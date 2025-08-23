@@ -1,0 +1,224 @@
+import { AuditLog } from './MasterDataService';
+import { storageService } from './StorageService';
+
+export interface AuditAction {
+  action: string;
+  entityType: string;
+  entityId: string;
+  details: string;
+  userId: string;
+  userName: string;
+  organizationId: string;
+  tenantId: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+export class AuditService {
+  private static instance: AuditService;
+
+  private constructor() {}
+
+  static getInstance(): AuditService {
+    if (!AuditService.instance) {
+      AuditService.instance = new AuditService();
+    }
+    return AuditService.instance;
+  }
+
+  async logAction(auditAction: AuditAction): Promise<AuditLog> {
+    const auditLog: Omit<AuditLog, 'id' | 'createdAt' | 'updatedAt'> = {
+      ...auditAction,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    return await storageService.create<AuditLog>('auditLogs', auditLog);
+  }
+
+  async getAuditLogs(filters?: {
+    tenantId?: string;
+    userId?: string;
+    entityType?: string;
+    entityId?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): Promise<AuditLog[]> {
+    let logs = await storageService.query<AuditLog>('auditLogs', filters);
+
+    // Apply date filters if provided
+    if (filters?.startDate) {
+      logs = logs.filter(log => log.createdAt >= filters.startDate!);
+    }
+    if (filters?.endDate) {
+      logs = logs.filter(log => log.createdAt <= filters.endDate!);
+    }
+
+    // Apply limit if provided
+    if (filters?.limit) {
+      logs = logs.slice(0, filters.limit);
+    }
+
+    // Sort by creation date (newest first)
+    return logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getAuditLogsByEntity(entityType: string, entityId: string, tenantId?: string): Promise<AuditLog[]> {
+    const filters: any = { entityType, entityId };
+    if (tenantId) {
+      filters.tenantId = tenantId;
+    }
+    return await this.getAuditLogs(filters);
+  }
+
+  async getAuditLogsByUser(userId: string, tenantId?: string): Promise<AuditLog[]> {
+    const filters: any = { userId };
+    if (tenantId) {
+      filters.tenantId = tenantId;
+    }
+    return await this.getAuditLogs(filters);
+  }
+
+  async getRecentActivity(tenantId: string, limit: number = 50): Promise<AuditLog[]> {
+    return await this.getAuditLogs({ tenantId, limit });
+  }
+
+  // Convenience methods for common actions
+  async logCreate(entityType: string, entityId: string, entityName: string, userId: string, userName: string, organizationId: string, tenantId: string): Promise<AuditLog> {
+    return await this.logAction({
+      action: 'CREATE',
+      entityType,
+      entityId,
+      details: `Created ${entityType.toLowerCase()} "${entityName}"`,
+      userId,
+      userName,
+      organizationId,
+      tenantId,
+    });
+  }
+
+  async logUpdate(entityType: string, entityId: string, entityName: string, userId: string, userName: string, organizationId: string, tenantId: string, changes?: string): Promise<AuditLog> {
+    const details = changes 
+      ? `Updated ${entityType.toLowerCase()} "${entityName}" - ${changes}`
+      : `Updated ${entityType.toLowerCase()} "${entityName}"`;
+    
+    return await this.logAction({
+      action: 'UPDATE',
+      entityType,
+      entityId,
+      details,
+      userId,
+      userName,
+      organizationId,
+      tenantId,
+    });
+  }
+
+  async logDelete(entityType: string, entityId: string, entityName: string, userId: string, userName: string, organizationId: string, tenantId: string): Promise<AuditLog> {
+    return await this.logAction({
+      action: 'DELETE',
+      entityType,
+      entityId,
+      details: `Deleted ${entityType.toLowerCase()} "${entityName}"`,
+      userId,
+      userName,
+      organizationId,
+      tenantId,
+    });
+  }
+
+  async logLogin(userId: string, userName: string, organizationId: string, tenantId: string, ipAddress?: string): Promise<AuditLog> {
+    return await this.logAction({
+      action: 'LOGIN',
+      entityType: 'USER',
+      entityId: userId,
+      details: `User logged in`,
+      userId,
+      userName,
+      organizationId,
+      tenantId,
+      ipAddress,
+    });
+  }
+
+  async logLogout(userId: string, userName: string, organizationId: string, tenantId: string): Promise<AuditLog> {
+    return await this.logAction({
+      action: 'LOGOUT',
+      entityType: 'USER',
+      entityId: userId,
+      details: `User logged out`,
+      userId,
+      userName,
+      organizationId,
+      tenantId,
+    });
+  }
+
+  async logAccess(entityType: string, entityId: string, entityName: string, userId: string, userName: string, organizationId: string, tenantId: string): Promise<AuditLog> {
+    return await this.logAction({
+      action: 'ACCESS',
+      entityType,
+      entityId,
+      details: `Accessed ${entityType.toLowerCase()} "${entityName}"`,
+      userId,
+      userName,
+      organizationId,
+      tenantId,
+    });
+  }
+
+  async logExport(entityType: string, userId: string, userName: string, organizationId: string, tenantId: string, format: string): Promise<AuditLog> {
+    return await this.logAction({
+      action: 'EXPORT',
+      entityType,
+      entityId: 'N/A',
+      details: `Exported ${entityType.toLowerCase()} data in ${format} format`,
+      userId,
+      userName,
+      organizationId,
+      tenantId,
+    });
+  }
+
+  async logImport(entityType: string, userId: string, userName: string, organizationId: string, tenantId: string, recordCount: number): Promise<AuditLog> {
+    return await this.logAction({
+      action: 'IMPORT',
+      entityType,
+      entityId: 'N/A',
+      details: `Imported ${recordCount} ${entityType.toLowerCase()} records`,
+      userId,
+      userName,
+      organizationId,
+      tenantId,
+    });
+  }
+
+  // Get audit statistics
+  async getAuditStats(tenantId: string, startDate?: string, endDate?: string): Promise<{
+    totalActions: number;
+    actionsByType: Record<string, number>;
+    actionsByUser: Record<string, number>;
+    recentActivity: AuditLog[];
+  }> {
+    const logs = await this.getAuditLogs({ tenantId, startDate, endDate });
+    
+    const actionsByType: Record<string, number> = {};
+    const actionsByUser: Record<string, number> = {};
+    
+    logs.forEach(log => {
+      actionsByType[log.action] = (actionsByType[log.action] || 0) + 1;
+      actionsByUser[log.userName] = (actionsByUser[log.userName] || 0) + 1;
+    });
+
+    return {
+      totalActions: logs.length,
+      actionsByType,
+      actionsByUser,
+      recentActivity: logs.slice(0, 10), // Last 10 activities
+    };
+  }
+}
+
+// Export singleton instance
+export const auditService = AuditService.getInstance(); 
