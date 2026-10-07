@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Param, Body, Query } from '@nestjs/common';
 import { DashboardConfigurationService } from './dashboard-configuration.service';
-import { DashboardConfiguration } from './dashboard-configuration.entity';
+import { DashboardConfigApiPayload, DashboardConfigApiRecord } from './dashboard-configuration.mapper';
 
 @Controller('dashboard-configurations')
 export class DashboardConfigurationController {
@@ -11,12 +11,12 @@ export class DashboardConfigurationController {
     @Query('tenantId') tenantId?: string,
     @Query('active') active?: string,
     @Query('version') version?: string,
-  ): Promise<DashboardConfiguration[]> {
+  ): Promise<DashboardConfigApiRecord[]> {
     if (active === 'true' && tenantId) {
-      return this.configService.findActiveByTenant(tenantId).then(config => config ? [config] : []);
+      return this.configService.findActiveByTenant(tenantId).then((config) => (config ? [config] : []));
     }
     if (version && tenantId) {
-      return this.configService.findByVersion(tenantId, parseInt(version)).then(config => config ? [config] : []);
+      return this.configService.findByVersion(tenantId, parseInt(version, 10)).then((config) => (config ? [config] : []));
     }
     if (tenantId) {
       return this.configService.findByTenant(tenantId);
@@ -25,13 +25,12 @@ export class DashboardConfigurationController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Promise<DashboardConfiguration | null> {
+  findOne(@Param('id') id: string): Promise<DashboardConfigApiRecord | null> {
     return this.configService.findOne(id);
   }
 
   @Post()
-  async create(@Body() data: Partial<DashboardConfiguration>): Promise<DashboardConfiguration> {
-    // If this is an active configuration, deactivate all others for the tenant
+  async create(@Body() data: DashboardConfigApiPayload): Promise<DashboardConfigApiRecord> {
     if (data.isActive && data.tenantId) {
       await this.configService.deactivateAll(data.tenantId);
     }
@@ -39,8 +38,10 @@ export class DashboardConfigurationController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() data: Partial<DashboardConfiguration>): Promise<DashboardConfiguration | null> {
-    // If this is being set as active, deactivate all others for the tenant
+  async update(
+    @Param('id') id: string,
+    @Body() data: DashboardConfigApiPayload,
+  ): Promise<DashboardConfigApiRecord | null> {
     if (data.isActive && data.tenantId) {
       await this.configService.deactivateAll(data.tenantId);
     }
@@ -51,4 +52,4 @@ export class DashboardConfigurationController {
   remove(@Param('id') id: string): Promise<void> {
     return this.configService.remove(id);
   }
-} 
+}

@@ -1,0 +1,11 @@
+{
+  "id": "T38",
+  "title": "Missing price",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T38, VAL03",
+  "given": "Valid loss quantity, no effective margin",
+  "action": "Value the line",
+  "assertion": "Quantity remains; cost null with unvalued status, not zero",
+  "owner_subphase": "2.6",
+  "status": "authored"
+}

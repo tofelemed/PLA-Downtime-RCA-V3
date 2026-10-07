@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { storageService } from '../services/StorageService';
+import { appSettingsApi } from '../services/api/appSettingsApi';
 import { Organization, Tenant, Unit, Asset } from '../services/MasterDataService';
+import { useAuth } from './AuthContext';
 
 export interface PlantSelection {
   organization?: Organization;
@@ -20,25 +21,44 @@ const PlantSelectionContext = createContext<PlantSelectionContextType | undefine
 export const PlantSelectionProvider = ({ children }: { children: ReactNode }) => {
   const [selection, setSelectionState] = useState<PlantSelection | null>(null);
   const [loading, setLoading] = useState(true);
+  const { session, isLoading: authLoading } = useAuth();
 
-  // Load selection from IndexedDB on mount
+  // Load selection from backend API - wait for authentication
   useEffect(() => {
+    if (authLoading || !session) {
+      setLoading(true);
+      return;
+    }
+
     let mounted = true;
     (async () => {
-      await storageService.initialize();
-      const saved = await storageService.getAppSetting<PlantSelection>('plantSelection');
-      if (mounted) {
-        setSelectionState(saved || null);
-        setLoading(false);
+      try {
+        const saved = await appSettingsApi.getValue<PlantSelection>('plantSelection');
+        if (mounted) {
+          setSelectionState(saved || null);
+        }
+      } catch (error) {
+        console.warn('Failed to load plant selection from backend, using default', error);
+        if (mounted) {
+          setSelectionState(null);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [session, authLoading]);
 
-  // Persist selection to IndexedDB on change
-  const setSelection = (sel: PlantSelection | null) => {
+  // Persist selection to backend API on change
+  const setSelection = async (sel: PlantSelection | null) => {
     setSelectionState(sel);
-    storageService.setAppSetting('plantSelection', sel);
+    try {
+      await appSettingsApi.setValue('plantSelection', sel);
+    } catch (error) {
+      console.error('Failed to save plant selection to backend', error);
+    }
   };
 
   return (

@@ -1,0 +1,11 @@
+{
+  "id": "T09",
+  "title": "MQTT replay",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T09, MQ02, MQ05",
+  "given": "Disconnect/reconnect, duplicate QoS 1 delivery, retained old state",
+  "action": "Reconnect subscriber",
+  "assertion": "One business observation effect; no new stop at reconnect",
+  "owner_subphase": "1.8",
+  "status": "authored"
+}

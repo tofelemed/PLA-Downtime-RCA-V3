@@ -15,7 +15,7 @@ export class UpdateOeeSummaryDto {
   @ApiProperty({ required: false })
   @IsNumber()
   @IsOptional()
-  oee?: number;
+  overallOEE?: number;
 
   @ApiProperty({ required: false })
   @IsNumber()

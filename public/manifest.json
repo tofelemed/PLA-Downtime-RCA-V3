@@ -1,8 +1,8 @@
 
 {
-  "name": "Pro-Act - Production Loss Analysis Platform",
-  "short_name": "Pro-Act",
-  "description": "Enterprise-grade platform for managing production loss and root cause analysis",
+  "name": "Unified APM - Asset Performance Management",
+  "short_name": "Unified APM",
+  "description": "Enterprise-grade Asset Performance Management platform for managing production loss and root cause analysis",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

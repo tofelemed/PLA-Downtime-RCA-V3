@@ -5,51 +5,57 @@ export class Asset {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 255, unique: true })
+  @Column({ name: 'code', type: 'varchar', length: 50 })
   code: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ name: 'name', type: 'varchar', length: 255 })
   name: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'unit_id', type: 'varchar', length: 36 })
   unitId: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'description', type: 'text', nullable: true })
   description?: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  assetType: string;
+  @Column({ name: 'asset_type', type: 'varchar', length: 50, nullable: true })
+  assetType?: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  criticality: string;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ name: 'manufacturer', type: 'varchar', length: 255, nullable: true })
   manufacturer?: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ name: 'model', type: 'varchar', length: 255, nullable: true })
   model?: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ name: 'serial_number', type: 'varchar', length: 255, nullable: true })
   serialNumber?: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ name: 'criticality', type: 'varchar', length: 50, nullable: true })
+  criticality?: string;
+
+  @Column({ name: 'status', type: 'varchar', length: 50, nullable: true })
+  status?: string;
+
+  @Column({ name: 'location', type: 'varchar', length: 255, nullable: true })
+  location?: string;
+
+  @Column({ name: 'installation_date', type: 'timestamptz', nullable: true })
   installationDate?: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ name: 'last_maintenance_date', type: 'timestamptz', nullable: true })
   lastMaintenanceDate?: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ name: 'next_maintenance_date', type: 'timestamptz', nullable: true })
   nextMaintenanceDate?: Date;
 
-  @Column({ type: 'varchar', length: 100 })
-  status: string;
+  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  tenantId?: string;
 
-  @Column({ type: 'uuid' })
-  tenantId: string;
+  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  organizationId?: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

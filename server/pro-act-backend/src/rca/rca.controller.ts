@@ -19,7 +19,11 @@ export class RCAController {
     @Query('priority') priority?: string,
     @Query('teamLeadId') teamLeadId?: string,
     @Query('eventId') eventId?: string,
+    @Query('tenantId') tenantId?: string,
   ): Promise<RCA[]> {
+    if (tenantId) {
+      return this.rcaService.findByTenant(tenantId);
+    }
     if (status) {
       return this.rcaService.findByStatus(status);
     }

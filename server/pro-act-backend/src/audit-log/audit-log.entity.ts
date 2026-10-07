@@ -5,42 +5,44 @@ export class AuditLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  userName: string;
+  // Note: Database schema doesn't have 'userName'
+  // @Column({ type: 'varchar', length: 255 })
+  // userName: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ name: 'action', type: 'varchar', length: 100 })
   action: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ name: 'entity_type', type: 'varchar', length: 100 })
   entityType: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'entity_id', type: 'varchar', length: 36 })
   entityId: string;
 
-  @Column({ type: 'text' })
-  details: string;
+  @Column({ name: 'details', type: 'text', nullable: true })
+  details?: string;
 
-  @Column({ type: 'uuid' })
-  organizationId: string;
+  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  organizationId?: string;
 
-  @Column({ type: 'uuid' })
-  tenantId: string;
+  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  tenantId?: string;
 
-  @Column({ type: 'varchar', length: 64, nullable: true })
-  ipAddress?: string;
+  // Note: Database schema doesn't have 'ipAddress' or 'userAgent' columns
+  // @Column({ type: 'varchar', length: 64, nullable: true })
+  // ipAddress?: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  userAgent?: string;
+  // @Column({ type: 'varchar', length: 255, nullable: true })
+  // userAgent?: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
-  timestamp?: Date;
+  @Column({ name: 'timestamp', type: 'timestamptz' })
+  timestamp: Date;
 } 

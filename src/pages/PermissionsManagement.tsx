@@ -1,7 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Organization, Tenant, storageService } from '../services/StorageService';
+import { masterDataService, Organization, Tenant } from '../services/MasterDataService';
+import { userApi, UserRecord, UserRole } from '../services/api/userApi';
+import { auditApi } from '../services/api/auditApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -31,7 +33,7 @@ interface ModulePermissions {
   settings: boolean;
 }
 
-const DEFAULT_ROLE_PERMISSIONS: Record<User['role'], ModulePermissions> = {
+const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, ModulePermissions> = {
   SuperAdmin: {
     dashboard: true,
     events: true,
@@ -97,10 +99,10 @@ const DEFAULT_ROLE_PERMISSIONS: Record<User['role'], ModulePermissions> = {
 export const PermissionsManagement: React.FC = () => {
   const { session } = useAuth();
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserRecord[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
   const [userPermissions, setUserPermissions] = useState<ModulePermissions | null>(null);
 
   useEffect(() => {
@@ -111,22 +113,24 @@ export const PermissionsManagement: React.FC = () => {
     if (!session) return;
 
     try {
-      let userFilters = {};
-      
-      // Apply role-based filtering
-      if (session.user.role === 'TenantAdmin') {
-        userFilters = { tenantId: session.tenant?.id };
-      } else if (session.user.role === 'OrgAdmin') {
-        userFilters = { organizationId: session.organization?.id };
-      }
-
       const [usersData, orgsData, tenantsData] = await Promise.all([
-        storageService.query<User>('users', userFilters),
-        storageService.query<Organization>('organizations'),
-        storageService.query<Tenant>('tenants'),
+        userApi.getUsers(),
+        masterDataService.getOrganizations(),
+        masterDataService.getTenants(),
       ]);
 
-      setUsers(usersData);
+      let filteredUsers = usersData;
+      if (session.user.role === 'TenantAdmin') {
+        filteredUsers = filteredUsers.filter((user) => user.tenantId === session.tenant?.id);
+      } else if (session.user.role === 'OrgAdmin') {
+        filteredUsers = filteredUsers.filter(
+          (user) =>
+            user.organizationId === session.organization?.id ||
+            (!user.organizationId && user.tenantId === session.tenant?.id),
+        );
+      }
+
+      setUsers(filteredUsers);
       setOrganizations(orgsData);
       setTenants(tenantsData);
     } catch (error) {
@@ -139,7 +143,7 @@ export const PermissionsManagement: React.FC = () => {
     }
   };
 
-  const handleUserSelect = (user: User) => {
+  const handleUserSelect = (user: UserRecord) => {
     setSelectedUser(user);
     // Load user's current permissions (or use role defaults)
     const permissions = { ...DEFAULT_ROLE_PERMISSIONS[user.role] };
@@ -159,15 +163,16 @@ export const PermissionsManagement: React.FC = () => {
     if (!selectedUser || !userPermissions) return;
 
     try {
-      // In a real implementation, you'd save custom permissions to a separate table
-      // For now, we'll just show a success message
-      await storageService.logAudit(
-        session!.user.id,
-        'UPDATE_PERMISSIONS',
-        'USER',
-        selectedUser.id,
-        { permissions: userPermissions }
-      );
+      await auditApi.createLog({
+        userId: session!.user.id,
+        userName: session!.user.name || session!.user.email,
+        action: 'UPDATE_PERMISSIONS',
+        entityType: 'USER',
+        entityId: selectedUser.id,
+        details: { permissions: userPermissions },
+        organizationId: session!.user.organizationId || session!.organization?.id || '',
+        tenantId: session!.user.tenantId || session!.tenant?.id || '',
+      });
 
       toast({
         title: 'Success',
@@ -185,15 +190,18 @@ export const PermissionsManagement: React.FC = () => {
 
   const handleToggleUserStatus = async (userId: string, isActive: boolean) => {
     try {
-      await storageService.update<User>('users', userId, { isActive });
-      
-      await storageService.logAudit(
-        session!.user.id,
-        isActive ? 'ACTIVATE_USER' : 'DEACTIVATE_USER',
-        'USER',
-        userId,
-        {}
-      );
+      await userApi.updateUser(userId, { isActive });
+
+      await auditApi.createLog({
+        userId: session!.user.id,
+        userName: session!.user.name || session!.user.email,
+        action: isActive ? 'ACTIVATE_USER' : 'DEACTIVATE_USER',
+        entityType: 'USER',
+        entityId: userId,
+        details: {},
+        organizationId: session!.user.organizationId || session!.organization?.id || '',
+        tenantId: session!.user.tenantId || session!.tenant?.id || '',
+      });
 
       toast({
         title: 'Success',
@@ -211,7 +219,7 @@ export const PermissionsManagement: React.FC = () => {
     }
   };
 
-  const canManageUser = (user: User) => {
+  const canManageUser = (user: UserRecord) => {
     if (!session) return false;
     
     // SuperAdmin can manage all users

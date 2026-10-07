@@ -1,0 +1,38 @@
+{
+  "id": "T27",
+  "title": "Counter reset with unknown reset time",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T27, ACT03",
+  "tolerance": "0.000001",
+  "inputs": {
+    "signal": {
+      "semanticType": "counter",
+      "rolloverModulus": null,
+      "resetPolicy": "detect_drop"
+    },
+    "readings": [
+      {
+        "t": "2026-10-07T08:00:00Z",
+        "v": "1000"
+      },
+      {
+        "t": "2026-10-07T09:00:00Z",
+        "v": "10"
+      }
+    ],
+    "intermediateReadings": []
+  },
+  "expected": {
+    "quantity": null,
+    "qualityState": "incomplete",
+    "exception": "reset_unresolved",
+    "forbiddenValues": [
+      "990",
+      "1010"
+    ],
+    "approvalBlocked": true
+  },
+  "owner_subphase": "1.7",
+  "notes": "",
+  "status": "authored"
+}

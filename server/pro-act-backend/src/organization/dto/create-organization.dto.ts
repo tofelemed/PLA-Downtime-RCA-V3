@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsUUID, IsEmail } from 'class-validator';
 
 export class CreateOrganizationDto {
   @ApiProperty()
@@ -17,10 +17,27 @@ export class CreateOrganizationDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty({ default: true })
+  // Note: These fields don't exist in database schema, but frontend sends them
+  // Accept them in DTO but ignore them in service
+  @ApiProperty({ required: false, default: true })
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @ApiProperty({ required: false })
+  @IsEmail()
+  @IsOptional()
+  contactEmail?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  contactPhone?: string;
 
   @ApiProperty({ required: false })
   @IsUUID()

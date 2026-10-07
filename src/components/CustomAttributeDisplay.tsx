@@ -8,7 +8,6 @@ import {
   EntityType 
 } from '@/types/CustomAttributes';
 import { customAttributeService } from '@/services/CustomAttributeService';
-import { storageService } from '@/services/StorageService';
 
 interface CustomAttributeDisplayProps {
   entityId: string;
@@ -32,7 +31,6 @@ const CustomAttributeDisplay: React.FC<CustomAttributeDisplayProps> = ({
   const [definitions, setDefinitions] = useState<CustomAttributeDefinition[]>([]);
   const [values, setValues] = useState<CustomAttributeValue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [storageReady, setStorageReady] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -54,63 +52,10 @@ const CustomAttributeDisplay: React.FC<CustomAttributeDisplayProps> = ({
   });
   const [newSelectOption, setNewSelectOption] = useState('');
 
-  // Check storage service readiness
-  useEffect(() => {
-    const checkStorageReady = async () => {
-      try {
-        // Ensure storage service is initialized
-        if (!(storageService as any).db) {
-          await storageService.initialize();
-          
-          // Wait a bit for the database to be fully ready
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        // Test if we can actually query the database
-        try {
-          await storageService.query('customAttributeDefinitions');
-          const ready = !!(storageService as any).db;
-          setStorageReady(ready);
-          if (ready) {
-            console.log('Storage service is fully ready and queryable');
-            loadData();
-          }
-        } catch (error) {
-          console.log('Storage service not yet queryable, waiting...');
-          setStorageReady(false);
-        }
-      } catch (error) {
-        console.error('Failed to initialize storage service:', error);
-        setStorageReady(false);
-      }
-    };
-
-    // Check immediately
-    checkStorageReady();
-
-    // If not ready, set up a polling mechanism
-    if (!(storageService as any).db) {
-      const interval = setInterval(checkStorageReady, 500);
-      
-      // Add timeout to prevent infinite waiting
-      const timeout = setTimeout(() => {
-        clearInterval(interval);
-        console.error('Storage service failed to initialize within timeout');
-      }, 10000); // 10 second timeout
-      
-      return () => {
-        clearInterval(interval);
-        clearTimeout(timeout);
-      };
-    }
-  }, []);
-
   useEffect(() => {
     console.log('CustomAttributeDisplay useEffect triggered:', { entityId, entityType, tenantId, organizationId });
-    if (storageReady) {
-      loadData();
-    }
-  }, [entityId, entityType, tenantId, organizationId, storageReady]);
+    loadData();
+  }, [entityId, entityType, tenantId, organizationId]);
 
   // Debug effect for showCreateForm changes
   useEffect(() => {
@@ -184,35 +129,12 @@ const CustomAttributeDisplay: React.FC<CustomAttributeDisplayProps> = ({
   const handleCreateAttribute = async () => {
     try {
       console.log('handleCreateAttribute called with:', createFormData);
-      console.log('Storage service ready:', !!(storageService as any).db);
       console.log('CustomAttributeService available:', !!customAttributeService);
       
       // Validate required fields
       if (!createFormData.name || !createFormData.displayName) {
         alert('Name and Display Name are required');
         return;
-      }
-
-      // Ensure storage service is fully initialized
-      if (!(storageService as any).db) {
-        console.error('Storage service not ready, attempting to initialize...');
-        await storageService.initialize();
-        
-        // Wait a bit for the database to be fully ready
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        if (!(storageService as any).db) {
-          throw new Error('Failed to initialize storage service');
-        }
-      }
-      
-      // Double-check that we can actually query the database
-      try {
-        const testQuery = await storageService.query('customAttributeDefinitions');
-        console.log('Storage service is fully ready and queryable, test query result:', testQuery);
-      } catch (error) {
-        console.error('Storage service not queryable:', error);
-        throw new Error('Storage service not fully ready');
       }
 
       // Get next order index
@@ -395,26 +317,6 @@ const CustomAttributeDisplay: React.FC<CustomAttributeDisplayProps> = ({
     );
   }
 
-  if (!storageReady) {
-    return (
-      <div className="text-center py-6">
-        <Settings className="w-8 h-8 text-gray-400 mx-auto mb-3" />
-        <h4 className="text-sm font-medium text-gray-900 mb-2">Initializing Storage Service</h4>
-        <p className="text-sm text-gray-500 mb-4">
-          Please wait while the storage service initializes...
-        </p>
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => window.location.reload()} 
-          className="mt-4"
-        >
-          Retry
-        </Button>
-      </div>
-    );
-  }
 
   // Show create/edit form if it's open, regardless of whether there are existing definitions
   if (showCreateForm) {

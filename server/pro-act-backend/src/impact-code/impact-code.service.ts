@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { ImpactCode } from './impact-code.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -21,7 +22,9 @@ export class ImpactCodeService {
   }
 
   async create(data: Partial<ImpactCode>): Promise<ImpactCode> {
-    const code = this.impactCodeRepository.create(data);
+    // Generate UUID manually for SQL Server compatibility
+    const id = randomUUID();
+    const code = this.impactCodeRepository.create({ id, ...data });
     const saved = await this.impactCodeRepository.save(code);
     this.realtimeGateway.broadcastEntityEvent('Created', 'impactCode', saved);
     return saved;

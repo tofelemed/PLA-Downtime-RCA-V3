@@ -1,0 +1,11 @@
+{
+  "id": "T13",
+  "title": "Compound queries",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T13, API01",
+  "given": "Events across tenants, units and reasons",
+  "action": "Query tenant + unit + asset + reason + overlapping time",
+  "assertion": "All filters apply; pagination stable; no unrelated events",
+  "owner_subphase": "0.4",
+  "status": "authored"
+}

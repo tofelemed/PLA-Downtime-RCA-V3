@@ -16,8 +16,10 @@ export class RequestLoggerMiddleware implements NestMiddleware {
     );
 
     // Override res.end to log response
-    const originalEnd = res.end;
-    res.end = function(chunk?: any, encoding?: any) {
+    const originalEnd = res.end.bind(res);
+    const logger = this.logger;
+    
+    res.end = function(chunk?: any, encoding?: any, cb?: () => void): Response {
       const endTime = Date.now();
       const duration = endTime - startTime;
       const { statusCode } = res;
@@ -27,14 +29,21 @@ export class RequestLoggerMiddleware implements NestMiddleware {
       const logMessage = `${method} ${originalUrl} - ${statusCode} - ${duration}ms`;
 
       if (logLevel === 'error') {
-        this.logger.error(logMessage);
+        logger.error(logMessage);
       } else {
-        this.logger.log(logMessage);
+        logger.log(logMessage);
       }
 
-      // Call original end method
-      originalEnd.call(this, chunk, encoding);
-    }.bind(this);
+      // Call original end method with correct context and return the response
+      // Handle different overloads
+      if (typeof chunk === 'function') {
+        return originalEnd(chunk);
+      } else if (typeof encoding === 'function') {
+        return originalEnd(chunk, encoding);
+      } else {
+        return originalEnd(chunk, encoding, cb);
+      }
+    } as typeof res.end;
 
     next();
   }

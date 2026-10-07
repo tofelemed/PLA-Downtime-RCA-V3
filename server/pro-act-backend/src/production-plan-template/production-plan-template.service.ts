@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { ProductionPlanTemplate } from './production-plan-template.entity';
 
 @Injectable()
@@ -11,20 +12,23 @@ export class ProductionPlanTemplateService {
   ) {}
 
   findAll(): Promise<ProductionPlanTemplate[]> {
+    // Note: unit, tenant, organization relations don't exist in database schema
     return this.templateRepository.find({
-      relations: ['unit', 'tenant', 'organization'],
+      // relations: ['unit', 'tenant', 'organization'],
     });
   }
 
   findOne(id: string): Promise<ProductionPlanTemplate | null> {
+    // Note: unit, tenant, organization relations don't exist in database schema
     return this.templateRepository.findOne({
       where: { id },
-      relations: ['unit', 'tenant', 'organization'],
+      // relations: ['unit', 'tenant', 'organization'],
     });
   }
 
   create(data: Partial<ProductionPlanTemplate>): Promise<ProductionPlanTemplate> {
-    const template = this.templateRepository.create(data);
+    const id = randomUUID();
+    const template = this.templateRepository.create({ id, ...data });
     return this.templateRepository.save(template);
   }
 
@@ -38,9 +42,10 @@ export class ProductionPlanTemplateService {
   }
 
   findByTenant(tenantId: string): Promise<ProductionPlanTemplate[]> {
+    // Note: unit, tenant, organization relations don't exist in database schema
     return this.templateRepository.find({
       where: { tenantId },
-      relations: ['unit', 'tenant', 'organization'],
+      // relations: ['unit', 'tenant', 'organization'],
     });
   }
 } 

@@ -1,0 +1,11 @@
+{
+  "id": "T23",
+  "title": "Realtime scope",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T23, API05",
+  "given": "Clients in tenant A and B connected",
+  "action": "Event changed in tenant A",
+  "assertion": "Only authorized A clients receive one invalidation; reconnect refetches",
+  "owner_subphase": "1.9/3.1",
+  "status": "authored"
+}

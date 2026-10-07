@@ -14,18 +14,25 @@ export class VerificationStatusCode {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  color: string;
+  // Note: Database schema doesn't have 'color' or 'items'
+  // @Column({ type: 'varchar', length: 50 })
+  // color: string;
 
-  @Column({ type: 'uuid' })
-  tenantId: string;
+  // @Column('simple-array', { nullable: true })
+  // items?: string[];
 
-  @Column('simple-array', { nullable: true })
-  items?: string[];
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive: boolean;
 
-  @CreateDateColumn()
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
+  tenantId?: string;
+
+  @Column({ name: 'organization_id', type: 'uuid', nullable: true })
+  organizationId?: string;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 } 

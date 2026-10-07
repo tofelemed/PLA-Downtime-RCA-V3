@@ -1,21 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { usePlantSelection } from '../contexts/PlantSelectionContext';
 import { MasterDataService, DashboardConfiguration } from '../services/MasterDataService';
 
 const masterDataService = new MasterDataService();
 
 export function useDashboardConfig() {
   const { session } = useAuth();
+  const { selection: plantSelection } = usePlantSelection();
+  const tenantId = plantSelection?.tenant?.id || session?.tenant?.id;
   const [config, setConfig] = useState<DashboardConfiguration | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadConfig();
-  }, [session?.tenant?.id]);
+  }, [tenantId]);
 
   const loadConfig = async () => {
-    if (!session?.tenant?.id) {
+    if (!tenantId) {
       setLoading(false);
       return;
     }
@@ -24,11 +27,11 @@ export function useDashboardConfig() {
       setLoading(true);
       setError(null);
       
-      let dashboardConfig = await masterDataService.getDashboardConfiguration(session.tenant.id);
+      let dashboardConfig = await masterDataService.getDashboardConfiguration(tenantId);
       
       if (!dashboardConfig) {
         // Initialize with default configuration if none exists
-        dashboardConfig = await masterDataService.initializeDashboardConfiguration(session.tenant.id);
+        dashboardConfig = await masterDataService.initializeDashboardConfiguration(tenantId);
       }
       
       setConfig(dashboardConfig);

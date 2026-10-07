@@ -1,0 +1,11 @@
+{
+  "id": "T05",
+  "title": "Typed mapping",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T05, ING04",
+  "given": "Digital-state object attribute, TimeSpan duration string, asset-only binding",
+  "action": "Map the event frame",
+  "assertion": "Digital Name/Value preserved; valid duration with diagnostic; unitId derived from asset",
+  "owner_subphase": "1.3",
+  "status": "authored"
+}

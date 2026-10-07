@@ -21,14 +21,31 @@ export class AppSettingsService {
   }
 
   async create(data: Partial<AppSettings>): Promise<AppSettings> {
-    const setting = this.settingsRepository.create(data);
+    // Serialize value to JSON string if it's an object/array
+    const serializedData = {
+      ...data,
+      value: typeof data.value === 'string' ? data.value : JSON.stringify(data.value),
+    };
+    const setting = this.settingsRepository.create(serializedData);
     const saved = await this.settingsRepository.save(setting);
     this.realtimeGateway.broadcastEntityEvent('Created', 'appSettings', saved);
     return saved;
   }
 
   async update(key: string, data: Partial<AppSettings>): Promise<AppSettings | null> {
-    await this.settingsRepository.update(key, data);
+    // Serialize value to JSON string if it's an object/array
+    const updateData: any = {};
+    if (data.value !== undefined) {
+      updateData.value = typeof data.value === 'string' 
+        ? data.value 
+        : JSON.stringify(data.value);
+    }
+    
+    // Only update if there's something to update
+    if (Object.keys(updateData).length > 0) {
+      await this.settingsRepository.update(key, updateData);
+    }
+    
     const updated = await this.findOne(key);
     if (updated) {
       this.realtimeGateway.broadcastEntityEvent('Updated', 'appSettings', updated);
@@ -56,7 +73,14 @@ export class AppSettingsService {
 
   async getValue(key: string, defaultValue?: any): Promise<any> {
     const setting = await this.findOne(key);
-    return setting ? setting.value : defaultValue;
+    if (!setting) return defaultValue;
+    
+    // Try to parse as JSON, fallback to string if it's not valid JSON
+    try {
+      return JSON.parse(setting.value);
+    } catch {
+      return setting.value;
+    }
   }
 
   async setValue(key: string, value: any): Promise<AppSettings> {

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { EvidenceCategory } from './evidence-category.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -13,20 +14,24 @@ export class EvidenceCategoryService {
   ) {}
 
   findAll(): Promise<EvidenceCategory[]> {
+    // Note: tenant relation doesn't exist in database schema
     return this.categoryRepository.find({
-      relations: ['tenant'],
+      // relations: ['tenant'],
     });
   }
 
   findOne(id: string): Promise<EvidenceCategory | null> {
+    // Note: tenant relation doesn't exist in database schema
     return this.categoryRepository.findOne({
       where: { id },
-      relations: ['tenant'],
+      // relations: ['tenant'],
     });
   }
 
   async create(data: Partial<EvidenceCategory>): Promise<EvidenceCategory> {
-    const category = this.categoryRepository.create(data);
+    // Generate UUID manually for SQL Server compatibility
+    const id = randomUUID();
+    const category = this.categoryRepository.create({ id, ...data });
     const saved = await this.categoryRepository.save(category);
     this.realtimeGateway.broadcastEntityEvent('Created', 'evidenceCategory', saved);
     return saved;
@@ -50,9 +55,10 @@ export class EvidenceCategoryService {
   }
 
   findByTenant(tenantId: string): Promise<EvidenceCategory[]> {
+    // Note: tenant relation doesn't exist in database schema
     return this.categoryRepository.find({
       where: { tenantId },
-      relations: ['tenant'],
+      // relations: ['tenant'],
     });
   }
 } 

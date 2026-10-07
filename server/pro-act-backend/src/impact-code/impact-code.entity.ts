@@ -14,24 +14,36 @@ export class ImpactCode {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  category: string;
+  @Column({ name: 'category', type: 'varchar', length: 50, nullable: true })
+  category?: string;
 
-  @Column({ type: 'float', nullable: true })
+  @Column({ name: 'cost_per_unit', type: 'decimal', precision: 15, scale: 4, nullable: true })
   costPerUnit?: number;
 
-  @Column({ type: 'float', nullable: true })
+  @Column({ name: 'cost_per_hour', type: 'decimal', precision: 15, scale: 4, nullable: true })
   costPerHour?: number;
 
-  @Column({ type: 'varchar', length: 20, nullable: true })
+  @Column({ name: 'cost_basis', type: 'varchar', length: 20, nullable: true })
   costBasis?: string;
 
-  @Column({ type: 'uuid' })
-  tenantId: string;
+  @Column({ name: 'severity', type: 'varchar', length: 50, nullable: true })
+  severity?: string;
 
-  @CreateDateColumn()
+  @Column({ name: 'color', type: 'varchar', length: 7, nullable: true })
+  color?: string;
+
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive: boolean;
+
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
+  tenantId?: string;
+
+  @Column({ name: 'organization_id', type: 'uuid', nullable: true })
+  organizationId?: string;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 } 

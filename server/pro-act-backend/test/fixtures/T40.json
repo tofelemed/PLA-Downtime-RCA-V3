@@ -1,0 +1,11 @@
+{
+  "id": "T40",
+  "title": "Performance soak",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T40, §17.1",
+  "given": "Target load and 15-minute burst",
+  "action": "Restart a worker mid-run",
+  "assertion": "Meets p95 objectives; no accepted-record loss or tenant leakage",
+  "owner_subphase": "3.11",
+  "status": "authored"
+}

@@ -1,0 +1,127 @@
+================================================================================
+  ProAct Database - AUTOMATED SETUP - QUICK START
+================================================================================
+
+  📋 ONE COMMAND TO CREATE EVERYTHING!
+
+  ✅ Creates database: ProActDB
+  ✅ Creates 50 tables with all fields
+  ✅ Creates 150+ indexes
+  ✅ Verifies setup automatically
+  ✅ Takes 30 seconds!
+
+================================================================================
+
+  🚀 RUN THIS COMMAND:
+
+  database-setup\setup-database.bat
+
+  (or setup-database.ps1 for PowerShell)
+
+================================================================================
+
+  ⚡ STEP-BY-STEP:
+
+  1. Open Command Prompt or PowerShell
+
+  2. Navigate to backend:
+     cd server\pro-act-backend
+
+  3. Run automated setup:
+     database-setup\setup-database.bat
+
+  4. Wait 30 seconds... Done!
+
+  5. Configure .env file with database credentials
+
+  6. Start backend:
+     npm install
+     npm run start:dev
+
+  7. Access Swagger UI:
+     http://localhost:3000/api
+
+================================================================================
+
+  ✅ WHAT GETS CREATED:
+
+  Core Entities (6):
+    ✓ organizations, tenants, users, units, assets, audit_logs
+
+  Master Data (5):
+    ✓ impact_codes, oee_codes, rca_cause_codes, etc.
+
+  Production (9):
+    ✓ products, production_plans, production_events, etc.
+
+  RCA Modules (10):
+    ✓ rcas, rca_recommendations, rca_evidence, etc.
+
+  Analysis Tools (6):
+    ✓ five_why_analyses, fishbone_diagrams, fmea_analyses, etc.
+
+  PI Integration (8):
+    ✓ pi_connections, pi_af_elements, pi_events, etc.
+
+  Custom Attributes (2):
+    ✓ custom_attribute_definitions, custom_attribute_values
+
+  Integration (1):
+    ✓ data_sources
+
+  Historian (1):
+    ✓ query_history
+
+  Settings (2):
+    ✓ app_settings, dashboard_configurations
+
+  TOTAL: 50 Tables + 150+ Indexes
+
+================================================================================
+
+  📝 .ENV CONFIGURATION (After Setup):
+
+  DB_HOST=localhost
+  DB_PORT=1433
+  DB_USERNAME=sa
+  DB_PASSWORD=YourPassword
+  DB_NAME=ProActDB
+
+  JWT_SECRET=your-secret-key-min-32-chars
+  JWT_REFRESH_SECRET=your-refresh-secret
+
+================================================================================
+
+  🔍 VERIFY SETUP:
+
+  -- Count tables
+  sqlcmd -S localhost -E -d ProActDB -Q "SELECT COUNT(*) FROM sys.tables"
+
+  -- Expected result: 50
+
+================================================================================
+
+  🎯 RESULT:
+
+  After running the automated setup:
+    ✅ Database ready
+    ✅ All 50 tables created
+    ✅ All indexes created
+    ✅ Backend ready to start
+    ✅ Zero manual work!
+
+================================================================================
+
+  ⏱️ TOTAL TIME: 30 SECONDS
+
+  🎉 THAT'S IT! FULLY AUTOMATED!
+
+================================================================================
+
+  For detailed documentation, see:
+  - AUTOMATED_DATABASE_SETUP_GUIDE.md
+  - database-setup/README.md
+  - database-setup/setup-log.txt (after running)
+
+================================================================================
+

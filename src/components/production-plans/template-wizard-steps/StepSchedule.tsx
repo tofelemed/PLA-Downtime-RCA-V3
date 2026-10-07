@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { formatDateRange } from '../../../utils/dateFormatters';
 
 type StepScheduleProps = {
   template: Partial<ProductionPlanTemplate>;
@@ -100,7 +101,7 @@ const StepSchedule: React.FC<StepScheduleProps> = ({ template, onUpdate }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-indigo-800">
-                    📅 {template.startDate} to {template.endDate}
+                    📅 {formatDateRange(template.startDate, template.endDate)}
                   </p>
                   <p className="text-xs text-indigo-700">
                     {template.recurrence || 'Daily'} • {template.dataEntryFrequency || 'Daily'} data entry

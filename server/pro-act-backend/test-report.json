@@ -1,0 +1,914 @@
+{
+  "summary": {
+    "total": 128,
+    "passed": 128,
+    "failed": 0,
+    "skipped": 0,
+    "successRate": "100.00%"
+  },
+  "results": [
+    {
+      "endpoint": "/auth/register",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 143
+    },
+    {
+      "endpoint": "/auth/login",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 80
+    },
+    {
+      "endpoint": "/organizations",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/tenants",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/units",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/organizations",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 20
+    },
+    {
+      "endpoint": "/organizations/B6146D0E-E69E-4FB5-833E-500D75D303EC",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 10
+    },
+    {
+      "endpoint": "/organizations",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 11
+    },
+    {
+      "endpoint": "/organizations/B6146D0E-E69E-4FB5-833E-500D75D303EC",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 13
+    },
+    {
+      "endpoint": "/organizations/B6146D0E-E69E-4FB5-833E-500D75D303EC",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/tenants",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 15
+    },
+    {
+      "endpoint": "/tenants/6FDA0339-8149-4084-8FBE-C4DEC876B264",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/tenants",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/tenants/6FDA0339-8149-4084-8FBE-C4DEC876B264",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 12
+    },
+    {
+      "endpoint": "/tenants/6FDA0339-8149-4084-8FBE-C4DEC876B264",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/units",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 19
+    },
+    {
+      "endpoint": "/units/A4580A51-873B-4D09-86D1-0333FD02FB4D",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 14
+    },
+    {
+      "endpoint": "/units",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 11
+    },
+    {
+      "endpoint": "/units/A4580A51-873B-4D09-86D1-0333FD02FB4D",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 21
+    },
+    {
+      "endpoint": "/units/A4580A51-873B-4D09-86D1-0333FD02FB4D",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 14
+    },
+    {
+      "endpoint": "/assets",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 23
+    },
+    {
+      "endpoint": "/assets/55CF4612-8E1D-4D63-B166-F21DDFD01AF7",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/assets",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/assets/55CF4612-8E1D-4D63-B166-F21DDFD01AF7",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 20
+    },
+    {
+      "endpoint": "/assets/55CF4612-8E1D-4D63-B166-F21DDFD01AF7",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 11
+    },
+    {
+      "endpoint": "/users",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 88
+    },
+    {
+      "endpoint": "/users/F0567AD0-F2BF-4D67-B1B3-4CF60D3DA79F",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/users",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/users/F0567AD0-F2BF-4D67-B1B3-4CF60D3DA79F",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 10
+    },
+    {
+      "endpoint": "/users/F0567AD0-F2BF-4D67-B1B3-4CF60D3DA79F",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/impact-codes",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 14
+    },
+    {
+      "endpoint": "/impact-codes/6E2FCA43-1C9F-45E7-A84A-97723E109039",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/impact-codes",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/impact-codes/6E2FCA43-1C9F-45E7-A84A-97723E109039",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 12
+    },
+    {
+      "endpoint": "/impact-codes/6E2FCA43-1C9F-45E7-A84A-97723E109039",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/oee-codes",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 14
+    },
+    {
+      "endpoint": "/oee-codes/5C93B11F-A4EA-40B8-97D7-4F9860C6156E",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/oee-codes",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 4
+    },
+    {
+      "endpoint": "/oee-codes/5C93B11F-A4EA-40B8-97D7-4F9860C6156E",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 12
+    },
+    {
+      "endpoint": "/oee-codes/5C93B11F-A4EA-40B8-97D7-4F9860C6156E",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/rca-cause-codes",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 17
+    },
+    {
+      "endpoint": "/rca-cause-codes/3A494ABF-247A-43D7-A789-0DB60F203525",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/rca-cause-codes",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/rca-cause-codes/3A494ABF-247A-43D7-A789-0DB60F203525",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 11
+    },
+    {
+      "endpoint": "/rca-cause-codes/3A494ABF-247A-43D7-A789-0DB60F203525",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/verification-status-codes",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 17
+    },
+    {
+      "endpoint": "/verification-status-codes/B26FF4C3-3517-4F01-9B83-45AFA3DD67B2",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/verification-status-codes",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/verification-status-codes/B26FF4C3-3517-4F01-9B83-45AFA3DD67B2",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 10
+    },
+    {
+      "endpoint": "/verification-status-codes/B26FF4C3-3517-4F01-9B83-45AFA3DD67B2",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/reason-codes",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 14
+    },
+    {
+      "endpoint": "/reason-codes/A2CFE97B-B34F-487F-B4A1-66EA5CDCC2A2",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/reason-codes",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/reason-codes/A2CFE97B-B34F-487F-B4A1-66EA5CDCC2A2",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 10
+    },
+    {
+      "endpoint": "/reason-codes/A2CFE97B-B34F-487F-B4A1-66EA5CDCC2A2",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 10
+    },
+    {
+      "endpoint": "/products",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 15
+    },
+    {
+      "endpoint": "/products/CB1A7FF6-29A7-42DD-92F4-DDDDE2CC5976",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/products",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/products/CB1A7FF6-29A7-42DD-92F4-DDDDE2CC5976",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 10
+    },
+    {
+      "endpoint": "/products/CB1A7FF6-29A7-42DD-92F4-DDDDE2CC5976",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/production-plans",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 16
+    },
+    {
+      "endpoint": "/production-plans/7CCED220-5B39-418A-8784-E87B1C8BE2E6",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/production-plans",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/production-plans/7CCED220-5B39-418A-8784-E87B1C8BE2E6",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/production-plans/7CCED220-5B39-418A-8784-E87B1C8BE2E6",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/production-plan-templates",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 16
+    },
+    {
+      "endpoint": "/production-plan-templates/C767BD6C-4E12-4658-A7DA-2E506F10C1CC",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/production-plan-templates",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/production-plan-templates/C767BD6C-4E12-4658-A7DA-2E506F10C1CC",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 12
+    },
+    {
+      "endpoint": "/production-plan-templates/C767BD6C-4E12-4658-A7DA-2E506F10C1CC",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/rca-templates",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 15
+    },
+    {
+      "endpoint": "/rca-templates/2A538BB9-42C1-4BDC-84F9-36D085795C00",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/rca-templates",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 5
+    },
+    {
+      "endpoint": "/rca-templates/2A538BB9-42C1-4BDC-84F9-36D085795C00",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 11
+    },
+    {
+      "endpoint": "/rca-templates/2A538BB9-42C1-4BDC-84F9-36D085795C00",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/evidence-categories",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 15
+    },
+    {
+      "endpoint": "/evidence-categories/CC4FCE42-DDDB-4ADF-8B09-C480022ECB50",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/evidence-categories",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 5
+    },
+    {
+      "endpoint": "/evidence-categories/CC4FCE42-DDDB-4ADF-8B09-C480022ECB50",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/evidence-categories/CC4FCE42-DDDB-4ADF-8B09-C480022ECB50",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/evidence-locations",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 15
+    },
+    {
+      "endpoint": "/evidence-locations/A02FA47F-1101-4B7D-8235-747CE462E8C4",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 5
+    },
+    {
+      "endpoint": "/evidence-locations",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/evidence-locations/A02FA47F-1101-4B7D-8235-747CE462E8C4",
+      "method": "PUT",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 11
+    },
+    {
+      "endpoint": "/evidence-locations/A02FA47F-1101-4B7D-8235-747CE462E8C4",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/rca-trigger-configs",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 20
+    },
+    {
+      "endpoint": "/rca-trigger-configs/4BF5DF39-7B23-47C4-8852-AA48E1CB3D74",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/rca-trigger-configs",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/rca-trigger-configs/4BF5DF39-7B23-47C4-8852-AA48E1CB3D74",
+      "method": "PATCH",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 15
+    },
+    {
+      "endpoint": "/rca-trigger-configs/4BF5DF39-7B23-47C4-8852-AA48E1CB3D74",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/rca-analysis-configs",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 16
+    },
+    {
+      "endpoint": "/rca-analysis-configs/AB634D07-E7AA-4403-865D-433697A57169",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/rca-analysis-configs",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/rca-analysis-configs/AB634D07-E7AA-4403-865D-433697A57169",
+      "method": "PATCH",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 14
+    },
+    {
+      "endpoint": "/rca-analysis-configs/AB634D07-E7AA-4403-865D-433697A57169",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/five-why-analyses",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/fishbone-diagrams",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 5
+    },
+    {
+      "endpoint": "/fmea-analyses",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/fault-tree-analyses",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/barrier-analyses",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/change-analyses",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/pi-connections",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 18
+    },
+    {
+      "endpoint": "/pi-connections/18452BFF-13A7-49B4-8C81-F4140EAB6D7A",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/pi-connections",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/pi-connections/18452BFF-13A7-49B4-8C81-F4140EAB6D7A",
+      "method": "PATCH",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 20
+    },
+    {
+      "endpoint": "/pi-connections/18452BFF-13A7-49B4-8C81-F4140EAB6D7A",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/historian-tags",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 18
+    },
+    {
+      "endpoint": "/historian-tags/A77FD95F-6FAA-4F9B-94D5-FEF4C86DC060",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 10
+    },
+    {
+      "endpoint": "/historian-tags",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/historian-tags/A77FD95F-6FAA-4F9B-94D5-FEF4C86DC060",
+      "method": "PATCH",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 24
+    },
+    {
+      "endpoint": "/historian-tags/A77FD95F-6FAA-4F9B-94D5-FEF4C86DC060",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 11
+    },
+    {
+      "endpoint": "/custom-attribute-definitions",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 14
+    },
+    {
+      "endpoint": "/custom-attribute-definitions/B2A57DF6-DFB4-423B-9806-D45E0742DACD",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/custom-attribute-definitions",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 5
+    },
+    {
+      "endpoint": "/custom-attribute-definitions/B2A57DF6-DFB4-423B-9806-D45E0742DACD",
+      "method": "PATCH",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 17
+    },
+    {
+      "endpoint": "/custom-attribute-definitions/B2A57DF6-DFB4-423B-9806-D45E0742DACD",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/custom-attribute-values",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 14
+    },
+    {
+      "endpoint": "/custom-attribute-values/134EB680-CD38-4F98-8D20-1880579E53DA",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/custom-attribute-values",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 5
+    },
+    {
+      "endpoint": "/custom-attribute-values/134EB680-CD38-4F98-8D20-1880579E53DA",
+      "method": "PATCH",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 15
+    },
+    {
+      "endpoint": "/custom-attribute-values/134EB680-CD38-4F98-8D20-1880579E53DA",
+      "method": "DELETE",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "endpoint": "/roles",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 5
+    },
+    {
+      "endpoint": "/tasks",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 7
+    },
+    {
+      "endpoint": "/dashboard-configurations",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/app-settings",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 6
+    },
+    {
+      "endpoint": "/data-sources",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 5
+    },
+    {
+      "endpoint": "/audit-logs",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 8
+    },
+    {
+      "endpoint": "/unmapped-events",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 5
+    }
+  ],
+  "fixesApplied": [],
+  "timestamp": "2025-11-26T10:36:43.556Z",
+  "testContext": {
+    "organizationId": "46588B17-1B17-4F4D-9166-AE4F993D5A7C",
+    "tenantId": "C0B51780-1016-4CA9-A17E-DB94E997AED4",
+    "unitId": "DC7C86F2-C3BB-46DF-B5ED-893018E4B2B1"
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/canonical-event.schema.json",
+  "title": "ProAct canonical ingestion envelope",
+  "description": "Versioned envelope every adapter (PI Web API, MQTT, Kafka, future OPC UA/imports) emits into the intake pipeline. Spec section 5.1. Skeleton authored in Phase 0.1; completed in 1.5.",
+  "type": "object",
+  "required": ["schemaVersion", "messageId", "tenantId", "connectionId", "sourceType", "sourceObjectId", "operation", "kind", "observedAt", "receivedAt", "location", "quality", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1.0" },
+
+    "messageId": { "type": "string", "minLength": 1, "description": "Identifies one delivery (dedupe key with tenantId + connectionId)." },
+    "tenantId": { "type": "string", "format": "uuid", "description": "Checked against the connector's authenticated binding; never grants access." },
+    "connectionId": { "type": "string", "format": "uuid" },
+    "sourceType": { "type": "string", "enum": ["pi_web_api", "mqtt", "kafka", "opc_ua", "rest_import", "file_import", "db_import", "manual"] },
+    "sourceObjectId": { "type": "string", "minLength": 1, "description": "Stable identity of the source object (e.g. PI WebId, topic+device id). Logical identity = tenant + connection + sourceObjectId." },
+    "sourceRevision": { "type": ["string", "null"], "description": "Source version/revision when the source has one; otherwise null and contentHash is used." },
+    "operation": { "type": "string", "enum": ["observe", "correct", "retract"], "description": "ING01: independent observation, correction of an earlier revision, or retraction (tombstone)." },
+    "kind": { "type": "string", "enum": ["interval_event", "measurement", "state", "output_event", "retraction"] },
+
+    "observedAt": { "type": "string", "format": "date-time", "description": "Event time at the source (UTC)." },
+    "receivedAt": { "type": "string", "format": "date-time", "description": "When the connector received it (UTC)." },
+    "startTime": { "type": "string", "format": "date-time", "description": "Interval kinds only." },
+    "endTime": { "type": ["string", "null"], "format": "date-time", "description": "Null = open interval. Source sentinels (e.g. 9999-12-31) are normalised to null and kept in rawPayload." },
+    "sourceTimezone": { "type": ["string", "null"], "description": "IANA zone if the source supplied local times." },
+
+    "location": {
+      "type": "object",
+      "required": ["sourcePath"],
+      "additionalProperties": false,
+      "properties": {
+        "sourcePath": { "type": "string", "description": "Source asset path or identifier as delivered." },
+        "sourceElementIds": { "type": "array", "items": { "type": "string" }, "description": "Ancestor identifiers for mapping (e.g. AF element WebIds)." },
+        "unitId": { "type": ["string", "null"], "format": "uuid", "description": "Assigned by mapping, never guessed by the adapter." },
+        "assetId": { "type": ["string", "null"], "format": "uuid" }
+      }
+    },
+
+    "values": {
+      "type": "object",
+      "description": "Typed values. For interval events: template name and attributes; for measurements: a single sample.",
+      "additionalProperties": false,
+      "properties": {
+        "templateName": { "type": ["string", "null"] },
+        "attributes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string", "enum": ["number", "string", "boolean", "digital", "duration", "timestamp"] },
+              "value": {},
+              "digital": {
+                "type": "object",
+                "required": ["name", "value"],
+                "properties": { "name": { "type": "string" }, "value": { "type": "integer" }, "isSystem": { "type": "boolean" } }
+              },
+              "unit": { "type": ["string", "null"] },
+              "semanticType": { "type": ["string", "null"], "enum": ["rate", "counter", "state", "quality", "level", "output_increment", "other", null] }
+            }
+          }
+        },
+        "sample": {
+          "type": "object",
+          "required": ["signalRef", "value"],
+          "properties": {
+            "signalRef": { "type": "string" },
+            "value": {},
+            "unit": { "type": ["string", "null"] },
+            "semanticType": { "type": "string", "enum": ["rate", "counter", "state", "quality", "level", "output_increment", "other"] },
+            "sequence": { "type": ["integer", "null"] }
+          }
+        }
+      }
+    },
+
+    "quality": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "type": "string", "enum": ["good", "uncertain", "bad", "missing"] },
+        "sourceFlags": { "type": "array", "items": { "type": "string" } },
+        "reason": { "type": ["string", "null"] },
+        "degraded": { "type": "boolean", "description": "e.g. timestamp substituted by receive time (MQ03)." }
+      }
+    },
+
+    "provenance": {
+      "type": "object",
+      "required": ["payloadHash", "mappingVersion", "correlationId"],
+      "additionalProperties": false,
+      "properties": {
+        "rawPayload": { "description": "Inline raw payload when <= 1 MiB." },
+        "rawPayloadRef": { "type": ["string", "null"], "description": "Object-store reference when the payload is large (KF04)." },
+        "payloadHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "sourceCursor": { "type": ["object", "null"], "description": "Adapter checkpoint context (window, page, offset)." },
+        "mappingVersion": { "type": "integer", "minimum": 0 },
+        "correlationId": { "type": "string" },
+        "replayRunId": { "type": ["string", "null"], "format": "uuid" }
+      }
+    },
+
+    "sourceControls": {
+      "type": "object",
+      "description": "Protocol-specific controls (section 5.1 last row).",
+      "additionalProperties": false,
+      "properties": {
+        "mqtt": { "type": "object", "properties": { "retained": { "type": "boolean" }, "duplicate": { "type": "boolean" }, "qos": { "type": "integer" }, "bootId": { "type": ["string", "null"] }, "sequence": { "type": ["integer", "null"] } } },
+        "kafka": { "type": "object", "properties": { "topic": { "type": "string" }, "partition": { "type": "integer" }, "offset": { "type": "integer" }, "key": { "type": ["string", "null"] }, "headers": { "type": "object" } } },
+        "pi": { "type": "object", "properties": { "webId": { "type": "string" }, "lastModified": { "type": ["string", "null"] }, "contentHash": { "type": ["string", "null"] }, "rawEndTime": { "type": ["string", "null"] } } }
+      }
+    }
+  },
+  "allOf": [
+    { "if": { "properties": { "kind": { "enum": ["interval_event", "output_event"] } } }, "then": { "required": ["startTime"] } },
+    { "if": { "properties": { "kind": { "const": "measurement" } } }, "then": { "required": ["values"], "properties": { "values": { "required": ["sample"] } } } },
+    { "if": { "properties": { "operation": { "const": "retract" } } }, "then": { "required": ["sourceRevision"] } }
+  ]
+}

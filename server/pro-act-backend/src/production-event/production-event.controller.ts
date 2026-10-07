@@ -23,7 +23,11 @@ export class ProductionEventController {
     @Query('eventType') eventType?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('tenantId') tenantId?: string,
   ): Promise<ProductionEvent[]> {
+    if (tenantId) {
+      return this.eventService.findByTenant(tenantId);
+    }
     if (unitId) {
       return this.eventService.findByUnit(unitId);
     }

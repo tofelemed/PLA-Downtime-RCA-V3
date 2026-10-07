@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { ProductionPlan } from './production-plan.entity';
 
 @Injectable()
@@ -11,20 +12,20 @@ export class ProductionPlanService {
   ) {}
 
   findAll(): Promise<ProductionPlan[]> {
-    return this.planRepository.find({
-      relations: ['unit', 'product', 'tenant'],
-    });
+    return this.planRepository.find();
   }
 
   findOne(id: string): Promise<ProductionPlan | null> {
     return this.planRepository.findOne({
       where: { id },
-      relations: ['unit', 'product', 'tenant'],
     });
   }
 
   create(data: Partial<ProductionPlan>): Promise<ProductionPlan> {
-    const plan = this.planRepository.create(data);
+    const plan = this.planRepository.create({
+      ...data,
+      id: data.id ?? randomUUID(),
+    });
     return this.planRepository.save(plan);
   }
 
@@ -40,21 +41,12 @@ export class ProductionPlanService {
   findByTenant(tenantId: string): Promise<ProductionPlan[]> {
     return this.planRepository.find({
       where: { tenantId },
-      relations: ['unit', 'product', 'tenant'],
     });
   }
 
   findByStatus(status: string): Promise<ProductionPlan[]> {
     return this.planRepository.find({
       where: { status },
-      relations: ['unit', 'product', 'tenant'],
-    });
-  }
-
-  findByApprovalStatus(approvalStatus: string): Promise<ProductionPlan[]> {
-    return this.planRepository.find({
-      where: { approvalStatus },
-      relations: ['unit', 'product', 'tenant'],
     });
   }
 } 

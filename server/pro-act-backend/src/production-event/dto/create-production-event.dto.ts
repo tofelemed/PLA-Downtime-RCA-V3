@@ -39,14 +39,12 @@ export class CreateProductionEventDto {
 
   @ApiProperty()
   @IsDateString()
-  @Type(() => Date)
-  startTime: Date;
+  startTime: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsDateString()
-  @Type(() => Date)
-  endTime?: Date;
+  endTime?: string;
 
   @ApiProperty({ enum: ['Manual', 'Simulated PI', 'CMMS'] })
   @IsString()
@@ -167,4 +165,14 @@ export class CreateProductionEventDto {
   @IsOptional()
   @IsNumber()
   duration?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsUUID()
+  tenantId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsUUID()
+  organizationId?: string;
 } 

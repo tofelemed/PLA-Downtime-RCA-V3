@@ -1,0 +1,22 @@
+{
+  "id": "T02",
+  "title": "Open event with source sentinel",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T02, PI03",
+  "tolerance": "0.000001",
+  "inputs": {
+    "startTime": "2026-10-07T10:00:00Z",
+    "sourceEndTime": "9999-12-31T23:59:59Z",
+    "asOf": "2026-10-07T10:15:00Z"
+  },
+  "expected": {
+    "endTime": null,
+    "durationSeconds": null,
+    "elapsedSeconds": "900",
+    "neverYear9999Duration": true,
+    "rawSentinelRetained": true
+  },
+  "owner_subphase": "1.1",
+  "notes": "",
+  "status": "authored"
+}

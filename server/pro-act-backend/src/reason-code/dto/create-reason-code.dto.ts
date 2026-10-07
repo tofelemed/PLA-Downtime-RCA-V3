@@ -19,10 +19,17 @@ export class CreateReasonCodeDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
-  @IsUUID()
-  parentId?: string;
+  @IsString()
+  category?: string;
 
-  @ApiProperty()
+  // Note: parentId doesn't exist in database schema
+  // @ApiProperty({ required: false })
+  // @IsOptional()
+  // @IsUUID()
+  // parentId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsUUID()
-  tenantId: string;
+  tenantId?: string;
 } 

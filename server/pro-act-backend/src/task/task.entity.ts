@@ -1,68 +1,49 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { User } from '../users/user.entity';
-import { Organization } from '../organization/organization.entity';
-import { Tenant } from '../tenant/tenant.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('tasks')
 export class Task {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ name: 'title', type: 'varchar', length: 255 })
   title: string;
 
-  @Column({ type: 'text', nullable: true })
-  description: string;
+  @Column({ name: 'description', type: 'text', nullable: true })
+  description?: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'assigned_to', type: 'varchar', length: 36 })
   assignedTo: string;
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'assignedTo' })
-  assignedToUser: User;
-
-  @Column({ type: 'uuid' })
+  @Column({ name: 'assigned_by', type: 'varchar', length: 36 })
   assignedBy: string;
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'assignedBy' })
-  assignedByUser: User;
+  @Column({ name: 'priority', type: 'varchar', length: 50 })
+  priority: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  priority: string; // Low, Medium, High, Critical
+  @Column({ name: 'status', type: 'varchar', length: 50 })
+  status: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  status: string; // Open, In Progress, Completed, Cancelled
+  @Column({ name: 'due_date', type: 'timestamptz', nullable: true })
+  dueDate?: Date;
 
-  @Column({ type: 'datetime', nullable: true })
-  dueDate: Date;
+  @Column({ name: 'completed_date', type: 'timestamptz', nullable: true })
+  completedDate?: Date;
 
-  @Column({ type: 'datetime', nullable: true })
-  completedDate: Date;
+  @Column({ name: 'entity_type', type: 'varchar', length: 100, nullable: true })
+  entityType?: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  entityType: string;
+  @Column({ name: 'entity_id', type: 'varchar', length: 36, nullable: true })
+  entityId?: string;
 
-  @Column({ type: 'uuid', nullable: true })
-  entityId: string;
-
-  @Column({ type: 'uuid' })
+  @Column({ name: 'organization_id', type: 'varchar', length: 36 })
   organizationId: string;
 
-  @ManyToOne(() => Organization)
-  @JoinColumn({ name: 'organizationId' })
-  organization: Organization;
-
-  @Column({ type: 'uuid' })
+  @Column({ name: 'tenant_id', type: 'varchar', length: 36 })
   tenantId: string;
 
-  @ManyToOne(() => Tenant)
-  @JoinColumn({ name: 'tenantId' })
-  tenant: Tenant;
-
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

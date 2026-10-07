@@ -83,11 +83,11 @@ export const LoginForm: React.FC = () => {
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <p className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</p>
             <div className="space-y-1 text-xs text-gray-600">
-              <div>admin@acme.com - SuperAdmin</div>
-              <div>manager@acme.com - TenantAdmin</div>
-              <div>engineer@acme.com - Engineer</div>
-              <div>operator@acme.com - Operator</div>
-              <div className="font-medium mt-2">Password: demo123</div>
+              <div><span className="font-medium">admin@acme.com</span> / demo123 (SuperAdmin)</div>
+              <div><span className="font-medium">test@example.com</span> / Test123!@# (SuperAdmin)</div>
+              <div>manager@acme.com / demo123 (TenantAdmin)</div>
+              <div>engineer@acme.com / demo123 (Engineer)</div>
+              <div>operator@acme.com / demo123 (Operator)</div>
             </div>
           </div>
         </CardContent>

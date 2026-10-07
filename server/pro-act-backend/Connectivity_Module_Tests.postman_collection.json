@@ -1,0 +1,608 @@
+{
+  "info": {
+    "name": "Connectivity Module Tests",
+    "description": "Comprehensive test collection for the Connectivity module backend API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/connectivity",
+      "type": "string"
+    },
+    {
+      "key": "opcuaConnectionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "modbusConnectionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ethernetipConnectionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mqttConnectionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "integrationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bindingId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "OPC UA Connections",
+      "item": [
+        {
+          "name": "Create OPC UA Connection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test OPC UA Server\",\n  \"endpoint\": \"opc.tcp://localhost:4840\",\n  \"securityMode\": \"None\",\n  \"securityPolicy\": \"None\",\n  \"username\": \"testuser\",\n  \"password\": \"testpass\",\n  \"timeoutMs\": 30000,\n  \"sessionTimeoutMs\": 60000,\n  \"keepAliveMs\": 10000,\n  \"maxMessageSize\": 65536,\n  \"pollingIntervalMs\": 1000,\n  \"subscriptionSize\": 1000,\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/opcua/connections",
+              "host": ["{{baseUrl}}"],
+              "path": ["opcua", "connections"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('opcuaConnectionId', response.data.id);",
+                  "    console.log('OPC UA Connection ID saved:', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All OPC UA Connections",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/opcua/connections",
+              "host": ["{{baseUrl}}"],
+              "path": ["opcua", "connections"]
+            }
+          }
+        },
+        {
+          "name": "Get OPC UA Connection by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/opcua/connections/{{opcuaConnectionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["opcua", "connections", "{{opcuaConnectionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update OPC UA Connection",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated OPC UA Server\",\n  \"pollingIntervalMs\": 2000,\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/opcua/connections/{{opcuaConnectionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["opcua", "connections", "{{opcuaConnectionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Test OPC UA Connection",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/opcua/connections/{{opcuaConnectionId}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["opcua", "connections", "{{opcuaConnectionId}}", "test"]
+            }
+          }
+        },
+        {
+          "name": "Delete OPC UA Connection",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/opcua/connections/{{opcuaConnectionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["opcua", "connections", "{{opcuaConnectionId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Modbus Connections",
+      "item": [
+        {
+          "name": "Create Modbus Connection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Modbus Device\",\n  \"connectionType\": \"tcp\",\n  \"ipAddress\": \"192.168.1.100\",\n  \"port\": 502,\n  \"timeoutMs\": 5000,\n  \"retryCount\": 3,\n  \"unitId\": 1,\n  \"pollingIntervalMs\": 1000,\n  \"startAddress\": 0,\n  \"registerCount\": 10,\n  \"dataType\": \"uint16\",\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/modbus/connections",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "connections"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('modbusConnectionId', response.data.id);",
+                  "    console.log('Modbus Connection ID saved:', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Modbus Connections",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/modbus/connections",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "connections"]
+            }
+          }
+        },
+        {
+          "name": "Test Modbus Connection",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/modbus/connections/{{modbusConnectionId}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "connections", "{{modbusConnectionId}}", "test"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "EtherNet/IP Connections",
+      "item": [
+        {
+          "name": "Create EtherNet/IP Connection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test EtherNet/IP Device\",\n  \"ipAddress\": \"192.168.1.101\",\n  \"port\": 44818,\n  \"timeoutMs\": 10000,\n  \"backplaneSlot\": 0,\n  \"vendorId\": 1,\n  \"productCode\": 0,\n  \"pollingIntervalMs\": 100,\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ethernetip/connections",
+              "host": ["{{baseUrl}}"],
+              "path": ["ethernetip", "connections"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('ethernetipConnectionId', response.data.id);",
+                  "    console.log('EtherNet/IP Connection ID saved:', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All EtherNet/IP Connections",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ethernetip/connections",
+              "host": ["{{baseUrl}}"],
+              "path": ["ethernetip", "connections"]
+            }
+          }
+        },
+        {
+          "name": "Test EtherNet/IP Connection",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/ethernetip/connections/{{ethernetipConnectionId}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["ethernetip", "connections", "{{ethernetipConnectionId}}", "test"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MQTT Connections",
+      "item": [
+        {
+          "name": "Create MQTT Connection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test MQTT Broker\",\n  \"brokerUrl\": \"mqtt://localhost:1883\",\n  \"port\": 1883,\n  \"clientId\": \"ProAct_Test_Client\",\n  \"username\": \"testuser\",\n  \"password\": \"testpass\",\n  \"keepAliveSeconds\": 60,\n  \"cleanSession\": true,\n  \"subscribeTopics\": \"sensors/+/temperature,devices/+/status\",\n  \"publishTopic\": \"commands/device/control\",\n  \"qosLevel\": 1,\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mqtt/connections",
+              "host": ["{{baseUrl}}"],
+              "path": ["mqtt", "connections"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('mqttConnectionId', response.data.id);",
+                  "    console.log('MQTT Connection ID saved:', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All MQTT Connections",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/mqtt/connections",
+              "host": ["{{baseUrl}}"],
+              "path": ["mqtt", "connections"]
+            }
+          }
+        },
+        {
+          "name": "Test MQTT Connection",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/mqtt/connections/{{mqttConnectionId}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["mqtt", "connections", "{{mqttConnectionId}}", "test"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "System Integrations",
+      "item": [
+        {
+          "name": "Create System Integration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test PI Integration\",\n  \"integrationType\": \"pi\",\n  \"endpoint\": \"https://pi-server.company.com/piwebapi\",\n  \"apiKey\": \"test-api-key\",\n  \"username\": \"pi-user\",\n  \"password\": \"pi-password\",\n  \"systemType\": \"aveva-pi\",\n  \"enabled\": true,\n  \"syncIntervalSeconds\": 300\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/integrations",
+              "host": ["{{baseUrl}}"],
+              "path": ["integrations"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('integrationId', response.data.id);",
+                  "    console.log('Integration ID saved:', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All System Integrations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/integrations",
+              "host": ["{{baseUrl}}"],
+              "path": ["integrations"]
+            }
+          }
+        },
+        {
+          "name": "Test System Integration",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/integrations/{{integrationId}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["integrations", "{{integrationId}}", "test"]
+            }
+          }
+        },
+        {
+          "name": "Sync System Integration",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/integrations/{{integrationId}}/sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["integrations", "{{integrationId}}", "sync"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Data Bindings",
+      "item": [
+        {
+          "name": "Create Data Binding",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"OPC UA to PI Binding\",\n  \"sourceConnectionId\": \"{{opcuaConnectionId}}\",\n  \"targetConnectionId\": \"{{integrationId}}\",\n  \"sourcePath\": \"ns=2;s=Device1.Temperature\",\n  \"targetPath\": \"\\\\\\\\Server\\\\Area\\\\Temperature\",\n  \"transformationRules\": {\n    \"scaling\": 1.8,\n    \"offset\": 32\n  },\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/bindings",
+              "host": ["{{baseUrl}}"],
+              "path": ["bindings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('bindingId', response.data.id);",
+                  "    console.log('Binding ID saved:', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Data Bindings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/bindings",
+              "host": ["{{baseUrl}}"],
+              "path": ["bindings"]
+            }
+          }
+        },
+        {
+          "name": "Activate Data Binding",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/bindings/{{bindingId}}/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["bindings", "{{bindingId}}", "activate"]
+            }
+          }
+        },
+        {
+          "name": "Deactivate Data Binding",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/bindings/{{bindingId}}/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["bindings", "{{bindingId}}", "deactivate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Monitoring",
+      "item": [
+        {
+          "name": "Get System Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Get Connection Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health/connections",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "connections"]
+            }
+          }
+        },
+        {
+          "name": "Get Integration Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health/integrations",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "integrations"]
+            }
+          }
+        },
+        {
+          "name": "Run Health Check",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/health/check",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "check"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Performance Metrics",
+      "item": [
+        {
+          "name": "Get All Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics"]
+            }
+          }
+        },
+        {
+          "name": "Get Connection Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/metrics/connections/{{opcuaConnectionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics", "connections", "{{opcuaConnectionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Integration Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/metrics/integrations/{{integrationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics", "integrations", "{{integrationId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Performance Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/metrics/performance",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics", "performance"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Real-time Data",
+      "item": [
+        {
+          "name": "Get Real-time Connection Data",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/realtime/connections/{{opcuaConnectionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["realtime", "connections", "{{opcuaConnectionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Real-time Integration Data",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/realtime/integrations/{{integrationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["realtime", "integrations", "{{integrationId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

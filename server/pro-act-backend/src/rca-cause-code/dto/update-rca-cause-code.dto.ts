@@ -10,15 +10,26 @@ export class UpdateRcaCauseCodeDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
+  name?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
   description?: string;
 
   @ApiProperty({ required: false })
-  @IsUUID()
+  @IsString()
   @IsOptional()
-  parentId?: string;
+  category?: string;
+
+  // Note: parentId doesn't exist in database schema
+  // @ApiProperty({ required: false })
+  // @IsUUID()
+  // @IsOptional()
+  // parentId?: string;
 
   @ApiProperty({ required: false })
   @IsUUID()
   @IsOptional()
   tenantId?: string;
-} 
+}

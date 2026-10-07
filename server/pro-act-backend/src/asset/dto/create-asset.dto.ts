@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsDate, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateAssetDto {
   @ApiProperty()
@@ -21,15 +22,15 @@ export class CreateAssetDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
   @IsString()
-  @IsNotEmpty()
-  assetType: string;
+  @IsOptional()
+  assetType?: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
   @IsString()
-  @IsNotEmpty()
-  criticality: string;
+  @IsOptional()
+  criticality?: string;
 
   @ApiProperty({ required: false })
   @IsString()
@@ -47,23 +48,37 @@ export class CreateAssetDto {
   serialNumber?: string;
 
   @ApiProperty({ required: false })
+  @IsString()
   @IsOptional()
+  status?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  location?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @Type(() => Date)
   installationDate?: Date;
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @Type(() => Date)
   lastMaintenanceDate?: Date;
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @Type(() => Date)
   nextMaintenanceDate?: Date;
 
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  status: string;
-
-  @ApiProperty()
+  @ApiProperty({ required: false })
   @IsUUID()
-  tenantId: string;
+  @IsOptional()
+  tenantId?: string;
+
+  @ApiProperty({ required: false })
+  @IsUUID()
+  @IsOptional()
+  organizationId?: string;
 } 

@@ -16,15 +16,18 @@ export class ReasonCodeController {
   @Get()
   findAll(
     @Query('tenantId') tenantId?: string,
-    @Query('parentId') parentId?: string,
-    @Query('root') root?: string,
+    // Note: parentId doesn't exist in database schema, so this filter is not supported
+    // @Query('parentId') parentId?: string,
+    // Note: root filter is not supported since parentId doesn't exist
+    // @Query('root') root?: string,
   ): Promise<ReasonCode[]> {
-    if (root === 'true' && tenantId) {
-      return this.reasonCodeService.findRootCodes(tenantId);
-    }
-    if (parentId) {
-      return this.reasonCodeService.findByParent(parentId);
-    }
+    // Note: root and parentId filters are not supported since parentId doesn't exist in database
+    // if (root === 'true' && tenantId) {
+    //   return this.reasonCodeService.findRootCodes(tenantId);
+    // }
+    // if (parentId) {
+    //   return this.reasonCodeService.findByParent(parentId);
+    // }
     if (tenantId) {
       return this.reasonCodeService.findByTenant(tenantId);
     }

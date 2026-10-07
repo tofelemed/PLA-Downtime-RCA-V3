@@ -1,0 +1,11 @@
+{
+  "id": "T04",
+  "title": "Source refresh preserves user work",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T04, ING06",
+  "given": "User codes an event and links RCA",
+  "action": "PI updates the event frame end time",
+  "assertion": "Source revision changes; user coding, status and RCA link survive",
+  "owner_subphase": "1.2",
+  "status": "authored"
+}

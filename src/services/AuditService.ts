@@ -1,5 +1,5 @@
 import { AuditLog } from './MasterDataService';
-import { storageService } from './StorageService';
+import { auditApi } from './api/auditApi';
 
 export interface AuditAction {
   action: string;
@@ -27,13 +27,41 @@ export class AuditService {
   }
 
   async logAction(auditAction: AuditAction): Promise<AuditLog> {
-    const auditLog: Omit<AuditLog, 'id' | 'createdAt' | 'updatedAt'> = {
-      ...auditAction,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    return await storageService.create<AuditLog>('auditLogs', auditLog);
+    try {
+      const result = await auditApi.createLog({
+        userId: auditAction.userId,
+        userName: auditAction.userName,
+        action: auditAction.action,
+        entityType: auditAction.entityType,
+        entityId: auditAction.entityId,
+        details: auditAction.details,
+        organizationId: auditAction.organizationId,
+        tenantId: auditAction.tenantId,
+        ipAddress: auditAction.ipAddress,
+        userAgent: auditAction.userAgent,
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Map API response to AuditLog format
+      return {
+        id: result.id || crypto.randomUUID(),
+        userId: auditAction.userId,
+        action: auditAction.action,
+        entityType: auditAction.entityType,
+        entityId: auditAction.entityId,
+        details: typeof result.details === 'string' 
+          ? JSON.parse(result.details || '{}') 
+          : result.details,
+        timestamp: result.timestamp || new Date().toISOString(),
+        tenantId: auditAction.tenantId,
+        organizationId: auditAction.organizationId,
+        createdAt: result.createdAt || new Date().toISOString(),
+        updatedAt: result.updatedAt || new Date().toISOString(),
+      } as AuditLog;
+    } catch (error) {
+      console.error('Failed to log audit action to backend:', error);
+      throw error;
+    }
   }
 
   async getAuditLogs(filters?: {
@@ -41,27 +69,41 @@ export class AuditService {
     userId?: string;
     entityType?: string;
     entityId?: string;
+    action?: string;
     startDate?: string;
     endDate?: string;
     limit?: number;
+    offset?: number;
   }): Promise<AuditLog[]> {
-    let logs = await storageService.query<AuditLog>('auditLogs', filters);
-
-    // Apply date filters if provided
-    if (filters?.startDate) {
-      logs = logs.filter(log => log.createdAt >= filters.startDate!);
+    try {
+      const records = await auditApi.getAuditLogs(filters);
+      return records.map((log) => {
+        let details: unknown = log.details;
+        try {
+          details = log.details ? JSON.parse(log.details) : {};
+        } catch {
+          details = log.details;
+        }
+        const parsed = typeof details === 'object' && details !== null ? details as Record<string, unknown> : {};
+        return {
+          id: log.id,
+          userId: log.userId,
+          userName: (parsed.userName as string) || log.userId,
+          action: log.action,
+          entityType: log.entityType,
+          entityId: log.entityId,
+          details: parsed.message ?? log.details ?? '',
+          timestamp: log.timestamp || log.createdAt,
+          tenantId: log.tenantId || '',
+          organizationId: log.organizationId || '',
+          createdAt: log.createdAt,
+          updatedAt: log.updatedAt,
+        } as AuditLog;
+      });
+    } catch (error) {
+      console.error('Failed to get audit logs from backend:', error);
+      return [];
     }
-    if (filters?.endDate) {
-      logs = logs.filter(log => log.createdAt <= filters.endDate!);
-    }
-
-    // Apply limit if provided
-    if (filters?.limit) {
-      logs = logs.slice(0, filters.limit);
-    }
-
-    // Sort by creation date (newest first)
-    return logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getAuditLogsByEntity(entityType: string, entityId: string, tenantId?: string): Promise<AuditLog[]> {

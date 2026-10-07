@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { masterDataService, ProductionEvent, ImpactCode, Unit, Asset } from '../services/MasterDataService';
 import { Eye, FileText } from 'lucide-react';
 import { BarChart, Bar, ResponsiveContainer } from 'recharts';
+import { formatDurationSimple } from '../utils/durationFormatter';
 
 interface LossEventTableProps {
   tenantId: string;
@@ -9,6 +10,7 @@ interface LossEventTableProps {
   startDate: string;
   endDate: string;
   lossCategory?: string;
+  impactCodeId?: string;
   shift?: string;
   onEventClick?: (event: ProductionEvent) => void;
 }
@@ -21,7 +23,7 @@ function getInitials(name?: string) {
 }
 
 export const LossEventTable: React.FC<LossEventTableProps> = ({
-  tenantId, unitId, startDate, endDate, lossCategory, shift, onEventClick
+  tenantId, unitId, startDate, endDate, lossCategory, impactCodeId, shift, onEventClick
 }) => {
   const [events, setEvents] = useState<ProductionEvent[]>([]);
   const [impactCodes, setImpactCodes] = useState<ImpactCode[]>([]);
@@ -34,7 +36,7 @@ export const LossEventTable: React.FC<LossEventTableProps> = ({
     Promise.all([
       masterDataService.getProductionEvents({ tenantId, unitId }),
       masterDataService.getImpactCodes({ tenantId }),
-      masterDataService.getUnits({ tenantId }),
+      masterDataService.getUnits(),
       masterDataService.getAssets({ tenantId }),
     ]).then(([ev, codes, units, assets]) => {
       // Filter by date, category, and shift
@@ -45,6 +47,7 @@ export const LossEventTable: React.FC<LossEventTableProps> = ({
         const end = new Date(endDate).getTime();
         if (t < start || t > end) return false;
         if (lossCategory && e.lossCategory !== lossCategory) return false;
+        if (impactCodeId && e.impactCodeId !== impactCodeId) return false;
         if (shift && e.shift !== shift) return false;
         return true;
       });
@@ -54,7 +57,7 @@ export const LossEventTable: React.FC<LossEventTableProps> = ({
       setAssets(assets);
       setLoading(false);
     });
-  }, [tenantId, unitId, startDate, endDate, lossCategory, shift]);
+  }, [tenantId, unitId, startDate, endDate, lossCategory, impactCodeId, shift]);
 
   const getUnitName = (id?: string) => units.find(u => u.id === id)?.name || '';
   const getAssetName = (id?: string) => assets.find(a => a.id === id)?.name || '';
@@ -106,7 +109,7 @@ export const LossEventTable: React.FC<LossEventTableProps> = ({
                     ev.lossCategory === 'Quality' ? 'bg-green-100 text-green-700' :
                     'bg-gray-100 text-gray-700'}`}>{ev.lossCategory || 'Other'}</span>
               </td>
-              <td className="px-4 py-2 text-right font-mono">{ev.duration}</td>
+              <td className="px-4 py-2 text-right font-mono">{formatDurationSimple(Number(ev.duration) || 0)}</td>
               <td className="px-4 py-2 w-24 text-center">
                 <ResponsiveContainer width="100%" height={18}>
                   <BarChart data={[{ value: Number(ev.duration) || 0 }]}> 

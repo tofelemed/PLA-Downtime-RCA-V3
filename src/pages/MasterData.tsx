@@ -21,7 +21,6 @@ import PlantHierarchyManager from '../components/plant-hierarchy/PlantHierarchyM
 import { useNavigate } from 'react-router-dom';
 import { useSpring, animated } from '@react-spring/web';
 import CustomAttributeDisplay from '../components/CustomAttributeDisplay';
-import { storageService } from '../services/StorageService';
 
 export const MasterData: React.FC = () => {
   const { session } = useAuth();

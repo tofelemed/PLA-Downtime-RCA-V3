@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsNumber, IsDateString, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsNotEmpty, IsUUID, IsOptional, IsNumber, IsDateString } from 'class-validator';
 
 export class CreateProductionPlanDto {
   @ApiProperty()
@@ -12,40 +11,58 @@ export class CreateProductionPlanDto {
   @IsUUID()
   unitId: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsUUID()
-  productId: string;
+  productId?: string;
 
-  @ApiProperty()
-  @IsNumber()
-  plannedQuantity: number;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsUUID()
+  tenantId?: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsUUID()
+  organizationId?: string;
+
+  @ApiProperty({ required: false, description: 'Target quantity' })
+  @IsOptional()
   @IsNumber()
-  toleranceLimit: number;
+  plannedQuantity?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  actualQuantity?: number;
 
   @ApiProperty()
   @IsDateString()
-  @Type(() => Date)
-  startDate: Date;
+  startDate: string;
 
   @ApiProperty()
   @IsDateString()
-  @Type(() => Date)
-  endDate: Date;
+  endDate: string;
 
-  @ApiProperty()
-  @IsUUID()
-  tenantId: string;
+  @ApiProperty({ required: false, enum: ['Planned', 'Active', 'Completed', 'Cancelled'] })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  toleranceLimit?: number;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   planBasis?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'JSON string of useful production time' })
   @IsOptional()
-  usefulProductionTime?: any;
+  @IsString()
+  usefulProductionTime?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -56,16 +73,6 @@ export class CreateProductionPlanDto {
   @IsOptional()
   @IsString()
   dataEntryFrequency?: string;
-
-  @ApiProperty({ enum: ['Planned', 'Active', 'Completed', 'Cancelled'] })
-  @IsString()
-  @IsNotEmpty()
-  status: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsNumber()
-  actualQuantity?: number;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -82,15 +89,15 @@ export class CreateProductionPlanDto {
   @IsString()
   plannerNotes?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'JSON string of comments array' })
   @IsOptional()
   @IsString()
   comments?: string;
 
-  @ApiProperty({ enum: ['Draft', 'Pending Review', 'Pending Approval', 'Approved', 'Rejected'] })
+  @ApiProperty({ required: false, enum: ['Draft', 'Pending Review', 'Pending Approval', 'Approved', 'Rejected'] })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  approvalStatus: string;
+  approvalStatus?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -100,8 +107,7 @@ export class CreateProductionPlanDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsDateString()
-  @Type(() => Date)
-  submittedAt?: Date;
+  submittedAt?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -111,8 +117,7 @@ export class CreateProductionPlanDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsDateString()
-  @Type(() => Date)
-  reviewedAt?: Date;
+  reviewedAt?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -122,21 +127,20 @@ export class CreateProductionPlanDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsDateString()
-  @Type(() => Date)
-  approvedAt?: Date;
+  approvedAt?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   rejectionReason?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'JSON string of custom attributes' })
   @IsOptional()
   @IsString()
   customAttributes?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'JSON string of audit trail array' })
   @IsOptional()
   @IsString()
   auditTrail?: string;
-} 
+}

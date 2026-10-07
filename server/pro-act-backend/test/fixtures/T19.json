@@ -1,0 +1,11 @@
+{
+  "id": "T19",
+  "title": "DST calendar",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T19, CAL02",
+  "given": "Daily schedules on 23-hour and 25-hour local days",
+  "action": "Generate shift instances",
+  "assertion": "Correct UTC elapsed durations, repeated-hour offsets and quantities",
+  "owner_subphase": "2.1",
+  "status": "authored"
+}

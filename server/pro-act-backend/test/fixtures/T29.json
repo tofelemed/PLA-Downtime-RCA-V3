@@ -1,0 +1,23 @@
+{
+  "id": "T29",
+  "title": "Cross-shift clipping",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T29, DT05, KPI06",
+  "tolerance": "0.000001",
+  "inputs": {
+    "stop": {
+      "startLocal": "05:50",
+      "endLocal": "06:20",
+      "tz": "Asia/Dubai"
+    },
+    "shiftBoundaryLocal": "06:00"
+  },
+  "expected": {
+    "priorShiftSeconds": "600",
+    "nextShiftSeconds": "1200",
+    "occurrenceCount": 1
+  },
+  "owner_subphase": "1.1",
+  "notes": "",
+  "status": "authored"
+}

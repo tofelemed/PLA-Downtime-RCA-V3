@@ -1,0 +1,11 @@
+{
+  "id": "T07",
+  "title": "PI paging",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T07, PI04",
+  "given": "1201 frames, page size 500, failure on page 3",
+  "action": "Run window extraction",
+  "assertion": "No completed window checkpoint until durable capture; retry yields 1201 unique source objects",
+  "owner_subphase": "1.6",
+  "status": "authored"
+}

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { Organization } from './organization.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -20,8 +21,18 @@ export class OrganizationService {
     return this.organizationRepository.findOneBy({ id });
   }
 
+  findByCode(code: string): Promise<Organization | null> {
+    return this.organizationRepository.findOneBy({ code });
+  }
+
   async create(data: Partial<Organization>): Promise<Organization> {
-    const org = this.organizationRepository.create(data);
+    // Generate UUID manually for SQL Server compatibility
+    const id = randomUUID();
+    const org = this.organizationRepository.create({
+      id,
+      isActive: data.isActive ?? true, // Default to true if not provided
+      ...data,
+    });
     const saved = await this.organizationRepository.save(org);
     this.realtimeGateway.broadcastEntityEvent('Created', 'organization', saved);
     return saved;

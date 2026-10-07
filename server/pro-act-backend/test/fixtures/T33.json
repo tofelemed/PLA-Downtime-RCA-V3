@@ -1,0 +1,11 @@
+{
+  "id": "T33",
+  "title": "Atomic save",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T33, ACC08",
+  "given": "Draft with lines",
+  "action": "Force failure midway through reconciliation update",
+  "assertion": "No partial replacement or deleted lines; previous revision intact",
+  "owner_subphase": "2.8",
+  "status": "authored"
+}

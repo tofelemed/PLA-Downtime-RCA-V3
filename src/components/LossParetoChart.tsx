@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { masterDataService, ProductionEvent, ImpactCode } from '../services/MasterDataService';
+import { formatDurationSimple } from '../utils/durationFormatter';
 
 interface LossParetoChartProps {
   tenantId: string;
@@ -72,7 +73,7 @@ export const LossParetoChart: React.FC<LossParetoChartProps> = ({ tenantId, unit
             <Tooltip
               contentStyle={{ background: '#fff', borderRadius: '0.5rem', border: '1px solid #e0e7ef' }}
               labelStyle={{ color: '#6366f1', fontWeight: 600 }}
-              formatter={(value: any, name: string) => [`${value} min`, name === 'duration' ? 'Duration' : 'Cost']}
+              formatter={(value: any, name: string) => [name === 'duration' ? formatDurationSimple(value) : `$${value}`, name === 'duration' ? 'Duration' : 'Cost']}
             />
             <Bar
               dataKey="duration"

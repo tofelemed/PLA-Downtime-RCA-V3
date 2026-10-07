@@ -1,0 +1,11 @@
+{
+  "id": "T18",
+  "title": "Reason hierarchy",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T18",
+  "given": "Reason tree saved",
+  "action": "Reload, version mappings, retire parent",
+  "assertion": "Hierarchy persists; cycles rejected; historical mapping unchanged",
+  "owner_subphase": "1.3",
+  "status": "authored"
+}

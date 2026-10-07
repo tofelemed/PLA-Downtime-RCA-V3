@@ -1,40 +1,74 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  masterDataService,
+  Organization,
+  Tenant,
+  Unit,
+  Asset,
+} from '../services/MasterDataService';
+
+interface MasterDataState {
+  organizations: Organization[];
+  tenants: Tenant[];
+  units: Unit[];
+  assets: Asset[];
+  loading: boolean;
+  error: unknown;
+}
 
 export const useMasterData = () => {
   const { session } = useAuth();
-  const [organizations, setOrganizations] = useState([]);
-  const [tenants, setTenants] = useState([]);
-  const [units, setUnits] = useState([]);
-  const [assets, setAssets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<MasterDataState>({
+    organizations: [],
+    tenants: [],
+    units: [],
+    assets: [],
+    loading: true,
+    error: null,
+  });
 
   useEffect(() => {
+    let isCancelled = false;
+
     const fetchHierarchy = async () => {
+      if (!session) {
+        setState((prev) => ({ ...prev, loading: false }));
+        return;
+      }
+
+      setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
-        setLoading(true);
-        
-        // Fetch real Pro-Act hierarchy data
-        const orgs = await fetch('/api/organizations').then(r => r.json());
-        const tnts = await fetch('/api/tenants').then(r => r.json());
-        const unts = await fetch('/api/units').then(r => r.json());
-        const asts = await fetch('/api/assets').then(r => r.json());
-        
-        setOrganizations(orgs);
-        setTenants(tnts);
-        setUnits(unts);
-        setAssets(asts);
+        const [orgs, tnts, unts, asts] = await Promise.all([
+          masterDataService.getOrganizations(),
+          masterDataService.getTenants(),
+          masterDataService.getUnits(),
+          masterDataService.getAssets({ tenantId: session?.tenant?.id }),
+        ]);
+
+        if (isCancelled) return;
+
+        setState({
+          organizations: orgs,
+          tenants: tnts,
+          units: unts,
+          assets: asts,
+          loading: false,
+          error: null,
+        });
       } catch (error) {
+        if (isCancelled) return;
         console.error('Failed to fetch hierarchy:', error);
-      } finally {
-        setLoading(false);
+        setState((prev) => ({ ...prev, loading: false, error }));
       }
     };
 
-    if (session) {
-      fetchHierarchy();
-    }
+    fetchHierarchy();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [session]);
 
-  return { organizations, tenants, units, assets, loading };
+  return state;
 };

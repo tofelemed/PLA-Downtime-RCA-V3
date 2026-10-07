@@ -1,0 +1,11 @@
+{
+  "id": "T11",
+  "title": "Source outage",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T11, DT04, MQ04",
+  "given": "Broker, historian or collector loses contact",
+  "action": "Staleness boundary passes",
+  "assertion": "Source health unavailable; state becomes Unknown per policy, not Stopped",
+  "owner_subphase": "1.10",
+  "status": "authored"
+}

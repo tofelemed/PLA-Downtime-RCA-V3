@@ -7,38 +7,64 @@ export class RCATemplate {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  // Note: Database schema has: template_name, template_type, template_data, description, is_active
+  @Column({ name: 'template_name', type: 'varchar', length: 255 })
   name: string;
 
-  @Column({ type: 'text', nullable: true })
-  description: string;
+  @Column({ name: 'description', type: 'text', nullable: true })
+  description?: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  category: string;
+  // Map category to template_type for database
+  @Column({ name: 'template_type', type: 'varchar', length: 100, nullable: true })
+  category?: string;
 
-  @Column({ type: 'nvarchar', length: 'max' })
-  logicTreeStructure: string;
+  // Map logicTreeStructure to template_data JSON for database
+  @Column({
+    name: 'template_data',
+    type: 'text',
+    nullable: true,
+    transformer: {
+      to: (value: any) => {
+        if (!value) return null;
+        if (typeof value === 'string') return value;
+        return JSON.stringify(value);
+      },
+      from: (value: string | null) => {
+        if (!value) return null;
+        try {
+          return JSON.parse(value);
+        } catch {
+          return value;
+        }
+      },
+    },
+  })
+  logicTreeStructure?: any;
 
-  @Column({ type: 'simple-array' })
-  verificationChecklist: string[];
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive: boolean;
 
-  @Column({ type: 'uuid' })
+  // Note: Database schema doesn't have 'verificationChecklist' column
+  // @Column({ type: 'simple-array' })
+  // verificationChecklist: string[];
+
+  @Column({ name: 'organization_id', type: 'uuid' })
   organizationId: string;
 
-  @ManyToOne(() => Organization)
-  @JoinColumn({ name: 'organizationId' })
-  organization: Organization;
+  // @ManyToOne(() => Organization)
+  // @JoinColumn({ name: 'organizationId' })
+  // organization: Organization;
 
-  @Column({ type: 'uuid' })
-  tenantId: string;
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
+  tenantId?: string;
 
-  @ManyToOne(() => Tenant)
-  @JoinColumn({ name: 'tenantId' })
-  tenant: Tenant;
+  // @ManyToOne(() => Tenant)
+  // @JoinColumn({ name: 'tenantId' })
+  // tenant: Tenant;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 } 

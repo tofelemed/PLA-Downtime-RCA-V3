@@ -1,23 +1,38 @@
+
+
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { masterDataService, RCA, ProductionEvent, RCARecommendation, RCAEvidence } from '../services/MasterDataService';
 import type { LogicTreeNode as UILogicTreeNode } from '../components/rca-settings/LogicTreeBuilder';
+import { rcaKnowledgeBaseService } from '../services/RCAKnowledgeBaseService';
+import { rcaAnalysisConfigService } from '../services/RCAAnalysisConfigService';
+import { RCASimilarityMatch, RCAAnalysisConfig, FiveWhyAnalysis as FiveWhyData, FishboneDiagram, FMEAAnalysis, FaultTreeAnalysis, BarrierAnalysis, ChangeAnalysis, DEFAULT_ANALYSIS_CONFIGS } from '../types/RCAKnowledgeBase';
+import SimilarRCAs from '../components/rca-analysis/SimilarRCAs';
+import FiveWhyAnalysisTool from '../components/rca-analysis/FiveWhyAnalysis';
+import FishboneDiagramTool from '../components/rca-analysis/FishboneDiagramTool';
+import FMEAAnalysisTool from '../components/rca-analysis/FMEAAnalysisTool';
+import FaultTreeAnalysisTool from '../components/rca-analysis/FaultTreeAnalysisTool';
+import BarrierAnalysisTool from '../components/rca-analysis/BarrierAnalysisTool';
+import ChangeAnalysisTool from '../components/rca-analysis/ChangeAnalysisTool';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, FileText, Users, Camera, BarChart3, Target, CheckCircle, AlertTriangle, Clock, Pencil, Trash2, Eye, Paperclip, Tag, MapPin, Hash, Video, Maximize2, X, Link, TrendingUp, DollarSign, Calendar, CheckSquare, Play, Info, Search, Download } from 'lucide-react';
+import { Plus, FileText, Users, Camera, BarChart3, Target, CheckCircle, AlertTriangle, AlertCircle, Clock, Pencil, Trash2, Eye, Paperclip, Tag, MapPin, Hash, Video, Maximize2, X, Link, TrendingUp, DollarSign, Calendar, CheckSquare, Play, Info, Search, Download, Settings, Activity, FolderTree, ChevronDown, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { treeToFlatList, flatListToTree } from '../lib/utils';
 import type { RCA as BackendRCA } from '../services/MasterDataService';
 import { usePlantSelection } from '../contexts/PlantSelectionContext';
-import { storageService } from '../services/StorageService';
-import type { User } from '../services/StorageService';
+import { userApi, UserRecord } from '../services/api/userApi';
+import { RCACreateTaskButton, RCATasksLink } from '../components/rca/RCACreateTaskButton';
+import { loadLinkedTaskIds } from '../services/rca/rcaTaskBridge';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { EventDiagram } from '@/components/EventDiagram';
 import { EventTimeline, TimelineEvent } from '@/components/EventTimeline';
@@ -34,8 +49,21 @@ type UIRCA = Omit<BackendRCA, 'logicTree'> & { logicTree: UILogicTreeNode[]; tea
 function useRCATemplates(tenantId?: string) {
   const [templates, setTemplates] = useState<any[]>([]);
   useEffect(() => {
-    if (!tenantId) { setTemplates([]); return; }
-    masterDataService.getRCATemplates({ tenantId }).then(setTemplates).catch(() => setTemplates([]));
+    if (!tenantId) { 
+      console.log('useRCATemplates: No tenantId provided');
+      setTemplates([]); 
+      return; 
+    }
+    console.log('useRCATemplates: Loading templates for tenantId:', tenantId);
+    masterDataService.getRCATemplates({ tenantId })
+      .then(tpls => {
+        console.log('useRCATemplates: Loaded templates:', tpls);
+        setTemplates(tpls);
+      })
+      .catch(err => {
+        console.error('useRCATemplates: Error loading templates:', err);
+        setTemplates([]);
+      });
   }, [tenantId]);
   return templates;
 }
@@ -138,12 +166,25 @@ export const RCAModule: React.FC = () => {
   const { session } = useAuth();
   const { toast } = useToast();
   const { selection: plantSelection, loading: plantLoading } = usePlantSelection();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [rcas, setRcas] = useState<UIRCA[]>([]);
   const [events, setEvents] = useState<ProductionEvent[]>([]);
   const [selectedRCA, setSelectedRCA] = useState<UIRCA | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('definition');
+  
+  // Knowledge Base & Analysis Tools
+  const [similarRCAs, setSimilarRCAs] = useState<RCASimilarityMatch[]>([]);
+  const [analysisConfig, setAnalysisConfig] = useState<RCAAnalysisConfig | null>(null);
+  const [currentFiveWhy, setCurrentFiveWhy] = useState<FiveWhyData | null>(null);
+  const [currentFishbone, setCurrentFishbone] = useState<FishboneDiagram | null>(null);
+  const [currentFmea, setCurrentFmea] = useState<FMEAAnalysis | null>(null);
+  const [currentFaultTree, setCurrentFaultTree] = useState<FaultTreeAnalysis | null>(null);
+  const [currentBarrier, setCurrentBarrier] = useState<BarrierAnalysis | null>(null);
+  const [currentChange, setCurrentChange] = useState<ChangeAnalysis | null>(null);
+  const [showSimilarRCAs, setShowSimilarRCAs] = useState(false);
+  const [isAnalysisFullscreen, setIsAnalysisFullscreen] = useState(false);
   
   const [rcaForm, setRcaForm] = useState({
     eventId: '',
@@ -153,6 +194,12 @@ export const RCAModule: React.FC = () => {
     targetCloseDate: '',
     templateId: '',
   });
+  
+  // Track if we're coming from Start RCA button
+  const [isFromStartRCA, setIsFromStartRCA] = useState(false);
+  
+  // Event search filter for create dialog
+  const [eventSearchFilter, setEventSearchFilter] = useState('');
 
   const [evidenceForm, setEvidenceForm] = useState({
     title: '',
@@ -205,38 +252,580 @@ export const RCAModule: React.FC = () => {
     teamLeadId: '',
     teamMemberIds: [] as string[],
   });
-
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+  
+  // Edit linked event state
+  const [isEditingEvent, setIsEditingEvent] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState('');
+  
+  // Reset editing state when RCA changes
   useEffect(() => {
-    if (!plantSelection?.tenant?.id) return;
-    storageService.query<User>('users', { tenantId: plantSelection.tenant.id }).then(setAllUsers);
-  }, [plantSelection]);
+    setIsEditingEvent(false);
+    setSelectedEventId('');
+  }, [selectedRCA?.id]);
 
-  const rcaTemplates = useRCATemplates(session?.tenant?.id);
+  const [allUsers, setAllUsers] = useState<UserRecord[]>([]);
+  const [linkedRecommendationTaskIds, setLinkedRecommendationTaskIds] = useState<Set<string>>(new Set());
+  const [rcaLinkedTaskCount, setRcaLinkedTaskCount] = useState(0);
+
+  const refreshLinkedTasks = React.useCallback(async () => {
+    if (!selectedRCA?.id) {
+      setLinkedRecommendationTaskIds(new Set());
+      setRcaLinkedTaskCount(0);
+      return;
+    }
+    try {
+      const recIds = (selectedRCA.recommendations || []).map((r) => r.id);
+      const { rcaTaskCount, recommendationTaskIds } = await loadLinkedTaskIds(selectedRCA.id, recIds);
+      setLinkedRecommendationTaskIds(recommendationTaskIds);
+      setRcaLinkedTaskCount(rcaTaskCount);
+    } catch {
+      // non-blocking
+    }
+  }, [selectedRCA?.id, selectedRCA?.recommendations]);
+
+  useEffect(() => {
+    refreshLinkedTasks();
+  }, [refreshLinkedTasks]);
+  useEffect(() => {
+    let cancelled = false;
+    const tenantId = plantSelection?.tenant?.id || session?.tenant?.id;
+
+    const loadUsers = async () => {
+      if (!tenantId) {
+        console.log('No tenantId available, skipping user loading');
+        setAllUsers([]);
+        return;
+      }
+
+      console.log('Loading users via API for tenantId:', tenantId);
+      try {
+        const tenantUsers = await userApi.getUsers({ tenantId });
+        if (cancelled) return;
+
+        if (tenantUsers.length === 0) {
+          console.log('No tenant-specific users returned, requesting full user list as fallback');
+          const allUsersList = await userApi.getUsers();
+          if (!cancelled) {
+            setAllUsers(allUsersList);
+          }
+        } else {
+          setAllUsers(tenantUsers);
+        }
+      } catch (apiError) {
+        console.error('Failed to load users from API:', apiError);
+        if (!cancelled) {
+          setAllUsers([]);
+        }
+      }
+    };
+
+    loadUsers();
+    return () => {
+      cancelled = true;
+    };
+  }, [plantSelection?.tenant?.id, session?.tenant?.id]);
+
+  // Load RCA Analysis Configuration
+  useEffect(() => {
+    const loadAnalysisConfig = async () => {
+      const tenantId = plantSelection?.tenant?.id || session?.tenant?.id;
+      if (!tenantId) return;
+
+      try {
+        let config = await rcaAnalysisConfigService.getActiveConfig(tenantId);
+        
+        if (!config) {
+          console.log('No RCA analysis config found, initializing default...');
+          config = await rcaAnalysisConfigService.initializeDefaultConfig(
+            tenantId,
+            session?.organization?.id || '',
+            'OilAndGas'
+          );
+        }
+        
+        console.log('✅ RCA Analysis Config loaded:', config.name);
+        setAnalysisConfig(config);
+      } catch (error) {
+        console.error('Failed to load RCA analysis config:', error);
+      }
+    };
+
+    loadAnalysisConfig();
+  }, [plantSelection, session]);
+
+  // Detect similar RCAs when creating new RCA
+  useEffect(() => {
+    const detectSimilarRCAs = async () => {
+      const tenantId = plantSelection?.tenant?.id || session?.tenant?.id;
+      if (!tenantId || !analysisConfig || !isCreateDialogOpen) {
+        setSimilarRCAs([]);
+        return;
+      }
+
+      // Only search if we have enough context
+      if (!rcaForm.title && !rcaForm.description && !rcaForm.eventId) {
+        return;
+      }
+
+      try {
+        // Get event details if eventId is set
+        let event: ProductionEvent | undefined;
+        if (rcaForm.eventId) {
+          try {
+            const allEvents = await masterDataService.getProductionEvents({});
+            event = allEvents.find(e => e.id === rcaForm.eventId);
+          } catch (error) {
+            console.log('Could not load event for similarity detection');
+          }
+        }
+
+        const searchContext = {
+          title: rcaForm.title,
+          description: rcaForm.description,
+          unitId: event?.unitId,
+          assetId: event?.assetId,
+          eventType: event?.eventType,
+          impactCodeId: event?.impactCodeId,
+          oeeCodeId: event?.oeeCodeId,
+        };
+
+        console.log('🔍 Searching for similar RCAs...', searchContext);
+        const matches = await rcaKnowledgeBaseService.findSimilarRCAs(searchContext, tenantId, analysisConfig);
+        
+        if (matches.length > 0) {
+          console.log(`✅ Found ${matches.length} similar RCAs`);
+          setSimilarRCAs(matches);
+          setShowSimilarRCAs(true);
+        } else {
+          console.log('No similar RCAs found');
+          setSimilarRCAs([]);
+        }
+      } catch (error) {
+        console.error('Failed to find similar RCAs:', error);
+      }
+    };
+
+    // Debounce the search
+    const timeoutId = setTimeout(detectSimilarRCAs, 500);
+    return () => clearTimeout(timeoutId);
+  }, [rcaForm.title, rcaForm.description, rcaForm.eventId, isCreateDialogOpen, analysisConfig, plantSelection, session]);
+
+  // Load existing analysis tools data when RCA is selected
+  useEffect(() => {
+    const loadAnalysisToolsData = async () => {
+      if (!selectedRCA) {
+        setCurrentFiveWhy(null);
+        setCurrentFishbone(null);
+        setCurrentFmea(null);
+        setCurrentFaultTree(null);
+        setCurrentBarrier(null);
+        setCurrentChange(null);
+        return;
+      }
+
+      const tenantId = plantSelection?.tenant?.id || session?.tenant?.id;
+
+      try {
+        const [fiveWhy, fishbone, fmea, faultTree, barrier, change] = await Promise.all([
+          rcaAnalysisConfigService.getFiveWhyByRCAId(selectedRCA.id, tenantId),
+          rcaAnalysisConfigService.getFishboneByRCAId(selectedRCA.id, tenantId),
+          rcaAnalysisConfigService.getFMEAByRCAId(selectedRCA.id, tenantId),
+          rcaAnalysisConfigService.getFaultTreeByRCAId(selectedRCA.id, tenantId),
+          rcaAnalysisConfigService.getBarrierByRCAId(selectedRCA.id, tenantId),
+          rcaAnalysisConfigService.getChangeByRCAId(selectedRCA.id, tenantId),
+        ]);
+
+        setCurrentFiveWhy(fiveWhy);
+        setCurrentFishbone(fishbone);
+        setCurrentFmea(fmea);
+        setCurrentFaultTree(faultTree);
+        setCurrentBarrier(barrier);
+        setCurrentChange(change);
+      } catch (error) {
+        console.error('Failed to load analysis tools data:', error);
+      }
+    };
+
+    loadAnalysisToolsData();
+  }, [selectedRCA?.id, plantSelection?.tenant?.id, session?.tenant?.id]);
+
+  // Keyboard shortcut for exiting fullscreen (ESC key)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isAnalysisFullscreen) {
+        setIsAnalysisFullscreen(false);
+      }
+    };
+
+    if (isAnalysisFullscreen) {
+      window.addEventListener('keydown', handleKeyDown);
+      // Prevent body scroll when in fullscreen
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'auto';
+    };
+  }, [isAnalysisFullscreen]);
 
   const [assets, setAssets] = useState([]);
   const [units, setUnits] = useState([]);
+  const [impactCodes, setImpactCodes] = useState([]);
+  const [oeeCodes, setOeeCodes] = useState([]);
+  
+  // Evidence-related state
+  const [evidenceFilter, setEvidenceFilter] = useState('');
+  const [evidenceViewMode, setEvidenceViewMode] = useState<'table' | 'list'>('table');
+  const [evidenceCategories, setEvidenceCategories] = useState([]);
+  const [evidenceLocations, setEvidenceLocations] = useState([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [categoryInput, setCategoryInput] = useState('');
+  const [locationInput, setLocationInput] = useState('');
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingLocation, setEditingLocation] = useState(null);
+  
+  // Evidence modal state
+  const [showEvidenceModal, setShowEvidenceModal] = useState(false);
+  const [evidenceModalMode, setEvidenceModalMode] = useState<'view' | 'edit' | 'add'>('view');
+  const [currentEvidence, setCurrentEvidence] = useState<RCAEvidence | null>(null);
+  const [editEvidenceForm, setEditEvidenceForm] = useState<any>(null);
+  const [showAddEvidenceModal, setShowAddEvidenceModal] = useState(false);
+  
+  // Manual event modal state
+  const [showManualEventModal, setShowManualEventModal] = useState(false);
+  const [manualEventForm, setManualEventForm] = useState({
+    id: '',
+    label: '',
+    type: 'Failure',
+    timestamp: '',
+    description: '',
+    asset: '',
+    severity: 'Medium' as 'Low' | 'Medium' | 'High' | 'Critical',
+  });
+  const [manualEventMode, setManualEventMode] = useState<'add' | 'edit'>('add');
+  const [manualEventError, setManualEventError] = useState<string | null>(null);
+  
+  // Link evidence modal state
+  const [showLinkEvidenceModal, setShowLinkEvidenceModal] = useState(false);
+  const [linkEvidenceEvent, setLinkEvidenceEvent] = useState<any>(null);
+  const [linkEvidenceSelection, setLinkEvidenceSelection] = useState<string[]>([]);
+  
+  // Diagram state
+  const [diagramNodes, setDiagramNodes] = useState(selectedRCA?.eventDiagram?.nodes || []);
+  const [diagramEdges, setDiagramEdges] = useState(selectedRCA?.eventDiagram?.edges || []);
+  
+  // RCA filters and search
+  const [rcaSearch, setRcaSearch] = useState('');
+  const [rcaPriorityFilter, setRcaPriorityFilter] = useState<'All' | 'Critical' | 'High' | 'Medium' | 'Low'>('All');
+  const [rcaOverdueFilter, setRcaOverdueFilter] = useState<'All' | 'Overdue' | 'NotOverdue'>('All');
+  const [rcaStatusFilter, setRcaStatusFilter] = useState<'All' | 'Draft' | 'In Progress' | 'Analysis' | 'Published' | 'Closed'>('All');
+  
+  // Fullscreen modals
+  const [showLogicTreeFullscreen, setShowLogicTreeFullscreen] = useState(false);
+  const [showEventDiagramFullscreen, setShowEventDiagramFullscreen] = useState(false);
+  
+  // Logic tree reset modal
+  const [showResetLogicTreeModal, setShowResetLogicTreeModal] = useState(false);
+  const [resettingLogicTree, setResettingLogicTree] = useState(false);
+  
+  // Time series results
+  const [timeSeriesResults, setTimeSeriesResults] = useState<any>(null);
+  const [timeSeriesLoading, setTimeSeriesLoading] = useState(false);
+  const [showTimeSeriesResults, setShowTimeSeriesResults] = useState(false);
+  
+  // Recommendation filters
+  const [recommendationFilter, setRecommendationFilter] = useState('');
+  const [recommendationStatusFilter, setRecommendationStatusFilter] = useState('All');
+  const [recommendationPriorityFilter, setRecommendationPriorityFilter] = useState('All');
+  const [recommendationAssigneeFilter, setRecommendationAssigneeFilter] = useState('All');
+  
+  // Comments - Enhanced for industrial RCA standards
+  const [comments, setComments] = useState<{ [rcaId: string]: Array<{ 
+    id: string; 
+    user: string; 
+    userId: string;
+    text: string; 
+    timestamp: string;
+    type: 'general' | 'investigation' | 'analysis' | 'recommendation' | 'implementation' | 'followup';
+    phase: string;
+    attachments?: Array<{ name: string; url: string; type: string }>;
+    mentions?: string[]; // User mentions
+    isPrivate?: boolean;
+  }> }>({});
+  const [newComment, setNewComment] = useState('');
+  const [commentType, setCommentType] = useState<'general' | 'investigation' | 'analysis' | 'recommendation' | 'implementation' | 'followup'>('general');
+  const [isPrivateComment, setIsPrivateComment] = useState(false);
+  
+  // Share/Export - Enhanced for industrial RCA standards
+  const [shareCopied, setShareCopied] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'excel' | 'word' | 'csv'>('pdf');
+  const [exportOptions, setExportOptions] = useState({
+    includeEvidence: true,
+    includeLogicTree: true,
+    includeRecommendations: true,
+    includeComments: true,
+    includeTimeline: true,
+    includeAttachments: false,
+  });
+  
+  // Edit recommendation modal
+  const [showEditRecommendationModal, setShowEditRecommendationModal] = useState(false);
+  const [editRecommendationForm, setEditRecommendationForm] = useState<any>(null);
+  const [editingRecommendationId, setEditingRecommendationId] = useState<string | null>(null);
+  
+  // Add recommendation modal
+  const [showAddRecommendationModal, setShowAddRecommendationModal] = useState(false);
+  
+  // Active tab
+  const [activeTab, setActiveTab] = useState('definition');
+  
+  // Approval comment
+  const [approvalComment, setApprovalComment] = useState('');
+  
+  // Closure notes
+  const [closureNotes, setClosureNotes] = useState('');
+  
+  // Review banner
+  const [showReviewBanner, setShowReviewBanner] = useState(false);
+  
+  // Next phase
+  const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
+  
+  // Use plantSelection.tenant if available, otherwise fall back to session.tenant
+  const activeTenantId = plantSelection?.tenant?.id || session?.tenant?.id;
+  const rcaTemplates = useRCATemplates(activeTenantId);
+  
   useEffect(() => {
-    if (!plantSelection?.tenant?.id) return;
-    masterDataService.getAssets({ tenantId: plantSelection.tenant.id }).then(setAssets);
-    masterDataService.getUnits({ tenantId: plantSelection.tenant.id }).then(setUnits);
-  }, [plantSelection]);
+    const tenantId = activeTenantId;
+    if (!tenantId) return;
+    
+    console.log('Loading assets and units for tenantId:', tenantId);
+    
+    // Load assets and units for the specific tenant
+    masterDataService.getAssets({ tenantId }).then(assets => {
+      console.log('Loaded assets for tenant:', assets);
+      setAssets(assets);
+    });
+    masterDataService.getUnits({ tenantId }).then(units => {
+      console.log('Loaded units for tenant:', units);
+      setUnits(units);
+    });
+    
+    // Also load all assets and units to ensure we have complete data for timeline
+    masterDataService.getAssets({}).then(allAssets => {
+      console.log('Loaded all assets:', allAssets);
+      if (allAssets.length > 0) {
+        setAssets(allAssets); // Use all assets to ensure we can resolve any asset ID
+      }
+    });
+    masterDataService.getUnits({}).then(allUnits => {
+      console.log('Loaded all units:', allUnits);
+      if (allUnits.length > 0) {
+        setUnits(allUnits); // Use all units to ensure we can resolve any unit ID
+      }
+    });
+    
+    // Load impact codes and OEE codes
+    masterDataService.getImpactCodes({}).then(codes => {
+      console.log('Loaded impact codes:', codes);
+      setImpactCodes(codes);
+    });
+    masterDataService.getOEECodes({}).then(codes => {
+      console.log('Loaded OEE codes:', codes);
+      setOeeCodes(codes);
+    });
+  }, [activeTenantId]);
 
   useEffect(() => {
     loadData();
-  }, [session]);
+  }, [session, plantSelection]);
+
+  // Handle URL parameters for pre-filling RCA form
+  useEffect(() => {
+    const eventId = searchParams.get('eventId');
+    const eventTitle = searchParams.get('eventTitle');
+    
+    console.log('URL params check:', { eventId, eventTitle, isCreateDialogOpen });
+    
+    if (eventId && eventTitle && !isCreateDialogOpen) {
+      // Pre-fill the RCA form with event data immediately
+      setRcaForm(prev => ({
+        ...prev,
+        eventId: eventId,
+        title: `RCA for ${decodeURIComponent(eventTitle)}`,
+        description: `Root cause analysis for: ${decodeURIComponent(eventTitle)}`
+      }));
+      
+      // Mark that we're coming from Start RCA button
+      setIsFromStartRCA(true);
+      
+      // Open the create dialog automatically
+      setIsCreateDialogOpen(true);
+      
+      // Don't clear URL parameters here - let the close handler do it
+    }
+  }, [searchParams, setSearchParams, isCreateDialogOpen]);
+
+  // Update edit form when selectedRCA changes
+  useEffect(() => {
+    if (selectedRCA) {
+      setEditRCAForm({
+        title: selectedRCA.title || '',
+        description: selectedRCA.description || '',
+        priority: selectedRCA.priority || 'Medium',
+        targetCloseDate: selectedRCA.targetCloseDate || '',
+        teamCharter: selectedRCA.teamCharter || '',
+        teamLeadId: selectedRCA.teamLeadId || '',
+        teamMemberIds: selectedRCA.teamMemberIds || [],
+      });
+    }
+  }, [selectedRCA]);
+
+  // Load categories/locations for tenant
+  useEffect(() => {
+    const tenantId = plantSelection?.tenant?.id;
+    if (!tenantId) return;
+
+    masterDataService
+      .getEvidenceCategories({ tenantId })
+      .then(setEvidenceCategories)
+      .catch(error => {
+        console.error('Failed to load evidence categories:', error);
+        toast({ title: 'Error', description: 'Failed to load evidence categories.', variant: 'destructive' });
+      });
+
+    masterDataService
+      .getEvidenceLocations({ tenantId })
+      .then(setEvidenceLocations)
+      .catch(error => {
+        console.error('Failed to load evidence locations:', error);
+        toast({ title: 'Error', description: 'Failed to load evidence locations.', variant: 'destructive' });
+      });
+  }, [plantSelection, toast]);
+
+  // Sync local state with selectedRCA when it changes
+  useEffect(() => {
+    setDiagramNodes(selectedRCA?.eventDiagram?.nodes || []);
+    setDiagramEdges(selectedRCA?.eventDiagram?.edges || []);
+  }, [selectedRCA?.id]);
+
+  // Add ESC key handler for fullscreen modals
+  useEffect(() => {
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        if (showLogicTreeFullscreen) {
+          setShowLogicTreeFullscreen(false);
+        }
+        if (showEventDiagramFullscreen) {
+          setShowEventDiagramFullscreen(false);
+        }
+      }
+    }
+    if (showLogicTreeFullscreen || showEventDiagramFullscreen) {
+      window.addEventListener('keydown', handleEsc);
+      return () => window.removeEventListener('keydown', handleEsc);
+    }
+  }, [showLogicTreeFullscreen, showEventDiagramFullscreen]);
+
+  // Active tab management
+  useEffect(() => {
+    if (selectedRCA) {
+      setActiveTab(PHASE_TO_TAB[normalizeStatus(selectedRCA.status)] || 'definition');
+    }
+  }, [selectedRCA?.status]);
+
+  // Phase advancement logic
+  useEffect(() => {
+    if (!selectedRCA) return;
+    const phase = normalizeStatus(selectedRCA.status);
+    if (phase === 'Definition' && isDefinitionComplete(selectedRCA)) {
+      setShowReviewBanner(true); setNextPhase('Data Collection');
+    } else if (phase === 'Data Collection' && isDataCollectionComplete(selectedRCA)) {
+      setShowReviewBanner(true); setNextPhase('Analysis');
+    } else if (phase === 'Analysis' && isAnalysisComplete(selectedRCA)) {
+      setShowReviewBanner(true); setNextPhase('Recommendations');
+    } else if (phase === 'Recommendations' && isRecommendationsComplete(selectedRCA)) {
+      setShowReviewBanner(true); setNextPhase('Approval');
+    } else if (phase === 'Approval' && isApprovalComplete(selectedRCA)) {
+      setShowReviewBanner(true); setNextPhase('Closure');
+    } else {
+      setShowReviewBanner(false); setNextPhase(null);
+    }
+  }, [selectedRCA]);
 
   const loadData = async () => {
-    if (!session || !plantSelection?.tenant?.id) return;
+    // Use plantSelection.tenant if available, otherwise fall back to session.tenant
+    const tenantId = plantSelection?.tenant?.id || session?.tenant?.id;
+    const unitId = plantSelection?.unit?.id;
+    
+    if (!session) {
+      console.log('loadData: Missing session', { session: !!session });
+      return;
+    }
+
+    console.log('Loading data with tenantId:', tenantId, 'unitId:', unitId);
 
     try {
-      const [rcaData, eventData] = await Promise.all([
-        masterDataService.getRCAs({ tenantId: plantSelection.tenant.id }),
-        masterDataService.getProductionEvents({ tenantId: plantSelection.tenant.id })
-      ]);
+      console.log('About to fetch RCAs and events...');
+      
+      // Get ALL RCAs regardless of tenant when plant is selected
+      const allRcaData = await masterDataService.getRCAs({});
+      console.log('All RCAs in system:', { rcaCount: allRcaData?.length, rcas: allRcaData });
+      
+      // Get ALL events regardless of tenant when plant is selected
+      let eventData;
+      if (unitId) {
+        eventData = await masterDataService.getProductionEvents({ unitId });
+        console.log('Events filtered by unit:', { unitId, eventCount: eventData?.length, events: eventData });
+      } else {
+        eventData = await masterDataService.getProductionEvents({});
+        console.log('All events in system:', { eventCount: eventData?.length, events: eventData });
+      }
+      
+      // Debug: Check the relationship between RCAs and events
+      console.log('Debugging RCA-Event relationship:');
+      allRcaData.forEach(rca => {
+        console.log(`RCA ${rca.id} has eventId: ${rca.eventId}`);
+      });
+      eventData.forEach(event => {
+        console.log(`Event ${event.id} belongs to unit: ${event.unitId}`);
+      });
+      
+      // Filter RCAs based on selection level
+      let filteredRcaData;
+      
+      if (unitId) {
+        // If a specific unit is selected, filter RCAs by events from that unit
+        const eventIds = new Set(eventData.map(event => event.id));
+        filteredRcaData = allRcaData.filter(rca => eventIds.has(rca.eventId));
+        
+        console.log('Unit-specific filtering:', { 
+          unitId,
+          totalRCAs: allRcaData.length, 
+          filteredRCAs: filteredRcaData.length,
+          eventIds: Array.from(eventIds),
+          rcaEventIds: allRcaData.map(rca => rca.eventId)
+        });
+        
+        // If no RCAs match after filtering by unit, fall back to showing all RCAs for the tenant
+        if (filteredRcaData.length === 0 && allRcaData.length > 0) {
+          console.log('No RCAs found for selected unit, falling back to all RCAs for tenant');
+          filteredRcaData = allRcaData;
+        }
+      } else {
+        // If only plant is selected (no unit), show ALL RCAs regardless of tenant
+        filteredRcaData = allRcaData;
+        
+        console.log('Plant-only filtering (showing ALL RCAs):', { 
+          totalRCAs: allRcaData.length, 
+          filteredRCAs: filteredRcaData.length
+        });
+      }
 
-      // Convert all RCAs to UIRCA
-      const uiRcas: UIRCA[] = rcaData.map((rca: any) => {
+      // Convert filtered RCAs to UIRCA
+      const uiRcas: UIRCA[] = filteredRcaData.map((rca: any) => {
         if (Array.isArray(rca.logicTree) && rca.logicTree.length > 0) {
           console.log('LOAD DATA: raw flat logicTree from storage:', JSON.stringify(rca.logicTree, null, 2));
         }
@@ -253,13 +842,36 @@ export const RCAModule: React.FC = () => {
       });
       setRcas(uiRcas);
       setEvents(eventData);
+      console.log('Events set in state:', eventData.length);
     } catch (error) {
       console.error('Failed to load RCA data:', error);
+      console.error('Error details:', error);
       toast({
         title: 'Error',
         description: 'Failed to load RCA data',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleCloseCreateDialog = () => {
+    setIsCreateDialogOpen(false);
+    setIsFromStartRCA(false);
+    setEventSearchFilter(''); // Reset event search filter
+    setSimilarRCAs([]); // Clear similar RCAs
+    setShowSimilarRCAs(false);
+    setRcaForm({
+      eventId: '',
+      title: '',
+      description: '',
+      priority: 'Medium',
+      targetCloseDate: '',
+      templateId: '',
+    });
+    
+    // Clear URL parameters when closing modal
+    if (searchParams.get('eventId') || searchParams.get('eventTitle')) {
+      setSearchParams({});
     }
   };
 
@@ -277,7 +889,8 @@ export const RCAModule: React.FC = () => {
 
     try {
       // Flatten tree for persistence
-      const flatLogicTree = logicTree ? flattenUILogicTree(logicTree, 'TEMP_RCA_ID', plantSelection.tenant.id || '') : undefined;
+      const tenantId = plantSelection?.tenant?.id || session?.tenant?.id || '';
+      const flatLogicTree = logicTree ? flattenUILogicTree(logicTree, 'TEMP_RCA_ID', tenantId) : undefined;
       if (flatLogicTree) {
         console.log('CREATE RCA: flatLogicTree to store:', JSON.stringify(flatLogicTree, null, 2));
       }
@@ -287,19 +900,19 @@ export const RCAModule: React.FC = () => {
         description: rcaForm.description,
         status: 'Draft',
         teamLeadId: session.user.id,
-        teamMemberIds: [session.user.id],
+        teamMemberIds: [...new Set([session.user.id])], // Ensure no duplicates
         priority: rcaForm.priority,
         targetCloseDate: rcaForm.targetCloseDate || undefined,
         recommendations: [],
         evidence: [],
-        tenantId: plantSelection.tenant.id || '',
+        tenantId: tenantId,
         templateId: rcaForm.templateId,
         logicTree: flatLogicTree,
       });
 
       // Update logic tree with real RCA ID
       if (logicTree) {
-        const flatLogicTreeWithRealId = flattenUILogicTree(logicTree, newRCA.id, plantSelection.tenant.id || '');
+        const flatLogicTreeWithRealId = flattenUILogicTree(logicTree, newRCA.id, tenantId);
         console.log('UPDATE RCA: flatLogicTreeWithRealId to store:', JSON.stringify(flatLogicTreeWithRealId, null, 2));
         await masterDataService.updateRCA(newRCA.id, { logicTree: flatLogicTreeWithRealId });
       }
@@ -309,15 +922,7 @@ export const RCAModule: React.FC = () => {
         description: 'RCA investigation created successfully',
       });
 
-      setIsCreateDialogOpen(false);
-      setRcaForm({
-        eventId: '',
-        title: '',
-        description: '',
-        priority: 'Medium',
-        targetCloseDate: '',
-        templateId: '',
-      });
+      handleCloseCreateDialog();
       // Convert backend logicTree to UI logicTree
       let logicTreeUI = [];
       if (Array.isArray(newRCA.logicTree) && newRCA.logicTree.length > 0) {
@@ -467,7 +1072,7 @@ export const RCAModule: React.FC = () => {
     return event ? event.description : 'Unknown Event';
   };
 
-  // --- Refactored LogicTreeNodeInteractive for full interactivity and visual appeal ---
+  // --- Enhanced Professional Logic Tree Node with Industry-Standard Styling ---
   function LogicTreeNodeInteractive({ node, depth, onChange, onDelete, onAddChild, onEdit, evidence, onAttachEvidence }: {
     node: UILogicTreeNode;
     depth: number;
@@ -491,13 +1096,79 @@ export const RCAModule: React.FC = () => {
       note: node.note || '',
       finding: !!node.finding,
     });
-    const categoryColors: Record<string, string> = {
-      Equipment: 'bg-blue-100 text-blue-800',
-      Process: 'bg-green-100 text-green-800',
-      Material: 'bg-yellow-100 text-yellow-800',
-      Personnel: 'bg-purple-100 text-purple-800',
-      Environment: 'bg-cyan-100 text-cyan-800',
-      Method: 'bg-pink-100 text-pink-800',
+    
+    // Application Theme Color Schemes - Matching Dashboard Style
+    const categoryColors: Record<string, { badge: string; node: string; border: string; icon: string; iconBg: string }> = {
+      Equipment: { 
+        badge: 'bg-blue-100 text-blue-800', 
+        node: 'bg-gradient-to-br from-blue-50 to-white', 
+        border: 'border-blue-200',
+        icon: '⚙️',
+        iconBg: 'bg-blue-100 text-blue-600'
+      },
+      Process: { 
+        badge: 'bg-green-100 text-green-800', 
+        node: 'bg-gradient-to-br from-green-50 to-white', 
+        border: 'border-green-200',
+        icon: '🔄',
+        iconBg: 'bg-green-100 text-green-600'
+      },
+      Material: { 
+        badge: 'bg-yellow-100 text-yellow-800', 
+        node: 'bg-gradient-to-br from-yellow-50 to-white', 
+        border: 'border-yellow-200',
+        icon: '📦',
+        iconBg: 'bg-yellow-100 text-yellow-600'
+      },
+      Personnel: { 
+        badge: 'bg-purple-100 text-purple-800', 
+        node: 'bg-gradient-to-br from-purple-50 to-white', 
+        border: 'border-purple-200',
+        icon: '👤',
+        iconBg: 'bg-purple-100 text-purple-600'
+      },
+      Environment: { 
+        badge: 'bg-cyan-100 text-cyan-800', 
+        node: 'bg-gradient-to-br from-cyan-50 to-white', 
+        border: 'border-cyan-200',
+        icon: '🌡️',
+        iconBg: 'bg-cyan-100 text-cyan-600'
+      },
+      Method: { 
+        badge: 'bg-pink-100 text-pink-800', 
+        node: 'bg-gradient-to-br from-pink-50 to-white', 
+        border: 'border-pink-200',
+        icon: '📋',
+        iconBg: 'bg-pink-100 text-pink-600'
+      },
+      Root: { 
+        badge: 'bg-indigo-100 text-indigo-800', 
+        node: 'bg-gradient-to-br from-indigo-50 to-white', 
+        border: 'border-indigo-200',
+        icon: '🎯',
+        iconBg: 'bg-indigo-100 text-indigo-600'
+      },
+      Why: { 
+        badge: 'bg-sky-100 text-sky-800', 
+        node: 'bg-gradient-to-br from-sky-50 to-white', 
+        border: 'border-sky-200',
+        icon: '❓',
+        iconBg: 'bg-sky-100 text-sky-600'
+      },
+      How: { 
+        badge: 'bg-teal-100 text-teal-800', 
+        node: 'bg-gradient-to-br from-teal-50 to-white', 
+        border: 'border-teal-200',
+        icon: '🔍',
+        iconBg: 'bg-teal-100 text-teal-600'
+      },
+      Cause: { 
+        badge: 'bg-red-100 text-red-800', 
+        node: 'bg-gradient-to-br from-red-50 to-white', 
+        border: 'border-red-200',
+        icon: '⚠️',
+        iconBg: 'bg-red-100 text-red-600'
+      },
     };
     // --- Edit Node Modal ---
     function handleEditSave() {
@@ -558,80 +1229,275 @@ export const RCAModule: React.FC = () => {
       }
     }
     // --- Render ---
+    // Get evidence count for this node
+    const attachedEvidence = evidence.filter(e => Array.isArray(e.nodeIds) && e.nodeIds.includes(node.id));
+    const isRootCause = node.category === 'Cause' || node.category === 'root_cause';
+    const isVerified = node.finding || false; // Using finding flag as verification
+    const hasChildren = node.children && node.children.length > 0;
+    
+    // Get current category styling
+    const currentCategoryStyle = categoryColors[node.category] || categoryColors['Equipment'];
+
     return (
-      <li className="mb-2 ml-2">
-        <div className="flex items-center gap-2 group" style={{ marginLeft: depth * 8 }}>
-          {node.children && node.children.length > 0 && (
-            <button type="button" className="text-xs text-blue-500 hover:underline" onClick={() => setExpanded(e => !e)}>
-              {expanded ? '▼' : '▶'}
-            </button>
-          )}
-          <input
-            type="checkbox"
-            checked={!!node.finding}
-            onChange={e => onChange({ ...node, finding: e.target.checked })}
-            className="accent-blue-600"
-            title="Mark as finding/root cause"
-          />
-          <span className={`font-semibold text-xs px-2 py-1 rounded ${categoryColors[node.category] || 'bg-gray-100 text-gray-800'}`}>{node.name}</span>
-          {node.category && <span className={`text-xs px-2 py-1 rounded ${categoryColors[node.category] || 'bg-gray-100 text-gray-800'}`}>{node.category}</span>}
-          <button type="button" className="ml-1 text-xs text-green-600 underline" onClick={() => setShowAddChildModal(true)}>Add Child</button>
-          <button type="button" className="ml-1 text-xs text-blue-600 underline" onClick={() => setShowEditModal(true)}>Edit</button>
-          <button type="button" className="ml-1 text-xs text-red-600 underline" onClick={() => setShowDeleteConfirm(true)}>Delete</button>
-        </div>
-        <div className="ml-8 mt-1 flex items-center gap-2">
-          <textarea
-            className="border rounded px-2 py-1 text-xs w-full min-w-[120px] max-w-xs"
-            placeholder="Add note..."
-            value={noteDraft}
-            onChange={e => setNoteDraft(e.target.value)}
-            onBlur={handleNoteBlur}
-            rows={1}
-          />
-          {/* Attach evidence popover with beautiful icon and tooltip (fixed Popover parent structure) */}
-          <Popover>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <PopoverTrigger asChild>
-                    <button
+      <li className="relative" style={{ marginLeft: depth > 0 ? 32 : 0 }}>
+        {/* Tree connector lines - Industry standard visual hierarchy */}
+        {depth > 0 && (
+          <>
+            {/* Horizontal connector line */}
+            <div 
+              className="absolute top-6 border-t-2 border-gray-300"
+              style={{ 
+                left: -20, 
+                width: 20,
+              }}
+            />
+            {/* Vertical connector line */}
+            <div 
+              className="absolute top-0 border-l-2 border-gray-300"
+              style={{ 
+                left: -20, 
+                height: hasChildren && expanded ? '100%' : 24,
+              }}
+            />
+          </>
+        )}
+        
+        {/* Node Card - Matching App Theme */}
+        <div className={`relative mb-3 ${currentCategoryStyle.node} border ${currentCategoryStyle.border} rounded-lg shadow hover:shadow-md transition-all duration-200`}>
+          <div className="p-4">
+            {/* Header with expand/collapse and node info */}
+            <div className="flex items-start gap-3 mb-3">
+              {/* Expand/Collapse Button */}
+              {hasChildren && (
+                <button 
+                  type="button" 
+                  className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+                  onClick={() => setExpanded(e => !e)}
+                  title={expanded ? 'Collapse' : 'Expand'}
+                >
+                  {expanded ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                </button>
+              )}
+              
+              {/* Category Icon Badge */}
+              <div className={`flex-shrink-0 w-8 h-8 rounded flex items-center justify-center ${currentCategoryStyle.iconBg}`}>
+                <span className="text-lg">{currentCategoryStyle.icon}</span>
+              </div>
+              
+              {/* Node Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    {/* Node Name */}
+                    <h4 className="font-semibold text-sm text-gray-900 leading-tight mb-1">
+                      {node.name}
+                    </h4>
+                    
+                    {/* Badges Row */}
+                    <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                      <Badge className={`text-xs ${currentCategoryStyle.badge}`}>
+                        {node.category}
+                      </Badge>
+                      
+                      {node.code && (
+                        <Badge variant="outline" className="text-xs">
+                          {node.code}
+                        </Badge>
+                      )}
+                      
+                      {isRootCause && (
+                        <Badge variant="destructive" className="text-xs">
+                          Root Cause
+                        </Badge>
+                      )}
+                      
+                      {isVerified && (
+                        <Badge className="text-xs bg-green-600 text-white">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Verified
+                        </Badge>
+                      )}
+                      
+                      {attachedEvidence.length > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          <Paperclip className="w-3 h-3 mr-1" />
+                          {attachedEvidence.length}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button
                       type="button"
-                      className="ml-2 rounded-full bg-gradient-to-br from-blue-100 via-white to-pink-100 border border-blue-200 shadow-md p-2 flex items-center justify-center transition hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
-                      aria-label="Attach Evidence"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAddChildModal(true)}
+                      className="h-7 w-7 p-0"
+                      title="Add Child Node"
                     >
-                      <Paperclip className="w-5 h-5 text-blue-600" />
-                    </button>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowEditModal(true)}
+                      className="h-7 w-7 p-0"
+                      title="Edit Node"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="h-7 w-7 p-0"
+                      title="Delete Node"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Description/Answer Section */}
+            {node.description && (
+              <div className="mt-3 bg-blue-50 border border-blue-200 rounded p-3">
+                <p className="text-xs font-semibold text-blue-800 mb-1">Analysis / Finding</p>
+                <p className="text-sm text-gray-800">{node.description}</p>
+              </div>
+            )}
+
+            {/* Node Note */}
+            {node.note && (
+              <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded p-3">
+                <p className="text-xs font-semibold text-yellow-800 mb-1">Note</p>
+                <p className="text-sm text-gray-700">{node.note}</p>
+              </div>
+            )}
+
+            {/* Attached Evidence */}
+            {attachedEvidence.length > 0 && (
+              <div className="mt-3 bg-green-50 border border-green-200 rounded p-3">
+                <p className="text-xs font-semibold text-green-800 mb-2">
+                  Supporting Evidence ({attachedEvidence.length})
+                </p>
+                <div className="space-y-1.5">
+                  {attachedEvidence.map(ev => (
+                    <div key={ev.id} className="flex items-center gap-2 text-sm">
+                      <Badge variant="outline" className="text-xs">{ev.type}</Badge>
+                      <span className="flex-1 truncate text-gray-700">{ev.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Interactive Controls */}
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <div className="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  checked={!!node.finding}
+                  onChange={e => onChange({ ...node, finding: e.target.checked })}
+                  className="accent-green-600 w-4 h-4 rounded cursor-pointer"
+                  id={`verify-${node.id}`}
+                />
+                <label htmlFor={`verify-${node.id}`} className="text-sm text-gray-700 cursor-pointer">
+                  {isRootCause ? 'Confirmed Root Cause' : 'Mark as Verified'}
+                </label>
+                
+                {/* Attach Evidence Button */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="ml-auto"
+                    >
+                      <Paperclip className="w-4 h-4 mr-1" />
+                      Link Evidence
+                      {attachedEvidence.length > 0 && (
+                        <Badge className="ml-2 bg-green-600 text-white">
+                          {attachedEvidence.length}
+                        </Badge>
+                      )}
+                    </Button>
                   </PopoverTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs font-semibold bg-gradient-to-br from-blue-50 to-pink-50 border-blue-200 shadow-xl rounded-xl">
-                  Attach Evidence
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <PopoverContent className="p-2 w-64">
-              <div className="font-semibold text-xs mb-2">Attach Evidence to Node</div>
-              {evidence.length === 0 && <div className="text-gray-400 italic text-xs">No evidence available.</div>}
-              <ul className="max-h-48 overflow-y-auto">
-                {evidence.map(e => {
-                  const checked = Array.isArray(e.nodeIds) && e.nodeIds.includes(node.id);
-                  return (
-                    <li key={e.id} className="flex items-center gap-2 py-1">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={ev => onAttachEvidence(node.id, e.id, ev.target.checked)}
-                        className="accent-blue-600"
-                        id={`attach-${node.id}-${e.id}`}
-                      />
-                      <label htmlFor={`attach-${node.id}-${e.id}`} className="text-xs cursor-pointer">
-                        {e.title || e.type || e.id}
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-            </PopoverContent>
-          </Popover>
+                  <PopoverContent className="w-96" align="start">
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm">Attach Evidence</h4>
+                      {evidence.length === 0 ? (
+                        <p className="text-sm text-gray-500 py-4 text-center">
+                          No evidence available. Add evidence from Data Collection tab.
+                        </p>
+                      ) : (
+                        <div className="max-h-64 overflow-y-auto space-y-2">
+                          {evidence.map(e => {
+                            const checked = Array.isArray(e.nodeIds) && e.nodeIds.includes(node.id);
+                            return (
+                              <div 
+                                key={e.id} 
+                                className={`flex items-start gap-2 p-2 rounded border cursor-pointer ${
+                                  checked 
+                                    ? 'bg-green-50 border-green-300' 
+                                    : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                                onClick={() => onAttachEvidence(node.id, e.id, !checked)}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={ev => {
+                                    ev.stopPropagation();
+                                    onAttachEvidence(node.id, e.id, ev.target.checked);
+                                  }}
+                                  className="mt-0.5"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs">{e.type}</Badge>
+                                    <span className="text-sm font-medium truncate">{e.title}</span>
+                                  </div>
+                                  {e.description && (
+                                    <p className="text-xs text-gray-600 mt-1 line-clamp-2">{e.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              {/* Note Input Field */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Additional Notes
+                </label>
+                <textarea
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  placeholder="Add notes or context..."
+                  value={noteDraft}
+                  onChange={e => setNoteDraft(e.target.value)}
+                  onBlur={handleNoteBlur}
+                  rows={2}
+                />
+              </div>
+            </div>
+          </div>
         </div>
         {/* Edit Node Modal */}
         {showEditModal && (
@@ -739,9 +1605,9 @@ export const RCAModule: React.FC = () => {
             </div>
           </div>
         )}
-        {/* Children */}
-        {expanded && node.children && node.children.length > 0 && (
-          <ul className="pl-4 border-l border-blue-100">
+        {/* Children Nodes - Hierarchical Tree Structure */}
+        {expanded && hasChildren && (
+          <ul className="mt-2 space-y-0 relative">
             {node.children.map((child: UILogicTreeNode, idx: number) => (
               <LogicTreeNodeInteractive
                 key={child.id || idx}
@@ -859,16 +1725,30 @@ export const RCAModule: React.FC = () => {
   //   loadData();
   // }
 
-  function getUserName(userId: string) {
-    const user = allUsers.find(u => u.id === userId);
-    return user ? user.name : userId;
+  function getUserName(userIdOrName: string | undefined) {
+    if (!userIdOrName) return '-';
+    
+    // Check if it's already a name (not a UUID)
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidPattern.test(userIdOrName)) {
+      return userIdOrName; // Already a name
+    }
+    
+    // Look up user by ID
+    const user = allUsers.find(u => u.id === userIdOrName);
+    return user ? user.name : userIdOrName;
   }
 
   async function handleTeamChange(newTeam: string[]) {
     if (!selectedRCA) return;
-    const updated = await masterDataService.updateRCA(selectedRCA.id, { teamMemberIds: newTeam });
+    
+    // Remove duplicates from team member IDs
+    const uniqueTeam = [...new Set(newTeam)];
+    
+    const updated = await masterDataService.updateRCA(selectedRCA.id, { teamMemberIds: uniqueTeam });
     setSelectedRCA({
       ...selectedRCA,
+      teamMemberIds: uniqueTeam,
       logicTree: Array.isArray(selectedRCA.logicTree) && selectedRCA.logicTree.length > 0
         ? flatListToTree(selectedRCA.logicTree as any[])
         : [],
@@ -892,19 +1772,31 @@ export const RCAModule: React.FC = () => {
   function TeamMembersEditor({ teamMemberIds, onChange, allUsers, teamLeadId, onLeadChange, renderUser }: {
     teamMemberIds: string[];
     onChange: (ids: string[]) => void;
-    allUsers: User[];
+    allUsers: UserRecord[];
     teamLeadId: string;
     onLeadChange: (id: string) => void;
-    renderUser: (user: User) => React.ReactNode;
+    renderUser: (user: UserRecord) => React.ReactNode;
   }) {
+    console.log('TeamMembersEditor received users:', allUsers.length);
     // Add/remove team members
     function handleToggle(userId: string) {
       if (teamMemberIds.includes(userId)) {
         onChange(teamMemberIds.filter(id => id !== userId));
       } else {
-        onChange([...teamMemberIds, userId]);
+        // Ensure no duplicates when adding
+        const uniqueIds = [...new Set([...teamMemberIds, userId])];
+        onChange(uniqueIds);
       }
     }
+    if (allUsers.length === 0) {
+      return (
+        <div className="text-center py-4 text-gray-500">
+          <p>No users available for team selection.</p>
+          <p className="text-xs mt-1">Users will appear here once they are loaded.</p>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-wrap gap-1 items-center">
         {allUsers.map(user => (
@@ -952,12 +1844,26 @@ export const RCAModule: React.FC = () => {
 
   // Helper to get asset or unit name by ID
   function getAssetOrUnitName(id: string): string {
-    if (!id) return '';
+    if (!id) return 'Unknown Asset';
+    
+    // Debug logging
+    console.log('getAssetOrUnitName called with:', { id, assetsLength: assets.length, unitsLength: units.length });
+    
     const asset = assets.find(a => a.id === id);
-    if (asset) return `Asset: ${asset.name}`;
+    if (asset) {
+      console.log('Found asset:', asset.name);
+      return asset.name;
+    }
+    
     const unit = units.find(u => u.id === id);
-    if (unit) return `Unit: ${unit.name}`;
-    return id;
+    if (unit) {
+      console.log('Found unit:', unit.name);
+      return unit.name;
+    }
+    
+    // If we can't find the asset/unit, try to provide a more helpful fallback
+    console.log('Asset/Unit not found for ID:', id);
+    return `Asset ID: ${id.substring(0, 8)}...`;
   }
 
   function handleAddRootNode() {
@@ -1009,7 +1915,7 @@ export const RCAModule: React.FC = () => {
     if (!selectedRCA) return;
     if (!window.confirm(`Delete recommendation "${rec.title}"?`)) return;
     const updated = await masterDataService.updateRCA(selectedRCA.id, {
-      recommendations: selectedRCA.recommendations.filter((r: RCARecommendation) => r.id !== rec.id)
+      recommendations: (selectedRCA.recommendations || []).filter((r: RCARecommendation) => r.id !== rec.id)
     });
     setSelectedRCA({
       ...updated,
@@ -1023,7 +1929,7 @@ export const RCAModule: React.FC = () => {
   async function handlePushToCMMS(rec: RCARecommendation) {
     if (!selectedRCA) return;
     // Simulate push: set status to 'In Progress' and show badge
-    const updatedRecs = selectedRCA.recommendations.map(r =>
+    const updatedRecs = (selectedRCA.recommendations || []).map(r =>
       r.id === rec.id ? { ...r, status: 'In Progress' as 'In Progress' } : r
     );
     const updated = await masterDataService.updateRCA(selectedRCA.id, { recommendations: updatedRecs });
@@ -1034,58 +1940,32 @@ export const RCAModule: React.FC = () => {
     toast({ title: 'Pushed', description: 'Recommendation pushed to CMMS (simulated).' });
   }
 
-  const [evidenceFilter, setEvidenceFilter] = useState('');
-  const [evidenceViewMode, setEvidenceViewMode] = useState<'table' | 'list'>('table');
-
-  useEffect(() => {
-    if (selectedRCA) {
-      setEditRCAForm({
-        title: selectedRCA.title || '',
-        description: selectedRCA.description || '',
-        priority: selectedRCA.priority || 'Medium',
-        targetCloseDate: selectedRCA.targetCloseDate || '',
-        teamCharter: selectedRCA.teamCharter || '',
-        teamLeadId: selectedRCA.teamLeadId || '',
-        teamMemberIds: selectedRCA.teamMemberIds || [],
-      });
-    }
-  }, [selectedRCA]);
-
-  // 1. Add state for evidenceCategories and evidenceLocations:
-  const [evidenceCategories, setEvidenceCategories] = useState([]);
-  const [evidenceLocations, setEvidenceLocations] = useState([]);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [categoryInput, setCategoryInput] = useState('');
-  const [locationInput, setLocationInput] = useState('');
-  const [editingCategory, setEditingCategory] = useState(null);
-  const [editingLocation, setEditingLocation] = useState(null);
-
-  // 2. Load categories/locations for tenant:
-  useEffect(() => {
-    if (!plantSelection?.tenant?.id) return;
-    storageService.query('evidenceCategories', { tenantId: plantSelection.tenant.id }).then(setEvidenceCategories);
-    storageService.query('evidenceLocations', { tenantId: plantSelection.tenant.id }).then(setEvidenceLocations);
-  }, [plantSelection]);
+  // 1. Load categories/locations for tenant:
 
   // 3. Add handlers to add, edit, delete category/location:
   const handleAddCategory = async () => {
     if (!categoryInput.trim()) return;
+    const tenantId = plantSelection?.tenant?.id;
+    if (!tenantId) {
+      toast({ title: 'Tenant required', description: 'Select a tenant before managing evidence categories.', variant: 'destructive' });
+      return;
+    }
     try {
       if (editingCategory) {
-        await storageService.update('evidenceCategories', editingCategory.id, { name: categoryInput } as any);
+        await masterDataService.updateEvidenceCategory(editingCategory.id, { name: categoryInput });
         toast({ title: 'Success', description: 'Category updated.' });
       } else {
-        await storageService.create('evidenceCategories', {
+        await masterDataService.createEvidenceCategory({
           name: categoryInput,
-          tenantId: plantSelection.tenant.id,
-        } as any);
+          tenantId,
+        });
         toast({ title: 'Success', description: 'Category added.' });
       }
       setCategoryInput('');
       setEditingCategory(null);
       setShowCategoryModal(false);
-      storageService.query('evidenceCategories', { tenantId: plantSelection.tenant.id }).then(setEvidenceCategories);
+      const categories = await masterDataService.getEvidenceCategories({ tenantId });
+      setEvidenceCategories(categories);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to add/update category.' });
       console.error('Failed to add/update category:', err);
@@ -1097,26 +1977,41 @@ export const RCAModule: React.FC = () => {
     setShowCategoryModal(true);
   };
   const handleDeleteCategory = async (cat) => {
-    await storageService.delete('evidenceCategories', cat.id);
-    storageService.query('evidenceCategories', { tenantId: plantSelection.tenant.id }).then(setEvidenceCategories);
+    const tenantId = plantSelection?.tenant?.id;
+    if (!tenantId) return;
+    try {
+      await masterDataService.deleteEvidenceCategory(cat.id);
+      const categories = await masterDataService.getEvidenceCategories({ tenantId });
+      setEvidenceCategories(categories);
+      toast({ title: 'Deleted', description: 'Category deleted.' });
+    } catch (error) {
+      console.error('Failed to delete category:', error);
+      toast({ title: 'Error', description: 'Failed to delete category.', variant: 'destructive' });
+    }
   };
   const handleAddLocation = async () => {
     if (!locationInput.trim()) return;
+    const tenantId = plantSelection?.tenant?.id;
+    if (!tenantId) {
+      toast({ title: 'Tenant required', description: 'Select a tenant before managing evidence locations.', variant: 'destructive' });
+      return;
+    }
     try {
       if (editingLocation) {
-        await storageService.update('evidenceLocations', editingLocation.id, { name: locationInput } as any);
+        await masterDataService.updateEvidenceLocation(editingLocation.id, { name: locationInput });
         toast({ title: 'Success', description: 'Location updated.' });
       } else {
-        await storageService.create('evidenceLocations', {
+        await masterDataService.createEvidenceLocation({
           name: locationInput,
-          tenantId: plantSelection.tenant.id,
-        } as any);
+          tenantId,
+        });
         toast({ title: 'Success', description: 'Location added.' });
       }
       setLocationInput('');
       setEditingLocation(null);
       setShowLocationModal(false);
-      storageService.query('evidenceLocations', { tenantId: plantSelection.tenant.id }).then(setEvidenceLocations);
+      const locations = await masterDataService.getEvidenceLocations({ tenantId });
+      setEvidenceLocations(locations);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to add/update location.' });
       console.error('Failed to add/update location:', err);
@@ -1128,16 +2023,20 @@ export const RCAModule: React.FC = () => {
     setShowLocationModal(true);
   };
   const handleDeleteLocation = async (loc) => {
-    await storageService.delete('evidenceLocations', loc.id);
-    storageService.query('evidenceLocations', { tenantId: plantSelection.tenant.id }).then(setEvidenceLocations);
+    const tenantId = plantSelection?.tenant?.id;
+    if (!tenantId) return;
+    try {
+      await masterDataService.deleteEvidenceLocation(loc.id);
+      const locations = await masterDataService.getEvidenceLocations({ tenantId });
+      setEvidenceLocations(locations);
+      toast({ title: 'Deleted', description: 'Location deleted.' });
+    } catch (error) {
+      console.error('Failed to delete location:', error);
+      toast({ title: 'Error', description: 'Failed to delete location.', variant: 'destructive' });
+    }
   };
 
-  // Add state for evidence modal
-  const [showEvidenceModal, setShowEvidenceModal] = useState(false);
-  const [evidenceModalMode, setEvidenceModalMode] = useState<'view' | 'edit' | 'add'>('view');
-  const [currentEvidence, setCurrentEvidence] = useState<RCAEvidence | null>(null);
-  const [editEvidenceForm, setEditEvidenceForm] = useState<any>(null);
-  const [showAddEvidenceModal, setShowAddEvidenceModal] = useState(false);
+  // Evidence modal handlers
 
   function handleViewEvidence(evidence: RCAEvidence) {
     setCurrentEvidence(evidence);
@@ -1170,7 +2069,7 @@ export const RCAModule: React.FC = () => {
   async function handleSaveEvidenceEdit() {
     if (!selectedRCA || !currentEvidence) return;
     // Only update the evidence with the matching id
-    const updatedEvidence = selectedRCA.evidence.map(e =>
+    const updatedEvidence = (selectedRCA.evidence || []).map(e =>
       e.id === currentEvidence.id
         ? {
             ...e,
@@ -1200,7 +2099,7 @@ export const RCAModule: React.FC = () => {
     if (!window.confirm(`Delete evidence "${evidence.title}"?`)) return;
     try {
       const updated = await masterDataService.updateRCA(selectedRCA.id, {
-        evidence: selectedRCA.evidence.filter((e: RCAEvidence) => e.id !== evidence.id)
+        evidence: (selectedRCA.evidence || []).filter((e: RCAEvidence) => e.id !== evidence.id)
       });
       setSelectedRCA({
         ...updated,
@@ -1217,7 +2116,7 @@ export const RCAModule: React.FC = () => {
 
   async function handleAttachEvidence(nodeId: string, evidenceId: string, checked: boolean) {
     if (!selectedRCA) return;
-    const newEvidence = selectedRCA.evidence.map(e => {
+    const newEvidence = (selectedRCA.evidence || []).map(e => {
       if (e.id !== evidenceId) return e;
       let nodeIds = Array.isArray(e.nodeIds) ? [...e.nodeIds] : [];
       if (checked) {
@@ -1265,25 +2164,7 @@ export const RCAModule: React.FC = () => {
     }
   }
 
-  const [showManualEventModal, setShowManualEventModal] = useState(false);
-  const [manualEventForm, setManualEventForm] = useState({
-    id: '',
-    label: '',
-    type: 'Failure',
-    timestamp: '',
-    description: '',
-    asset: '',
-    severity: 'Medium',
-  });
-  const [manualEventMode, setManualEventMode] = useState<'add' | 'edit'>('add');
-  const [manualEventError, setManualEventError] = useState<string | null>(null);
-
-  const [showLinkEvidenceModal, setShowLinkEvidenceModal] = useState(false);
-  const [linkEvidenceEvent, setLinkEvidenceEvent] = useState<any>(null);
-  const [linkEvidenceSelection, setLinkEvidenceSelection] = useState<string[]>([]);
-
-  const [diagramNodes, setDiagramNodes] = useState(selectedRCA?.eventDiagram?.nodes || []);
-  const [diagramEdges, setDiagramEdges] = useState(selectedRCA?.eventDiagram?.edges || []);
+  // Manual event and diagram handlers
 
   // Sync local state with selectedRCA when it changes
   useEffect(() => {
@@ -1291,15 +2172,9 @@ export const RCAModule: React.FC = () => {
     setDiagramEdges(selectedRCA?.eventDiagram?.edges || []);
   }, [selectedRCA?.id]);
 
-  // --- Add state for RCA list search and filters ---
-  const [rcaSearch, setRcaSearch] = useState('');
-  const [rcaPriorityFilter, setRcaPriorityFilter] = useState<'All' | 'Critical' | 'High' | 'Medium' | 'Low'>('All');
-  const [rcaOverdueFilter, setRcaOverdueFilter] = useState<'All' | 'Overdue' | 'NotOverdue'>('All');
-  const [rcaStatusFilter, setRcaStatusFilter] = useState<'All' | 'Draft' | 'In Progress' | 'Analysis' | 'Published' | 'Closed'>('All');
+  // RCA list search and filters
 
-  // Add state for fullscreen modals
-  const [showLogicTreeFullscreen, setShowLogicTreeFullscreen] = useState(false);
-  const [showEventDiagramFullscreen, setShowEventDiagramFullscreen] = useState(false);
+  // Fullscreen modals
 
   // Add ESC key handler for fullscreen modals
   useEffect(() => {
@@ -1315,14 +2190,7 @@ export const RCAModule: React.FC = () => {
     }
   }, [showLogicTreeFullscreen, showEventDiagramFullscreen]);
 
-  // --- Add state for reset logic tree modal ---
-  const [showResetLogicTreeModal, setShowResetLogicTreeModal] = useState(false);
-  const [resettingLogicTree, setResettingLogicTree] = useState(false);
-  
-  // Time Series query state
-  const [timeSeriesResults, setTimeSeriesResults] = useState<any>(null);
-  const [timeSeriesLoading, setTimeSeriesLoading] = useState(false);
-  const [showTimeSeriesResults, setShowTimeSeriesResults] = useState(false);
+  // Reset logic tree and time series
 
   // --- Handler to execute time series query ---
   async function handleExecuteTimeSeriesQuery(evidence: RCAEvidence) {
@@ -1494,33 +2362,54 @@ export const RCAModule: React.FC = () => {
     }
   }
 
-  // --- Add state for recommendation filters ---
-  const [recommendationFilter, setRecommendationFilter] = useState('');
-  const [recommendationStatusFilter, setRecommendationStatusFilter] = useState('All');
-  const [recommendationPriorityFilter, setRecommendationPriorityFilter] = useState('All');
-  const [recommendationAssigneeFilter, setRecommendationAssigneeFilter] = useState('All');
-
-  // --- Add state for comments (per RCA) ---
-  const [comments, setComments] = useState<{ [rcaId: string]: Array<{ id: string; user: string; text: string; timestamp: string }> }>({});
-  const [newComment, setNewComment] = useState('');
+  // Recommendation filters and comments
 
   // Helper to get comments for selected RCA
   const rcaComments = selectedRCA ? (comments[selectedRCA.id] || []) : [];
+  const publicComments = rcaComments.filter(c => !c.isPrivate || c.userId === session?.user?.id);
+  const privateComments = rcaComments.filter(c => c.isPrivate && c.userId === session?.user?.id);
 
-  // Handler to add a comment
+  // Handler to add a comment with industrial RCA standards
   function handleAddComment() {
     if (!selectedRCA || !newComment.trim()) return;
+    
     const comment = {
       id: Math.random().toString(36).substr(2, 9),
       user: session?.user?.name || 'User',
+      userId: session?.user?.id || '',
       text: newComment,
       timestamp: new Date().toISOString(),
+      type: commentType,
+      phase: normalizeStatus(selectedRCA.status),
+      isPrivate: isPrivateComment,
+      mentions: extractMentions(newComment),
     };
+    
     setComments(prev => ({
       ...prev,
       [selectedRCA.id]: [...(prev[selectedRCA.id] || []), comment],
     }));
+    
     setNewComment('');
+    setCommentType('general');
+    setIsPrivateComment(false);
+    
+    // Show success message
+    toast({
+      title: 'Comment Added',
+      description: `Comment added to ${commentType} phase`,
+    });
+  }
+
+  // Helper to extract user mentions from comment text
+  function extractMentions(text: string): string[] {
+    const mentionRegex = /@(\w+)/g;
+    const mentions = [];
+    let match;
+    while ((match = mentionRegex.exec(text)) !== null) {
+      mentions.push(match[1]);
+    }
+    return mentions;
   }
 
   // Handler to delete a comment
@@ -1530,11 +2419,44 @@ export const RCAModule: React.FC = () => {
       ...prev,
       [selectedRCA.id]: (prev[selectedRCA.id] || []).filter(c => c.id !== commentId),
     }));
+    
+    toast({
+      title: 'Comment Deleted',
+      description: 'Comment has been removed',
+    });
   }
 
-  if (plantLoading) return <div>Loading plant context...</div>;
-  if (!plantSelection || !plantSelection.tenant || !plantSelection.unit) {
-    return <div className="p-8 text-center text-gray-500">Please select a Plant and Unit to access RCA investigations.</div>;
+  // Handler to edit a comment
+  function handleEditComment(commentId: string, newText: string) {
+    if (!selectedRCA) return;
+    setComments(prev => ({
+      ...prev,
+      [selectedRCA.id]: (prev[selectedRCA.id] || []).map(c => 
+        c.id === commentId ? { ...c, text: newText, timestamp: new Date().toISOString() } : c
+      ),
+    }));
+    
+    toast({
+      title: 'Comment Updated',
+      description: 'Comment has been updated',
+    });
+  }
+  
+  // Debug: Plant selection check
+  // console.log('Plant selection check:', { plantSelection, hasTenant: !!plantSelection?.tenant, hasUnit: !!plantSelection?.unit, sessionTenant: !!session?.tenant });
+  
+  // Check if we have URL parameters (coming from Start RCA button)
+  const hasUrlParams = searchParams.get('eventId') && searchParams.get('eventTitle');
+  
+  // If we have URL parameters, we can work with just the session tenant
+  // Otherwise, we need at least a plant (tenant) selection
+  if (!hasUrlParams && (!plantSelection || !plantSelection.tenant)) {
+    return <div className="p-8 text-center text-gray-500">Please select a Plant to access RCA investigations.</div>;
+  }
+  
+  // If we have URL parameters but no plant selection, we need at least a tenant from session
+  if (hasUrlParams && (!plantSelection?.tenant && !session?.tenant)) {
+    return <div className="p-8 text-center text-gray-500">Please select a Plant to access RCA investigations.</div>;
   }
 
   // --- Patch eventDiagram nodes to always have position ---
@@ -1546,13 +2468,12 @@ export const RCAModule: React.FC = () => {
     }));
   }
 
-  // --- Share/Export Handlers and State ---
-  const [shareCopied, setShareCopied] = useState(false);
+  // Share/Export Handlers
   const shareLink = selectedRCA ? `${window.location.origin}${window.location.pathname}?rca=${selectedRCA.id}` : '';
   function handleExportCSV() {
     if (!selectedRCA) return;
     const headers = ['Title', 'Description', 'Priority', 'Assignee', 'Due Date', 'Status', 'Estimated Cost'];
-    const rows = selectedRCA.recommendations.map(r => [
+    const rows = (selectedRCA.recommendations || []).map(r => [
       r.title,
       r.description,
       r.priority,
@@ -1570,6 +2491,132 @@ export const RCAModule: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
   }
+  // Enhanced Export Functions for Industrial RCA Standards
+  function handleExportPDF() {
+    if (!selectedRCA) return;
+    
+    const rcaData = {
+      title: selectedRCA.title,
+      description: selectedRCA.description,
+      status: selectedRCA.status,
+      priority: selectedRCA.priority,
+      teamLead: getUserName(selectedRCA.teamLeadId),
+      teamMembers: selectedRCA.teamMemberIds.map(id => getUserName(id)).filter(Boolean),
+      targetCloseDate: selectedRCA.targetCloseDate,
+      actualCloseDate: selectedRCA.actualCloseDate,
+      rootCause: selectedRCA.rootCause,
+      evidence: exportOptions.includeEvidence ? selectedRCA.evidence : [],
+      recommendations: exportOptions.includeRecommendations ? selectedRCA.recommendations : [],
+      comments: exportOptions.includeComments ? rcaComments : [],
+      logicTree: exportOptions.includeLogicTree ? selectedRCA.logicTree : [],
+      createdAt: selectedRCA.createdAt,
+      updatedAt: selectedRCA.updatedAt,
+    };
+    
+    const pdfContent = generatePDFContent(rcaData);
+    downloadFile(pdfContent, `RCA_${selectedRCA.title.replace(/[^a-z0-9]/gi, '_')}.pdf`, 'application/pdf');
+    
+    toast({
+      title: 'Export Complete',
+      description: 'RCA exported to PDF successfully',
+    });
+  }
+
+  function handleExportExcel() {
+    if (!selectedRCA) return;
+    
+    const excelData = {
+      'RCA Summary': [
+        ['Title', selectedRCA.title],
+        ['Description', selectedRCA.description],
+        ['Status', selectedRCA.status],
+        ['Priority', selectedRCA.priority],
+        ['Team Lead', getUserName(selectedRCA.teamLeadId)],
+        ['Target Close Date', selectedRCA.targetCloseDate || 'Not set'],
+        ['Root Cause', selectedRCA.rootCause || 'Not identified'],
+      ],
+      'Recommendations': (selectedRCA.recommendations || []).map(r => [
+        r.title,
+        r.description,
+        r.priority,
+        getUserName(r.assigneeId),
+        r.dueDate || 'Not set',
+        r.status,
+        r.estimatedCost || 'Not set'
+      ]),
+      'Evidence': (selectedRCA.evidence || []).map(e => [
+        e.title,
+        e.description,
+        e.type,
+        e.collectedBy,
+        e.collectedAt,
+        e.category || 'Not categorized',
+        e.verified ? 'Yes' : 'No'
+      ]),
+      'Comments': rcaComments.map(c => [
+        c.user,
+        c.text,
+        c.type,
+        c.phase,
+        c.timestamp,
+        c.isPrivate ? 'Private' : 'Public'
+      ])
+    };
+    
+    const csvContent = Object.entries(excelData).map(([sheetName, data]) => {
+      return `=== ${sheetName} ===\n${data.map(row => row.join(',')).join('\n')}\n\n`;
+    }).join('');
+    
+    downloadFile(csvContent, `RCA_${selectedRCA.title.replace(/[^a-z0-9]/gi, '_')}.csv`, 'text/csv');
+    
+    toast({
+      title: 'Export Complete',
+      description: 'RCA exported to Excel format successfully',
+    });
+  }
+
+  function generatePDFContent(rcaData: any): string {
+    return `
+RCA REPORT
+==========
+
+Title: ${rcaData.title}
+Description: ${rcaData.description}
+Status: ${rcaData.status}
+Priority: ${rcaData.priority}
+Team Lead: ${rcaData.teamLead}
+Target Close Date: ${rcaData.targetCloseDate}
+
+ROOT CAUSE ANALYSIS
+==================
+${rcaData.rootCause || 'Not identified'}
+
+EVIDENCE
+========
+${(rcaData.evidence || []).map((e: any) => `- ${e.title}: ${e.description}`).join('\n')}
+
+RECOMMENDATIONS
+===============
+${(rcaData.recommendations || []).map((r: any) => `- ${r.title}: ${r.description} (Priority: ${r.priority})`).join('\n')}
+
+COMMENTS
+========
+${rcaData.comments.map((c: any) => `[${c.user}] ${c.text}`).join('\n')}
+
+Generated on: ${new Date().toISOString()}
+    `.trim();
+  }
+
+  function downloadFile(content: string, filename: string, mimeType: string) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function handleExportJSON() {
     if (!selectedRCA) return;
     const json = JSON.stringify(selectedRCA.recommendations, null, 2);
@@ -1588,10 +2635,7 @@ export const RCAModule: React.FC = () => {
     setTimeout(() => setShareCopied(false), 2000);
   }
 
-  // --- Recommendation Edit Modal State ---
-  const [showEditRecommendationModal, setShowEditRecommendationModal] = useState(false);
-  const [editRecommendationForm, setEditRecommendationForm] = useState<any>(null);
-  const [editingRecommendationId, setEditingRecommendationId] = useState<string | null>(null);
+  // Recommendation Edit Modal
 
   function handleEditRecommendation(rec: RCARecommendation) {
     setEditingRecommendationId(rec.id);
@@ -1601,7 +2645,7 @@ export const RCAModule: React.FC = () => {
 
   async function handleSaveEditRecommendation() {
     if (!selectedRCA || !editingRecommendationId) return;
-    const updatedRecs = selectedRCA.recommendations.map(r =>
+    const updatedRecs = (selectedRCA.recommendations || []).map(r =>
       r.id === editingRecommendationId ? { ...r, ...editRecommendationForm } : r
     );
     const updated = await masterDataService.updateRCA(selectedRCA.id, { recommendations: updatedRecs });
@@ -1621,8 +2665,7 @@ export const RCAModule: React.FC = () => {
     setEditRecommendationForm(null);
   }
 
-  // Add state for modal
-  const [showAddRecommendationModal, setShowAddRecommendationModal] = useState(false);
+  // Add recommendation modal
 
   // Update status phases to match stepper
   const STATUS_PHASES = [
@@ -1706,19 +2749,12 @@ export const RCAModule: React.FC = () => {
 
   const TAB_TO_PHASE = Object.fromEntries(Object.entries(PHASE_TO_TAB).map(([k, v]) => [v, k]));
 
-  const [activeTab, setActiveTab] = useState('definition');
-  useEffect(() => {
-    if (selectedRCA) {
-      setActiveTab(PHASE_TO_TAB[normalizeStatus(selectedRCA.status)] || 'definition');
-    }
-  }, [selectedRCA?.status]);
-
   // Approval logic helpers
   const canApprove = session?.user?.role === 'SuperAdmin' || session?.user?.role === 'OrgAdmin' || session?.user?.role === 'Manager';
   const isApproved = selectedRCA?.approvalStatus === 'Approved';
   const isRejected = selectedRCA?.approvalStatus === 'Rejected';
   const isPendingApproval = selectedRCA?.approvalStatus === 'Pending' || !selectedRCA?.approvalStatus;
-  const [approvalComment, setApprovalComment] = useState('');
+  // Approval comment management
 
   async function handleApproveRCA() {
     if (!selectedRCA || !canApprove) return;
@@ -1748,7 +2784,7 @@ export const RCAModule: React.FC = () => {
 
   const isClosureAllowed = selectedRCA?.approvalStatus === 'Approved';
   const isClosed = selectedRCA?.closureStatus === 'Closed';
-  const [closureNotes, setClosureNotes] = useState('');
+  // Closure notes management
 
   async function handleCloseRCA() {
     if (!selectedRCA || !isClosureAllowed) return;
@@ -1766,7 +2802,7 @@ export const RCAModule: React.FC = () => {
 
   // Phase completion checks
   function isDefinitionComplete(rca: UIRCA) {
-    return !!rca.title && !!rca.description && !!rca.teamCharter && rca.teamMemberIds && rca.teamMemberIds.length > 0;
+    return !!rca.title && !!rca.description && !!rca.teamCharter && rca.teamMemberIds && new Set(rca.teamMemberIds).size > 0;
   }
   function isDataCollectionComplete(rca: UIRCA) {
     return rca.evidence && rca.evidence.length > 0;
@@ -1785,27 +2821,7 @@ export const RCAModule: React.FC = () => {
   }
 
   // Review & Advance state
-  const [showReviewBanner, setShowReviewBanner] = useState(false);
-  //const [nextPhase, setNextPhase] = useState<string | null>(null);
-const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
-  // Phase advancement logic
-  useEffect(() => {
-    if (!selectedRCA) return;
-    const phase = normalizeStatus(selectedRCA.status);
-    if (phase === 'Definition' && isDefinitionComplete(selectedRCA)) {
-      setShowReviewBanner(true); setNextPhase('Data Collection');
-    } else if (phase === 'Data Collection' && isDataCollectionComplete(selectedRCA)) {
-      setShowReviewBanner(true); setNextPhase('Analysis');
-    } else if (phase === 'Analysis' && isAnalysisComplete(selectedRCA)) {
-      setShowReviewBanner(true); setNextPhase('Recommendations');
-    } else if (phase === 'Recommendations' && isRecommendationsComplete(selectedRCA)) {
-      setShowReviewBanner(true); setNextPhase('Approval');
-    } else if (phase === 'Approval' && isApprovalComplete(selectedRCA)) {
-      setShowReviewBanner(true); setNextPhase('Closure');
-    } else {
-      setShowReviewBanner(false); setNextPhase(null);
-    }
-  }, [selectedRCA]);
+  // Review banner and next phase management
 
   async function handleAdvancePhase() {
     if (!selectedRCA || !nextPhase) return;
@@ -1823,64 +2839,111 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
   const activeStatuses = ['Definition', 'Data Collection', 'Analysis', 'Recommendations', 'Approval'];
   const activeRcas = rcas.filter(r => activeStatuses.includes(normalizeStatus(r.status)));
   const highPriorityRcas = rcas.filter(r => ['High', 'Critical'].includes(r.priority));
-  const overdueRcas = rcas.filter(r => r.targetCloseDate && new Date(r.targetCloseDate) < new Date() && normalizeStatus(r.status) !== 'Closure');
+  const overdueRcas = rcas.filter(r => r.targetCloseDate && new Date(r.targetCloseDate) < new Date() && r.status !== 'Closed' && normalizeStatus(r.status) !== 'Closure');
   const publishedRcas = rcas.filter(r => normalizeStatus(r.status) === 'Recommendations');
 
   // Helper to check if RCA is closed
   const isRcaClosed = selectedRCA?.closureStatus === 'Closed';
+
+  // Early return for loading state - must be after all hooks are declared
+  if (plantLoading) return <div>Loading plant context...</div>;
+
+  // Debug information for tenant ID issues
+  const currentTenantId = plantSelection?.tenant?.id || session?.tenant?.id;
+  const debugInfo = {
+    plantSelectionTenant: plantSelection?.tenant?.id,
+    plantSelectionTenantName: plantSelection?.tenant?.name,
+    sessionTenant: session?.tenant?.id,
+    sessionTenantName: session?.tenant?.name,
+    finalTenantId: currentTenantId,
+    hasSession: !!session,
+    hasPlantSelection: !!plantSelection,
+    rcaCount: rcas.length,
+    eventCount: events.length
+  };
 
   return (
     <>
       {/* Always show dashboard and RCA list unless an RCA is selected */}
       {!selectedRCA && (
         <div className="space-y-6">
-          {/* Dashboard cards (Active RCAs, High Priority, Overdue, Published) */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
+          {/* Dashboard cards with Status Counts */}
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+            <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active RCAs</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Total RCAs</CardTitle>
+                <FileText className="h-4 w-4 text-blue-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {activeRcas.length}
+                <div className="text-2xl font-bold text-blue-700">
+                  {rcas.length}
                 </div>
+                <p className="text-xs text-gray-600 mt-1">All investigations</p>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="bg-gradient-to-br from-green-50 to-white border-green-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">High Priority</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Draft</CardTitle>
+                <Activity className="h-4 w-4 text-green-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">
-                  {highPriorityRcas.length}
+                <div className="text-2xl font-bold text-green-700">
+                  {rcas.filter(r => r.status === 'Draft' || r.status === 'Definition').length}
                 </div>
+                <p className="text-xs text-gray-600 mt-1">Just started</p>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="bg-gradient-to-br from-yellow-50 to-white border-yellow-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+                <Activity className="h-4 w-4 text-yellow-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-700">
+                  {rcas.filter(r => ['In Progress', 'Data Collection', 'Analysis', 'Recommendations', 'Approval'].includes(r.status)).length}
+                </div>
+                <p className="text-xs text-gray-600 mt-1">Active work</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-purple-50 to-white border-purple-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Closed</CardTitle>
+                <CheckCircle className="h-4 w-4 text-purple-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-700">
+                  {rcas.filter(r => r.status === 'Closed' || r.status === 'Closure' || r.status === 'Published').length}
+                </div>
+                <p className="text-xs text-gray-600 mt-1">Finished</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-red-50 to-white border-red-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
+                <AlertTriangle className="h-4 w-4 text-red-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
+                <div className="text-2xl font-bold text-red-700">
                   {overdueRcas.length}
                 </div>
+                <p className="text-xs text-gray-600 mt-1">Need attention</p>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="bg-gradient-to-br from-indigo-50 to-white border-indigo-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Published</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Critical</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-indigo-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  {publishedRcas.length}
+                <div className="text-2xl font-bold text-indigo-700">
+                  {rcas.filter(r => r.priority === 'Critical').length}
                 </div>
+                <p className="text-xs text-gray-600 mt-1">High priority</p>
               </CardContent>
             </Card>
           </div>
@@ -1941,8 +3004,8 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                 // Priority filter
                 const matchesPriority =
                   rcaPriorityFilter === 'All' || rca.priority === rcaPriorityFilter;
-                // Overdue filter
-                const isOverdue = rca.targetCloseDate && new Date(rca.targetCloseDate) < new Date();
+                // Overdue filter (exclude Closed RCAs)
+                const isOverdue = rca.targetCloseDate && new Date(rca.targetCloseDate) < new Date() && rca.status !== 'Closed';
                 const matchesOverdue =
                   rcaOverdueFilter === 'All' ||
                   (rcaOverdueFilter === 'Overdue' && isOverdue) ||
@@ -1956,7 +3019,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                   {filteredRcas.map((rca) => {
                     const tpl = rcaTemplates.find(t => t.id === rca.templateId);
-                    const isOverdue = rca.targetCloseDate && new Date(rca.targetCloseDate) < new Date();
+                    const isOverdue = rca.targetCloseDate && new Date(rca.targetCloseDate) < new Date() && rca.status !== 'Closed';
                     return (
                       <div
                         key={rca.id}
@@ -1994,15 +3057,15 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                             </div>
                             <div>
                               <div className="text-[10px] text-gray-500 font-semibold mb-0.5 flex items-center gap-1"><Users className="w-3 h-3 text-green-400" /> Team</div>
-                              <div className="text-xs text-gray-700">{rca.teamMemberIds.length}</div>
+                              <div className="text-xs text-gray-700">{new Set(rca.teamMemberIds).size}</div>
                             </div>
                             <div>
                               <div className="text-[10px] text-gray-500 font-semibold mb-0.5 flex items-center gap-1"><Paperclip className="w-3 h-3 text-purple-400" /> Evidence</div>
-                              <div className="text-xs text-gray-700">{rca.evidence.length}</div>
+                              <div className="text-xs text-gray-700">{rca.evidence?.length || 0}</div>
                             </div>
                             <div>
                               <div className="text-[10px] text-gray-500 font-semibold mb-0.5 flex items-center gap-1"><CheckCircle className="w-3 h-3 text-blue-400" /> Recs</div>
-                              <div className="text-xs text-gray-700">{rca.recommendations.length}</div>
+                              <div className="text-xs text-gray-700">{rca.recommendations?.length || 0}</div>
                             </div>
                             <div>
                               <div className="text-[10px] text-gray-500 font-semibold mb-0.5 flex items-center gap-1"><Clock className="w-3 h-3 text-yellow-400" /> Due</div>
@@ -2013,10 +3076,48 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                           <div className="flex flex-wrap gap-2 items-center mt-1">
                             <div className="flex items-center gap-1 bg-blue-50 rounded px-2 py-0.5 border border-blue-100 text-xs"><FileText className="w-3 h-3 text-blue-500" />{rca.status}</div>
                             <div className="flex items-center gap-1 bg-pink-50 rounded px-2 py-0.5 border border-pink-100 text-xs"><AlertTriangle className="w-3 h-3 text-pink-500" />{rca.priority}</div>
-                            <div className="flex items-center gap-1 bg-green-50 rounded px-2 py-0.5 border border-green-100 text-xs"><Users className="w-3 h-3 text-green-500" />{rca.teamMemberIds.length}</div>
-                            <div className="flex items-center gap-1 bg-purple-50 rounded px-2 py-0.5 border border-purple-100 text-xs"><Paperclip className="w-3 h-3 text-purple-500" />{rca.evidence.length}</div>
+                            <div className="flex items-center gap-1 bg-green-50 rounded px-2 py-0.5 border border-green-100 text-xs"><Users className="w-3 h-3 text-green-500" />{new Set(rca.teamMemberIds).size}</div>
+                            <div className="flex items-center gap-1 bg-purple-50 rounded px-2 py-0.5 border border-purple-100 text-xs"><Paperclip className="w-3 h-3 text-purple-500" />{rca.evidence?.length || 0}</div>
                             <div className="flex items-center gap-1 bg-yellow-50 rounded px-2 py-0.5 border border-yellow-100 text-xs"><Clock className="w-3 h-3 text-yellow-500" />{rca.targetCloseDate ? new Date(rca.targetCloseDate).toLocaleDateString() : '-'}</div>
                           </div>
+                          
+                          {/* Progress Bar */}
+                          {(() => {
+                            const totalRecs = rca.recommendations?.length || 0;
+                            const completedRecs = rca.recommendations?.filter(r => r.status === 'Completed').length || 0;
+                            const evidenceCount = rca.evidence?.length || 0;
+                            const hasRootCause = !!rca.rootCause && rca.rootCause !== '';
+                            
+                            let progressPercent = 0;
+                            if (totalRecs > 0) {
+                              progressPercent = Math.round((completedRecs / totalRecs) * 60 + (evidenceCount > 0 ? 20 : 0) + (hasRootCause ? 20 : 0));
+                            } else {
+                              progressPercent = (evidenceCount > 0 ? 30 : 0) + (hasRootCause ? 70 : 0);
+                            }
+                            
+                            return (
+                              <div className="mt-3">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[10px] text-gray-600 font-semibold">Completion</span>
+                                  <span className="text-[10px] text-gray-600 font-bold">{progressPercent}%</span>
+                                </div>
+                                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full transition-all ${
+                                      progressPercent >= 75 ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
+                                      progressPercent >= 50 ? 'bg-gradient-to-r from-blue-500 to-cyan-600' :
+                                      progressPercent >= 25 ? 'bg-gradient-to-r from-yellow-500 to-orange-600' :
+                                      'bg-gradient-to-r from-red-500 to-pink-600'
+                                    }`}
+                                    style={{ width: `${progressPercent}%` }}
+                                  />
+                                </div>
+                                <p className="text-[9px] text-gray-500 mt-0.5">
+                                  {completedRecs}/{totalRecs} actions • {evidenceCount} evidence • {hasRootCause ? '✓' : '○'} root cause
+                                </p>
+                              </div>
+                            );
+                          })()}
                         </div>
                         {/* Premium Button - compact */}
                         <div className="flex justify-end px-4 pb-3">
@@ -2127,29 +3228,118 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                   <CardContent className="px-8 py-6 space-y-8">
                     {/* Event details if linked */}
                     {selectedRCA.eventId && (
-                      <div className="mb-4 p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-pink-50 border border-blue-100 shadow flex flex-col gap-1">
-                        <div className="font-semibold text-blue-700 flex items-center gap-2"><Target className="w-5 h-5 text-pink-500" /> Linked Event</div>
-                        {(() => {
-                          const event = events.find(e => e.id === selectedRCA.eventId);
-                          if (!event) return <div className="text-xs text-gray-600">ID: {selectedRCA.eventId}</div>;
-                          return (
-                            <div className="text-xs text-gray-600 space-y-1">
-                              <div>ID: {event.id}</div>
-                              <div>Date: {new Date(event.startTime).toLocaleString()}</div>
-                              <div>Asset: {event.assetId || 'N/A'}</div>
-                              <div>Impact Code: {event.impactCodeId || 'N/A'}</div>
-                              <div>OEE Code: {event.oeeCodeId || 'N/A'}</div>
-                              <div>Description: {event.description}</div>
+                      <div className="mb-4 p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-pink-50 border border-blue-100 shadow flex flex-col gap-2">
+                        <div className="font-semibold text-blue-700 flex items-center justify-between">
+                          <span className="flex items-center gap-2">
+                            <Target className="w-5 h-5 text-pink-500" /> Linked Event
+                          </span>
+                          {!isEditingEvent && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="text-xs px-3 py-1 rounded-full hover:bg-blue-100"
+                              onClick={() => {
+                                setIsEditingEvent(true);
+                                setSelectedEventId(selectedRCA.eventId);
+                              }}
+                            >
+                              <Pencil className="w-3 h-3 mr-1" />
+                              Edit Event
+                            </Button>
+                          )}
+                        </div>
+                        
+                        {isEditingEvent ? (
+                          <div className="space-y-3">
+                            <div>
+                              <Label className="text-xs text-blue-700 font-semibold mb-1">Select New Event</Label>
+                              <select
+                                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 bg-white"
+                                value={selectedEventId}
+                                onChange={(e) => setSelectedEventId(e.target.value)}
+                              >
+                                {events.map(ev => {
+                                  const asset = assets.find((a: any) => a.id === ev.assetId);
+                                  return (
+                                    <option key={ev.id} value={ev.id}>
+                                      {ev.eventType ? `[${ev.eventType}] ` : ''}{asset?.name || 'Unknown Asset'} - {ev.description?.substring(0, 80) || 'No description'}
+                                    </option>
+                                  );
+                                })}
+                              </select>
                             </div>
-                          );
-                        })()}
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs px-4 py-1 rounded-full"
+                                onClick={() => {
+                                  setIsEditingEvent(false);
+                                  setSelectedEventId(selectedRCA.eventId);
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="text-xs px-4 py-1 rounded-full bg-gradient-to-r from-blue-600 to-pink-500 hover:from-blue-700 hover:to-pink-600 text-white"
+                                onClick={async () => {
+                                  try {
+                                    const updated = await masterDataService.updateRCA(selectedRCA.id, {
+                                      eventId: selectedEventId
+                                    });
+                                    setSelectedRCA({ ...updated, logicTree: selectedRCA.logicTree });
+                                    setIsEditingEvent(false);
+                                    toast({
+                                      title: 'Success',
+                                      description: 'Linked event updated successfully',
+                                    });
+                                  } catch (error) {
+                                    console.error('Failed to update linked event:', error);
+                                    toast({
+                                      title: 'Error',
+                                      description: 'Failed to update linked event',
+                                      variant: 'destructive',
+                                    });
+                                  }
+                                }}
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {(() => {
+                              const event = events.find(e => e.id === selectedRCA.eventId);
+                              if (!event) return <div className="text-xs text-gray-600">ID: {selectedRCA.eventId}</div>;
+                              
+                              // Get names from IDs
+                              const asset = assets.find((a: any) => a.id === event.assetId);
+                              const impactCode = impactCodes.find((ic: any) => ic.id === event.impactCodeId);
+                              const oeeCode = oeeCodes.find((oc: any) => oc.id === event.oeeCodeId);
+                              
+                              return (
+                                <div className="text-xs text-gray-600 space-y-1">
+                                  <div>ID: {event.id}</div>
+                                  <div>Date: {new Date(event.startTime).toLocaleString()}</div>
+                                  <div>Asset: {asset?.name || event.assetId || 'N/A'}</div>
+                                  <div>Impact Code: {impactCode?.name || event.impactCodeId || 'N/A'}</div>
+                                  <div>OEE Code: {oeeCode?.name || event.oeeCodeId || 'N/A'}</div>
+                                  <div>Description: {event.description}</div>
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
                       </div>
                     )}
                     {/* RCA status and timeline */}
                     <div className="mb-4 flex flex-wrap items-center gap-4">
                       <Badge className={getStatusBadgeColor(selectedRCA.status) + ' text-xs px-3 py-1 rounded-full shadow'}>{selectedRCA.status}</Badge>
                       <Badge className={getPriorityBadgeColor(selectedRCA.priority) + ' text-xs px-3 py-1 rounded-full shadow'}>{selectedRCA.priority}</Badge>
-                      <span className="text-xs text-gray-500">Created: {new Date(selectedRCA.createdAt).toLocaleDateString()}</span>
+                      {/* <span className="text-xs text-gray-500">Created: {new Date(selectedRCA.createdAt).toLocaleDateString()}</span> */}
+                     
                       {selectedRCA.targetCloseDate && <span className="text-xs text-gray-500">Target Close: {new Date(selectedRCA.targetCloseDate).toLocaleDateString()}</span>}
                     </div>
                     {/* Team charter guidance */}
@@ -2282,16 +3472,25 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                 {['Photo', 'Document', 'Video', 'Note', 'Time Series'].map(type => (
                   <div key={type} className="flex items-center gap-2 rounded-full px-4 py-2 bg-gradient-to-r from-blue-100 to-pink-100 border border-blue-200 shadow text-base font-bold">
                     <span>{type === 'Photo' ? '📷' : type === 'Document' ? '📄' : type === 'Video' ? '🎥' : type === 'Note' ? '📝' : '📊'}</span>
-                    <span>{selectedRCA.evidence.filter(ev => ev.type === type).length}</span>
+                    <span>{selectedRCA.evidence?.filter(ev => ev.type === type).length || 0}</span>
                     <span className="text-xs text-gray-500 font-semibold">{type}</span>
                   </div>
                 ))}
-                {selectedRCA.evidence.length > 0 && (
-                  <div className="flex items-center gap-2 rounded-full px-4 py-2 bg-gradient-to-r from-green-100 to-blue-100 border border-green-200 shadow text-base font-bold">
-                    <span>🕒</span>
-                    <span className="text-xs text-gray-500">Last: {new Date(selectedRCA.evidence[selectedRCA.evidence.length-1].createdAt).toLocaleString()}</span>
-                  </div>
-                )}
+                {selectedRCA.evidence && selectedRCA.evidence.length > 0 && (() => {
+                  const lastEvidence = selectedRCA.evidence[selectedRCA.evidence.length - 1];
+                  const timestamp = lastEvidence.collectedAt || lastEvidence.createdAt;
+                  if (!timestamp) return null;
+                  
+                  const date = new Date(timestamp);
+                  if (isNaN(date.getTime())) return null; // Invalid date check
+                  
+                  return (
+                    <div className="flex items-center gap-2 rounded-full px-4 py-2 bg-gradient-to-r from-green-100 to-blue-100 border border-green-200 shadow text-base font-bold">
+                      <span>🕒</span>
+                      <span className="text-xs text-gray-500">Last: {date.toLocaleString()}</span>
+                    </div>
+                  );
+                })()}
               </div>
               {/* Evidence Table/List View */}
               {evidenceViewMode === 'table' ? (
@@ -2310,7 +3509,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {selectedRCA.evidence.filter(ev =>
+                      {(selectedRCA.evidence || []).filter(ev =>
                         (!evidenceFilter ||
                           ev.title.toLowerCase().includes(evidenceFilter.toLowerCase()) ||
                           (allUsers.find(u => u.id === ev.collectedBy)?.name || '').toLowerCase().includes(evidenceFilter.toLowerCase()) ||
@@ -2417,7 +3616,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                           </tr>
                         );
                       })}
-                      {selectedRCA.evidence.filter(ev =>
+                      {(selectedRCA.evidence || []).filter(ev =>
                         (!evidenceFilter ||
                           ev.title.toLowerCase().includes(evidenceFilter.toLowerCase()) ||
                           (allUsers.find(u => u.id === ev.collectedBy)?.name || '').toLowerCase().includes(evidenceFilter.toLowerCase()) ||
@@ -2437,7 +3636,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
               ) : (
                 // ... keep card/list view as before, but polish if needed ...
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {selectedRCA.evidence.filter(ev =>
+                  {(selectedRCA.evidence || []).filter(ev =>
                     (!evidenceFilter ||
                       ev.title.toLowerCase().includes(evidenceFilter.toLowerCase()) ||
                       (allUsers.find(u => u.id === ev.collectedBy)?.name || '').toLowerCase().includes(evidenceFilter.toLowerCase()) ||
@@ -2489,7 +3688,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                       </div>
                     );
                   })}
-                  {selectedRCA.evidence.filter(ev =>
+                  {(selectedRCA.evidence || []).filter(ev =>
                     (!evidenceFilter ||
                       ev.title.toLowerCase().includes(evidenceFilter.toLowerCase()) ||
                       (allUsers.find(u => u.id === ev.collectedBy)?.name || '').toLowerCase().includes(evidenceFilter.toLowerCase()) ||
@@ -2505,86 +3704,247 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
               )}
             </TabsContent>
             <TabsContent value="analysis">
-              {showReviewBanner && nextPhase === 'Recommendations' && activeTab === 'analysis' && (
-                <div className="w-full bg-gradient-to-r from-green-100 to-blue-100 border border-green-300 rounded-xl shadow p-4 flex items-center justify-between mb-4">
-                  <div className="text-green-800 font-semibold">Phase complete! Ready to advance to <b>{nextPhase}</b>.</div>
-                  <Button className="rounded-full bg-gradient-to-r from-green-600 to-blue-500 text-white font-bold px-6 py-2" onClick={handleAdvancePhase}>
-                    Review & Advance
-                  </Button>
-                </div>
-              )}
-              {/* --- ANALYZE TAB: Two-column layout with cards on left (25%) and content on right (75%) --- */}
-              <div className="flex flex-col md:flex-row gap-6">
-                {/* Left: Cards (25%) */}
-                <div className="w-full md:w-1/6 flex flex-col gap-6
-                  
-                  ">
-                  <Card className="rounded-2xl shadow-xl border-0 bg-gradient-to-br from-blue-50 via-white to-pink-50">
-                    <CardHeader className="pb-2 flex flex-row items-center gap-2"><BarChart3 className="w-5 h-5 text-blue-500" /><CardTitle className="text-xs font-semibold">Root Causes</CardTitle></CardHeader>
-                    <CardContent className="text-2xl font-bold text-blue-700">{selectedRCA.logicTree ? selectedRCA.logicTree.filter(n => n.finding).length : 0}</CardContent>
-                  </Card>
-                  <Card className="rounded-2xl shadow-xl border-0 bg-gradient-to-br from-green-50 via-white to-blue-50">
-                    <CardHeader className="pb-2 flex flex-row items-center gap-2"><BarChart3 className="w-5 h-5 text-green-500" /><CardTitle className="text-xs font-semibold">Total Nodes</CardTitle></CardHeader>
-                    <CardContent className="text-2xl font-bold text-green-700">{selectedRCA.logicTree ? (JSON.stringify(selectedRCA.logicTree).match(/"id":/g) || []).length : 0}</CardContent>
-                  </Card>
-                  <Card className="rounded-2xl shadow-xl border-0 bg-gradient-to-br from-pink-50 via-white to-blue-50">
-                    <CardHeader className="pb-2 flex flex-row items-center gap-2"><BarChart3 className="w-5 h-5 text-pink-500" /><CardTitle className="text-xs font-semibold">Evidence Linked</CardTitle></CardHeader>
-                    <CardContent className="text-2xl font-bold text-purple-700">{selectedRCA.evidence.filter(ev => Array.isArray(ev.nodeIds) && ev.nodeIds.length > 0).length}</CardContent>
-                  </Card>
-                </div>
-                {/* Right: Tabs and content (75%) */}
-                <div className="w-full md:w-3/4 md:pl-6">
+              {/* Fullscreen Toggle Button */}
+              <div className="flex items-center justify-between mb-4">
+                {showReviewBanner && nextPhase === 'Recommendations' && activeTab === 'analysis' && (
+                  <div className="flex-1 bg-gradient-to-r from-green-100 to-blue-100 border border-green-300 rounded-xl shadow p-4 flex items-center justify-between mr-4">
+                    <div className="text-green-800 font-semibold">Phase complete! Ready to advance to <b>{nextPhase}</b>.</div>
+                    <Button className="rounded-full bg-gradient-to-r from-green-600 to-blue-500 text-white font-bold px-6 py-2" onClick={handleAdvancePhase}>
+                      Review & Advance
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  onClick={() => setIsAnalysisFullscreen(!isAnalysisFullscreen)}
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto border-2 border-blue-300 hover:bg-blue-50 hover:border-blue-500"
+                  title={isAnalysisFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                >
+                  {isAnalysisFullscreen ? (
+                    <>
+                      <X className="w-4 h-4 mr-2" />
+                      Exit Fullscreen
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="w-4 h-4 mr-2" />
+                      Fullscreen View
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* --- ANALYZE TAB: Full width content (statistics cards are now in each sub-tab) --- */}
+              <div className={`${isAnalysisFullscreen ? 'fixed inset-0 z-50 bg-white overflow-auto p-6' : ''}`}>
+                <div className="w-full">
+                  {/* Fullscreen header with close button */}
+                  {isAnalysisFullscreen && (
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b-2 border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                          <BarChart3 className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-bold text-gray-800">Analysis Tools - Fullscreen Mode</h2>
+                          <p className="text-sm text-gray-600">{selectedRCA.title}</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => setIsAnalysisFullscreen(false)}
+                        variant="outline"
+                        size="sm"
+                        className="border-2 border-red-300 hover:bg-red-50 hover:border-red-500"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Exit Fullscreen
+                      </Button>
+                    </div>
+                  )}
                   <Tabs defaultValue="logic-tree" className="w-full">
-                    <TabsList className="w-full flex justify-between mb-4 rounded-2xl shadow bg-gradient-to-r from-blue-50 to-pink-50 border border-blue-100">
-                      <TabsTrigger value="logic-tree" className="flex-1">Logic Tree</TabsTrigger>
-                      <TabsTrigger value="event-diagram" className="flex-1">Event Diagram</TabsTrigger>
-                      <TabsTrigger value="event-timeline" className="flex-1">Event Timeline</TabsTrigger>
+                    {(() => {
+                      const enabledTools = analysisConfig?.enabledTools ?? DEFAULT_ANALYSIS_CONFIGS.OilAndGas.enabledTools;
+                      return (
+                        <>
+                    <TabsList className="w-full flex flex-wrap justify-start mb-4 rounded-2xl shadow bg-gradient-to-r from-blue-50 to-pink-50 border border-blue-100 gap-1 h-auto p-1">
+                      <TabsTrigger value="logic-tree" className="flex-shrink-0">Logic Tree</TabsTrigger>
+                      <TabsTrigger value="event-diagram" className="flex-shrink-0">Event Diagram</TabsTrigger>
+                      <TabsTrigger value="event-timeline" className="flex-shrink-0">Event Timeline</TabsTrigger>
+                      {enabledTools.fiveWhy !== false && (
+                        <TabsTrigger value="5why" className="flex-shrink-0 text-green-600">5-Why</TabsTrigger>
+                      )}
+                      {enabledTools.fishbone !== false && (
+                        <TabsTrigger value="fishbone" className="flex-shrink-0 text-purple-600">Fishbone</TabsTrigger>
+                      )}
+                      {enabledTools.fmea !== false && (
+                        <TabsTrigger value="fmea" className="flex-shrink-0 text-amber-600">FMEA</TabsTrigger>
+                      )}
+                      {enabledTools.faultTree !== false && (
+                        <TabsTrigger value="fault-tree" className="flex-shrink-0 text-indigo-600">Fault Tree</TabsTrigger>
+                      )}
+                      {enabledTools.barrierAnalysis !== false && (
+                        <TabsTrigger value="barrier" className="flex-shrink-0 text-teal-600">Barrier</TabsTrigger>
+                      )}
+                      {enabledTools.changeAnalysis !== false && (
+                        <TabsTrigger value="change" className="flex-shrink-0 text-rose-600">Change</TabsTrigger>
+                      )}
                     </TabsList>
                     <TabsContent value="logic-tree">
-                      <div className="space-y-6 max-w-2xl mx-auto">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-lg font-semibold flex items-center gap-2">
-                            <BarChart3 className="w-5 h-5 text-blue-500" />Logic Tree
-                            <button type="button" title="Fullscreen" className="ml-2 p-1 rounded-full hover:bg-blue-100 transition" onClick={() => setShowLogicTreeFullscreen(true)}>
-                              <Maximize2 className="w-5 h-5 text-blue-500" />
-                            </button>
-                          </h3>
+                      <div className={`space-y-4 ${isAnalysisFullscreen ? 'max-w-full' : 'max-w-5xl'} mx-auto`}>
+                        {/* Header Section - Matches Dashboard Theme */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <FolderTree className="w-6 h-6 text-blue-600" />
+                            <div>
+                              <h3 className="text-xl font-bold text-gray-900">Logic Tree Analysis</h3>
+                              <p className="text-sm text-gray-600">
+                                Systematic cause-and-effect investigation
+                              </p>
+                            </div>
+                          </div>
                           <div className="flex gap-2">
-                            <Button size="sm" className="rounded-full bg-gradient-to-r from-blue-600 to-pink-500 text-white shadow font-bold px-2 py-0.5 text-[10px] transition-transform hover:scale-105 hover:shadow-blue-300/60" onClick={() => downloadLogicTree(selectedRCA.logicTree)}>Download Tree</Button>
-                            <Button size="sm" className="rounded-full bg-gradient-to-r from-blue-600 to-pink-500 text-white shadow font-bold px-2 py-0.5 text-[10px] transition-transform hover:scale-105 hover:shadow-blue-300/60" onClick={handleAddRootNode}>Add Root Node</Button>
-                            {/* Reset to Template Button */}
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => setShowLogicTreeFullscreen(true)}
+                              title="Fullscreen View"
+                            >
+                              <Maximize2 className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => downloadLogicTree(selectedRCA.logicTree)}
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Export
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              onClick={handleAddRootNode}
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add Node
+                            </Button>
                             {selectedRCA.templateId && rcaTemplates.find(t => t.id === selectedRCA.templateId) && (
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                className="rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-white shadow font-bold px-2 py-0.5 text-[10px] transition-transform hover:scale-105 hover:shadow-pink-300/60"
                                 onClick={() => setShowResetLogicTreeModal(true)}
                                 disabled={resettingLogicTree}
                               >
-                                Reset to Template
+                                Reset Template
                               </Button>
                             )}
                           </div>
                         </div>
-                        {selectedRCA.logicTree && selectedRCA.logicTree.length > 0 ? (
-                          <ul className="pl-0">
-                            {selectedRCA.logicTree.map((node, idx) => (
-                              <LogicTreeNodeInteractive
-                                key={node.id || idx}
-                                node={node}
-                                depth={0}
-                                onChange={updatedNode => handleLogicTreeNodeChange(node.id, updatedNode)}
-                                onDelete={() => handleDeleteNode(idx)}
-                                onAddChild={() => handleAddChildNode(idx)}
-                                onEdit={updatedNode => handleLogicTreeNodeChange(node.id, updatedNode)}
-                                evidence={selectedRCA.evidence}
-                                onAttachEvidence={handleAttachEvidence}
-                              />
-                            ))}
-                          </ul>
-                        ) : (
-                          <div className="text-gray-400 italic">No logic tree nodes. Add a root node to start.</div>
+
+                        {/* Statistics Cards - Matching Dashboard Style */}
+                        {selectedRCA.logicTree && selectedRCA.logicTree.length > 0 && (
+                          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
+                              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total Nodes</CardTitle>
+                                <FolderTree className="h-4 w-4 text-blue-400" />
+                              </CardHeader>
+                              <CardContent>
+                                <div className="text-2xl font-bold text-blue-700">
+                                  {(() => {
+                                    const countNodes = (nodes: UILogicTreeNode[]): number => {
+                                      return nodes.reduce((sum, n) => sum + 1 + (n.children ? countNodes(n.children) : 0), 0);
+                                    };
+                                    return countNodes(selectedRCA.logicTree);
+                                  })()}
+                                </div>
+                                <p className="text-xs text-gray-600 mt-1">In logic tree</p>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="bg-gradient-to-br from-green-50 to-white border-green-200">
+                              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Verified</CardTitle>
+                                <CheckCircle className="h-4 w-4 text-green-400" />
+                              </CardHeader>
+                              <CardContent>
+                                <div className="text-2xl font-bold text-green-700">
+                                  {(() => {
+                                    const countVerified = (nodes: UILogicTreeNode[]): number => {
+                                      return nodes.reduce((sum, n) => sum + (n.finding ? 1 : 0) + (n.children ? countVerified(n.children) : 0), 0);
+                                    };
+                                    return countVerified(selectedRCA.logicTree);
+                                  })()}
+                                </div>
+                                <p className="text-xs text-gray-600 mt-1">Verified findings</p>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="bg-gradient-to-br from-red-50 to-white border-red-200">
+                              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Root Causes</CardTitle>
+                                <AlertTriangle className="h-4 w-4 text-red-400" />
+                              </CardHeader>
+                              <CardContent>
+                                <div className="text-2xl font-bold text-red-700">
+                                  {(() => {
+                                    const countRootCauses = (nodes: UILogicTreeNode[]): number => {
+                                      return nodes.reduce((sum, n) => sum + ((n.category === 'Cause' || n.category === 'root_cause') ? 1 : 0) + (n.children ? countRootCauses(n.children) : 0), 0);
+                                    };
+                                    return countRootCauses(selectedRCA.logicTree);
+                                  })()}
+                                </div>
+                                <p className="text-xs text-gray-600 mt-1">Identified</p>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="bg-gradient-to-br from-yellow-50 to-white border-yellow-200">
+                              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Evidence Links</CardTitle>
+                                <Paperclip className="h-4 w-4 text-yellow-400" />
+                              </CardHeader>
+                              <CardContent>
+                                <div className="text-2xl font-bold text-yellow-700">
+                                  {(selectedRCA.evidence || []).filter(e => e.nodeIds && e.nodeIds.length > 0).length}
+                                </div>
+                                <p className="text-xs text-gray-600 mt-1">Supporting evidence</p>
+                              </CardContent>
+                            </Card>
+                          </div>
                         )}
+
+                        {/* Logic Tree Container */}
+                        <Card>
+                          <CardContent className="p-6">
+                            {selectedRCA.logicTree && selectedRCA.logicTree.length > 0 ? (
+                              <ul className="space-y-0">
+                                {selectedRCA.logicTree.map((node, idx) => (
+                                  <LogicTreeNodeInteractive
+                                    key={node.id || idx}
+                                    node={node}
+                                    depth={0}
+                                    onChange={updatedNode => handleLogicTreeNodeChange(node.id, updatedNode)}
+                                    onDelete={() => handleDeleteNode(idx)}
+                                    onAddChild={() => handleAddChildNode(idx)}
+                                    onEdit={updatedNode => handleLogicTreeNodeChange(node.id, updatedNode)}
+                                    evidence={selectedRCA.evidence}
+                                    onAttachEvidence={handleAttachEvidence}
+                                  />
+                                ))}
+                              </ul>
+                            ) : (
+                              <div className="text-center py-12">
+                                <FolderTree className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                <h4 className="text-lg font-semibold text-gray-700 mb-2">No Logic Tree Nodes</h4>
+                                <p className="text-gray-500 mb-6">
+                                  Start building your root cause analysis by adding a node.
+                                </p>
+                                <Button onClick={handleAddRootNode}>
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Add First Node
+                                </Button>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
                       </div>
                       {/* Reset Logic Tree Confirmation Modal */}
                       {showResetLogicTreeModal && (
@@ -2659,7 +4019,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                         <div className="text-xs text-gray-500 mb-4">Chronological timeline of all RCA-linked events. Add, edit, or link evidence to events.</div>
                         <Button size="sm" className="mb-4 rounded-full bg-gradient-to-r from-blue-600 to-pink-500 text-white shadow font-bold" onClick={() => {
                           setManualEventMode('add');
-                          setManualEventForm({ id: '', label: '', type: 'Failure', timestamp: '', description: '', asset: '', severity: 'Medium' });
+                          setManualEventForm({ id: '', label: '', type: 'Failure', timestamp: '', description: '', asset: '', severity: 'Medium' as 'Low' | 'Medium' | 'High' | 'Critical' });
                           setShowManualEventModal(true);
                         }}>+ Add Manual Event</Button>
                         {/* --- INDUSTRY-GRADE EVENT FILTERING LOGIC --- */}
@@ -2680,31 +4040,58 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                             (selectedRCA?.evidence || []).flatMap(ev => [ev.relatedAssetId, ...(ev.nodeIds || [])]).filter(Boolean)
                           );
                           const evidenceLinkedEvents = events.filter(ev => evidenceLinkedEventIds.has(ev.id));
-                          const manualEvents = (selectedRCA?.eventDiagram?.nodes || []).map((n: any) => ({
-                            id: n.id,
-                            type: n.data?.type || n.type || 'Manual',
-                            title: n.data?.label || n.label || 'Manual Event',
-                            timestamp: n.data?.timestamp || n.timestamp,
-                            description: n.data?.description || n.description,
-                            asset: n.data?.asset || n.asset,
-                            severity: n.data?.severity || n.severity,
-                            evidenceCount: (selectedRCA?.evidence || []).filter(e => Array.isArray(e.nodeIds) && e.nodeIds.includes(n.id)).length,
-                          }));
+                          
+                          // Convert event diagram nodes to timeline events with proper timestamps
+                          const eventDiagramEvents = (selectedRCA?.eventDiagram?.nodes || []).map((n: any, index: number) => {
+                            const nodeData = n.data || {};
+                            const nodeType = n.type || 'event';
+                            
+                            // Map node types to severity
+                            let severity: 'Low' | 'Medium' | 'High' | 'Critical' = 'Medium';
+                            if (nodeType === 'failure') severity = 'Critical';
+                            else if (nodeType === 'alarm') severity = 'High';
+                            else if (nodeType === 'warning') severity = 'Medium';
+                            else if (nodeType === 'normal' || nodeType === 'resolution') severity = 'Low';
+                            
+                            // Create proper ISO timestamp for sorting
+                            const baseTime = primaryEvent?.startTime || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+                            const baseDate = new Date(baseTime);
+                            const eventTimestamp = new Date(baseDate.getTime() + index * 3600000).toISOString(); // Space by 1 hour
+                            
+                            return {
+                              id: n.id || `diagram-node-${index}`,
+                              type: 'Event Diagram' as any,
+                              title: nodeData.label || `Event ${index + 1}`,
+                              timestamp: eventTimestamp,
+                              description: `${nodeData.time ? `🕐 ${nodeData.time}\n` : ''}${nodeData.description || ''}`,
+                              asset: 'Event Diagram',
+                              severity: severity,
+                              evidenceCount: (selectedRCA?.evidence || []).filter(e => Array.isArray(e.nodeIds) && e.nodeIds.includes(n.id)).length,
+                              status: 'Closed' as any,
+                            };
+                          });
+                          
                           const allEventsMap = new Map();
                           if (primaryEvent) allEventsMap.set(primaryEvent.id, primaryEvent);
                           for (const ev of relatedEvents) allEventsMap.set(ev.id, ev);
                           for (const ev of evidenceLinkedEvents) allEventsMap.set(ev.id, ev);
-                          let timelineEvents = Array.from(allEventsMap.values()).map(ev => ({
-                            id: ev.id,
-                            type: 'Production',
-                            title: ev.description,
-                            timestamp: ev.startTime,
-                            description: ev.description,
-                            asset: ev.assetId,
-                            severity: ev.severity,
-                            evidenceCount: (selectedRCA?.evidence || []).filter(e => e.relatedAssetId === ev.asset || (Array.isArray(e.nodeIds) && e.nodeIds.includes(ev.id))).length,
-                          }));
-                          timelineEvents = timelineEvents.concat(manualEvents);
+                          let timelineEvents = Array.from(allEventsMap.values()).map(ev => {
+                            const assetName = getAssetOrUnitName(ev.assetId);
+                            return {
+                              id: ev.id,
+                              type: 'Production',
+                              title: ev.description,
+                              timestamp: ev.startTime,
+                              description: ev.description,
+                              asset: assetName,
+                              severity: ev.severity,
+                              evidenceCount: (selectedRCA?.evidence || []).filter(e => e.relatedAssetId === ev.assetId || (Array.isArray(e.nodeIds) && e.nodeIds.includes(ev.id))).length,
+                            };
+                          });
+                          
+                          // Add event diagram events to timeline
+                          timelineEvents = timelineEvents.concat(eventDiagramEvents);
+                          
                           timelineEvents.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
                           return (
                             <RCATimeline
@@ -2721,7 +4108,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                                   timestamp: ev.timestamp,
                                   description: ev.description || '',
                                   asset: ev.asset || '',
-                                  severity: ev.severity || 'Medium',
+                                  severity: (ev.severity || 'Medium') as 'Low' | 'Medium' | 'High' | 'Critical',
                                 });
                                 setShowManualEventModal(true);
                               }}
@@ -2749,6 +4136,140 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                         })()}
                       </div>
                     </TabsContent>
+                    
+                    {/* 5-Why Analysis Tab */}
+                    {enabledTools.fiveWhy !== false && (
+                    <TabsContent value="5why">
+                      <FiveWhyAnalysisTool
+                        rcaId={selectedRCA.id}
+                        initialProblem={selectedRCA.description || selectedRCA.title}
+                        onSave={async (analysis) => {
+                          try {
+                            const saved = await rcaAnalysisConfigService.saveFiveWhyAnalysis(analysis, currentFiveWhy);
+                            setCurrentFiveWhy(saved);
+                            const updated = await masterDataService.updateRCA(selectedRCA.id, {
+                              rootCause: analysis.rootCause
+                            });
+                            setSelectedRCA({ 
+                              ...updated, 
+                              logicTree: Array.isArray(updated.logicTree) && updated.logicTree.length > 0 
+                                ? flatListToTree(updated.logicTree as any[]) 
+                                : [] 
+                            });
+                            toast({ title: 'Success', description: '5-Why Analysis saved and root cause updated in RCA' });
+                          } catch (error) {
+                            console.error('Failed to save 5-Why analysis:', error);
+                            toast({ title: 'Error', description: 'Failed to save 5-Why analysis', variant: 'destructive' });
+                          }
+                        }}
+                        existingAnalysis={currentFiveWhy}
+                        config={analysisConfig}
+                      />
+                    </TabsContent>
+                    )}
+                    
+                    {enabledTools.fishbone !== false && (
+                    <TabsContent value="fishbone">
+                      <FishboneDiagramTool
+                        rcaId={selectedRCA.id}
+                        initialEffect={selectedRCA.title}
+                        onSave={async (diagram) => {
+                          try {
+                            const saved = await rcaAnalysisConfigService.saveFishboneDiagram(diagram, currentFishbone);
+                            setCurrentFishbone(saved);
+                            toast({ title: 'Success', description: 'Fishbone diagram saved' });
+                          } catch (error) {
+                            console.error('Failed to save fishbone diagram:', error);
+                            toast({ title: 'Error', description: 'Failed to save fishbone diagram', variant: 'destructive' });
+                          }
+                        }}
+                        existingDiagram={currentFishbone}
+                        config={analysisConfig}
+                      />
+                    </TabsContent>
+                    )}
+
+                    {enabledTools.fmea !== false && (
+                    <TabsContent value="fmea">
+                      <FMEAAnalysisTool
+                        rcaId={selectedRCA.id}
+                        initialFailureMode={selectedRCA.title}
+                        onSave={async (analysis) => {
+                          try {
+                            const saved = await rcaAnalysisConfigService.saveFMEAAnalysis(analysis, currentFmea);
+                            setCurrentFmea(saved);
+                            toast({ title: 'Success', description: 'FMEA analysis saved' });
+                          } catch (error) {
+                            toast({ title: 'Error', description: 'Failed to save FMEA', variant: 'destructive' });
+                          }
+                        }}
+                        existingAnalysis={currentFmea}
+                        config={analysisConfig}
+                      />
+                    </TabsContent>
+                    )}
+
+                    {enabledTools.faultTree !== false && (
+                    <TabsContent value="fault-tree">
+                      <FaultTreeAnalysisTool
+                        rcaId={selectedRCA.id}
+                        initialTopEvent={selectedRCA.title}
+                        onSave={async (analysis) => {
+                          try {
+                            const saved = await rcaAnalysisConfigService.saveFaultTreeAnalysis(analysis, currentFaultTree);
+                            setCurrentFaultTree(saved);
+                            toast({ title: 'Success', description: 'Fault tree saved' });
+                          } catch (error) {
+                            toast({ title: 'Error', description: 'Failed to save fault tree', variant: 'destructive' });
+                          }
+                        }}
+                        existingAnalysis={currentFaultTree}
+                        config={analysisConfig}
+                      />
+                    </TabsContent>
+                    )}
+
+                    {enabledTools.barrierAnalysis !== false && (
+                    <TabsContent value="barrier">
+                      <BarrierAnalysisTool
+                        rcaId={selectedRCA.id}
+                        initialHazard={selectedRCA.description || selectedRCA.title}
+                        onSave={async (analysis) => {
+                          try {
+                            const saved = await rcaAnalysisConfigService.saveBarrierAnalysis(analysis, currentBarrier);
+                            setCurrentBarrier(saved);
+                            toast({ title: 'Success', description: 'Barrier analysis saved' });
+                          } catch (error) {
+                            toast({ title: 'Error', description: 'Failed to save barrier analysis', variant: 'destructive' });
+                          }
+                        }}
+                        existingAnalysis={currentBarrier}
+                        config={analysisConfig}
+                      />
+                    </TabsContent>
+                    )}
+
+                    {enabledTools.changeAnalysis !== false && (
+                    <TabsContent value="change">
+                      <ChangeAnalysisTool
+                        rcaId={selectedRCA.id}
+                        onSave={async (analysis) => {
+                          try {
+                            const saved = await rcaAnalysisConfigService.saveChangeAnalysis(analysis, currentChange);
+                            setCurrentChange(saved);
+                            toast({ title: 'Success', description: 'Change analysis saved' });
+                          } catch (error) {
+                            toast({ title: 'Error', description: 'Failed to save change analysis', variant: 'destructive' });
+                          }
+                        }}
+                        existingAnalysis={currentChange}
+                        config={analysisConfig}
+                      />
+                    </TabsContent>
+                    )}
+                        </>
+                      );
+                    })()}
                   </Tabs>
                 </div>
               </div>
@@ -2768,15 +4289,15 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                 <div className="w-full md:w-1/6 flex flex-col gap-6">
                   <Card className="rounded-2xl shadow-xl border-0 bg-gradient-to-br from-blue-50 via-white to-pink-50">
                     <CardHeader className="pb-2 flex flex-row items-center gap-2"><BarChart3 className="w-5 h-5 text-blue-500" /><CardTitle className="text-xs font-semibold">Total Recs</CardTitle></CardHeader>
-                    <CardContent className="text-2xl font-bold text-blue-700">{selectedRCA.recommendations.length}</CardContent>
+                    <CardContent className="text-2xl font-bold text-blue-700">{selectedRCA.recommendations?.length || 0}</CardContent>
                   </Card>
                   <Card className="rounded-2xl shadow-xl border-0 bg-gradient-to-br from-green-50 via-white to-blue-50">
                     <CardHeader className="pb-2 flex flex-row items-center gap-2"><CheckCircle className="w-5 h-5 text-green-500" /><CardTitle className="text-xs font-semibold">Open</CardTitle></CardHeader>
-                    <CardContent className="text-2xl font-bold text-green-700">{selectedRCA.recommendations.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled').length}</CardContent>
+                    <CardContent className="text-2xl font-bold text-green-700">{selectedRCA.recommendations?.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled').length || 0}</CardContent>
                   </Card>
                   <Card className="rounded-2xl shadow-xl border-0 bg-gradient-to-br from-pink-50 via-white to-blue-50">
                     <CardHeader className="pb-2 flex flex-row items-center gap-2"><CheckCircle className="w-5 h-5 text-pink-500" /><CardTitle className="text-xs font-semibold">Closed</CardTitle></CardHeader>
-                    <CardContent className="text-2xl font-bold text-pink-700">{selectedRCA.recommendations.filter(r => r.status === 'Completed').length}</CardContent>
+                    <CardContent className="text-2xl font-bold text-pink-700">{selectedRCA.recommendations?.filter(r => r.status === 'Completed').length || 0}</CardContent>
                   </Card>
                   {/* <Card className="rounded-2xl shadow-xl border-0 bg-gradient-to-br from-purple-50 via-white to-blue-50">
                     <CardHeader className="pb-2 flex flex-row items-center gap-2"><Paperclip className="w-5 h-5 text-purple-500" /><CardTitle className="text-xs font-semibold">Pushed to CMMS</CardTitle></CardHeader>
@@ -2796,7 +4317,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                         {/* Progress Bar and Filters */}
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
                           {/* Progress Bar */}
-                          {selectedRCA.recommendations.length > 0 && (
+                          {selectedRCA.recommendations && selectedRCA.recommendations.length > 0 && (
                             <div className="flex-1 flex flex-col gap-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-semibold text-gray-500">Progress:</span>
@@ -2859,46 +4380,88 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                             >
                               <Plus className="w-4 h-4" /> Add
                             </Button>
+                            {session && selectedRCA && (
+                              <RCACreateTaskButton
+                                rca={selectedRCA}
+                                session={session}
+                                tenantId={plantSelection?.tenant?.id || session.tenant?.id || ''}
+                                organizationId={
+                                  plantSelection?.organization?.id ||
+                                  session.organization?.id ||
+                                  session.tenant?.organizationId ||
+                                  ''
+                                }
+                                onCreated={refreshLinkedTasks}
+                              />
+                            )}
+                            <RCATasksLink count={rcaLinkedTaskCount + linkedRecommendationTaskIds.size} />
                           </div>
                         </div>
                         {/* Grouped Recommendations by Status */}
-                        {['Open', 'In Progress', 'Completed', 'Cancelled'].map(statusGroup => {
-                          const group = selectedRCA.recommendations.filter(rec => {
-                            // Filtering logic
-                            const matchesStatus = recommendationStatusFilter === 'All' ? true : rec.status === statusGroup;
-                            const matchesPriority = recommendationPriorityFilter === 'All' ? true : rec.priority === recommendationPriorityFilter;
-                            const matchesAssignee = recommendationAssigneeFilter === 'All' ? true : rec.assigneeId === recommendationAssigneeFilter;
-                            const matchesSearch = !recommendationFilter || rec.title.toLowerCase().includes(recommendationFilter.toLowerCase()) || (rec.description || '').toLowerCase().includes(recommendationFilter.toLowerCase());
-                            return rec.status === statusGroup && matchesStatus && matchesPriority && matchesAssignee && matchesSearch;
-                          });
-                          if (group.length === 0) return null;
-                          const statusColors = {
-                            'Open': 'bg-yellow-100 text-yellow-700',
-                            'In Progress': 'bg-blue-100 text-blue-700',
-                            'Completed': 'bg-green-100 text-green-700',
-                            'Cancelled': 'bg-gray-200 text-gray-500',
-                          };
+                        {(() => {
+                          // Get all unique statuses from recommendations
+                          const allStatuses: string[] = Array.from(new Set((selectedRCA.recommendations || []).map(r => r.status as string)));
+                          // Define standard order, but include any custom statuses
+                          const statusOrder: string[] = ['Open', 'Planned', 'In Progress', 'Completed', 'Cancelled'];
+                          const orderedStatuses = [...statusOrder.filter(s => allStatuses.includes(s)), ...allStatuses.filter(s => !statusOrder.includes(s))];
+                          
+                          return orderedStatuses.map(statusGroup => {
+                            const group = (selectedRCA.recommendations || []).filter(rec => {
+                              // Filtering logic
+                              const matchesStatus = recommendationStatusFilter === 'All' ? true : rec.status === recommendationStatusFilter;
+                              const matchesPriority = recommendationPriorityFilter === 'All' ? true : rec.priority === recommendationPriorityFilter;
+                              const matchesAssignee = recommendationAssigneeFilter === 'All' ? true : rec.assigneeId === recommendationAssigneeFilter;
+                              const matchesSearch = !recommendationFilter || rec.title.toLowerCase().includes(recommendationFilter.toLowerCase()) || (rec.description || '').toLowerCase().includes(recommendationFilter.toLowerCase());
+                              return rec.status === statusGroup && matchesStatus && matchesPriority && matchesAssignee && matchesSearch;
+                            });
+                            if (group.length === 0) return null;
+                            const statusColors = {
+                              'Open': 'bg-yellow-100 text-yellow-700',
+                              'Planned': 'bg-purple-100 text-purple-700',
+                              'In Progress': 'bg-blue-100 text-blue-700',
+                              'Completed': 'bg-green-100 text-green-700',
+                              'Cancelled': 'bg-gray-200 text-gray-500',
+                            };
+                            const defaultColor = 'bg-orange-100 text-orange-700';
                           return (
                             <div key={statusGroup} className="mb-6">
-                              <div className={`flex items-center gap-2 mb-2 text-base font-bold px-2 py-1 rounded-xl ${statusColors[statusGroup]}`}> 
-                                {statusGroup === 'Open' && <AlertTriangle className="w-5 h-5" />} 
+                              <div className={`flex items-center gap-2 mb-2 text-base font-bold px-2 py-1 rounded-xl ${statusColors[statusGroup] || defaultColor}`}> 
+                                {statusGroup === 'Open' && <AlertTriangle className="w-5 h-5" />}
+                                {statusGroup === 'Planned' && <Calendar className="w-5 h-5" />}
                                 {statusGroup === 'In Progress' && <Clock className="w-5 h-5" />} 
                                 {statusGroup === 'Completed' && <CheckCircle className="w-5 h-5" />} 
-                                {statusGroup === 'Cancelled' && <X className="w-5 h-5" />} 
+                                {statusGroup === 'Cancelled' && <X className="w-5 h-5" />}
+                                {!['Open', 'Planned', 'In Progress', 'Completed', 'Cancelled'].includes(statusGroup) && <Activity className="w-5 h-5" />}
                                 {statusGroup}
                               </div>
                               <ul className="space-y-2">
                                 {group.map(rec => (
                                   <li key={rec.id} className="border rounded-2xl p-4 flex items-center justify-between bg-gradient-to-br from-blue-50 via-white to-pink-50 shadow hover:shadow-xl transition">
                                     <div>
-                                      <div className="font-semibold text-lg text-blue-900 flex items-center gap-2">{rec.title} <Badge className={`${statusColors[statusGroup]} ml-2`}>{statusGroup}</Badge></div>
+                                      <div className="font-semibold text-lg text-blue-900 flex items-center gap-2">{rec.title} <Badge className={`${statusColors[statusGroup] || defaultColor} ml-2`}>{statusGroup}</Badge></div>
                                       <div className="text-xs text-gray-500 font-semibold">Priority: <span className={getPriorityBadgeColor(rec.priority)}>{rec.priority}</span></div>
                                       <div className="text-xs text-gray-400">{rec.description}</div>
                                       <div className="text-xs text-blue-600">Assignee: {getUserName(rec.assigneeId)}</div>
                                       {rec.dueDate && <div className="text-xs text-gray-500">Due: {new Date(rec.dueDate).toLocaleDateString()}</div>}
                                       {rec.estimatedCost && <div className="text-xs text-green-600">Est. Cost: ${rec.estimatedCost}</div>}
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 flex-wrap justify-end">
+                                      {session && selectedRCA && (
+                                        <RCACreateTaskButton
+                                          rca={selectedRCA}
+                                          recommendation={rec}
+                                          session={session}
+                                          tenantId={plantSelection?.tenant?.id || session.tenant?.id || ''}
+                                          organizationId={
+                                            plantSelection?.organization?.id ||
+                                            session.organization?.id ||
+                                            session.tenant?.organizationId ||
+                                            ''
+                                          }
+                                          alreadyLinked={linkedRecommendationTaskIds.has(rec.id)}
+                                          onCreated={refreshLinkedTasks}
+                                        />
+                                      )}
                                       <Button size="sm" variant="outline" onClick={() => handleEditRecommendation(rec)}><Pencil className="w-4 h-4" /> Edit</Button>
                                       <Button size="sm" variant="destructive" onClick={() => handleDeleteRecommendation(rec)}><Trash2 className="w-4 h-4" /> Delete</Button>
                                       <Button size="sm" variant="outline" onClick={() => handlePushToCMMS(rec)}><Paperclip className="w-4 h-4" /> Push</Button>
@@ -2908,10 +4471,11 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                               </ul>
                             </div>
                           );
-                        })}
+                        });
+                        })()}
                         {/* If no recommendations match filters */}
                         {(() => {
-                          const anyMatch = selectedRCA.recommendations.some(rec => {
+                          const anyMatch = (selectedRCA.recommendations || []).some(rec => {
                             const matchesStatus = recommendationStatusFilter === 'All' ? true : rec.status === recommendationStatusFilter;
                             const matchesPriority = recommendationPriorityFilter === 'All' ? true : rec.priority === recommendationPriorityFilter;
                             const matchesAssignee = recommendationAssigneeFilter === 'All' ? true : rec.assigneeId === recommendationAssigneeFilter;
@@ -3028,7 +4592,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                         {isPendingApproval && <span className="text-yellow-600">Pending</span>}
                       </div>
                       {selectedRCA?.approvedBy && (
-                        <div className="text-xs text-gray-500 mt-2">By: {selectedRCA.approvedBy}</div>
+                        <div className="text-xs text-gray-500 mt-2">By: {getUserName(selectedRCA.approvedBy)}</div>
                       )}
                       {selectedRCA?.approvedAt && (
                         <div className="text-xs text-gray-500">At: {new Date(selectedRCA.approvedAt).toLocaleString()}</div>
@@ -3109,7 +4673,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                           : <span className="text-yellow-600">In Closure</span>}
                       </div>
                       {selectedRCA?.closedBy && (
-                        <div className="text-xs text-gray-500 mt-2">By: {selectedRCA.closedBy}</div>
+                        <div className="text-xs text-gray-500 mt-2">By: {getUserName(selectedRCA.closedBy)}</div>
                       )}
                       {selectedRCA?.closedAt && (
                         <div className="text-xs text-gray-500">At: {new Date(selectedRCA.closedAt).toLocaleString()}</div>
@@ -3130,7 +4694,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
                     <CardContent>
                       <div className="mb-4 text-gray-700 text-sm">
                         <b>Approval Status:</b> {selectedRCA?.approvalStatus || 'Pending'}<br />
-                        <b>Approved By:</b> {selectedRCA?.approvedBy || '-'}<br />
+                        <b>Approved By:</b> {getUserName(selectedRCA?.approvedBy)}<br />
                         <b>Approved At:</b> {selectedRCA?.approvedAt ? new Date(selectedRCA.approvedAt).toLocaleString() : '-'}
                       </div>
                       <div className="mb-4 text-gray-700 text-sm">
@@ -3169,13 +4733,651 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
             </TabsContent>
             {/* Secondary/supporting tabs */}
             <TabsContent value="comments">
-              {/* Comments/discussion content */}
+              <div className="space-y-6 mt-4 max-w-4xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckCircle className="w-5 h-5 text-blue-500" />
+                  <h3 className="text-lg font-semibold">RCA Comments & Discussion</h3>
+                </div>
+                
+                {/* Comment Type Filter */}
+                <div className="flex items-center gap-4 mb-4">
+                  <Label className="text-sm font-semibold">Filter by Type:</Label>
+                  <Select value={commentType} onValueChange={(value: 'general' | 'investigation' | 'analysis' | 'recommendation' | 'implementation' | 'followup') => setCommentType(value)}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="investigation">Investigation</SelectItem>
+                      <SelectItem value="analysis">Analysis</SelectItem>
+                      <SelectItem value="recommendation">Recommendation</SelectItem>
+                      <SelectItem value="implementation">Implementation</SelectItem>
+                      <SelectItem value="followup">Follow-up</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Comment List */}
+                <div className="space-y-4">
+                  {publicComments.length === 0 && privateComments.length === 0 && (
+                    <div className="text-center py-8 text-gray-400 italic">
+                      <CheckCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <p>No comments yet. Start the discussion!</p>
+                    </div>
+                  )}
+                  
+                  {/* Public Comments */}
+                  {publicComments.map(comment => (
+                    <div key={comment.id} className="flex items-start gap-3 bg-gradient-to-br from-blue-50 via-white to-pink-50 rounded-2xl shadow p-4 border border-blue-100">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-200 to-pink-200 flex items-center justify-center font-bold text-blue-700 shadow text-lg">
+                        {comment.user.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-blue-900">{comment.user}</span>
+                          <Badge className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700">
+                            {comment.type}
+                          </Badge>
+                          <Badge className="text-xs px-2 py-0.5 bg-green-100 text-green-700">
+                            {comment.phase}
+                          </Badge>
+                          <span className="text-xs text-gray-400">{new Date(comment.timestamp).toLocaleString()}</span>
+                        </div>
+                        <div className="text-gray-700 text-sm mb-2">{comment.text}</div>
+                        {comment.mentions && comment.mentions.length > 0 && (
+                          <div className="text-xs text-blue-600">
+                            Mentions: {comment.mentions.map(m => `@${m}`).join(', ')}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const newText = prompt('Edit comment:', comment.text);
+                            if (newText && newText !== comment.text) {
+                              handleEditComment(comment.id, newText);
+                            }
+                          }}
+                          className="text-xs"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="text-xs"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Private Comments (only show to author) */}
+                  {privateComments.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
+                        <Eye className="w-4 h-4" />
+                        Private Comments (Only visible to you)
+                      </h4>
+                      {privateComments.map(comment => (
+                        <div key={comment.id} className="flex items-start gap-3 bg-gradient-to-br from-gray-50 via-white to-gray-50 rounded-2xl shadow p-4 border border-gray-200 mb-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center font-bold text-gray-700 shadow text-sm">
+                            {comment.user.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-gray-800">{comment.user}</span>
+                              <Badge className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600">
+                                {comment.type} (Private)
+                              </Badge>
+                              <span className="text-xs text-gray-400">{new Date(comment.timestamp).toLocaleString()}</span>
+                            </div>
+                            <div className="text-gray-600 text-sm">{comment.text}</div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const newText = prompt('Edit comment:', comment.text);
+                                if (newText && newText !== comment.text) {
+                                  handleEditComment(comment.id, newText);
+                                }
+                              }}
+                              className="text-xs"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteComment(comment.id)}
+                              className="text-xs"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Add Comment Form */}
+                <div className="bg-gradient-to-br from-blue-50 via-white to-pink-50 rounded-2xl shadow p-6 border border-blue-100">
+                  <h4 className="text-lg font-semibold text-blue-800 mb-4">Add New Comment</h4>
+                  <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleAddComment(); }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-semibold">Comment Type</Label>
+                        <Select value={commentType} onValueChange={(value: 'general' | 'investigation' | 'analysis' | 'recommendation' | 'implementation' | 'followup') => setCommentType(value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="general">General</SelectItem>
+                            <SelectItem value="investigation">Investigation</SelectItem>
+                            <SelectItem value="analysis">Analysis</SelectItem>
+                            <SelectItem value="recommendation">Recommendation</SelectItem>
+                            <SelectItem value="implementation">Implementation</SelectItem>
+                            <SelectItem value="followup">Follow-up</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-2 mt-6">
+                        <input
+                          type="checkbox"
+                          id="privateComment"
+                          checked={isPrivateComment}
+                          onChange={e => setIsPrivateComment(e.target.checked)}
+                          className="accent-blue-600"
+                        />
+                        <Label htmlFor="privateComment" className="text-sm">Private comment (only visible to you)</Label>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-semibold">Comment</Label>
+                      <Textarea
+                        className="mt-1 min-h-[100px]"
+                        placeholder="Add your comment... Use @username to mention team members"
+                        value={newComment}
+                        onChange={e => setNewComment(e.target.value)}
+                        required
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        Tip: Use @username to mention team members. They will be notified.
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button type="submit" className="bg-gradient-to-r from-blue-600 to-pink-500 hover:from-blue-700 hover:to-pink-600 text-white">
+                        Post Comment
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              </div>
             </TabsContent>
             <TabsContent value="track">
-              {/* Tracking/KPI/timeline content */}
+              <div className="space-y-6 mt-4 max-w-4xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-5 h-5 text-green-500" />
+                  <h3 className="text-lg font-semibold">RCA Tracking & Analytics</h3>
+                </div>
+
+                {/* Key Metrics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-blue-600" />
+                        <div>
+                          <div className="text-sm text-blue-600 font-semibold">Days Active</div>
+                          <div className="text-2xl font-bold text-blue-800">
+                            {Math.ceil((new Date().getTime() - new Date(selectedRCA.createdAt).getTime()) / (1000 * 60 * 60 * 24))}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <div>
+                          <div className="text-sm text-green-600 font-semibold">Completion %</div>
+                          <div className="text-2xl font-bold text-green-800">
+                            {(() => {
+                              const total = 6; // Total phases
+                              const completed = STATUS_PHASES.indexOf(normalizeStatus(selectedRCA.status)) + 1;
+                              return Math.round((completed / total) * 100);
+                            })()}%
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-5 h-5 text-purple-600" />
+                        <div>
+                          <div className="text-sm text-purple-600 font-semibold">Team Members</div>
+                          <div className="text-2xl font-bold text-purple-800">
+                            {new Set(selectedRCA.teamMemberIds).size}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Paperclip className="w-5 h-5 text-orange-600" />
+                        <div>
+                        <div className="text-sm text-orange-600 font-semibold">Evidence Items</div>
+                        <div className="text-2xl font-bold text-orange-800">
+                          {selectedRCA.evidence?.length || 0}
+                        </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Phase Progress */}
+                <Card className="bg-gradient-to-br from-blue-50 via-white to-pink-50 border-blue-100">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="w-5 h-5 text-blue-500" />
+                      Phase Progress
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {STATUS_PHASES.map((phase, index) => {
+                        const isCompleted = index < STATUS_PHASES.indexOf(normalizeStatus(selectedRCA.status));
+                        const isCurrent = index === STATUS_PHASES.indexOf(normalizeStatus(selectedRCA.status));
+                        const isUpcoming = index > STATUS_PHASES.indexOf(normalizeStatus(selectedRCA.status));
+                        
+                        return (
+                          <div key={phase} className="flex items-center gap-4">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                              isCompleted 
+                                ? 'bg-green-500 text-white' 
+                                : isCurrent 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-200 text-gray-500'
+                            }`}>
+                              {isCompleted ? <CheckCircle className="w-5 h-5" /> : index + 1}
+                            </div>
+                            <div className="flex-1">
+                              <div className={`font-semibold ${
+                                isCompleted ? 'text-green-700' : isCurrent ? 'text-blue-700' : 'text-gray-500'
+                              }`}>
+                                {phase}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {isCompleted && 'Completed'} 
+                                {isCurrent && 'In Progress'} 
+                                {isUpcoming && 'Upcoming'}
+                              </div>
+                            </div>
+                            {isCurrent && (
+                              <Badge className="bg-blue-100 text-blue-700">Current</Badge>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Activity Timeline */}
+                <Card className="bg-gradient-to-br from-green-50 via-white to-blue-50 border-green-100">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-green-500" />
+                      Activity Timeline
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* RCA Created */}
+                      <div className="flex items-start gap-3">
+                        <div className="w-3 h-3 rounded-full bg-green-500 mt-2"></div>
+                        <div>
+                          <div className="font-semibold text-green-700">RCA Investigation Created</div>
+                          <div className="text-sm text-gray-600">
+                            {new Date(selectedRCA.createdAt).toLocaleString()}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            Investigation "{selectedRCA.title}" was initiated
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Last Updated */}
+                      {selectedRCA.updatedAt !== selectedRCA.createdAt && (
+                        <div className="flex items-start gap-3">
+                          <div className="w-3 h-3 rounded-full bg-blue-500 mt-2"></div>
+                          <div>
+                            <div className="font-semibold text-blue-700">Last Updated</div>
+                            <div className="text-sm text-gray-600">
+                              {new Date(selectedRCA.updatedAt).toLocaleString()}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Investigation details were modified
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Comments Activity */}
+                      {rcaComments.length > 0 && (
+                        <div className="flex items-start gap-3">
+                          <div className="w-3 h-3 rounded-full bg-purple-500 mt-2"></div>
+                          <div>
+                            <div className="font-semibold text-purple-700">Discussion Activity</div>
+                            <div className="text-sm text-gray-600">
+                              {rcaComments.length} comment(s) added
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Latest: {new Date(rcaComments[rcaComments.length - 1].timestamp).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Evidence Activity */}
+                      {selectedRCA.evidence && selectedRCA.evidence.length > 0 && (
+                        <div className="flex items-start gap-3">
+                          <div className="w-3 h-3 rounded-full bg-orange-500 mt-2"></div>
+                          <div>
+                            <div className="font-semibold text-orange-700">Evidence Collection</div>
+                            <div className="text-sm text-gray-600">
+                              {selectedRCA.evidence.length} evidence item(s) collected
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Latest: {new Date(selectedRCA.evidence[selectedRCA.evidence.length - 1].createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recommendations Activity */}
+                      {selectedRCA.recommendations && selectedRCA.recommendations.length > 0 && (
+                        <div className="flex items-start gap-3">
+                          <div className="w-3 h-3 rounded-full bg-pink-500 mt-2"></div>
+                          <div>
+                            <div className="font-semibold text-pink-700">Recommendations</div>
+                            <div className="text-sm text-gray-600">
+                              {selectedRCA.recommendations.length} recommendation(s) created
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {(selectedRCA.recommendations || []).filter(r => r.status === 'Completed').length} completed
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Performance Metrics */}
+                <Card className="bg-gradient-to-br from-pink-50 via-white to-blue-50 border-pink-100">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-pink-500" />
+                      Performance Metrics
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <div className="text-sm font-semibold text-gray-600 mb-2">Time to Completion</div>
+                        <div className="text-2xl font-bold text-blue-800">
+                          {selectedRCA.targetCloseDate ? (
+                            (() => {
+                              const targetDate = new Date(selectedRCA.targetCloseDate);
+                              const now = new Date();
+                              const diffDays = Math.ceil((targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                              return diffDays > 0 ? `${diffDays} days remaining` : `${Math.abs(diffDays)} days overdue`;
+                            })()
+                          ) : (
+                            'No target date set'
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-gray-600 mb-2">Team Engagement</div>
+                        <div className="text-2xl font-bold text-green-800">
+                          {Math.round((rcaComments.length / Math.max(new Set(selectedRCA.teamMemberIds).size, 1)) * 10) / 10} comments per member
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-gray-600 mb-2">Evidence Quality</div>
+                        <div className="text-2xl font-bold text-purple-800">
+                          {selectedRCA.evidence && selectedRCA.evidence.length > 0 ? 
+                            Math.round((selectedRCA.evidence.filter(e => e.verified).length / selectedRCA.evidence.length) * 100) 
+                            : 0}% verified
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-gray-600 mb-2">Recommendation Progress</div>
+                        <div className="text-2xl font-bold text-orange-800">
+                          {selectedRCA.recommendations && selectedRCA.recommendations.length > 0 ? 
+                            Math.round((selectedRCA.recommendations.filter(r => r.status === 'Completed').length / selectedRCA.recommendations.length) * 100) 
+                            : 0}% completed
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
             <TabsContent value="export">
-              {/* Export/download content */}
+              <div className="space-y-6 mt-4 max-w-4xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <Download className="w-5 h-5 text-purple-500" />
+                  <h3 className="text-lg font-semibold">Export RCA Investigation</h3>
+                </div>
+
+                {/* Export Format Selection */}
+                <Card className="bg-gradient-to-br from-purple-50 via-white to-blue-50 border-purple-100">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-purple-500" />
+                      Export Format
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      <Select value={exportFormat} onValueChange={(value: 'pdf' | 'excel' | 'word' | 'csv') => setExportFormat(value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pdf">PDF Report</SelectItem>
+                          <SelectItem value="excel">Excel Workbook</SelectItem>
+                          <SelectItem value="word">Word Document</SelectItem>
+                          <SelectItem value="csv">CSV Data</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Export Options */}
+                <Card className="bg-gradient-to-br from-blue-50 via-white to-pink-50 border-blue-100">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-blue-500" />
+                      Export Options
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="includeEvidence"
+                          checked={exportOptions.includeEvidence}
+                          onChange={e => setExportOptions(prev => ({ ...prev, includeEvidence: e.target.checked }))}
+                          className="accent-blue-600"
+                        />
+                        <Label htmlFor="includeEvidence">Include Evidence</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="includeLogicTree"
+                          checked={exportOptions.includeLogicTree}
+                          onChange={e => setExportOptions(prev => ({ ...prev, includeLogicTree: e.target.checked }))}
+                          className="accent-blue-600"
+                        />
+                        <Label htmlFor="includeLogicTree">Include Logic Tree</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="includeRecommendations"
+                          checked={exportOptions.includeRecommendations}
+                          onChange={e => setExportOptions(prev => ({ ...prev, includeRecommendations: e.target.checked }))}
+                          className="accent-blue-600"
+                        />
+                        <Label htmlFor="includeRecommendations">Include Recommendations</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="includeComments"
+                          checked={exportOptions.includeComments}
+                          onChange={e => setExportOptions(prev => ({ ...prev, includeComments: e.target.checked }))}
+                          className="accent-blue-600"
+                        />
+                        <Label htmlFor="includeComments">Include Comments</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="includeTimeline"
+                          checked={exportOptions.includeTimeline}
+                          onChange={e => setExportOptions(prev => ({ ...prev, includeTimeline: e.target.checked }))}
+                          className="accent-blue-600"
+                        />
+                        <Label htmlFor="includeTimeline">Include Timeline</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="includeAttachments"
+                          checked={exportOptions.includeAttachments}
+                          onChange={e => setExportOptions(prev => ({ ...prev, includeAttachments: e.target.checked }))}
+                          className="accent-blue-600"
+                        />
+                        <Label htmlFor="includeAttachments">Include Attachments</Label>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Export Actions */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                    <CardContent className="p-6 text-center">
+                      <FileText className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                      <h4 className="font-semibold text-blue-800 mb-2">PDF Report</h4>
+                      <p className="text-sm text-blue-600 mb-4">Professional RCA report with all sections</p>
+                      <Button 
+                        onClick={handleExportPDF}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Export PDF
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                    <CardContent className="p-6 text-center">
+                      <FileText className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                      <h4 className="font-semibold text-green-800 mb-2">Excel Workbook</h4>
+                      <p className="text-sm text-green-600 mb-4">Multi-sheet data export for analysis</p>
+                      <Button 
+                        onClick={handleExportExcel}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        Export Excel
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                    <CardContent className="p-6 text-center">
+                      <FileText className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+                      <h4 className="font-semibold text-purple-800 mb-2">CSV Data</h4>
+                      <p className="text-sm text-purple-600 mb-4">Simple data export for recommendations</p>
+                      <Button 
+                        onClick={handleExportCSV}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                      >
+                        Export CSV
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+                    <CardContent className="p-6 text-center">
+                      <Link className="w-8 h-8 text-orange-600 mx-auto mb-2" />
+                      <h4 className="font-semibold text-orange-800 mb-2">Share Link</h4>
+                      <p className="text-sm text-orange-600 mb-4">Generate shareable link for collaboration</p>
+                      <Button 
+                        onClick={handleCopyShareLink}
+                        className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {shareCopied ? 'Copied!' : 'Copy Link'}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Export Preview */}
+                <Card className="bg-gradient-to-br from-gray-50 via-white to-gray-50 border-gray-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Eye className="w-5 h-5 text-gray-500" />
+                      Export Preview
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-gray-50 rounded-lg p-4 border">
+                      <div className="text-sm text-gray-600 space-y-2">
+                        <div><strong>Format:</strong> {exportFormat.toUpperCase()}</div>
+                        <div><strong>RCA Title:</strong> {selectedRCA.title}</div>
+                        <div><strong>Status:</strong> {selectedRCA.status}</div>
+                        <div><strong>Priority:</strong> {selectedRCA.priority}</div>
+                        <div><strong>Team Lead:</strong> {getUserName(selectedRCA.teamLeadId)}</div>
+                        <div><strong>Created:</strong> {new Date(selectedRCA.createdAt).toLocaleDateString()}</div>
+                        <div><strong>Included Sections:</strong></div>
+                        <ul className="list-disc list-inside ml-4 text-xs">
+                          {exportOptions.includeEvidence && <li>Evidence ({selectedRCA.evidence?.length || 0} items)</li>}
+                          {exportOptions.includeLogicTree && <li>Logic Tree ({selectedRCA.logicTree?.length || 0} nodes)</li>}
+                          {exportOptions.includeRecommendations && <li>Recommendations ({selectedRCA.recommendations?.length || 0} items)</li>}
+                          {exportOptions.includeComments && <li>Comments ({rcaComments.length} items)</li>}
+                          {exportOptions.includeTimeline && <li>Activity Timeline</li>}
+                          {exportOptions.includeAttachments && <li>Attachments</li>}
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
           {/* Edit RCA Modal */}
@@ -3986,55 +6188,174 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
       )}
       {/* Create RCA Modal */}
       {isCreateDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg relative border border-blue-100 flex flex-col">
-            <button className="absolute top-2 right-2 text-gray-400 hover:text-blue-600 text-xl font-bold" onClick={() => setIsCreateDialogOpen(false)} aria-label="Close">&times;</button>
-            <h2 className="text-xl font-bold text-blue-700 mb-4">Start New RCA Investigation</h2>
-            <form className="space-y-4" onSubmit={e => { e.preventDefault(); createRCA(); }}>
-              <div>
-                <Label>Title</Label>
-                <Input value={rcaForm.title} onChange={e => setRcaForm(f => ({ ...f, title: e.target.value }))} required />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
+          <div className={`bg-white rounded-xl shadow-2xl p-6 w-full ${similarRCAs.length > 0 ? 'max-w-6xl' : 'max-w-lg'} relative border border-blue-100 transition-all duration-300 max-h-[90vh] overflow-y-auto`}>
+            <button className="absolute top-4 right-4 text-gray-400 hover:text-blue-600 text-2xl font-bold hover:bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors" onClick={handleCloseCreateDialog} aria-label="Close">&times;</button>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-3 rounded-lg">
+                <AlertCircle className="w-6 h-6 text-white" />
               </div>
               <div>
-                <Label>Description</Label>
-                <Textarea value={rcaForm.description} onChange={e => setRcaForm(f => ({ ...f, description: e.target.value }))} />
+                <h2 className="text-2xl font-bold text-gray-800">Start New RCA Investigation</h2>
+                <p className="text-sm text-gray-500">Investigate and analyze root causes</p>
               </div>
-              <div>
-                <Label>Priority</Label>
-                <select className="w-full border rounded px-2 py-1" value={rcaForm.priority} onChange={e => setRcaForm(f => ({ ...f, priority: e.target.value as any }))} required>
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                  <option value="Critical">Critical</option>
-                </select>
-              </div>
-              <div>
-                <Label>Target Close Date</Label>
-                <Input type="date" value={rcaForm.targetCloseDate} onChange={e => setRcaForm(f => ({ ...f, targetCloseDate: e.target.value }))} />
-              </div>
-              <div>
-                <Label>Template</Label>
-                <select className="w-full border rounded px-2 py-1" value={rcaForm.templateId} onChange={e => setRcaForm(f => ({ ...f, templateId: e.target.value }))} required>
-                  <option value="">Select a template...</option>
-                  {rcaTemplates.map(tpl => (
-                    <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label>Event (optional)</Label>
-                <select className="w-full border rounded px-2 py-1" value={rcaForm.eventId} onChange={e => setRcaForm(f => ({ ...f, eventId: e.target.value }))}>
-                  <option value="">No event linked</option>
-                  {events.map(ev => (
-                    <option key={ev.id} value={ev.id}>{ev.description}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} size="sm">Cancel</Button>
-                <Button type="submit" size="sm">Create</Button>
-              </div>
-            </form>
+            </div>
+            <div className={`grid gap-6 ${similarRCAs.length > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {/* Left Column - RCA Form */}
+              <form className="space-y-4" onSubmit={e => { e.preventDefault(); createRCA(); }}>
+                <div className="bg-gradient-to-br from-blue-50 to-white p-4 rounded-lg border border-blue-100">
+                  <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    Investigation Details
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-sm font-medium">Title *</Label>
+                      <Input 
+                        value={rcaForm.title} 
+                        onChange={e => setRcaForm(f => ({ ...f, title: e.target.value }))} 
+                        required 
+                        className="mt-1"
+                        placeholder="Brief description of the issue"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Description</Label>
+                      <Textarea 
+                        value={rcaForm.description} 
+                        onChange={e => setRcaForm(f => ({ ...f, description: e.target.value }))} 
+                        className="mt-1"
+                        placeholder="Detailed description of the problem"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm font-medium">Priority *</Label>
+                    <select className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-200" value={rcaForm.priority} onChange={e => setRcaForm(f => ({ ...f, priority: e.target.value as any }))} required>
+                      <option value="Low">🟢 Low</option>
+                      <option value="Medium">🟡 Medium</option>
+                      <option value="High">🟠 High</option>
+                      <option value="Critical">🔴 Critical</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Target Close Date</Label>
+                    <Input type="date" value={rcaForm.targetCloseDate} onChange={e => setRcaForm(f => ({ ...f, targetCloseDate: e.target.value }))} className="mt-1" />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium">Template *</Label>
+                  <select className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-200" value={rcaForm.templateId} onChange={e => setRcaForm(f => ({ ...f, templateId: e.target.value }))} required>
+                    <option value="">Select a template...</option>
+                    {rcaTemplates.length === 0 && (
+                      <option disabled>No templates available for this tenant</option>
+                    )}
+                    {rcaTemplates.map(tpl => (
+                      <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                    ))}
+                  </select>
+                  {rcaTemplates.length === 0 && (
+                    <p className="text-xs text-red-600 mt-1">No templates found. Please contact your administrator to create RCA templates.</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium">
+                    Event {isFromStartRCA ? '(required)' : '(optional)'}
+                  </Label>
+                  {!isFromStartRCA && events.length > 5 && (
+                    <Input 
+                      type="text"
+                      placeholder="🔍 Search events..."
+                      value={eventSearchFilter}
+                      onChange={e => setEventSearchFilter(e.target.value)}
+                      className="mt-1 mb-2"
+                    />
+                  )}
+                  <select 
+                    className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-200 max-h-48 overflow-y-auto" 
+                    value={rcaForm.eventId} 
+                    onChange={e => setRcaForm(f => ({ ...f, eventId: e.target.value }))}
+                    required={isFromStartRCA}
+                    disabled={isFromStartRCA}
+                    size={events.length > 5 ? 5 : undefined}
+                  >
+                    <option value="">{isFromStartRCA ? 'Select event...' : 'No event linked'}</option>
+                    {events.length > 0 ? (
+                      events
+                        .filter(ev => 
+                          eventSearchFilter === '' || 
+                          ev.eventId?.toLowerCase().includes(eventSearchFilter.toLowerCase()) ||
+                          ev.description?.toLowerCase().includes(eventSearchFilter.toLowerCase()) ||
+                          ev.eventType?.toLowerCase().includes(eventSearchFilter.toLowerCase())
+                        )
+                        .map(ev => (
+                          <option key={ev.id} value={ev.id}>
+                            {ev.eventType ? `[${ev.eventType}] ` : ''}{ev.eventId} - {ev.description?.substring(0, 60)}{ev.description?.length > 60 ? '...' : ''}
+                          </option>
+                        ))
+                    ) : (
+                      <option value={rcaForm.eventId} disabled>
+                        {rcaForm.eventId ? `Event ID: ${rcaForm.eventId}` : 'Loading events...'}
+                      </option>
+                    )}
+                  </select>
+                  {isFromStartRCA && (
+                    <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                      <Info className="w-3 h-3" />
+                      This RCA is linked to the event you selected
+                    </p>
+                  )}
+                  {eventSearchFilter && events.filter(ev => 
+                    ev.eventId?.toLowerCase().includes(eventSearchFilter.toLowerCase()) ||
+                    ev.description?.toLowerCase().includes(eventSearchFilter.toLowerCase()) ||
+                    ev.eventType?.toLowerCase().includes(eventSearchFilter.toLowerCase())
+                  ).length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">No events match your search</p>
+                  )}
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+                  <Button type="button" variant="outline" onClick={handleCloseCreateDialog} size="sm">
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Create Investigation
+                  </Button>
+                </div>
+              </form>
+
+              {/* Right Column - Similar RCAs */}
+              {similarRCAs.length > 0 && showSimilarRCAs && (
+                <div className="bg-gradient-to-br from-green-50 to-white p-4 rounded-lg border border-green-200 max-h-[70vh] overflow-y-auto">
+                  <SimilarRCAs
+                    matches={similarRCAs}
+                    onApplyRecommendation={(recommendation) => {
+                      console.log('📋 Recommendation will be available after RCA is created:', recommendation);
+                      toast({ 
+                        title: 'Note', 
+                        description: 'Create the RCA first, then add recommendations from the detail view',
+                      });
+                    }}
+                    onApplyEvidence={(evidenceType) => {
+                      toast({ 
+                        title: 'Suggestion', 
+                        description: `Consider adding ${evidenceType} evidence after creating this RCA`,
+                      });
+                    }}
+                    onMarkHelpful={(knowledgeId) => {
+                      // Handled in component
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -4106,7 +6427,7 @@ const [nextPhase, setNextPhase] = useState<RCA['status'] | null>(null);
             </div>
             <div>
               <Label>Severity</Label>
-              <select className="w-full border rounded px-2 py-2 mt-1" value={manualEventForm.severity} onChange={e => setManualEventForm(f => ({ ...f, severity: e.target.value }))} required>
+              <select className="w-full border rounded px-2 py-2 mt-1" value={manualEventForm.severity} onChange={e => setManualEventForm(f => ({ ...f, severity: e.target.value as 'Low' | 'Medium' | 'High' | 'Critical' }))} required>
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
                 <option value="High">High</option>

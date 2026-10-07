@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { Role } from './role.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -23,7 +24,10 @@ export class RolesService {
   }
 
   async create(data: Partial<Role>): Promise<Role> {
-    const role = this.rolesRepository.create(data);
+    const role = this.rolesRepository.create({
+      id: data.id ?? randomUUID(),
+      ...data,
+    });
     const saved = await this.rolesRepository.save(role);
     this.realtimeGateway.broadcastEntityEvent('Created', 'role', saved);
     return saved;

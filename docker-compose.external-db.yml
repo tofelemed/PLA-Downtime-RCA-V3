@@ -1,0 +1,22 @@
+# Override: run the backend against the shared `instrumental-postgres` container
+# (database "proact", the one local development uses) instead of the bundled postgres service.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.external-db.yml up -d --build
+#
+# POSTGRES_PASSWORD in .env must be that container's password (DB_PASSWORD in server/pro-act-backend/.env).
+services:
+  postgres:
+    # Parked behind a profile so it is neither built nor started
+    profiles: ["bundled-db"]
+
+  backend:
+    depends_on: !reset []
+    environment:
+      DB_HOST: ${DB_HOST:-instrumental-postgres}
+    networks:
+      - default
+      - instrumental-network
+
+networks:
+  instrumental-network:
+    external: true

@@ -8,60 +8,65 @@ export class ProductionPlanTemplate {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  // Note: Database schema has: name, description, template_data, is_active, tenant_id, organization_id
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description?: string;
 
-  @Column({ type: 'uuid' })
-  unitId: string;
+  @Column({
+    name: 'template_data',
+    type: 'text',
+    nullable: true,
+    transformer: {
+      to: (value: any) => {
+        if (!value) return null;
+        if (typeof value === 'string') return value;
+        return JSON.stringify(value);
+      },
+      from: (value: string | null) => {
+        if (!value) return null;
+        try {
+          return JSON.parse(value);
+        } catch {
+          return value;
+        }
+      },
+    },
+  })
+  templateData?: any;
 
-  @ManyToOne(() => Unit)
-  @JoinColumn({ name: 'unitId' })
-  unit: Unit;
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive: boolean;
 
-  @Column({ type: 'simple-array' })
-  productIds: string[];
+  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  tenantId?: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  planBasis: string;
+  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  organizationId?: string;
 
-  @Column({ type: 'datetime' })
-  startDate: Date;
+  // Note: Database schema doesn't have these columns - they should be in template_data JSON
+  // @Column({ type: 'uuid' })
+  // unitId: string;
+  // @Column({ type: 'simple-array' })
+  // productIds: string[];
+  // @Column({ type: 'varchar', length: 100 })
+  // planBasis: string;
+  // @Column({ type: 'timestamptz' })
+  // startDate: Date;
+  // @Column({ type: 'timestamptz' })
+  // endDate: Date;
+  // @Column({ type: 'varchar', length: 100, nullable: true })
+  // recurrence: string;
+  // @Column({ type: 'text', nullable: true })
+  // usefulProductionTime: string;
+  // @Column({ type: 'varchar', length: 100, nullable: true })
+  // dataEntryFrequency: string;
 
-  @Column({ type: 'datetime' })
-  endDate: Date;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  recurrence: string;
-
-  @Column({ type: 'uuid' })
-  tenantId: string;
-
-  @ManyToOne(() => Tenant)
-  @JoinColumn({ name: 'tenantId' })
-  tenant: Tenant;
-
-  @Column({ type: 'uuid', nullable: true })
-  organizationId: string;
-
-  @ManyToOne(() => Organization)
-  @JoinColumn({ name: 'organizationId' })
-  organization: Organization;
-
-  @Column({ type: 'int', default: 1 })
-  version: number;
-
-  @Column({ type: 'nvarchar', length: 'max', nullable: true })
-  usefulProductionTime: string;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  dataEntryFrequency: string;
-
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 } 

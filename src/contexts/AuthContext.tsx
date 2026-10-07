@@ -1,8 +1,17 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Organization, Tenant, storageService } from '../services/StorageService';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { authApi, AuthenticatedUser, LoginRequest, LoginResponse } from '../services/api/authApi';
+import { httpClient } from '../services/api/httpClient';
+import { masterDataApi, Organization, Tenant } from '../services/api/masterDataApi';
+import { auditService } from '../services/AuditService';
+
+interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}
 
 interface AuthSession {
-  user: User;
+  user: AuthenticatedUser;
   organization: Organization | null;
   tenant: Tenant | null;
   token: string;
@@ -11,12 +20,27 @@ interface AuthSession {
 interface AuthContextType {
   session: AuthSession | null;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   selectTenant: (tenantId: string) => Promise<void>;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const AUTH_STORAGE_KEY = 'proact_auth_state';
+
+type StoredAuthState = {
+  tokens: AuthTokens;
+  user: AuthenticatedUser;
+  organization?: Organization | null;
+  tenant?: Tenant | null;
+};
+
+const mapTokens = (response: LoginResponse): AuthTokens => ({
+  accessToken: response.access_token,
+  refreshToken: response.refresh_token,
+  expiresAt: Date.now() + response.expires_in * 1000,
+});
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -27,319 +51,249 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Initialize tokens synchronously from localStorage BEFORE components mount
+  const initializeTokensFromStorage = (): AuthTokens | null => {
+    try {
+      const storedStateRaw = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (!storedStateRaw) return null;
+      
+      const storedState = JSON.parse(storedStateRaw) as StoredAuthState;
+      return storedState.tokens;
+    } catch {
+      return null;
+    }
+  };
+
+  const initialTokens = initializeTokensFromStorage();
   const [session, setSession] = useState<AuthSession | null>(null);
+  const [tokens, setTokens] = useState<AuthTokens | null>(initialTokens);
+  const tokensRef = useRef<AuthTokens | null>(initialTokens);
   const [isLoading, setIsLoading] = useState(true);
 
+  const applyTokens = (nextTokens: AuthTokens | null) => {
+    tokensRef.current = nextTokens;
+    setTokens(nextTokens);
+    // Ensure token provider is updated whenever tokens change
+    httpClient.setTokenProvider(() => tokensRef.current?.accessToken ?? null);
+  };
+
+  // Set up token provider immediately with initial tokens
   useEffect(() => {
-    const initializeAuth = async () => {
+    if (initialTokens) {
+      applyTokens(initialTokens);
+    }
+    httpClient.setTokenProvider(() => tokensRef.current?.accessToken ?? null);
+  }, []);
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      const storedStateRaw = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (!storedStateRaw) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        await storageService.initialize();
-        
-        // Create demo data if not exists
-        await createDemoData();
-        
-        // Check for existing session
-        const savedSession = localStorage.getItem('proact_session');
-        if (savedSession) {
-          const sessionData = JSON.parse(savedSession);
-          setSession(sessionData);
+        const storedState = JSON.parse(storedStateRaw) as StoredAuthState;
+        let activeTokens = storedState.tokens;
+
+        // Tokens already applied synchronously during initialization
+        // Just check if refresh is needed
+        const needsRefresh = activeTokens.expiresAt <= Date.now() + 60_000;
+        if (needsRefresh) {
+          try {
+            activeTokens = await refreshTokens(activeTokens.refreshToken);
+          } catch (refreshError) {
+            console.warn('Token refresh failed, using stored token', refreshError);
+            // Don't clear session if refresh fails - let user continue with current token
+            // Only clear if token is truly invalid (will happen on next API call)
+          }
+        }
+
+        // Try to build session, but don't fail completely if API calls fail
+        try {
+          const rebuiltSession = await buildSession(storedState.user, activeTokens, {
+            organizationFallback: storedState.organization ?? null,
+            tenantFallback: storedState.tenant ?? null,
+          });
+
+          setSession(rebuiltSession);
+          persistAuthState(rebuiltSession, activeTokens);
+        } catch (buildError) {
+          // If buildSession fails (e.g., 401 on org/tenant fetch), create session with fallback data
+          console.warn('buildSession failed, using fallback data', buildError);
+          const fallbackSession: AuthSession = {
+            user: storedState.user,
+            organization: storedState.organization ?? null,
+            tenant: storedState.tenant ?? null,
+            token: activeTokens.accessToken,
+          };
+          setSession(fallbackSession);
+          // Don't persist - let it work with current token and try to refresh org/tenant later
         }
       } catch (error) {
-        console.error('Failed to initialize auth:', error);
+        console.error('Failed to restore authentication state', error);
+        // Only clear if token parsing failed or something critical
+        if (error instanceof SyntaxError || error instanceof TypeError) {
+          clearAuthState();
+        }
+        // Otherwise, keep session null but don't clear localStorage - might be recoverable
       } finally {
         setIsLoading(false);
       }
     };
 
-    initializeAuth();
+    restoreSession();
   }, []);
 
-  const createDemoData = async () => {
-    // Check if demo data already exists
-    const existingUsers = await storageService.query<User>('users');
-    if (existingUsers.length > 0) return;
-
-    // Create demo organization
-    const org = await storageService.create<Organization>('organizations', {
-      name: 'Acme Manufacturing',
-      code: 'ACME',
-      description: 'Main manufacturing organization',
-    });
-
-    // Create demo tenant (plant)
-    const tenant = await storageService.create<Tenant>('tenants', {
-      name: 'Plant Alpha',
-      code: 'PA01',
-      organizationId: org.id,
-      description: 'Primary production facility',
-    });
-
-    // Create demo users
-    const users = [
-      {
-        name: 'Admin User',
-        email: 'admin@acme.com',
-        passwordHash: 'demo123',
-        role: 'SuperAdmin' as const,
-        organizationId: org.id,
-        tenantId: tenant.id,
-        isActive: true,
-      },
-      {
-        name: 'Plant Manager',
-        email: 'manager@acme.com',
-        passwordHash: 'demo123',
-        role: 'TenantAdmin' as const,
-        organizationId: org.id,
-        tenantId: tenant.id,
-        isActive: true,
-      },
-      {
-        name: 'Process Engineer',
-        email: 'engineer@acme.com',
-        passwordHash: 'demo123',
-        role: 'Engineer' as const,
-        organizationId: org.id,
-        tenantId: tenant.id,
-        isActive: true,
-      },
-      {
-        name: 'Line Operator',
-        email: 'operator@acme.com',
-        passwordHash: 'demo123',
-        role: 'Operator' as const,
-        organizationId: org.id,
-        tenantId: tenant.id,
-        isActive: true,
-      },
-    ];
-
-    for (const userData of users) {
-      await storageService.create<User>('users', userData);
-    }
-
-    // Create demo production units
-    const units = [
-      {
-        name: 'Production Line A',
-        code: 'PLA',
-        description: 'Main production line for Product A',
-        capacity: 1000,
-        unitOfMeasure: 'units/day',
-        tenantId: tenant.id,
-      },
-      {
-        name: 'Production Line B',
-        code: 'PLB',
-        description: 'Secondary production line for Product B',
-        capacity: 800,
-        unitOfMeasure: 'units/day',
-        tenantId: tenant.id,
-      },
-    ];
-
-    const createdUnits = [];
-    for (const unitData of units) {
-      const createdUnit = await storageService.create('units', unitData);
-      createdUnits.push(createdUnit);
-    }
-
-    // Create demo products
-    const products = [
-      {
-        name: 'Product Alpha',
-        code: 'PA001',
-        unitOfMeasure: 'units',
-        description: 'High-quality product Alpha',
-        standardCost: 25.50,
-        organizationId: org.id,
-      },
-      {
-        name: 'Product Beta',
-        code: 'PB002',
-        unitOfMeasure: 'units',
-        description: 'Premium product Beta',
-        standardCost: 45.75,
-        organizationId: org.id,
-      },
-    ];
-
-    const createdProducts = [];
-    for (const productData of products) {
-      const createdProduct = await storageService.create('products', productData);
-      createdProducts.push(createdProduct);
-    }
-
-    // Create demo production plan templates
-    const templates = [
-      {
-        name: 'Standard 8-Hour Shift Template',
-        unitId: createdUnits[0].id,
-        productIds: [createdProducts[0].id],
-        planBasis: 'Time-based',
-        startDate: '2024-01-01',
-        endDate: '2024-12-31',
-        recurrence: 'Daily',
-        dataEntryFrequency: 'Hourly',
-        usefulProductionTime: {
-          'Monday': { start: '08:00', end: '16:00' },
-          'Tuesday': { start: '08:00', end: '16:00' },
-          'Wednesday': { start: '08:00', end: '16:00' },
-          'Thursday': { start: '08:00', end: '16:00' },
-          'Friday': { start: '08:00', end: '16:00' },
-        },
-        tenantId: tenant.id,
-        orgId: org.id,
-        version: 1,
-      },
-      {
-        name: '24/7 Continuous Production Template',
-        unitId: createdUnits[1].id,
-        productIds: [createdProducts[1].id],
-        planBasis: 'Quantity-based',
-        startDate: '2024-01-01',
-        endDate: '2024-12-31',
-        recurrence: 'Daily',
-        dataEntryFrequency: 'Daily',
-        usefulProductionTime: {
-          'Monday': { start: '00:00', end: '23:59' },
-          'Tuesday': { start: '00:00', end: '23:59' },
-          'Wednesday': { start: '00:00', end: '23:59' },
-          'Thursday': { start: '00:00', end: '23:59' },
-          'Friday': { start: '00:00', end: '23:59' },
-          'Saturday': { start: '00:00', end: '23:59' },
-          'Sunday': { start: '00:00', end: '23:59' },
-        },
-        tenantId: tenant.id,
-        orgId: org.id,
-        version: 1,
-      },
-    ];
-
-    for (const templateData of templates) {
-      await storageService.create('productionPlanTemplates', templateData);
-    }
-
-    // Create demo production plans from templates
-    const plans = [
-      {
-        name: 'Q1 Production Plan - Product Alpha',
-        unitId: createdUnits[0].id,
-        productId: createdProducts[0].id,
-        plannedQuantity: 6400, // 8 hours * 5 days * 16 weeks * 10 units/hour
-        toleranceLimit: 5,
-        startDate: '2024-01-01',
-        endDate: '2024-03-31',
-        planBasis: 'Time-based',
-        recurrence: 'Daily',
-        dataEntryFrequency: 'Hourly',
-        usefulProductionTime: {
-          'Monday': { start: '08:00', end: '16:00' },
-          'Tuesday': { start: '08:00', end: '16:00' },
-          'Wednesday': { start: '08:00', end: '16:00' },
-          'Thursday': { start: '08:00', end: '16:00' },
-          'Friday': { start: '08:00', end: '16:00' },
-        },
-        status: 'Active',
-        tenantId: tenant.id,
-      },
-      {
-        name: 'Q2 Production Plan - Product Beta',
-        unitId: createdUnits[1].id,
-        productId: createdProducts[1].id,
-        plannedQuantity: 51840, // 24 hours * 7 days * 12 weeks * 25 units/hour
-        toleranceLimit: 3,
-        startDate: '2024-04-01',
-        endDate: '2024-06-30',
-        planBasis: 'Quantity-based',
-        recurrence: 'Daily',
-        dataEntryFrequency: 'Daily',
-        usefulProductionTime: {
-          'Monday': { start: '00:00', end: '23:59' },
-          'Tuesday': { start: '00:00', end: '23:59' },
-          'Wednesday': { start: '00:00', end: '23:59' },
-          'Thursday': { start: '00:00', end: '23:59' },
-          'Friday': { start: '00:00', end: '23:59' },
-          'Saturday': { start: '00:00', end: '23:59' },
-          'Sunday': { start: '00:00', end: '23:59' },
-        },
-        status: 'Planned',
-        tenantId: tenant.id,
-      },
-    ];
-
-    for (const planData of plans) {
-      await storageService.create('productionPlans', planData);
-    }
-
-    console.log('Demo data created successfully');
+  const persistAuthState = (currentSession: AuthSession, currentTokens: AuthTokens) => {
+    const payload: StoredAuthState = {
+      tokens: currentTokens,
+      user: currentSession.user,
+      organization: currentSession.organization,
+      tenant: currentSession.tenant,
+    };
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const clearAuthState = () => {
+    applyTokens(null);
+    setSession(null);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  };
+
+  const refreshTokens = async (refreshToken: string) => {
+    const response = await authApi.refreshToken(refreshToken);
+    const nextTokens = mapTokens(response);
+    applyTokens(nextTokens);
+    return nextTokens;
+  };
+
+  const buildSession = async (
+    user: AuthenticatedUser,
+    activeTokens: AuthTokens,
+    options?: {
+      organizationFallback?: Organization | null;
+      tenantFallback?: Tenant | null;
+    },
+  ): Promise<AuthSession> => {
+    applyTokens(activeTokens);
+
+    let organization: Organization | null = options?.organizationFallback ?? null;
+    if (user.organizationId) {
+      try {
+        organization = await masterDataApi.getOrganization(user.organizationId);
+      } catch (error) {
+        console.warn('Unable to load organization details', error);
+      }
+    }
+
+    let tenant: Tenant | null = options?.tenantFallback ?? null;
+    if (user.tenantId) {
+      try {
+        tenant = await masterDataApi.getTenant(user.tenantId);
+      } catch (error) {
+        console.warn('Unable to load tenant details', error);
+      }
+    }
+
+    return {
+      user,
+      organization,
+      tenant,
+      token: activeTokens.accessToken,
+    };
+  };
+
+  const login = async (email: string, password: string) => {
     try {
-      const users = await storageService.query<User>('users');
-      const user = users.find(u => u.email === email && u.passwordHash === password && u.isActive);
+      // Clear any existing auth state before login to prevent token conflicts
+      clearAuthState();
       
-      if (!user) return false;
+      const payload: LoginRequest = { email, password };
+      const response = await authApi.login(payload);
+      const nextTokens = mapTokens(response);
 
-      const organization = user.organizationId ? 
-        await storageService.get<Organization>('organizations', user.organizationId) : null;
+      // Apply tokens FIRST so they're available for API calls in buildSession
+      applyTokens(nextTokens);
       
-      const tenant = user.tenantId ? 
-        await storageService.get<Tenant>('tenants', user.tenantId) : null;
+      // Verify token is set and log for debugging
+      const currentToken = tokensRef.current?.accessToken;
+      if (!currentToken) {
+        console.error('[AuthContext] ❌ Token was not set after applyTokens');
+        throw new Error('Failed to set authentication token');
+      }
+      
+      console.log('[AuthContext] ✅ Token set successfully, length:', currentToken.length);
+      
+      const nextSession = await buildSession(response.user, nextTokens);
+      setSession(nextSession);
+      persistAuthState(nextSession, nextTokens);
 
-      const newSession: AuthSession = {
-        user,
-        organization,
-        tenant,
-        token: `demo_token_${user.id}`,
-      };
+      auditService.logLogin(
+        response.user.id,
+        response.user.name,
+        nextSession.organization?.id || nextSession.tenant?.organizationId || '',
+        nextSession.tenant?.id || response.user.tenantId || '',
+      ).catch(() => {});
 
-      setSession(newSession);
-      localStorage.setItem('proact_session', JSON.stringify(newSession));
-
-      // Log successful login
-      await storageService.logAudit(user.id, 'LOGIN', 'USER', user.id, { email });
-
+      console.log('[AuthContext] ✅ Login completed successfully');
       return true;
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('[AuthContext] ❌ Login failed:', error);
+      clearAuthState();
       return false;
     }
   };
 
-  const logout = () => {
-    if (session) {
-      storageService.logAudit(session.user.id, 'LOGOUT', 'USER', session.user.id, {});
+  const logout = async () => {
+    const current = session;
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.warn('Failed to notify backend about logout', error);
+    } finally {
+      if (current?.user) {
+        auditService.logLogout(
+          current.user.id,
+          current.user.name,
+          current.organization?.id || current.tenant?.organizationId || '',
+          current.tenant?.id || current.user.tenantId || '',
+        ).catch(() => {});
+      }
+      clearAuthState();
     }
-    setSession(null);
-    localStorage.removeItem('proact_session');
   };
 
   const selectTenant = async (tenantId: string) => {
     if (!session) return;
-
-    const tenant = await storageService.get<Tenant>('tenants', tenantId);
-    if (!tenant) return;
-
-    const updatedSession = {
+    try {
+      const tenant = await masterDataApi.getTenant(tenantId);
+      const updatedSession: AuthSession = {
       ...session,
       tenant,
     };
-
     setSession(updatedSession);
-    localStorage.setItem('proact_session', JSON.stringify(updatedSession));
+      if (tokensRef.current) {
+        persistAuthState(updatedSession, tokensRef.current);
+      }
+    } catch (error) {
+      console.error('Failed to select tenant', error);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{
+    <AuthContext.Provider
+      value={{
       session,
       login,
       logout,
       selectTenant,
       isLoading,
-    }}>
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
+

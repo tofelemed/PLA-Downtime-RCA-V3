@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Database, Cloud, RefreshCw, ChevronRight, ChevronDown, Folder, FolderOpen, Box, Factory, Wrench, Copy, PlugZap, Wifi, WifiOff, Info, Hash, FileText } from 'lucide-react';
+import { autoPIEventSyncService } from '@/services/pi/AutoPIEventSyncService';
 import { PISyncService } from '@/services/pi/PISyncService';
 import { HistorianClient } from '@/services/historian/HistorianClient';
 import { PIHistorianProvider } from '@/services/historian/providers/pi/PIHistorianProvider';
@@ -32,11 +33,19 @@ export default function PIIntegration() {
   const [autoDelta, setAutoDelta] = useState<boolean>(false);
   const [intervalSec, setIntervalSec] = useState<number>(300);
   const client = useMemo(() => {
-    if (username && password) {
-      return new PIClient({ basePath: '/piwebapi', authProvider: async () => basicAuthHeader(username, password) });
+    const tenantId = session?.tenant?.id;
+    // Prefer backend-proxied PI calls (credentials stored encrypted server-side)
+    if (tenantId) {
+      return new PIClient({ tenantId });
+    }
+    if (username && password && baseUrl) {
+      return new PIClient({
+        baseUrl,
+        authProvider: async () => basicAuthHeader(username, password),
+      });
     }
     return null;
-  }, [username, password]);
+  }, [session?.tenant?.id, username, password, baseUrl]);
   const [assetServers, setAssetServers] = useState<any[]>([]);
   const [tab, setTab] = useState<string>('conn');
   const [selectedServer, setSelectedServer] = useState<string>('');
@@ -114,13 +123,20 @@ export default function PIIntegration() {
   };
 
   useEffect(() => {
-    // Avoid unauthenticated PI requests that trigger Windows auth prompt
-    if (!username || !password || !baseUrl) return;
+    if (!client) return;
     checkConnectivity();
     const timer = setInterval(checkConnectivity, 60000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username, password, baseUrl, selectedDb, selectedRoot]);
+  }, [client, selectedDb, selectedRoot]);
+
+  // Auto-load asset servers when client becomes available
+  useEffect(() => {
+    if (client && assetServers.length === 0) {
+      loadAssetServers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client]);
   const [templateToType, setTemplateToType] = useState<Record<string, string>>({ ...defaultTemplateToEventType, '*NoTemplate*': 'ProductionLoss' });
   const [attrTextByTemplate, setAttrTextByTemplate] = useState<Record<string, string>>(() => {
     const obj: Record<string, string> = {};
@@ -290,8 +306,40 @@ export default function PIIntegration() {
       setAssetServers(items);
       const count = items.length;
       toast({ title: 'PI Connection OK', description: `Asset Servers: ${count}` });
+      
+      // If we have asset servers, also load databases for the first one to test full connectivity
+      if (items.length > 0 && !selectedServer) {
+        try {
+          const firstServer = items[0];
+          const databasesRes = await client.getAFDatabases(firstServer.WebId);
+          setDatabases(databasesRes?.Items ?? []);
+          console.log('Loaded databases for first server:', databasesRes?.Items?.length || 0);
+        } catch (error) {
+          console.warn('Failed to load databases for first server:', error);
+        }
+      }
     } catch (e: any) {
       toast({ title: 'PI Connection Failed', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  const loadAssetServers = async () => {
+    try {
+      if (!client) {
+        toast({ title: 'No PI Client', description: 'Please configure PI connection first', variant: 'destructive' });
+        return;
+      }
+      const data = await client.getAssetServers();
+      const items = data?.Items ?? [];
+      setAssetServers(items);
+      console.log('Loaded asset servers:', items.length);
+      if (items.length > 0) {
+        toast({ title: 'Asset Servers Loaded', description: `${items.length} server(s) found` });
+      } else {
+        toast({ title: 'No Asset Servers', description: 'No asset servers found on this PI system', variant: 'destructive' });
+      }
+    } catch (e: any) {
+      toast({ title: 'Load Asset Servers Failed', description: e.message, variant: 'destructive' });
     }
   };
 
@@ -553,7 +601,25 @@ export default function PIIntegration() {
       if (selectedRoot) {
         await piStore.bindTenantRoot(tenantId, selectedRoot);
       }
-      toast({ title: 'PI Settings Saved', description: 'Connection and AF root have been persisted.' });
+      // Sync auto-delta settings to backend cron job (no browser timer)
+      const scopeType = selectedRoot ? 'element' as const : 'database' as const;
+      const scopeId = selectedRoot || selectedDb;
+      const intervalMinutes = Math.max(1, Math.ceil(intervalSec / 60));
+      if (scopeId) {
+        let job = await autoPIEventSyncService.getSyncJobConfig(tenantId);
+        const jobUpdates = {
+          enabled: autoDelta,
+          intervalMinutes,
+          scopeType,
+          scopeId,
+        };
+        if (!job) {
+          await autoPIEventSyncService.createSyncJobConfig(tenantId, jobUpdates);
+        } else {
+          await autoPIEventSyncService.updateSyncJobConfig(tenantId, jobUpdates);
+        }
+      }
+      toast({ title: 'PI Settings Saved', description: 'Connection saved. Auto-sync runs on the backend scheduler when enabled.' });
     } catch (e: any) {
       toast({ title: 'Save failed', description: e.message, variant: 'destructive' });
     }
@@ -597,20 +663,32 @@ export default function PIIntegration() {
         setPassword(cfg.password || '');
         setAutoDelta(!!cfg.autoDeltaSyncEnabled);
         setIntervalSec(cfg.syncIntervalSec || 300);
-        // Use a temporary client with persisted creds to avoid unauth prompts
-        if (cfg.username && cfg.password) {
-          const tempClient = new PIClient({ basePath: '/piwebapi', authProvider: async () => basicAuthHeader(cfg.username!, cfg.password!) });
+        // Use backend-proxied client when tenant session exists
+        const browseClient = session?.tenant?.id
+          ? new PIClient({ tenantId: session.tenant.id })
+          : (cfg.username && cfg.password
+            ? new PIClient({ basePath: '/piwebapi', authProvider: async () => basicAuthHeader(cfg.username!, cfg.password!) })
+            : null);
+        if (browseClient) {
+          try {
+            const assetServersRes = await browseClient.getAssetServers();
+            setAssetServers(assetServersRes?.Items ?? []);
+            console.log('Loaded asset servers:', assetServersRes?.Items?.length || 0);
+          } catch (error) {
+            console.warn('Failed to load asset servers:', error);
+          }
+          
           if (cfg.assetServer?.webId) {
             setSelectedServer(cfg.assetServer.webId);
             try {
-              const res = await tempClient.getAFDatabases(cfg.assetServer.webId);
+              const res = await browseClient.getAFDatabases(cfg.assetServer.webId);
               setDatabases(res?.Items ?? []);
             } catch {}
           }
           if (cfg.afDatabase?.webId) {
             setSelectedDb(cfg.afDatabase.webId);
             try {
-              const res = await tempClient.getDatabaseElements(cfg.afDatabase.webId);
+              const res = await browseClient.getDatabaseElements(cfg.afDatabase.webId);
               setRootElements(res?.Items ?? []);
             } catch {}
           }
@@ -665,28 +743,7 @@ export default function PIIntegration() {
     } catch {}
   };
 
-  // Auto delta sync timer
-  useEffect(() => {
-    if (!autoDelta) return;
-    const handle = setInterval(async () => {
-      try {
-        const tenantId = session?.tenant?.id ?? 'default-tenant';
-        const wm = await piStore.getWatermark(tenantId, 'element', selectedRoot);
-        const start = wm?.lastEndUtc || new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        const end = new Date().toISOString();
-        const svc = new PISyncService(client);
-        if (selectedRoot) {
-          await svc.syncRange({ tenantId, scopeType: 'element', scopeId: selectedRoot, startTimeUtc: start, endTimeUtc: end, maxCount: 200 });
-        } else if (selectedDb) {
-          await svc.syncRange({ tenantId, scopeType: 'database', scopeId: selectedDb, startTimeUtc: start, endTimeUtc: end, maxCount: 200 });
-        }
-        await refreshStatsAndWatermark();
-      } catch {
-        // ignore errors in background
-      }
-    }, Math.max(60, intervalSec) * 1000);
-    return () => clearInterval(handle);
-  }, [autoDelta, intervalSec, selectedRoot, selectedDb, session, client]);
+  // Auto delta sync is handled by backend pi-sync-jobs cron (see onSaveSettings)
 
   return (
     <div className="space-y-6">
@@ -836,38 +893,87 @@ export default function PIIntegration() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Database className="w-5 h-5"/> AF Hierarchy</CardTitle>
               <CardDescription>Browse and bind AF nodes (select server, database, and root element).</CardDescription>
+              <div className="flex items-center gap-2 text-sm">
+                <div className={`inline-flex items-center gap-1 px-2 py-1 rounded border ${piOnline==='connected'?'bg-green-50 border-green-200 text-green-700':piOnline==='disconnected'?'bg-red-50 border-red-200 text-red-700':'bg-gray-50 border-gray-200 text-gray-700'}`}>
+                  {piOnline==='connected'?<PlugZap className="w-3 h-3"/>:piOnline==='disconnected'?<WifiOff className="w-3 h-3"/>:<Wifi className="w-3 h-3"/>}
+                  <span>PI: {piOnline==='connected'?'Connected':piOnline==='disconnected'?'Disconnected':'Unknown'}</span>
+                </div>
+                {assetServers.length > 0 && (
+                  <div className="text-green-600 text-xs">
+                    {assetServers.length} server(s) loaded
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-4 gap-4">
-                <div>
-                  <Label>Scope</Label>
-                  <select className="w-full border rounded px-2 py-1" value={scopeType} onChange={(e) => setScopeType(e.target.value as any)}>
-                    <option value="element">Element (Root)</option>
-                    <option value="database">Database</option>
-                  </select>
+              <div className="flex items-center justify-between">
+                <div className="grid grid-cols-4 gap-4 flex-1">
+                  <div>
+                    <Label>Scope</Label>
+                    <select className="w-full border rounded px-2 py-1" value={scopeType} onChange={(e) => setScopeType(e.target.value as any)}>
+                      <option value="element">Element (Root)</option>
+                      <option value="database">Database</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Asset Server</Label>
+                    <select className="w-full border rounded px-2 py-1" value={selectedServer} onChange={async (e) => { const id = e.target.value; setSelectedServer(id); if (id) await loadDatabases(id); }}>
+                      <option value="">Select server</option>
+                      {assetServers.map(s => (<option key={s.WebId} value={s.WebId}>{s.Name}</option>))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>AF Database</Label>
+                    <select className="w-full border rounded px-2 py-1" value={selectedDb} onChange={async (e) => { const id = e.target.value; setSelectedDb(id); if (id) await loadRootElements(id); }} disabled={!selectedServer}>
+                      <option value="">Select database</option>
+                      {databases.map(d => (<option key={d.WebId} value={d.WebId}>{d.Name}</option>))}
+                    </select>
+                  </div>
+                  <div hidden={scopeType !== 'element'}>
+                    <Label>Root Element</Label>
+                    <select className="w-full border rounded px-2 py-1" value={selectedRoot} onChange={(e) => setSelectedRoot(e.target.value)} disabled={!selectedDb}>
+                      <option value="">Select root</option>
+                      {rootElements.map(el => (<option key={el.WebId} value={el.WebId}>{el.Name}</option>))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <Label>Asset Server</Label>
-                  <select className="w-full border rounded px-2 py-1" value={selectedServer} onChange={async (e) => { const id = e.target.value; setSelectedServer(id); if (id) await loadDatabases(id); }}>
-                    <option value="">Select server</option>
-                    {assetServers.map(s => (<option key={s.WebId} value={s.WebId}>{s.Name}</option>))}
-                  </select>
-                </div>
-                <div>
-                  <Label>AF Database</Label>
-                  <select className="w-full border rounded px-2 py-1" value={selectedDb} onChange={async (e) => { const id = e.target.value; setSelectedDb(id); if (id) await loadRootElements(id); }} disabled={!selectedServer}>
-                    <option value="">Select database</option>
-                    {databases.map(d => (<option key={d.WebId} value={d.WebId}>{d.Name}</option>))}
-                  </select>
-                </div>
-                <div hidden={scopeType !== 'element'}>
-                  <Label>Root Element</Label>
-                  <select className="w-full border rounded px-2 py-1" value={selectedRoot} onChange={(e) => setSelectedRoot(e.target.value)} disabled={!selectedDb}>
-                    <option value="">Select root</option>
-                    {rootElements.map(el => (<option key={el.WebId} value={el.WebId}>{el.Name}</option>))}
-                  </select>
+                <div className="flex gap-2 ml-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={loadAssetServers}
+                    disabled={!client}
+                    className="whitespace-nowrap"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-1" />
+                    Load Servers
+                  </Button>
                 </div>
               </div>
+              
+              {!client && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-yellow-800">
+                    <Info className="w-4 h-4" />
+                    <span className="text-sm font-medium">PI Connection Required</span>
+                  </div>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    Please configure your PI connection in the "Connection" tab first to load asset servers.
+                  </p>
+                </div>
+              )}
+              
+              {client && assetServers.length === 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-blue-800">
+                    <Info className="w-4 h-4" />
+                    <span className="text-sm font-medium">No Asset Servers Loaded</span>
+                  </div>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Click "Load Servers" to fetch available asset servers from your PI system.
+                  </p>
+                </div>
+              )}
               {selectedRoot && (
                 <div className="space-y-2">
                   <div className="text-sm text-muted-foreground">Selected Root WebId: {selectedRoot}</div>

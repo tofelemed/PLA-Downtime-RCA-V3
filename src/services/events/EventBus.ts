@@ -117,7 +117,7 @@ export class EventBus {
     // Update topic counter
     this.eventCounters.set(topic, (this.eventCounters.get(topic) || 0) + 1);
 
-    console.log(`📡 Subscribed to topic: ${topic} (ID: ${subscriptionId})`);
+   // console.log(`📡 Subscribed to topic: ${topic} (ID: ${subscriptionId})`);
 
     return subscription;
   }
@@ -142,7 +142,7 @@ export class EventBus {
       this.eventCounters.delete(topic);
     }
 
-    console.log(`🔌 Unsubscribed from topic: ${topic} (ID: ${subscriptionId})`);
+   // console.log(`🔌 Unsubscribed from topic: ${topic} (ID: ${subscriptionId})`);
     return true;
   }
 
@@ -182,7 +182,7 @@ export class EventBus {
     // Wait for all deliveries to complete
     await Promise.allSettled(publishPromises);
 
-    console.log(`📢 Published event to ${matchingSubscriptions.length} subscribers: ${topic}`);
+   // console.log(`📢 Published event to ${matchingSubscriptions.length} subscribers: ${topic}`);
     return event.id;
   }
 
@@ -241,7 +241,7 @@ export class EventBus {
   // Clear event history
   clearEventHistory(): void {
     this.eventHistory = [];
-    console.log('🗑️ Event history cleared');
+   // console.log('🗑️ Event history cleared');
   }
 
   // Get active topics
@@ -276,7 +276,7 @@ export class EventBus {
     this.subscriptions.clear();
     this.eventHistory = [];
     this.eventCounters.clear();
-    console.log('🗑️ EventBus destroyed');
+   // console.log('🗑️ EventBus destroyed');
   }
 
   // Private methods
@@ -330,7 +330,7 @@ export class EventBus {
       this.updateLatencyMetrics(latency);
 
     } catch (error) {
-      console.error(`❌ Error delivering event to subscription ${subscription.id}:`, error);
+   //   console.error(`❌ Error delivering event to subscription ${subscription.id}:`, error);
       
       // Emit error event
       this.emitErrorEvent(subscription, event, error);

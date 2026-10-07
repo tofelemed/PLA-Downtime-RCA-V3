@@ -11,4 +11,9 @@ export class UpdateRoleDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  permissions?: string;
 } 

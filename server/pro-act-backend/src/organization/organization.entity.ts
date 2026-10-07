@@ -5,24 +5,33 @@ export class Organization {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 255, unique: true })
+  @Column({ name: 'code', type: 'varchar', length: 255, unique: true })
   code: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ name: 'name', type: 'varchar', length: 255 })
   name: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'description', type: 'text', nullable: true })
   description?: string;
 
-  @Column({ type: 'bit', default: true })
+  @Column({ name: 'is_active', type: 'boolean', default: true, nullable: false })
   isActive: boolean;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ name: 'address', type: 'varchar', length: 500, nullable: true })
+  address?: string;
+
+  @Column({ name: 'contact_email', type: 'varchar', length: 255, nullable: true })
+  contactEmail?: string;
+
+  @Column({ name: 'contact_phone', type: 'varchar', length: 50, nullable: true })
+  contactPhone?: string;
+
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
   tenantId?: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 } 

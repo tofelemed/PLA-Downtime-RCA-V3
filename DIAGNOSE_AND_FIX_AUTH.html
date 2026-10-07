@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Diagnostic Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .section { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f0f0f0; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Authentication Diagnostic Tool</h1>
+    
+    <div class="section">
+        <h2>Step 1: Check Token in localStorage</h2>
+        <button onclick="checkToken()">Check Token</button>
+        <div id="tokenCheck"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Step 2: Clear All Storage</h2>
+        <button onclick="clearStorage()">Clear localStorage & sessionStorage</button>
+        <div id="clearResult"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Step 3: Test API Request</h2>
+        <button onclick="testRequest()">Test API Call</button>
+        <div id="testResult"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Step 4: Check Network Tab</h2>
+        <p>Open DevTools (F12) → Network tab → Check if Authorization header is present</p>
+    </div>
+
+    <script>
+        function checkToken() {
+            const result = document.getElementById('tokenCheck');
+            try {
+                const authState = JSON.parse(localStorage.getItem('proact_auth_state') || '{}');
+                const token = authState?.tokens?.accessToken;
+                
+                if (token) {
+                    result.innerHTML = `
+                        <p class="success">✅ Token exists in localStorage</p>
+                        <p>Token length: ${token.length}</p>
+                        <p>Token preview: ${token.substring(0, 30)}...</p>
+                        <p>Expires at: ${new Date(authState.tokens.expiresAt).toLocaleString()}</p>
+                        <p>Expired: ${Date.now() > authState.tokens.expiresAt ? 'YES ❌' : 'NO ✅'}</p>
+                    `;
+                } else {
+                    result.innerHTML = '<p class="error">❌ No token found in localStorage</p>';
+                }
+            } catch (e) {
+                result.innerHTML = `<p class="error">❌ Error: ${e.message}</p>`;
+            }
+        }
+        
+        function clearStorage() {
+            const result = document.getElementById('clearResult');
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                result.innerHTML = '<p class="success">✅ All storage cleared! Reload page now.</p>';
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } catch (e) {
+                result.innerHTML = `<p class="error">❌ Error: ${e.message}</p>`;
+            }
+        }
+        
+        async function testRequest() {
+            const result = document.getElementById('testResult');
+            result.innerHTML = '<p class="info">Testing API request...</p>';
+            
+            try {
+                const authState = JSON.parse(localStorage.getItem('proact_auth_state') || '{}');
+                const token = authState?.tokens?.accessToken;
+                
+                if (!token) {
+                    result.innerHTML = '<p class="error">❌ No token available for test</p>';
+                    return;
+                }
+                
+                const response = await fetch('http://localhost:4004/api/organizations', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `
+                        <p class="success">✅ API request successful!</p>
+                        <p>Status: ${response.status}</p>
+                        <p>Response: ${JSON.stringify(data).substring(0, 200)}...</p>
+                    `;
+                } else {
+                    const errorText = await response.text();
+                    result.innerHTML = `
+                        <p class="error">❌ API request failed</p>
+                        <p>Status: ${response.status}</p>
+                        <p>Error: ${errorText.substring(0, 200)}</p>
+                    `;
+                }
+            } catch (e) {
+                result.innerHTML = `<p class="error">❌ Error: ${e.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
+

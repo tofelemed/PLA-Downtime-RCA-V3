@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ProductionPlanTemplate } from '../../services/MasterDataService';
 import { Plus, Edit, Trash2, Copy, FileText, Search, Filter, Calendar, Package, Clock, Users, Settings } from 'lucide-react';
+import { formatDateRange } from '../../utils/dateFormatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,7 +44,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
   }, [templates, searchQuery, filterBasis]);
 
   const planBasisOptions = useMemo(() => {
-    const bases = [...new Set(templates.map(t => t.planBasis))];
+    const bases = [...new Set(templates.map((t) => t.planBasis).filter(Boolean))] as string[];
     return bases;
   }, [templates]);
 
@@ -160,7 +161,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <div className="text-xs text-gray-500 mb-1">Schedule Period</div>
                         <div className="text-sm font-medium text-gray-900">
-                          {template.startDate} → {template.endDate}
+                          {formatDateRange(template.startDate, template.endDate)}
                         </div>
                       </div>
 

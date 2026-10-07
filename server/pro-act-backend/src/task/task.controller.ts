@@ -4,6 +4,7 @@ import { Task } from './task.entity';
 import { ApiTags, ApiBearerAuth, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
 
 @ApiTags('Tasks')
 @ApiBearerAuth()
@@ -13,35 +14,37 @@ export class TaskController {
   constructor(private readonly taskService: TaskService) {}
 
   @Get()
-  @ApiResponse({ status: 200, description: 'List all tasks', type: [Task] })
+  @ApiResponse({ status: 200, description: 'List tasks with combined filters', type: [Task] })
   @ApiQuery({ name: 'assignedTo', required: false })
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'priority', required: false })
   @ApiQuery({ name: 'tenantId', required: false })
+  @ApiQuery({ name: 'entityType', required: false })
+  @ApiQuery({ name: 'entityId', required: false })
   @ApiQuery({ name: 'overdue', required: false })
   findAll(
     @Query('assignedTo') assignedTo?: string,
     @Query('status') status?: string,
     @Query('priority') priority?: string,
     @Query('tenantId') tenantId?: string,
+    @Query('entityType') entityType?: string,
+    @Query('entityId') entityId?: string,
     @Query('overdue') overdue?: string,
   ): Promise<Task[]> {
-    if (overdue === 'true') {
-      return this.taskService.findOverdue();
+    const hasFilters =
+      assignedTo || status || priority || tenantId || entityType || entityId || overdue === 'true';
+    if (!hasFilters) {
+      return this.taskService.findAll();
     }
-    if (assignedTo) {
-      return this.taskService.findByAssignedTo(assignedTo);
-    }
-    if (status) {
-      return this.taskService.findByStatus(status);
-    }
-    if (priority) {
-      return this.taskService.findByPriority(priority);
-    }
-    if (tenantId) {
-      return this.taskService.findByTenant(tenantId);
-    }
-    return this.taskService.findAll();
+    return this.taskService.findWithFilters({
+      assignedTo,
+      status,
+      priority,
+      tenantId,
+      entityType,
+      entityId,
+      overdue: overdue === 'true',
+    });
   }
 
   @Get(':id')
@@ -54,14 +57,16 @@ export class TaskController {
   @ApiBody({ type: CreateTaskDto })
   @ApiResponse({ status: 201, description: 'Create task', type: Task })
   create(@Body() data: CreateTaskDto): Promise<Task> {
-    return this.taskService.create(data);
+    const payload = this.transformDateFields(data);
+    return this.taskService.create(payload);
   }
 
   @Put(':id')
-  @ApiBody({ type: CreateTaskDto })
+  @ApiBody({ type: UpdateTaskDto })
   @ApiResponse({ status: 200, description: 'Update task', type: Task })
-  update(@Param('id') id: string, @Body() data: CreateTaskDto): Promise<Task | null> {
-    return this.taskService.update(id, data);
+  update(@Param('id') id: string, @Body() data: UpdateTaskDto): Promise<Task | null> {
+    const payload = this.transformDateFields(data);
+    return this.taskService.update(id, payload);
   }
 
   @Delete(':id')
@@ -69,4 +74,16 @@ export class TaskController {
   remove(@Param('id') id: string): Promise<void> {
     return this.taskService.remove(id);
   }
-} 
+
+  private transformDateFields<T extends Partial<CreateTaskDto> | Partial<UpdateTaskDto>>(data: T): Partial<Task> {
+    const transformed: Record<string, unknown> = { ...data };
+    const dateFields: (keyof T)[] = ['dueDate', 'completedDate'];
+    for (const field of dateFields) {
+      const value = transformed[field as string];
+      if (typeof value === 'string') {
+        transformed[field as string] = value ? new Date(value) : undefined;
+      }
+    }
+    return transformed as Partial<Task>;
+  }
+}

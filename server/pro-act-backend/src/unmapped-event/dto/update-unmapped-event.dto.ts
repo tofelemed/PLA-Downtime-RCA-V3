@@ -1,39 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsUUID, IsDate, IsNumber } from 'class-validator';
+import { PartialType } from '@nestjs/swagger';
+import { CreateUnmappedEventDto } from './create-unmapped-event.dto';
 
-export class UpdateUnmappedEventDto {
-  @ApiProperty({ required: false })
-  @IsUUID()
-  @IsOptional()
-  planId?: string;
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  eventType?: string;
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  description?: string;
-
-  @ApiProperty({ required: false })
-  @IsDate()
-  @IsOptional()
-  startTime?: Date;
-
-  @ApiProperty({ required: false })
-  @IsDate()
-  @IsOptional()
-  endTime?: Date;
-
-  @ApiProperty({ required: false })
-  @IsNumber()
-  @IsOptional()
-  duration?: number;
-
-  @ApiProperty({ required: false })
-  @IsUUID()
-  @IsOptional()
-  tenantId?: string;
-} 
+export class UpdateUnmappedEventDto extends PartialType(CreateUnmappedEventDto) {}

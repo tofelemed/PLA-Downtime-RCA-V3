@@ -14,21 +14,24 @@ export class Unit {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @Column({ type: 'int' })
-  capacity: number;
+  @Column({ name: 'capacity', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  capacity?: number;
 
-  @Column({ type: 'varchar', length: 50 })
-  unitOfMeasure: string;
+  @Column({ name: 'unit_of_measure', type: 'varchar', length: 50, nullable: true })
+  unitOfMeasure?: string;
 
-  @Column({ type: 'float', nullable: true })
+  @Column({ name: 'ideal_cycle_time', type: 'decimal', precision: 10, scale: 2, nullable: true })
   idealCycleTime?: number;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'tenant_id', type: 'uuid' })
   tenantId: string;
 
-  @CreateDateColumn()
+  @Column({ name: 'organization_id', type: 'uuid', nullable: true })
+  organizationId?: string;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 } 

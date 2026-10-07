@@ -1,112 +1,100 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Unit } from '../unit/unit.entity';
-import { Product } from '../product/product.entity';
-import { Tenant } from '../tenant/tenant.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('production_plans')
 export class ProductionPlan {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ name: 'plan_name', type: 'varchar', length: 255 })
   name: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'unit_id', type: 'varchar', length: 36 })
   unitId: string;
 
-  @ManyToOne(() => Unit)
-  @JoinColumn({ name: 'unitId' })
-  unit: Unit;
+  @Column({ name: 'product_id', type: 'varchar', length: 36, nullable: true })
+  productId?: string;
 
-  @Column({ type: 'uuid' })
-  productId: string;
+  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  tenantId?: string;
 
-  @ManyToOne(() => Product)
-  @JoinColumn({ name: 'productId' })
-  product: Product;
+  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  organizationId?: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  plannedQuantity: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  toleranceLimit: number;
-
-  @Column({ type: 'datetime' })
+  @Column({ name: 'start_date', type: 'timestamptz' })
   startDate: Date;
 
-  @Column({ type: 'datetime' })
+  @Column({ name: 'end_date', type: 'timestamptz' })
   endDate: Date;
 
-  @Column({ type: 'uuid' })
-  tenantId: string;
+  @Column({ name: 'target_quantity', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  plannedQuantity?: number;
 
-  @ManyToOne(() => Tenant)
-  @JoinColumn({ name: 'tenantId' })
-  tenant: Tenant;
+  @Column({ name: 'actual_quantity', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  actualQuantity?: number;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  planBasis: string;
+  @Column({ name: 'status', type: 'varchar', length: 50, nullable: true })
+  status?: string;
 
-  @Column({ type: 'nvarchar', length: 'max', nullable: true })
-  usefulProductionTime: string;
+  @Column({ name: 'tolerance_limit', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  toleranceLimit?: number;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  recurrence: string;
+  @Column({ name: 'plan_basis', type: 'varchar', length: 255, nullable: true })
+  planBasis?: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  dataEntryFrequency: string;
+  @Column({ name: 'useful_production_time', type: 'text', nullable: true })
+  usefulProductionTime?: string; // JSON string
 
-  @Column({ type: 'varchar', length: 50 })
-  status: string; // Planned, Active, Completed, Cancelled
+  @Column({ name: 'recurrence', type: 'varchar', length: 100, nullable: true })
+  recurrence?: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  actualQuantity: number;
+  @Column({ name: 'data_entry_frequency', type: 'varchar', length: 100, nullable: true })
+  dataEntryFrequency?: string;
 
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  shift: string;
+  @Column({ name: 'shift', type: 'varchar', length: 50, nullable: true })
+  shift?: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  crew: string;
+  @Column({ name: 'crew', type: 'varchar', length: 100, nullable: true })
+  crew?: string;
 
-  @Column({ type: 'text', nullable: true })
-  plannerNotes: string;
+  @Column({ name: 'planner_notes', type: 'text', nullable: true })
+  plannerNotes?: string;
 
-  @Column({ type: 'nvarchar', length: 'max', nullable: true })
-  comments: string;
+  @Column({ name: 'comments', type: 'text', nullable: true })
+  comments?: string; // JSON string
 
-  @Column({ type: 'varchar', length: 50 })
-  approvalStatus: string; // Draft, Pending Review, Pending Approval, Approved, Rejected
+  @Column({ name: 'approval_status', type: 'varchar', length: 50, nullable: true })
+  approvalStatus?: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  submittedBy: string;
+  @Column({ name: 'submitted_by', type: 'varchar', length: 36, nullable: true })
+  submittedBy?: string;
 
-  @Column({ type: 'datetime', nullable: true })
-  submittedAt: Date;
+  @Column({ name: 'submitted_at', type: 'timestamptz', nullable: true })
+  submittedAt?: Date;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  reviewedBy: string;
+  @Column({ name: 'reviewed_by', type: 'varchar', length: 36, nullable: true })
+  reviewedBy?: string;
 
-  @Column({ type: 'datetime', nullable: true })
-  reviewedAt: Date;
+  @Column({ name: 'reviewed_at', type: 'timestamptz', nullable: true })
+  reviewedAt?: Date;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  approvedBy: string;
+  @Column({ name: 'approved_by', type: 'varchar', length: 36, nullable: true })
+  approvedBy?: string;
 
-  @Column({ type: 'datetime', nullable: true })
-  approvedAt: Date;
+  @Column({ name: 'approved_at', type: 'timestamptz', nullable: true })
+  approvedAt?: Date;
 
-  @Column({ type: 'text', nullable: true })
-  rejectionReason: string;
+  @Column({ name: 'rejection_reason', type: 'text', nullable: true })
+  rejectionReason?: string;
 
-  @Column({ type: 'nvarchar', length: 'max', nullable: true })
-  customAttributes: string;
+  @Column({ name: 'custom_attributes', type: 'text', nullable: true })
+  customAttributes?: string; // JSON string
 
-  @Column({ type: 'nvarchar', length: 'max', nullable: true })
-  auditTrail: string;
+  @Column({ name: 'audit_trail', type: 'text', nullable: true })
+  auditTrail?: string; // JSON string
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

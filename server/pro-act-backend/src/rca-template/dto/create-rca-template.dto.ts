@@ -17,14 +17,16 @@ export class CreateRcaTemplateDto {
   @IsNotEmpty()
   category: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: Object, required: false, default: {} })
   @IsObject()
-  logicTreeStructure: any;
+  @IsOptional()
+  logicTreeStructure?: Record<string, any>;
 
-  @ApiProperty({ type: [String] })
+  @ApiProperty({ type: [String], required: false, default: [] })
   @IsArray()
+  @IsOptional()
   @IsString({ each: true })
-  verificationChecklist: string[];
+  verificationChecklist?: string[];
 
   @ApiProperty()
   @IsUUID()
@@ -33,4 +35,4 @@ export class CreateRcaTemplateDto {
   @ApiProperty()
   @IsUUID()
   tenantId: string;
-} 
+}

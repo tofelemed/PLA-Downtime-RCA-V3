@@ -64,11 +64,14 @@ const VerificationChecklists: React.FC = () => {
   }, [session]);
 
   const loadData = async () => {
-    if (!session?.tenant?.id) return;
+    console.log('[VerificationChecklists] Loading ALL checklists (Master Data view)');
     try {
-      const data = await masterDataService.getVerificationStatusCodes({ tenantId: session.tenant.id });
+      // Load ALL verification checklists without tenant filter (Master Data should show all)
+      const data = await masterDataService.getVerificationStatusCodes({});
+      console.log(`[VerificationChecklists] ✅ Loaded ${data.length} verification checklists (ALL tenants)`);
       setChecklists(data);
     } catch (error) {
+      console.error('[VerificationChecklists] ❌ Failed to load checklists:', error);
       toast({ title: 'Error', description: 'Failed to load verification checklists', variant: 'destructive' });
     }
   };

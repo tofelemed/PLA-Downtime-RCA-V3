@@ -1,0 +1,11 @@
+{
+  "id": "T12",
+  "title": "Competing actuals",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T12, SRC01",
+  "given": "PI and MQTT report the same output window",
+  "action": "Compute actuals",
+  "assertion": "One selected authority; conflict visible; output not doubled",
+  "owner_subphase": "1.10",
+  "status": "authored"
+}

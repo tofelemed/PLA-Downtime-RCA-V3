@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '../../contexts/AuthContext';
+import { dataSourceService } from '@/services/DataSourceService';
 
 
 export const BindingManager: React.FC = () => {
@@ -126,26 +127,31 @@ export const BindingManager: React.FC = () => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const { storageService } = await import('../../services/StorageService');
-        await storageService.initialize();
+        // Storage service initialization no longer needed - using backend APIs
         
-        // Load data sources
-        const stored = await storageService.query('dataSources');
-        if (stored && stored.length > 0) {
-          setDataSources(stored as unknown as Array<{ id: string; name: string; type: string; connectionString: string; customHeaders?: Array<{ key: string; value: string }> }>);
-          
-          // Generate sample fields for each data source type with nested structure
+        const tenantId = session?.tenant?.id;
+        const connectorSources = await dataSourceService.list({ tenantId });
+        if (connectorSources.length > 0) {
+          const normalizedSources = connectorSources.map(source => ({
+            id: source.remoteId ?? source.id,
+            name: source.sourceName,
+            type: source.type ?? 'custom',
+            connectionString: source.connectionString ?? '',
+            customHeaders: (source.config as any)?.customHeaders ?? [],
+          }));
+          setDataSources(normalizedSources);
+
           const fields: Record<string, any[]> = {};
-          stored.forEach((ds: any) => {
+          normalizedSources.forEach(ds => {
             if (ds.type === 'rest' || ds.type === 'custom') {
               fields[ds.id] = [
-                { 
-                  name: 'response', 
-                  path: 'response', 
+                {
+                  name: 'response',
+                  path: 'response',
                   type: 'object',
                   children: [
                     { name: 'data', path: 'response.data', type: 'array', description: 'Array of data points - actual fields will be discovered from API response' },
-                { name: 'metadata', path: 'response.metadata', type: 'object', description: 'Metadata object - actual fields will be discovered from API response' }
+                    { name: 'metadata', path: 'response.metadata', type: 'object', description: 'Metadata object - actual fields will be discovered from API response' }
                   ]
                 },
                 { name: 'status', path: 'status', type: 'string', description: 'HTTP status code' },
@@ -172,41 +178,37 @@ export const BindingManager: React.FC = () => {
             }
           });
           setDataSourceFields(fields);
+        } else {
+          setDataSources([]);
+          setDataSourceFields({});
         }
 
         // Load or create sample hierarchy data
-        let orgs = await storageService.query('organizations');
-        let tnts = await storageService.query('tenants');
-        let unts = await storageService.query('units');
-        let asts = await storageService.query('assets');
+        const { masterDataService } = await import('../../services/MasterDataService');
+        let orgs = await masterDataService.getOrganizations();
+        let tnts = await masterDataService.getTenants();
+        let unts = await masterDataService.getUnits();
+        let asts = await masterDataService.getAssets();
 
         // Only create sample organization and tenant if none exist
         if (!orgs || orgs.length === 0) {
-          const sampleOrg = {
-            id: 'org-1',
+          const sampleOrg = await masterDataService.createOrganization({
             name: 'Pro-Act Manufacturing',
             code: 'PAM',
             description: 'Main manufacturing organization',
             isActive: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          await storageService.create('organizations', sampleOrg as any);
+          });
           orgs = [sampleOrg];
         }
 
         if (!tnts || tnts.length === 0) {
-          const sampleTenant = {
-            id: 'tenant-1',
+          const sampleTenant = await masterDataService.createTenant({
             name: 'Production Plant A',
             code: 'PPA',
             description: 'Main production facility',
             organizationId: orgs[0].id,
             isActive: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          await storageService.create('tenants', sampleTenant as any);
+          });
           tnts = [sampleTenant];
         }
 

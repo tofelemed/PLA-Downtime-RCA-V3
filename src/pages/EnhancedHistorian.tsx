@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Activity, Server, Database, Settings, CheckCircle, AlertCircle, Clock, PlugZap, ClipboardList } from 'lucide-react';
-import { PIClient, basicAuthHeader } from '@/services/pi/PIClient';
+import { PIClient, createTenantPIClient } from '@/services/pi/PIClient';
 import { piStore } from '@/services/pi/PIStore';
 import { useToast } from '@/hooks/use-toast';
 import EnhancedHistorianPage from '@/components/historian/EnhancedHistorianPage';
@@ -152,18 +152,20 @@ export const EnhancedHistorian: React.FC = () => {
 
   async function checkPIStatus() {
     try {
-      const tenantId = session?.tenant?.id ?? 'default-tenant';
+      const tenantId = session?.tenant?.id;
+      if (!tenantId) {
+        setPiServerConnected(null);
+        setPiEfOnline(null);
+        return;
+      }
       const cfg = await piStore.getConnectionByTenant(tenantId);
-      if (!cfg || !cfg.username || !cfg.password) {
+      if (!cfg) {
         setPiServerConnected(null); 
         setPiEfOnline(null); 
         return;
       }
       
-      const client = new PIClient({ 
-        basePath: '/piwebapi', 
-        authProvider: async () => basicAuthHeader(cfg.username!, cfg.password!) 
-      });
+      const client = createTenantPIClient(tenantId);
       
       // Server status - test basic connectivity
       try {
@@ -263,21 +265,11 @@ export const EnhancedHistorian: React.FC = () => {
 
   // Get PI client for historian using saved credentials
   const getPIClient = async () => {
-    const tenantId = session?.tenant?.id ?? 'default-tenant';
-    try {
+      const tenantId = session?.tenant?.id;
+      if (!tenantId) return null;
       const cfg = await piStore.getConnectionByTenant(tenantId);
-      if (!cfg || !cfg.username || !cfg.password) {
-        return null; // No saved credentials
-      }
-      
-      return new PIClient({ 
-        basePath: cfg.baseUrl || '/piwebapi', 
-        authProvider: async () => basicAuthHeader(cfg.username!, cfg.password!) 
-      });
-    } catch (error) {
-      console.error('Failed to get PI client:', error);
-      return null;
-    }
+      if (!cfg) return null;
+      return createTenantPIClient(tenantId);
   };
 
   return (

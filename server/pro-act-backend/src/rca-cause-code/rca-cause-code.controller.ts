@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query, UsePipes, ValidationPipe } from '@nestjs/common';
 import { RCACauseCodeService } from './rca-cause-code.service';
 import { RCACauseCode } from './rca-cause-code.entity';
 import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
@@ -14,9 +14,19 @@ export class RCACauseCodeController {
   constructor(private readonly rcaCauseCodeService: RCACauseCodeService) {}
 
   @Get()
-  @ApiResponse({ status: 200, description: 'List all RCA cause codes', type: [RCACauseCode] })
-  findAll(): Promise<RCACauseCode[]> {
-    return this.rcaCauseCodeService.findAll();
+  @ApiResponse({ status: 200, description: 'List RCA cause codes', type: [RCACauseCode] })
+  findAll(
+    @Query('tenantId') tenantId?: string,
+    // Note: parentId doesn't exist in database schema, so this filter is not supported
+    // @Query('parentId') parentId?: string,
+    // Note: root filter is not supported since parentId doesn't exist
+    // @Query('root') root?: string,
+  ): Promise<RCACauseCode[]> {
+    return this.rcaCauseCodeService.findAll({
+      tenantId,
+      // parentId,
+      // root: root === 'true',
+    });
   }
 
   @Get(':id')
@@ -27,6 +37,7 @@ export class RCACauseCodeController {
 
   @Post()
   @ApiBody({ type: CreateRcaCauseCodeDto })
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   @ApiResponse({ status: 201, description: 'Create RCA cause code', type: RCACauseCode })
   create(@Body() data: CreateRcaCauseCodeDto): Promise<RCACauseCode> {
     return this.rcaCauseCodeService.create(data);
@@ -34,6 +45,7 @@ export class RCACauseCodeController {
 
   @Put(':id')
   @ApiBody({ type: UpdateRcaCauseCodeDto })
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   @ApiResponse({ status: 200, description: 'Update RCA cause code', type: RCACauseCode })
   update(@Param('id') id: string, @Body() data: UpdateRcaCauseCodeDto): Promise<RCACauseCode | null> {
     return this.rcaCauseCodeService.update(id, data);

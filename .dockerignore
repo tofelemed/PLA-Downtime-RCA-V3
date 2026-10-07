@@ -1,0 +1,31 @@
+# Frontend image build context (repo root). The backend has its own context and .dockerignore.
+.git
+.github
+.vscode
+.idea
+node_modules
+dist
+dist-ssr
+server
+e2e
+test-results
+playwright-report
+coverage
+uploads
+docs
+docs archive
+*.md
+*.ps1
+*.sql
+*.txt
+*.log
+.env
+.env.*
+bun.lockb
+DIAGNOSE_AND_FIX_AUTH.html
+eslint.config.js
+vitest.config.ts
+playwright.config.ts
+Dockerfile
+docker-compose*.yml
+.dockerignore

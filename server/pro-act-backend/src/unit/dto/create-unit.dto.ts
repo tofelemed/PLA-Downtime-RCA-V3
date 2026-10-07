@@ -17,14 +17,15 @@ export class CreateUnitDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
   @IsNumber()
-  capacity: number;
+  @IsOptional()
+  capacity?: number;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
   @IsString()
-  @IsNotEmpty()
-  unitOfMeasure: string;
+  @IsOptional()
+  unitOfMeasure?: string;
 
   @ApiProperty({ required: false })
   @IsNumber()
@@ -34,4 +35,9 @@ export class CreateUnitDto {
   @ApiProperty()
   @IsUUID()
   tenantId: string;
+
+  @ApiProperty({ required: false })
+  @IsUUID()
+  @IsOptional()
+  organizationId?: string;
 } 

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { VerificationStatusCode } from './verification-status-code.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -21,7 +22,9 @@ export class VerificationStatusCodeService {
   }
 
   async create(data: Partial<VerificationStatusCode>): Promise<VerificationStatusCode> {
-    const code = this.verificationStatusCodeRepository.create(data);
+    // Generate UUID manually for SQL Server compatibility
+    const id = randomUUID();
+    const code = this.verificationStatusCodeRepository.create({ id, ...data });
     const saved = await this.verificationStatusCodeRepository.save(code);
     this.realtimeGateway.broadcastEntityEvent('Created', 'verificationStatusCode', saved);
     return saved;

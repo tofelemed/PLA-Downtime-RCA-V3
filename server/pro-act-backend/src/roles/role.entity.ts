@@ -5,18 +5,18 @@ export class Role {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ name: 'name', type: 'varchar', length: 100, unique: true })
   name: string;
 
-  @Column({ nullable: true })
-  description: string;
+  @Column({ name: 'description', type: 'text', nullable: true })
+  description?: string;
 
-  @Column({ type: 'nvarchar', nullable: true })
-  permissions: string;
+  @Column({ name: 'permissions', type: 'text', nullable: true })
+  permissions?: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

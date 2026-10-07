@@ -1,57 +1,40 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Tenant } from '../tenant/tenant.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('dashboard_configurations')
 export class DashboardConfiguration {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'nvarchar', length: 'max' })
-  oee: string;
+  @Column({ name: 'dashboard_name', type: 'varchar', length: 255 })
+  dashboardName: string;
 
-  @Column({ type: 'nvarchar', length: 'max' })
-  losses: string;
+  @Column({ name: 'dashboard_type', type: 'varchar', length: 100, nullable: true })
+  dashboardType?: string;
 
-  @Column({ type: 'nvarchar', length: 'max' })
-  costs: string;
+  @Column({ name: 'layout_config', type: 'text', nullable: true })
+  layoutConfig?: string;
 
-  @Column({ type: 'nvarchar', length: 'max' })
-  bottleneckRisk: string;
+  @Column({ name: 'widget_config', type: 'text', nullable: true })
+  widgetConfig?: string;
 
-  @Column({ type: 'nvarchar', length: 'max' })
-  display: string;
+  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  tenantId?: string;
 
-  @Column({ type: 'nvarchar', length: 'max' })
-  performance: string;
+  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  organizationId?: string;
 
-  @Column({ type: 'nvarchar', length: 'max' })
-  quality: string;
+  @Column({ name: 'is_default', type: 'boolean', default: false })
+  isDefault: boolean;
 
-  @Column({ type: 'nvarchar', length: 'max' })
-  availability: string;
+  @Column({ name: 'is_public', type: 'boolean', default: false })
+  isPublic: boolean;
 
-  @Column({ type: 'uuid' })
-  tenantId: string;
+  @Column({ name: 'created_by', type: 'varchar', length: 36, nullable: true })
+  createdBy?: string;
 
-  @ManyToOne(() => Tenant)
-  @JoinColumn({ name: 'tenantId' })
-  tenant: Tenant;
-
-  @Column({ type: 'bit', default: true })
-  isActive: boolean;
-
-  @Column({ type: 'int', default: 1 })
-  version: number;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  lastModifiedBy: string;
-
-  @Column({ type: 'datetime', nullable: true })
-  lastModifiedAt: Date;
-
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

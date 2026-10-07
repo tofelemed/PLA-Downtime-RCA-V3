@@ -33,7 +33,7 @@ export class ReconcileForm {
   @Column({ type: 'varchar', length: 50 })
   status: string; // Draft, Submitted, Approved, Rejected
 
-  @Column({ type: 'nvarchar', length: 'max' })
+  @Column({ type: 'text' })
   categories: string;
 
   @Column({ type: 'uuid' })

@@ -5,36 +5,39 @@ export class Tenant {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 255, unique: true })
+  @Column({ name: 'code', type: 'varchar', length: 255, unique: true })
   code: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ name: 'name', type: 'varchar', length: 255 })
   name: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'description', type: 'text', nullable: true })
   description?: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'organization_id', type: 'uuid' })
   organizationId: string;
 
-  @Column({ type: 'bit', default: true })
+  @Column({ name: 'is_active', type: 'boolean', default: true, nullable: false })
   isActive: boolean;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ name: 'address', type: 'varchar', length: 500, nullable: true })
   address?: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ name: 'contact_person', type: 'varchar', length: 255, nullable: true })
   contactPerson?: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ name: 'contact_email', type: 'varchar', length: 255, nullable: true })
   contactEmail?: string;
 
-  @Column({ type: 'varchar', length: 50, nullable: true })
+  @Column({ name: 'contact_phone', type: 'varchar', length: 50, nullable: true })
   contactPhone?: string;
 
-  @CreateDateColumn()
+  @Column({ name: 'timezone', type: 'varchar', length: 100, nullable: true })
+  timezone?: string;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 } 

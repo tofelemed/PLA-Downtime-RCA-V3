@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { RCATemplate } from './rca-template.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -13,27 +14,42 @@ export class RCATemplateService {
   ) {}
 
   findAll(): Promise<RCATemplate[]> {
+    // Note: organization and tenant relations don't exist in database schema
     return this.templateRepository.find({
-      relations: ['organization', 'tenant'],
+      // relations: ['organization', 'tenant'],
     });
   }
 
   findOne(id: string): Promise<RCATemplate | null> {
+    // Note: organization and tenant relations don't exist in database schema
     return this.templateRepository.findOne({
       where: { id },
-      relations: ['organization', 'tenant'],
+      // relations: ['organization', 'tenant'],
     });
   }
 
   async create(data: Partial<RCATemplate>): Promise<RCATemplate> {
-    const template = this.templateRepository.create(data);
+    // Note: verificationChecklist doesn't exist in database schema, but logicTreeStructure maps to template_data
+    const id = randomUUID();
+    const template = this.templateRepository.create({
+      id,
+      ...data,
+      logicTreeStructure: data.logicTreeStructure ?? null,
+      // verificationChecklist: data.verificationChecklist ?? [],
+    });
     const saved = await this.templateRepository.save(template);
     this.realtimeGateway.broadcastEntityEvent('Created', 'rcaTemplate', saved);
     return saved;
   }
 
   async update(id: string, data: Partial<RCATemplate>): Promise<RCATemplate | null> {
-    await this.templateRepository.update(id, data);
+    // Note: verificationChecklist doesn't exist in database schema, but logicTreeStructure maps to template_data
+    const updatePayload: Partial<RCATemplate> = {
+      ...data,
+      ...(data.logicTreeStructure !== undefined && { logicTreeStructure: data.logicTreeStructure ?? null }),
+      // ...(data.verificationChecklist !== undefined && { verificationChecklist: data.verificationChecklist ?? [] }),
+    };
+    await this.templateRepository.update(id, updatePayload);
     const updated = await this.findOne(id);
     if (updated) {
       this.realtimeGateway.broadcastEntityEvent('Updated', 'rcaTemplate', updated);
@@ -50,23 +66,26 @@ export class RCATemplateService {
   }
 
   findByTenant(tenantId: string): Promise<RCATemplate[]> {
+    // Note: organization and tenant relations don't exist in database schema
     return this.templateRepository.find({
       where: { tenantId },
-      relations: ['organization', 'tenant'],
+      // relations: ['organization', 'tenant'],
     });
   }
 
   findByOrganization(organizationId: string): Promise<RCATemplate[]> {
+    // Note: organization and tenant relations don't exist in database schema
     return this.templateRepository.find({
       where: { organizationId },
-      relations: ['organization', 'tenant'],
+      // relations: ['organization', 'tenant'],
     });
   }
 
   findByCategory(category: string): Promise<RCATemplate[]> {
+    // Note: organization and tenant relations don't exist in database schema
     return this.templateRepository.find({
       where: { category },
-      relations: ['organization', 'tenant'],
+      // relations: ['organization', 'tenant'],
     });
   }
 } 

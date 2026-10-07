@@ -11,11 +11,35 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Enable CORS
-  app.enableCors({
-    origin: true,
+  // Enable CORS - Allow all origins in development, configured origins in production
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
+  console.log('🔧 CORS Configuration:');
+  console.log(`   Environment: ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`);
+  
+  // CORS configuration - use origin: true directly (simplest and most reliable)
+  const corsOptions = {
+    origin: isDevelopment 
+      ? true  // Allow all origins in development
+      : (process.env.CORS_ORIGIN 
+          ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+          : true),
     credentials: true,
-  });
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 86400,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  };
+  
+  app.enableCors(corsOptions);
+  
+  if (isDevelopment) {
+    console.log('   CORS: Allowing ALL origins (development mode)');
+  } else {
+    console.log(`   CORS: Allowing origins: ${Array.isArray(corsOptions.origin) ? corsOptions.origin.join(', ') : 'ALL'}`);
+  }
 
   // Set global prefix
   app.setGlobalPrefix('api');
@@ -45,8 +69,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  // Serve static files from /uploads
-  app.useStaticAssets(join(__dirname, '..', '..', 'uploads'), {
+  // Serve uploaded files. The upload controllers write to "./uploads" relative to the working
+  // directory (multer diskStorage), so resolve the same way here rather than relative to the
+  // compiled output, whose depth differs between local builds (dist/src) and other layouts.
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
   });
 
@@ -54,7 +80,10 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
-  console.log(`API documentation available at: http://localhost:${port}/api`);
+  console.log('');
+  console.log('✅ Application is running on: http://localhost:' + port);
+  console.log('✅ API documentation available at: http://localhost:' + port + '/api');
+  console.log('✅ CORS enabled - Frontend can connect from any origin in development');
+  console.log('');
 }
 bootstrap();

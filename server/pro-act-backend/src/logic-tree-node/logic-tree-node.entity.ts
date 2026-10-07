@@ -32,13 +32,13 @@ export class LogicTreeNode {
   @Column({ type: 'varchar', length: 50 })
   type: string; // Root, Why, How, Cause
 
-  @Column({ type: 'bit', default: false })
+  @Column({ type: 'boolean', default: false })
   verified: boolean;
 
   @Column({ type: 'simple-array' })
   evidenceIds: string[];
 
-  @Column({ type: 'nvarchar', length: 'max' })
+  @Column({ type: 'text' })
   position: string;
 
   @CreateDateColumn()

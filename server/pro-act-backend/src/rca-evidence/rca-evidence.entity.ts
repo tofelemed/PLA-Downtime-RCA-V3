@@ -30,13 +30,13 @@ export class RCAEvidence {
   @Column({ type: 'varchar', length: 255 })
   collectedBy: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamptz' })
   collectedAt: Date;
 
   @Column({ type: 'simple-array', nullable: true })
   nodeIds: string[];
 
-  @Column({ type: 'varbinary', nullable: true })
+  @Column({ type: 'bytea', nullable: true })
   fileBlob: Buffer;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
@@ -45,7 +45,7 @@ export class RCAEvidence {
   @Column({ type: 'varchar', length: 100, nullable: true })
   location: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   timestamp: Date;
 
   @Column({ type: 'uuid', nullable: true })
@@ -57,7 +57,7 @@ export class RCAEvidence {
   @Column({ type: 'simple-array', nullable: true })
   tags: string[];
 
-  @Column({ type: 'bit', nullable: true })
+  @Column({ type: 'boolean', nullable: true })
   verified: boolean;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
@@ -66,7 +66,7 @@ export class RCAEvidence {
   @Column({ type: 'varchar', length: 255, nullable: true })
   task: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   dueDate: Date;
 
   @Column({ type: 'varchar', length: 50, nullable: true })

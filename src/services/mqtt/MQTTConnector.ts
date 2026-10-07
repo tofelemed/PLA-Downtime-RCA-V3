@@ -36,6 +36,7 @@ export interface MQTTMessage {
   retain: boolean;
   dup: boolean;
   messageId?: number;
+  metadata?: Record<string, any>;
 }
 
 export interface MQTTSubscription {
@@ -48,12 +49,12 @@ export class MQTTConnector extends BaseConnector implements IStreamingConnector 
   private mqttClient: any = null; // Will be replaced with actual MQTT client
   private mqttOptions: MQTTOptions;
   private activeStreams: Set<string> = new Set();
-  private transforms: TransformConfig[] = [];
-  private filters: FilterConfig[] = [];
-  private subscriptions: Map<string, MQTTSubscription> = new Map();
+  protected transforms: TransformConfig[] = [];
+  protected filters: FilterConfig[] = [];
+  private mqttSubscriptions: Map<string, MQTTSubscription> = new Map();
   private messageBuffer: MQTTMessage[] = [];
   private bufferSize: number = 1000;
-  private isStreaming: boolean = false;
+  private streamingActive: boolean = false;
 
   constructor(config: ConnectionConfig, mqttOptions: MQTTOptions = {}) {
     super(config);
@@ -180,7 +181,7 @@ export class MQTTConnector extends BaseConnector implements IStreamingConnector 
 
   // Streaming connector implementation
   async startStreaming(config: StreamConfig): Promise<void> {
-    if (this.isStreaming) {
+    if (this.streamingActive) {
       throw new Error('Streaming is already active');
     }
 
@@ -188,7 +189,7 @@ export class MQTTConnector extends BaseConnector implements IStreamingConnector 
       throw new Error('Not connected to MQTT broker');
     }
 
-    this.isStreaming = true;
+    this.streamingActive = true;
     console.log(`🚀 Starting MQTT streaming for ${this.config.name}`);
 
     // Start processing message buffer
@@ -203,11 +204,11 @@ export class MQTTConnector extends BaseConnector implements IStreamingConnector 
   }
 
   async stopStreaming(): Promise<void> {
-    if (!this.isStreaming) {
+    if (!this.streamingActive) {
       return;
     }
 
-    this.isStreaming = false;
+    this.streamingActive = false;
     console.log(`🛑 Stopped MQTT streaming for ${this.config.name}`);
 
     // Emit streaming stopped event
@@ -219,7 +220,7 @@ export class MQTTConnector extends BaseConnector implements IStreamingConnector 
   }
 
   isStreaming(): boolean {
-    return this.isStreaming;
+    return this.streamingActive;
   }
 
   getActiveStreams(): string[] {
@@ -289,7 +290,7 @@ export class MQTTConnector extends BaseConnector implements IStreamingConnector 
     };
 
     const subscriptionId = `mqtt_sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    this.subscriptions.set(subscriptionId, subscription);
+    this.mqttSubscriptions.set(subscriptionId, subscription);
 
     // Subscribe to the topic
     await this.mqttClient.subscribe(topic, { qos });
@@ -299,14 +300,14 @@ export class MQTTConnector extends BaseConnector implements IStreamingConnector 
   }
 
   async unsubscribe(subscriptionId: string): Promise<void> {
-    const subscription = this.subscriptions.get(subscriptionId);
+    const subscription = this.mqttSubscriptions.get(subscriptionId);
     if (!subscription) {
       return;
     }
 
     // Unsubscribe from the topic
     await this.mqttClient.unsubscribe(subscription.topic);
-    this.subscriptions.delete(subscriptionId);
+    this.mqttSubscriptions.delete(subscriptionId);
 
     console.log(`🔌 Unsubscribed from MQTT topic: ${subscription.topic}`);
   }
@@ -336,7 +337,7 @@ export class MQTTConnector extends BaseConnector implements IStreamingConnector 
   private startMessageProcessing(): void {
     // Process messages in the background
     setInterval(() => {
-      if (this.isStreaming && this.messageBuffer.length > 0) {
+      if (this.streamingActive && this.messageBuffer.length > 0) {
         this.processMessageBuffer();
       }
     }, 100); // Process every 100ms
@@ -517,7 +518,7 @@ export class MQTTConnector extends BaseConnector implements IStreamingConnector 
   }
 
   private notifySubscribers(topic: string, message: MQTTMessage): void {
-    for (const [subscriptionId, subscription] of this.subscriptions.entries()) {
+    for (const [subscriptionId, subscription] of this.mqttSubscriptions.entries()) {
       if (this.matchesTopicPattern(topic, subscription.topic)) {
         try {
           subscription.callback(message);
@@ -566,9 +567,9 @@ export class MQTTConnector extends BaseConnector implements IStreamingConnector 
       ...baseHealth,
       mqtt: {
         clientId: this.mqttOptions.clientId,
-        isStreaming: this.isStreaming,
+        isStreaming: this.streamingActive,
         activeStreams: this.getActiveStreams(),
-        activeSubscriptions: this.subscriptions.size,
+        activeSubscriptions: this.mqttSubscriptions.size,
         messageBufferSize: this.messageBuffer.length,
         transforms: this.transforms.length,
         filters: this.filters.length
@@ -576,3 +577,56 @@ export class MQTTConnector extends BaseConnector implements IStreamingConnector 
     };
   }
 }
+
+// MQTT Manager for handling multiple connections
+export class MQTTManager {
+  private connections: Map<string, MQTTConnector> = new Map();
+
+  createConnection(id: string, config: ConnectionConfig, options?: MQTTOptions): MQTTConnector {
+    const connector = new MQTTConnector(config, options);
+    this.connections.set(id, connector);
+    
+    globalEventBus.publish('mqtt.manager.connection.created', { 
+      connectionId: id,
+      config,
+      options,
+      timestamp: new Date()
+    });
+    
+    return connector;
+  }
+
+  getConnection(id: string): MQTTConnector | undefined {
+    return this.connections.get(id);
+  }
+
+  removeConnection(id: string): boolean {
+    const connection = this.connections.get(id);
+    if (connection) {
+      connection.destroy();
+      this.connections.delete(id);
+      
+      globalEventBus.publish('mqtt.manager.connection.removed', { 
+        connectionId: id,
+        timestamp: new Date()
+      });
+      
+      return true;
+    }
+    return false;
+  }
+
+  getAllConnections(): Map<string, MQTTConnector> {
+    return new Map(this.connections);
+  }
+
+  destroy(): void {
+    for (const connection of this.connections.values()) {
+      connection.destroy();
+    }
+    this.connections.clear();
+  }
+}
+
+// Global MQTT manager instance
+export const globalMQTTManager = new MQTTManager();

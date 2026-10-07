@@ -1,0 +1,27 @@
+{
+  "id": "T32",
+  "title": "Tolerance adjustment",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T32, ACC09",
+  "tolerance": "0.000001",
+  "inputs": {
+    "targetQty": "1000",
+    "residual": "0.5",
+    "tolerancePolicy": {
+      "mode": "percent",
+      "value": "0.1"
+    }
+  },
+  "expected": {
+    "toleranceQty": "1",
+    "residualDisplayed": "0.5",
+    "acceptedAdjustmentLine": {
+      "kind": "tolerance_adjustment",
+      "quantity": "0.5"
+    },
+    "silentZero": false
+  },
+  "owner_subphase": "2.8",
+  "notes": "",
+  "status": "authored"
+}

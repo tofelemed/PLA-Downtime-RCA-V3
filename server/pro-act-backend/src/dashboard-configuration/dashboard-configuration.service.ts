@@ -1,8 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { DashboardConfiguration } from './dashboard-configuration.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import {
+  DashboardConfigApiPayload,
+  DashboardConfigApiRecord,
+  fromApiPayload,
+  toApiRecord,
+} from './dashboard-configuration.mapper';
 
 @Injectable()
 export class DashboardConfigurationService {
@@ -12,68 +19,63 @@ export class DashboardConfigurationService {
     private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
-  findAll(): Promise<DashboardConfiguration[]> {
-    return this.configRepository.find({
-      relations: ['tenant'],
-    });
+  private mapList(entities: DashboardConfiguration[]): DashboardConfigApiRecord[] {
+    return entities.map(toApiRecord);
   }
 
-  findOne(id: string): Promise<DashboardConfiguration | null> {
-    return this.configRepository.findOne({
-      where: { id },
-      relations: ['tenant'],
-    });
+  findAll(): Promise<DashboardConfigApiRecord[]> {
+    return this.configRepository.find().then((rows) => this.mapList(rows));
   }
 
-  async create(data: Partial<DashboardConfiguration>): Promise<DashboardConfiguration> {
-    const config = this.configRepository.create(data);
+  findOne(id: string): Promise<DashboardConfigApiRecord | null> {
+    return this.configRepository.findOne({ where: { id } }).then((row) => (row ? toApiRecord(row) : null));
+  }
+
+  async create(data: DashboardConfigApiPayload): Promise<DashboardConfigApiRecord> {
+    const mapped = fromApiPayload(data);
+    const config = this.configRepository.create({
+      id: randomUUID(),
+      ...mapped,
+    });
     const saved = await this.configRepository.save(config);
-    this.realtimeGateway.broadcastEntityEvent('Created', 'dashboardConfiguration', saved);
-    return saved;
+    const record = toApiRecord(saved);
+    this.realtimeGateway.broadcastEntityEvent('Created', 'dashboardConfiguration', record);
+    return record;
   }
 
-  async update(id: string, data: Partial<DashboardConfiguration>): Promise<DashboardConfiguration | null> {
-    await this.configRepository.update(id, data);
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'dashboardConfiguration', updated);
-    }
-    return updated;
+  async update(id: string, data: DashboardConfigApiPayload): Promise<DashboardConfigApiRecord | null> {
+    const mapped = fromApiPayload(data);
+    await this.configRepository.update(id, mapped);
+    const updated = await this.configRepository.findOne({ where: { id } });
+    if (!updated) return null;
+    const record = toApiRecord(updated);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'dashboardConfiguration', record);
+    return record;
   }
 
   async remove(id: string): Promise<void> {
-    const config = await this.findOne(id);
+    const config = await this.configRepository.findOne({ where: { id } });
     await this.configRepository.delete(id);
     if (config) {
       this.realtimeGateway.broadcastEntityEvent('Deleted', 'dashboardConfiguration', { id });
     }
   }
 
-  findByTenant(tenantId: string): Promise<DashboardConfiguration[]> {
-    return this.configRepository.find({
-      where: { tenantId },
-      relations: ['tenant'],
-    });
+  findByTenant(tenantId: string): Promise<DashboardConfigApiRecord[]> {
+    return this.configRepository.find({ where: { tenantId } }).then((rows) => this.mapList(rows));
   }
 
-  findActiveByTenant(tenantId: string): Promise<DashboardConfiguration | null> {
-    return this.configRepository.findOne({
-      where: { tenantId, isActive: true },
-      relations: ['tenant'],
-    });
+  findActiveByTenant(tenantId: string): Promise<DashboardConfigApiRecord | null> {
+    return this.configRepository
+      .findOne({ where: { tenantId, isDefault: true } })
+      .then((row) => (row ? toApiRecord(row) : null));
   }
 
-  findByVersion(tenantId: string, version: number): Promise<DashboardConfiguration | null> {
-    return this.configRepository.findOne({
-      where: { tenantId, version },
-      relations: ['tenant'],
-    });
+  findByVersion(_tenantId: string, _version: number): Promise<DashboardConfigApiRecord | null> {
+    return Promise.resolve(null);
   }
 
   async deactivateAll(tenantId: string): Promise<void> {
-    await this.configRepository.update(
-      { tenantId },
-      { isActive: false }
-    );
+    await this.configRepository.update({ tenantId }, { isDefault: false });
   }
-} 
+}

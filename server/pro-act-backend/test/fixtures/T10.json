@@ -1,0 +1,11 @@
+{
+  "id": "T10",
+  "title": "Kafka crash",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T10, KF02",
+  "given": "Consumer crashes after DB commit before offset commit",
+  "action": "Restart and rebalance",
+  "assertion": "One ledger effect from inbox uniqueness; no missing accepted records",
+  "owner_subphase": "1.9",
+  "status": "authored"
+}

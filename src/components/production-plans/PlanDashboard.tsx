@@ -41,12 +41,14 @@ import {
   HelpCircle,
   ClipboardList
 } from 'lucide-react';
-import { masterDataService, ProductionPlan, ProductionLoss, OEESummary, ReconcileForm, LossCategory, ImpactCode, OEECode, Unit, ProductionEvent } from '../../services/MasterDataService';
+import { masterDataService, ProductionPlan, ProductionLoss, OEESummary, ReconcileForm, LossCategory, ImpactCode, OEECode, Unit, ProductionEvent, Product } from '../../services/MasterDataService';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePlantSelection } from '../../contexts/PlantSelectionContext';
 import { useToast } from '@/hooks/use-toast';
 import { useDashboardConfig } from '@/hooks/useDashboardConfig';
 import { getOEEComponentForEvent } from '../../services/MasterDataService';
 import { auditService } from '../../services/AuditService';
+import { formatDateRange } from '../../utils/dateFormatters';
 
 // Utility function to format time display
 const formatTimeDisplay = (timeString: string): string => {
@@ -79,6 +81,7 @@ const formatTimeDisplay = (timeString: string): string => {
 interface PlanDashboardProps {
   plan: ProductionPlan;
   onClose: () => void;
+  onPlanUpdate?: (updatedPlan: ProductionPlan) => void;
 }
 
 interface DonutChartProps {
@@ -89,10 +92,11 @@ interface DonutChartProps {
 }
 
 const DonutChart: React.FC<DonutChartProps> = ({ value, label, color, size = 120 }) => {
+  const safeValue = isNaN(value) ? 0 : value;
   const radius = (size - 20) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDasharray = circumference;
-  const strokeDashoffset = circumference - (value / 100) * circumference;
+  const strokeDashoffset = circumference - (safeValue / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center space-y-3">
@@ -121,7 +125,7 @@ const DonutChart: React.FC<DonutChartProps> = ({ value, label, color, size = 120
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">{value.toFixed(1)}%</div>
+            <div className="text-2xl font-bold text-gray-900">{safeValue.toFixed(1)}%</div>
             <div className="text-xs text-gray-500">{label}</div>
           </div>
         </div>
@@ -130,9 +134,15 @@ const DonutChart: React.FC<DonutChartProps> = ({ value, label, color, size = 120
   );
 };
 
-function calculateOEE({ plan, events, unit, impactCodes, oeeCodes, dashboardConfig }) {
-  // Planned Production Time (hours)
-  const plannedTime = plan.usefulProductionTime
+function calculateOEE({ plan, events, unit, impactCodes, oeeCodes, dashboardConfig, productionEvents }) {
+  // Calculate total plan period in days
+  const planStartDate = new Date(plan.startDate);
+  const planEndDate = new Date(plan.endDate);
+  const planDays = Math.max(1, Math.ceil((planEndDate.getTime() - planStartDate.getTime()) / (1000 * 60 * 60 * 24)));
+  const planWeeks = planDays / 7;
+  
+  // Planned Production Time (hours) - Weekly schedule
+  const weeklyPlannedTime = plan.usefulProductionTime
     ? Object.values(plan.usefulProductionTime).reduce((sum: number, t: any) => {
         const time = t as { start: string; end: string };
         if (time && time.start && time.end) {
@@ -145,6 +155,9 @@ function calculateOEE({ plan, events, unit, impactCodes, oeeCodes, dashboardConf
         return sum;
       }, 0)
     : 0;
+  
+  // Total Planned Time for entire plan period
+  const plannedTime = weeklyPlannedTime * planWeeks;
   // Downtime (hours)
   const downtime = events.filter(e => getOEEComponentForEvent(e, impactCodes, oeeCodes) === 'Availability')
     .reduce((sum: number, e: any) => {
@@ -156,21 +169,67 @@ function calculateOEE({ plan, events, unit, impactCodes, oeeCodes, dashboardConf
       return sum;
     }, 0);
   const operatingTime = Number(plannedTime) - Number(downtime);
-  // Ideal Cycle Time (seconds/unit) - use config or unit value or default
-  const idealCycleTime = Number(unit?.idealCycleTime) || 
-                        (dashboardConfig?.performance?.defaultIdealCycleTime || 6);
-  // Theoretical Max Output
-  const theoreticalMaxOutput = Number(operatingTime) * 3600 / Number(idealCycleTime);
-  // Actual Output
-  const actualOutput = Number(plan.actualQuantity) || 0;
+  
+  // Actual Output - Use auto-calculated from production events if available
+  const autoActualQuantity = productionEvents
+    .filter(e => e.eventType === 'ProductionOutput')
+    .reduce((sum, e) => sum + (e.quantity || 0), 0);
+  const actualOutput = autoActualQuantity || Number(plan.actualQuantity) || 0;
+  
+  // For PLAN-LEVEL metrics, use plan-based performance instead of ideal cycle time
+  // Theoretical Max = Planned Quantity (what we planned to produce)
+  const theoreticalMaxOutput = Number(plan.plannedQuantity) || 1;
+  
+  console.log('Actual Output Debug:', {
+    planActualQuantity: plan.actualQuantity,
+    autoActualQuantity: autoActualQuantity,
+    finalActualOutput: actualOutput,
+    planData: {
+      id: plan.id,
+      name: plan.name,
+      plannedQuantity: plan.plannedQuantity,
+      actualQuantity: plan.actualQuantity,
+      status: plan.status
+    }
+  });
   // Defective Output
   const defective = events.filter(e => getOEEComponentForEvent(e, impactCodes, oeeCodes) === 'Quality')
     .reduce((sum: number, e: any) => sum + (Number(e.defectiveQuantity) || 0), 0);
   const goodOutput = Number(actualOutput) - Number(defective);
-  // OEE Components
-  const availability = Number(plannedTime) > 0 ? Number(operatingTime) / Number(plannedTime) : 0;
-  const performance = Number(theoreticalMaxOutput) > 0 ? Number(actualOutput) / Number(theoreticalMaxOutput) : 0;
-  const quality = Number(actualOutput) > 0 ? Number(goodOutput) / Number(actualOutput) : 0;
+  
+  console.log('Defective Output Debug:', {
+    totalEvents: events.length,
+    qualityEvents: events.filter(e => getOEEComponentForEvent(e, impactCodes, oeeCodes) === 'Quality').length,
+    defectiveQuantity: defective,
+    actualOutput: actualOutput,
+    goodOutput: goodOutput,
+    eventDetails: events.map(e => ({
+      id: e.id,
+      type: e.eventType,
+      oeeComponent: getOEEComponentForEvent(e, impactCodes, oeeCodes),
+      defectiveQuantity: e.defectiveQuantity || 0
+    }))
+  });
+  // OEE Components (cap each at 1.0 = 100%)
+  const availability = Math.min(1.0, Number(plannedTime) > 0 ? Number(operatingTime) / Number(plannedTime) : 0);
+  const performance = Math.min(1.0, Number(theoreticalMaxOutput) > 0 ? Number(actualOutput) / Number(theoreticalMaxOutput) : 0);
+  const quality = Math.min(1.0, Number(actualOutput) > 0 ? Number(goodOutput) / Number(actualOutput) : 0);
+  
+  // Debug logging for OEE calculations
+  console.log('OEE Calculation Debug:', {
+    plannedTime,
+    operatingTime,
+    downtime,
+    theoreticalMaxOutput,
+    actualOutput,
+    defective,
+    goodOutput,
+    availability: availability * 100,
+    performance: performance * 100,
+    quality: quality * 100,
+    performanceCalculation: `${actualOutput} / ${theoreticalMaxOutput} = ${performance}`,
+    qualityCalculation: `${goodOutput} / ${actualOutput} = ${quality}`
+  });
   
   // Apply component weights from configuration
   const availabilityWeight = dashboardConfig?.oee?.availabilityWeight || 1.0;
@@ -184,22 +243,24 @@ function calculateOEE({ plan, events, unit, impactCodes, oeeCodes, dashboardConf
   const oee = weightedAvailability * weightedPerformance * weightedQuality;
   
   return {
-    availability: Number(availability) * 100,
-    performance: Number(performance) * 100,
-    quality: Number(quality) * 100,
-    overallOEE: Number(oee) * 100,
-    plannedTime: Number(plannedTime),
-    operatingTime: Number(operatingTime),
-    downtime: Number(downtime),
-    theoreticalMaxOutput: Number(theoreticalMaxOutput),
-    actualOutput: Number(actualOutput),
-    defective: Number(defective),
-    goodOutput: Number(goodOutput)
+    availability: isNaN(availability) ? 0 : Number(availability) * 100,
+    performance: isNaN(performance) ? 0 : Number(performance) * 100,
+    quality: isNaN(quality) ? 0 : Number(quality) * 100,
+    overallOEE: isNaN(oee) ? 0 : Number(oee) * 100,
+    plannedTime: Number(plannedTime) || 0,
+    operatingTime: Number(operatingTime) || 0,
+    downtime: Number(downtime) || 0,
+    theoreticalMaxOutput: Number(theoreticalMaxOutput) || 0,
+    actualOutput: Number(actualOutput) || 0,
+    defective: Number(defective) || 0,
+    goodOutput: Number(goodOutput) || 0
   };
 }
 
-export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) => {
+export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose, onPlanUpdate }) => {
   const { session } = useAuth();
+  const { selection: plantSelection } = usePlantSelection();
+  const tenantId = plantSelection?.tenant?.id || session?.tenant?.id;
   const { toast } = useToast();
   const { config: dashboardConfig, loading: configLoading } = useDashboardConfig();
   const [losses, setLosses] = useState<ProductionLoss[]>([]);
@@ -207,6 +268,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
   const [impactCodes, setImpactCodes] = useState<ImpactCode[]>([]);
   const [oeeCodes, setOeeCodes] = useState<OEECode[]>([]);
   const [productionEvents, setProductionEvents] = useState<ProductionEvent[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [showReconcileModal, setShowReconcileModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -241,6 +303,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
   const [lossCategories, setLossCategories] = useState<LossCategory[]>([]);
   const [showEventSearch, setShowEventSearch] = useState(false);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [unit, setUnit] = useState<Unit | null>(null);
   const [isNavBlurred, setIsNavBlurred] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
   const [showUnmappedModal, setShowUnmappedModal] = useState(false);
@@ -248,6 +311,9 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
   const [assigningEventId, setAssigningEventId] = useState<string | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [availablePlans, setAvailablePlans] = useState<ProductionPlan[]>([]);
+  const [showEventSelector, setShowEventSelector] = useState(false);
+  const [selectedCategoryIndex, setSelectedCategoryIndex] = useState<number | null>(null);
+  const [availableEvents, setAvailableEvents] = useState<ProductionEvent[]>([]);
 
   // Section refs
   const overviewRef = useRef<HTMLDivElement>(null);
@@ -256,12 +322,11 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
   const capacityRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
-  // Find the current unit for this plan
-  const unit = units.find(u => u.id === plan.unitId);
+  // Unit is now stored in state, no need to compute it here
 
   useEffect(() => {
     loadDashboardData();
-  }, [plan.id]);
+  }, [plan.id, tenantId]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -304,9 +369,9 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
   // --- OEE recalculation effect ---
   useEffect(() => {
     // Only recalculate if all required data is present
-    if (!session?.tenant?.id || !plan || !unit || impactCodes.length === 0 || oeeCodes.length === 0) return;
+    if (!tenantId || !plan || !unit || impactCodes.length === 0 || oeeCodes.length === 0) return;
 
-    const oeeCalc = calculateOEE({ plan, events: productionEvents, unit, impactCodes, oeeCodes, dashboardConfig });
+    const oeeCalc = calculateOEE({ plan, events: productionEvents, unit, impactCodes, oeeCodes, dashboardConfig, productionEvents });
     // Update backend OEE summary if available
     const updateOeeSummary = async () => {
       try {
@@ -314,7 +379,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
         let summary = oeeSummary;
         if (!summary) {
           // Try to fetch again or create default
-          const summaries = await masterDataService.getOEESummaries({ planId: plan.id, tenantId: session.tenant.id });
+          const summaries = await masterDataService.getOEESummaries({ planId: plan.id, tenantId });
           summary = summaries[0];
           if (!summary) {
             const defaultOEE = {
@@ -324,14 +389,13 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
               quality: 0,
               overallOEE: 0,
               period: new Date().toISOString().split('T')[0],
-              tenantId: session.tenant.id
+              tenantId,
             };
             summary = await masterDataService.createOEESummary(defaultOEE);
           }
         }
         // Update summary with new OEE values
         await masterDataService.updateOEESummary(summary.id, {
-          ...summary,
           availability: oeeCalc.availability,
           performance: oeeCalc.performance,
           quality: oeeCalc.quality,
@@ -344,7 +408,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
     };
     updateOeeSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan, productionEvents, unit, impactCodes, oeeCodes, session?.tenant?.id]);
+  }, [plan, productionEvents, unit, impactCodes, oeeCodes, tenantId]);
 
   // Enhanced loss calculation function that considers template configuration
   const calculateLosses = (actual: number, planned: number) => {
@@ -407,8 +471,14 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
     return Math.round(totalHours * 10) / 10; // Round to 1 decimal place
   };
 
+  // Helper function to get unit of measure for a plan
+  const getPlanUnitOfMeasure = (plan: ProductionPlan): string => {
+    const product = products.find(p => p.id === plan.productId);
+    return product?.unitOfMeasure || 'units';
+  };
+
   // Validation function
-  const validateLossCalculation = (actual: number, planned: number, losses: number, unaccounted: number) => {
+  const validateLossCalculation = (actual: number = 0, planned: number = 0, losses: number = 0, unaccounted: number = 0) => {
     const { totalLosses, unaccountedLoss } = calculateLosses(actual, planned);
     
     if (Math.abs(losses - totalLosses) > 0.01) {
@@ -429,44 +499,113 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
   };
 
   const loadDashboardData = async () => {
-    if (!session?.tenant?.id) return;
+    if (!tenantId) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     try {
-      await masterDataService.initializeSampleData(session.tenant.id);
+      console.log('PlanDashboard: Starting data load with session:', {
+        tenantId,
+        planId: plan.id,
+        planUnitId: plan.unitId
+      });
 
-      const [lossesData, oeeData, impactCodesData, oeeCodesData, eventsData, unitsData] = await Promise.all([
-        masterDataService.getProductionLosses({ planId: plan.id, tenantId: session.tenant.id }),
-        masterDataService.getOEESummaries({ planId: plan.id, tenantId: session.tenant.id }),
-        masterDataService.getImpactCodes({ tenantId: session.tenant.id }),
-        masterDataService.getOEECodes({ tenantId: session.tenant.id }),
-        masterDataService.getProductionEvents({ unitId: plan.unitId, tenantId: session.tenant.id }),
-        masterDataService.getUnits({ tenantId: session.tenant.id })
+      await masterDataService.initializeSampleData(tenantId);
+
+      console.log('🔍 Loading production losses with:', { planId: plan.id });
+      
+      const [lossesData, oeeData, impactCodesData, oeeCodesData, eventsData, unitsData, productsData] = await Promise.all([
+        masterDataService.getProductionLosses({ planId: plan.id }),
+        masterDataService.getOEESummaries({ planId: plan.id }),
+        masterDataService.getImpactCodes({ tenantId }),
+        masterDataService.getOEECodes({ tenantId }),
+        masterDataService.getProductionEvents({ unitId: plan.unitId, tenantId }),
+        masterDataService.getUnits(),
+        masterDataService.getProducts(),
       ]);
 
-      setLosses(lossesData);
+      console.log('PlanDashboard: Raw data loaded:', {
+        lossesDataLength: lossesData.length,
+        oeeDataLength: oeeData.length,
+        impactCodesDataLength: impactCodesData.length,
+        oeeCodesDataLength: oeeCodesData.length,
+        eventsDataLength: eventsData.length,
+        unitsDataLength: unitsData.length,
+        productsDataLength: productsData.length
+      });
+      
+      console.log('📊 Production Losses Detail:', {
+        count: lossesData.length,
+        planId: plan.id,
+        sampleLoss: lossesData[0] || 'No losses found',
+        allLosses: lossesData
+      });
+
+      // Debug: Check if there are any units in the system at all
+      let finalUnitsData = unitsData;
+      if (unitsData.length === 0) {
+        console.log('PlanDashboard: No units found for tenant, checking all units in system...');
+        const allUnits = await masterDataService.getUnits();
+        console.log('PlanDashboard: All units in system:', {
+          allUnitsLength: allUnits.length,
+          allUnits: allUnits.map(u => ({ id: u.id, name: u.name, tenantId: u.tenantId }))
+        });
+        
+        // Temporary fix: Use all units if none found for tenant
+        finalUnitsData = allUnits;
+        console.log('PlanDashboard: Using all units as fallback');
+      }
+
+      // Filter out empty/invalid loss records
+      const validLosses = lossesData.filter(loss => 
+        loss.period && (loss.actual > 0 || loss.shortRangePlan > 0 || loss.losses > 0)
+      );
+      setLosses(validLosses);
       setOeeSummary(oeeData[0] || null);
       setImpactCodes(impactCodesData);
       setOeeCodes(oeeCodesData);
       setProductionEvents(eventsData);
-      setUnits(unitsData);
+      setUnits(finalUnitsData);
+      setProducts(productsData);
+
+      // Find and set the unit for this plan
+      let planUnit = finalUnitsData.find(u => u.id === plan.unitId) || null;
+      if (!planUnit && plan.unitId) {
+        try {
+          planUnit = await masterDataService.getUnit(plan.unitId);
+        } catch (unitError) {
+          console.warn('PlanDashboard: Could not load unit by id', plan.unitId, unitError);
+        }
+      }
+      console.log('PlanDashboard Debug:', {
+        planId: plan.id,
+        planUnitId: plan.unitId,
+        finalUnitsDataLength: finalUnitsData.length,
+        finalUnitsData: finalUnitsData.map(u => ({ id: u.id, name: u.name })),
+        foundPlanUnit: planUnit ? { id: planUnit.id, name: planUnit.name } : null
+      });
+      setUnit(planUnit);
 
       if (oeeData.length === 0) {
         await createDefaultOEESummary();
       }
-
-      const unit = units.find(u => u.id === plan.unitId);
-      const oeeCalc = calculateOEE({ plan, events: eventsData, unit, impactCodes: impactCodesData, oeeCodes: oeeCodesData, dashboardConfig });
+      const oeeCalc = calculateOEE({ plan, events: eventsData, unit: planUnit, impactCodes: impactCodesData, oeeCodes: oeeCodesData, dashboardConfig, productionEvents: eventsData });
       if (oeeData[0]?.id) {
-        await masterDataService.updateOEESummary(oeeData[0].id, {
-          availability: oeeCalc.availability,
-          performance: oeeCalc.performance,
-          quality: oeeCalc.quality,
-          overallOEE: oeeCalc.overallOEE,
-          period: oeeData[0].period || new Date().toISOString().split('T')[0],
-          planId: plan.id,
-          tenantId: session.tenant.id
-        });
+        try {
+          await masterDataService.updateOEESummary(oeeData[0].id, {
+            availability: oeeCalc.availability,
+            performance: oeeCalc.performance,
+            quality: oeeCalc.quality,
+            overallOEE: oeeCalc.overallOEE,
+            period: oeeData[0].period || new Date().toISOString().split('T')[0],
+            planId: plan.id,
+            tenantId,
+          });
+        } catch (oeeUpdateError) {
+          console.warn('PlanDashboard: OEE summary update skipped', oeeUpdateError);
+        }
         setOeeSummary({ ...oeeData[0], ...oeeCalc });
       } else {
         const newOEE = await masterDataService.createOEESummary({
@@ -476,7 +615,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
           quality: oeeCalc.quality,
           overallOEE: oeeCalc.overallOEE,
           period: new Date().toISOString().split('T')[0],
-          tenantId: session.tenant.id
+          tenantId
         });
         setOeeSummary(newOEE);
       }
@@ -521,7 +660,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
   };
 
   const createDefaultOEESummary = async () => {
-    if (!session?.tenant?.id) return;
+    if (!tenantId) return;
 
     try {
       const defaultOEE: Omit<OEESummary, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -531,7 +670,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
         quality: 0,
         overallOEE: 0,
         period: new Date().toISOString().split('T')[0],
-        tenantId: session.tenant.id
+        tenantId,
       };
 
       const newOEE = await masterDataService.createOEESummary(defaultOEE);
@@ -819,7 +958,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
       await loadDashboardData();
       
       // Enhanced success message with template context
-      let description = `Production loss calculated: ${totalLosses.toLocaleString()} units`;
+      let description = `Production loss calculated: ${totalLosses.toLocaleString()} ${getPlanUnitOfMeasure(plan)}`;
       if (plan.planBasis) {
         description += ` (${plan.planBasis} approach)`;
       }
@@ -916,7 +1055,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
       
       toast({
         title: 'Success',
-        description: `Losses calculated from production events: ${totalLosses.toLocaleString()} units`,
+        description: `Losses calculated from production events: ${totalLosses.toLocaleString()} ${getPlanUnitOfMeasure(plan)}`,
       });
     } catch (error) {
       console.error('Failed to calculate losses from production data:', error);
@@ -945,14 +1084,71 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
   // Add this function inside the component:
   const handleSyncActualQuantity = async () => {
     if (!plan.id) return;
-    await masterDataService.updateProductionPlan(plan.id, { actualQuantity: autoActualQuantity });
-    toast({ title: 'Synced', description: 'Manual value updated to match auto-calculated.' });
-    await loadDashboardData();
+    
+    console.log('Syncing actual quantity:', {
+      planId: plan.id,
+      currentActualQuantity: plan.actualQuantity,
+      autoActualQuantity: autoActualQuantity,
+      willUpdateTo: autoActualQuantity
+    });
+    
+    try {
+      await masterDataService.updateProductionPlan(plan.id, { actualQuantity: autoActualQuantity });
+      
+      // Update the plan object locally to reflect the change immediately
+      const updatedPlan = { ...plan, actualQuantity: autoActualQuantity };
+      
+      // Notify parent component of the update
+      if (onPlanUpdate) {
+        onPlanUpdate(updatedPlan);
+      }
+      
+      toast({ 
+        title: 'Synced Successfully', 
+        description: `Manual value updated from ${plan.actualQuantity || 0} to ${autoActualQuantity.toLocaleString()}` 
+      });
+      
+      // Reload dashboard data to get fresh data
+      await loadDashboardData();
+      
+      console.log('Sync completed:', {
+        planId: plan.id,
+        updatedActualQuantity: autoActualQuantity,
+        parentNotified: !!onPlanUpdate
+      });
+      
+    } catch (error) {
+      console.error('Failed to sync actual quantity:', error);
+      toast({ 
+        title: 'Sync Failed', 
+        description: 'Failed to update manual actual quantity. Please try again.',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleOpenUnmappedModal = async () => {
     setShowUnmappedModal(true);
   };
+
+  // Load available events when event selector opens
+  useEffect(() => {
+    if (showEventSelector && session?.tenant?.id) {
+      const loadAvailableEvents = async () => {
+        try {
+          const events = await masterDataService.getProductionEvents({ 
+            tenantId: session.tenant.id,
+            unitId: plan.unitId 
+          });
+          setAvailableEvents(events);
+        } catch (error) {
+          console.error('Failed to load available events:', error);
+          setAvailableEvents([]);
+        }
+      };
+      loadAvailableEvents();
+    }
+  }, [showEventSelector, session?.tenant?.id, plan.unitId]);
 
   useEffect(() => {
     if (showUnmappedModal) {
@@ -1025,31 +1221,31 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
     setSelectedPlanId(null);
   };
 
-  // Loading state for dashboard configuration
-  if (configLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading dashboard configuration...</div>
-      </div>
-    );
-  }
-
-  // Loading state for other data
-  if (!plan || !unit) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading plan data...</div>
-      </div>
-    );
-  }
-
-  if (loading) {
+  if (configLoading || loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">Loading dashboard data...</p>
+          <p className="text-gray-600">
+            {configLoading ? 'Loading dashboard configuration...' : 'Loading dashboard data...'}
+          </p>
         </div>
+      </div>
+    );
+  }
+
+  if (!plan || !unit) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <div className="text-lg text-gray-700">
+          {!tenantId
+            ? 'Select a plant to view this dashboard.'
+            : 'Could not load unit data for this plan.'}
+        </div>
+        <Button variant="outline" onClick={onClose}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Plans
+        </Button>
       </div>
     );
   }
@@ -1096,7 +1292,6 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
 
   // UI warnings for missing OEE data
   const isMissingOeeCodes = impactCodes.length === 0 || oeeCodes.length === 0;
-  const isMissingIdealCycleTime = !unit?.idealCycleTime || unit.idealCycleTime <= 0;
 
   // Helper for smooth scroll with offset
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>, sectionId: string) => {
@@ -1173,7 +1368,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                   <span className="text-lg font-semibold text-blue-900">OEE</span>
                 </div>
                 <div className="text-3xl font-bold text-blue-800">
-                  {oeeSummary?.overallOEE?.toFixed(1) || '0.0'}%
+                  {(oeeSummary?.overallOEE != null && !isNaN(oeeSummary.overallOEE)) ? oeeSummary.overallOEE.toFixed(1) : '0.0'}%
                 </div>
                 <span className="text-xs text-gray-500">Overall Equipment Effectiveness</span>
               </div>
@@ -1199,7 +1394,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                     </Button>
                   </div>
                 </div>
-                <span className="text-xs text-gray-500">{plan.plannedQuantity?.toLocaleString() || 0} units</span>
+                <span className="text-xs text-gray-500">{plan.plannedQuantity?.toLocaleString() || 0} {getPlanUnitOfMeasure(plan)}</span>
               </div>
               {/* Total Losses */}
               <div className="flex flex-col items-center justify-center space-y-1">
@@ -1208,7 +1403,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                   <span className="text-lg font-semibold text-red-900">Losses</span>
                 </div>
                 <div className="text-3xl font-bold text-red-700">
-                  {losses.reduce((sum, loss) => sum + loss.losses, 0).toLocaleString()}
+                  {losses.reduce((sum, loss) => sum + (loss.losses || 0), 0).toLocaleString()}
                 </div>
                 <span className="text-xs text-gray-500">Total Losses (units)</span>
               </div>
@@ -1485,11 +1680,11 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                     return (
                       <TableRow key={loss.id} className={!validation.isValid ? 'bg-red-50' : ''}>
                         <TableCell className="font-medium">{loss.period}</TableCell>
-                        <TableCell className="text-right">{loss.actual.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{loss.shortRangePlan.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{(loss.actual || 0).toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{(loss.shortRangePlan || 0).toLocaleString()}</TableCell>
                         <TableCell className="text-right text-red-600 font-semibold">
                           <div className="flex items-center justify-end space-x-2">
-                            <span>{loss.losses.toLocaleString()}</span>
+                            <span>{(loss.losses || 0).toLocaleString()}</span>
                             {!validation.isValid && (
                               <div className="relative group">
                                 <XCircle className="w-4 h-4 text-red-500 cursor-help" />
@@ -1504,7 +1699,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                           </div>
                         </TableCell>
                         <TableCell className="text-right text-orange-600">
-                          {loss.unaccountedLoss.toLocaleString()}
+                          {(loss.unaccountedLoss || 0).toLocaleString()}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2">
@@ -1599,7 +1794,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                 <div className="p-3 bg-white rounded-lg border border-red-200">
                   <div className="text-lg font-semibold text-red-800">
                     {(dashboardConfig?.display?.currencySymbol || '$') + 
-                     (losses.reduce((sum, loss) => sum + loss.losses, 0) * 
+                     (losses.reduce((sum, loss) => sum + (loss.losses || 0), 0) * 
                       (dashboardConfig?.losses?.lossValuePerUnit || 100)).toLocaleString()}
                   </div>
                   <div className="text-xs text-red-600 mt-1">
@@ -1618,7 +1813,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                 <div className="p-3 bg-white rounded-lg border border-orange-200">
                   <div className="text-lg font-semibold text-orange-800">
                     {(dashboardConfig?.display?.currencySymbol || '$') + 
-                     (losses.reduce((sum, loss) => sum + loss.unaccountedLoss, 0) * 
+                     (losses.reduce((sum, loss) => sum + (loss.unaccountedLoss || 0), 0) * 
                       (dashboardConfig?.losses?.lossValuePerUnit || 100)).toLocaleString()}
                   </div>
                   <div className="text-xs text-orange-600 mt-1">
@@ -1653,8 +1848,8 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                 <div className="p-3 bg-white rounded-lg border border-green-200">
                   <div className="text-lg font-semibold text-green-800">
                     {(dashboardConfig?.display?.currencySymbol || '$') + 
-                     (plan.actualQuantity ? 
-                      Math.round((losses.reduce((sum, loss) => sum + loss.losses, 0) * 
+                     (plan.actualQuantity && plan.actualQuantity > 0 ? 
+                      Math.round((losses.reduce((sum, loss) => sum + (loss.losses || 0), 0) * 
                        (dashboardConfig?.losses?.lossValuePerUnit || 100)) / plan.actualQuantity) : 0)}
                   </div>
                   <div className="text-xs text-green-600 mt-1">
@@ -1674,21 +1869,21 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                 <div>
                   <h5 className="font-medium text-blue-800 mb-2">Loss Breakdown:</h5>
                   <ul className="space-y-1 text-blue-700">
-                    <li>• Total Losses: {losses.reduce((sum, loss) => sum + loss.losses, 0).toLocaleString()} units</li>
-                    <li>• Accounted: {(losses.reduce((sum, loss) => sum + loss.losses, 0) - losses.reduce((sum, loss) => sum + loss.unaccountedLoss, 0)).toLocaleString()} units</li>
-                    <li>• Unaccounted: {losses.reduce((sum, loss) => sum + loss.unaccountedLoss, 0).toLocaleString()} units</li>
+                    <li>• Total Losses: {losses.reduce((sum, loss) => sum + (loss.losses || 0), 0).toLocaleString()} {getPlanUnitOfMeasure(plan)}</li>
+                    <li>• Accounted: {(losses.reduce((sum, loss) => sum + (loss.losses || 0), 0) - losses.reduce((sum, loss) => sum + (loss.unaccountedLoss || 0), 0)).toLocaleString()} {getPlanUnitOfMeasure(plan)}</li>
+                    <li>• Unaccounted: {losses.reduce((sum, loss) => sum + (loss.unaccountedLoss || 0), 0).toLocaleString()} {getPlanUnitOfMeasure(plan)}</li>
                   </ul>
                 </div>
                 <div>
                   <h5 className="font-medium text-blue-800 mb-2">Cost Impact:</h5>
                   <ul className="space-y-1 text-blue-700">
                     <li>• Loss Value: {(dashboardConfig?.display?.currencySymbol || '$') + 
-                       (losses.reduce((sum, loss) => sum + loss.losses, 0) * 
+                       (losses.reduce((sum, loss) => sum + (loss.losses || 0), 0) * 
                         (dashboardConfig?.losses?.lossValuePerUnit || 100)).toLocaleString()}</li>
                     <li>• Event Costs: {(dashboardConfig?.display?.currencySymbol || '$') + 
                        productionEvents.reduce((sum, event) => sum + (event.cost || 0), 0).toLocaleString()}</li>
                     <li>• Total Impact: {(dashboardConfig?.display?.currencySymbol || '$') + 
-                       ((losses.reduce((sum, loss) => sum + loss.losses, 0) * 
+                       ((losses.reduce((sum, loss) => sum + (loss.losses || 0), 0) * 
                          (dashboardConfig?.losses?.lossValuePerUnit || 100)) + 
                         productionEvents.reduce((sum, event) => sum + (event.cost || 0), 0)).toLocaleString()}</li>
                   </ul>
@@ -1916,10 +2111,10 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                 <div>
                   <h5 className="font-medium text-blue-800 mb-2">Current Capacity:</h5>
                   <ul className="space-y-1 text-blue-700">
-                    <li>• Planned Output: {plan.plannedQuantity.toLocaleString()} units</li>
+                    <li>• Planned Output: {plan.plannedQuantity.toLocaleString()} {getPlanUnitOfMeasure(plan)}</li>
                     <li>• Production Days: {plan.usefulProductionTime ? Object.keys(plan.usefulProductionTime).filter(day => plan.usefulProductionTime?.[day]?.start).length : 0} days/week</li>
                     <li>• Weekly Hours: {plan.usefulProductionTime ? calculateTotalProductionHours(plan.usefulProductionTime) : 0} hours</li>
-                    <li>• Rate Required: {plan.usefulProductionTime ? Math.round(plan.plannedQuantity / (calculateTotalProductionHours(plan.usefulProductionTime) * 4)) : 0} units/hour</li>
+                    <li>• Rate Required: {plan.usefulProductionTime ? Math.round(plan.plannedQuantity / (calculateTotalProductionHours(plan.usefulProductionTime) * 4)) : 0} {getPlanUnitOfMeasure(plan)}/hour</li>
                   </ul>
                 </div>
                 <div>
@@ -2030,7 +2225,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                 </div>
                 <div className="p-3 bg-white rounded-lg border border-green-200">
                   <div className="text-lg font-semibold text-green-800">
-                    {losses.length > 0 ? Math.min(5, Math.ceil(losses.reduce((sum, loss) => sum + loss.losses, 0) / 1000)) : 0}
+                    {losses.length > 0 ? Math.min(5, Math.ceil(losses.reduce((sum, loss) => sum + (loss.losses || 0), 0) / 1000)) : 0}
                   </div>
                   <div className="text-xs text-green-600 mt-1">
                     Areas identified
@@ -2053,7 +2248,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                       <div>
                         <div className="font-medium text-red-800">RCA Required - {loss.period}</div>
                         <div className="text-sm text-red-600">
-                          {loss.losses.toLocaleString()} units lost, requires root cause analysis
+                          {(loss.losses || 0).toLocaleString()} {getPlanUnitOfMeasure(plan)} lost, requires root cause analysis
                         </div>
                       </div>
                     </div>
@@ -2070,7 +2265,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                       <div>
                         <div className="font-medium text-orange-800">Reconcile Losses - {loss.period}</div>
                         <div className="text-sm text-orange-600">
-                          {loss.losses.toLocaleString()} units to reconcile
+                          {(loss.losses || 0).toLocaleString()} {getPlanUnitOfMeasure(plan)} to reconcile
                         </div>
                       </div>
                     </div>
@@ -2118,19 +2313,19 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                 <div>
                   <span className="text-gray-600">Total Losses:</span>
                   <span className="ml-2 font-semibold text-red-600">
-                    {reconcileForm.totalLossAmount.toLocaleString()} units
+                    {reconcileForm.totalLossAmount.toLocaleString()} {getPlanUnitOfMeasure(plan)}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-600">Categorized:</span>
                   <span className="ml-2 font-semibold text-green-600">
-                    {reconcileForm.categories.reduce((sum, cat) => sum + cat.lossAmount, 0).toLocaleString()} units
+                    {reconcileForm.categories.reduce((sum, cat) => sum + cat.lossAmount, 0).toLocaleString()} {getPlanUnitOfMeasure(plan)}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-600">Unaccounted:</span>
                   <span className="ml-2 font-semibold text-orange-600">
-                    {(reconcileForm.totalLossAmount - reconcileForm.categories.reduce((sum, cat) => sum + cat.lossAmount, 0)).toLocaleString()} units
+                    {(reconcileForm.totalLossAmount - reconcileForm.categories.reduce((sum, cat) => sum + cat.lossAmount, 0)).toLocaleString()} {getPlanUnitOfMeasure(plan)}
                   </span>
                 </div>
               </div>
@@ -2208,18 +2403,33 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                 <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <h5 className="font-medium text-gray-900">Category {index + 1}</h5>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setReconcileForm(prev => ({
-                        ...prev,
-                        categories: prev.categories.filter((_, i) => i !== index)
-                      }))}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCategoryIndex(index);
+                          setShowEventSelector(true);
+                        }}
+                        className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                      >
+                        <Activity className="w-4 h-4 mr-1" />
+                        {category.productionEventId ? 'Change Event' : 'Add Event'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setReconcileForm(prev => ({
+                          ...prev,
+                          categories: prev.categories.filter((_, i) => i !== index)
+                        }))}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -2499,6 +2709,149 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
         </DialogContent>
       </Dialog>
 
+      {/* Event Selector Modal */}
+      <Dialog open={showEventSelector} onOpenChange={setShowEventSelector}>
+        <DialogContent className="max-w-3xl bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 border border-blue-200 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-xl font-semibold text-gray-900">
+              <Activity className="w-6 h-6 text-blue-600" />
+              <span>Select Production Event</span>
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Choose a production event to link to this loss category, or create a new one.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Event Selection */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-gray-900">Available Events</h4>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Open Event Hub to create new event
+                    window.open('/events', '_blank');
+                  }}
+                  className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Create New Event
+                </Button>
+              </div>
+
+              {/* Event List */}
+              <div className="max-h-60 overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-3">
+                {availableEvents.length > 0 ? (
+                  availableEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                        reconcileForm.categories[selectedCategoryIndex || 0]?.productionEventId === event.id
+                          ? 'bg-blue-50 border-blue-300'
+                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                      }`}
+                      onClick={() => {
+                        if (selectedCategoryIndex !== null) {
+                          setReconcileForm(prev => ({
+                            ...prev,
+                            categories: prev.categories.map((cat, i) => 
+                              i === selectedCategoryIndex ? { 
+                                ...cat, 
+                                productionEventId: event.id,
+                                productionEvent: `${event.eventType} - ${event.description || 'No description'}`
+                              } : cat
+                            )
+                          }));
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900">{event.eventType}</div>
+                          <div className="text-sm text-gray-600">{event.description || 'No description'}</div>
+                          <div className="text-xs text-gray-500">
+                            {event.startTime ? new Date(event.startTime).toLocaleString() : 'No start time'}
+                            {event.endTime && ` - ${new Date(event.endTime).toLocaleString()}`}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {event.quantity && (
+                            <div className="text-sm font-medium text-gray-900">{event.quantity.toLocaleString()} {getPlanUnitOfMeasure(plan)}</div>
+                          )}
+                          {event.cost && (
+                            <div className="text-xs text-gray-500">${event.cost.toLocaleString()}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Activity className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Events Available</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Create production events first to link them to loss categories.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        window.open('/events', '_blank');
+                      }}
+                      className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Create Event
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Current Selection */}
+            {selectedCategoryIndex !== null && reconcileForm.categories[selectedCategoryIndex]?.productionEventId && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h5 className="font-medium text-blue-900 mb-2">Selected Event</h5>
+                <div className="text-sm text-blue-800">
+                  {reconcileForm.categories[selectedCategoryIndex].productionEvent}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowEventSelector(false);
+                  setSelectedCategoryIndex(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowEventSelector(false);
+                  setSelectedCategoryIndex(null);
+                  toast({
+                    title: 'Event Linked',
+                    description: 'Production event has been linked to the loss category.',
+                  });
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Confirm Selection
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="max-w-2xl bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 border border-blue-200 shadow-2xl">
@@ -2656,13 +3009,13 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                 <div>
                   <span className="text-gray-600">Total Losses:</span>
                   <span className="ml-2 font-semibold text-red-600">
-                    {selectedLossBreakdown?.losses.toLocaleString()} units
+                    {selectedLossBreakdown?.losses.toLocaleString()} {getPlanUnitOfMeasure(plan)}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-600">Categorized:</span>
                   <span className="ml-2 font-semibold text-green-600">
-                    {lossCategories.reduce((sum, cat) => sum + cat.lossAmount, 0).toLocaleString()} units
+                    {lossCategories.reduce((sum, cat) => sum + cat.lossAmount, 0).toLocaleString()} {getPlanUnitOfMeasure(plan)}
                   </span>
                 </div>
                 <div>
@@ -2705,7 +3058,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                           </div>
                           <div className="text-right">
                             <div className="text-lg font-semibold text-red-600">
-                              {category.lossAmount.toLocaleString()} units
+                              {category.lossAmount.toLocaleString()} {getPlanUnitOfMeasure(plan)}
                             </div>
                           </div>
                         </div>
@@ -2733,10 +3086,98 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                         
                         {category.description && (
                           <div className="mt-3 pt-3 border-t border-gray-100">
-                            <span className="text-gray-600 text-sm">Description:</span>
+                            <span className="text-gray-600 text-sm font-medium">Description:</span>
                             <p className="text-sm text-gray-800 mt-1">{category.description}</p>
                           </div>
                         )}
+
+                        {/* Linked Production Event */}
+                        {category.productionEventId && (
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Activity className="w-4 h-4 text-blue-500" />
+                              <span className="text-gray-600 text-sm font-medium">Linked Production Event:</span>
+                            </div>
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <p className="text-sm text-blue-800 font-medium">{category.productionEvent}</p>
+                              <p className="text-xs text-blue-600 mt-1">Event ID: {category.productionEventId}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Financial Impact */}
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <DollarSign className="w-4 h-4 text-green-500" />
+                            <span className="text-gray-600 text-sm font-medium">Financial Impact:</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-2">
+                              <div className="text-red-700 font-medium">Loss Value</div>
+                              <div className="text-red-800 font-semibold">
+                                ${(category.lossAmount * (dashboardConfig?.losses?.lossValuePerUnit || 100)).toLocaleString()}
+                              </div>
+                              <div className="text-xs text-red-600">@ ${dashboardConfig?.losses?.lossValuePerUnit || 100}/unit</div>
+                            </div>
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-2">
+                              <div className="text-orange-700 font-medium">Cost per Unit</div>
+                              <div className="text-orange-800 font-semibold">
+                                ${Math.round((category.lossAmount * (dashboardConfig?.losses?.lossValuePerUnit || 100)) / Math.max(category.lossAmount, 1))}
+                              </div>
+                              <div className="text-xs text-orange-600">Average cost</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Recommendations */}
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Target className="w-4 h-4 text-purple-500" />
+                            <span className="text-gray-600 text-sm font-medium">Recommended Actions:</span>
+                          </div>
+                          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                            <ul className="text-sm text-purple-800 space-y-1">
+                              {category.categoryName.toLowerCase().includes('equipment') && (
+                                <>
+                                  <li>• Schedule preventive maintenance</li>
+                                  <li>• Implement predictive maintenance program</li>
+                                  <li>• Review equipment operating procedures</li>
+                                </>
+                              )}
+                              {category.categoryName.toLowerCase().includes('quality') && (
+                                <>
+                                  <li>• Enhance quality control processes</li>
+                                  <li>• Review raw material specifications</li>
+                                  <li>• Implement statistical process control</li>
+                                </>
+                              )}
+                              {category.categoryName.toLowerCase().includes('setup') && (
+                                <>
+                                  <li>• Optimize changeover procedures</li>
+                                  <li>• Implement SMED (Single Minute Exchange of Die)</li>
+                                  <li>• Train operators on quick setup techniques</li>
+                                </>
+                              )}
+                              {category.categoryName.toLowerCase().includes('material') && (
+                                <>
+                                  <li>• Improve supplier quality agreements</li>
+                                  <li>• Implement material testing protocols</li>
+                                  <li>• Optimize inventory management</li>
+                                </>
+                              )}
+                              {!category.categoryName.toLowerCase().includes('equipment') && 
+                               !category.categoryName.toLowerCase().includes('quality') && 
+                               !category.categoryName.toLowerCase().includes('setup') && 
+                               !category.categoryName.toLowerCase().includes('material') && (
+                                <>
+                                  <li>• Conduct root cause analysis</li>
+                                  <li>• Implement corrective actions</li>
+                                  <li>• Monitor performance improvements</li>
+                                </>
+                              )}
+                            </ul>
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
@@ -2772,6 +3213,100 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                 <div className="flex justify-between text-xs text-gray-500">
                   <span>0% (No losses categorized)</span>
                   <span>100% (All losses categorized)</span>
+                </div>
+              </div>
+            )}
+
+            {/* Overall Analysis & Insights */}
+            {lossCategories.length > 0 && (
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-3">
+                  <Info className="w-5 h-5 text-blue-600" />
+                  <h4 className="font-semibold text-gray-900">Analysis & Insights</h4>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Top Loss Categories */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-3">
+                    <h5 className="font-medium text-gray-800 mb-2">Top Loss Categories</h5>
+                    <div className="space-y-2">
+                      {lossCategories
+                        .sort((a, b) => b.lossAmount - a.lossAmount)
+                        .slice(0, 3)
+                        .map((category, index) => {
+                          const percentage = selectedLossBreakdown?.losses ? 
+                            Math.round((category.lossAmount / selectedLossBreakdown.losses) * 100) : 0;
+                          return (
+                            <div key={category.id} className="flex items-center justify-between text-sm">
+                              <div className="flex items-center space-x-2">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  index === 0 ? 'bg-red-500' : index === 1 ? 'bg-orange-500' : 'bg-yellow-500'
+                                }`}></div>
+                                <span className="text-gray-700">{category.categoryName}</span>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-medium text-gray-900">{category.lossAmount.toLocaleString()} {getPlanUnitOfMeasure(plan)}</div>
+                                <div className="text-xs text-gray-500">{percentage}%</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+
+                  {/* Financial Summary */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-3">
+                    <h5 className="font-medium text-gray-800 mb-2">Financial Impact Summary</h5>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Total Loss Value:</span>
+                        <span className="font-semibold text-red-600">
+                          ${lossCategories.reduce((sum, cat) => sum + (cat.lossAmount * (dashboardConfig?.losses?.lossValuePerUnit || 100)), 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Average Cost/Unit:</span>
+                        <span className="font-semibold text-orange-600">
+                          ${dashboardConfig?.losses?.lossValuePerUnit || 100}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Categories Analyzed:</span>
+                        <span className="font-semibold text-blue-600">
+                          {lossCategories.length}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Key Recommendations */}
+                <div className="mt-4 pt-3 border-t border-gray-200">
+                  <h5 className="font-medium text-gray-800 mb-2">Key Recommendations</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <Target className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium text-blue-800">Priority Actions</span>
+                      </div>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• Focus on top loss category (highest impact)</li>
+                        <li>• Implement preventive measures</li>
+                        <li>• Set up monitoring systems</li>
+                      </ul>
+                    </div>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <TrendingUp className="w-4 h-4 text-green-600" />
+                        <span className="font-medium text-green-800">Improvement Potential</span>
+                      </div>
+                      <ul className="text-sm text-green-700 space-y-1">
+                        <li>• Reduce losses by 20-30%</li>
+                        <li>• Improve accountability to 90%+</li>
+                        <li>• Implement continuous monitoring</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -2842,7 +3377,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose }) =
                             <SelectItem value="" disabled>No plans available</SelectItem>
                           ) : (
                             availablePlans.map(plan => (
-                              <SelectItem key={plan.id} value={plan.id}>{plan.name} ({plan.startDate} - {plan.endDate})</SelectItem>
+                              <SelectItem key={plan.id} value={plan.id}>{plan.name} ({formatDateRange(plan.startDate, plan.endDate)})</SelectItem>
                             ))
                           )}
                         </SelectContent>

@@ -1,5 +1,7 @@
-import { Module, MiddlewareConsumer, RequestMethod, Global } from '@nestjs/common';
+import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { OrganizationModule } from './organization/organization.module';
@@ -36,24 +38,55 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { ReportingModule } from './reporting/reporting.module';
 import { IntegrationModule } from './integration/integration.module';
 import { HealthModule } from './health/health.module';
+import { ConnectivityModule } from './connectivity/connectivity.module';
+import { PIProxyModule } from './pi-proxy/pi-proxy.module';
+import { RCATriggerConfigModule } from './rca-trigger-config/rca-trigger-config.module';
+import { RCAKnowledgeBaseModule } from './rca-knowledge-base/rca-knowledge-base.module';
+import { RCAAnalysisConfigModule } from './rca-analysis-config/rca-analysis-config.module';
+import { RCAAnalysisMethodologyModule } from './rca-analysis-methodology/rca-analysis-methodology.module';
+import { FiveWhyAnalysisModule } from './five-why-analysis/five-why-analysis.module';
+import { FishboneDiagramModule } from './fishbone-diagram/fishbone-diagram.module';
+import { FMEAAnalysisModule } from './fmea-analysis/fmea-analysis.module';
+import { FaultTreeAnalysisModule } from './fault-tree-analysis/fault-tree-analysis.module';
+import { BarrierAnalysisModule } from './barrier-analysis/barrier-analysis.module';
+import { ChangeAnalysisModule } from './change-analysis/change-analysis.module';
+import { PIConnectionModule } from './pi-connection/pi-connection.module';
+import { PIAfElementModule } from './pi-af-element/pi-af-element.module';
+import { AfBindingModule } from './af-binding/af-binding.module';
+import { PIEventModule } from './pi-event/pi-event.module';
+import { PIMappingModule } from './pi-mapping/pi-mapping.module';
+import { PISyncWatermarkModule } from './pi-sync-watermark/pi-sync-watermark.module';
+import { PISyncJobModule } from './pi-sync-job/pi-sync-job.module';
+import { HistorianTagModule } from './historian-tag/historian-tag.module';
+import { DataSourceModule } from './data-source/data-source.module';
+import { CustomAttributeDefinitionModule } from './custom-attribute-definition/custom-attribute-definition.module';
+import { CustomAttributeValueModule } from './custom-attribute-value/custom-attribute-value.module';
+import { HistorianHistoryModule } from './historian-history/historian-history.module';
+import { HierarchyMappingModule } from './hierarchy-mapping/hierarchy-mapping.module';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
+import { StreamingModule } from './streaming/streaming.module';
+import { TableInitService } from './common/database/table-init.service';
 import * as dotenv from 'dotenv';
+import { types as pgTypes } from 'pg';
 dotenv.config();
+
+// pg returns NUMERIC/DECIMAL as strings by default; the services and frontend expect numbers
+pgTypes.setTypeParser(pgTypes.builtins.NUMERIC, (value: string) => parseFloat(value));
 
 @Module({
   imports: [
+    CommonModule,
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
-      type: 'mssql',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT || '1433', 10),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
+      type: 'postgres',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      username: process.env.DB_USERNAME || 'postgres',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'proact',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: false, // Use migrations or run your SQL script manually
-      options: {
-        encrypt: false, // Set to true if using Azure SQL or require encryption
-      },
+      // Schema is derived from entities; set DB_SYNCHRONIZE=false once a migration workflow exists
+      synchronize: process.env.DB_SYNCHRONIZE === 'true',
     }),
     AuthModule,
     UsersModule,
@@ -91,8 +124,37 @@ dotenv.config();
     ReportingModule,
     IntegrationModule,
     HealthModule,
+    ConnectivityModule,
+    PIProxyModule,
+    // New Modules - Analysis & RCA Tools
+    RCATriggerConfigModule,
+    RCAKnowledgeBaseModule,
+    RCAAnalysisConfigModule,
+    RCAAnalysisMethodologyModule,
+    FiveWhyAnalysisModule,
+    FishboneDiagramModule,
+    FMEAAnalysisModule,
+    FaultTreeAnalysisModule,
+    BarrierAnalysisModule,
+    ChangeAnalysisModule,
+    // PI Integration Modules
+    PIConnectionModule,
+    PIAfElementModule,
+    AfBindingModule,
+    PIEventModule,
+    PIMappingModule,
+    PISyncWatermarkModule,
+    PISyncJobModule,
+    HistorianTagModule,
+    // Custom Attributes & Integration
+    DataSourceModule,
+    CustomAttributeDefinitionModule,
+    CustomAttributeValueModule,
+    HistorianHistoryModule,
+    HierarchyMappingModule,
+    StreamingModule,
   ],
-  providers: [],
+  providers: [TableInitService],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

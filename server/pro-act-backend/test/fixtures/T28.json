@@ -1,0 +1,40 @@
+{
+  "id": "T28",
+  "title": "Capacity ledger versus plan ledger",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T28, ACC01, ACC02, ACC04",
+  "tolerance": "0.000001",
+  "inputs": {
+    "calendarHours": "8",
+    "sustainedRatePerHour": "100",
+    "excludedHours": "1",
+    "planningRatePerHour": "90",
+    "planTargetQty": "630",
+    "scheduledStopHours": "1",
+    "grossQty": "570",
+    "goodQty": "550"
+  },
+  "expected": {
+    "capacity": {
+      "capacityQty": "800",
+      "scheduleExclusion": "100",
+      "availabilityLoss": "100",
+      "performanceLoss": "30",
+      "qualityLoss": "20",
+      "goodQty": "550",
+      "residual": "0"
+    },
+    "plan": {
+      "targetQty": "630",
+      "actualQty": "550",
+      "gap": "80",
+      "planningRateStopCandidate": "90",
+      "candidateExceedsGap": true,
+      "flag": "bridge_or_conflict",
+      "forcedAllocation": false
+    }
+  },
+  "owner_subphase": "2.5",
+  "notes": "",
+  "status": "authored"
+}

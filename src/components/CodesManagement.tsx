@@ -57,27 +57,32 @@ const CodesManagement: React.FC = () => {
   const [oeeCodes, setOEECodes] = useState<OEECode[]>([]);
 
   useEffect(() => {
-    if (session?.tenant?.id) {
-      loadCodes();
-    }
+    // Always load codes, even if tenant ID is not set yet
+    loadCodes();
   }, [session, activeTab]);
 
   const loadCodes = async () => {
-    if (!session?.tenant?.id) return;
-
+    console.log('🔍 CodesManagement: Loading codes for tab:', activeTab);
+    console.log('   Session Tenant ID:', session?.tenant?.id);
+    
     try {
+      // Load ALL codes without tenant filter (Master Data should show all codes)
+      // This allows viewing and managing codes across all tenants
+      
       switch (activeTab) {
         case 'impact':
-          const impacts = await masterDataService.getImpactCodes({ tenantId: session.tenant.id });
+          const impacts = await masterDataService.getImpactCodes({});
+          console.log(`   ✅ Loaded ${impacts.length} impact codes (ALL tenants)`);
           setImpactCodes(impacts);
           break;
         case 'oee':
-          const oees = await masterDataService.getOEECodes({ tenantId: session.tenant.id });
+          const oees = await masterDataService.getOEECodes({});
+          console.log(`   ✅ Loaded ${oees.length} OEE codes (ALL tenants)`);
           setOEECodes(oees);
           break;
       }
     } catch (error) {
-      console.error('Failed to load codes:', error);
+      console.error('❌ Failed to load codes:', error);
       toast({
         title: 'Error',
         description: 'Failed to load codes',
@@ -88,6 +93,7 @@ const CodesManagement: React.FC = () => {
 
   const getFilteredCodes = () => {
     const codes = getCurrentCodes();
+    console.log(`📊 CodesManagement: Filtering ${codes.length} codes for tab ${activeTab}`);
     if (!searchQuery) return codes;
     
     return codes.filter(code => 
@@ -99,9 +105,14 @@ const CodesManagement: React.FC = () => {
 
   const getCurrentCodes = () => {
     switch (activeTab) {
-      case 'impact': return impactCodes;
-      case 'oee': return oeeCodes;
-      default: return [];
+      case 'impact': 
+        console.log(`   Impact codes array length: ${impactCodes.length}`);
+        return impactCodes;
+      case 'oee': 
+        console.log(`   OEE codes array length: ${oeeCodes.length}`);
+        return oeeCodes;
+      default: 
+        return [];
     }
   };
 

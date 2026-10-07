@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { OEECode } from './oee-code.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -21,7 +22,9 @@ export class OEECodeService {
   }
 
   async create(data: Partial<OEECode>): Promise<OEECode> {
-    const code = this.oeeCodeRepository.create(data);
+    // Generate UUID manually for SQL Server compatibility
+    const id = randomUUID();
+    const code = this.oeeCodeRepository.create({ id, ...data });
     const saved = await this.oeeCodeRepository.save(code);
     this.realtimeGateway.broadcastEntityEvent('Created', 'oeeCode', saved);
     return saved;

@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Docker Compose environment (copy of .env.example)
+.env
+
+# Playwright output
+test-results/
+playwright-report/

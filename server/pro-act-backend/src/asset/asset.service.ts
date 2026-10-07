@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { Asset } from './asset.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -21,7 +22,10 @@ export class AssetService {
   }
 
   async create(data: Partial<Asset>): Promise<Asset> {
-    const asset = this.assetRepository.create(data);
+    const asset = this.assetRepository.create({
+      id: randomUUID(),
+      ...data,
+    });
     const saved = await this.assetRepository.save(asset);
     this.realtimeGateway.broadcastEntityEvent('Created', 'asset', saved);
     return saved;

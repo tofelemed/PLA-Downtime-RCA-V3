@@ -1,0 +1,82 @@
+# Pro-Act: frontend (nginx + static Vite build), backend (NestJS) and Postgres.
+#
+#   cp .env.example .env            # set POSTGRES_PASSWORD and JWT_SECRET
+#   docker compose up -d --build
+#   docker compose exec backend node dist/scripts/seed-demo-users.js   # login-page demo accounts
+#
+# Frontend: http://localhost:${FRONTEND_PORT:-8070}  (API, uploads and Socket.IO are proxied under the same origin)
+# Backend:  http://localhost:${BACKEND_PORT:-4004}/api/health, Swagger at /api
+#
+# To reuse the shared instrumental-postgres container instead of the bundled database:
+#   docker compose -f docker-compose.yml -f docker-compose.external-db.yml up -d --build
+#
+# Details: docs/DOCKER.md
+name: proact
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-proact}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      # 5433 on the host by default: the shared instrumental-postgres container already owns 5432
+      - "${POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./server/pro-act-backend
+    restart: unless-stopped
+    # Minimal init as PID 1: forwards signals to node and reaps zombie children so `docker stop` is clean
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "4004"
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      DB_NAME: ${POSTGRES_DB:-proact}
+      # Schema is derived from the TypeORM entities; there is no migration workflow yet (see CLAUDE.md)
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      # Encrypts PI/connector credentials at rest; falls back to JWT_SECRET when empty
+      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
+      # Only affects clients calling the backend port directly; the frontend reaches it same-origin via nginx
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8070}
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "${BACKEND_PORT:-4004}:4004"
+
+  frontend:
+    build:
+      context: .
+      args:
+        # "/api" = same origin (nginx proxies to the backend). Absolute URL only if the backend lives elsewhere.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:4004
+      PI_SERVER: ${PI_SERVER:-https://87.107.103.198:7443}
+    ports:
+      - "${FRONTEND_PORT:-8070}:80"
+
+volumes:
+  postgres-data:
+  uploads:

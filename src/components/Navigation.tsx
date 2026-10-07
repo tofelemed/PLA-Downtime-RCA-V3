@@ -14,6 +14,7 @@ import {
   UserCog,
   Lock,
   Calendar,
+  CheckSquare,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -56,7 +57,13 @@ const navigationItems = [
     roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Analyst', 'Engineer', 'Operator'],
     description: 'View analytics and quick stats',
   },
-  // --- PLA Analytics ---
+  {
+    name: 'Reports',
+    href: '/reports',
+    icon: BarChart3,
+    roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Analyst', 'Engineer'],
+    description: 'OEE, loss, RCA, audit, and task reports',
+  },
   {
     name: 'Production Loss Analysis',
     href: '/pla-analytics',
@@ -84,6 +91,13 @@ const navigationItems = [
     icon: FileText,
     roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Analyst', 'Engineer'],
     description: 'Root Cause Analysis investigations',
+  },
+  {
+    name: 'Knowledge Base',
+    href: '/rca-knowledge-base',
+    icon: Database,
+    roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Analyst', 'Engineer'],
+    description: 'Closed RCAs & lessons learned',
   },
   {
     name: 'Master Data',
@@ -128,6 +142,13 @@ const navigationItems = [
     description: 'Multi-attribute time series analysis',
   },
   {
+    name: 'Tasks',
+    href: '/tasks',
+    icon: CheckSquare,
+    roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Analyst', 'Engineer', 'Operator'],
+    description: 'Assign and track action items',
+  },
+  {
     name: 'Audit Logs',
     href: '/audit',
     icon: Shield,
@@ -140,6 +161,13 @@ const navigationItems = [
     icon: Settings,
     roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin'],
     description: 'System settings',
+  },
+  {
+    name: 'Data Seeding',
+    href: '/data-seeding',
+    icon: Database,
+    roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin'],
+    description: 'Manage test data for PLA and RCA',
   },
 ];
 

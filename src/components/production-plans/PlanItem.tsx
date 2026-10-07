@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import PlanStatusBadge from './PlanStatusBadge';
 import PlanActions from './PlanActions';
 import { AuditTrailViewer } from '../AuditTrailViewer';
+import { formatDateRange } from '../../utils/dateFormatters';
 
 type PlanItemProps = {
   plan: ProductionPlan;
@@ -140,7 +141,7 @@ const PlanItem: React.FC<PlanItemProps> = ({
           
           <div>
             <span className="font-medium text-muted-foreground">Schedule:</span>
-            <p className="text-xs">{plan.startDate} - {plan.endDate}</p>
+            <p className="text-xs">{formatDateRange(plan.startDate, plan.endDate)}</p>
           </div>
         </div>
         

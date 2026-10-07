@@ -1,7 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, storageService } from '../services/StorageService';
+import { userApi, UserRecord, UserRole, CreateUserPayload } from '../services/api/userApi';
+import { auditApi } from '../services/api/auditApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,10 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Edit, Trash2, User as UserIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-const roleColors = {
+const roleColors: Record<UserRole, string> = {
   SuperAdmin: 'bg-purple-100 text-purple-800',
   OrgAdmin: 'bg-blue-100 text-blue-800',
   TenantAdmin: 'bg-green-100 text-green-800',
+  Manager: 'bg-indigo-100 text-indigo-800',
   Analyst: 'bg-yellow-100 text-yellow-800',
   Engineer: 'bg-orange-100 text-orange-800',
   Operator: 'bg-gray-100 text-gray-800',
@@ -24,14 +26,14 @@ const roleColors = {
 export const UserManagement: React.FC = () => {
   const { session } = useAuth();
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserRecord[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    role: 'Operator' as User['role'],
+    role: 'Operator' as UserRole,
   });
 
   useEffect(() => {
@@ -41,72 +43,96 @@ export const UserManagement: React.FC = () => {
   const loadUsers = async () => {
     if (!session) return;
 
-    try {
-      let filters = {};
-      
-      // Apply role-based filtering
-      if (session.user.role === 'TenantAdmin') {
-        filters = { tenantId: session.tenant?.id };
-      } else if (session.user.role === 'OrgAdmin') {
-        filters = { organizationId: session.organization?.id };
-      }
+    const filters: { tenantId?: string; organizationId?: string } = {};
 
-      const usersData = await storageService.query<User>('users', filters);
-      setUsers(usersData);
+    if (session.user.role === 'TenantAdmin' && session.tenant?.id) {
+      filters.tenantId = session.tenant.id;
+    } else if (session.user.role === 'OrgAdmin' && session.organization?.id) {
+      filters.organizationId = session.organization.id;
+    }
+
+    try {
+      const apiUsers = await userApi.getUsers(Object.keys(filters).length ? filters : undefined);
+      setUsers(apiUsers);
     } catch (error) {
       console.error('Failed to load users:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load users',
+        description: 'Failed to load users. Please try again.',
         variant: 'destructive',
       });
+      setUsers([]);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!session) return;
+
     try {
       if (editingUser) {
-        // Update existing user
-        await storageService.update<User>('users', editingUser.id, {
+        // Build update payload - only include defined fields
+        const updatePayload: Partial<UserRecord> & { password?: string } = {
           name: formData.name,
           email: formData.email,
           role: formData.role,
+        };
+        if (formData.password && formData.password.trim()) {
+          updatePayload.password = formData.password;
+        }
+        await userApi.updateUser(editingUser.id, updatePayload);
+        await auditApi.createLog({
+          userId: session.user.id,
+          userName: session.user.name,
+          action: 'UPDATE_USER',
+          entityType: 'USER',
+          entityId: editingUser.id,
+          details: updatePayload,
+          organizationId: session.organization?.id,
+          tenantId: session.tenant?.id,
         });
-        
-        await storageService.logAudit(
-          session!.user.id,
-          'UPDATE',
-          'USER',
-          editingUser.id,
-          { name: formData.name, email: formData.email, role: formData.role }
-        );
-        
         toast({
           title: 'Success',
           description: 'User updated successfully',
         });
       } else {
-        // Create new user
-        await storageService.create<User>('users', {
+        if (!formData.password) {
+          toast({
+            title: 'Password required',
+            description: 'Please provide a password when creating a user.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Build payload - SuperAdmin may not have org/tenant, so only include if present
+        const createPayload: CreateUserPayload = {
           name: formData.name,
           email: formData.email,
-          passwordHash: formData.password,
+          password: formData.password,
           role: formData.role,
-          organizationId: session!.organization?.id || '',
-          tenantId: session!.tenant?.id || '',
           isActive: true,
+        };
+        
+        // Only include organizationId/tenantId if they exist (SuperAdmin may not have them)
+        if (session.organization?.id) {
+          createPayload.organizationId = session.organization.id;
+        }
+        if (session.tenant?.id) {
+          createPayload.tenantId = session.tenant.id;
+        }
+        
+        await userApi.createUser(createPayload);
+        await auditApi.createLog({
+          userId: session.user.id,
+          userName: session.user.name,
+          action: 'CREATE_USER',
+          entityType: 'USER',
+          entityId: 'new',
+          details: { name: formData.name, email: formData.email, role: formData.role },
+          organizationId: session.organization?.id,
+          tenantId: session.tenant?.id,
         });
-        
-        await storageService.logAudit(
-          session!.user.id,
-          'CREATE',
-          'USER',
-          'new',
-          { name: formData.name, email: formData.email, role: formData.role }
-        );
-        
         toast({
           title: 'Success',
           description: 'User created successfully',
@@ -117,17 +143,33 @@ export const UserManagement: React.FC = () => {
       setIsCreateDialogOpen(false);
       setEditingUser(null);
       loadUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save user:', error);
+      
+      // Extract error message from API error response
+      let errorMessage = 'Failed to save user. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error?.body?.message) {
+        // Handle validation errors from backend
+        if (Array.isArray(error.body.message)) {
+          errorMessage = error.body.message.join(', ');
+        } else {
+          errorMessage = error.body.message;
+        }
+      } else if (error?.body?.error) {
+        errorMessage = error.body.error;
+      }
+      
       toast({
         title: 'Error',
-        description: 'Failed to save user',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
   };
 
-  const handleEdit = (user: User) => {
+  const handleEdit = (user: UserRecord) => {
     setEditingUser(user);
     setFormData({
       name: user.name,
@@ -140,28 +182,38 @@ export const UserManagement: React.FC = () => {
 
   const handleDelete = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
+    if (!session) return;
 
     try {
-      await storageService.delete('users', userId);
-      await storageService.logAudit(session!.user.id, 'DELETE', 'USER', userId, {});
-      
+      await userApi.deleteUser(userId);
+      await auditApi.createLog({
+        userId: session.user.id,
+        userName: session.user.name,
+        action: 'DELETE_USER',
+        entityType: 'USER',
+        entityId: userId,
+        details: { id: userId },
+        organizationId: session.organization?.id,
+        tenantId: session.tenant?.id,
+      });
+
       toast({
         title: 'Success',
         description: 'User deleted successfully',
       });
-      
+
       loadUsers();
     } catch (error) {
       console.error('Failed to delete user:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete user',
+        description: 'Failed to delete user. Please try again.',
         variant: 'destructive',
       });
     }
   };
 
-  const canManageUser = (user: User) => {
+  const canManageUser = (user: UserRecord) => {
     if (!session) return false;
     
     // SuperAdmin can manage all users
@@ -246,7 +298,7 @@ export const UserManagement: React.FC = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
-                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as User['role'] })}>
+                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -254,6 +306,7 @@ export const UserManagement: React.FC = () => {
                     <SelectItem value="Operator">Operator</SelectItem>
                     <SelectItem value="Engineer">Engineer</SelectItem>
                     <SelectItem value="Analyst">Analyst</SelectItem>
+                    <SelectItem value="Manager">Manager</SelectItem>
                     {['SuperAdmin', 'OrgAdmin'].includes(session.user.role) && (
                       <SelectItem value="TenantAdmin">Tenant Admin</SelectItem>
                     )}

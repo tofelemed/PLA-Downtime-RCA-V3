@@ -13,6 +13,10 @@ export interface User extends BaseEntity {
   passwordHash: string;
   role: 'SuperAdmin' | 'OrgAdmin' | 'TenantAdmin' | 'Manager' | 'Analyst' | 'Engineer' | 'Operator';
   isActive: boolean;
+  tenantId?: string;
+  organizationId?: string;
+  phone?: string;
+  department?: string;
 }
 
 export interface Organization extends BaseEntity {
@@ -53,7 +57,7 @@ export interface AuditLog extends BaseEntity {
 
 export class StorageService {
   private dbName = 'ProActDB';
-  private version = 16; // Incremented to ensure custom attribute tables are created
+  private version = 19; // Incremented to add PI sync jobs store for automated event syncing
   private db: IDBDatabase | null = null;
 
   async initialize(): Promise<void> {
@@ -78,7 +82,9 @@ export class StorageService {
           'users', 'organizations', 'tenants', 'units', 'assets', 'auditLogs',
           'impactCodes', 'oeeCodes', 'rcaCauseCodes', 'verificationStatusCodes',
           'products', 'productionPlans', 'productionPlanTemplates', 'productionEvents', 'rcas', 'rcaRecommendations',
-          'rcaEvidence', 'logicTreeNodes',
+          'rcaEvidence', 'logicTreeNodes', 'rcaTriggerConfigs',
+          'rcaKnowledgeBase', 'rcaAnalysisConfigs', 'fiveWhyAnalyses', 'fishboneDiagrams', 
+          'fmeaAnalyses', 'faultTreeAnalyses', 'barrierAnalyses', 'changeAnalyses',
           'appSettings',
           'rcaTemplates',
           'evidenceCategories',
@@ -89,7 +95,7 @@ export class StorageService {
           'reasonCodes',
           'dashboardConfigurations',
           // PI Integration stores
-          'piConnections', 'piAfElements', 'afBindings', 'piEvents', 'piMappings', 'piSyncWatermarks', 'historianTags',
+          'piConnections', 'piAfElements', 'afBindings', 'piEvents', 'piMappings', 'piSyncWatermarks', 'piSyncJobs', 'historianTags',
           // Integration stores
           'dataSources',
           // Custom attribute stores
@@ -754,7 +760,7 @@ export class HistorianHistoryDB {
       deleteRequest.onsuccess = () => {
         console.log('[StorageService] Database deleted successfully');
         // Reinitialize the database
-        this.initialize().then(resolve).catch(reject);
+        this.init().then(resolve).catch(reject);
       };
       deleteRequest.onerror = () => {
         console.error('[StorageService] Failed to delete database:', deleteRequest.error);

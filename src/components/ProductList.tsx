@@ -46,10 +46,16 @@ const ProductList: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      if (!session?.organization?.id) return;
-      const data = await masterDataService.getProducts({ organizationId: session.organization.id });
+      console.log('🔍 ProductList: Loading products...');
+      console.log('   Session Org ID:', session?.organization?.id);
+      
+      // Products are global (no organizationId field), so load all products
+      const data = await masterDataService.getProducts({});
+      console.log(`   Loaded ${data.length} products`);
+      
       if (isMounted.current) setProducts(data);
     } catch (error) {
+      console.error('Failed to load products:', error);
       toast({ title: 'Error', description: 'Failed to load products', variant: 'destructive' });
     } finally {
       if (isMounted.current) setLoading(false);

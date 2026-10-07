@@ -1,0 +1,11 @@
+{
+  "id": "T08",
+  "title": "Long open frame",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T08, PI03",
+  "given": "Frame start predates lookback; closes today",
+  "action": "Open-frame refresh job runs",
+  "assertion": "Closure found; impacted drafts recalculate",
+  "owner_subphase": "1.6",
+  "status": "authored"
+}

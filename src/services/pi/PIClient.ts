@@ -1,5 +1,6 @@
-// Thin client for AVEVA PI Web API. Designed to be swapped with a backend proxy later.
-// Never hardcode credentials. Supply auth headers at runtime from UI (stored in memory or IndexedDB if needed).
+// PI Web API client — routes all requests through the backend when tenantId is provided.
+
+import { piBrowserApi } from '../api/piBrowserApi';
 
 export type PIAuth = {
   type: 'basic';
@@ -8,63 +9,90 @@ export type PIAuth = {
 };
 
 export interface PIClientOptions {
-  basePath?: string; // default '/piwebapi'
-  authProvider: () => Promise<HeadersInit>; // returns headers including Authorization
+  tenantId?: string;
+  basePath?: string;
+  baseUrl?: string;
+  authProvider?: () => Promise<HeadersInit>;
 }
 
 export class PIClient {
-  private basePath: string;
+  private baseUrl: string;
   private authProvider: () => Promise<HeadersInit>;
+  readonly tenantId?: string;
 
   constructor(opts: PIClientOptions) {
-    this.basePath = opts.basePath ?? '/piwebapi';
-    this.authProvider = opts.authProvider;
+    this.tenantId = opts.tenantId;
+
+    if (opts.baseUrl) {
+      let url = opts.baseUrl.endsWith('/') ? opts.baseUrl.slice(0, -1) : opts.baseUrl;
+      if (!url.endsWith('/piwebapi')) {
+        url = url.endsWith('/piwebapi/')
+          ? url.slice(0, -1)
+          : url.includes('/piwebapi')
+            ? url
+            : `${url}/piwebapi`;
+      }
+      this.baseUrl = url;
+    } else if (opts.basePath) {
+      const basePath = opts.basePath;
+      if (basePath.startsWith('http://') || basePath.startsWith('https://')) {
+        let url = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
+        if (!url.endsWith('/piwebapi')) {
+          url = url.includes('/piwebapi') ? url : `${url}/piwebapi`;
+        }
+        this.baseUrl = url;
+      } else {
+        this.baseUrl = basePath.startsWith('/') ? basePath : `/${basePath}`;
+      }
+    } else {
+      this.baseUrl = '/piwebapi';
+    }
+
+    this.authProvider = opts.authProvider || (async () => ({}));
   }
 
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
-    const headers = new Headers({ 'Accept': 'application/json' });
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+    if (this.tenantId) {
+      return piBrowserApi.request<T>(this.tenantId, {
+        path: normalizedPath,
+        method: (init?.method as any) || 'GET',
+      });
+    }
+
+    const headers = new Headers({ Accept: 'application/json' });
     const authHeaders = await this.authProvider();
     Object.entries(authHeaders).forEach(([k, v]) => headers.set(k, String(v)));
-    
+
+    const fullUrl = this.baseUrl.startsWith('http')
+      ? `${this.baseUrl}${normalizedPath}`
+      : `${this.baseUrl}${normalizedPath}`;
+
     try {
-      const resp = await fetch(`${this.basePath}${path}`, { ...init, headers });
-      
+      const resp = await fetch(fullUrl, {
+        ...init,
+        headers,
+        credentials: 'omit',
+        mode: 'cors',
+      });
+
       if (!resp.ok) {
         const text = await resp.text().catch(() => '');
         const error = new Error(`PI request failed ${resp.status}: ${text}`);
-        
-        // Add status code to error for better error handling
         (error as any).status = resp.status;
         (error as any).statusText = resp.statusText;
         (error as any).url = resp.url;
-        
-        // Add specific error details for common status codes
-        if (resp.status === 500) {
-          (error as any).details = 'Internal Server Error - PI Web API server error';
-        } else if (resp.status === 401) {
-          (error as any).details = 'Unauthorized - Check authentication credentials';
-        } else if (resp.status === 403) {
-          (error as any).details = 'Forbidden - Check user permissions';
-        } else if (resp.status === 404) {
-          (error as any).details = 'Not Found - Resource may not exist or be accessible';
-        } else if (resp.status === 503) {
-          (error as any).details = 'Service Unavailable - PI Web API may be down';
-        }
-        
         throw error;
       }
-      
+
       return resp.json() as Promise<T>;
     } catch (error) {
-      // Re-throw if it's already our custom error
-      if ((error as any).status) {
-        throw error;
-      }
-      
-      // Handle network/other errors
-      const networkError = new Error(`PI request failed: ${error instanceof Error ? error.message : 'Network error'}`);
+      if ((error as any).status) throw error;
+      const networkError = new Error(
+        `PI request failed: ${error instanceof Error ? error.message : 'Network error'}`,
+      );
       (networkError as any).status = 0;
-      (networkError as any).details = 'Network or connection error';
       throw networkError;
     }
   }
@@ -258,5 +286,10 @@ export function basicAuthHeader(username: string, password: string): HeadersInit
   // Note: btoa may fail for unicode; in such cases, use a proper encoder.
   const token = btoa(`${username}:${password}`);
   return { Authorization: `Basic ${token}` };
+}
+
+/** Route all PI Web API calls through the backend proxy for a tenant */
+export function createTenantPIClient(tenantId: string): PIClient {
+  return new PIClient({ tenantId });
 }
 

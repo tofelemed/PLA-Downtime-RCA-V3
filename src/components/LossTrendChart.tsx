@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { masterDataService, ProductionEvent } from '../services/MasterDataService';
+import { formatDurationSimple, formatDurationTooltip } from '../utils/durationFormatter';
 
 interface LossTrendChartProps {
   tenantId: string;
@@ -9,10 +10,11 @@ interface LossTrendChartProps {
   endDate: string;
   groupBy?: 'day' | 'week' | 'shift';
   lossCategory?: string; // Optional: filter by category
+  impactCodeId?: string; // Optional: filter by impact code
 }
 
 export const LossTrendChart: React.FC<LossTrendChartProps> = ({
-  tenantId, unitId, startDate, endDate, groupBy = 'day', lossCategory
+  tenantId, unitId, startDate, endDate, groupBy = 'day', lossCategory, impactCodeId
 }) => {
   const [events, setEvents] = useState<ProductionEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,12 +30,13 @@ export const LossTrendChart: React.FC<LossTrendChartProps> = ({
         const end = new Date(endDate).getTime();
         if (t < start || t > end) return false;
         if (lossCategory && e.lossCategory !== lossCategory) return false;
+        if (impactCodeId && e.impactCodeId !== impactCodeId) return false;
         return true;
       });
       setEvents(filtered);
       setLoading(false);
     });
-  }, [tenantId, unitId, startDate, endDate, lossCategory]);
+  }, [tenantId, unitId, startDate, endDate, lossCategory, impactCodeId]);
 
   // Group and aggregate
   const trendMap: Record<string, number> = {};
@@ -68,7 +71,7 @@ export const LossTrendChart: React.FC<LossTrendChartProps> = ({
             <Tooltip
               contentStyle={{ background: '#fff', borderRadius: '0.5rem', border: '1px solid #e0e7ef' }}
               labelStyle={{ color: '#6366f1', fontWeight: 600 }}
-              formatter={(value: any) => [`${value} min`, 'Duration']}
+              formatter={(value: any) => [formatDurationSimple(value), 'Duration']}
             />
             <Legend />
             <Line

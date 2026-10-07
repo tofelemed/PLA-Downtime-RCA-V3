@@ -24,13 +24,26 @@ const ReasonCodeLibraryTree: React.FC = () => {
   const [parentForAdd, setParentForAdd] = useState<TreeNode | null>(null);
   const [form, setForm] = useState({ code: '', name: '', description: '' });
 
-  useEffect(() => { loadCodes(); }, [session]);
+  useEffect(() => {
+    loadCodes();
+  }, [session]);
 
   const loadCodes = async () => {
-    if (!session?.tenant?.id) return;
-    const all = await masterDataService.getReasonCodes({ tenantId: session.tenant.id });
-    setCodes(all);
-    setTree(buildTree(all));
+    if (!session) return;
+    try {
+      const all = await masterDataService.getReasonCodes(
+        session.tenant?.id ? { tenantId: session.tenant.id } : undefined,
+      );
+      setCodes(all);
+      setTree(buildTree(all));
+    } catch (error) {
+      console.error('Failed to load reason codes:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load reason codes',
+        variant: 'destructive',
+      });
+    }
   };
 
   const buildTree = (flat: ReasonCode[]): TreeNode[] => {
@@ -73,33 +86,58 @@ const ReasonCodeLibraryTree: React.FC = () => {
 
   const handleDelete = async (node: TreeNode) => {
     if (!window.confirm(`Delete "${node.name}" and all its children?`)) return;
-    await masterDataService.deleteReasonCode(node.id);
-    toast({ title: 'Deleted', description: 'Reason code deleted.' });
-    loadCodes();
+    try {
+      await masterDataService.deleteReasonCode(node.id);
+      toast({ title: 'Deleted', description: 'Reason code deleted.' });
+      loadCodes();
+    } catch (error) {
+      console.error('Failed to delete reason code:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete reason code',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDialogSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!session?.tenant?.id) return;
-    if (dialogMode === 'add') {
-      await masterDataService.createReasonCode({
-        code: form.code,
-        name: form.name,
-        description: form.description,
-        parentId: parentForAdd ? String(parentForAdd.id) : '',
-        tenantId: session.tenant.id,
+    if (!session?.tenant?.id) {
+      toast({
+        title: 'Tenant required',
+        description: 'Select a tenant before managing reason codes.',
+        variant: 'destructive',
       });
-      toast({ title: 'Added', description: 'Reason code added.' });
-    } else if (editingNode) {
-      await masterDataService.updateReasonCode(editingNode.id, {
-        code: form.code,
-        name: form.name,
-        description: form.description,
-      });
-      toast({ title: 'Updated', description: 'Reason code updated.' });
+      return;
     }
-    setShowDialog(false);
-    loadCodes();
+    try {
+      if (dialogMode === 'add') {
+        await masterDataService.createReasonCode({
+          code: form.code,
+          name: form.name,
+          description: form.description,
+          parentId: parentForAdd ? String(parentForAdd.id) : undefined,
+          tenantId: session.tenant.id,
+        });
+        toast({ title: 'Added', description: 'Reason code added.' });
+      } else if (editingNode) {
+        await masterDataService.updateReasonCode(editingNode.id, {
+          code: form.code,
+          name: form.name,
+          description: form.description,
+        });
+        toast({ title: 'Updated', description: 'Reason code updated.' });
+      }
+      setShowDialog(false);
+      loadCodes();
+    } catch (error) {
+      console.error('Failed to save reason code:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save reason code',
+        variant: 'destructive',
+      });
+    }
   };
 
   const renderTree = (nodes: TreeNode[], level = 0) => (

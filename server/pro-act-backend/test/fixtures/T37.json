@@ -1,0 +1,11 @@
+{
+  "id": "T37",
+  "title": "Event operations",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T37, DT09",
+  "given": "Stop with linked loss lines",
+  "action": "Split then merge",
+  "assertion": "Occurrence count stable; lineage preserved; allocation conserved",
+  "owner_subphase": "1.4",
+  "status": "authored"
+}

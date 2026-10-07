@@ -1,0 +1,24 @@
+# Backend image build context (server/pro-act-backend)
+node_modules
+dist
+coverage
+test
+uploads
+migrations
+database-setup
+.env
+.env.*
+*.md
+*.ps1
+*.sh
+*.bat
+*.sql
+*.log
+*.json.bak
+test-all-endpoints*.ts
+test-report.json
+*.postman_collection.json
+fix-entities.js
+Dockerfile
+.dockerignore
+.prettierrc

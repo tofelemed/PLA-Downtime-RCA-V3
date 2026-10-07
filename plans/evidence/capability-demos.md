@@ -1,0 +1,20 @@
+# Capability demonstrations (spec §2.2) — what actually works today
+
+Spec rule: "No backend function may be credited as delivered solely because its screen or table exists." Each row states what was demonstrated (API call or screen), and classifies the capability as **working** (persisted, server-enforced), **browser-only** (works but logic/validation lives in the client), or **fabricated** (shows numbers that are not derived from data). Source: code traces in `docs/DOWNTIME_AND_LOSS_ACCOUNTING_GAP_ANALYSIS.md` and `docs/PROACT_APPLICATION_GUIDE.md` plus the API checks of 7 Oct 2026.
+
+| Area (§2.2 row) | Demonstrated | Classification | Notes for reuse |
+|---|---|---|---|
+| **Event Hub** | `GET/POST/PUT/DELETE /api/production-events` round-trip (event created, read with correct decimals and timestamps, deleted); tabs/filters/export render | Capture **working**; filtering **browser-only** (server ignores combined filters); status rules **browser-only** (`localStorage`); IOW trend **fabricated** (random fallback); quick-stat durations inconsistent | Retain shell, list, detail, code pickers (UX01) |
+| **Plans and templates** | `GET/POST /api/production-plans`, template wizard creates plans | Header CRUD **working**; approval **browser-only** (client sets strings); default quantity **fabricated** (100 units/h) | Retain forms and wizard steps |
+| **Plan Dashboard** | Opens, computes OEE, shows loss rows, reconcile modal saves `reconcile_forms`/`loss_categories` | OEE **browser-only** (and written to server on render); "Calculate from Events" **fabricated** (hard-coded events); unaccounted % **fabricated**; reconcile save **browser-only** and loses event link; financial tiles **fabricated** (flat 100/unit) | Retain layout and modal structure only |
+| **PLA Analytics** | Pareto, trend, waterfall render from tenant events | Pareto/trend **browser-only** (no cumulative line, selector unwired); OEE tiles **fabricated** (heuristic constants) | Retain page shell and chart components |
+| **Master data** | Units, assets, products, impact/OEE/reason codes CRUD via API (200s on all list endpoints; create/read verified for units) | **Working** CRUD; reason hierarchy **browser-only** (not persisted); codes globally unique; `idealCycleTime`/`standardCost` stored but unused | Preserve identifiers; add tenant keys, hierarchy, versions |
+| **PI integration** | Code paths for EF pull, mapping, watermark, scheduler, unmapped queue exist; not exercised against a live PI in this baseline (credentials unknown; server reachable check in `BASELINE.md`) | **Working in principle** for a single window ≤ 500 frames; **unsafe** cursor (watermark always advances), status reset on re-sync, no paging — see I1–I16 | Reuse AF browsing, code resolver, mapping UI shell |
+| **Storage and services** | 80 tables created from entities; CRUD services respond; reporting service aggregates (`GET /api/reports/production-loss` returned a summary for one event) | Storage **working**; reporting **partial** (filters by `createdAt`, sums ambiguous `duration`); no revisions/ledger/calculation runs | Extend event storage; add typed periods, revisions, ledger |
+| **RCA connection** | `rca-auto-create` runs on event create; Event Hub "Create RCA" gate; **`POST /api/rcas` from the UI payload returns 400** (field mismatch) | Trigger **working** (create-only); UI save **broken**; action buttons on Plan Dashboard have no handler | Preserve module; fix contract (plan 3.9) |
+| **Auth / tenancy** | Login/refresh verified for all demo accounts; `register` public; `tenantId` from query string | Auth **working**; tenancy **browser-only** (server does not enforce scope) | Plan 0.4 |
+| **Realtime** | Socket.IO emits on event create/update/delete (observed twice per change) | **Working** but unauthenticated and global | Plan 1.9 / 3.1 |
+
+## Demonstrations still to record
+- Playwright e2e run (in progress at time of writing) — screenshots for Event Hub, Plan Dashboard, PLA Analytics.
+- Live PI pull against the plant PI (blocked on D02 credentials).

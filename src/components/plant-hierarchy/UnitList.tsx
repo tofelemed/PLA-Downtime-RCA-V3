@@ -12,7 +12,7 @@ import { Plus, Edit, Trash2, Settings, Search, Loader2, Copy } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { piStore } from '@/services/pi/PIStore';
-import { PIClient, basicAuthHeader } from '@/services/pi/PIClient';
+import { PIClient, createTenantPIClient } from '@/services/pi/PIClient';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Database } from 'lucide-react';
 
@@ -97,12 +97,11 @@ const UnitList: React.FC = () => {
 
   const getPIClient = async (): Promise<PIClient | null> => {
     try {
-      const tenantId = session?.tenant?.id || 'default-tenant';
+      const tenantId = session?.tenant?.id;
+      if (!tenantId) return null;
       const cfg = await piStore.getConnectionByTenant(tenantId);
-      if (!cfg || !cfg.username || !cfg.password) {
-        return null;
-      }
-      return new PIClient({ basePath: '/piwebapi', authProvider: async () => basicAuthHeader(cfg.username, cfg.password || '') });
+      if (!cfg) return null;
+      return createTenantPIClient(tenantId);
     } catch {
       return null;
     }

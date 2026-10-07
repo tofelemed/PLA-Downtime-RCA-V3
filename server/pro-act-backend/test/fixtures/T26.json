@@ -1,0 +1,33 @@
+{
+  "id": "T26",
+  "title": "Counter rollover",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T26, ACT03, PI09",
+  "tolerance": "0.000001",
+  "inputs": {
+    "signal": {
+      "semanticType": "counter",
+      "rolloverModulus": "1000",
+      "expectedMaxRatePerHour": "500"
+    },
+    "readings": [
+      {
+        "t": "2026-10-07T08:00:00Z",
+        "v": "995"
+      },
+      {
+        "t": "2026-10-07T08:06:00Z",
+        "v": "5"
+      }
+    ]
+  },
+  "expected": {
+    "delta": "10",
+    "impliedRatePerHour": "100",
+    "accepted": true,
+    "rejectIfImpliedRateExceeds": "500"
+  },
+  "owner_subphase": "1.7",
+  "notes": "",
+  "status": "authored"
+}

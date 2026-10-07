@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Plus, Edit, Trash2, ChevronDown, ChevronRight, FolderTree } from 'lucide-react';
 import { masterDataService, RCACauseCode } from '../../services/MasterDataService';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface TreeNode extends RCACauseCode {
   children?: TreeNode[];
@@ -23,6 +24,7 @@ const categoryColors: Record<string, string> = {
 
 const RCACauseLibraryTree: React.FC = () => {
   const { toast } = useToast();
+  const { session } = useAuth();
   const [codes, setCodes] = useState<RCACauseCode[]>([]);
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -33,12 +35,26 @@ const RCACauseLibraryTree: React.FC = () => {
   const [form, setForm] = useState({ name: '', code: '', category: 'Equipment', description: '' });
   const [search, setSearch] = useState('');
 
-  useEffect(() => { loadCodes(); }, []);
+  useEffect(() => {
+    loadCodes();
+  }, [session]);
 
   const loadCodes = async () => {
-    const all = await masterDataService.getRCACauseCodes({});
-    setCodes(all);
-    setTree(buildTree(all));
+    if (!session) return;
+    try {
+      const filters =
+        session?.tenant?.id ? { tenantId: session.tenant.id } : undefined;
+      const all = await masterDataService.getRCACauseCodes(filters);
+      setCodes(all);
+      setTree(buildTree(all));
+    } catch (error) {
+      console.error('Failed to load RCA cause codes:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load RCA cause codes',
+        variant: 'destructive',
+      });
+    }
   };
 
   const buildTree = (flat: RCACauseCode[]): TreeNode[] => {
@@ -81,34 +97,61 @@ const RCACauseLibraryTree: React.FC = () => {
 
   const handleDelete = async (node: TreeNode) => {
     if (!window.confirm(`Delete "${node.name}" and all its children?`)) return;
-    await masterDataService.deleteRCACauseCode(node.id);
-    toast({ title: 'Deleted', description: 'Cause code deleted.' });
-    loadCodes();
+    try {
+      await masterDataService.deleteRCACauseCode(node.id);
+      toast({ title: 'Deleted', description: 'Cause code deleted.' });
+      loadCodes();
+    } catch (error) {
+      console.error('Failed to delete cause code:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete cause code',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDialogSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (dialogMode === 'add') {
-      await masterDataService.createRCACauseCode({
-        name: form.name,
-        code: form.code,
-        category: form.category as any,
-        description: form.description,
-        parentId: parentForAdd ? String(parentForAdd.id) : '',
-        tenantId: '', // Fill as needed
+    if (!session?.tenant?.id) {
+      toast({
+        title: 'Tenant required',
+        description: 'Select a tenant before managing cause codes.',
+        variant: 'destructive',
       });
-      toast({ title: 'Added', description: 'Cause code added.' });
-    } else if (editingNode) {
-      await masterDataService.updateRCACauseCode(editingNode.id, {
-        name: form.name,
-        code: form.code,
-        category: form.category as any,
-        description: form.description,
-      });
-      toast({ title: 'Updated', description: 'Cause code updated.' });
+      return;
     }
-    setShowDialog(false);
-    loadCodes();
+
+    try {
+      if (dialogMode === 'add') {
+        await masterDataService.createRCACauseCode({
+          name: form.name,
+          code: form.code,
+          category: form.category as any,
+          description: form.description,
+          parentId: parentForAdd ? String(parentForAdd.id) : undefined,
+          tenantId: session.tenant.id,
+        });
+        toast({ title: 'Added', description: 'Cause code added.' });
+      } else if (editingNode) {
+        await masterDataService.updateRCACauseCode(editingNode.id, {
+          name: form.name,
+          code: form.code,
+          category: form.category as any,
+          description: form.description,
+        });
+        toast({ title: 'Updated', description: 'Cause code updated.' });
+      }
+      setShowDialog(false);
+      loadCodes();
+    } catch (error) {
+      console.error('Failed to save cause code:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save cause code',
+        variant: 'destructive',
+      });
+    }
   };
 
   const filterTree = (nodes, query) => {

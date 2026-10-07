@@ -1,11 +1,19 @@
-import { storageService } from './StorageService';
-import { 
-  CustomAttributeDefinition, 
-  CustomAttributeValue, 
-  AttributeFormData, 
+import {
+  CustomAttributeDefinition,
+  CustomAttributeValue,
+  AttributeFormData,
   EntityType,
-  ValidationRules 
+  ValidationRules,
 } from '../types/CustomAttributes';
+import {
+  customAttributeApi,
+  mapDefinitionDto,
+  mapValueDto,
+  buildCreateDefinitionPayload,
+  buildUpdateDefinitionPayload,
+  buildCreateValuePayload,
+  buildUpdateValuePayload,
+} from './api/customAttributeApi';
 
 export class CustomAttributeService {
   private static instance: CustomAttributeService;
@@ -23,158 +31,89 @@ export class CustomAttributeService {
     tenantId?: string, 
     organizationId?: string
   ): Promise<CustomAttributeDefinition[]> {
-    try {
-      // Check if storage service is available and initialized
-      if (!storageService || !(storageService as any).db) {
-        console.warn('Storage service not ready, returning empty attribute definitions');
-        return [];
-      }
-
-      let definitions = await storageService.query<CustomAttributeDefinition>('customAttributeDefinitions');
-      
-      // Filter by entity type if specified
-      if (entityType) {
-        definitions = definitions.filter(d => d.entityType === entityType);
-      }
-      
-      // Filter by tenant/organization scope
-      if (tenantId || organizationId) {
-        definitions = definitions.filter(d => {
-          // Global attributes (no tenant/organization restriction)
-          if (!d.tenantId && !d.organizationId) return true;
-          
-          // Tenant-specific attributes
-          if (tenantId && d.tenantId === tenantId) return true;
-          
-          // Organization-specific attributes
-          if (organizationId && d.organizationId === organizationId) return true;
-          
-          return false;
-        });
-      }
-      
-      // Sort by order index
-      return definitions.sort((a, b) => a.orderIndex - b.orderIndex);
-    } catch (error) {
-      console.error('Failed to get attribute definitions:', error);
-      // Return empty array instead of throwing
-      return [];
-    }
+    const response = await customAttributeApi.getDefinitions({ entityType, tenantId, organizationId });
+    const mapped = response.map(mapDefinitionDto);
+    return mapped.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
   }
 
   async createAttributeDefinition(data: AttributeFormData, createdBy: string): Promise<CustomAttributeDefinition> {
-    try {
-      const now = new Date().toISOString();
-      
-      // Build validation rules
-      const validationRules: ValidationRules = {};
-      if (data.minLength !== undefined) validationRules.minLength = data.minLength;
-      if (data.maxLength !== undefined) validationRules.maxLength = data.maxLength;
-      if (data.minValue !== undefined) validationRules.minValue = data.minValue;
-      if (data.maxValue !== undefined) validationRules.maxValue = data.maxValue;
-      if (data.pattern) validationRules.pattern = data.pattern;
-      if (data.customValidation) validationRules.customValidation = data.customValidation;
+    const validationRules: ValidationRules = {};
+    if (data.minLength !== undefined) validationRules.minLength = data.minLength;
+    if (data.maxLength !== undefined) validationRules.maxLength = data.maxLength;
+    if (data.minValue !== undefined) validationRules.minValue = data.minValue;
+    if (data.maxValue !== undefined) validationRules.maxValue = data.maxValue;
+    if (data.pattern) validationRules.pattern = data.pattern;
+    if (data.customValidation) validationRules.customValidation = data.customValidation;
 
-      const definition: CustomAttributeDefinition = {
-        id: crypto.randomUUID(),
-        entityType: data.entityType as EntityType,
-        name: data.name,
-        displayName: data.displayName,
-        dataType: data.dataType,
-        isRequired: data.isRequired,
-        defaultValue: data.defaultValue,
-        validationRules: Object.keys(validationRules).length > 0 ? validationRules : undefined,
-        selectOptions: data.selectOptions,
-        orderIndex: data.orderIndex,
-        isActive: data.isActive,
-        tenantId: data.tenantId,
-        organizationId: data.organizationId,
-        createdBy,
-        createdAt: now,
-        updatedAt: now,
-      };
+    const baseDefinition: Omit<CustomAttributeDefinition, 'id' | 'createdAt' | 'updatedAt'> = {
+      entityType: data.entityType as EntityType,
+      name: data.name,
+      displayName: data.displayName,
+      dataType: data.dataType,
+      isRequired: data.isRequired,
+      defaultValue: data.defaultValue,
+      validationRules: Object.keys(validationRules).length > 0 ? validationRules : undefined,
+      selectOptions: data.selectOptions,
+      orderIndex: data.orderIndex,
+      isActive: data.isActive,
+      tenantId: data.tenantId,
+      organizationId: data.organizationId,
+      createdBy,
+    };
 
-      await storageService.create('customAttributeDefinitions', definition);
-      return definition;
-    } catch (error) {
-      console.error('Failed to create attribute definition:', error);
-      throw error;
-    }
+    const payload = buildCreateDefinitionPayload(baseDefinition);
+    const dto = await customAttributeApi.createDefinition(payload);
+    return mapDefinitionDto(dto);
   }
 
   async updateAttributeDefinition(id: string, data: Partial<AttributeFormData>): Promise<CustomAttributeDefinition | null> {
-    try {
-      const existing = await storageService.get<CustomAttributeDefinition>('customAttributeDefinitions', id);
-      if (!existing) return null;
+    const validationRules: ValidationRules = {};
+    if (data.minLength !== undefined) validationRules.minLength = data.minLength;
+    if (data.maxLength !== undefined) validationRules.maxLength = data.maxLength;
+    if (data.minValue !== undefined) validationRules.minValue = data.minValue;
+    if (data.maxValue !== undefined) validationRules.maxValue = data.maxValue;
+    if (data.pattern) validationRules.pattern = data.pattern;
+    if (data.customValidation) validationRules.customValidation = data.customValidation;
 
-      const now = new Date().toISOString();
-      
-      // Build validation rules
-      const validationRules: ValidationRules = {};
-      if (data.minLength !== undefined) validationRules.minLength = data.minLength;
-      if (data.maxLength !== undefined) validationRules.maxLength = data.maxLength;
-      if (data.minValue !== undefined) validationRules.minValue = data.minValue;
-      if (data.maxValue !== undefined) validationRules.maxValue = data.maxValue;
-      if (data.pattern) validationRules.pattern = data.pattern;
-      if (data.customValidation) validationRules.customValidation = data.customValidation;
+    const payload = buildUpdateDefinitionPayload({
+      entityType: data.entityType as EntityType | undefined,
+      name: data.name,
+      displayName: data.displayName,
+      dataType: data.dataType,
+      isRequired: data.isRequired,
+      defaultValue: data.defaultValue,
+      validationRules: Object.keys(validationRules).length > 0 ? validationRules : undefined,
+      selectOptions: data.selectOptions,
+      orderIndex: data.orderIndex,
+      isActive: data.isActive,
+      tenantId: data.tenantId,
+      organizationId: data.organizationId,
+    });
 
-      const updated: CustomAttributeDefinition = {
-        ...existing,
-        ...data,
-        validationRules: Object.keys(validationRules).length > 0 ? validationRules : undefined,
-        updatedAt: now,
-      };
-
-      await storageService.update('customAttributeDefinitions', id, updated);
-      return updated;
-    } catch (error) {
-      console.error('Failed to update attribute definition:', error);
-      throw error;
-    }
+    const dto = await customAttributeApi.updateDefinition(id, payload);
+    return mapDefinitionDto(dto);
   }
 
   async deleteAttributeDefinition(id: string): Promise<void> {
-    try {
-      // Delete all values for this attribute first
-      const values = await this.getAttributeValuesByDefinition(id);
-      for (const value of values) {
-        await storageService.delete('customAttributeValues', value.id);
-      }
-      
-      // Delete the definition
-      await storageService.delete('customAttributeDefinitions', id);
-    } catch (error) {
-      console.error('Failed to delete attribute definition:', error);
-      throw error;
+    // Delete all values for this attribute first
+    const values = await this.getAttributeValuesByDefinition(id);
+    for (const value of values) {
+      await customAttributeApi.deleteValue(value.id);
     }
+    
+    // Delete the definition
+    await customAttributeApi.deleteDefinition(id);
   }
 
   // Attribute Values
   async getAttributeValues(entityId: string, entityType: EntityType): Promise<CustomAttributeValue[]> {
-    try {
-      // Check if storage service is available and initialized
-      if (!storageService || !(storageService as any).db) {
-        console.warn('Storage service not ready, returning empty attribute values');
-        return [];
-      }
-
-      const values = await storageService.query<CustomAttributeValue>('customAttributeValues');
-      return values.filter(v => v.entityId === entityId && v.entityType === entityType);
-    } catch (error) {
-      console.error('Failed to get attribute values:', error);
-      // Return empty array instead of throwing
-      return [];
-    }
+    const response = await customAttributeApi.getValues({ entityId, entityType });
+    return response.map(mapValueDto);
   }
 
   async getAttributeValuesByDefinition(attributeDefinitionId: string): Promise<CustomAttributeValue[]> {
-    try {
-      const values = await storageService.query<CustomAttributeValue>('customAttributeValues');
-      return values.filter(v => v.attributeDefinitionId === attributeDefinitionId);
-    } catch (error) {
-      console.error('Failed to get attribute values by definition:', error);
-      return [];
-    }
+    const response = await customAttributeApi.getValues({ attributeDefinitionId });
+    return response.map(mapValueDto);
   }
 
   async setAttributeValue(
@@ -183,39 +122,31 @@ export class CustomAttributeService {
     attributeDefinitionId: string, 
     value?: string
   ): Promise<CustomAttributeValue> {
-    try {
-      const now = new Date().toISOString();
-      
-      // Check if value already exists
-      const existingValues = await this.getAttributeValues(entityId, entityType);
-      const existing = existingValues.find(v => v.attributeDefinitionId === attributeDefinitionId);
-      
-      if (existing) {
-        // Update existing value
-        const updated: CustomAttributeValue = {
-          ...existing,
-          value,
-          updatedAt: now,
-        };
-        await storageService.update('customAttributeValues', existing.id, updated);
-        return updated;
-      } else {
-        // Create new value
-        const newValue: CustomAttributeValue = {
-          id: crypto.randomUUID(),
-          entityId,
-          entityType,
-          attributeDefinitionId,
-          value,
-          createdAt: now,
-          updatedAt: now,
-        };
-        await storageService.create('customAttributeValues', newValue);
-        return newValue;
-      }
-    } catch (error) {
-      console.error('Failed to set attribute value:', error);
-      throw error;
+    // Check if value already exists
+    const existingValues = await this.getAttributeValues(entityId, entityType);
+    const existing = existingValues.find(v => v.attributeDefinitionId === attributeDefinitionId);
+    
+    if (existing) {
+      // Update existing value
+      const payload = buildUpdateValuePayload({
+        id: existing.id,
+        entityId,
+        entityType,
+        attributeDefinitionId,
+        value,
+      });
+      const dto = await customAttributeApi.updateValue(existing.id, payload);
+      return mapValueDto(dto);
+    } else {
+      // Create new value
+      const payload = buildCreateValuePayload({
+        entityId,
+        entityType,
+        attributeDefinitionId,
+        value,
+      });
+      const dto = await customAttributeApi.createValue(payload);
+      return mapValueDto(dto);
     }
   }
 
@@ -238,12 +169,7 @@ export class CustomAttributeService {
   }
 
   async deleteAttributeValue(id: string): Promise<void> {
-    try {
-      await storageService.delete('customAttributeValues', id);
-    } catch (error) {
-      console.error('Failed to delete attribute value:', error);
-      throw error;
-    }
+    await customAttributeApi.deleteValue(id);
   }
 
   // Utility methods

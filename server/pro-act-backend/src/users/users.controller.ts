@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Query } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
 import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
@@ -15,8 +15,25 @@ export class UsersController {
 
   @Get()
   @ApiResponse({ status: 200, description: 'List all users', type: [User] })
-  async findAll(): Promise<User[]> {
-    return this.usersService['usersRepository'].find();
+  async findAll(
+    @Query('tenantId') tenantId?: string,
+    @Query('organizationId') organizationId?: string,
+    @Query('isActive') isActive?: string,
+  ): Promise<User[]> {
+    const normalizedIsActive =
+      isActive === undefined
+        ? undefined
+        : String(isActive).toLowerCase() === 'true'
+          ? true
+          : String(isActive).toLowerCase() === 'false'
+            ? false
+            : undefined;
+
+    return this.usersService.findAll({
+      tenantId,
+      organizationId,
+      isActive: normalizedIsActive,
+    });
   }
 
   @Get(':id')
@@ -29,11 +46,7 @@ export class UsersController {
   @ApiBody({ type: CreateUserDto })
   @ApiResponse({ status: 201, description: 'Create user', type: User })
   async create(@Body() body: CreateUserDto): Promise<User> {
-    // You may want to hash the password here or in the service
-    return this.usersService.create({
-      ...body,
-      passwordHash: body.password,
-    });
+    return this.usersService.create(body);
   }
 
   @Put(':id')

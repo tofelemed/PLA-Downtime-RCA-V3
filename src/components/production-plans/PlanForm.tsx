@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProductionPlan, ProductionPlanTemplate, Unit, Product, ProductionEvent } from '../../services/MasterDataService';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePlantSelection } from '../../contexts/PlantSelectionContext';
 import { Calendar, Package, Clock, Target, FileText, MessageSquare, CheckCircle, XCircle, User, Send, AlertCircle, Shield } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -99,6 +100,7 @@ const PlanForm: React.FC<PlanFormProps> = ({
   initialPlan 
 }) => {
   const { session } = useAuth();
+  const { selection: plantSelection } = usePlantSelection();
   const [plan, setPlan] = useState<Partial<ProductionPlan>>(
     initialPlan || {
       id: '',
@@ -112,7 +114,7 @@ const PlanForm: React.FC<PlanFormProps> = ({
       status: 'Planned',
       actualQuantity: 0,
       organizationId: session?.organization?.id || '',
-      tenantId: session?.tenant?.id || '',
+      tenantId: plantSelection?.tenant?.id || session?.tenant?.id || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       shift: '',
@@ -202,10 +204,10 @@ const PlanForm: React.FC<PlanFormProps> = ({
       setPlan(prev => ({
         ...prev,
         organizationId: session.organization?.id || '',
-        tenantId: session.tenant?.id || '',
+        tenantId: plantSelection?.tenant?.id || session.tenant?.id || '',
       }));
     }
-  }, [session]);
+  }, [session, plantSelection?.tenant?.id]);
 
   useEffect(() => {
     // Reset form state when opening for creation (no initialPlan)
@@ -222,7 +224,7 @@ const PlanForm: React.FC<PlanFormProps> = ({
         status: 'Planned',
         actualQuantity: 0,
         organizationId: session?.organization?.id || '',
-        tenantId: session?.tenant?.id || '',
+        tenantId: plantSelection?.tenant?.id || session?.tenant?.id || '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         shift: '',
@@ -344,7 +346,7 @@ const PlanForm: React.FC<PlanFormProps> = ({
       
       const planToSave: ProductionPlan = {
         ...plan,
-        tenantId: plan.tenantId || session?.tenant?.id || 'default-tenant',
+        tenantId: plan.tenantId || plantSelection?.tenant?.id || session?.tenant?.id || 'default-tenant',
         organizationId: plan.organizationId || session?.organization?.id || 'default-org',
         createdAt: plan.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),

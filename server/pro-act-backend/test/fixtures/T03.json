@@ -1,0 +1,38 @@
+{
+  "id": "T03",
+  "title": "Overlapping asset stops on one unit",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T03, DT05, DT07",
+  "tolerance": "0.000001",
+  "inputs": {
+    "unitId": "U1",
+    "events": [
+      {
+        "id": "E1",
+        "assetId": "A1",
+        "start": "2026-10-07T10:00:00Z",
+        "end": "2026-10-07T11:00:00Z"
+      },
+      {
+        "id": "E2",
+        "assetId": "A2",
+        "start": "2026-10-07T10:30:00Z",
+        "end": "2026-10-07T11:30:00Z"
+      }
+    ]
+  },
+  "expected": {
+    "unitDowntimeSeconds": "5400",
+    "rawEventCount": 2,
+    "assetDowntimeSeconds": {
+      "A1": "3600",
+      "A2": "3600"
+    },
+    "assetTotalsAdditiveToUnit": false,
+    "primaryCauseAllocationTotalSeconds": "5400",
+    "sharesPerSegmentSumTo": "1"
+  },
+  "owner_subphase": "1.1",
+  "notes": "",
+  "status": "authored"
+}

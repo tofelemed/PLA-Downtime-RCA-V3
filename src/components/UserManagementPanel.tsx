@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, storageService } from '../services/StorageService';
+import { userApi, UserRecord, UserRole } from '../services/api/userApi';
+import { auditApi } from '../services/api/auditApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ const roleColors = {
   SuperAdmin: 'bg-purple-100 text-purple-800',
   OrgAdmin: 'bg-blue-100 text-blue-800',
   TenantAdmin: 'bg-green-100 text-green-800',
+  Manager: 'bg-indigo-100 text-indigo-800',
   Analyst: 'bg-yellow-100 text-yellow-800',
   Engineer: 'bg-orange-100 text-orange-800',
   Operator: 'bg-gray-100 text-gray-800',
@@ -24,7 +26,7 @@ interface UserFormData {
   name: string;
   email: string;
   password: string;
-  role: User['role'];
+  role: UserRole;
   phone: string;
   department: string;
   isActive: boolean;
@@ -33,9 +35,9 @@ interface UserFormData {
 const UserManagementPanel: React.FC = () => {
   const { session } = useAuth();
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserRecord[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState<UserFormData>({
     name: '',
@@ -54,25 +56,25 @@ const UserManagementPanel: React.FC = () => {
   const loadUsers = async () => {
     if (!session) return;
 
-    try {
-      let filters = {};
-      
-      // Apply role-based filtering
-      if (session.user.role === 'TenantAdmin') {
-        filters = { tenantId: session.tenant?.id };
-      } else if (session.user.role === 'OrgAdmin') {
-        filters = { organizationId: session.organization?.id };
-      }
+    const filters: { tenantId?: string; organizationId?: string } = {};
 
-      const usersData = await storageService.query<User>('users', filters);
-      setUsers(usersData);
+    if (session.user.role === 'TenantAdmin' && session.tenant?.id) {
+      filters.tenantId = session.tenant.id;
+    } else if (session.user.role === 'OrgAdmin' && session.organization?.id) {
+      filters.organizationId = session.organization.id;
+    }
+
+    try {
+      const apiUsers = await userApi.getUsers(Object.keys(filters).length ? filters : undefined);
+      setUsers(apiUsers);
     } catch (error) {
       console.error('Failed to load users:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load users',
+        description: 'Failed to load users. Please try again.',
         variant: 'destructive',
       });
+      setUsers([]);
     }
   };
 
@@ -104,7 +106,7 @@ const UserManagementPanel: React.FC = () => {
     setShowForm(true);
   };
 
-  const handleEdit = (user: User) => {
+  const handleEdit = (user: UserRecord) => {
     setEditingUser(user);
     setFormData({
       name: user.name,
@@ -118,13 +120,28 @@ const UserManagementPanel: React.FC = () => {
     setShowForm(true);
   };
 
-  const handleDelete = async (user: User) => {
+  const handleDelete = async (user: UserRecord) => {
     if (!window.confirm(`Are you sure you want to delete "${user.name}"?`)) return;
 
     try {
-      await storageService.delete('users', user.id);
-      await storageService.logAudit(session!.user.id, 'DELETE', 'USER', user.id, {});
-      
+      await userApi.deleteUser(user.id);
+      try {
+        if (session) {
+          await auditApi.createLog({
+            userId: session.user.id,
+            userName: session.user.name,
+            action: 'DELETE_USER',
+            entityType: 'USER',
+            entityId: user.id,
+            details: { name: user.name, email: user.email },
+            organizationId: session.organization?.id,
+            tenantId: session.tenant?.id,
+          });
+        }
+      } catch (auditError) {
+        console.warn('Failed to record audit log for user delete:', auditError);
+      }
+
       toast({
         title: 'Success',
         description: 'User deleted successfully',
@@ -134,7 +151,7 @@ const UserManagementPanel: React.FC = () => {
       console.error('Failed to delete user:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete user',
+        description: 'Failed to delete user. Please try again.',
         variant: 'destructive',
       });
     }
@@ -145,55 +162,67 @@ const UserManagementPanel: React.FC = () => {
 
     try {
       if (editingUser) {
-        // Update existing user
-        const updateData: Partial<User> = {
+        const updatePayload: Partial<UserRecord> & { password?: string } = {
           name: formData.name,
           email: formData.email,
           role: formData.role,
-          phone: formData.phone,
-          department: formData.department,
+          phone: formData.phone || undefined,
+          department: formData.department || undefined,
           isActive: formData.isActive,
         };
 
         if (formData.password) {
-          updateData.passwordHash = formData.password;
+          updatePayload.password = formData.password;
         }
 
-        await storageService.update<User>('users', editingUser.id, updateData);
-        await storageService.logAudit(
-          session.user.id,
-          'UPDATE',
-          'USER',
-          editingUser.id,
-          updateData
-        );
-        
+        await userApi.updateUser(editingUser.id, updatePayload);
+        try {
+          await auditApi.createLog({
+            userId: session.user.id,
+            userName: session.user.name,
+            action: 'UPDATE_USER',
+            entityType: 'USER',
+            entityId: editingUser.id,
+            details: updatePayload,
+            organizationId: session.organization?.id,
+            tenantId: session.tenant?.id,
+          });
+        } catch (auditError) {
+          console.warn('Failed to log audit event for user update:', auditError);
+        }
+
         toast({
           title: 'Success',
           description: 'User updated successfully',
         });
       } else {
-        // Create new user
-        await storageService.create<User>('users', {
+        await userApi.createUser({
           name: formData.name,
           email: formData.email,
-          passwordHash: formData.password,
+          password: formData.password,
           role: formData.role,
-          phone: formData.phone,
-          department: formData.department,
-          organizationId: session.organization?.id || '',
-          tenantId: session.tenant?.id || '',
+          phone: formData.phone || undefined,
+          department: formData.department || undefined,
+          organizationId: session.organization?.id,
+          tenantId: session.tenant?.id,
           isActive: formData.isActive,
         });
-        
-        await storageService.logAudit(
-          session.user.id,
-          'CREATE',
-          'USER',
-          'new',
-          { name: formData.name, email: formData.email, role: formData.role }
-        );
-        
+
+        try {
+          await auditApi.createLog({
+            userId: session.user.id,
+            userName: session.user.name,
+            action: 'CREATE_USER',
+            entityType: 'USER',
+            entityId: 'new',
+            details: { name: formData.name, email: formData.email, role: formData.role },
+            organizationId: session.organization?.id,
+            tenantId: session.tenant?.id,
+          });
+        } catch (auditError) {
+          console.warn('Failed to log audit event for user creation:', auditError);
+        }
+
         toast({
           title: 'Success',
           description: 'User created successfully',
@@ -207,13 +236,13 @@ const UserManagementPanel: React.FC = () => {
       console.error('Failed to save user:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save user',
+        description: 'Failed to save user. Please try again.',
         variant: 'destructive',
       });
     }
   };
 
-  const canManageUser = (user: User) => {
+  const canManageUser = (user: UserRecord) => {
     if (!session) return false;
     
     // SuperAdmin can manage all users
@@ -228,7 +257,7 @@ const UserManagementPanel: React.FC = () => {
     return false;
   };
 
-  const renderUserCard = (user: User) => (
+  const renderUserCard = (user: UserRecord) => (
     <Card key={user.id} className="hover:shadow-md transition-all duration-200">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
@@ -338,7 +367,7 @@ const UserManagementPanel: React.FC = () => {
             <Label htmlFor="role">Role *</Label>
             <Select
               value={formData.role}
-              onValueChange={(value) => setFormData({ ...formData, role: value as User['role'] })}
+              onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}
               required
             >
               <SelectTrigger>

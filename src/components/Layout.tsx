@@ -1,18 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigation } from './Navigation';
 import PlantSelector from './PlantSelector';
 import { Button } from '@/components/ui/button';
 import { LogOut, User, Bell, Settings, Search } from 'lucide-react';
+import { brandingService, BrandingSettings } from '@/services/BrandingService';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { session, logout } = useAuth();
+  const { session, logout, isLoading: authLoading } = useAuth();
   const [plantSelection, setPlantSelection] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [branding, setBranding] = useState<BrandingSettings | null>(null);
+
+  // Load branding settings - wait for authentication
+  useEffect(() => {
+    if (authLoading || !session) {
+      return;
+    }
+    
+    const loadBranding = async () => {
+      try {
+        const settings = await brandingService.getBranding();
+        setBranding(settings);
+        // Apply branding to document
+        brandingService.applyBrandingToDocument(settings);
+      } catch (error) {
+        console.error('Failed to load branding:', error);
+      }
+    };
+
+    loadBranding();
+
+    // Listen for branding updates
+    const handleBrandingUpdate = () => {
+      loadBranding();
+    };
+
+    window.addEventListener('brandingUpdated', handleBrandingUpdate);
+
+    return () => {
+      window.removeEventListener('brandingUpdated', handleBrandingUpdate);
+    };
+  }, []);
 
   if (!session) {
     return <div>{children}</div>;
@@ -27,14 +60,62 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="flex items-center space-x-6">
               {/* Enhanced Logo Section */}
               <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-sm">PA</span>
+                <div 
+                  className="flex items-center justify-center shadow-lg"
+                  style={{
+                    width: `${branding?.logoContainerSize || 40}px`,
+                    height: `${branding?.logoContainerSize || 40}px`,
+                    borderRadius: `${branding?.logoContainerRadius || 12}px`,
+                    padding: `${branding?.logoContainerPadding || 0}px`,
+                    background: branding 
+                      ? `linear-gradient(to bottom right, ${branding.primaryColor || '#2563eb'}, ${branding.secondaryColor || '#ec4899'})`
+                      : 'linear-gradient(to bottom right, #2563eb, #ec4899)',
+                    opacity: branding?.logoBackgroundOpacity ?? 1,
+                  }}
+                >
+                  {branding?.logoUrl ? (
+                    <img 
+                      src={branding.logoUrl} 
+                      alt="Logo" 
+                      style={{
+                        width: `${branding?.logoSize || 32}px`,
+                        height: `${branding?.logoSize || 32}px`,
+                        objectFit: branding?.logoObjectFit || 'contain',
+                        borderRadius: `${branding?.logoBorderRadius || 4}px`,
+                      }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        const initials = (e.target as HTMLImageElement).nextElementSibling;
+                        if (initials) {
+                          (initials as HTMLElement).style.display = 'block';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <span 
+                    className="text-white font-bold"
+                    style={{ 
+                      display: branding?.logoUrl ? 'none' : 'block',
+                      fontSize: `${(branding?.logoSize || 32) / 2.5}px`
+                    }}
+                  >
+                    {branding?.logoInitials || 'UA'}
+                  </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-blue-800 to-pink-600 bg-clip-text text-transparent">
-                    Pro-Act
+                  <h1 
+                    className="text-xl font-bold bg-clip-text text-transparent"
+                    style={{
+                      backgroundImage: branding
+                        ? `linear-gradient(to right, ${branding.primaryColor || '#2563eb'}, ${branding.secondaryColor || '#ec4899'})`
+                        : 'linear-gradient(to right, #2563eb, #ec4899)'
+                    }}
+                  >
+                    {branding?.appName || 'Unified APM'}
                   </h1>
-                  <p className="text-xs text-gray-600 font-medium">Production Loss Analysis</p>
+                  <p className="text-xs text-gray-600 font-medium">
+                    {branding?.appSubtitle || 'Asset Performance Management'}
+                  </p>
                 </div>
               </div>
               

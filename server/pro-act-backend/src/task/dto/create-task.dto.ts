@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsNumber, IsDate, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, IsOptional, IsDateString } from 'class-validator';
 
 export class CreateTaskDto {
   @ApiProperty()
@@ -31,14 +31,14 @@ export class CreateTaskDto {
   status: string;
 
   @ApiProperty({ required: false })
-  @IsDate()
   @IsOptional()
-  dueDate?: Date;
+  @IsDateString()
+  dueDate?: string;
 
   @ApiProperty({ required: false })
-  @IsDate()
   @IsOptional()
-  completedDate?: Date;
+  @IsDateString()
+  completedDate?: string;
 
   @ApiProperty({ required: false })
   @IsString()
@@ -46,7 +46,7 @@ export class CreateTaskDto {
   entityType?: string;
 
   @ApiProperty({ required: false })
-  @IsUUID()
+  @IsString()
   @IsOptional()
   entityId?: string;
 
@@ -57,4 +57,4 @@ export class CreateTaskDto {
   @ApiProperty()
   @IsUUID()
   tenantId: string;
-} 
+}

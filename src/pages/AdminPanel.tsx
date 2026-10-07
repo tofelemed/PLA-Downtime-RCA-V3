@@ -1,7 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Organization, Tenant, Unit, Asset, User, storageService } from '../services/StorageService';
+import { masterDataApi, Organization, Tenant, Unit, Asset } from '../services/api/masterDataApi';
+import { userApi, UserRecord, UserRole } from '../services/api/userApi';
 import { customAttributeService } from '../services/CustomAttributeService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,13 +12,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Factory, Wrench, Users, Plus, Edit, Trash2, Settings } from 'lucide-react';
+import { Building2, Factory, Wrench, Users, Plus, Edit, Trash2, Settings, Palette } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { defaultStatusAutomationRules } from './EventHub'; // Reuse the config
 import { Switch } from '@/components/ui/switch';
 import DashboardConfiguration from '@/components/DashboardConfiguration';
 import AttributeManagementPanel from '@/components/AttributeManagementPanel';
 import CustomAttributeForm from '@/components/CustomAttributeForm';
+import BrandingSettings from '@/components/BrandingSettings';
 
 interface HierarchyFormData {
   name: string;
@@ -33,7 +35,7 @@ export const AdminPanel: React.FC = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserRecord[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<'org' | 'tenant' | 'unit' | 'asset' | 'user'>('org');
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -47,7 +49,7 @@ export const AdminPanel: React.FC = () => {
     name: '',
     email: '',
     password: '',
-    role: 'Operator' as User['role'],
+    role: 'Operator' as UserRole,
     organizationId: '',
     tenantId: '',
   });
@@ -88,11 +90,11 @@ export const AdminPanel: React.FC = () => {
 
     try {
       const [orgsData, tenantsData, unitsData, assetsData, usersData] = await Promise.all([
-        storageService.query<Organization>('organizations'),
-        storageService.query<Tenant>('tenants'),
-        storageService.query<Unit>('units'),
-        storageService.query<Asset>('assets'),
-        storageService.query<User>('users'),
+        masterDataApi.getOrganizations(),
+        masterDataApi.getTenants(),
+        masterDataApi.getUnits(),
+        masterDataApi.getAssets(),
+        userApi.getUsers(),
       ]);
 
       setOrganizations(orgsData);
@@ -112,19 +114,23 @@ export const AdminPanel: React.FC = () => {
 
   const handleCreateOrganization = async () => {
     try {
-      const org = await storageService.create<Organization>('organizations', {
+      const org = await masterDataApi.createOrganization({
         name: formData.name,
         code: formData.code,
         description: formData.description,
+        isActive: true,
       });
-      
-      // Save custom attribute values
+
       if (customAttributeValues.length > 0) {
-        await customAttributeService.bulkSetAttributeValues(
-          org.id, 
-          'Organization', 
-          customAttributeValues
-        );
+        try {
+          await customAttributeService.bulkSetAttributeValues(
+            org.id,
+            'Organization',
+            customAttributeValues,
+          );
+        } catch (attributeError) {
+          console.warn('Failed to persist custom attributes', attributeError);
+        }
       }
       
       toast({
@@ -146,11 +152,15 @@ export const AdminPanel: React.FC = () => {
 
   const handleCreateTenant = async () => {
     try {
-      await storageService.create<Tenant>('tenants', {
+      if (!formData.parentId) {
+        throw new Error('Organization is required to create a tenant');
+      }
+      await masterDataApi.createTenant({
         name: formData.name,
         code: formData.code,
         description: formData.description,
-        organizationId: formData.parentId!,
+        organizationId: formData.parentId,
+        isActive: true,
       });
       
       toast({
@@ -172,11 +182,16 @@ export const AdminPanel: React.FC = () => {
 
   const handleCreateUnit = async () => {
     try {
-      await storageService.create<Unit>('units', {
+      if (!formData.parentId) {
+        throw new Error('Tenant is required to create a unit');
+      }
+      await masterDataApi.createUnit({
         name: formData.name,
         code: formData.code,
         description: formData.description,
-        tenantId: formData.parentId!,
+        tenantId: formData.parentId,
+        capacity: 0,
+        unitOfMeasure: 'units',
       });
       
       toast({
@@ -198,11 +213,23 @@ export const AdminPanel: React.FC = () => {
 
   const handleCreateAsset = async () => {
     try {
-      await storageService.create<Asset>('assets', {
+      if (!formData.parentId) {
+        throw new Error('Unit is required to create an asset');
+      }
+      const parentUnit = units.find((unit) => unit.id === formData.parentId);
+      if (!parentUnit) {
+        throw new Error('Selected unit not found');
+      }
+
+      await masterDataApi.createAsset({
         name: formData.name,
         code: formData.code,
         description: formData.description,
-        unitId: formData.parentId!,
+        unitId: parentUnit.id,
+        tenantId: parentUnit.tenantId,
+        assetType: 'Equipment',
+        criticality: 'Medium',
+        status: 'Active',
       });
       
       toast({
@@ -224,13 +251,13 @@ export const AdminPanel: React.FC = () => {
 
   const handleCreateUser = async () => {
     try {
-      await storageService.create<User>('users', {
+      await userApi.createUser({
         name: userFormData.name,
         email: userFormData.email,
-        passwordHash: userFormData.password,
+        password: userFormData.password,
         role: userFormData.role,
-        organizationId: userFormData.organizationId,
-        tenantId: userFormData.tenantId,
+        organizationId: userFormData.organizationId || undefined,
+        tenantId: userFormData.tenantId || undefined,
         isActive: true,
       });
       
@@ -294,11 +321,20 @@ export const AdminPanel: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (type: string, id: string) => {
+  const handleDelete = async (type: 'organizations' | 'tenants' | 'units' | 'assets' | 'users', id: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
 
     try {
-      await storageService.delete(type, id);
+      const deleteHandlers = {
+        organizations: masterDataApi.deleteOrganization,
+        tenants: masterDataApi.deleteTenant,
+        units: masterDataApi.deleteUnit,
+        assets: masterDataApi.deleteAsset,
+        users: userApi.deleteUser,
+      } as const;
+
+      const handler = deleteHandlers[type];
+      await handler(id);
       toast({
         title: 'Success',
         description: 'Item deleted successfully',
@@ -350,11 +386,12 @@ export const AdminPanel: React.FC = () => {
       </div>
 
       <Tabs defaultValue="hierarchy" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="hierarchy">Hierarchy Management</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="attributes">Custom Attributes</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard Config</TabsTrigger>
+          <TabsTrigger value="branding">Branding</TabsTrigger>
           {canEditRules && <TabsTrigger value="automation">Status Automation</TabsTrigger>}
         </TabsList>
 
@@ -547,6 +584,10 @@ export const AdminPanel: React.FC = () => {
 
         <TabsContent value="dashboard" className="space-y-6">
           <DashboardConfiguration />
+        </TabsContent>
+
+        <TabsContent value="branding" className="space-y-6">
+          <BrandingSettings />
         </TabsContent>
 
         {canEditRules && (
@@ -802,7 +843,7 @@ export const AdminPanel: React.FC = () => {
                   <Label htmlFor="userRole">Role</Label>
                   <Select 
                     value={userFormData.role} 
-                    onValueChange={(value) => setUserFormData({ ...userFormData, role: value as User['role'] })}
+                    onValueChange={(value) => setUserFormData({ ...userFormData, role: value as UserRole })}
                   >
                     <SelectTrigger>
                       <SelectValue />

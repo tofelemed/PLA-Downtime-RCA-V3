@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { ReasonCode } from './reason-code.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -13,20 +14,24 @@ export class ReasonCodeService {
   ) {}
 
   findAll(): Promise<ReasonCode[]> {
+    // Note: parent and children relations don't exist in database schema
     return this.reasonCodeRepository.find({
-      relations: ['parent', 'children', 'tenant'],
+      // relations: ['parent', 'children', 'tenant'],
     });
   }
 
   findOne(id: string): Promise<ReasonCode | null> {
+    // Note: parent and children relations don't exist in database schema
     return this.reasonCodeRepository.findOne({
       where: { id },
-      relations: ['parent', 'children', 'tenant'],
+      // relations: ['parent', 'children', 'tenant'],
     });
   }
 
   async create(data: Partial<ReasonCode>): Promise<ReasonCode> {
-    const reasonCode = this.reasonCodeRepository.create(data);
+    // Generate UUID manually for SQL Server compatibility
+    const id = randomUUID();
+    const reasonCode = this.reasonCodeRepository.create({ id, ...data });
     const saved = await this.reasonCodeRepository.save(reasonCode);
     this.realtimeGateway.broadcastEntityEvent('Created', 'reasonCode', saved);
     return saved;
@@ -50,23 +55,29 @@ export class ReasonCodeService {
   }
 
   findByTenant(tenantId: string): Promise<ReasonCode[]> {
+    // Note: parent, children, and tenant relations don't exist in database schema
     return this.reasonCodeRepository.find({
       where: { tenantId },
-      relations: ['parent', 'children', 'tenant'],
+      // relations: ['parent', 'children', 'tenant'],
     });
   }
 
   findByParent(parentId: string): Promise<ReasonCode[]> {
-    return this.reasonCodeRepository.find({
-      where: { parentId },
-      relations: ['parent', 'children', 'tenant'],
-    });
+    // Note: parentId doesn't exist in database schema
+    // This method is not supported
+    return Promise.resolve([]);
+    // return this.reasonCodeRepository.find({
+    //   where: { parentId },
+    //   relations: ['parent', 'children', 'tenant'],
+    // });
   }
 
   findRootCodes(tenantId: string): Promise<ReasonCode[]> {
+    // Note: parentId doesn't exist in database schema
+    // This method returns all codes for the tenant
     return this.reasonCodeRepository.find({
-      where: { tenantId, parentId: null as any },
-      relations: ['parent', 'children', 'tenant'],
+      where: { tenantId },
+      // relations: ['parent', 'children', 'tenant'],
     });
   }
 } 

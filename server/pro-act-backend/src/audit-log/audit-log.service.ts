@@ -1,8 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { AuditLog } from './audit-log.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+
+export interface AuditLogQuery {
+  tenantId?: string;
+  userId?: string;
+  entityType?: string;
+  entityId?: string;
+  action?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+}
 
 @Injectable()
 export class AuditLogService {
@@ -13,15 +26,68 @@ export class AuditLogService {
   ) {}
 
   findAll(): Promise<AuditLog[]> {
-    return this.auditLogRepository.find();
+    return this.auditLogRepository.find({ order: { createdAt: 'DESC' }, take: 500 });
+  }
+
+  findWithFilters(filters: AuditLogQuery): Promise<AuditLog[]> {
+    const qb = this.auditLogRepository.createQueryBuilder('log');
+
+    if (filters.tenantId) {
+      qb.andWhere('log.tenantId = :tenantId', { tenantId: filters.tenantId });
+    }
+    if (filters.userId) {
+      qb.andWhere('log.userId = :userId', { userId: filters.userId });
+    }
+    if (filters.entityType) {
+      qb.andWhere('log.entityType = :entityType', { entityType: filters.entityType });
+    }
+    if (filters.entityId) {
+      qb.andWhere('log.entityId = :entityId', { entityId: filters.entityId });
+    }
+    if (filters.action) {
+      qb.andWhere('log.action = :action', { action: filters.action });
+    }
+    if (filters.startDate && filters.endDate) {
+      qb.andWhere('log.createdAt >= :startDate AND log.createdAt <= :endDate', {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      });
+    } else if (filters.startDate) {
+      qb.andWhere('log.createdAt >= :startDate', { startDate: filters.startDate });
+    } else if (filters.endDate) {
+      qb.andWhere('log.createdAt <= :endDate', { endDate: filters.endDate });
+    }
+
+    qb.orderBy('log.createdAt', 'DESC');
+    if (filters.limit) qb.take(filters.limit);
+    if (filters.offset) qb.skip(filters.offset);
+
+    return qb.getMany();
   }
 
   findOne(id: string): Promise<AuditLog | null> {
     return this.auditLogRepository.findOneBy({ id });
   }
 
-  async create(data: Partial<AuditLog>): Promise<AuditLog> {
-    const log = this.auditLogRepository.create(data);
+  async create(data: Partial<AuditLog> & { userName?: string; ipAddress?: string; userAgent?: string }): Promise<AuditLog> {
+    const { userName, ipAddress, userAgent, ...rest } = data;
+    let details = rest.details;
+    if (userName || ipAddress || userAgent) {
+      const payload: Record<string, unknown> = {
+        userName: userName || undefined,
+        message: typeof details === 'string' ? details : details,
+        ipAddress: ipAddress || undefined,
+        userAgent: userAgent || undefined,
+      };
+      details = JSON.stringify(payload);
+    }
+
+    const log = this.auditLogRepository.create({
+      id: randomUUID(),
+      ...rest,
+      details: typeof details === 'string' ? details : JSON.stringify(details ?? {}),
+      timestamp: rest.timestamp ? new Date(rest.timestamp) : new Date(),
+    });
     const saved = await this.auditLogRepository.save(log);
     this.realtimeGateway.broadcastEntityEvent('Created', 'auditLog', saved);
     return saved;
@@ -43,4 +109,4 @@ export class AuditLogService {
       this.realtimeGateway.broadcastEntityEvent('Deleted', 'auditLog', { id });
     }
   }
-} 
+}

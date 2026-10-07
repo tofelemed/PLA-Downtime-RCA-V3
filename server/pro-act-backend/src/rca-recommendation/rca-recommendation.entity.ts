@@ -28,7 +28,7 @@ export class RCARecommendation {
   @JoinColumn({ name: 'assigneeId' })
   assignee: User;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   dueDate: Date;
 
   @Column({ type: 'varchar', length: 50 })

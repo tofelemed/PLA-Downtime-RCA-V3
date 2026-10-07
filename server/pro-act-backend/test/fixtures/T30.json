@@ -1,0 +1,32 @@
+{
+  "id": "T30",
+  "title": "Rate version change during a stop",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T30, ACC02",
+  "tolerance": "0.000001",
+  "inputs": {
+    "stopSegments": [
+      {
+        "minutes": "30",
+        "sustainedRatePerHour": "100",
+        "rateVersion": "v1"
+      },
+      {
+        "minutes": "30",
+        "sustainedRatePerHour": "120",
+        "rateVersion": "v2"
+      }
+    ]
+  },
+  "expected": {
+    "capacityLossQty": "110",
+    "lines": 2,
+    "rateVersionsUsed": [
+      "v1",
+      "v2"
+    ]
+  },
+  "owner_subphase": "2.5",
+  "notes": "",
+  "status": "authored"
+}

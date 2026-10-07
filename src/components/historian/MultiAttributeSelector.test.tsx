@@ -1,28 +1,29 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import MultiAttributeSelector from './MultiAttributeSelector';
 
 // Mock PIClient
 const mockPIClient = {
-  getAssetServers: jest.fn(),
-  getAFDatabases: jest.fn(),
-  getDatabaseElements: jest.fn(),
-  getElementChildren: jest.fn(),
-  getElementAttributes: jest.fn(),
+  getAssetServers: vi.fn(),
+  getAFDatabases: vi.fn(),
+  getDatabaseElements: vi.fn(),
+  getElementChildren: vi.fn(),
+  getElementAttributes: vi.fn(),
 };
 
 // Mock props
 const defaultProps = {
   piClient: mockPIClient,
-  onAttributesSelected: jest.fn(),
+  onAttributesSelected: vi.fn(),
   selectedAttributes: [],
   maxAttributes: 10,
 };
 
 describe('MultiAttributeSelector', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders without crashing', () => {

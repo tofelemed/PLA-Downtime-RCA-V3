@@ -343,7 +343,7 @@ export class UniversalConnectorDB {
       return store.getAll();
     });
     
-    if (allMetrics.length === 0) return undefined;
+    if (!Array.isArray(allMetrics) || allMetrics.length === 0) return undefined;
     
     // Return the most recent metrics
     return allMetrics.sort((a, b) => 
@@ -355,6 +355,8 @@ export class UniversalConnectorDB {
     const allMetrics = await this.performTransaction('streamMetrics', 'readonly', (store) => {
       return store.getAll();
     });
+    
+    if (!Array.isArray(allMetrics)) return [];
     
     return allMetrics
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
@@ -555,11 +557,13 @@ export class UniversalConnectorDB {
       return store.getAll();
     });
 
-    for (const metric of oldMetrics) {
-      if (new Date(metric.timestamp) < cutoffDate) {
-        await this.performTransaction('streamMetrics', 'readwrite', (store) => {
-          return store.delete(metric.id);
-        });
+    if (Array.isArray(oldMetrics)) {
+      for (const metric of oldMetrics) {
+        if (new Date(metric.timestamp) < cutoffDate) {
+          await this.performTransaction('streamMetrics', 'readwrite', (store) => {
+            return store.delete(metric.id);
+          });
+        }
       }
     }
 
@@ -568,14 +572,16 @@ export class UniversalConnectorDB {
       return store.getAll();
     });
 
-    for (const alert of oldAlerts) {
-      const alertAge = Date.now() - new Date(alert.timestamp).getTime();
-      const shouldDelete = alert.acknowledged ? alertAge > 7 * 24 * 60 * 60 * 1000 : alertAge > maxAge;
-      
-      if (shouldDelete) {
-        await this.performTransaction('streamAlerts', 'readwrite', (store) => {
-          return store.delete(alert.id);
-        });
+    if (Array.isArray(oldAlerts)) {
+      for (const alert of oldAlerts) {
+        const alertAge = Date.now() - new Date(alert.timestamp).getTime();
+        const shouldDelete = alert.acknowledged ? alertAge > 7 * 24 * 60 * 60 * 1000 : alertAge > maxAge;
+        
+        if (shouldDelete) {
+          await this.performTransaction('streamAlerts', 'readwrite', (store) => {
+            return store.delete(alert.id);
+          });
+        }
       }
     }
   }

@@ -1,0 +1,41 @@
+{
+  "id": "T25",
+  "title": "Rate integration",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T25, ACT04, PI09",
+  "tolerance": "0.000001",
+  "inputs": {
+    "signal": {
+      "semanticType": "rate",
+      "uom": "t",
+      "timebase": "h",
+      "interpolation": "step"
+    },
+    "samples": [
+      {
+        "t": "2026-10-07T08:00:00Z",
+        "v": "120",
+        "q": "good"
+      },
+      {
+        "t": "2026-10-07T08:30:00Z",
+        "v": "120",
+        "q": "good"
+      }
+    ],
+    "window": {
+      "from": "2026-10-07T08:00:00Z",
+      "to": "2026-10-07T08:30:00Z"
+    }
+  },
+  "expected": {
+    "quantity": "60",
+    "uom": "t",
+    "method": "rate_integration/step",
+    "timebaseConversionRecorded": true,
+    "coverageRatio": "1"
+  },
+  "owner_subphase": "1.7",
+  "notes": "",
+  "status": "authored"
+}

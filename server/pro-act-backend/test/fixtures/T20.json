@@ -1,0 +1,29 @@
+{
+  "id": "T20",
+  "title": "Operational OEE",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T20, KPI01",
+  "tolerance": "0.000001",
+  "inputs": {
+    "scheduledSeconds": "28800",
+    "availabilityStopSeconds": "3600",
+    "idealRatePerMinute": "2",
+    "grossQty": "756",
+    "goodQty": "718.2",
+    "quantityUom": "units"
+  },
+  "expected": {
+    "runTimeSeconds": "25200",
+    "availability": "0.875",
+    "performance": "0.9",
+    "quality": "0.95",
+    "oee": "0.748125",
+    "availabilityLossQty": "120",
+    "performanceLossQty": "84",
+    "qualityLossQty": "37.8",
+    "goodPlusLossesEqualsCapacity": "960"
+  },
+  "owner_subphase": "2.7",
+  "notes": "Ideal time for gross = 756/2 = 378 min = 22680 s; P = 22680/25200 = 0.9. Full-schedule capacity 480 min x 2 = 960.",
+  "status": "authored"
+}

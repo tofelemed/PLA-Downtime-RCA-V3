@@ -1,0 +1,46 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Column, Index } from 'typeorm';
+
+@Entity('rca_fmea_analyses')
+@Index(['tenantId'])
+@Index(['organizationId'])
+@Index(['rcaId'])
+export class RcaFmeaAnalysis {
+  @ApiProperty({ description: 'Primary key UUID' })
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @ApiProperty({ description: 'Creation timestamp' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Last update timestamp' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  updatedAt: Date;
+
+  @ApiProperty({ description: 'Tenant ID', required: false })
+  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  tenantId?: string;
+
+  @ApiProperty({ description: 'Organization ID', required: false })
+  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  organizationId?: string;
+
+  @ApiProperty({ description: 'Associated RCA ID' })
+  @Column({ name: 'rca_id', type: 'varchar', length: 36 })
+  rcaId: string;
+
+  @ApiProperty({ description: 'Failure mode' })
+  @Column({ name: 'failure_mode', type: 'varchar', length: 255 })
+  failureMode: string;
+
+  @ApiProperty({ description: 'Effects list', type: 'array' })
+  @Column({ name: 'effects', type: 'simple-json' })
+  effects: Record<string, any>[];
+
+  @ApiProperty({ description: 'Causes list', type: 'array' })
+  @Column({ name: 'causes', type: 'simple-json' })
+  causes: Record<string, any>[];
+}
+
+

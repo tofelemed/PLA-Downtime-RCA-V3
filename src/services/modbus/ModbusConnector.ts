@@ -2,7 +2,9 @@
 // This can be easily replaced with backend services later
 
 import { IConnector, ConnectionConfig, ConnectionStatus, StreamConfig } from '../integrations/base/IConnector';
+import { BaseConnector } from '../integrations/base/BaseConnector';
 import { globalEventBus } from '../events/EventBus';
+import { UniversalConnectorDB } from '../storage/UniversalConnectorDB';
 
 export interface ModbusConfig extends ConnectionConfig {
   protocol: 'tcp' | 'rtu';
@@ -31,7 +33,7 @@ export interface ModbusMetrics {
   averageResponseTime: number;
 }
 
-export class ModbusConnector implements IConnector {
+export class ModbusConnector extends BaseConnector implements IConnector {
   private config: ModbusConfig;
   private status: ConnectionStatus;
   private metrics: ModbusMetrics;
@@ -39,8 +41,11 @@ export class ModbusConnector implements IConnector {
   private subscriptions: Map<string, (data: any) => void> = new Map();
   private pollingInterval?: NodeJS.Timeout;
   private lastPoll: number = 0;
+  private db: UniversalConnectorDB;
 
   constructor(config: ModbusConfig) {
+    super(config);
+    
     this.config = config;
     this.status = {
       connected: false,
@@ -56,11 +61,32 @@ export class ModbusConnector implements IConnector {
       errors: 0,
       averageResponseTime: 0
     };
+
+    this.db = new UniversalConnectorDB();
   }
 
   // IConnector implementation
   async connect(): Promise<boolean> {
     try {
+      // Store connection in IndexedDB
+      await this.db.storeConnectionConfig({
+        id: this.config.id,
+        name: this.config.name,
+        type: 'modbus',
+        config: this.config,
+        enabled: this.config.enabled,
+        lastConnection: new Date(),
+        connectionStatus: 'connecting',
+        errorCount: 0,
+        metadata: {
+          protocol: this.config.protocol,
+          slaveId: this.config.slaveId,
+          endpoint: this.config.endpoint
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
       // Simulate Modbus connection
       // In production, this would use a proper Modbus library
       await this.simulateConnection();
@@ -69,6 +95,9 @@ export class ModbusConnector implements IConnector {
       this.status.connected = true;
       this.status.lastConnected = new Date();
       this.status.errorCount = 0;
+      
+      // Update connection status in IndexedDB
+      await this.db.updateConnectionStatus(this.config.id, 'connected');
       
       // Start polling for subscribed registers
       this.startPolling();
@@ -83,6 +112,7 @@ export class ModbusConnector implements IConnector {
       
     } catch (error) {
       this.handleError(error);
+      await this.db.updateConnectionStatus(this.config.id, 'error');
       return false;
     }
   }
@@ -93,6 +123,9 @@ export class ModbusConnector implements IConnector {
       this.isConnected = false;
       this.status.connected = false;
       this.status.lastConnected = undefined;
+      
+      // Update connection status in IndexedDB
+      await this.db.updateConnectionStatus(this.config.id, 'disconnected');
       
       globalEventBus.publish('modbus.disconnected', { 
         endpoint: this.config.endpoint,
@@ -108,7 +141,7 @@ export class ModbusConnector implements IConnector {
   }
 
   isConnected(): boolean {
-    return this.isConnected;
+    return this.status.connected;
   }
 
   getStatus(): ConnectionStatus {
@@ -121,6 +154,9 @@ export class ModbusConnector implements IConnector {
 
   async updateConfig(config: Partial<ConnectionConfig>): Promise<void> {
     this.config = { ...this.config, ...config };
+    
+    // Update in IndexedDB
+    await this.db.updateConnectionConfig(this.config.id, this.config);
     
     // Reconnect if currently connected
     if (this.isConnected()) {
@@ -159,6 +195,23 @@ export class ModbusConnector implements IConnector {
       this.metrics.reads++;
       this.metrics.lastRead = new Date();
       
+      // Store data point in IndexedDB
+      await this.db.storeDataPoint({
+        id: `${this.config.id}_${registerInfo.type}_${registerInfo.address}`,
+        connectorId: this.config.id,
+        path,
+        value,
+        timestamp: new Date(),
+        quality: 'Good',
+        metadata: {
+          registerType: registerInfo.type,
+          address: registerInfo.address,
+          count: registerInfo.count,
+          protocol: 'Modbus',
+          slaveId: this.config.slaveId
+        }
+      });
+      
       globalEventBus.publish('modbus.read', { 
         path,
         value,
@@ -194,6 +247,24 @@ export class ModbusConnector implements IConnector {
       this.metrics.writes++;
       this.metrics.lastWrite = new Date();
       
+      // Store write operation in IndexedDB
+      await this.db.storeDataPoint({
+        id: `${this.config.id}_${registerInfo.type}_${registerInfo.address}_write`,
+        connectorId: this.config.id,
+        path,
+        value: data,
+        timestamp: new Date(),
+        quality: 'Good',
+        metadata: {
+          registerType: registerInfo.type,
+          address: registerInfo.address,
+          count: registerInfo.count,
+          operation: 'write',
+          protocol: 'Modbus',
+          slaveId: this.config.slaveId
+        }
+      });
+      
       globalEventBus.publish('modbus.write', { 
         path,
         data,
@@ -218,6 +289,16 @@ export class ModbusConnector implements IConnector {
     
     this.subscriptions.set(subscriptionId, callback);
     
+    // Store subscription in IndexedDB
+    await this.db.storeSubscription({
+      id: subscriptionId,
+      connectorId: this.config.id,
+      topic,
+      callback: callback.toString(), // Store function reference as string
+      enabled: true,
+      timestamp: new Date()
+    });
+    
     globalEventBus.publish('modbus.subscription.created', { 
       subscriptionId, 
       topic,
@@ -229,6 +310,9 @@ export class ModbusConnector implements IConnector {
 
   async unsubscribe(subscriptionId: string): Promise<void> {
     this.subscriptions.delete(subscriptionId);
+    
+    // Remove subscription from IndexedDB
+    await this.db.removeSubscription(subscriptionId);
     
     globalEventBus.publish('modbus.subscription.removed', { 
       subscriptionId,
@@ -254,6 +338,29 @@ export class ModbusConnector implements IConnector {
   }
 
   async getMetrics(): Promise<Record<string, any>> {
+    // Store metrics in IndexedDB
+    await this.db.storeStreamMetrics({
+      id: `${this.config.id}_metrics_${Date.now()}`,
+      timestamp: new Date(),
+      totalEvents: this.metrics.reads + this.metrics.writes,
+      processedEvents: this.metrics.reads + this.metrics.writes,
+      droppedEvents: 0,
+      averageLatency: this.metrics.averageResponseTime,
+      throughput: (this.metrics.reads + this.metrics.writes) / Math.max(this.metrics.averageResponseTime / 1000, 1),
+      activeSources: 1,
+      activeSinks: 0,
+      activeProcessors: 0,
+      errorRate: this.metrics.errors / Math.max(this.metrics.reads + this.metrics.writes, 1),
+      dataQuality: {
+        completeness: this.metrics.reads > 0 ? 100 : 0,
+        accuracy: 100 - (this.metrics.errors / Math.max(this.metrics.reads + this.metrics.writes, 1)) * 100,
+        timeliness: this.metrics.averageResponseTime,
+        validity: 100,
+        consistency: 100,
+        lastUpdated: new Date()
+      }
+    });
+    
     return {
       ...this.metrics,
       subscriptions: this.subscriptions.size,
@@ -442,6 +549,19 @@ export class ModbusConnector implements IConnector {
     this.status.lastError = error?.message || 'Unknown error';
     this.metrics.errors++;
     
+    // Store error in IndexedDB
+    this.db.storeStreamAlert({
+      id: `${this.config.id}_error_${Date.now()}`,
+      type: 'error',
+      message: error?.message || 'Unknown error',
+      timestamp: new Date(),
+      source: this.config.name,
+      severity: 3,
+      acknowledged: false,
+      metadata: { protocol: 'Modbus', connectorId: this.config.id },
+      createdAt: new Date()
+    });
+    
     globalEventBus.publish('modbus.error', { 
       error: error?.message || error,
       timestamp: new Date()
@@ -461,19 +581,44 @@ export class ModbusConnector implements IConnector {
   }
 
   // Cleanup
-  destroy(): void {
-    this.disconnect();
+  async destroy(): Promise<void> {
+    await this.disconnect();
     this.subscriptions.clear();
   }
 }
 
-// Modbus Manager for handling multiple connections
-export class ModbusManager {
+// Modbus Universal Manager with bulk operations
+export class ModbusUniversalManager {
   private connections: Map<string, ModbusConnector> = new Map();
+  private db: UniversalConnectorDB;
 
-  createConnection(id: string, config: ModbusConfig): ModbusConnector {
+  constructor() {
+    this.db = new UniversalConnectorDB();
+  }
+
+  // Create and manage connections
+  async createConnection(id: string, config: ModbusConfig): Promise<ModbusConnector> {
     const connector = new ModbusConnector(config);
     this.connections.set(id, connector);
+    
+    // Store in IndexedDB
+    await this.db.storeConnectionConfig({
+      id,
+      name: config.name,
+      type: 'modbus',
+      config,
+      enabled: config.enabled,
+      lastConnection: undefined,
+      connectionStatus: 'disconnected',
+      errorCount: 0,
+      metadata: {
+        protocol: config.protocol,
+        slaveId: config.slaveId,
+        endpoint: config.endpoint
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
     
     globalEventBus.publish('modbus.manager.connection.created', { 
       connectionId: id,
@@ -484,15 +629,18 @@ export class ModbusManager {
     return connector;
   }
 
-  getConnection(id: string): ModbusConnector | undefined {
+  async getConnection(id: string): Promise<ModbusConnector | undefined> {
     return this.connections.get(id);
   }
 
-  removeConnection(id: string): boolean {
+  async removeConnection(id: string): Promise<boolean> {
     const connection = this.connections.get(id);
     if (connection) {
-      connection.destroy();
+      await connection.destroy();
       this.connections.delete(id);
+      
+      // Remove from IndexedDB
+      await this.db.removeConnectionConfig(id);
       
       globalEventBus.publish('modbus.manager.connection.removed', { 
         connectionId: id,
@@ -504,17 +652,176 @@ export class ModbusManager {
     return false;
   }
 
-  getAllConnections(): Map<string, ModbusConnector> {
+  async getAllConnections(): Promise<Map<string, ModbusConnector>> {
     return new Map(this.connections);
   }
 
-  destroy(): void {
+  // Bulk operations
+  async bulkConnect(connectionIds: string[]): Promise<Record<string, boolean>> {
+    const results: Record<string, boolean> = {};
+    
+    await Promise.all(
+      connectionIds.map(async (id) => {
+        const connection = this.connections.get(id);
+        if (connection) {
+          try {
+            results[id] = await connection.connect();
+          } catch (error) {
+            results[id] = false;
+            console.error(`Failed to connect ${id}:`, error);
+          }
+        } else {
+          results[id] = false;
+        }
+      })
+    );
+    
+    return results;
+  }
+
+  async bulkDisconnect(connectionIds: string[]): Promise<Record<string, boolean>> {
+    const results: Record<string, boolean> = {};
+    
+    await Promise.all(
+      connectionIds.map(async (id) => {
+        const connection = this.connections.get(id);
+        if (connection) {
+          try {
+            results[id] = await connection.disconnect();
+          } catch (error) {
+            results[id] = false;
+            console.error(`Failed to disconnect ${id}:`, error);
+          }
+        } else {
+          results[id] = false;
+        }
+      })
+    );
+    
+    return results;
+  }
+
+  async bulkRead(operations: Array<{ connectionId: string; path: string; options?: Record<string, any> }>): Promise<Record<string, any>> {
+    const results: Record<string, any> = {};
+    
+    await Promise.all(
+      operations.map(async (op) => {
+        const connection = this.connections.get(op.connectionId);
+        if (connection && connection.isConnected()) {
+          try {
+            results[op.connectionId] = await connection.read(op.path, op.options);
+          } catch (error) {
+            results[op.connectionId] = { error: error instanceof Error ? error.message : 'Unknown error' };
+          }
+        } else {
+          results[op.connectionId] = { error: 'Connection not available' };
+        }
+      })
+    );
+    
+    return results;
+  }
+
+  async bulkWrite(operations: Array<{ connectionId: string; path: string; data: any; options?: Record<string, any> }>): Promise<Record<string, boolean>> {
+    const results: Record<string, boolean> = {};
+    
+    await Promise.all(
+      operations.map(async (op) => {
+        const connection = this.connections.get(op.connectionId);
+        if (connection && connection.isConnected()) {
+          try {
+            await connection.write(op.path, op.data, op.options);
+            results[op.connectionId] = true;
+          } catch (error) {
+            results[op.connectionId] = false;
+            console.error(`Failed to write to ${op.connectionId}:`, error);
+          }
+        } else {
+          results[op.connectionId] = false;
+        }
+      })
+    );
+    
+    return results;
+  }
+
+  // Health monitoring
+  async getSystemHealth(): Promise<Record<string, any>> {
+    const health: Record<string, any> = {};
+    
+    for (const [id, connection] of this.connections.entries()) {
+      try {
+        health[id] = await connection.getHealth();
+      } catch (error) {
+        health[id] = { error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    }
+    
+    return health;
+  }
+
+  async getSystemMetrics(): Promise<Record<string, any>> {
+    const metrics: Record<string, any> = {};
+    
+    for (const [id, connection] of this.connections.entries()) {
+      try {
+        metrics[id] = await connection.getMetrics();
+      } catch (error) {
+        metrics[id] = { error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    }
+    
+    return metrics;
+  }
+
+  // Data persistence
+  async exportConnections(): Promise<Record<string, any>> {
+    const exportData: Record<string, any> = {};
+    
+    for (const [id, connection] of this.connections.entries()) {
+      exportData[id] = {
+        config: connection.getConfig(),
+        status: connection.getStatus(),
+        metrics: await connection.getMetrics(),
+        health: await connection.getHealth()
+      };
+    }
+    
+    return exportData;
+  }
+
+  async importConnections(importData: Record<string, any>): Promise<void> {
+    for (const [id, data] of Object.entries(importData)) {
+      if (data.config && data.config.type === 'modbus') {
+        const connector = new ModbusConnector(data.config);
+        this.connections.set(id, connector);
+        
+        // Store in IndexedDB
+        await this.db.storeConnectionConfig({
+          id,
+          name: data.config.name,
+          type: 'modbus',
+          config: data.config,
+          enabled: data.config.enabled,
+          lastConnection: undefined,
+          connectionStatus: 'disconnected',
+          errorCount: 0,
+          metadata: data.config.metadata || {},
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+    }
+  }
+
+  // Cleanup
+  async destroy(): Promise<void> {
     for (const connection of this.connections.values()) {
-      connection.destroy();
+      await connection.destroy();
     }
     this.connections.clear();
   }
 }
 
-// Global Modbus manager instance
-export const globalModbusManager = new ModbusManager();
+// Global Modbus universal manager instance
+export const globalModbusUniversalManager = new ModbusUniversalManager();

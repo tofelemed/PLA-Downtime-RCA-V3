@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { Tenant } from './tenant.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -20,8 +21,17 @@ export class TenantService {
     return this.tenantRepository.findOneBy({ id });
   }
 
+  findByCodeAndOrganization(code: string, organizationId: string): Promise<Tenant | null> {
+    return this.tenantRepository.findOneBy({ code, organizationId });
+  }
+
   async create(data: Partial<Tenant>): Promise<Tenant> {
-    const tenant = this.tenantRepository.create(data);
+    // Generate UUID manually for SQL Server compatibility
+    const id = randomUUID();
+    const tenant = this.tenantRepository.create({
+      id,
+      ...data,
+    });
     const saved = await this.tenantRepository.save(tenant);
     this.realtimeGateway.broadcastEntityEvent('Created', 'tenant', saved);
     return saved;

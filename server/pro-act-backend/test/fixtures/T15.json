@@ -1,0 +1,30 @@
+{
+  "id": "T15",
+  "title": "Plan reconciliation with unexplained residual",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T15, ACC01, ACC10",
+  "tolerance": "0.000001",
+  "inputs": {
+    "ledger": "plan",
+    "targetQty": "1000",
+    "actualQty": "850",
+    "acceptedLines": [
+      "90",
+      "40",
+      "10"
+    ],
+    "tolerancePolicy": {
+      "mode": "zero"
+    }
+  },
+  "expected": {
+    "gap": "150",
+    "attributed": "140",
+    "residual": "10",
+    "residualLabel": "unaccounted",
+    "submitResult": "422 RESIDUAL_UNEXPLAINED"
+  },
+  "owner_subphase": "2.5",
+  "notes": "",
+  "status": "authored"
+}

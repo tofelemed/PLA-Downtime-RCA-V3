@@ -1,0 +1,11 @@
+{
+  "id": "T22",
+  "title": "Rule persistence",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T22, NFR02",
+  "given": "Declarative status rule saved",
+  "action": "Restart backend, replay fixture",
+  "assertion": "Same result; no function serialization or arbitrary code execution",
+  "owner_subphase": "3.8",
+  "status": "authored"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "T42",
+  "title": "Non-impact alert",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T42, §3.2",
+  "given": "IOW/APM alert without impact evidence",
+  "action": "Ingest alert",
+  "assertion": "Visible advisory; zero automatic production-loss attribution",
+  "owner_subphase": "1.1/3.9",
+  "status": "authored"
+}

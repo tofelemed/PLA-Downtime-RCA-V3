@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { Product } from './product.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -21,7 +22,8 @@ export class ProductService {
   }
 
   async create(data: Partial<Product>): Promise<Product> {
-    const product = this.productRepository.create(data);
+    const id = randomUUID();
+    const product = this.productRepository.create({ id, ...data });
     const saved = await this.productRepository.save(product);
     this.realtimeGateway.broadcastEntityEvent('Created', 'product', saved);
     return saved;

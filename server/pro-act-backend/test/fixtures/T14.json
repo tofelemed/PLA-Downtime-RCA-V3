@@ -1,0 +1,11 @@
+{
+  "id": "T14",
+  "title": "Tenant attack",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T14, WF05",
+  "given": "Foreign tenant IDs in routes, joins, replay, export, socket and cache",
+  "action": "Attempt access as tenant B",
+  "assertion": "Access denied with no existence/data leakage; audit identifies attempt",
+  "owner_subphase": "0.4",
+  "status": "authored"
+}

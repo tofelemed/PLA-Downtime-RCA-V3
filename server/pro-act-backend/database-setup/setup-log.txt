@@ -1,0 +1,172 @@
+Changed database context to 'master'.
+⚠ Database ProActDB already exists - using existing database
+Changed database context to 'ProActDB'.
+ 
+==============================================
+Creating ProAct Database Schema
+Total Tables: 50
+==============================================
+ 
+✓ Created: organizations
+✓ Created: tenants
+✓ Created: users
+✓ Created: units
+✓ Created: assets
+✓ Created: audit_logs
+ 
+✓ Core entities completed (6/50)
+ 
+✓ Created: impact_codes
+✓ Created: oee_codes
+✓ Created: rca_cause_codes
+✓ Created: verification_status_codes
+✓ Created: reason_codes
+ 
+✓ Master data entities completed (11/50)
+ 
+✓ Created: products
+✓ Created: production_plans
+✓ Created: production_plan_templates
+✓ Created: production_events
+✓ Created: production_losses
+✓ Created: oee_summaries
+✓ Created: reconcile_forms
+✓ Created: loss_categories
+✓ Created: unmapped_events
+ 
+✓ Production entities completed (20/50)
+ 
+✓ Created: rcas
+✓ Created: rca_recommendations
+✓ Created: rca_evidence
+✓ Created: logic_tree_nodes
+✓ Created: rca_trigger_configs
+✓ Created: rca_knowledge_base
+✓ Created: rca_analysis_configs
+✓ Created: rca_templates
+✓ Created: evidence_categories
+✓ Created: evidence_locations
+ 
+✓ RCA entities completed (30/50)
+ 
+✓ Created: five_why_analyses
+✓ Created: fishbone_diagrams
+✓ Created: fmea_analyses
+✓ Created: fault_tree_analyses
+✓ Created: barrier_analyses
+✓ Created: change_analyses
+ 
+✓ Analysis tool entities completed (36/50)
+ 
+✓ Created: pi_connections
+✓ Created: pi_af_elements
+✓ Created: af_bindings
+✓ Created: pi_events
+✓ Created: pi_mappings
+✓ Created: pi_sync_watermarks
+✓ Created: pi_sync_jobs
+✓ Created: historian_tags
+ 
+✓ PI Integration entities completed (44/50)
+ 
+✓ Created: custom_attribute_definitions
+✓ Created: custom_attribute_values
+ 
+✓ Custom attributes completed (46/50)
+ 
+✓ Created: data_sources
+ 
+✓ Integration entities completed (47/50)
+ 
+✓ Created: query_history
+ 
+✓ Historian history completed (48/50)
+ 
+✓ Created: app_settings
+✓ Created: dashboard_configurations
+ 
+✓ Settings entities completed (50/50)
+ 
+ 
+==============================================
+DATABASE SETUP VERIFICATION
+==============================================
+ 
+Total Tables Created: 50
+Expected: 50
+✓ SUCCESS: All tables created!
+ 
+Tables in database:
+TableName                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------
+af_bindings                                                                                                                     
+app_settings                                                                                                                    
+assets                                                                                                                          
+audit_logs                                                                                                                      
+barrier_analyses                                                                                                                
+change_analyses                                                                                                                 
+custom_attribute_definitions                                                                                                    
+custom_attribute_values                                                                                                         
+dashboard_configurations                                                                                                        
+data_sources                                                                                                                    
+evidence_categories                                                                                                             
+evidence_locations                                                                                                              
+fault_tree_analyses                                                                                                             
+fishbone_diagrams                                                                                                               
+five_why_analyses                                                                                                               
+fmea_analyses                                                                                                                   
+historian_tags                                                                                                                  
+impact_codes                                                                                                                    
+logic_tree_nodes                                                                                                                
+loss_categories                                                                                                                 
+oee_codes                                                                                                                       
+oee_summaries                                                                                                                   
+organizations                                                                                                                   
+pi_af_elements                                                                                                                  
+pi_connections                                                                                                                  
+pi_events                                                                                                                       
+pi_mappings                                                                                                                     
+pi_sync_jobs                                                                                                                    
+pi_sync_watermarks                                                                                                              
+production_events                                                                                                               
+production_losses                                                                                                               
+production_plan_templates                                                                                                       
+production_plans                                                                                                                
+products                                                                                                                        
+query_history                                                                                                                   
+rca_analysis_configs                                                                                                            
+rca_cause_codes                                                                                                                 
+rca_evidence                                                                                                                    
+rca_knowledge_base                                                                                                              
+rca_recommendations                                                                                                             
+rca_templates                                                                                                                   
+rca_trigger_configs                                                                                                             
+rcas                                                                                                                            
+reason_codes                                                                                                                    
+reconcile_forms                                                                                                                 
+tenants                                                                                                                         
+units                                                                                                                           
+unmapped_events                                                                                                                 
+users                                                                                                                           
+verification_status_codes                                                                                                       
+
+(50 rows affected)
+ 
+Total Indexes: 408
+Expected: 150+
+ 
+==============================================
+✓✓✓ DATABASE SETUP COMPLETE! ✓✓✓
+==============================================
+ 
+Database: ProActDB
+Tables: 50
+Status: READY
+ 
+Next Steps:
+1. Configure .env file with database credentials
+2. Run: npm install
+3. Run: npm run start:dev
+4. Access Swagger: http://localhost:3000/api
+ 
+==============================================

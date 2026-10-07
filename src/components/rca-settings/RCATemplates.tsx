@@ -47,36 +47,27 @@ const RCATemplates: React.FC = () => {
   }, [session]);
 
   const loadData = async () => {
-    console.log('[RCATemplates] loadData session:', session);
-    if (!session?.organization?.id && !session?.tenant?.id) {
-      console.log('[RCATemplates] No organization or tenant ID in session, skipping load');
-      return;
-    }
+    console.log('[RCATemplates] loadData - Loading ALL templates (Master Data view)');
     try {
-      const filters = { tenantId: session.tenant?.id };
-      console.log('[RCATemplates] getRCATemplates filters:', filters);
-      const data = await masterDataService.getRCATemplates(filters);
-      console.log('[RCATemplates] getRCATemplates result:', data);
+      // Load ALL RCA templates without tenant filter (Master Data should show all)
+      const data = await masterDataService.getRCATemplates({});
+      console.log(`[RCATemplates] ✅ Loaded ${data.length} RCA templates (ALL tenants)`);
       setTemplates(data);
     } catch (error) {
-      console.error('[RCATemplates] Failed to load RCA templates:', error);
+      console.error('[RCATemplates] ❌ Failed to load RCA templates:', error);
       toast({ title: 'Error', description: 'Failed to load RCA templates', variant: 'destructive' });
     }
   };
 
   const loadChecklists = async () => {
-    if (!session?.tenant?.id) {
-      console.log('[RCATemplates] No tenant ID in session, skipping loadChecklists');
-      return;
-    }
+    console.log('[RCATemplates] loadChecklists - Loading ALL checklists (Master Data view)');
     try {
-      const filters = { tenantId: session.tenant.id };
-      console.log('[RCATemplates] getVerificationStatusCodes filters:', filters);
-      const data = await masterDataService.getVerificationStatusCodes(filters);
-      console.log('[RCATemplates] getVerificationStatusCodes result:', data);
+      // Load ALL verification checklists without tenant filter
+      const data = await masterDataService.getVerificationStatusCodes({});
+      console.log(`[RCATemplates] ✅ Loaded ${data.length} verification checklists (ALL tenants)`);
       setAvailableChecklists(data);
     } catch (error) {
-      console.error('[RCATemplates] Failed to load checklists:', error);
+      console.error('[RCATemplates] ❌ Failed to load checklists:', error);
       toast({ title: 'Error', description: 'Failed to load checklists', variant: 'destructive' });
     }
   };

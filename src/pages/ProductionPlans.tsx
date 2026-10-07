@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { masterDataService, ProductionPlan, ProductionPlanTemplate, Unit, Product, UsefulProductionTime } from '../services/MasterDataService';
+import { auditService } from '../services/AuditService';
 import TemplateManager from '../components/production-plans/TemplateManager';
 import TemplateWizard from '../components/production-plans/TemplateWizard';
 import TemplateSelector from '../components/production-plans/TemplateSelector';
@@ -67,23 +68,34 @@ export const ProductionPlans: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [session]);
+  }, [session, plantSelection?.tenant?.id]);
 
   const loadData = async () => {
     if (!session) return;
+    
+    // Use plant selection tenant if available, otherwise fall back to session tenant
+    const tenantId = plantSelection?.tenant?.id || session.tenant?.id;
 
     try {
       const [plansData, templatesData, unitsData, productsData] = await Promise.all([
-        masterDataService.getProductionPlans({ tenantId: session.tenant?.id }),
-        masterDataService.getProductionPlanTemplates({ tenantId: session.tenant?.id }),
-        masterDataService.getUnits({ tenantId: session.tenant?.id }),
-        masterDataService.getProducts({ organizationId: session.organization?.id }),
+        masterDataService.getProductionPlans({ tenantId }),
+        masterDataService.getProductionPlanTemplates({ tenantId }),
+        masterDataService.getUnits(), // Load all units without filtering
+        masterDataService.getProducts(),
       ]);
 
       setPlans(plansData);
       setTemplates(templatesData);
       setUnits(unitsData);
       setProducts(productsData);
+      
+      console.log('ProductionPlans Debug:', {
+        tenantId: session.tenant?.id,
+        unitsDataLength: unitsData.length,
+        unitsData: unitsData.map(u => ({ id: u.id, name: u.name })),
+        plansDataLength: plansData.length,
+        plansData: plansData.map(p => ({ id: p.id, name: p.name, unitId: p.unitId }))
+      });
     } catch (error) {
       console.error('Failed to load production data:', error);
       toast({
@@ -119,7 +131,7 @@ export const ProductionPlans: React.FC = () => {
       
       // Create audit log for template deletion
       if (session?.user && template) {
-        await masterDataService.createAuditLog({
+        await auditService.logAction({
           userId: session.user.id,
           userName: session.user.name,
           action: 'Delete Production Plan Template',
@@ -176,7 +188,7 @@ export const ProductionPlans: React.FC = () => {
         
         // Create audit log for new template
         if (session?.user) {
-          await masterDataService.createAuditLog({
+          await auditService.logAction({
             userId: session.user.id,
             userName: session.user.name,
             action: 'Create Production Plan Template',
@@ -196,7 +208,7 @@ export const ProductionPlans: React.FC = () => {
         
         // Create audit log for template update
         if (session?.user) {
-          await masterDataService.createAuditLog({
+          await auditService.logAction({
             userId: session.user.id,
             userName: session.user.name,
             action: 'Update Production Plan Template',
@@ -216,7 +228,7 @@ export const ProductionPlans: React.FC = () => {
         
         // Create audit log for new template
         if (session?.user) {
-          await masterDataService.createAuditLog({
+          await auditService.logAction({
             userId: session.user.id,
             userName: session.user.name,
             action: 'Create Production Plan Template',
@@ -279,7 +291,7 @@ export const ProductionPlans: React.FC = () => {
       
       // Create audit log for plan deletion
       if (session?.user && planToDelete) {
-        await masterDataService.createAuditLog({
+        await auditService.logAction({
           userId: session.user.id,
           userName: session.user.name,
           action: 'Delete Production Plan',
@@ -320,7 +332,7 @@ export const ProductionPlans: React.FC = () => {
         
         // Create audit log for new plan
         if (session?.user) {
-          await masterDataService.createAuditLog({
+          await auditService.logAction({
             userId: session.user.id,
             userName: session.user.name,
             action: 'Create Production Plan',
@@ -340,7 +352,7 @@ export const ProductionPlans: React.FC = () => {
         
         // Create audit log for plan update
         if (session?.user) {
-          await masterDataService.createAuditLog({
+          await auditService.logAction({
             userId: session.user.id,
             userName: session.user.name,
             action: 'Update Production Plan',
@@ -360,7 +372,7 @@ export const ProductionPlans: React.FC = () => {
         
         // Create audit log for new plan
         if (session?.user) {
-          await masterDataService.createAuditLog({
+          await auditService.logAction({
             userId: session.user.id,
             userName: session.user.name,
             action: 'Create Production Plan',
@@ -458,19 +470,32 @@ export const ProductionPlans: React.FC = () => {
     setSelectedPlanForDashboard(null);
   };
 
+  const handlePlanUpdate = (updatedPlan: ProductionPlan) => {
+    // Update the selected plan for dashboard
+    setSelectedPlanForDashboard(updatedPlan);
+    
+    // Update the plans list to reflect the change
+    setPlans(prevPlans => 
+      prevPlans.map(plan => 
+        plan.id === updatedPlan.id ? updatedPlan : plan
+      )
+    );
+  };
+
   if (!session) return null;
 
-  // Filter by selected unit
+  // Filter by selected unit - show all plans if only plant is selected
   const selectedUnitId = plantSelection?.unit?.id;
-  const filteredPlans = selectedUnitId ? plans.filter(p => p.unitId === selectedUnitId) : [];
-  const filteredTemplates = selectedUnitId ? templates.filter(t => t.unitId === selectedUnitId) : [];
+  const filteredPlans = selectedUnitId ? plans.filter(p => p.unitId === selectedUnitId) : plans;
+  const filteredTemplates = selectedUnitId ? templates.filter(t => t.unitId === selectedUnitId) : templates;
 
   // Show dashboard if selected
   if (showDashboard && selectedPlanForDashboard) {
     return (
       <PlanDashboard 
         plan={selectedPlanForDashboard} 
-        onClose={handleCloseDashboard} 
+        onClose={handleCloseDashboard}
+        onPlanUpdate={handlePlanUpdate}
       />
     );
   }

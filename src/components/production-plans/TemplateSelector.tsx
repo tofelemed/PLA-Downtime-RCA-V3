@@ -1,6 +1,7 @@
 import React from 'react';
 import { ProductionPlanTemplate } from '../../services/MasterDataService';
 import { Check, FileText, Calendar, Package } from 'lucide-react';
+import { formatDateRange } from '../../utils/dateFormatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -74,7 +75,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <div>
                         <span className="font-medium text-muted-foreground">Schedule:</span>
-                        <p>{template.startDate} to {template.endDate}</p>
+                        <p>{formatDateRange(template.startDate, template.endDate)}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">

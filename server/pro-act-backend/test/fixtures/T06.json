@@ -1,0 +1,11 @@
+{
+  "id": "T06",
+  "title": "Mapping replay",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T06, ING05",
+  "given": "Unknown path quarantined",
+  "action": "Correct mapping, replay run twice",
+  "assertion": "One canonical event; raw lineage and resolution retained",
+  "owner_subphase": "1.5",
+  "status": "authored"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "T24",
+  "title": "Reporting UI consistency",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T24, AN01, AN02",
+  "given": "Analytics page open",
+  "action": "Change groupBy, scope, date and ledger then drill down",
+  "assertion": "Chart, totals and export use the same result version and filters",
+  "owner_subphase": "3.6/3.3",
+  "status": "authored"
+}

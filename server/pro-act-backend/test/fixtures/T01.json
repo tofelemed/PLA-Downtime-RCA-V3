@@ -1,0 +1,20 @@
+{
+  "id": "T01",
+  "title": "Interval duration",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T01, §3.3",
+  "tolerance": "0.000001",
+  "inputs": {
+    "startTime": "2026-10-07T06:00:00Z",
+    "endTime": "2026-10-07T07:30:00Z"
+  },
+  "expected": {
+    "durationSeconds": "5400",
+    "displayMinutes": "90",
+    "displayHours": "1.5",
+    "sameValueEverywhere": true
+  },
+  "owner_subphase": "1.1",
+  "notes": "",
+  "status": "authored"
+}

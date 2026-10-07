@@ -1,0 +1,28 @@
+{
+  "id": "T16",
+  "title": "Over-accounting",
+  "kind": "numerical",
+  "spec_ref": "§19.1 T16, ACC01, ACC10",
+  "tolerance": "0.000001",
+  "inputs": {
+    "ledger": "plan",
+    "targetQty": "1000",
+    "actualQty": "850",
+    "acceptedLines": [
+      "160"
+    ],
+    "tolerancePolicy": {
+      "mode": "zero"
+    }
+  },
+  "expected": {
+    "gap": "150",
+    "attributed": "160",
+    "residual": "-10",
+    "overAccounted": "10",
+    "approvalBlocked": true
+  },
+  "owner_subphase": "2.5",
+  "notes": "",
+  "status": "authored"
+}

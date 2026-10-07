@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { Unit } from './unit.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
@@ -21,7 +22,9 @@ export class UnitService {
   }
 
   async create(data: Partial<Unit>): Promise<Unit> {
-    const unit = this.unitRepository.create(data);
+    // Generate UUID manually for SQL Server compatibility
+    const id = randomUUID();
+    const unit = this.unitRepository.create({ id, ...data });
     const saved = await this.unitRepository.save(unit);
     this.realtimeGateway.broadcastEntityEvent('Created', 'unit', saved);
     return saved;

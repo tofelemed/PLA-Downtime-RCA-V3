@@ -10,6 +10,7 @@ import { Building2, Factory, Settings, Package, ChevronRight, ChevronDown, Check
 import { Organization, Tenant, Unit, Asset } from '../services/MasterDataService';
 import { masterDataService } from '../services/MasterDataService';
 import { usePlantSelection } from '../contexts/PlantSelectionContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // Helper for unique node keys
 const getNodeKey = (type: string, id: string) => `${type}:${id}`;
@@ -24,31 +25,35 @@ const PlantSelector: React.FC = () => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [initialized, setInitialized] = useState(false);
 
+  const { session, isLoading: authLoading } = useAuth();
   const { selection: currentSelection, setSelection: onSelectionChange, loading: selectionLoading } = usePlantSelection();
 
+  // Wait for authentication before loading data
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!authLoading && session) {
+      loadData();
+    } else if (!authLoading && !session) {
+      // Not authenticated, don't load data
+      setLoading(false);
+    }
+  }, [session, authLoading]);
 
-  // Auto-select the first unit in the hierarchy if no selection is set
+  // Auto-select the first tenant (plant) in the hierarchy if no selection is set
   useEffect(() => {
-    if (!initialized && organizations.length && tenants.length && units.length && !currentSelection?.unit && !currentSelection?.asset) {
-      // Find the first unit in the hierarchy
+    if (!initialized && organizations.length && tenants.length && !currentSelection?.tenant && !currentSelection?.unit && !currentSelection?.asset) {
+      // Find the first tenant in the hierarchy
       for (const org of organizations) {
         const orgTenants = tenants.filter(t => t.organizationId === org.id);
-        for (const tenant of orgTenants) {
-          const tenantUnits = units.filter(u => u.tenantId === tenant.id);
-          if (tenantUnits.length > 0) {
-            // Select the first unit
-            onSelectionChange({ organization: org, tenant, unit: tenantUnits[0] });
-            setInitialized(true);
-            return;
-          }
+        if (orgTenants.length > 0) {
+          // Select the first tenant (plant) only, not the unit
+          onSelectionChange({ organization: org, tenant: orgTenants[0] });
+          setInitialized(true);
+          return;
         }
       }
       setInitialized(true);
     }
-  }, [organizations, tenants, units, assets, currentSelection, onSelectionChange, initialized]);
+  }, [organizations, tenants, currentSelection, onSelectionChange, initialized]);
 
   const loadData = async () => {
     try {
@@ -128,14 +133,30 @@ const PlantSelector: React.FC = () => {
           <div key={org.id}>
             <div
               className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition hover:bg-gray-100 ${isSelected('org', org.id) ? 'bg-blue-100 font-semibold' : ''}`}
-              onClick={() => toggleExpand(orgKey)}
+              onClick={() => {
+                if (orgTenants.length === 0) {
+                  // If no tenants, select the organization directly
+                  handleSelection({ organization: org });
+                } else {
+                  // If has tenants, toggle expand
+                  toggleExpand(orgKey);
+                }
+              }}
               style={{ paddingLeft: 8 }}
             >
               {orgTenants.length > 0 ? (
                 orgExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />
               ) : <span className="w-4 h-4" />}
               <Building2 className="w-4 h-4 text-blue-600" />
-              <span>{org.name}</span>
+              <span 
+                className="flex-1 cursor-pointer"
+                onClick={e => { 
+                  e.stopPropagation(); 
+                  handleSelection({ organization: org });
+                }}
+              >
+                {org.name}
+              </span>
               {isSelected('org', org.id) && <Check className="w-4 h-4 text-blue-600 ml-auto" />}
             </div>
             {orgExpanded && orgTenants.length > 0 && (
@@ -148,14 +169,31 @@ const PlantSelector: React.FC = () => {
                     <div key={tenant.id}>
                       <div
                         className={`flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition hover:bg-gray-100 ${isSelected('tenant', tenant.id) ? 'bg-blue-100 font-semibold' : ''}`}
-                        onClick={e => { e.stopPropagation(); toggleExpand(tenantKey); }}
+                        onClick={e => { 
+                          e.stopPropagation(); 
+                          if (tenantUnits.length === 0) {
+                            // If no units, select the tenant directly
+                            handleSelection({ organization: org, tenant });
+                          } else {
+                            // If has units, toggle expand
+                            toggleExpand(tenantKey);
+                          }
+                        }}
                         style={{ paddingLeft: 28 }}
                       >
                         {tenantUnits.length > 0 ? (
                           tenantExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />
                         ) : <span className="w-4 h-4" />}
                         <Factory className="w-4 h-4 text-green-600" />
-                        <span>{tenant.name}</span>
+                        <span 
+                          className="flex-1 cursor-pointer"
+                          onClick={e => { 
+                            e.stopPropagation(); 
+                            handleSelection({ organization: org, tenant });
+                          }}
+                        >
+                          {tenant.name}
+                        </span>
                         {isSelected('tenant', tenant.id) && <Check className="w-4 h-4 text-blue-600 ml-auto" />}
                       </div>
                       {tenantExpanded && tenantUnits.length > 0 && (
@@ -218,7 +256,7 @@ const PlantSelector: React.FC = () => {
     </div>
   );
 
-  // Get the full path for the dropdown display (Organization > Tenant > Unit)
+  // Get the path for the dropdown display based on selection level
   const getSelectedPath = () => {
     if (currentSelection?.asset) {
       // If asset is selected, show its parent unit path
@@ -234,6 +272,7 @@ const PlantSelector: React.FC = () => {
         ];
       }
     } else if (currentSelection?.unit) {
+      // If unit is selected, show full path including unit
       const unit = currentSelection.unit;
       const tenant = tenants.find(t => t.id === unit.tenantId);
       const org = tenant ? organizations.find(o => o.id === tenant.organizationId) : undefined;
@@ -244,6 +283,22 @@ const PlantSelector: React.FC = () => {
           { icon: <Settings className="w-4 h-4 text-orange-600" />, name: unit.name },
         ];
       }
+    } else if (currentSelection?.tenant) {
+      // If only tenant (plant) is selected, show only up to tenant level
+      const tenant = currentSelection.tenant;
+      const org = organizations.find(o => o.id === tenant.organizationId);
+      if (org && tenant) {
+        return [
+          { icon: <Building2 className="w-4 h-4 text-blue-600" />, name: org.name },
+          { icon: <Factory className="w-4 h-4 text-green-600" />, name: tenant.name },
+        ];
+      }
+    } else if (currentSelection?.organization) {
+      // If only organization is selected, show only organization
+      const org = currentSelection.organization;
+      return [
+        { icon: <Building2 className="w-4 h-4 text-blue-600" />, name: org.name },
+      ];
     }
     return null;
   };
@@ -255,7 +310,7 @@ const PlantSelector: React.FC = () => {
       return (
         <>
           <Settings className="w-4 h-4 text-orange-600 mr-2" />
-          <span className="text-gray-500">Select Unit</span>
+          <span className="text-gray-500">Select Plant & Unit</span>
         </>
       );
     }

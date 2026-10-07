@@ -38,11 +38,14 @@ const CauseLibraries: React.FC = () => {
   }, [session]);
 
   const loadData = async () => {
-    if (!session?.tenant?.id) return;
+    // Load ALL RCA cause codes without tenant filter (Master Data should show all codes)
+    console.log('🔍 CauseLibraries: Loading RCA cause codes (ALL tenants)');
     try {
-      const data = await masterDataService.getRCACauseCodes({ tenantId: session.tenant.id });
+      const data = await masterDataService.getRCACauseCodes({});
+      console.log(`   ✅ Loaded ${data.length} RCA cause codes`);
       setCauses(data);
     } catch (error) {
+      console.error('❌ Failed to load RCA causes:', error);
       toast({ title: 'Error', description: 'Failed to load RCA causes', variant: 'destructive' });
     }
   };

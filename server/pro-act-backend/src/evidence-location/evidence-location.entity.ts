@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 
 @Entity('evidence_locations')
@@ -6,16 +6,22 @@ export class EvidenceLocation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ name: 'location_name', type: 'varchar', length: 255 })
   name: string;
 
-  @Column({ type: 'uuid' })
-  tenantId: string;
+@Column({ type: 'text', nullable: true })
+description?: string;
 
-  @ManyToOne(() => Tenant)
-  @JoinColumn({ name: 'tenantId' })
-  tenant: Tenant;
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
+  tenantId?: string;
 
-  @CreateDateColumn()
+  // @ManyToOne(() => Tenant)
+  // @JoinColumn({ name: 'tenantId' })
+  // tenant: Tenant;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  updatedAt: Date;
 } 

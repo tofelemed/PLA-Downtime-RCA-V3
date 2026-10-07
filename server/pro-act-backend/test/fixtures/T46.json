@@ -1,0 +1,11 @@
+{
+  "id": "T46",
+  "title": "Historical deletion",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T46, PI06, ING01",
+  "given": "Source retracts a frame referenced by approval",
+  "action": "Inventory comparison confirms deletion",
+  "assertion": "Source tombstone and proposal; no approved history deletion",
+  "owner_subphase": "1.6",
+  "status": "authored"
+}

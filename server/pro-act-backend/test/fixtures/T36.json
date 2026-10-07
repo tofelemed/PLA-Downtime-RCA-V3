@@ -1,0 +1,11 @@
+{
+  "id": "T36",
+  "title": "Separation of duties",
+  "kind": "scenario",
+  "spec_ref": "§19.2 T36, WF02",
+  "given": "Submitter identity",
+  "action": "Submitter attempts approval via UI and API",
+  "assertion": "Both denied; distinct authorized approver succeeds",
+  "owner_subphase": "2.8",
+  "status": "authored"
+}
