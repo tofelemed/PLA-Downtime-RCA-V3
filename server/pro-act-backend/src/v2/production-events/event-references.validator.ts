@@ -1,0 +1,67 @@
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull, Repository } from 'typeorm';
+import { Asset } from '../../asset/asset.entity';
+import { ProductionPlan } from '../../production-plan/production-plan.entity';
+import { ReasonCode } from '../../reason-code/reason-code.entity';
+
+export interface EventReferences {
+  assetId?: string | null;
+  reasonCodeId?: string | null;
+  planId?: string | null;
+}
+
+/**
+ * Foreign ids in an event body must belong to the acting tenant (WF05): assets and plans to the
+ * event's unit, reason codes to the tenant (or be one of the legacy shared codes without a tenant
+ * until 1.3 makes code libraries per tenant). Answers 422 without saying whether the id exists elsewhere.
+ */
+@Injectable()
+export class EventReferencesValidator {
+  constructor(
+    @InjectRepository(Asset) private readonly assets: Repository<Asset>,
+    @InjectRepository(ReasonCode)
+    private readonly reasons: Repository<ReasonCode>,
+    @InjectRepository(ProductionPlan)
+    private readonly plans: Repository<ProductionPlan>,
+  ) {}
+
+  async assertOwned(
+    tenantId: string,
+    unitId: string,
+    refs: EventReferences,
+  ): Promise<void> {
+    if (
+      refs.assetId &&
+      (await this.assets.countBy({ id: refs.assetId, tenantId, unitId })) === 0
+    ) {
+      throw invalidReference('assetId');
+    }
+    if (
+      refs.planId &&
+      (await this.plans.countBy({ id: refs.planId, tenantId, unitId })) === 0
+    ) {
+      throw invalidReference('planId');
+    }
+    if (
+      refs.reasonCodeId &&
+      (await this.reasons.count({
+        where: [
+          { id: refs.reasonCodeId, tenantId },
+          { id: refs.reasonCodeId, tenantId: IsNull() },
+        ],
+      })) === 0
+    ) {
+      throw invalidReference('reasonCodeId');
+    }
+  }
+}
+
+function invalidReference(field: string): UnprocessableEntityException {
+  const message = `${field} does not refer to a record of this unit or tenant`;
+  return new UnprocessableEntityException({
+    code: 'INVALID_REFERENCE',
+    message: [message],
+    fieldErrors: [{ field, message }],
+  });
+}

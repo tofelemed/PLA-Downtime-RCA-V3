@@ -26,6 +26,7 @@ import {
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { ProductionEventService } from '../../production-event/production-event.service';
 import { Unit } from '../../unit/unit.entity';
+import { EventReferencesValidator } from './event-references.validator';
 import {
   CreateProductionEventV2Dto,
   PatchProductionEventV2Dto,
@@ -44,6 +45,7 @@ export class ProductionEventsV2CommandService {
     @InjectRepository(Unit)
     private readonly units: Repository<Unit>,
     private readonly lifecycle: ProductionEventService,
+    private readonly references: EventReferencesValidator,
   ) {}
 
   /** Creates a manual event in the caller's tenant; returns its id. */
@@ -58,6 +60,7 @@ export class ProductionEventsV2CommandService {
         message: 'Unit not found',
       });
     }
+    await this.references.assertOwned(tenantId, dto.unitId, dto);
     const fields = prepareCreate({
       ...writeInput(dto),
       eventType: dto.eventType,
@@ -104,6 +107,7 @@ export class ProductionEventsV2CommandService {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
     }
     assertRevision(existing.rowVersion, expectedRevision);
+    await this.references.assertOwned(tenantId, existing.unitId, dto);
     if (
       existing.sourceKind !== 'manual' &&
       INTERVAL_FIELDS.some((field) => dto[field] !== undefined)

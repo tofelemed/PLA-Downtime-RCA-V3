@@ -11,7 +11,10 @@ import { OrganizationService } from '../organization/organization.service';
 import { TenantService } from '../tenant/tenant.service';
 import * as bcrypt from 'bcryptjs';
 import { User } from '../users/user.entity';
-import { getRequestContext, RequestContext } from '../common/context/request-context';
+import {
+  getRequestContext,
+  RequestContext,
+} from '../common/context/request-context';
 import { canGrantRole, mapLegacyRole } from './roles/role-model';
 import { UserScopesService } from './scopes/user-scopes.service';
 
@@ -27,31 +30,40 @@ export class AuthService {
 
   async validateUser(email: string, pass: string): Promise<User | null> {
     const user = await this.usersService.findByEmail(email);
-    if (user && await bcrypt.compare(pass, user.passwordHash)) {
+    if (user && (await bcrypt.compare(pass, user.passwordHash))) {
       return user;
     }
     return null;
   }
 
   async login(user: User) {
-    const payload = { 
-      sub: user.id, 
-      email: user.email, 
+    const payload = {
+      sub: user.id,
+      email: user.email,
       role: user.role,
       tenantId: user.tenantId,
-      organizationId: user.organizationId
+      organizationId: user.organizationId,
     };
-    
+
     // Log JWT_SECRET status when signing (don't log the actual secret)
     const jwtSecretLength = process.env.JWT_SECRET?.length || 0;
-    console.log(`[AuthService] Signing token with JWT_SECRET length: ${jwtSecretLength}`);
-    
+    console.log(
+      `[AuthService] Signing token with JWT_SECRET length: ${jwtSecretLength}`,
+    );
+
     const access_token = this.jwtService.sign(payload, { expiresIn: '24h' });
-    const refresh_token = this.jwtService.sign({ sub: user.id }, { expiresIn: '7d' });
-    
-    console.log(`[AuthService] Token signed successfully for user: ${user.email}`);
-    console.log(`[AuthService] Token preview: ${access_token.substring(0, 30)}...`);
-    
+    const refresh_token = this.jwtService.sign(
+      { sub: user.id },
+      { expiresIn: '7d' },
+    );
+
+    console.log(
+      `[AuthService] Token signed successfully for user: ${user.email}`,
+    );
+    console.log(
+      `[AuthService] Token preview: ${access_token.substring(0, 30)}...`,
+    );
+
     return {
       access_token,
       refresh_token,
@@ -73,11 +85,11 @@ export class AuthService {
     try {
       const payload = this.jwtService.verify(refreshToken);
       const user = await this.usersService.findOne(payload.sub);
-      
+
       if (!user || !user.isActive) {
         throw new UnauthorizedException('Invalid refresh token');
       }
-      
+
       return this.login(user);
     } catch (error) {
       throw new UnauthorizedException('Invalid refresh token');
@@ -93,11 +105,13 @@ export class AuthService {
     }
   }
 
-  async register(data: Partial<User> & { 
-    password: string;
-    organizationName?: string;
-    tenantName?: string;
-  }) {
+  async register(
+    data: Partial<User> & {
+      password: string;
+      organizationName?: string;
+      tenantName?: string;
+    },
+  ) {
     if (!data.email || !data.password || !data.name || !data.role) {
       throw new BadRequestException('Missing required fields');
     }
@@ -115,12 +129,21 @@ export class AuthService {
       throw new UnauthorizedException('Registration requires an administrator');
     }
 
-    let organizationId = data.organizationId ?? (callerIsAuthenticated ? caller!.organizationId ?? undefined : undefined);
-    let tenantId = data.tenantId ?? (callerIsAuthenticated ? caller!.tenantId ?? undefined : undefined);
+    let organizationId =
+      data.organizationId ??
+      (callerIsAuthenticated
+        ? (caller!.organizationId ?? undefined)
+        : undefined);
+    let tenantId =
+      data.tenantId ??
+      (callerIsAuthenticated ? (caller!.tenantId ?? undefined) : undefined);
 
     // Auto-create organization if name is provided but ID is not
     if (!organizationId && data.organizationName) {
-      const orgCode = data.organizationName.toLowerCase().replace(/\s+/g, '-').substring(0, 50);
+      const orgCode = data.organizationName
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .substring(0, 50);
       // Check if organization with this code already exists
       const existingOrg = await this.organizationService.findByCode(orgCode);
       if (existingOrg) {
@@ -140,11 +163,19 @@ export class AuthService {
     // Tenant requires organizationId
     if (!tenantId && data.tenantName) {
       if (!organizationId) {
-        throw new BadRequestException('Organization ID or name is required to create a tenant');
+        throw new BadRequestException(
+          'Organization ID or name is required to create a tenant',
+        );
       }
-      const tenantCode = data.tenantName.toLowerCase().replace(/\s+/g, '-').substring(0, 50);
+      const tenantCode = data.tenantName
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .substring(0, 50);
       // Check if tenant with this code already exists in this organization
-      const existingTenant = await this.tenantService.findByCodeAndOrganization(tenantCode, organizationId);
+      const existingTenant = await this.tenantService.findByCodeAndOrganization(
+        tenantCode,
+        organizationId,
+      );
       if (existingTenant) {
         tenantId = existingTenant.id;
       } else {
@@ -162,10 +193,12 @@ export class AuthService {
     // For SuperAdmin role, allow registration without org/tenant
     // For other roles, require at least organization
     if (data.role !== 'SuperAdmin' && !organizationId) {
-      throw new BadRequestException('Organization ID or name is required for non-SuperAdmin users');
+      throw new BadRequestException(
+        'Organization ID or name is required for non-SuperAdmin users',
+      );
     }
 
-    const user = await this.usersService.create({ 
+    const user = await this.usersService.create({
       name: data.name,
       email: data.email,
       password: data.password,
@@ -196,7 +229,13 @@ export class AuthService {
 
 function assertCallerMayRegister(
   caller: RequestContext,
-  data: { role?: string; tenantId?: string },
+  data: {
+    role?: string;
+    tenantId?: string;
+    organizationId?: string;
+    organizationName?: string;
+    tenantName?: string;
+  },
 ): void {
   if (!data.role || !canGrantRole(caller.roles, data.role)) {
     throw new ForbiddenException({
@@ -204,10 +243,27 @@ function assertCallerMayRegister(
       message: `Cannot grant role ${data.role}`,
     });
   }
-  if (!caller.isSuperAdmin && data.tenantId && data.tenantId !== caller.tenantId) {
+  if (caller.isSuperAdmin) {
+    return;
+  }
+  if (data.tenantId && data.tenantId !== caller.tenantId) {
     throw new ForbiddenException({
       code: 'TENANT_NOT_ALLOWED',
       message: 'Users can only be registered into your own tenant',
+    });
+  }
+  if (data.organizationId && data.organizationId !== caller.organizationId) {
+    throw new ForbiddenException({
+      code: 'ORGANIZATION_NOT_ALLOWED',
+      message: 'Users can only be registered into your own organization',
+    });
+  }
+  // Creating organizations or tenants on the fly is a SuperAdmin operation
+  if (data.organizationName || data.tenantName) {
+    throw new ForbiddenException({
+      code: 'ORGANIZATION_CREATE_NOT_ALLOWED',
+      message:
+        'Only a SuperAdmin can create organizations or tenants during registration',
     });
   }
 }
@@ -222,4 +278,4 @@ function publicUser(user: User) {
     organizationId: user.organizationId,
     isActive: user.isActive,
   };
-} 
+}

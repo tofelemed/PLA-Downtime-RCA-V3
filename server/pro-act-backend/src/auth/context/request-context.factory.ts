@@ -32,7 +32,9 @@ export function tenantNotAllowed(): ForbiddenException {
 /**
  * Builds the `RequestContext` for an authenticated request (WF05):
  *
- * - roles = legacy role + its D06 mapping + every `user_scopes` role
+ * - roles = legacy role + its D06 mapping + the `user_scopes` roles held in the acting tenant (the
+ *   legacy role only counts in the home tenant, except SuperAdmin everywhere and OrgAdmin within its
+ *   organization)
  * - tenant = `X-Tenant-Id` when selected and allowed, otherwise the token tenant
  * - SuperAdmin may select any tenant that exists; everyone else only a tenant present in their
  *   scopes; anything else is 403 `TENANT_NOT_ALLOWED` and an audit row.
@@ -50,18 +52,19 @@ export class RequestContextFactory {
     const { payload } = input;
     const scopes = await this.userScopes.grantsForUser(payload.sub);
     const legacyRole = payload.role ?? null;
+    const homeTenant = payload.tenantId ?? null;
     const context: RequestContext = {
       userId: payload.sub,
-      tenantId: payload.tenantId ?? null,
+      tenantId: homeTenant,
       organizationId: payload.organizationId ?? null,
       legacyRole,
-      roles: mergeRoles(legacyRole, scopes),
+      roles: mergeRoles(legacyRole, scopesIn(scopes, homeTenant)),
       scopes,
       isSuperAdmin: legacyRole === 'SuperAdmin',
       correlationId: input.correlationId,
     };
     const selected = firstHeaderValue(input.selectedTenant);
-    if (selected === undefined) {
+    if (selected === undefined || selected === homeTenant) {
       return context;
     }
     if (!(await this.maySelectTenant(context, selected))) {
@@ -74,7 +77,38 @@ export class RequestContextFactory {
       });
       throw tenantNotAllowed();
     }
-    return { ...context, tenantId: selected };
+    // Roles are those held in the selected tenant: never carry the home tenant's roles over
+    const legacyApplies = await this.legacyRoleAppliesIn(context, selected);
+    return {
+      ...context,
+      tenantId: selected,
+      roles: mergeRoles(
+        legacyApplies ? legacyRole : null,
+        scopesIn(scopes, selected),
+      ),
+    };
+  }
+
+  /**
+   * A legacy `users.role` belongs to the token's home tenant. Outside it only SuperAdmin keeps it
+   * everywhere, and OrgAdmin inside tenants of its own organization.
+   */
+  private async legacyRoleAppliesIn(
+    context: RequestContext,
+    tenantId: string,
+  ): Promise<boolean> {
+    if (context.isSuperAdmin) {
+      return true;
+    }
+    if (context.legacyRole !== 'OrgAdmin' || !context.organizationId) {
+      return false;
+    }
+    return (
+      (await this.tenants.countBy({
+        id: tenantId,
+        organizationId: context.organizationId,
+      })) > 0
+    );
   }
 
   private async maySelectTenant(
@@ -89,6 +123,10 @@ export class RequestContextFactory {
     }
     return context.scopes.some((scope) => scope.tenantId === tenantId);
   }
+}
+
+function scopesIn(scopes: ScopeGrant[], tenantId: string | null): ScopeGrant[] {
+  return tenantId ? scopes.filter((scope) => scope.tenantId === tenantId) : [];
 }
 
 function mergeRoles(legacyRole: string | null, scopes: ScopeGrant[]): string[] {

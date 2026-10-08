@@ -7,6 +7,9 @@ import { configureHttpApp } from '../common/http/configure-http-app';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { ProductionEventModule } from '../production-event/production-event.module';
 import { ProductionEventService } from '../production-event/production-event.service';
+import { Asset } from '../asset/asset.entity';
+import { ProductionPlan } from '../production-plan/production-plan.entity';
+import { ReasonCode } from '../reason-code/reason-code.entity';
 import { Unit } from '../unit/unit.entity';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
@@ -26,6 +29,12 @@ async function generate(): Promise<string> {
     .overrideProvider(getRepositoryToken(ProductionEvent))
     .useValue({})
     .overrideProvider(getRepositoryToken(Unit))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(Asset))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(ReasonCode))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(ProductionPlan))
     .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)

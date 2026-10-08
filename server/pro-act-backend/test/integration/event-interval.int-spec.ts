@@ -140,6 +140,26 @@ describe('event interval model (plan 1.1)', () => {
       await create({ unitId: world.unitB1, startTime: t('06:00') }).expect(404);
     });
 
+    it('refuses references outside the unit or tenant (422 INVALID_REFERENCE)', async () => {
+      const tokenB = signToken(app, { userId: randomUUID(), tenantId: world.tenantB });
+      const foreignAsset = await http()
+        .post('/api/v2/production-events')
+        .set(bearer(tokenB))
+        .set('Idempotency-Key', randomUUID())
+        .send({ unitId: world.unitB1, startTime: t('06:00'), assetId: world.assetA1 })
+        .expect(422);
+      expect(foreignAsset.body.code).toBe('INVALID_REFERENCE');
+      const otherUnit = await create({ unitId: world.unitA2, startTime: t('06:00'), assetId: world.assetA1 }).expect(422);
+      expect(otherUnit.body.fieldErrors[0].field).toBe('assetId');
+      const foreignReason = await http()
+        .post('/api/v2/production-events')
+        .set(bearer(tokenB))
+        .set('Idempotency-Key', randomUUID())
+        .send({ unitId: world.unitB1, startTime: t('06:00'), reasonCodeId: world.reasonR1 })
+        .expect(422);
+      expect(foreignReason.body.fieldErrors[0].field).toBe('reasonCodeId');
+    });
+
     it('replays the same Idempotency-Key without creating a second event', async () => {
       const key = randomUUID();
       const body = {
