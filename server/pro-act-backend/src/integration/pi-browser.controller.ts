@@ -1,29 +1,16 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-  UsePipes,
-  ValidationPipe,
-} from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { PIWebApiService } from './pi-web-api.service';
 import { PIEventPullService } from './pi-event-pull.service';
+import { PIBrowserRequestDto } from './dto/pi-browser-request.dto';
+import { PIBrowserSyncDto } from './dto/pi-browser-sync.dto';
 
-class PIBrowserRequestDto {
-  path: string;
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  params?: Record<string, string | number | boolean>;
-  data?: any;
-}
-
+/** v1 PI browsing for the caller's own tenant (TenantGuard: the `:tenantId` must be the caller's). */
 @ApiTags('PI Browser')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('pi-browser')
 export class PIBrowserController {
   constructor(
@@ -38,17 +25,11 @@ export class PIBrowserController {
   }
 
   @Post(':tenantId/request')
-  @ApiOperation({ summary: 'Proxy a PI Web API request using stored tenant credentials' })
-  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  @ApiOperation({
+    summary: 'PI Web API request with stored tenant credentials (allowlisted paths, GET or POST /batch)',
+  })
   async proxyRequest(@Param('tenantId') tenantId: string, @Body() body: PIBrowserRequestDto) {
-    if (!body.path) {
-      return { error: 'path is required' };
-    }
-    return this.piWebApiService.request(tenantId, body.path, {
-      method: body.method || 'GET',
-      params: body.params,
-      data: body.data,
-    });
+    return this.piWebApiService.browserRequest(tenantId, body);
   }
 
   @Get(':tenantId/eventframes')
@@ -83,19 +64,7 @@ export class PIBrowserController {
 
   @Post(':tenantId/sync')
   @ApiOperation({ summary: 'Trigger PI event sync for tenant (uses watermarks for delta sync)' })
-  async triggerSync(
-    @Param('tenantId') tenantId: string,
-    @Body()
-    body?: {
-      startTimeUtc?: string;
-      endTimeUtc?: string;
-      scopeType?: 'database' | 'element';
-      scopeId?: string;
-      templateName?: string;
-      maxCount?: number;
-      autoCreateProductionEvents?: boolean;
-    },
-  ) {
+  async triggerSync(@Param('tenantId') tenantId: string, @Body() body: PIBrowserSyncDto) {
     return this.piEventPullService.pullEvents({
       tenantId,
       ...body,

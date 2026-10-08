@@ -107,5 +107,10 @@ export const RETRACTION_SCHEMA = {
   properties: {
     reason: { type: ['string', 'null'] },
     retractsRevision: { type: ['string', 'null'] },
+    confirmedDeletion: {
+      type: ['boolean', 'null'],
+      description:
+        'True when the source deletion was confirmed (PI06: completed inventory comparison plus a direct lookup); the source object becomes deleted_confirmed.',
+    },
   },
 } as const;

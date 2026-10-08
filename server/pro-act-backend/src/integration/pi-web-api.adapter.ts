@@ -11,25 +11,25 @@ import {
   ConnectionCapabilities,
   IntegrationConnection,
 } from '../intake/entities/integration-connection.entity';
-import { piFrameEnvelope } from './pi-envelope';
-import { fetchEventFrameAttributes } from './pi-event-mapper';
-import { PiEventFrame } from './pi-frame-ingest.service';
-import { PIWebApiService } from './pi-web-api.service';
+import { PiClientFactory } from './pi/pi-client-factory';
+import { diagnosePiEndpoint, diagnosisMessage } from './pi/pi-diagnostics';
+import { PiSearchScope } from './pi/pi-frame-search';
+import { PiInventory } from './pi/pi-inventory';
+import { PiJobScope, parsePiJobScope } from './pi/pi-job-scope';
+import { PiOpenFrameRefresh } from './pi/pi-open-frame-refresh';
+import { PiWindowRead } from './pi/pi-window-read';
 
-/** Cursor of a PI event-frame job: the current search window and the next start index inside it. */
-interface PiCursor {
-  windowStart: string;
-  windowEnd: string;
-  startIndex: number;
+interface AfItem {
+  Name?: unknown;
+  WebId?: unknown;
 }
 
-const DEFAULT_LOOKBACK_MINUTES = 60;
-
 /**
- * PI Web API adapter for leased ingestion jobs (ING07; certified in plan 1.6). Reads event frames of
- * the job scope (`scopeType`, `scopeId`, `templateName`, `lookbackMinutes`) window by window, sorted by
- * start time and paged by `startIndex`; each frame becomes a canonical envelope. Replay is served from
- * the raw store, so `replayRead` is not implemented.
+ * Certified PI Web API adapter (plan 1.6, ING07, PI01–PI06). Each PI ingestion job has a mode
+ * (`parsePiJobScope`): `window` polls with overlap and full paging, `rescan` re-reads 7/90 days for
+ * corrections, `open_frames` re-reads tracked open frames by WebId, `inventory` confirms deletions.
+ * Connection tests report DNS, TLS, auth, version, authorisation and read separately and detect the
+ * batch controller. Replay is served from the raw store, so `replayRead` is not implemented.
  */
 @Injectable()
 export class PiWebApiAdapter implements SourceAdapter, OnModuleInit {
@@ -37,7 +37,10 @@ export class PiWebApiAdapter implements SourceAdapter, OnModuleInit {
 
   constructor(
     private readonly registry: AdapterRegistry,
-    private readonly piWebApi: PIWebApiService,
+    private readonly clients: PiClientFactory,
+    private readonly windows: PiWindowRead,
+    private readonly openFrames: PiOpenFrameRefresh,
+    private readonly inventory: PiInventory,
   ) {}
 
   onModuleInit(): void {
@@ -48,64 +51,80 @@ export class PiWebApiAdapter implements SourceAdapter, OnModuleInit {
     return {
       replay: true,
       corrections: true,
-      deletions: false,
+      deletions: true,
       quality: false,
       sourceTimestamps: true,
       sequence: false,
+      batch: true,
     };
   }
 
   validateConfig(config: Readonly<Record<string, unknown>>): string[] {
+    const problems: string[] = [];
     const url = config.piWebApiUrl;
-    return typeof url === 'string' && /^https?:\/\/\S+$/i.test(url)
-      ? []
-      : ['piWebApiUrl must be an http(s) URL'];
+    if (typeof url !== 'string' || !/^https?:\/\/\S+$/i.test(url)) {
+      problems.push('piWebApiUrl must be an http(s) URL');
+    }
+    const insecure = config.allowInsecureTls;
+    if (insecure !== undefined && typeof insecure !== 'boolean') {
+      problems.push('allowInsecureTls must be a boolean');
+    }
+    return problems;
   }
 
-  test(connection: IntegrationConnection): Promise<ConnectionTest> {
-    return this.piWebApi.testConnection(connection.tenantId);
+  async test(connection: IntegrationConnection): Promise<ConnectionTest> {
+    const client = await this.clients
+      .forConnection(connection)
+      .catch((error: unknown) => error as Error);
+    if (client instanceof Error) {
+      return { connected: false, message: client.message };
+    }
+    const verifyTls = connection.endpointConfig.allowInsecureTls !== true;
+    const result = await diagnosePiEndpoint(client, verifyTls);
+    const message = diagnosisMessage(result.diagnostics);
+    return {
+      connected: message === 'All PI Web API checks passed',
+      message,
+      diagnostics: { ...result.diagnostics },
+      capabilities: result.capabilities,
+    };
   }
 
   async discover(
     connection: IntegrationConnection,
   ): Promise<Record<string, unknown>> {
-    const servers = await this.piWebApi.request<{
-      Items?: Array<{ Name?: string; WebId?: string }>;
-    }>(connection.tenantId, '/assetservers');
-    return {
-      assetServers: (servers?.Items ?? []).map((item) => ({
-        name: item.Name,
-        webId: item.WebId,
-      })),
-    };
+    const client = await this.clients.forConnection(connection);
+    const servers = itemsOf(await client.get('assetservers'));
+    const assetServers: Array<Record<string, unknown>> = [];
+    for (const server of servers) {
+      if (typeof server.WebId !== 'string') continue;
+      const databases = itemsOf(
+        await client.get(
+          `assetservers/${encodeURIComponent(server.WebId)}/assetdatabases`,
+        ),
+      );
+      assetServers.push({
+        name: server.Name,
+        webId: server.WebId,
+        databases: databases.map((db) => ({ name: db.Name, webId: db.WebId })),
+      });
+    }
+    return { assetServers };
   }
 
   async read(request: ReadRequest): Promise<ReadPage> {
-    const cursor = cursorOf(request);
-    const tenantId = request.connection.tenantId;
-    const data: unknown = await this.piWebApi.getEventFrames(tenantId, {
-      scopeType: request.scope.scopeType as 'database' | 'element' | undefined,
-      scopeId: request.scope.scopeId as string | undefined,
-      templateName: request.scope.templateName as string | undefined,
-      startTimeUtc: cursor.windowStart,
-      endTimeUtc: cursor.windowEnd,
-      maxCount: request.pageSize,
-      startIndex: cursor.startIndex,
-    });
-    const frames = (data as { Items?: PiEventFrame[] } | null)?.Items ?? [];
-    const records = await this.envelopes(request.connection, frames);
-    const full = frames.length >= request.pageSize;
-    return {
-      records,
-      hasMore: full,
-      nextCursor: full
-        ? { ...cursor, startIndex: cursor.startIndex + frames.length }
-        : {
-            windowStart: cursor.windowEnd,
-            windowEnd: cursor.windowEnd,
-            startIndex: 0,
-          },
+    const scope = parsePiJobScope(request.scope);
+    const source = {
+      client: await this.clients.forConnection(request.connection),
+      connection: request.connection,
     };
+    if (scope.mode === 'open_frames') {
+      return this.openFrames.read(source, request);
+    }
+    const searchable = scope as PiJobScope & { search: PiSearchScope };
+    return scope.mode === 'inventory'
+      ? this.inventory.read(source, request, searchable)
+      : this.windows.read(source, request, searchable);
   }
 
   async health(connection: IntegrationConnection): Promise<AdapterHealth> {
@@ -114,54 +133,9 @@ export class PiWebApiAdapter implements SourceAdapter, OnModuleInit {
       ? { status: 'ok' }
       : { status: 'down', detail: test.message };
   }
-
-  private async envelopes(
-    connection: IntegrationConnection,
-    frames: PiEventFrame[],
-  ): Promise<unknown[]> {
-    const binding = {
-      tenantId: connection.tenantId,
-      connectionId: connection.id,
-    };
-    const read = {
-      at: new Date(),
-      correlationId: `pi-job:${new Date().toISOString()}`,
-    };
-    const requestFn = (path: string) =>
-      this.piWebApi.request(connection.tenantId, path);
-    const records: unknown[] = [];
-    for (const frame of frames) {
-      const attributes = await fetchEventFrameAttributes(
-        requestFn,
-        frame.WebId,
-      );
-      records.push(piFrameEnvelope(binding, { frame, attributes }, read));
-    }
-    return records;
-  }
 }
 
-/**
- * The window to read: the stored one while it is being paged; otherwise a new window from the end of
- * the previous one (or `lookbackMinutes` ago on the first run) to now.
- */
-function cursorOf(request: ReadRequest): PiCursor {
-  const stored = request.cursor as Partial<PiCursor> | null;
-  if (stored?.windowStart && stored.windowEnd && (stored.startIndex ?? 0) > 0) {
-    return {
-      windowStart: stored.windowStart,
-      windowEnd: stored.windowEnd,
-      startIndex: stored.startIndex ?? 0,
-    };
-  }
-  const lookback = Number(
-    request.scope.lookbackMinutes ?? DEFAULT_LOOKBACK_MINUTES,
-  );
-  const start =
-    stored?.windowEnd ?? new Date(Date.now() - lookback * 60_000).toISOString();
-  return {
-    windowStart: start,
-    windowEnd: new Date().toISOString(),
-    startIndex: 0,
-  };
+function itemsOf(reply: unknown): AfItem[] {
+  const items = (reply as { Items?: unknown } | null)?.Items;
+  return Array.isArray(items) ? (items as AfItem[]) : [];
 }

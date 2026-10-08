@@ -3,6 +3,7 @@ import { MappingDiagnostic } from '../attribute-mapping/attribute-conversion';
 import { ResolvedMapping } from '../source-mapping/source-mapping.service';
 import { UnmappedEventService } from '../unmapped-event/unmapped-event.service';
 import type { FrameContext, PiEventFrame } from './pi-frame-ingest.service';
+import { piEndTimeIso } from './pi/pi-time';
 
 /** Why a frame could not be placed, and what it looked like after mapping. */
 export interface QuarantineDetails {
@@ -60,7 +61,8 @@ export class PiUnmappedRecorder {
       eventName: frame.Name ?? frame.WebId,
       eventType: details.mapped.eventType,
       startTime: frame.StartTime,
-      endTime: frame.EndTime || undefined,
+      // the open sentinel (PI03) is not an end time; the raw frame keeps it in event_data
+      endTime: piEndTimeIso(frame.EndTime) ?? undefined,
       sourceSystem: 'PI',
       sourceId: frame.WebId,
       eventData: JSON.stringify(quarantinePayload(frame, details)),

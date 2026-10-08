@@ -63,11 +63,11 @@ export class PISyncJobController {
   }
 
   @Post(':id/run')
-  @ApiOperation({ summary: 'Run PI sync job immediately' })
+  @ApiOperation({ summary: 'Run PI sync job immediately (queued on the leased ingestion runner)' })
   async runNow(@Param('id') id: string) {
     const job = await this.piSyncJobService.findOne(id);
-    await this.piSyncSchedulerService.runJob(job);
-    return { success: true, message: 'PI sync job executed' };
+    await this.piSyncSchedulerService.runJob(job, true);
+    return { success: true, message: 'PI sync job queued on the ingestion runner' };
   }
 }
 

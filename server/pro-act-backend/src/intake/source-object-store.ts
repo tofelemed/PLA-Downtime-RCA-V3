@@ -1,5 +1,8 @@
 import { EntityManager } from 'typeorm';
-import { SourceObject } from './entities/source-object.entity';
+import {
+  SourceObject,
+  SourceObjectState,
+} from './entities/source-object.entity';
 import { ObjectKey } from './exceptions/exception-store';
 import { StoredVersion } from './source-object-ordering';
 
@@ -8,7 +11,8 @@ export interface VersionRow extends StoredVersion {
   rawId: string;
   receivedAt: Date;
   kind: string;
-  retracted: boolean;
+  /** `retracted` for a retraction, `deleted_confirmed` for a confirmed source deletion (PI06) */
+  state: SourceObjectState;
 }
 
 /**
@@ -36,7 +40,7 @@ export async function insertIfNew(
       version.revision,
       version.hash,
       version.observedAt,
-      version.retracted ? 'retracted' : 'active',
+      version.state,
     ],
   );
   return rows[0]?.id ?? null;
@@ -87,7 +91,7 @@ export async function advanceVersion(
       version.hash,
       version.observedAt,
       version.kind,
-      version.retracted ? 'retracted' : 'active',
+      version.state,
     ],
   );
 }

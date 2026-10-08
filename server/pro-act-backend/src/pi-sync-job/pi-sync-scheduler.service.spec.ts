@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ShutdownCoordinator } from '../common/scheduling/shutdown-coordinator.service';
-import { PIEventPullService } from '../integration/pi-event-pull.service';
+import { PiLegacyJobLink } from '../integration/pi/pi-legacy-job-link';
 import { PIConnection } from '../pi-connection/pi-connection.entity';
 import { PISyncWatermark } from '../pi-sync-watermark/pi-sync-watermark.entity';
 import { PISyncJob } from './pi-sync-job.entity';
@@ -38,7 +38,7 @@ describe('PISyncSchedulerService shutdown behaviour', () => {
           provide: getRepositoryToken(PIConnection),
           useValue: connectionRepository,
         },
-        { provide: PIEventPullService, useValue: {} },
+        { provide: PiLegacyJobLink, useValue: {} },
       ],
     }).compile();
     service = moduleRef.get(PISyncSchedulerService);

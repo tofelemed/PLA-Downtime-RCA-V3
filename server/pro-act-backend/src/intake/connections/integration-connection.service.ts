@@ -37,6 +37,8 @@ export interface PiConnectionSource {
   username?: string | null;
   afDatabasePath?: string | null;
   passwordEncrypted?: string | null;
+  /** v1 JSON settings; `insecureSkipTlsVerify: true` becomes `allowInsecureTls` */
+  connectionConfig?: string | null;
   isActive: boolean;
 }
 
@@ -226,7 +228,23 @@ function piEndpoint(pi: PiConnectionSource): Record<string, unknown> {
   const endpoint: Record<string, unknown> = { piWebApiUrl: pi.piWebApiUrl };
   if (pi.username) endpoint.username = pi.username;
   if (pi.afDatabasePath) endpoint.afDatabasePath = pi.afDatabasePath;
+  if (skipsTlsVerification(pi.connectionConfig)) endpoint.allowInsecureTls = true;
   return endpoint;
+}
+
+/** The v1 opt-out of TLS verification (plan 0.4 proxy setting), carried into the mirror. */
+function skipsTlsVerification(connectionConfig?: string | null): boolean {
+  if (!connectionConfig) return false;
+  try {
+    const parsed: unknown = JSON.parse(connectionConfig);
+    return (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      (parsed as Record<string, unknown>).insecureSkipTlsVerify === true
+    );
+  } catch {
+    return false;
+  }
 }
 
 function sameMirror(

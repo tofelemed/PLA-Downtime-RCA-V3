@@ -100,6 +100,16 @@ export async function commitPage(
   return firstRow(rows)?.state ?? null;
 }
 
+/** Why a page failed and how the job continues. */
+export interface PageFailure {
+  error: string;
+  delaySeconds: number;
+  /** the job becomes `failed` once its retry count reaches this (0 = at once) */
+  maxRetries: number;
+  /** replaces the job health when set (e.g. `{ auth_failed: 1 }`) */
+  health?: Record<string, number> | null;
+}
+
 /**
  * A failed page: nothing is committed, the retry is scheduled with backoff and the lease released;
  * after `maxRetries` the job becomes `failed`. Returns the resulting state (null = lease lost).
@@ -107,12 +117,13 @@ export async function commitPage(
 export async function failPage(
   manager: EntityManager,
   lease: JobLease,
-  failure: { error: string; delaySeconds: number; maxRetries: number },
+  failure: PageFailure,
 ): Promise<string | null> {
   const [rows]: [Array<{ state: string }>, number] = await manager.query(
     `UPDATE "ingestion_jobs" SET "retry_count" = "retry_count" + 1, "last_error" = $3,
             "next_run_at" = now() + make_interval(secs => $4),
             "state" = CASE WHEN "retry_count" + 1 >= $5 THEN 'failed'::ingestion_job_state ELSE "state" END,
+            "health" = coalesce($6::jsonb, "health"),
             "lease_owner" = NULL, "lease_expiry" = NULL, "updated_at" = now(), "row_version" = "row_version" + 1
       WHERE "id" = $1 AND "lease_owner" = $2 RETURNING "state"`,
     [
@@ -121,6 +132,7 @@ export async function failPage(
       failure.error,
       failure.delaySeconds,
       failure.maxRetries,
+      failure.health ? JSON.stringify(failure.health) : null,
     ],
   );
   return firstRow(rows)?.state ?? null;

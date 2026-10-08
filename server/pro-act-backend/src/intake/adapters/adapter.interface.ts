@@ -11,6 +11,8 @@ export interface ReadRequest {
   /** last committed cursor; null on the first run */
   cursor: Readonly<Record<string, unknown>> | null;
   pageSize: number;
+  /** the leased job (absent for replay reads); adapters key page bookkeeping on it */
+  jobId?: string;
 }
 
 /** What a read returns; the runner commits `nextCursor` only after every record is accepted. */
@@ -20,6 +22,8 @@ export interface ReadPage {
   nextCursor: Record<string, unknown>;
   /** true = more data is ready now (the runner reads again without waiting for the cadence) */
   hasMore: boolean;
+  /** called by the runner after the cursor of this page is committed (page bookkeeping, PI04) */
+  onCommitted?: () => Promise<void>;
 }
 
 export interface AdapterHealth {
@@ -30,6 +34,10 @@ export interface AdapterHealth {
 export interface ConnectionTest {
   connected: boolean;
   message: string;
+  /** per-step results (PI01: dns, tls, auth, authz, version, read), adapter-specific */
+  diagnostics?: Record<string, unknown>;
+  /** capabilities detected at test time (e.g. PI batch support) */
+  capabilities?: Record<string, unknown>;
 }
 
 /**

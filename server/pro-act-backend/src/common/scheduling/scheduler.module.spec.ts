@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { PIEventPullService } from '../../integration/pi-event-pull.service';
+import { PiLegacyJobLink } from '../../integration/pi/pi-legacy-job-link';
 import { PIConnection } from '../../pi-connection/pi-connection.entity';
 import { PISyncJob } from '../../pi-sync-job/pi-sync-job.entity';
 import { PISyncSchedulerService } from '../../pi-sync-job/pi-sync-scheduler.service';
@@ -43,7 +43,7 @@ describe('SchedulerModule (PROCESS_ROLE gating)', () => {
         },
         { provide: getRepositoryToken(PISyncWatermark), useValue: {} },
         { provide: getRepositoryToken(PIConnection), useValue: {} },
-        { provide: PIEventPullService, useValue: {} },
+        { provide: PiLegacyJobLink, useValue: {} },
       ],
     }).compile();
     // init() runs onModuleInit (ScheduleExplorer) and onApplicationBootstrap (cron mount)

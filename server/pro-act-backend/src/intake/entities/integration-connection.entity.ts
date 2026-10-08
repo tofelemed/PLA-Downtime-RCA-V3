@@ -10,6 +10,8 @@ export interface ConnectionCapabilities {
   quality?: boolean;
   sourceTimestamps?: boolean;
   sequence?: boolean;
+  /** PI Web API: the batch controller is available (attribute reads in one call per page) */
+  batch?: boolean;
 }
 
 /**

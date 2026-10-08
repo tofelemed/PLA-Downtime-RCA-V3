@@ -23,6 +23,7 @@ import {
 import { MasterDataCodeResolverService } from './master-data-code-resolver.service';
 import { NO_TEMPLATE_KEY } from './pi-event-mapper';
 import { PiUnmappedRecorder } from './pi-unmapped-recorder';
+import { piEndTime, piEndTimeIso } from './pi/pi-time';
 
 /** The fields of a PI event frame the bridge reads. */
 export interface PiEventFrame {
@@ -38,6 +39,8 @@ export interface PiEventFrame {
   } | null;
   /** referenced elements beyond the primary one, when PI supplies them */
   RefElementWebIds?: string[] | null;
+  /** ancestors of the primary element (closest first), added by the adapter (plan 1.6) */
+  AncestorElementWebIds?: string[] | null;
 }
 
 /** Everything loaded once per pull: the tenant, its mapping profile and its mapping resolver. */
@@ -134,7 +137,8 @@ export class PiFrameIngestService {
   ): Promise<MappedFrame> {
     const templateName = frame.TemplateName || NO_TEMPLATE_KEY;
     const start = new Date(frame.StartTime);
-    const end = frame.EndTime ? new Date(frame.EndTime) : null;
+    // PI03: the open-frame sentinel is "still open", never an end time
+    const end = piEndTime(frame.EndTime);
     const typed = mapAttributes(
       context.profile.rulesFor(templateName),
       attributes,
@@ -257,14 +261,18 @@ function frameColumns(
     eventType,
     source: 'PI',
     startTime: new Date(frame.StartTime).toISOString(),
-    endTime: frame.EndTime ? new Date(frame.EndTime).toISOString() : undefined,
+    endTime: piEndTimeIso(frame.EndTime) ?? undefined,
   };
 }
 
-/** The PI element first, then any further referenced elements. */
+/** The PI element first, then further referenced elements, then the primary's ancestors. */
 function elementWebIds(frame: PiEventFrame): string[] {
   const primary = frame.PrimaryReferencedElement?.WebId;
-  return [...(primary ? [primary] : []), ...(frame.RefElementWebIds ?? [])];
+  return [
+    ...(primary ? [primary] : []),
+    ...(frame.RefElementWebIds ?? []),
+    ...(frame.AncestorElementWebIds ?? []),
+  ];
 }
 
 /** The column-backed source fields of a PI event DTO (open frames deliver no end time: it stays open). */

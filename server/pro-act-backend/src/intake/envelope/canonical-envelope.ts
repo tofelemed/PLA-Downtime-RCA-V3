@@ -124,5 +124,9 @@ export interface CanonicalEnvelope {
   quality: EnvelopeQuality;
   provenance: EnvelopeProvenance;
   sourceControls?: EnvelopeSourceControls;
-  retraction?: { reason?: string | null; retractsRevision?: string | null };
+  retraction?: {
+    reason?: string | null;
+    retractsRevision?: string | null;
+    confirmedDeletion?: boolean | null;
+  };
 }

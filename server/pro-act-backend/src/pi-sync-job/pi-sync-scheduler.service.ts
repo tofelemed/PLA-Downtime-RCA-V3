@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { PISyncJob } from '../pi-sync-job/pi-sync-job.entity';
 import { PISyncWatermark } from '../pi-sync-watermark/pi-sync-watermark.entity';
 import { PIConnection } from '../pi-connection/pi-connection.entity';
-import { PIEventPullService } from '../integration/pi-event-pull.service';
+import { PiLegacyJobLink } from '../integration/pi/pi-legacy-job-link';
 import { ShutdownCoordinator } from '../common/scheduling/shutdown-coordinator.service';
 
 interface SyncJobConfigExtras {
@@ -24,6 +24,16 @@ interface SyncJobConfigExtras {
   nextRun?: string;
 }
 
+/** PI05 default poll when a v1 job does not set its own interval. */
+const DEFAULT_POLL_SECONDS = 60;
+
+/**
+ * v1 PI sync jobs on the certified intake (plan 1.6 step 5): every minute each due, active v1 job is
+ * linked to its leased ingestion jobs (`PiLegacyJobLink`, created from the v1 scope, template, interval
+ * and watermark) and the ingestion job's status is written back to the v1 row for the v1 screens. The
+ * pull itself runs in the worker's job runner (paging, checkpoints, retries); "run now" makes the
+ * linked window job due at once.
+ */
 @Injectable()
 export class PISyncSchedulerService {
   private readonly logger = new Logger(PISyncSchedulerService.name);
@@ -36,7 +46,7 @@ export class PISyncSchedulerService {
     private readonly piSyncWatermarkRepository: Repository<PISyncWatermark>,
     @InjectRepository(PIConnection)
     private readonly piConnectionRepository: Repository<PIConnection>,
-    private readonly piEventPullService: PIEventPullService,
+    private readonly link: PiLegacyJobLink,
     private readonly shutdown: ShutdownCoordinator,
   ) {}
 
@@ -64,7 +74,8 @@ export class PISyncSchedulerService {
     }
   }
 
-  async runJob(job: PISyncJob): Promise<void> {
+  /** Links the v1 job (and with `runNow`, makes its window job due immediately). */
+  async runJob(job: PISyncJob, runNow = false): Promise<void> {
     if (!job.tenantId) return;
     if (this.runningJobs.has(job.id)) {
       this.logger.warn(`PI sync job ${job.id} already running, skipping`);
@@ -72,12 +83,15 @@ export class PISyncSchedulerService {
     }
 
     this.runningJobs.add(job.id);
-    // Tracked so SIGTERM waits for the pull to finish before the DB connection closes (ING02).
-    // A pull cannot be cancelled midway; ShutdownCoordinator bounds the wait.
-    await this.shutdown.track(this.executeJob(job, job.tenantId));
+    // Tracked so SIGTERM waits for the link to finish before the DB connection closes (ING02).
+    await this.shutdown.track(this.executeJob(job, job.tenantId, runNow));
   }
 
-  private async executeJob(job: PISyncJob, tenantId: string): Promise<void> {
+  private async executeJob(
+    job: PISyncJob,
+    tenantId: string,
+    runNow: boolean,
+  ): Promise<void> {
     const startedAt = new Date();
 
     try {
@@ -91,59 +105,45 @@ export class PISyncSchedulerService {
       }
 
       const { scopeType, scopeId } = this.resolveScope(connection, extras);
-      const endTimeUtc = new Date().toISOString();
-      const startTimeUtc = await this.resolveStartTime(tenantId, scopeType, scopeId, extras);
-
-      const result = await this.piEventPullService.pullEvents({
+      const linked = await this.link.link({
+        piSyncJobId: job.id,
         tenantId,
-        startTimeUtc,
-        endTimeUtc,
-        scopeType,
-        scopeId,
-        templateName: extras.templateName,
-        maxCount: extras.maxCount || 500,
-        autoCreateProductionEvents: true,
-      });
-
-      const intervalMinutes = extras.intervalMinutes || this.parseIntervalFromSchedule(job.schedule) || 15;
-      const nextRun = new Date(Date.now() + intervalMinutes * 60 * 1000);
-
-      const updatedExtras: SyncJobConfigExtras = {
-        ...extras,
-        intervalMinutes,
+        piConnection: connection,
+        search: { scopeType, scopeId, templateName: extras.templateName },
+        intervalSeconds: this.intervalSeconds(job, extras),
         lookbackMinutes: extras.lookbackMinutes || 60,
-        syncedEventCount: (extras.syncedEventCount || 0) + result.productionEventsCreated,
-        errorCount: result.success ? extras.errorCount || 0 : (extras.errorCount || 0) + 1,
-        lastRun: startedAt.toISOString(),
-        lastSuccess: result.success ? startedAt.toISOString() : extras.lastSuccess,
-        lastError: result.success ? undefined : result.errors.join('; '),
-        nextRun: nextRun.toISOString(),
-      };
+        watermark: await this.watermarkOf(tenantId, scopeType, scopeId),
+      });
+      if (runNow) await this.link.runNow(job.id);
 
       await this.piSyncJobRepository.update(job.id, {
-        lastRunTime: startedAt,
-        nextRunTime: nextRun,
-        status: result.success ? 'success' : 'error',
-        errorMessage: result.errors.length > 0 ? result.errors.join('; ') : undefined,
-        jobConfig: JSON.stringify(updatedExtras),
+        lastRunTime: linked.lastSuccessAt ?? undefined,
+        nextRunTime: runNow ? startedAt : linked.nextRunAt,
+        status: linked.state === 'failed' ? 'error' : 'success',
+        errorMessage: linked.lastError ?? (() => 'NULL'),
       });
-
-      this.logger.log(
-        `PI sync job ${job.id} complete: fetched=${result.eventsFetched}, created=${result.productionEventsCreated}, updated=${result.productionEventsUpdated}, skipped=${result.productionEventsSkipped}, unmapped=${result.unmappedEventsCreated}`,
-      );
-    } catch (error: any) {
-      this.logger.error(`PI sync job ${job.id} failed: ${error.message}`);
-      const extras = this.parseJobConfig(job.jobConfig);
-      const intervalMinutes = extras.intervalMinutes || 15;
-      await this.piSyncJobRepository.update(job.id, {
-        lastRunTime: startedAt,
-        nextRunTime: new Date(Date.now() + intervalMinutes * 60 * 1000),
-        status: 'error',
-        errorMessage: error.message,
-      });
+    } catch (error: unknown) {
+      await this.recordFailure(job, startedAt, error);
     } finally {
       this.runningJobs.delete(job.id);
     }
+  }
+
+  private async recordFailure(
+    job: PISyncJob,
+    startedAt: Date,
+    error: unknown,
+  ): Promise<void> {
+    const message = error instanceof Error ? error.message : String(error);
+    this.logger.error(`PI sync job ${job.id} failed: ${message}`);
+    const extras = this.parseJobConfig(job.jobConfig);
+    const intervalMinutes = extras.intervalMinutes || 15;
+    await this.piSyncJobRepository.update(job.id, {
+      lastRunTime: startedAt,
+      nextRunTime: new Date(Date.now() + intervalMinutes * 60 * 1000),
+      status: 'error',
+      errorMessage: message,
+    });
   }
 
   private isJobDue(job: PISyncJob): boolean {
@@ -161,10 +161,13 @@ export class PISyncSchedulerService {
     return nextDue <= now;
   }
 
-  private parseJobConfig(jobConfig?: string | null): SyncJobConfigExtras & Record<string, any> {
+  private parseJobConfig(jobConfig?: string | null): SyncJobConfigExtras {
     if (!jobConfig) return {};
     try {
-      return JSON.parse(jobConfig);
+      const parsed: unknown = JSON.parse(jobConfig);
+      return typeof parsed === 'object' && parsed !== null
+        ? (parsed as SyncJobConfigExtras)
+        : {};
     } catch {
       return {};
     }
@@ -176,9 +179,13 @@ export class PISyncSchedulerService {
     return match ? parseInt(match[1], 10) : null;
   }
 
-  private resolveScope(connection: PIConnection, extras: SyncJobConfigExtras) {
-    const config = connection.connectionConfig ? JSON.parse(connection.connectionConfig) : {};
-    const scopeType = extras.scopeType || (config.databaseWebId ? 'database' : 'element');
+  private resolveScope(
+    connection: PIConnection,
+    extras: SyncJobConfigExtras,
+  ): { scopeType: 'database' | 'element'; scopeId: string } {
+    const config = connectionSettings(connection.connectionConfig);
+    const scopeType =
+      extras.scopeType || (config.databaseWebId ? 'database' : 'element');
     const scopeId =
       extras.scopeId ||
       config.databaseWebId ||
@@ -190,24 +197,44 @@ export class PISyncSchedulerService {
       throw new Error('No PI sync scope configured (database or element WebId)');
     }
 
-    return { scopeType: scopeType as 'database' | 'element', scopeId };
+    return { scopeType, scopeId };
   }
 
-  private async resolveStartTime(
+  private intervalSeconds(job: PISyncJob, extras: SyncJobConfigExtras): number {
+    const minutes =
+      extras.intervalMinutes || this.parseIntervalFromSchedule(job.schedule);
+    return minutes ? minutes * 60 : DEFAULT_POLL_SECONDS;
+  }
+
+  /** The v1 watermark of the scope: where a newly linked window job starts (no gap, no re-read). */
+  private async watermarkOf(
     tenantId: string,
     scopeType: 'database' | 'element',
     scopeId: string,
-    extras: SyncJobConfigExtras,
-  ): Promise<string> {
+  ): Promise<Date | null> {
     const watermark = await this.piSyncWatermarkRepository.findOne({
       where: { tenantId, syncType: scopeType, lastSyncMarker: scopeId },
     });
+    return watermark?.lastSyncTimestamp ?? null;
+  }
+}
 
-    if (watermark?.lastSyncTimestamp) {
-      return watermark.lastSyncTimestamp.toISOString();
-    }
+/** The scope settings a v1 connection's JSON config may carry. */
+interface ConnectionScopeSettings {
+  databaseWebId?: string;
+  elementWebId?: string;
+  afDatabase?: { webId?: string };
+  afRootElement?: { webId?: string };
+}
 
-    const lookbackMinutes = extras.lookbackMinutes || 60;
-    return new Date(Date.now() - lookbackMinutes * 60 * 1000).toISOString();
+function connectionSettings(json?: string | null): ConnectionScopeSettings {
+  if (!json) return {};
+  try {
+    const parsed: unknown = JSON.parse(json);
+    return typeof parsed === 'object' && parsed !== null
+      ? (parsed as ConnectionScopeSettings)
+      : {};
+  } catch {
+    return {};
   }
 }

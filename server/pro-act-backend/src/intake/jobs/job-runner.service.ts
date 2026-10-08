@@ -7,6 +7,7 @@ import {
   withTimeout,
 } from '../../common/helpers/time-bounds';
 import { runnerIdentity } from '../../common/scheduling/runner-identity';
+import { adapterErrorOf } from '../adapters/adapter-error';
 import { AdapterRegistry } from '../adapters/adapter-registry';
 import { ReadPage } from '../adapters/adapter.interface';
 import { IntegrationConnectionService } from '../connections/integration-connection.service';
@@ -104,6 +105,7 @@ export class JobRunnerService {
         scope: job.scope,
         cursor: job.committedCursor,
         pageSize: job.cadence.pageSize ?? 500,
+        jobId: job.id,
       }),
       envInt('INTAKE_READ_TIMEOUT_MS', 120_000),
       `read job ${job.id}`,
@@ -138,6 +140,7 @@ export class JobRunnerService {
     });
     if (state === null)
       return { status: 'lease_lost', accepted: page.records.length };
+    await this.afterCommit(job, page);
     if (state === 'stopped' && job.state === 'draining') {
       await this.auditRunner(lease, {
         action: 'drained',
@@ -148,6 +151,20 @@ export class JobRunnerService {
     return { status: 'committed', accepted: page.records.length, state };
   }
 
+  /** Adapter bookkeeping after the commit; its failure never undoes the committed page. */
+  private async afterCommit(job: IngestionJob, page: ReadPage): Promise<void> {
+    try {
+      await page.onCommitted?.();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Ingestion job ${job.id} post-commit hook: ${message}`);
+    }
+  }
+
+  /**
+   * Schedules the retry with backoff; an adapter error that cannot succeed on retry (lost credentials,
+   * missing permission) fails the job at once and records its health code. The cursor never moves.
+   */
   private async fail(
     job: IngestionJob,
     lease: JobLease,
@@ -157,11 +174,13 @@ export class JobRunnerService {
       error instanceof Error ? error.message : String(error)
     ).slice(0, 2000);
     this.logger.warn(`Ingestion job ${job.id} page failed: ${message}`);
-    const maxRetries = envInt('INTAKE_MAX_RETRIES', 10);
+    const classified = adapterErrorOf(error);
+    const fatal = classified !== null && !classified.retryable;
     const state = await failPage(this.dataSource.manager, lease, {
-      error: message,
+      error: classified ? `${classified.code}: ${message}` : message,
       delaySeconds: backoffSeconds(job.retryCount, 5, 900),
-      maxRetries,
+      maxRetries: fatal ? 0 : envInt('INTAKE_MAX_RETRIES', 10),
+      health: classified?.health ? { [classified.health]: 1 } : null,
     });
     if (state === 'failed') {
       await this.auditRunner(lease, {

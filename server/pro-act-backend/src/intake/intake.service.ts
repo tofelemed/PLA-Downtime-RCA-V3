@@ -9,6 +9,7 @@ import {
   validateEnvelope,
 } from './envelope/envelope-validator';
 import { RawObservation, RawOutcome } from './entities/raw-observation.entity';
+import { SourceObjectState } from './entities/source-object.entity';
 import { ObjectKey, recordException } from './exceptions/exception-store';
 import {
   AcceptResult,
@@ -366,6 +367,14 @@ function versionOf(
     observedAt: new Date(envelope.observedAt),
     revision: envelope.sourceRevision ?? null,
     kind: envelope.kind,
-    retracted: envelope.operation === 'retract',
+    state: objectStateOf(envelope),
   };
+}
+
+/** A retraction tombstones the object; a confirmed source deletion (PI06) is recorded as such. */
+function objectStateOf(envelope: CanonicalEnvelope): SourceObjectState {
+  if (envelope.operation !== 'retract') return 'active';
+  return envelope.retraction?.confirmedDeletion === true
+    ? 'deleted_confirmed'
+    : 'retracted';
 }

@@ -24,6 +24,18 @@ import { IntakeModule } from '../intake/intake.module';
 import { PiIntakeBridge } from './pi-intake-bridge';
 import { PiIntervalHandler } from './pi-interval.handler';
 import { PiWebApiAdapter } from './pi-web-api.adapter';
+import { PiPageManifest } from './pi/entities/pi-page-manifest.entity';
+import { PiOpenFrame } from './pi/entities/pi-open-frame.entity';
+import { PiSyncJobLink } from './pi/entities/pi-sync-job-link.entity';
+import { PiClientFactory } from './pi/pi-client-factory';
+import { PiFrameReader } from './pi/pi-frame-reader';
+import { PiInventory } from './pi/pi-inventory';
+import { PiLegacyJobLink } from './pi/pi-legacy-job-link';
+import { PiManifestStore } from './pi/pi-manifest-store';
+import { PiOpenFrameRefresh } from './pi/pi-open-frame-refresh';
+import { PiOpenFrameStore } from './pi/pi-open-frame-store';
+import { PiWindowFetch } from './pi/pi-window-fetch';
+import { PiWindowRead } from './pi/pi-window-read';
 
 @Module({
   imports: [
@@ -36,6 +48,9 @@ import { PiWebApiAdapter } from './pi-web-api.adapter';
       ReasonCode,
       ImpactCode,
       OEECode,
+      PiPageManifest,
+      PiOpenFrame,
+      PiSyncJobLink,
     ]),
     ProductionEventModule,
     UnmappedEventModule,
@@ -55,7 +70,22 @@ import { PiWebApiAdapter } from './pi-web-api.adapter';
     PiIntervalHandler,
     PiIntakeBridge,
     PiWebApiAdapter,
+    // certified PI read path (plan 1.6)
+    PiClientFactory,
+    PiFrameReader,
+    PiManifestStore,
+    PiOpenFrameStore,
+    PiWindowRead,
+    PiOpenFrameRefresh,
+    PiInventory,
+    PiWindowFetch,
+    PiLegacyJobLink,
   ],
-  exports: [PIEventPullService, PIWebApiService, MasterDataCodeResolverService],
+  exports: [
+    PIEventPullService,
+    PIWebApiService,
+    MasterDataCodeResolverService,
+    PiLegacyJobLink,
+  ],
 })
 export class IntegrationModule {}

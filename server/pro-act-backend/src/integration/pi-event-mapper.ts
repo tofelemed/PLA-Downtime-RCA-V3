@@ -59,59 +59,6 @@ export function resolveEventType(
   );
 }
 
-interface PiAttributeItem {
-  Name?: unknown;
-  WebId?: unknown;
-  Value?: unknown;
-  DefaultValue?: unknown;
-  Links?: { Value?: unknown };
-}
-
-/**
- * Attribute values of an event frame by name. Values are returned as delivered (digital states keep
- * their `{ Name, Value, IsSystem }` object); the typed mapping converts them.
- */
-export async function fetchEventFrameAttributes(
-  requestFn: (path: string) => Promise<unknown>,
-  webId: string,
-): Promise<Record<string, unknown>> {
-  const attributes: Record<string, unknown> = {};
-  try {
-    const listing = asRecord(
-      await requestFn(`/eventframes/${encodeURIComponent(webId)}/attributes`),
-    );
-    const items = Array.isArray(listing.Items)
-      ? (listing.Items as PiAttributeItem[])
-      : [];
-    for (const item of items) {
-      if (typeof item.Name !== 'string') continue;
-      attributes[item.Name] = await attributeValue(requestFn, item);
-    }
-  } catch {
-    // an attribute listing failure leaves the frame without attributes (mapping reports what is missing)
-  }
-  return attributes;
-}
-
-async function attributeValue(
-  requestFn: (path: string) => Promise<unknown>,
-  item: PiAttributeItem,
-): Promise<unknown> {
-  const inline = item.Value ?? item.DefaultValue ?? null;
-  const link = item.Links?.Value;
-  if (inline !== null || typeof link !== 'string') return inline;
-  try {
-    const path =
-      link.replace(/^.*\/piwebapi/i, '') ||
-      `/attributes/${encodeURIComponent(String(item.WebId))}/value`;
-    const response = await requestFn(path);
-    const record = asRecord(response);
-    return 'Value' in record ? record.Value : response;
-  } catch {
-    return null;
-  }
-}
-
 function parseJsonObject(text?: string | null): Record<string, unknown> {
   if (!text) return {};
   try {

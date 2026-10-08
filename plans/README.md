@@ -53,7 +53,7 @@ Status legend: ⬜ not started · 🔄 in progress · 🧪 implemented, tests pe
 | 🧪 | 1.3 Hierarchy mapping and code libraries | [1.3-hierarchy-mapping-and-code-libraries.md](phase-1/1.3-hierarchy-mapping-and-code-libraries.md) | T05, T18 green (unit + integration, 8 Oct); B7 B12 I4 I6 I7 I10 closed; CI run and backfill on the data host open |
 | 🧪 | 1.4 Event operations: split, merge, bulk-code, close | [1.4-event-operations.md](phase-1/1.4-event-operations.md) | T37 green (unit + integration, 8 Oct); bulk jobs via worker; CI run open |
 | 🧪 | 1.5 Durable intake core: raw store, jobs, inbox/outbox, quarantine, replay | [1.5-durable-intake-core.md](phase-1/1.5-durable-intake-core.md) | T06, T10 (inbox), replay invariance, crash recovery green (unit + integration, 8 Oct); PI pull through the pipeline; CI run open |
-| ⬜ | 1.6 PI event frames certified | [1.6-pi-event-frames-certified.md](phase-1/1.6-pi-event-frames-certified.md) | T07, T08, T46, §6.4 matrix |
+| 🧪 | 1.6 PI event frames certified | [1.6-pi-event-frames-certified.md](phase-1/1.6-pi-event-frames-certified.md) | T07, T08, T46, §6.4 matrix green against the PI Web API simulator (8 Oct); legacy pull on the certified path, v1 jobs crosswalked; **real-PI certification ⛔ pending D02** |
 | ⬜ | 1.7 PI actuals: signals, counters, rates, output EFs | [1.7-pi-actuals-signals.md](phase-1/1.7-pi-actuals-signals.md) | T25, T26, T27 |
 | ⬜ | 1.8 MQTT adapter | [1.8-mqtt-adapter.md](phase-1/1.8-mqtt-adapter.md) | T09, T11 |
 | ⬜ | 1.9 Kafka adapter and internal transport | [1.9-kafka-adapter-and-internal-transport.md](phase-1/1.9-kafka-adapter-and-internal-transport.md) | T10, T23 (transport) |
@@ -100,7 +100,7 @@ Status legend: ⬜ not started · 🔄 in progress · 🧪 implemented, tests pe
 | ID | Decision | Owner | Proposed default | Status |
 |---|---|---|---|---|
 | D01 | Code/build baseline exists? | Engineering lead | Yes: this repo (see Baseline) | ✅ confirmed; commit + push |
-| D02 | PI versions, AF templates, sentinel, auth, tag semantics | PI admin | Templates per `pi-event-mapper.ts` defaults; sentinel 9999-12-31 | 🔄 Web API + SDK exist; details outstanding (gate 1.6) |
+| D02 | PI versions, AF templates, sentinel, auth, tag semantics | PI admin | Templates per `pi-event-mapper.ts` defaults; sentinel 9999-12-31 | 🔄 Web API + SDK exist; details outstanding — 1.6 built and green on the simulator, real-PI certification ⛔ waits for the items in DECISIONS "Still needed" |
 | D03 | Calendars, day start, shifts, crews, tz | Operations | Shift leaf, daily rollup; **Asia/Tehran** | ✅ default + timezone |
 | D04 | Plan vs capacity baseline, OEE policy, planned exclusions | Production owner | Both ledgers; planned stops inside S reduce A; GE tile on | ✅ default |
 | D05 | Authoritative actuals, gross/good boundary | Production/metrology | PI Production Output EF primary; counters fallback | ✅ default |

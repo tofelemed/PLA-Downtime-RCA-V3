@@ -7,9 +7,11 @@ import { PIEvent } from '../pi-event/pi-event.entity';
 import { PISyncWatermark } from '../pi-sync-watermark/pi-sync-watermark.entity';
 import { SourceMappingService } from '../source-mapping/source-mapping.service';
 import { PIWebApiService } from './pi-web-api.service';
-import { fetchEventFrameAttributes } from './pi-event-mapper';
+import { PiFramePayload } from './pi-envelope';
 import { PiIntakeBridge, PiPullScope } from './pi-intake-bridge';
 import { FrameOutcome, PiEventFrame } from './pi-frame-ingest.service';
+import { PiWindowFetch } from './pi/pi-window-fetch';
+import { piEndTime } from './pi/pi-time';
 
 export interface PullEventsRequest {
   tenantId: string;
@@ -18,6 +20,7 @@ export interface PullEventsRequest {
   scopeType?: 'database' | 'element';
   scopeId?: string;
   templateName?: string;
+  /** page size (default 500); every page of the window is read (plan 1.6, I8) */
   maxCount?: number;
   autoCreateProductionEvents?: boolean;
 }
@@ -54,8 +57,10 @@ const COUNTER_OF: Readonly<Record<FrameOutcome, keyof PullCounters>> = {
 };
 
 /**
- * Pulls PI event frames, stores the raw frames (v1 `pi_events`) and ingests each one through the durable
- * intake pipeline (plan 1.5: raw store → canonical envelope → source revision, plans 1.2/1.3).
+ * On-demand v1 pull: reads every page of the window on the certified PI read path (plan 1.6: TLS on,
+ * retries, batched attributes, ancestors, open-frame sentinel), stores the raw frames (v1 `pi_events`)
+ * and ingests each one through the durable intake pipeline (plan 1.5 → plans 1.2/1.3). The v1
+ * watermark moves only after a pull without errors. Scheduled pulls run as leased ingestion jobs.
  */
 @Injectable()
 export class PIEventPullService {
@@ -72,6 +77,7 @@ export class PIEventPullService {
     private readonly attributeMappings: AttributeMappingService,
     private readonly sourceMappings: SourceMappingService,
     private readonly bridge: PiIntakeBridge,
+    private readonly windows: PiWindowFetch,
   ) {}
 
   async pullEvents(request: PullEventsRequest): Promise<PullEventsResponse> {
@@ -79,19 +85,21 @@ export class PIEventPullService {
     const events: PIEvent[] = [];
     try {
       const pull = await this.fetchFrames(request);
-      counters.eventsFetched = pull.frames.length;
+      counters.eventsFetched = pull.payloads.length;
       const scope = await this.pullScope(request, pull.connection);
-      for (const frame of pull.frames) {
-        await this.processFrame(request, scope, frame, { counters, events });
+      for (const payload of pull.payloads) {
+        await this.processFrame(request, scope, payload, { counters, events });
       }
       pull.connection.lastSyncTime = new Date();
       await this.piConnectionRepository.save(pull.connection);
-      await this.upsertWatermark(
-        request.tenantId,
-        pull.scopeType,
-        pull.scopeId,
-        pull.endTime,
-      );
+      if (counters.errors.length === 0) {
+        await this.upsertWatermark(
+          request.tenantId,
+          pull.scopeType,
+          pull.scopeId,
+          pull.endTime,
+        );
+      }
       return { success: counters.errors.length === 0, ...counters, events };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
@@ -106,7 +114,7 @@ export class PIEventPullService {
     scopeType: 'database' | 'element';
     scopeId: string;
     endTime: string;
-    frames: PiEventFrame[];
+    payloads: PiFramePayload[];
   }> {
     const connection = await this.piWebApiService.getActiveConnection(
       request.tenantId,
@@ -119,19 +127,17 @@ export class PIEventPullService {
     const endTime = request.endTimeUtc || new Date().toISOString();
     const startTime =
       request.startTimeUtc || new Date(Date.now() - 3600 * 1000).toISOString();
-    const data = (await this.piWebApiService.getEventFrames(request.tenantId, {
-      scopeType,
-      scopeId,
-      startTimeUtc: startTime,
-      endTimeUtc: endTime,
-      templateName: request.templateName,
-      maxCount: request.maxCount || 200,
-    })) as { Items?: PiEventFrame[] } | null;
-    const frames = data?.Items ?? [];
+    const { payloads } = await this.windows.fetch(connection, {
+      tenantId: request.tenantId,
+      scope: { scopeType, scopeId, templateName: request.templateName },
+      start: startTime,
+      end: endTime,
+      pageSize: request.maxCount || 500,
+    });
     this.logger.log(
-      `Fetched ${frames.length} event frames from PI for tenant ${request.tenantId}`,
+      `Fetched ${payloads.length} event frames from PI for tenant ${request.tenantId}`,
     );
-    return { connection, scopeType, scopeId, endTime, frames };
+    return { connection, scopeType, scopeId, endTime, payloads };
   }
 
   async testConnection(
@@ -142,16 +148,13 @@ export class PIEventPullService {
 
   /**
    * Mapping profile and resolver, loaded once per pull (no per-frame rule queries), and the intake
-   * identity of the connection (mirrored into `integration_connections` when frames are ingested).
+   * identity of the connection (already mirrored into `integration_connections` by the fetch).
    */
   private async pullScope(
     request: PullEventsRequest,
     connection: PIConnection,
   ): Promise<PiPullScope> {
     const tenantId = request.tenantId;
-    if (request.autoCreateProductionEvents !== false) {
-      await this.bridge.prepare(tenantId, connection);
-    }
     return {
       context: {
         tenantId,
@@ -173,16 +176,11 @@ export class PIEventPullService {
   private async processFrame(
     request: PullEventsRequest,
     scope: PiPullScope,
-    frame: PiEventFrame,
+    payload: PiFramePayload,
     sink: { counters: PullCounters; events: PIEvent[] },
   ): Promise<void> {
+    const { frame, attributes } = payload;
     try {
-      const requestFn = (path: string) =>
-        this.piWebApiService.request(request.tenantId, path);
-      const attributes = await fetchEventFrameAttributes(
-        requestFn,
-        frame.WebId,
-      );
       sink.events.push(
         await this.storeRawFrame(scope.context, frame, attributes),
       );
@@ -220,7 +218,7 @@ export class PIEventPullService {
       template: frame.TemplateName || undefined,
       name: frame.Name ?? undefined,
       startUtc: frame.StartTime ? new Date(frame.StartTime) : undefined,
-      endUtc: frame.EndTime ? new Date(frame.EndTime) : undefined,
+      endUtc: piEndTime(frame.EndTime) ?? undefined,
       primaryAfId: frame.PrimaryReferencedElement?.WebId || undefined,
       eventData: JSON.stringify({ ...frame, Attributes: attributes }),
     };
