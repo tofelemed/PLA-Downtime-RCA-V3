@@ -59,10 +59,17 @@ export class EventReferencesValidator {
     ) {
       throw invalidReference('planId');
     }
-    if (
-      refs.reasonCodeId &&
-      (await this.reasons.countBy({ id: refs.reasonCodeId, tenantId })) === 0
-    ) {
+    if (refs.reasonCodeId) {
+      await this.assertReasonCodeOwned(tenantId, refs.reasonCodeId);
+    }
+  }
+
+  /** 422 INVALID_REFERENCE unless the reason code is in the tenant's own library. */
+  async assertReasonCodeOwned(
+    tenantId: string,
+    reasonCodeId: string,
+  ): Promise<void> {
+    if ((await this.reasons.countBy({ id: reasonCodeId, tenantId })) === 0) {
       throw invalidReference('reasonCodeId');
     }
   }

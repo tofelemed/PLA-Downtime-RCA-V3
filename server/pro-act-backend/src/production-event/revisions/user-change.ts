@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { assertRevision } from '../../common/concurrency/revision';
 import { ProductionEvent } from '../production-event.entity';
@@ -52,6 +53,7 @@ export async function applyUserChangeIn(
   if (!existing) {
     return { result: null, message: null };
   }
+  assertNotSuperseded(existing);
   if (change.expectedRowVersion !== undefined) {
     assertRevision(existing.rowVersion, change.expectedRowVersion);
   }
@@ -142,6 +144,17 @@ export function valuesOf(
     oldValues: completeFacts(factsOf(before, fields), fields),
     newValues: completeFacts(factsOf(after, fields), fields),
   };
+}
+
+/** 409 INVALID_STATE: a split/merge contributor is lineage only; its replacements are edited instead. */
+export function assertNotSuperseded(event: ProductionEvent): void {
+  if (event.physicalState === 'superseded') {
+    throw new ConflictException({
+      code: 'INVALID_STATE',
+      message:
+        'The event was superseded by a split or merge; edit the events that replaced it',
+    });
+  }
 }
 
 function withOverrides(

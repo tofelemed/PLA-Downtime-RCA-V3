@@ -73,6 +73,16 @@ describe('legacy status adapter (DT11)', () => {
     },
   );
 
+  it('shows a superseded split/merge contributor as Cancelled (plan 1.4)', () => {
+    expect(
+      toLegacyStatus({
+        physicalState: 'superseded',
+        codingState: 'coded',
+        rcaState: 'linked',
+      }),
+    ).toBe('Cancelled');
+  });
+
   it('takes the physical state from the interval, not the label', () => {
     expect(
       fromLegacyStatus('Open', {

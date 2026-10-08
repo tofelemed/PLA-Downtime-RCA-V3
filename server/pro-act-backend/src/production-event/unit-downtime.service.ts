@@ -37,7 +37,13 @@ export class UnitDowntimeService {
   ): Promise<UnitDowntime> {
     const qb = this.events
       .createQueryBuilder('event')
-      .select(['event.id', 'event.assetId', 'event.startTime', 'event.endTime'])
+      .select([
+        'event.id',
+        'event.occurrenceId',
+        'event.assetId',
+        'event.startTime',
+        'event.endTime',
+      ])
       .where('event.tenantId = :tenantId AND event.unitId = :unitId', {
         tenantId,
         unitId,
@@ -59,6 +65,7 @@ export class UnitDowntimeService {
     return computeUnitDowntime(
       rows.map((row) => ({
         id: row.id,
+        occurrenceId: row.occurrenceId,
         assetId: row.assetId ?? null,
         start: new Date(row.startTime),
         end: row.endTime ? new Date(row.endTime) : null,

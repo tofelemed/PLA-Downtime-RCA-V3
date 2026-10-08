@@ -72,4 +72,21 @@ describe('computeUnitDowntime (DT05)', () => {
     expect(result.downtimeSeconds).toBe(0);
     expect(result.occurrenceCount).toBe(0);
   });
+
+  it('KPI06: split fragments of one stop count as one occurrence (plan 1.4)', () => {
+    const result = computeUnitDowntime(
+      [
+        { ...event('c1', 'a1', '10:00', '11:00'), occurrenceId: 'stop' },
+        { ...event('c2', 'a1', '11:00', '12:00'), occurrenceId: 'stop' },
+      ],
+      window,
+      later,
+    );
+    expect(result.downtimeSeconds).toBe(7200);
+    expect(result.occurrenceCount).toBe(1);
+    expect(result.occurrences.map(({ eventId }) => eventId)).toEqual([
+      'c1',
+      'c2',
+    ]);
+  });
 });

@@ -18,6 +18,11 @@ export const REVIEW_DECISIONS = ['keep_override', 'accept_source'] as const;
 export type ReviewDecision = (typeof REVIEW_DECISIONS)[number];
 
 const ACCEPTED_SOURCE = 'accepted source value';
+/** items whose field has a source value to accept (a conflict, or a close awaiting the source) */
+const ACCEPTABLE_KINDS: readonly string[] = [
+  'source_vs_override_conflict',
+  'pending_source_confirmation',
+];
 
 /**
  * §5.3 decision on an open review item of the caller's tenant (and unit scope): keep the override, or
@@ -84,10 +89,11 @@ async function acceptSource(
 ): Promise<EventChangeMessage> {
   const field = item.field;
   const existing = await lockEvent(manager, item.eventId);
-  if (item.kind !== 'source_vs_override_conflict' || !field || !existing) {
+  if (!ACCEPTABLE_KINDS.includes(item.kind) || !field || !existing) {
     throw new UnprocessableEntityException({
       code: 'INVALID_DECISION',
-      message: 'Only source/override conflicts can accept the source value',
+      message:
+        'Only source/override conflicts and pending closes can accept the source value',
     });
   }
   const source = await latestSourceRevision(manager, existing.id);

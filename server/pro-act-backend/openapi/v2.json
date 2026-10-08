@@ -1,6 +1,203 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v2/production-events/merge": {
+      "post": {
+        "description": "Each event carries the `expectedVersion` the caller read (412 STALE_REVISION). One new event spans the union; contributors become superseded with `merged_from` lineage. 422: MERGE_DIFFERENT_UNITS, MERGE_INCOMPATIBLE_CLASSIFICATION, MERGE_GAP_EXCEEDED, MERGE_CODING_CONFLICT (details list the conflicts); 409 INVALID_STATE for superseded or retracted events; 404 for foreign or unknown ids.",
+        "operationId": "ProductionEventOperationsV2Controller_merge_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeEventsV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Merged"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Merge adjacent or overlapping events of one unit (DT09)",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    },
+    "/api/v2/production-events/bulk-code": {
+      "post": {
+        "description": "`preview: true` reports before/after per event, exclusions (not found, superseded, retracted, stale version, duplicate) and affected windows. `preview: false` applies up to 500 events atomically (404/409/412/422 when any item is excluded) or, above 500, answers 202 with a job processed in chunks of 200.",
+        "operationId": "ProductionEventOperationsV2Controller_bulkCode_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkCodeV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preview or applied result"
+          },
+          "202": {
+            "description": "Job accepted (`GET /jobs/{id}`)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Code many events at once (DT10)",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    },
+    "/api/v2/production-events/{id}/split": {
+      "post": {
+        "description": "Two children with the parent coding and occurrence; the parent becomes superseded (`split_child_of` lineage). 422 SPLIT_OUTSIDE_INTERVAL; 409 INVALID_STATE for superseded or retracted events.",
+        "operationId": "ProductionEventOperationsV2Controller_split_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag of the event as read (428 without, 412 when stale)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SplitEventV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Split"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Split an event at an instant (DT09)",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    },
+    "/api/v2/production-events/{id}/close": {
+      "post": {
+        "description": "Sets the end with a user revision (closing is not approving). On a source-owned event the end is an override until the source delivers the same end (review item resolved automatically). 409 EVENT_NOT_OPEN / INVALID_STATE; 422 CLOSE_END_BEFORE_START / CLOSE_END_IN_FUTURE.",
+        "operationId": "ProductionEventOperationsV2Controller_close_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "ETag of the event as read (428 without, 412 when stale)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseEventV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Close an open event (DT10)",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    },
     "/api/v2/production-events": {
       "get": {
         "description": "Filters AND across parameters and OR within a repeated parameter; from/to is a half-open window with overlap semantics; pages are keyset-based on (startTime, id). The tenant comes from the identity.",
@@ -2517,6 +2714,36 @@
           "v2 · Code Mapping Rules"
         ]
       }
+    },
+    "/api/v2/jobs/{id}": {
+      "get": {
+        "description": "state queued → running → completed | partial | failed; `chunks` lists each atomic chunk with its outcome and error code. A foreign or unknown id is 404.",
+        "operationId": "JobsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Status of a job of the caller tenant",
+        "tags": [
+          "v2 · Jobs"
+        ]
+      }
     }
   },
   "info": {
@@ -2536,6 +2763,154 @@
       }
     },
     "schemas": {
+      "EventVersionRefDto": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "eventId",
+          "expectedVersion"
+        ]
+      },
+      "MergeEventsV2Dto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Why (kept in the revisions)"
+          },
+          "events": {
+            "minItems": 2,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventVersionRefDto"
+            }
+          },
+          "maxGapSeconds": {
+            "type": "number",
+            "default": 0,
+            "maximum": 86400,
+            "description": "Largest gap between consecutive events that still merges (0 = adjacent or overlapping only)"
+          },
+          "overrideClassification": {
+            "type": "boolean",
+            "default": false,
+            "description": "Merge events with different physical types or schedule classes (the earliest event wins)"
+          }
+        },
+        "required": [
+          "reason",
+          "events"
+        ]
+      },
+      "BulkCodesDto": {
+        "type": "object",
+        "properties": {
+          "reasonCodeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Reason (cause) code"
+          },
+          "scheduleClass": {
+            "type": "string",
+            "enum": [
+              "planned",
+              "unplanned",
+              "external",
+              "unknown"
+            ]
+          },
+          "oeeComponent": {
+            "type": "string",
+            "enum": [
+              "availability",
+              "performance",
+              "quality",
+              "idle",
+              "none"
+            ]
+          }
+        }
+      },
+      "BulkCodeV2Dto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Why (kept in the revisions)"
+          },
+          "items": {
+            "minItems": 1,
+            "maxItems": 10000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventVersionRefDto"
+            }
+          },
+          "codes": {
+            "$ref": "#/components/schemas/BulkCodesDto"
+          },
+          "preview": {
+            "type": "boolean",
+            "description": "true: report before/after, exclusions and affected windows without changing anything"
+          }
+        },
+        "required": [
+          "reason",
+          "items",
+          "codes",
+          "preview"
+        ]
+      },
+      "SplitEventV2Dto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Why (kept in the revisions)"
+          },
+          "splitAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Strictly inside the event (before now while it is open)"
+          }
+        },
+        "required": [
+          "reason",
+          "splitAt"
+        ]
+      },
+      "CloseEventV2Dto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Why (kept in the revisions)"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Exclusive end: after the start, not in the future"
+          }
+        },
+        "required": [
+          "reason",
+          "endTime"
+        ]
+      },
       "CreateProductionEventV2Dto": {
         "type": "object",
         "properties": {

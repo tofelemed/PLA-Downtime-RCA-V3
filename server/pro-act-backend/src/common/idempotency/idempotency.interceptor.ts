@@ -88,7 +88,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
               concatMap((body: unknown) =>
                 from(
                   this.idempotency.complete(tenantId, key, {
-                    status: successStatus,
+                    status: storedStatus(response, successStatus),
                     body,
                   }),
                 ).pipe(map(() => body)),
@@ -103,6 +103,15 @@ export class IdempotencyInterceptor implements NestInterceptor {
       }),
     );
   }
+}
+
+/**
+ * Status to replay: Nest sets the route's status before interceptors run, so a different 2xx on the
+ * response was chosen by the handler itself (e.g. 202 when a command became a job).
+ */
+function storedStatus(response: Response, routeStatus: number): number {
+  const status = response.statusCode;
+  return status >= 200 && status < 300 ? status : routeStatus;
 }
 
 function readKey(request: Request): string {

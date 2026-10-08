@@ -6,6 +6,7 @@ export const REVIEW_ITEM_KINDS = [
   'source_vs_override_conflict',
   'late_correction',
   'retraction',
+  'pending_source_confirmation',
 ] as const;
 export type ReviewItemKind = (typeof REVIEW_ITEM_KINDS)[number];
 

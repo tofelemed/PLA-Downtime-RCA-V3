@@ -7,6 +7,8 @@ import { ProductionEvent } from '../../production-event/production-event.entity'
 import { EventCoding } from '../../production-event/revisions/event-coding.entity';
 import { EventReviewItem } from '../../production-event/revisions/event-review-item.entity';
 import { EventRevision } from '../../production-event/revisions/event-revision.entity';
+import { EventRelation } from '../../event-operations/event-relation.entity';
+import { toEventRelationView } from './event-operation.view';
 import {
   ProductionEventHistoryView,
   toEventCodingView,
@@ -29,6 +31,8 @@ export class ProductionEventHistoryService {
     private readonly coding: Repository<EventCoding>,
     @InjectRepository(EventReviewItem)
     private readonly reviewItems: Repository<EventReviewItem>,
+    @InjectRepository(EventRelation)
+    private readonly relations: Repository<EventRelation>,
   ) {}
 
   async history(
@@ -44,16 +48,33 @@ export class ProductionEventHistoryService {
     if (visible === 0) {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
     }
-    const [revisions, coding, reviewItems] = await Promise.all([
+    const [revisions, coding, reviewItems, relations] = await Promise.all([
       this.forEvent(this.revisions, context, eventId, 'revision'),
       this.forEvent(this.coding, context, eventId, 'revision'),
       this.forEvent(this.reviewItems, context, eventId, 'createdAt'),
+      this.lineage(context, eventId),
     ]);
     return {
       revisions: revisions.map(toEventRevisionView),
       coding: coding.map(toEventCodingView),
       reviewItems: reviewItems.map(toEventReviewItemView),
+      relations: relations.map(toEventRelationView),
     };
+  }
+
+  /** Relations where the event is either end (DT09 lineage). */
+  private lineage(
+    context: RequestContext,
+    eventId: string,
+  ): Promise<EventRelation[]> {
+    return scopedQuery(this.relations, 'row', { context })
+      .andWhere('(row.fromEventId = :eventId OR row.toEventId = :eventId)', {
+        eventId,
+      })
+      .orderBy('row.createdAt', 'ASC')
+      .addOrderBy('row.id', 'ASC')
+      .take(HISTORY_LIMIT)
+      .getMany();
   }
 
   private forEvent<T extends ObjectLiteral>(

@@ -28,6 +28,11 @@ import { EventRevisionService } from './revisions/event-revision.service';
     EventRevisionService,
     EventChangeNotifier,
   ],
-  exports: [ProductionEventService, UnitDowntimeService, EventRevisionService],
+  exports: [
+    ProductionEventService,
+    UnitDowntimeService,
+    EventRevisionService,
+    EventChangeNotifier,
+  ],
 })
 export class ProductionEventModule {}

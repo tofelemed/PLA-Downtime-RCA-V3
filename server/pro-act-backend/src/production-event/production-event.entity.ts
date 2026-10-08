@@ -65,6 +65,7 @@ export const DURATION_SECONDS_EXPRESSION =
   'physicalType',
   'startTime',
 ])
+@Index('IDX_production_events_tenant_occurrence', ['tenantId', 'occurrenceId'])
 @Index('IDX_production_events_open_by_unit', ['tenantId', 'unitId'], {
   where: '"end_time" IS NULL',
 })
@@ -439,4 +440,14 @@ export class ProductionEvent {
   /** where each code-driven classification came from (code rule, code default, user; plan 1.3) */
   @Column({ name: 'classification_basis', type: 'jsonb', nullable: true })
   classificationBasis?: ClassificationBasis | null;
+
+  // --- Event operations (plan 1.4, DT09) ---
+
+  /** physical stop occurrence (KPI06); split children share it. A trigger sets it to `id` when absent. */
+  @Column({ name: 'occurrence_id', type: 'uuid' })
+  occurrenceId: string;
+
+  /** the event a merge replaced this one with; null for split parents (two children) */
+  @Column({ name: 'superseded_by_event_id', type: 'uuid', nullable: true })
+  supersededByEventId?: string | null;
 }

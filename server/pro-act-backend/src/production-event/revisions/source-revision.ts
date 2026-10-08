@@ -20,6 +20,11 @@ import { EventReviewItem } from './event-review-item.entity';
 import { ActorKind, EventRevision } from './event-revision.entity';
 import { RevisionActor } from './revision-actor';
 import {
+  confirmedOverrides,
+  resolveConfirmed,
+  withoutOverrides,
+} from './source-confirmation';
+import {
   appendRevision,
   hasRevisionTenant,
   latestSourceRevision,
@@ -54,8 +59,9 @@ const DATE_FIELDS: ReadonlySet<string> = new Set(['startTime', 'endTime']);
 
 /**
  * ING01/ING06: identical content is a duplicate delivery (counted, no revision). Otherwise the changed
- * source fields without a user override are written, overridden ones open a review item, and a source
- * revision is recorded. Coding, RCA and workflow state are never reset (B5/I1).
+ * source fields without a user override are written, overridden ones open a review item (unless the
+ * source now confirms the user's value: the override is dropped and its open items resolved, plan 1.4),
+ * and a source revision is recorded. Coding, RCA and workflow state are never reset (B5/I1).
  */
 export async function applySourceIn(
   manager: EntityManager,
@@ -75,14 +81,13 @@ export async function applySourceIn(
     return { result: 'duplicate', message: null };
   }
   const overrides = existing.userOverrides ?? {};
-  // attribute facts without a column (plan 1.3) are kept in the revision only
-  const columns = changed.filter((field) =>
-    SOURCE_COLUMN_FIELDS.includes(field),
-  );
-  const accepted = columns.filter((field) => overrides[field] === undefined);
+  const plan = planFields(existing, facts, changed);
   const revision = await nextRevisionNumber(manager, eventId);
   const updated = await writeEvent(manager, eventId, {
-    ...sourceColumns(existing, facts, accepted),
+    ...sourceColumns(existing, facts, plan.accepted),
+    ...(plan.confirmed.length > 0
+      ? { userOverrides: withoutOverrides(overrides, plan.confirmed) }
+      : {}),
     currentSourceRevision: revision,
   });
   const stored = await appendRevision(manager, updated, {
@@ -93,11 +98,37 @@ export async function applySourceIn(
     changeReason: provenance.reason,
     sourceRevision: provenance.sourceRevision,
   });
-  const conflicts = columns.filter((field) => overrides[field] !== undefined);
-  await openConflicts(manager, updated, stored, conflicts);
+  await openConflicts(manager, updated, stored, plan.conflicts);
+  await resolveConfirmed(manager, eventId, plan.confirmed);
+  if (existing.physicalState === 'superseded') {
+    await openLateCorrection(manager, updated, stored);
+  }
   return {
     result: 'revised',
     message: changeMessage(existing, updated, revision, 'source'),
+  };
+}
+
+/**
+ * Changed source columns (attribute facts without a column, plan 1.3, stay in the revision only):
+ * `accepted` are written, `conflicts` keep the user override and open a review item, `confirmed` are
+ * overrides the source now delivers with the same value (dropped, items resolved; plan 1.4).
+ */
+function planFields(
+  existing: ProductionEvent,
+  facts: EventFacts,
+  changed: readonly string[],
+): { accepted: string[]; conflicts: string[]; confirmed: string[] } {
+  const overrides = existing.userOverrides ?? {};
+  const columns = changed.filter((field) =>
+    SOURCE_COLUMN_FIELDS.includes(field),
+  );
+  const overridden = columns.filter((field) => overrides[field] !== undefined);
+  const confirmed = confirmedOverrides(existing, facts, overridden);
+  return {
+    accepted: columns.filter((field) => overrides[field] === undefined),
+    conflicts: overridden.filter((field) => !confirmed.includes(field)),
+    confirmed,
   };
 }
 
@@ -228,4 +259,29 @@ async function openConflicts(
       }),
     );
   }
+}
+
+/**
+ * The source corrected an event that a split or merge already replaced (plan 1.4): the correction is
+ * kept on the superseded event (source evidence is never moved) and a person reviews the replacements.
+ */
+async function openLateCorrection(
+  manager: EntityManager,
+  event: ProductionEvent,
+  sourceRevision: EventRevision,
+): Promise<void> {
+  const items = manager.getRepository(EventReviewItem);
+  await items.save(
+    items.create({
+      tenantId: sourceRevision.tenantId,
+      eventId: event.id,
+      kind: 'late_correction',
+      field: null,
+      sourceRevisionId: sourceRevision.id,
+      codingRevisionId: null,
+      state: 'open',
+      createdBy: null,
+      updatedBy: null,
+    }),
+  );
 }

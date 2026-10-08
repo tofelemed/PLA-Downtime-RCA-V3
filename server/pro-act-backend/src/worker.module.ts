@@ -4,6 +4,7 @@ import { CommonModule } from './common/common.module';
 import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { SchedulerModule } from './common/scheduling/scheduler.module';
 import { dataSourceOptions } from './database/data-source';
+import { EventOperationsModule } from './event-operations/event-operations.module';
 import { registerPgTypeParsers } from './database/pg-type-parsers';
 import { WorkerHealthServer } from './health/worker-health.server';
 import { PISyncJobModule } from './pi-sync-job/pi-sync-job.module';
@@ -33,6 +34,8 @@ registerPgTypeParsers();
     SchedulerModule.register('worker'),
     PISyncJobModule,
     IdempotencyModule,
+    // bulk coding jobs above the atomic limit (plan 1.4, API04)
+    EventOperationsModule,
   ],
   providers: [WorkerHealthServer],
 })

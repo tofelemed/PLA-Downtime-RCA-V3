@@ -3,6 +3,8 @@ import { BoundedInterval, clip, unionSeconds } from '../time/interval-algebra';
 /** One downtime event as the calculation needs it. */
 export interface DowntimeEventInput {
   id: string;
+  /** physical stop occurrence; split children share it (plan 1.4); defaults to `id` */
+  occurrenceId?: string | null;
   assetId: string | null;
   start: Date;
   end: Date | null;
@@ -10,6 +12,7 @@ export interface DowntimeEventInput {
 
 export interface DowntimeOccurrence {
   eventId: string;
+  occurrenceId: string;
   assetId: string | null;
   /** clipped to the window (and to `asOf` while running) */
   start: Date;
@@ -27,7 +30,7 @@ export interface UnitDowntime {
   downtimeSeconds: number;
   /** union per asset; not additive across assets */
   assetSeconds: Record<string, number>;
-  /** one per event, however many boundaries it crosses (T29) */
+  /** one per physical stop occurrence, however many boundaries or split fragments it has (T29, KPI06) */
   occurrenceCount: number;
   occurrences: DowntimeOccurrence[];
 }
@@ -54,7 +57,7 @@ export function computeUnitDowntime(
     window,
     downtimeSeconds: unionSeconds(occurrences),
     assetSeconds: perAsset(occurrences),
-    occurrenceCount: occurrences.length,
+    occurrenceCount: new Set(occurrences.map((o) => o.occurrenceId)).size,
     occurrences,
   };
 }
@@ -71,6 +74,7 @@ function occurrenceOf(
   return [
     {
       eventId: event.id,
+      occurrenceId: event.occurrenceId ?? event.id,
       assetId: event.assetId,
       start: clipped.start,
       end: clipped.end,

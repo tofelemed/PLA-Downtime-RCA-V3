@@ -26,6 +26,11 @@ import { CodeMappingRuleService } from '../code-library/code-mapping-rule.servic
 import { SourceMapping } from '../source-mapping/source-mapping.entity';
 import { SourceMappingModule } from '../source-mapping/source-mapping.module';
 import { SourceMappingService } from '../source-mapping/source-mapping.service';
+import { BulkCodeService } from '../event-operations/bulk-code.service';
+import { BulkJobService } from '../event-operations/bulk-job.service';
+import { EventCommandService } from '../event-operations/event-command.service';
+import { EventOperationsModule } from '../event-operations/event-operations.module';
+import { EventRelation } from '../event-operations/event-relation.entity';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
 
@@ -68,6 +73,17 @@ class SourceMappingModuleStub {}
 })
 class AttributeMappingModuleStub {}
 
+/** Stands in for the plan 1.4 event operations (commands, bulk coding, jobs). */
+@Module({
+  providers: [
+    { provide: EventCommandService, useValue: {} },
+    { provide: BulkCodeService, useValue: {} },
+    { provide: BulkJobService, useValue: {} },
+  ],
+  exports: [EventCommandService, BulkCodeService, BulkJobService],
+})
+class EventOperationsModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -93,6 +109,8 @@ async function generate(): Promise<string> {
     .useValue({})
     .overrideProvider(getRepositoryToken(AttributeMappingVersion))
     .useValue({})
+    .overrideProvider(getRepositoryToken(EventRelation))
+    .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)
     .overrideModule(CodeLibraryModule)
@@ -101,6 +119,8 @@ async function generate(): Promise<string> {
     .useModule(SourceMappingModuleStub)
     .overrideModule(AttributeMappingModule)
     .useModule(AttributeMappingModuleStub)
+    .overrideModule(EventOperationsModule)
+    .useModule(EventOperationsModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

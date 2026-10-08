@@ -9,7 +9,7 @@
 | 🧪 | [1.1 Event interval model and classifications](1.1-event-interval-model.md) | 0.3, 0.4 | T01 T02 T03 T29 (+T42 advisory rule) — green locally |
 | 🧪 | [1.2 Event revisions and source ownership](1.2-event-revisions-and-source-ownership.md) | 1.1 | T04 — green locally |
 | 🧪 | [1.3 Hierarchy mapping and code libraries](1.3-hierarchy-mapping-and-code-libraries.md) | 0.4 | T05 T18 — green locally |
-| ⬜ | [1.4 Event operations](1.4-event-operations.md) | 1.1, 1.2 | T37 |
+| 🧪 | [1.4 Event operations](1.4-event-operations.md) | 1.1, 1.2 | T37 — green locally |
 | ⬜ | [1.5 Durable intake core](1.5-durable-intake-core.md) | 0.3, 0.4 | T06; T10 (inbox part); replay invariance |
 | ⬜ | [1.6 PI event frames certified](1.6-pi-event-frames-certified.md) | 1.2, 1.3, 1.5 | T07 T08 T46; §6.4 matrix |
 | ⬜ | [1.7 PI actuals: signals, counters, rates](1.7-pi-actuals-signals.md) | 1.5, 1.6 | T25 T26 T27 |

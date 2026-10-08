@@ -30,6 +30,11 @@ import { OeeCodesV2Controller } from './code-libraries/oee-codes-v2.controller';
 import { ReasonCodesV2Controller } from './code-libraries/reason-codes-v2.controller';
 import { SourceMappingsV2Controller } from './source-mappings/source-mappings-v2.controller';
 import { SourceMappingsV2Service } from './source-mappings/source-mappings-v2.service';
+import { EventRelation } from '../event-operations/event-relation.entity';
+import { EventOperationsModule } from '../event-operations/event-operations.module';
+import { JobsV2Controller } from './jobs/jobs-v2.controller';
+import { ProductionEventOperationsV2Controller } from './production-events/production-event-operations-v2.controller';
+import { ProductionEventOperationsV2Service } from './production-events/production-event-operations-v2.service';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -48,13 +53,16 @@ import { SourceMappingsV2Service } from './source-mappings/source-mappings-v2.se
       EventReviewItem,
       SourceMapping,
       AttributeMappingVersion,
+      EventRelation,
     ]),
     ProductionEventModule,
     CodeLibraryModule,
     SourceMappingModule,
     AttributeMappingModule,
+    EventOperationsModule,
   ],
   controllers: [
+    ProductionEventOperationsV2Controller,
     ProductionEventsV2Controller,
     EventReviewItemsV2Controller,
     SourceMappingsV2Controller,
@@ -65,11 +73,13 @@ import { SourceMappingsV2Service } from './source-mappings/source-mappings-v2.se
     FailureCodeGroupsV2Controller,
     LossCategoryDefsV2Controller,
     CodeMappingRulesV2Controller,
+    JobsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
     ProductionEventHistoryService,
     ProductionEventsV2CommandService,
+    ProductionEventOperationsV2Service,
     EventReferencesValidator,
     SourceMappingsV2Service,
     AttributeMappingsV2Service,

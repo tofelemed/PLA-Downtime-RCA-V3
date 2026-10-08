@@ -112,7 +112,7 @@ const LEGACY_ROWS: LegacyRow[] = [
 ];
 
 /** Migrations after EventIntervalModel; reverted so legacy rows are inserted in the pre-1.1 shape. */
-const MIGRATIONS_AFTER_INTERVAL_MODEL = 2; // EventRevisions, HierarchyMappingAndCodeLibraries
+const MIGRATIONS_AFTER_INTERVAL_MODEL = 3; // EventRevisions, HierarchyMappingAndCodeLibraries, EventOperations
 
 /**
  * Plan 1.1 step 4: the migration's SQL backfill gives the same answers as the TypeScript rules.

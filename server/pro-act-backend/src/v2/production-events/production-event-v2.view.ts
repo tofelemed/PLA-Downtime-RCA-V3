@@ -68,6 +68,10 @@ export interface ProductionEventV2View {
   quantityUom: string | null;
   cost: string | null;
   value: string | null;
+  /** physical stop occurrence (KPI06): split children share it (plan 1.4) */
+  occurrenceId: string;
+  /** the event a merge replaced this one with (`states.physical = superseded`) */
+  supersededByEventId: string | null;
   /** optimistic-concurrency revision; also sent as `ETag` on single reads */
   rowVersion: number;
   /** single reads only: what the source last said (ING06), null for events without a source revision */
@@ -124,6 +128,8 @@ export function toProductionEventV2View(
     quantityUom: event.quantityUom ?? null,
     cost: toDecimalString(event.cost),
     value: toDecimalString(event.value),
+    occurrenceId: event.occurrenceId ?? event.id,
+    supersededByEventId: event.supersededByEventId ?? null,
     rowVersion: event.rowVersion,
   };
 }

@@ -30,7 +30,13 @@ export interface LegacyStatusContext {
  * `production_events.status`; precedence follows what the v1 UI needs to show first.
  */
 export function toLegacyStatus(states: EventStates): LegacyStatus {
-  if (states.physicalState === 'retracted') return 'Cancelled';
+  // a superseded split/merge contributor is no longer an active event for v1 (plan 1.4)
+  if (
+    states.physicalState === 'retracted' ||
+    states.physicalState === 'superseded'
+  ) {
+    return 'Cancelled';
+  }
   if (states.rcaState === 'required') return 'RCA Required';
   if (states.rcaState === 'linked') return 'Investigating';
   if (states.rcaState === 'completed') return 'Completed';

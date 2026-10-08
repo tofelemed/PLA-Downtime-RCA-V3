@@ -16,6 +16,7 @@ import {
   RevisionKind,
 } from '../../production-event/revisions/event-revision.entity';
 import { toDecimalString } from '../common/decimal-string.transformer';
+import { EventRelationView } from './event-operation.view';
 
 /** One immutable revision of an event (spec §14.2 `event_revisions`). */
 export interface EventRevisionView {
@@ -71,6 +72,8 @@ export interface ProductionEventHistoryView {
   revisions: EventRevisionView[];
   coding: EventCodingView[];
   reviewItems: EventReviewItemView[];
+  /** lineage where the event is either end (split/merge, plan 1.4) */
+  relations: EventRelationView[];
 }
 
 export function toEventRevisionView(row: EventRevision): EventRevisionView {
