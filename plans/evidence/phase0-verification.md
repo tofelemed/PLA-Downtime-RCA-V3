@@ -79,3 +79,17 @@ Quiet host. This machine has no `instrumental-postgres`, so a dedicated `proact-
 | ESLint on authored source files | ✅ clean | test files keep the same `no-unsafe-*` findings as the existing specs (lint gate decision open, 0.3 step 7) |
 | e2e auth / production / event-pull / rca-auto-create | 15 passed, 6 failed, 1 skipped | the 5 known pre-existing failures + `auth › login via API` (cold Vite start; **4/4 pass on re-run**). Cleanup DELETEs answered 500 because of the `rcas` ↔ `production_events` FK cycle (pre-existing, see 1.1 risks) |
 | Backfill report | ⚠️ empty dev DB | [backfill-0002.md](backfill-0002.md); re-run on the data host |
+
+---
+
+# Plan 1.2 verification (8 Oct 2026)
+
+| Step | Result | Notes |
+|---|---|---|
+| Migration on scratch | ✅ up → `migration:generate --dr` finds **no changes** → down → up (run twice) | `EventRevisions1791670400000`; reuses the 1.1 classification enum types in `event_coding` |
+| `npx tsc --noEmit -p tsconfig.json` | ✅ exit 0 | |
+| `npx jest --selectProjects unit fixtures` | ✅ **31 suites, 963 tests** | new: `event-facts.spec.ts` (normalisation, change detection, field sets), `pi-event-pull.service.spec.ts` (B5/I1 bridge: no `status`, source revision, duplicate → `unchanged`, connector actor); OpenAPI v2 snapshot regenerated (additive: `/production-events/{id}/revisions`, `/event-review-items/{id}/resolve`, `ResolveReviewItemDto`) |
+| `npx jest --selectProjects integration --runInBand` | ✅ **9 suites, 114 tests** | new `event-revisions.int-spec.ts` (10): T04 (PI event, v2 PATCH reason, v1 PUT RCA link, source end-time revision keeps coding/RCA/status, `GET` shows `sourceFacts` + effective), duplicate delivery (no revision, `duplicate_deliveries` +1, ETag unchanged), override conflict → open review item, `accept_source` / `keep_override`, 409 on re-resolve, foreign-tenant 404 (item and history), retraction (`retracted`, `Cancelled`, `EventRetracted` emitted, −3600 s in the unit downtime union, revision kind `retraction`), concurrent PATCH with the same If-Match → one 200 + one 412. `event-backfill.int-spec.ts` now reverts two migrations and pins the EventRevisions backfill to `factsOf()` on 9 legacy shapes plus a non-uuid-tenant row (no revisions) |
+| ESLint (`prettier/prettier` off) on every created/changed file under `src/` | ✅ no findings, except `src/integration/pi-event-pull.service.ts`: 80 errors, identical count to HEAD (pre-existing `any` usage; none on changed lines) | integration specs keep the same `no-unsafe-*` findings as the existing specs (supertest bodies are `any`) |
+| Size rules | ✅ new functions ≤ 40 lines, ≤ 4 params, files ≤ 400 lines | `production-event.entity.ts` grows to 437 lines (new columns only, as agreed); `toProductionEventV2View` (49 lines) unchanged from 1.1 |
+| Backfill on dev DB `proact` | ⚠️ not run | dev DB is at EventIntervalModel with 1 event (0 without a uuid tenant); the app applies the migration on next boot |

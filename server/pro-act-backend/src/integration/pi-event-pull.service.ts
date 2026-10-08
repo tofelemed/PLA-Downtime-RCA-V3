@@ -5,6 +5,9 @@ import { PIConnection } from '../pi-connection/pi-connection.entity';
 import { PIEvent } from '../pi-event/pi-event.entity';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { ProductionEventService } from '../production-event/production-event.service';
+import { EventRevisionService } from '../production-event/revisions/event-revision.service';
+import { SOURCE_FIELDS } from '../production-event/revisions/event-facts';
+import { CONNECTOR_ACTOR } from '../production-event/revisions/revision-actor';
 import { PIMapping } from '../pi-mapping/pi-mapping.entity';
 import { AfBinding } from '../af-binding/af-binding.entity';
 import { PISyncWatermark } from '../pi-sync-watermark/pi-sync-watermark.entity';
@@ -68,6 +71,7 @@ export class PIEventPullService {
     private readonly piWebApiService: PIWebApiService,
     private readonly codeResolver: MasterDataCodeResolverService,
     private readonly unmappedEventService: UnmappedEventService,
+    private readonly eventRevisionService: EventRevisionService,
   ) {}
 
   async pullEvents(request: PullEventsRequest): Promise<PullEventsResponse> {
@@ -154,6 +158,7 @@ export class PIEventPullService {
             if (result === 'created') productionEventsCreated++;
             else if (result === 'updated') productionEventsUpdated++;
             else if (result === 'unmapped') unmappedEventsCreated++;
+            // 'unchanged' (duplicate delivery, ING01) and 'skipped' leave the event as it is
             else productionEventsSkipped++;
           }
         } catch (error: any) {
@@ -257,7 +262,7 @@ export class PIEventPullService {
     organizationId: string | undefined,
     mappingConfig: ReturnType<typeof parseTenantMappingRules>,
     bindingMap: Map<string, AfBinding>,
-  ): Promise<'created' | 'updated' | 'skipped' | 'unmapped'> {
+  ): Promise<'created' | 'updated' | 'unchanged' | 'skipped' | 'unmapped'> {
     const templateName = ef.TemplateName || NO_TEMPLATE_KEY;
     const eventType = resolveEventType(templateName, mappingConfig);
     const attrMap = mappingConfig.attributesByTemplate[templateName] ||
@@ -327,7 +332,6 @@ export class PIEventPullService {
       description: mappedFields.description || ef.Name || 'Event from PI',
       startTime: startTimeDate.toISOString(),
       endTime: endTimeDate ? endTimeDate.toISOString() : undefined,
-      status: 'Open',
       source: 'PI',
       unitId,
       assetId: hierarchyIds?.assetId,
@@ -340,11 +344,16 @@ export class PIEventPullService {
     });
 
     if (existing) {
-      await this.productionEventService.update(existing.id, productionEventDto);
-      return 'updated';
+      // Plan 1.2 (B5/I1): a re-sync is a source revision; status, coding, RCA and user overrides survive
+      const outcome = await this.eventRevisionService.applySourceRevision(
+        existing.id,
+        sourceFieldsOf(productionEventDto as Record<string, unknown>),
+        { actorKind: 'connector', sourceRevision: endTimeDate?.toISOString() },
+      );
+      return outcome === 'revised' ? 'updated' : 'unchanged';
     }
 
-    await this.productionEventService.create(productionEventDto);
+    await this.productionEventService.create(productionEventDto, CONNECTOR_ACTOR);
     return 'created';
   }
 
@@ -412,4 +421,13 @@ export class PIEventPullService {
 
     this.logger.log(`Recorded unmapped PI event ${ef.WebId} for tenant ${tenantId}: ${reason}`);
   }
+}
+
+/** The source-owned part of a PI event DTO (open frames deliver no end time: the event stays open). */
+function sourceFieldsOf(dto: Record<string, unknown>): Record<string, unknown> {
+  const facts: Record<string, unknown> = {};
+  for (const field of SOURCE_FIELDS) {
+    facts[field] = dto[field];
+  }
+  return facts;
 }

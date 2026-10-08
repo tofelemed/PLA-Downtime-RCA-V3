@@ -29,6 +29,8 @@ import { ProductionEventListQueryDto } from './production-event-list-query.dto';
 import { ProductionEventV2View } from './production-event-v2.view';
 import { ProductionEventsV2Service } from './production-events-v2.service';
 import { ProductionEventsV2CommandService } from './production-events-v2-commands.service';
+import { ProductionEventHistoryService } from './production-event-history.service';
+import { ProductionEventHistoryView } from './production-event-history.view';
 import {
   CreateProductionEventV2Dto,
   PatchProductionEventV2Dto,
@@ -42,6 +44,7 @@ export class ProductionEventsV2Controller {
   constructor(
     private readonly service: ProductionEventsV2Service,
     private readonly commands: ProductionEventsV2CommandService,
+    private readonly history: ProductionEventHistoryService,
   ) {}
 
   @Get()
@@ -69,13 +72,28 @@ export class ProductionEventsV2Controller {
   @ApiOperation({
     summary: 'Get one production event of the caller scope',
     description:
-      'Returns `ETag: "<rowVersion>"`; a foreign or unknown id is 404.',
+      'Returns `ETag: "<rowVersion>"`; a foreign or unknown id is 404. The body is the effective event plus ' +
+      '`sourceFacts` (what the source last delivered) and `overriddenFields` (user overrides of source values).',
   })
   get(
     @Ctx() ctx: RequestContext,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<ProductionEventV2View> {
     return this.service.get(ctx, id);
+  }
+
+  @Get(':id/revisions')
+  @ApiOperation({
+    summary: 'Revision history of a production event (ING06)',
+    description:
+      'Immutable revisions (source, user, system, retraction) with effective snapshots, coding revisions ' +
+      'with override provenance, and review items, oldest first. A foreign or unknown id is 404.',
+  })
+  revisions(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<ProductionEventHistoryView> {
+    return this.history.history(ctx, id);
   }
 
   @Post()

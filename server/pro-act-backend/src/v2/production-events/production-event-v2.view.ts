@@ -10,6 +10,7 @@ import {
 } from '../../domain/events/event-classification';
 import { durationSeconds } from '../../domain/time/interval-algebra';
 import { ProductionEvent } from '../../production-event/production-event.entity';
+import { EventFacts } from '../../production-event/revisions/event-facts';
 import { toDecimalString } from '../common/decimal-string.transformer';
 
 export interface EventClassificationView {
@@ -65,6 +66,10 @@ export interface ProductionEventV2View {
   value: string | null;
   /** optimistic-concurrency revision; also sent as `ETag` on single reads */
   rowVersion: number;
+  /** single reads only: what the source last said (ING06), null for events without a source revision */
+  sourceFacts?: EventFacts | null;
+  /** single reads only: fields where the user's value overrides the source value */
+  overriddenFields?: string[];
 }
 
 export function toProductionEventV2View(

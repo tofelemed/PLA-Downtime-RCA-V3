@@ -7,10 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { Repository } from 'typeorm';
-import {
-  assertRevision,
-  staleRevision,
-} from '../../common/concurrency/revision';
+import { assertRevision } from '../../common/concurrency/revision';
 import {
   RequestContext,
   requireTenantId,
@@ -25,7 +22,8 @@ import {
 } from '../../production-event/event-write-model';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { ProductionEventService } from '../../production-event/production-event.service';
-import { Unit } from '../../unit/unit.entity';
+import { EventRevisionService } from '../../production-event/revisions/event-revision.service';
+import { actorFromContext } from '../../production-event/revisions/revision-actor';
 import { EventReferencesValidator } from './event-references.validator';
 import {
   CreateProductionEventV2Dto,
@@ -42,10 +40,9 @@ export class ProductionEventsV2CommandService {
   constructor(
     @InjectRepository(ProductionEvent)
     private readonly events: Repository<ProductionEvent>,
-    @InjectRepository(Unit)
-    private readonly units: Repository<Unit>,
     private readonly lifecycle: ProductionEventService,
     private readonly references: EventReferencesValidator,
+    private readonly revisions: EventRevisionService,
   ) {}
 
   /** Creates a manual event in the caller's tenant; returns its id. */
@@ -54,12 +51,7 @@ export class ProductionEventsV2CommandService {
     dto: CreateProductionEventV2Dto,
   ): Promise<string> {
     const tenantId = requireTenantId(context);
-    if ((await this.units.countBy({ id: dto.unitId, tenantId })) === 0) {
-      throw new NotFoundException({
-        code: 'NOT_FOUND',
-        message: 'Unit not found',
-      });
-    }
+    await this.references.assertUnitOwned(tenantId, dto.unitId);
     await this.references.assertOwned(tenantId, dto.unitId, dto);
     const fields = prepareCreate({
       ...writeInput(dto),
@@ -81,14 +73,18 @@ export class ProductionEventsV2CommandService {
       source: MANUAL_SOURCE,
       ...fields,
     } as Partial<ProductionEvent>);
-    const saved = await this.events.save(event);
+    const saved = await this.revisions.createEvent(
+      event,
+      actorFromContext(context),
+    );
     await this.lifecycle.publishCreated(saved);
     return id;
   }
 
   /**
    * Applies user fields when the stored revision is `expectedRevision` (412 otherwise). Source-owned
-   * events keep their interval: only manual events accept start/end changes (409 SOURCE_OWNED).
+   * events keep their interval: only manual events accept start/end changes (409 SOURCE_OWNED). The
+   * write is a user revision (plan 1.2): coding revision, effective revision, source overrides.
    */
   async patch(
     context: RequestContext,
@@ -104,7 +100,7 @@ export class ProductionEventsV2CommandService {
       .andWhere('event.id = :id', { id })
       .getOne();
     if (!existing) {
-      throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
+      throw notFound();
     }
     assertRevision(existing.rowVersion, expectedRevision);
     await this.references.assertOwned(tenantId, existing.unitId, dto);
@@ -117,34 +113,37 @@ export class ProductionEventsV2CommandService {
         message: 'The interval of a source event is owned by its source system',
       });
     }
-    const fields = prepareUpdate(existing, writeInput(dto));
-    assertImpact(
-      fields,
-      dto.impactFraction === undefined
-        ? existing.impactFraction
-        : dto.impactFraction,
-    );
-    const result = await this.events
-      .createQueryBuilder()
-      .update(ProductionEvent)
-      .set({ ...editableColumns(dto), ...fields } as Partial<ProductionEvent>)
-      .where(
-        'id = :id AND tenant_id = :tenantId AND row_version = :expectedRevision',
-        {
-          id,
-          tenantId,
-          expectedRevision,
-        },
-      )
-      .execute();
-    if (!result.affected) {
-      throw staleRevision();
+    const updated = await this.revisions.applyUserChange({
+      actor: actorFromContext(context),
+      eventId: id,
+      tenantId,
+      expectedRowVersion: expectedRevision,
+      patch: (locked) => patchColumns(locked, dto),
+    });
+    if (!updated) {
+      throw notFound();
     }
-    const updated = await this.events.findOneBy({ id });
-    if (updated) {
-      this.lifecycle.publishUpdated(updated);
-    }
+    this.lifecycle.publishUpdated(updated);
   }
+}
+
+/** Columns of a PATCH against the locked row; 422 INVALID_IMPACT on an inconsistent impact. */
+function patchColumns(
+  locked: ProductionEvent,
+  dto: PatchProductionEventV2Dto,
+): Partial<ProductionEvent> {
+  const fields = prepareUpdate(locked, writeInput(dto));
+  assertImpact(
+    fields,
+    dto.impactFraction === undefined
+      ? locked.impactFraction
+      : dto.impactFraction,
+  );
+  return { ...editableColumns(dto), ...fields } as Partial<ProductionEvent>;
+}
+
+function notFound(): NotFoundException {
+  return new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
 }
 
 function writeInput(

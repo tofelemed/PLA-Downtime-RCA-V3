@@ -12,7 +12,7 @@ Checkout: working tree over commit `044cc83` (baseline commit pending A1 approva
 | B2 | `findByDateRange` uses Mongo `$gte/$lte` | confirmed | `production-event.service.ts` L110–116 | G04 → 0.4 |
 | B3 | Reconcile update DTO has `planId/period/categories/tenantId`, not form columns | confirmed | `reconcile-form/dto/update-reconcile-form.dto.ts` printed 7 Oct | G05 → 0.4 (DTO), 2.8 |
 | B4 | Loss-category update DTO uses `name` vs column `categoryName` | confirmed | `loss-category/dto/update-loss-category.dto.ts` printed 7 Oct | G05 → 0.4, 2.8 |
-| B5 | PI re-sync resets `status` to Open and overwrites edits | confirmed | `pi-event-pull.service.ts` DTO `status: 'Open'` + `update(existing.id, dto)` (lines ~331/344) | G02 → 1.2 |
+| B5 | PI re-sync resets `status` to Open and overwrites edits | **resolved** (1.2, 8 Oct) | was: `pi-event-pull.service.ts` DTO `status: 'Open'` + `update(existing.id, dto)`; now `applySourceRevision` (no status, user overrides kept); T04 in `event-revisions.int-spec.ts`, `pi-event-pull.service.spec.ts` | G02 → 1.2 |
 | B6 | Running PI frames stored with `9999-12-31` end | confirmed | no `9999` handling anywhere in `src/integration`, `src/pi-event` (grep) | G01 → 1.1, 1.6 |
 | B7 | PI enumeration values become `"[object Object]"` | confirmed (code) | `pi-event-mapper.ts` L117 `attr.Value?.Value ?? attr.Value` then `String()` for code lookup | G02 → 1.3 |
 | B8 | Manual events never save a duration | confirmed | `EventHub.tsx`: `eventForm.duration` initialised/read (L137, 152, 436) but no input or setter writes it | G01 → 1.1, 3.2 |
@@ -31,7 +31,7 @@ Checkout: working tree over commit `044cc83` (baseline commit pending A1 approva
 
 | ID | Finding | Status | Evidence | Target |
 |---|---|---|---|---|
-| I1 | Re-sync overwrites user work | confirmed | same as B5 | G02 → 1.2 |
+| I1 | Re-sync overwrites user work | **resolved** (1.2, 8 Oct) | same as B5; source vs override conflicts open review items instead of overwriting | G02 → 1.2 |
 | I2 | No sentinel handling for running frames | confirmed | same as B6 | G01 → 1.6 |
 | I3 | Duration attribute-only, no unit/TimeSpan parsing, not derived | confirmed (code) | `pi-event-mapper.ts` `Number(val)` list includes `duration`; no `(end−start)` at ingestion | G01 → 1.1, 1.3 |
 | I4 | Enumeration objects lost | confirmed (code) | same as B7 | G02 → 1.3 |

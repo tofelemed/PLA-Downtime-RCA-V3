@@ -1,9 +1,14 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { Asset } from '../../asset/asset.entity';
 import { ProductionPlan } from '../../production-plan/production-plan.entity';
 import { ReasonCode } from '../../reason-code/reason-code.entity';
+import { Unit } from '../../unit/unit.entity';
 
 export interface EventReferences {
   assetId?: string | null;
@@ -24,7 +29,18 @@ export class EventReferencesValidator {
     private readonly reasons: Repository<ReasonCode>,
     @InjectRepository(ProductionPlan)
     private readonly plans: Repository<ProductionPlan>,
+    @InjectRepository(Unit) private readonly units: Repository<Unit>,
   ) {}
+
+  /** 404 unless the unit belongs to the tenant (no existence leak across tenants). */
+  async assertUnitOwned(tenantId: string, unitId: string): Promise<void> {
+    if ((await this.units.countBy({ id: unitId, tenantId })) === 0) {
+      throw new NotFoundException({
+        code: 'NOT_FOUND',
+        message: 'Unit not found',
+      });
+    }
+  }
 
   async assertOwned(
     tenantId: string,

@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProductionEvent } from '../../production-event/production-event.entity';
+import { EventRevision } from '../../production-event/revisions/event-revision.entity';
 import {
   RequestContext,
   requireTenantId,
@@ -42,6 +43,8 @@ export class ProductionEventsV2Service {
   constructor(
     @InjectRepository(ProductionEvent)
     private readonly events: Repository<ProductionEvent>,
+    @InjectRepository(EventRevision)
+    private readonly revisions: Repository<EventRevision>,
   ) {}
 
   async list(
@@ -88,7 +91,10 @@ export class ProductionEventsV2Service {
     );
   }
 
-  /** One event of the caller's scope; a foreign or unknown id is the same 404 (no existence leak). */
+  /**
+   * One event of the caller's scope with its source layer (latest source facts, overridden fields); a
+   * foreign or unknown id is the same 404 (no existence leak).
+   */
   async get(
     context: RequestContext,
     id: string,
@@ -102,7 +108,18 @@ export class ProductionEventsV2Service {
     if (!event) {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
     }
-    return toProductionEventV2View(event, new Date());
+    const source = await scopedQuery(this.revisions, 'rev', { context })
+      .andWhere('rev.eventId = :id AND rev.kind = :kind', {
+        id,
+        kind: 'source',
+      })
+      .orderBy('rev.revision', 'DESC')
+      .getOne();
+    return {
+      ...toProductionEventV2View(event, new Date()),
+      sourceFacts: source?.sourceFacts ?? null,
+      overriddenFields: Object.keys(event.userOverrides ?? {}),
+    };
   }
 }
 

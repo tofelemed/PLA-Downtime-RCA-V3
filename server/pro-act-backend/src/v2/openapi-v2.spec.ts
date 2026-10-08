@@ -7,6 +7,10 @@ import { configureHttpApp } from '../common/http/configure-http-app';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { ProductionEventModule } from '../production-event/production-event.module';
 import { ProductionEventService } from '../production-event/production-event.service';
+import { EventCoding } from '../production-event/revisions/event-coding.entity';
+import { EventReviewItem } from '../production-event/revisions/event-review-item.entity';
+import { EventRevision } from '../production-event/revisions/event-revision.entity';
+import { EventRevisionService } from '../production-event/revisions/event-revision.service';
 import { Asset } from '../asset/asset.entity';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { ReasonCode } from '../reason-code/reason-code.entity';
@@ -16,8 +20,11 @@ import { V2Module } from './v2.module';
 
 /** Stands in for the v1 event module (and its RCA/realtime graph): only the document is needed. */
 @Module({
-  providers: [{ provide: ProductionEventService, useValue: {} }],
-  exports: [ProductionEventService],
+  providers: [
+    { provide: ProductionEventService, useValue: {} },
+    { provide: EventRevisionService, useValue: {} },
+  ],
+  exports: [ProductionEventService, EventRevisionService],
 })
 class ProductionEventModuleStub {}
 
@@ -35,6 +42,12 @@ async function generate(): Promise<string> {
     .overrideProvider(getRepositoryToken(ReasonCode))
     .useValue({})
     .overrideProvider(getRepositoryToken(ProductionPlan))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(EventRevision))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(EventCoding))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(EventReviewItem))
     .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)

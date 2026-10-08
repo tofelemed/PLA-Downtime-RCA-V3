@@ -49,7 +49,7 @@ Status legend: ⬜ not started · 🔄 in progress · 🧪 implemented, tests pe
 | Status | Sub-phase | File | Exit tests |
 |---|---|---|---|
 | 🧪 | 1.1 Event interval model and classifications | [1.1-event-interval-model.md](phase-1/1.1-event-interval-model.md) | T01, T02, T03, T29, T42 green (unit + integration, 8 Oct); CI run and backfill report on the data host open |
-| ⬜ | 1.2 Event revisions and source ownership | [1.2-event-revisions-and-source-ownership.md](phase-1/1.2-event-revisions-and-source-ownership.md) | T04 |
+| 🧪 | 1.2 Event revisions and source ownership | [1.2-event-revisions-and-source-ownership.md](phase-1/1.2-event-revisions-and-source-ownership.md) | T04 green (unit + integration, 8 Oct); B5/I1 closed; CI run and backfill report on the data host open |
 | ⬜ | 1.3 Hierarchy mapping and code libraries | [1.3-hierarchy-mapping-and-code-libraries.md](phase-1/1.3-hierarchy-mapping-and-code-libraries.md) | T05, T18 (7 Oct agent run left no code in the repo) |
 | ⬜ | 1.4 Event operations: split, merge, bulk-code, close | [1.4-event-operations.md](phase-1/1.4-event-operations.md) | T37 |
 | ⬜ | 1.5 Durable intake core: raw store, jobs, inbox/outbox, quarantine, replay | [1.5-durable-intake-core.md](phase-1/1.5-durable-intake-core.md) | T06, T10 (inbox), replay invariance |

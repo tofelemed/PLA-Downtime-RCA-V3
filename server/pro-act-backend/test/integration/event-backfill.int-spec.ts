@@ -4,6 +4,13 @@ import {
   sourceKindOf,
 } from '../../src/domain/events/event-classification';
 import { fromLegacyStatus } from '../../src/domain/events/legacy-status';
+import { ProductionEvent } from '../../src/production-event/production-event.entity';
+import {
+  CODING_FIELDS,
+  EFFECTIVE_FIELDS,
+  factsOf,
+  SOURCE_FIELDS,
+} from '../../src/production-event/revisions/event-facts';
 import { IntegrationHarness } from './harness';
 import { at, EventWorld, seedEventWorld } from './support/seed-event-world';
 
@@ -104,17 +111,31 @@ const LEGACY_ROWS: LegacyRow[] = [
   },
 ];
 
-/** Plan 1.1 step 4: the migration's SQL backfill gives the same answers as the TypeScript rules. */
-describe('EventIntervalModel backfill', () => {
+/** Migrations after EventIntervalModel; reverted so legacy rows are inserted in the pre-1.1 shape. */
+const MIGRATIONS_AFTER_INTERVAL_MODEL = 1; // EventRevisions
+
+/**
+ * Plan 1.1 step 4: the migration's SQL backfill gives the same answers as the TypeScript rules.
+ * Plan 1.2 step 2: EventRevisions then snapshots the same rows exactly as `factsOf()` would.
+ */
+describe('EventIntervalModel + EventRevisions backfill', () => {
   const harness = new IntegrationHarness();
   let world: EventWorld;
   const ids: string[] = [];
+  const legacyTenantId = randomUUID();
 
   beforeAll(async () => {
     await harness.start();
     world = await seedEventWorld(harness.dataSource);
     const rca = await insertRca(world);
-    await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    for (let undo = 0; undo <= MIGRATIONS_AFTER_INTERVAL_MODEL; undo++) {
+      await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    }
+    await harness.dataSource.query(
+      `INSERT INTO production_events (id, unit_id, start_time, event_type, status, source, tenant_id)
+       VALUES ($1, $2, $3, 'ProductionLoss', 'Open', 'PI', 'legacy-tenant')`,
+      [legacyTenantId, world.unitA1, at('08:00')],
+    );
     for (const row of LEGACY_ROWS) {
       const id = randomUUID();
       ids.push(id);
@@ -203,6 +224,46 @@ describe('EventIntervalModel backfill', () => {
     expect(Number((await migrated(ids[1])).duration_seconds)).toBe(3600);
   });
 
+  it.each(LEGACY_ROWS.map((row, index) => [index, row] as const))(
+    'row %i gets revision 1 and coding revision 1 equal to factsOf() (plan 1.2)',
+    async (index, row) => {
+      const event = await harness.dataSource
+        .getRepository(ProductionEvent)
+        .findOneByOrFail({ id: ids[index] });
+      const isSource = sourceKindOf(row.source) !== 'manual';
+      const [revision] = await rowsOf('event_revisions', ids[index]);
+      expect(revision).toMatchObject({
+        revision: 1,
+        kind: isSource ? 'source' : 'user',
+        actor_kind: 'system',
+        tenant_id: world.tenantA,
+        effective_facts: factsOf(event, EFFECTIVE_FIELDS),
+        source_facts: isSource ? factsOf(event, SOURCE_FIELDS) : null,
+      });
+      const [coding] = await rowsOf('event_coding', ids[index]);
+      expect(coding).toMatchObject({
+        revision: 1,
+        is_override: false,
+        reason: 'baseline',
+        old_values: {},
+        new_values: factsOf(event, CODING_FIELDS),
+        schedule_class: event.scheduleClass,
+      });
+      expect(event).toMatchObject({
+        currentSourceRevision: isSource ? 1 : 0,
+        currentCodingRevision: 1,
+        duplicateDeliveries: 0,
+        userOverrides: {},
+      });
+    },
+  );
+
+  it('keeps no revisions for an event without a uuid tenant (plan 1.2)', async () => {
+    expect(await rowsOf('event_revisions', legacyTenantId)).toEqual([]);
+    expect(await rowsOf('event_coding', legacyTenantId)).toEqual([]);
+    expect((await migrated(legacyTenantId)).current_coding_revision).toBe(0);
+  });
+
   it('keeps tenant_uuid in sync on later writes', async () => {
     await harness.dataSource.query(
       `UPDATE production_events SET tenant_id = $1 WHERE id = $2`,
@@ -215,6 +276,16 @@ describe('EventIntervalModel backfill', () => {
     );
     expect((await migrated(ids[1])).tenant_uuid).toBeNull();
   });
+
+  function rowsOf(
+    table: 'event_revisions' | 'event_coding',
+    eventId: string,
+  ): Promise<Array<Record<string, unknown>>> {
+    return harness.dataSource.query(
+      `SELECT * FROM ${table} WHERE event_id = $1 ORDER BY revision`,
+      [eventId],
+    );
+  }
 
   async function insertRca(eventWorld: EventWorld): Promise<string> {
     const id = randomUUID();

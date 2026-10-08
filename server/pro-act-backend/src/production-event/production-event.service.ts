@@ -11,6 +11,9 @@ import { RcaAutoCreateService } from '../rca/rca-auto-create.service';
 import { PagedResult } from '../common/dto/paged-result';
 import { applyProductionEventFilters } from './production-event-query.builder';
 import { prepareCreate, prepareUpdate } from './event-write-model';
+import { getRequestContext } from '../common/context/request-context';
+import { EventRevisionService } from './revisions/event-revision.service';
+import { actorFromContext, RevisionActor } from './revisions/revision-actor';
 
 /** Relations loaded on every read; `reasonCode` and `rca` were dropped at some point (B17) and are back. */
 const EVENT_RELATIONS = [
@@ -33,6 +36,7 @@ export class ProductionEventService {
     private readonly eventRepository: Repository<ProductionEvent>,
     private readonly realtimeGateway: RealtimeGateway,
     private readonly rcaAutoCreateService: RcaAutoCreateService,
+    private readonly revisions: EventRevisionService,
   ) {}
 
   findAll(): Promise<ProductionEvent[]> {
@@ -66,9 +70,13 @@ export class ProductionEventService {
   /**
    * v1 create. Interval, classification, states, `status` and the legacy `duration` (minutes) are
    * derived server-side by the write model; the client's `status` is translated and its `duration`
-   * ignored (B8, DT11). Interval violations are 422.
+   * ignored (B8, DT11). Interval violations are 422. Revision 1 is recorded in the same transaction
+   * (plan 1.2); `actor` defaults to the request's user (connectors pass their own).
    */
-  async create(data: CreateProductionEventDto): Promise<ProductionEvent> {
+  async create(
+    data: CreateProductionEventDto,
+    actor: RevisionActor = actorFromContext(getRequestContext()),
+  ): Promise<ProductionEvent> {
     const id = randomUUID();
     const fields = withoutClientDuration(data);
     const event = this.eventRepository.create({
@@ -77,7 +85,7 @@ export class ProductionEventService {
       canonicalId: id,
       ...prepareCreate(data),
     } as Partial<ProductionEvent>);
-    const result = await this.eventRepository.save(event);
+    const result = await this.revisions.createEvent(event, actor);
     await this.publishCreated(result);
     return result;
   }
@@ -115,19 +123,24 @@ export class ProductionEventService {
     this.realtimeGateway.broadcastProductionEventUpdated(event);
   }
 
+  /** v1 update: a user change with coding/effective revisions and source overrides (plan 1.2). */
   async update(
     id: string,
     data: UpdateProductionEventDto,
   ): Promise<ProductionEvent | null> {
-    const existing = await this.eventRepository.findOneBy({ id });
-    if (!existing) {
+    const fields = withoutClientDuration(data);
+    const changed = await this.revisions.applyUserChange({
+      actor: actorFromContext(getRequestContext()),
+      eventId: id,
+      patch: (existing) =>
+        ({
+          ...fields,
+          ...prepareUpdate(existing, data),
+        }) as Partial<ProductionEvent>,
+    });
+    if (!changed) {
       return null;
     }
-    const fields = withoutClientDuration(data);
-    await this.eventRepository.update(id, {
-      ...fields,
-      ...prepareUpdate(existing, data),
-    } as Partial<ProductionEvent>);
     const updated = await this.findOne(id);
     if (updated) {
       this.publishUpdated(updated);

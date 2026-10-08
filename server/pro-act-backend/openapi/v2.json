@@ -296,7 +296,7 @@
     },
     "/api/v2/production-events/{id}": {
       "get": {
-        "description": "Returns `ETag: \"<rowVersion>\"`; a foreign or unknown id is 404.",
+        "description": "Returns `ETag: \"<rowVersion>\"`; a foreign or unknown id is 404. The body is the effective event plus `sourceFacts` (what the source last delivered) and `overriddenFields` (user overrides of source values).",
         "operationId": "ProductionEventsV2Controller_get_v2",
         "parameters": [
           {
@@ -367,6 +367,84 @@
         "summary": "Edit user fields of a production event",
         "tags": [
           "v2 · Production Events"
+        ]
+      }
+    },
+    "/api/v2/production-events/{id}/revisions": {
+      "get": {
+        "description": "Immutable revisions (source, user, system, retraction) with effective snapshots, coding revisions with override provenance, and review items, oldest first. A foreign or unknown id is 404.",
+        "operationId": "ProductionEventsV2Controller_revisions_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revision history of a production event (ING06)",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    },
+    "/api/v2/event-review-items/{id}/resolve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. `accept_source` writes the latest source value and drops the override (coding and effective revision recorded); `keep_override` keeps the user value. 404 for a foreign or unknown item, 409 REVIEW_ITEM_RESOLVED when it is no longer open.",
+        "operationId": "EventReviewItemsV2Controller_resolve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveReviewItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolve a source/override review item (spec §5.3)",
+        "tags": [
+          "v2 · Event Review Items"
         ]
       }
     }
@@ -596,6 +674,22 @@
             "format": "date-time"
           }
         }
+      },
+      "ResolveReviewItemDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "keep_override",
+              "accept_source"
+            ],
+            "description": "keep_override: the user value stays; accept_source: the latest source value replaces it"
+          }
+        },
+        "required": [
+          "decision"
+        ]
       }
     }
   }

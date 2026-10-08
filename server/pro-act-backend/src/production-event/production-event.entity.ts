@@ -414,4 +414,24 @@ export class ProductionEvent {
     update: false,
   })
   tenantUuid?: string | null;
+
+  // --- Revisions and source ownership (plan 1.2, ING01/ING06) ---
+
+  /** `event_revisions.revision` of the latest source revision; 0 when the source never spoke */
+  @Column({ name: 'current_source_revision', type: 'int', default: 0 })
+  currentSourceRevision: number;
+
+  @Column({ name: 'current_coding_revision', type: 'int', default: 0 })
+  currentCodingRevision: number;
+
+  @Column({ name: 'retracted_at', type: 'timestamptz', nullable: true })
+  retractedAt?: Date | null;
+
+  /** identical source deliveries absorbed without a revision (ING01) */
+  @Column({ name: 'duplicate_deliveries', type: 'int', default: 0 })
+  duplicateDeliveries: number;
+
+  /** field → `event_coding.revision` that overrode the source value */
+  @Column({ name: 'user_overrides', type: 'jsonb', default: () => "'{}'" })
+  userOverrides: Record<string, number>;
 }

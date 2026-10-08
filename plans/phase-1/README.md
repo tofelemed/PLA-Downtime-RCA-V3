@@ -7,7 +7,7 @@
 | Status | Sub-phase | Depends on | Exit tests |
 |---|---|---|---|
 | 🧪 | [1.1 Event interval model and classifications](1.1-event-interval-model.md) | 0.3, 0.4 | T01 T02 T03 T29 (+T42 advisory rule) — green locally |
-| ⬜ | [1.2 Event revisions and source ownership](1.2-event-revisions-and-source-ownership.md) | 1.1 | T04 |
+| 🧪 | [1.2 Event revisions and source ownership](1.2-event-revisions-and-source-ownership.md) | 1.1 | T04 — green locally |
 | ⬜ | [1.3 Hierarchy mapping and code libraries](1.3-hierarchy-mapping-and-code-libraries.md) | 0.4 | T05 T18 |
 | ⬜ | [1.4 Event operations](1.4-event-operations.md) | 1.1, 1.2 | T37 |
 | ⬜ | [1.5 Durable intake core](1.5-durable-intake-core.md) | 0.3, 0.4 | T06; T10 (inbox part); replay invariance |
