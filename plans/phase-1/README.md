@@ -12,7 +12,7 @@
 | 🧪 | [1.4 Event operations](1.4-event-operations.md) | 1.1, 1.2 | T37 — green locally |
 | 🧪 | [1.5 Durable intake core](1.5-durable-intake-core.md) | 0.3, 0.4 | T06; T10 (inbox part); replay invariance; crash recovery — green locally |
 | 🧪 | [1.6 PI event frames certified](1.6-pi-event-frames-certified.md) | 1.2, 1.3, 1.5 | T07 T08 T46; §6.4 matrix — green against the simulator; real-PI certification ⛔ pending D02 |
-| ⬜ | [1.7 PI actuals: signals, counters, rates](1.7-pi-actuals-signals.md) | 1.5, 1.6 | T25 T26 T27 |
+| 🧪 | [1.7 PI actuals: signals, counters, rates](1.7-pi-actuals-signals.md) | 1.5, 1.6 | T25 T26 T27 — engine green; signals/samples/jobs/preview green against the simulator; real tags ⛔ pending D02 |
 | ⬜ | [1.8 MQTT adapter](1.8-mqtt-adapter.md) | 1.5 | T09 T11 |
 | ⬜ | [1.9 Kafka adapter and internal transport](1.9-kafka-adapter-and-internal-transport.md) | 1.5 | T10; T23 (transport) |
 | ⬜ | [1.10 Source authority and state engine](1.10-source-authority-and-state-engine.md) | 1.1, 1.7, 1.8/1.9 | T11 T12; DT01–DT07 fixtures |
@@ -26,7 +26,7 @@
 - `contracts/canonical-event.schema.json` (§5.1) — completed in 1.5 (examples in `contracts/examples/`; backend copy `src/intake/envelope/canonical-event.schema.ts`, drift-checked), used by every adapter.
 - `contracts/event-field-catalog.json` — the single list of mappable event fields used by backend validation and the mapping UI (ING04), produced in 1.3.
 - `src/domain/time/interval-algebra.ts` — clip/union/split helpers (1.1), reused by accounting in Phase 2.
-- PI Web API simulator (`test/simulators/pi-web-api/`) for certification without plant access (1.6) — done: in-process HTTP server on an ephemeral port (Overlapped search with `startIndex` paging, frames by WebId, `streamsets` values, `/batch`, elements by path/WebId, `/system`, Basic auth with revoke, injectable failures, close/change/delete frames); used by `test/integration/pi-certified-*.int-spec.ts`.
+- PI Web API simulator (`test/simulators/pi-web-api/`) for certification without plant access (1.6) — done: in-process HTTP server on an ephemeral port (Overlapped search with `startIndex` paging, frames by WebId, `streamsets` values, `/batch`, elements by path/WebId, `/system`, Basic auth with revoke, injectable failures, close/change/delete frames); used by `test/integration/pi-certified-*.int-spec.ts`. Plan 1.7 added streams (`sim-streams.ts`: `streamsets/recorded`, archive corrections, time-weighted `Total` summaries, stream-update markers that can be dropped or disabled), used by `pi-signals.int-spec.ts` and `pi-signal-updates.int-spec.ts`.
 
 ## Legacy compatibility during Phase 1
 `production_events` stays the table name. New columns are added (expand); v1 routes keep working through the legacy status adapter (1.1) until the frontend moves to v2 in Phase 3. No column is dropped in this phase.

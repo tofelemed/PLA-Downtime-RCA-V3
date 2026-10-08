@@ -41,6 +41,11 @@ import { IngestionExceptionsService } from '../intake/exceptions/ingestion-excep
 import { IntakeModule } from '../intake/intake.module';
 import { IngestionJobsService } from '../intake/jobs/ingestion-jobs.service';
 import { ReplayService } from '../intake/replay/replay.service';
+import { Signal } from '../signals/entities/signal.entity';
+import { SignalBackfillService } from '../signals/signal-backfill.service';
+import { SignalPreviewService } from '../signals/signal-preview.service';
+import { SignalsModule } from '../signals/signals.module';
+import { SignalsService } from '../signals/signals.service';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
 
@@ -111,6 +116,17 @@ class EventOperationsModuleStub {}
 })
 class IntakeModuleStub {}
 
+/** Stands in for the plan 1.7 signals module (definitions, preview, backfill). */
+@Module({
+  providers: [
+    { provide: SignalsService, useValue: {} },
+    { provide: SignalPreviewService, useValue: {} },
+    { provide: SignalBackfillService, useValue: {} },
+  ],
+  exports: [SignalsService, SignalPreviewService, SignalBackfillService],
+})
+class SignalsModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -148,6 +164,8 @@ async function generate(): Promise<string> {
     .useValue({})
     .overrideProvider(getRepositoryToken(ReplayRun))
     .useValue({})
+    .overrideProvider(getRepositoryToken(Signal))
+    .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)
     .overrideModule(CodeLibraryModule)
@@ -160,6 +178,8 @@ async function generate(): Promise<string> {
     .useModule(EventOperationsModuleStub)
     .overrideModule(IntakeModule)
     .useModule(IntakeModuleStub)
+    .overrideModule(SignalsModule)
+    .useModule(SignalsModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

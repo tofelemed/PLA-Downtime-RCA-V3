@@ -19,11 +19,15 @@ import {
 } from './support/intake-fixtures';
 import { createIntegrationApp } from './support/test-app';
 
-const until = async (condition: () => boolean): Promise<void> => {
-  for (let tries = 0; !condition() && tries < 200; tries++) {
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-};
+/** A promise with its resolver: the tests wait on events, never on wall-clock sleeps. */
+function deferred<T = void>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((done) => (resolve = done));
+  return { promise, resolve };
+}
 
 /** Plan 1.5: leased jobs (ING02), crash recovery (FND01 checkpoint after accept), lifecycle. */
 describe('ingestion jobs and leases (plan 1.5)', () => {
@@ -66,6 +70,10 @@ describe('ingestion jobs and leases (plan 1.5)', () => {
     await harness.stop();
   });
 
+  /**
+   * Creates and starts a job; `start` makes it due by the database clock (the clock the claim compares
+   * with), so a claim right after never depends on the host and container clocks agreeing.
+   */
   const startJob = async (scope: Record<string, unknown>) =>
     (await jobs.create(context, connectionId, { scope, start: true })).id;
   const page = (prefix: string, count: number, cursor: number): ReadPage => ({
@@ -136,6 +144,17 @@ describe('ingestion jobs and leases (plan 1.5)', () => {
         detail: { previousOwner: holder },
       });
     });
+  });
+
+  it('start makes the job due by the database clock (no host/container clock dependency)', async () => {
+    const id = await startJob({ case: 'due' });
+
+    const [row] = await rows<{ due: boolean }>(
+      `SELECT next_run_at <= now() AS due FROM ingestion_jobs WHERE id = $1`,
+      [id],
+    );
+    expect(row.due).toBe(true);
+    expect(await runner.claim('runner-A')).toMatchObject({ jobId: id });
   });
 
   describe('crash recovery (FND01)', () => {
@@ -232,18 +251,21 @@ describe('ingestion jobs and leases (plan 1.5)', () => {
   describe('lifecycle (ING02)', () => {
     it('stop lets the in-flight page finish and commit, then no new page starts', async () => {
       const id = await startJob({ case: 'stop' });
-      let release: (page: ReadPage) => void = () => undefined;
-      fake.next = () => new Promise<ReadPage>((resolve) => (release = resolve));
-      const readsBefore = fake.reads;
+      const reading = deferred();
+      const release = deferred<ReadPage>();
+      fake.next = () => {
+        reading.resolve();
+        return release.promise;
+      };
 
       const inFlight = runner.runOnce('runner-A');
-      await until(() => fake.reads > readsBefore);
+      await reading.promise;
       const stopped = await jobs.command(context, id, 'stop', 'maintenance');
       expect(stopped).toMatchObject({
         state: 'stopped',
         leaseOwner: 'runner-A',
       });
-      release(page('stop', 2, 2));
+      release.resolve(page('stop', 2, 2));
 
       expect(await inFlight).toMatchObject({
         status: 'committed',

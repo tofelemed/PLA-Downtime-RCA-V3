@@ -9,6 +9,7 @@ import {
   SimRequest,
 } from './sim-model';
 import { routeGet, SimAnswer, SimState } from './sim-routes';
+import { SimStreams } from './sim-streams';
 
 /** Test-only credentials of the simulator (never a real account). */
 export const SIM_USERNAME = 'sim-reader';
@@ -32,6 +33,8 @@ export class PiWebApiSimulator {
   readonly frames = new Map<string, SimFrame>();
   readonly elements = new Map<string, SimElement>();
   readonly requests: LoggedRequest[] = [];
+  /** recorded values, summaries and stream updates (plan 1.7) */
+  readonly streams = new SimStreams();
   authRevoked = false;
   batchSupported = true;
   private failures: SimFailure[] = [];
@@ -135,10 +138,21 @@ export class PiWebApiSimulator {
     }
     const injected = this.injected(request);
     if (injected) return injected;
-    if (request.method === 'GET') return routeGet(this.state(), request);
+    const parts = request.path
+      .split('/')
+      .filter(Boolean)
+      .map(decodeURIComponent);
+    if (request.method === 'GET') {
+      return (
+        this.streams.routeGet(request, parts) ?? routeGet(this.state(), request)
+      );
+    }
     if (request.method === 'POST' && request.path === '/batch') {
       return this.batch(body);
     }
+    const streamPost =
+      request.method === 'POST' ? this.streams.routePost(parts) : null;
+    if (streamPost) return streamPost;
     return { status: 405, body: { Errors: ['Method not allowed'] } };
   }
 

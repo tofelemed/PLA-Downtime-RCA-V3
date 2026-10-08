@@ -54,7 +54,7 @@ Status legend: ⬜ not started · 🔄 in progress · 🧪 implemented, tests pe
 | 🧪 | 1.4 Event operations: split, merge, bulk-code, close | [1.4-event-operations.md](phase-1/1.4-event-operations.md) | T37 green (unit + integration, 8 Oct); bulk jobs via worker; CI run open |
 | 🧪 | 1.5 Durable intake core: raw store, jobs, inbox/outbox, quarantine, replay | [1.5-durable-intake-core.md](phase-1/1.5-durable-intake-core.md) | T06, T10 (inbox), replay invariance, crash recovery green (unit + integration, 8 Oct); PI pull through the pipeline; CI run open |
 | 🧪 | 1.6 PI event frames certified | [1.6-pi-event-frames-certified.md](phase-1/1.6-pi-event-frames-certified.md) | T07, T08, T46, §6.4 matrix green against the PI Web API simulator (8 Oct); legacy pull on the certified path, v1 jobs crosswalked; **real-PI certification ⛔ pending D02** |
-| ⬜ | 1.7 PI actuals: signals, counters, rates, output EFs | [1.7-pi-actuals-signals.md](phase-1/1.7-pi-actuals-signals.md) | T25, T26, T27 |
+| 🧪 | 1.7 PI actuals: signals, counters, rates, output EFs | [1.7-pi-actuals-signals.md](phase-1/1.7-pi-actuals-signals.md) | T25, T26, T27 green in the decimal engine (fixtures + properties); signals, versioned samples, recorded/summary/updates/backfill jobs and preview green against the PI Web API simulator (9 Oct); **real tags ⛔ pending D02** |
 | ⬜ | 1.8 MQTT adapter | [1.8-mqtt-adapter.md](phase-1/1.8-mqtt-adapter.md) | T09, T11 |
 | ⬜ | 1.9 Kafka adapter and internal transport | [1.9-kafka-adapter-and-internal-transport.md](phase-1/1.9-kafka-adapter-and-internal-transport.md) | T10, T23 (transport) |
 | ⬜ | 1.10 Source authority and state engine | [1.10-source-authority-and-state-engine.md](phase-1/1.10-source-authority-and-state-engine.md) | T11, T12, DT fixtures |

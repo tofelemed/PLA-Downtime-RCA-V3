@@ -154,3 +154,24 @@ Against the in-process PI Web API simulator (`test/simulators/pi-web-api/`). **T
 
 
 > Re-verification of 1.6 by the coordinating session (9 Oct): tsc clean; unit + fixtures 1114/1114; integration 214 — one full run had 5 failures in `intake-jobs.int-spec.ts` (lease/timing tests), the suite passes alone and two further full runs passed 214/214. **Known flake** in the lease-timing tests under full-suite load; to be hardened (deterministic clock) before CI gating.
+
+
+# Plan 1.7 verification (9 Oct 2026)
+
+Against the in-process PI Web API simulator (`test/simulators/pi-web-api/`, streams added in `sim-streams.ts`). **No real PI tag was read**: tag names, units, timebases, rollover values and PI's `Total` timebase for unit100–unit500 are pending D02 (DECISIONS "Still needed" items 10–12). I11 (no server-side time-series ingestion) is resolved for PI: recorded values, stream updates, totals and backfills land in `measurement_samples` / `signal_summaries` through intake.
+
+| Step | Result | Notes |
+|---|---|---|
+| Migration on scratch | ✅ fresh `proact_scratch`: up (10 migrations) → `migration:generate --dr` **No changes** → revert → up → **No changes**; scratch DB dropped | `SignalsAndSamples1792102400000`: `signals` (partial unique current source key, tenant/connection/source/effective_from and tenant/unit indexes, checks), `measurement_samples` (range-partitioned by `observed_at`, partitions by `measurement_samples_ensure_partition`, immutable trigger, unique signal + time + revision), `signal_summaries`, `signal_backfill_runs`, `ingestion_error_code` + `unknown_signal` (enum rebuilt, revertible), historian-tag crosswalk. `event-backfill.int-spec.ts` now reverts 7 migrations |
+| `npx tsc --noEmit -p tsconfig.json` | ✅ exit 0 | |
+| `npx jest --selectProjects unit fixtures` | ✅ **49 suites, 1157 tests** | new: `counter-delta.spec.ts` (T26 rollover / rate_implausible, T27 reset_unresolved, known-instant reset, gap not counted, linear boundaries, properties: Σ segment deltas = last − first, never negative), `rate-integration.spec.ts` (T25 step + linear = 60 t with method/timebase, bad and out-of-range exclusion, no timebase refused, property: zero rate = 0), `output-events.spec.ts`, `pi-signal-envelope.spec.ts` (PI quality mapping, measurement identity, digital, Total), `pi-signal-cursor.spec.ts`; fixtures `actuals-engine.spec.ts` runs `T25.json`–`T27.json`; canonical-envelope drift test green with the additive `sample.digital` / `sample.summary` and the new example `pi-measurement.json`; OpenAPI v2 snapshot regenerated (signals routes, `unknown_signal`) |
+| `npx jest --selectProjects integration --runInBand` (run 1) | ✅ **28 suites, 226 tests** (320.9 s) | new: `pi-signals.int-spec.ts` (6), `pi-signal-updates.int-spec.ts` (4), `signals-crosswalk.int-spec.ts` (1); `intake-jobs.int-spec.ts` +1 |
+| same (run 2) | ✅ **28 suites, 226 tests** (348.2 s) | an earlier full run during development was also 226/226 |
+| ESLint (`prettier/prettier` off) on created/changed files under `src/` | ✅ no findings | |
+| Prettier | ✅ `--write` on created files; `--check` clean on every created/changed file | |
+| Size rules | ✅ new functions ≤ 40 lines, files ≤ 400 lines | DI constructor `PiWebApiAdapter` 6 (was 5) |
+| Real PI (tags of unit100–unit500) | ⛔ pending D02 | |
+
+**Simulator evidence (integration):** recorded poll of 3 signals → 13 samples (system state `I/O Timeout` stored as bad with its flag), re-read adds nothing; preview of 120 t/h over 30 min = **60 t**, `rate_integration/step`, timebase h, coverage 1 (T25); counter 995 → 5 → 25 with modulus 1000 = **30** (T26 rollover); 1000 → 10 without modulus → `null` + `reset_unresolved`, coverage 0 (T27); archive correction at one timestamp → second revision (120 → 240) and the preview uses it (70 t); summary job for a counter and for a rate with another timebase → **422 `INVALID_JOB_SCOPE`**, rate with confirmed timebase → 2 hourly Totals shown by the preview; stream updates register → event → dropped marker → re-register + bounded backfill run `marker_lost` (not truncated); server without updates → job `failed`, `capabilities.streamUpdates=false`, next updates job 422; `POST /signals/{id}/backfill` → 202, draining job reads the window, run `completed`, job `stopped`; unknown stream → `unknown_signal`, foreign unit `kg/h` → `unit_conflict`.
+
+**`intake-jobs` flake (1.6 re-verification note):** root cause — `start`/`resume` set `next_run_at` from the application host clock while `claimDueJob` compares with the database clock; with the Docker VM clock behind the host, a just-started job was not yet due and the lease tests failed together. Fixed in `IngestionJobsService` (`next_run_at = now()` in the database); the stop test waits on a deferred "read started" signal instead of a 2 s wall-clock poll; a new test asserts a started job is due by the DB clock and claimable at once. Full integration suite green in both runs above.

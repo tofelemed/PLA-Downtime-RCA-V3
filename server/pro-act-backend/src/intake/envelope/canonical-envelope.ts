@@ -59,6 +59,14 @@ export interface EnvelopeValues {
     unit?: string | null;
     semanticType?: SemanticType;
     sequence?: number | null;
+    /** enumeration-set value (PI digital state); `value` is null then */
+    digital?: { name: string; value: number; isSystem?: boolean };
+    /** a source summary over `[startTime, endTime)` (PI `Total` of a rate signal) */
+    summary?: {
+      summaryType: 'Total';
+      calculationBasis: 'TimeWeighted';
+      timebase: 's' | 'min' | 'h' | 'd';
+    };
   };
   state?: {
     stateRef: string;

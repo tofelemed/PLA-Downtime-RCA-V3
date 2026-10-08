@@ -261,6 +261,59 @@
                 "integer",
                 "null"
               ]
+            },
+            "digital": {
+              "type": "object",
+              "description": "Enumeration-set (digital state) value as the source delivered it (PI: Name, Value, IsSystem); value is then null. Added in plan 1.7.",
+              "required": [
+                "name",
+                "value"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "integer"
+                },
+                "isSystem": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "summary": {
+              "type": "object",
+              "description": "Set when the sample is a source summary over [startTime, endTime) instead of a point value (PI Total of a rate signal, PI09). Added in plan 1.7.",
+              "required": [
+                "summaryType",
+                "calculationBasis",
+                "timebase"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "summaryType": {
+                  "type": "string",
+                  "enum": [
+                    "Total"
+                  ]
+                },
+                "calculationBasis": {
+                  "type": "string",
+                  "enum": [
+                    "TimeWeighted"
+                  ]
+                },
+                "timebase": {
+                  "type": "string",
+                  "enum": [
+                    "s",
+                    "min",
+                    "h",
+                    "d"
+                  ]
+                }
+              }
             }
           },
           "additionalProperties": false

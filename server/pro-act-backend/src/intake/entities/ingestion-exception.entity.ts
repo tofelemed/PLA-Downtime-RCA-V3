@@ -13,6 +13,7 @@ export const INGESTION_ERROR_CODES = [
   'order_conflict',
   'no_handler',
   'processing_failed',
+  'unknown_signal',
 ] as const;
 export type IngestionErrorCode = (typeof INGESTION_ERROR_CODES)[number];
 

@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'crypto';
@@ -10,7 +11,10 @@ import {
   RequestContext,
   requireTenantId,
 } from '../../common/context/request-context';
+import { adapterErrorOf } from '../adapters/adapter-error';
+import { AdapterRegistry } from '../adapters/adapter-registry';
 import { IntegrationConnectionService } from '../connections/integration-connection.service';
+import { IntegrationConnection } from '../entities/integration-connection.entity';
 import { canonicalJson } from '../envelope/envelope-validator';
 import { IngestionJob, JobCadence } from '../entities/ingestion-job.entity';
 import { recordTransition } from './job-lease';
@@ -36,6 +40,7 @@ export class IngestionJobsService {
     @InjectRepository(IngestionJob)
     private readonly jobs: Repository<IngestionJob>,
     private readonly connections: IntegrationConnectionService,
+    private readonly adapters: AdapterRegistry,
   ) {}
 
   async create(
@@ -44,6 +49,7 @@ export class IngestionJobsService {
     input: NewIngestionJob,
   ): Promise<IngestionJob> {
     const connection = await this.connections.get(context, connectionId);
+    await this.validateScope(connection, input.scope);
     const created = await this.unique(() =>
       this.jobs.manager.transaction(async (manager) => {
         const job = await manager.save(
@@ -92,6 +98,8 @@ export class IngestionJobsService {
           updatedBy: context.userId,
         });
         const saved = await manager.save(job);
+        if (action === 'start' || action === 'resume')
+          await runNow(manager, saved);
         await this.audit(manager, saved, {
           action,
           from,
@@ -101,6 +109,24 @@ export class IngestionJobsService {
         return saved;
       }),
     );
+  }
+
+  /** The adapter's scope check (plan 1.7); a scope that can never run is 422 `INVALID_JOB_SCOPE`. */
+  private async validateScope(
+    connection: IntegrationConnection,
+    scope: Record<string, unknown>,
+  ): Promise<void> {
+    const adapter = this.adapters.find(connection.sourceType);
+    try {
+      await adapter?.validateScope?.(connection, scope);
+    } catch (error) {
+      const classified = adapterErrorOf(error);
+      if (!classified || classified.retryable) throw error;
+      throw new UnprocessableEntityException({
+        code: 'INVALID_JOB_SCOPE',
+        message: classified.message,
+      });
+    }
   }
 
   /** A job of the caller's tenant; 404 for foreign or unknown ids. */
@@ -170,21 +196,30 @@ export function scopeHash(scope: Record<string, unknown>): string {
   return createHash('sha256').update(canonicalJson(scope)).digest('hex');
 }
 
-/** Starting or resuming runs the job now; starting also resets the retry budget. */
+/** Starting also resets the retry budget; starting and resuming run the job now (`runNow`). */
 function transitionFields(
   action: JobAction,
   target: IngestionJob['state'],
 ): Partial<IngestionJob> {
   if (action === 'start') {
-    return {
-      state: target,
-      nextRunAt: new Date(),
-      retryCount: 0,
-      lastError: null,
-    };
+    return { state: target, retryCount: 0, lastError: null };
   }
-  if (action === 'resume') return { state: target, nextRunAt: new Date() };
   return { state: target };
+}
+
+/**
+ * Makes the job due by the database clock, the clock `claimDueJob` compares with: a time taken from the
+ * application host could lie ahead of the database and leave the job not yet due.
+ */
+async function runNow(
+  manager: EntityManager,
+  job: IngestionJob,
+): Promise<void> {
+  const [rows]: [Array<{ next_run_at: Date }>, number] = await manager.query(
+    `UPDATE "ingestion_jobs" SET "next_run_at" = now() WHERE "id" = $1 RETURNING "next_run_at"`,
+    [job.id],
+  );
+  job.nextRunAt = rows[0]?.next_run_at ?? job.nextRunAt;
 }
 
 function notFound(): NotFoundException {

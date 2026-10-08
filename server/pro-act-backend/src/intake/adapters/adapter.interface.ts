@@ -52,6 +52,11 @@ export interface SourceAdapter {
   capabilities(): ConnectionCapabilities;
   /** problems with an endpoint configuration (empty = valid); secrets are never part of it */
   validateConfig(config: Readonly<Record<string, unknown>>): string[];
+  /** checks a job scope before the job is created (throws an `AdapterError`; non-retryable → 422) */
+  validateScope?(
+    connection: IntegrationConnection,
+    scope: Readonly<Record<string, unknown>>,
+  ): Promise<void>;
   test(connection: IntegrationConnection): Promise<ConnectionTest>;
   discover(connection: IntegrationConnection): Promise<Record<string, unknown>>;
   read(request: ReadRequest): Promise<ReadPage>;

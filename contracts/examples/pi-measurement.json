@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "messageId": "P1DPmHnz3Hq9ME@2026-10-08T06:00:00.000Z:sha256:5f8c2a9e7b3d1c4e6a8b0d2f4e6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2b",
+  "tenantId": "0b5a6f3e-2d4c-4b8a-9e1f-7c6d5e4f3a2b",
+  "connectionId": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+  "sourceType": "pi_web_api",
+  "sourceObjectId": "P1DPmHnz3Hq9ME@2026-10-08T06:00:00.000Z",
+  "sourceRevision": "1791446460000",
+  "operation": "observe",
+  "kind": "measurement",
+  "observedAt": "2026-10-08T06:00:00.000Z",
+  "receivedAt": "2026-10-08T06:01:00.000Z",
+  "location": {
+    "sourcePath": "P1DPmHnz3Hq9ME",
+    "sourceElementIds": ["P1DPmHnz3Hq9ME"]
+  },
+  "values": {
+    "sample": { "signalRef": "P1DPmHnz3Hq9ME", "value": 120, "unit": "t/h" }
+  },
+  "quality": {
+    "status": "uncertain",
+    "sourceFlags": ["questionable"],
+    "degraded": true
+  },
+  "provenance": {
+    "rawPayload": {
+      "Timestamp": "2026-10-08T06:00:00Z",
+      "Value": 120,
+      "UnitsAbbreviation": "t/h",
+      "Good": true,
+      "Questionable": true
+    },
+    "payloadHash": "sha256:5f8c2a9e7b3d1c4e6a8b0d2f4e6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2b",
+    "mappingVersion": 0,
+    "correlationId": "pi-job:recorded"
+  },
+  "sourceControls": { "pi": { "webId": "P1DPmHnz3Hq9ME" } }
+}

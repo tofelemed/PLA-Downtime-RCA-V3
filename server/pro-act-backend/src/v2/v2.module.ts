@@ -46,6 +46,10 @@ import { IngestionExceptionsV2Controller } from './intake/ingestion-exceptions-v
 import { IngestionJobsV2Controller } from './intake/ingestion-jobs-v2.controller';
 import { IntakeQueriesV2Service } from './intake/intake-queries-v2.service';
 import { ReplayRunsV2Controller } from './intake/replay-runs-v2.controller';
+import { Signal } from '../signals/entities/signal.entity';
+import { SignalsModule } from '../signals/signals.module';
+import { SignalsV2Controller } from './signals/signals-v2.controller';
+import { SignalsV2Service } from './signals/signals-v2.service';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -70,6 +74,7 @@ import { ReplayRunsV2Controller } from './intake/replay-runs-v2.controller';
       IngestionJobTransition,
       IngestionException,
       ReplayRun,
+      Signal,
     ]),
     ProductionEventModule,
     CodeLibraryModule,
@@ -77,6 +82,7 @@ import { ReplayRunsV2Controller } from './intake/replay-runs-v2.controller';
     AttributeMappingModule,
     EventOperationsModule,
     IntakeModule,
+    SignalsModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -95,6 +101,7 @@ import { ReplayRunsV2Controller } from './intake/replay-runs-v2.controller';
     IngestionJobsV2Controller,
     IngestionExceptionsV2Controller,
     ReplayRunsV2Controller,
+    SignalsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -105,6 +112,7 @@ import { ReplayRunsV2Controller } from './intake/replay-runs-v2.controller';
     SourceMappingsV2Service,
     AttributeMappingsV2Service,
     IntakeQueriesV2Service,
+    SignalsV2Service,
   ],
 })
 export class V2Module {}

@@ -36,6 +36,11 @@ import { PiOpenFrameRefresh } from './pi/pi-open-frame-refresh';
 import { PiOpenFrameStore } from './pi/pi-open-frame-store';
 import { PiWindowFetch } from './pi/pi-window-fetch';
 import { PiWindowRead } from './pi/pi-window-read';
+import { PiRecordedRead } from './pi/pi-recorded-read';
+import { PiSignalRead } from './pi/pi-signal-read';
+import { PiStreamUpdates } from './pi/pi-stream-updates';
+import { PiSummaryRead } from './pi/pi-summary-read';
+import { SignalsModule } from '../signals/signals.module';
 
 @Module({
   imports: [
@@ -59,6 +64,8 @@ import { PiWindowRead } from './pi/pi-window-read';
     CodeLibraryModule,
     // durable intake (plan 1.5): the PI adapter and normaliser register themselves on init
     IntakeModule,
+    // signals and the measurement normaliser (plan 1.7)
+    SignalsModule,
   ],
   controllers: [IntegrationController, PIBrowserController],
   providers: [
@@ -80,6 +87,11 @@ import { PiWindowRead } from './pi/pi-window-read';
     PiInventory,
     PiWindowFetch,
     PiLegacyJobLink,
+    // PI signal jobs (plan 1.7)
+    PiSignalRead,
+    PiRecordedRead,
+    PiSummaryRead,
+    PiStreamUpdates,
   ],
   exports: [
     PIEventPullService,

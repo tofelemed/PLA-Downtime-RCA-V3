@@ -3365,7 +3365,8 @@
                 "duration_conflict",
                 "order_conflict",
                 "no_handler",
-                "processing_failed"
+                "processing_failed",
+                "unknown_signal"
               ],
               "type": "string"
             }
@@ -3512,6 +3513,302 @@
         "summary": "State and counts of a replay run; foreign ids are 404",
         "tags": [
           "v2 · Replay Runs"
+        ]
+      }
+    },
+    "/api/v2/signals": {
+      "get": {
+        "description": "Every version is listed; current versions have effectiveTo = null.",
+        "operationId": "SignalsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "connectionId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "semanticType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "rate",
+                "counter",
+                "state",
+                "quality",
+                "level",
+                "output_increment",
+                "other"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List signals of the caller tenant (keyset on createdAt, id)",
+        "tags": [
+          "v2 · Signals"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. A rate needs rateTimebase (422 RATE_TIMEBASE_REQUIRED); the unit must belong to the tenant (422 INVALID_REFERENCE); a next version starts after the current one.",
+        "operationId": "SignalsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalV2WriteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a signal (or the next version of the signal of the same source key)",
+        "tags": [
+          "v2 · Signals"
+        ]
+      }
+    },
+    "/api/v2/signals/{id}": {
+      "get": {
+        "operationId": "SignalsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one signal version; foreign ids are 404",
+        "tags": [
+          "v2 · Signals"
+        ]
+      }
+    },
+    "/api/v2/signals/{id}/preview": {
+      "post": {
+        "description": "Runs the quantity engine (counter delta, rate integration or output increments) on the latest sample revisions: quantity, method, coverage (measured / estimated / missing / excluded seconds), exceptions, the samples used and, for rates, stored PI Totals. At most 31 days / 50 000 samples.",
+        "operationId": "SignalsV2Controller_preview_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalWindowDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Preview the quantity of a window without storing anything (UX06)",
+        "tags": [
+          "v2 · Signals"
+        ]
+      }
+    },
+    "/api/v2/signals/{id}/backfill": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Answers 202 with the run status URL; the run is executed by a draining `backfill` ingestion job.",
+        "operationId": "SignalsV2Controller_backfill_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalWindowDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Re-read [from, to) of this signal from PI (at most 90 days, ending by now)",
+        "tags": [
+          "v2 · Signals"
+        ]
+      }
+    },
+    "/api/v2/signals/{id}/backfills/{runId}": {
+      "get": {
+        "operationId": "SignalsV2Controller_getBackfill_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "runId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Status of a backfill run",
+        "tags": [
+          "v2 · Signals"
         ]
       }
     }
@@ -4446,6 +4743,146 @@
         "required": [
           "action",
           "reason"
+        ]
+      },
+      "SignalQualityPolicyDto": {
+        "type": "object",
+        "properties": {
+          "acceptUncertain": {
+            "type": "boolean",
+            "description": "Use uncertain (questionable/substituted) samples; default false = good only"
+          }
+        }
+      },
+      "SignalV2WriteDto": {
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Integration connection of the caller tenant"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name"
+          },
+          "sourceKey": {
+            "type": "string",
+            "description": "Source stream id: PI point/attribute WebId (or a topic)"
+          },
+          "sourcePath": {
+            "type": "string",
+            "description": "PI path of the stream (documentation only)"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "semanticType": {
+            "type": "string",
+            "enum": [
+              "rate",
+              "counter",
+              "state",
+              "quality",
+              "level",
+              "output_increment",
+              "other"
+            ]
+          },
+          "canonicalUom": {
+            "type": "string",
+            "description": "Canonical unit (e.g. t, t/h); samples in another unit are quarantined"
+          },
+          "rateTimebase": {
+            "type": "string",
+            "enum": [
+              "s",
+              "min",
+              "h",
+              "d"
+            ],
+            "description": "Required for rate signals"
+          },
+          "interpolation": {
+            "type": "string",
+            "enum": [
+              "step",
+              "linear"
+            ],
+            "default": "step"
+          },
+          "maxGapSeconds": {
+            "type": "number",
+            "default": 900,
+            "minimum": 1,
+            "maximum": 604800
+          },
+          "resetPolicy": {
+            "type": "string",
+            "enum": [
+              "none",
+              "known_instant",
+              "detect_drop"
+            ],
+            "default": "none"
+          },
+          "rolloverModulus": {
+            "type": "string",
+            "description": "Counters: rollover modulus (decimal string)"
+          },
+          "expectedMin": {
+            "type": "string",
+            "description": "Lowest credible value (decimal string)"
+          },
+          "expectedMax": {
+            "type": "string",
+            "description": "Rates: highest credible value; counters: highest credible increase per rateTimebase"
+          },
+          "cadenceSeconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 86400
+          },
+          "qualityPolicy": {
+            "$ref": "#/components/schemas/SignalQualityPolicyDto"
+          },
+          "isAuthority": {
+            "type": "boolean",
+            "default": false
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "Start of validity (ISO 8601). Default: now for a next version, the epoch for a first one"
+          }
+        },
+        "required": [
+          "connectionId",
+          "name",
+          "sourceKey",
+          "unitId",
+          "semanticType"
+        ]
+      },
+      "SignalWindowDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Window start, ISO 8601 (inclusive)"
+          },
+          "to": {
+            "type": "string",
+            "description": "Window end, ISO 8601 (exclusive)"
+          }
+        },
+        "required": [
+          "from",
+          "to"
         ]
       }
     }

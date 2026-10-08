@@ -17,6 +17,8 @@ import { PiSearchScope } from './pi/pi-frame-search';
 import { PiInventory } from './pi/pi-inventory';
 import { PiJobScope, parsePiJobScope } from './pi/pi-job-scope';
 import { PiOpenFrameRefresh } from './pi/pi-open-frame-refresh';
+import { PiSignalRead } from './pi/pi-signal-read';
+import { isPiSignalMode } from './pi/pi-signal-scope';
 import { PiWindowRead } from './pi/pi-window-read';
 
 interface AfItem {
@@ -28,6 +30,7 @@ interface AfItem {
  * Certified PI Web API adapter (plan 1.6, ING07, PI01–PI06). Each PI ingestion job has a mode
  * (`parsePiJobScope`): `window` polls with overlap and full paging, `rescan` re-reads 7/90 days for
  * corrections, `open_frames` re-reads tracked open frames by WebId, `inventory` confirms deletions.
+ * Signal modes (plan 1.7, `PiSignalRead`): `recorded`, `summary`, `updates` and `backfill`.
  * Connection tests report DNS, TLS, auth, version, authorisation and read separately and detect the
  * batch controller. Replay is served from the raw store, so `replayRead` is not implemented.
  */
@@ -41,6 +44,7 @@ export class PiWebApiAdapter implements SourceAdapter, OnModuleInit {
     private readonly windows: PiWindowRead,
     private readonly openFrames: PiOpenFrameRefresh,
     private readonly inventory: PiInventory,
+    private readonly signals: PiSignalRead,
   ) {}
 
   onModuleInit(): void {
@@ -112,12 +116,23 @@ export class PiWebApiAdapter implements SourceAdapter, OnModuleInit {
     return { assetServers };
   }
 
+  /** Signal jobs (plan 1.7) are checked at creation; frame jobs keep failing at read time (1.6). */
+  async validateScope(
+    connection: IntegrationConnection,
+    scope: Readonly<Record<string, unknown>>,
+  ): Promise<void> {
+    if (isPiSignalMode(scope.mode)) await this.signals.check(connection, scope);
+  }
+
   async read(request: ReadRequest): Promise<ReadPage> {
-    const scope = parsePiJobScope(request.scope);
     const source = {
       client: await this.clients.forConnection(request.connection),
       connection: request.connection,
     };
+    if (isPiSignalMode(request.scope.mode)) {
+      return this.signals.read(source, request);
+    }
+    const scope = parsePiJobScope(request.scope);
     if (scope.mode === 'open_frames') {
       return this.openFrames.read(source, request);
     }
