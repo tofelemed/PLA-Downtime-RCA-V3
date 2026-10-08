@@ -2744,6 +2744,776 @@
           "v2 · Jobs"
         ]
       }
+    },
+    "/api/v2/connections": {
+      "get": {
+        "description": "Keyset pages on (createdAt, id); inactive ones with includeInactive=true.",
+        "operationId": "ConnectionsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "pi_web_api",
+                "mqtt",
+                "kafka",
+                "opc_ua",
+                "rest_import",
+                "file_import",
+                "db_import",
+                "manual"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "description": "Include inactive connections",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List connections of the caller tenant (redacted: `hasSecret` only)",
+        "tags": [
+          "v2 · Connections"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. The secret is stored encrypted (`secret_ref`); credential-like keys in endpointConfig are 422 SECRET_IN_CONFIG; the adapter validates the config (422 INVALID_ENDPOINT_CONFIG).",
+        "operationId": "ConnectionsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConnectionV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a connection",
+        "tags": [
+          "v2 · Connections"
+        ]
+      }
+    },
+    "/api/v2/connections/{id}": {
+      "get": {
+        "operationId": "ConnectionsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One connection (redacted); foreign ids are 404",
+        "tags": [
+          "v2 · Connections"
+        ]
+      }
+    },
+    "/api/v2/connections/{id}/test": {
+      "post": {
+        "description": "422 ADAPTER_UNAVAILABLE when no adapter for the source type is installed yet.",
+        "operationId": "ConnectionsV2Controller_test_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Test the connection through its adapter (no data is read or stored)",
+        "tags": [
+          "v2 · Connections"
+        ]
+      }
+    },
+    "/api/v2/connections/{id}/discover": {
+      "get": {
+        "operationId": "ConnectionsV2Controller_discover_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Adapter capabilities and source metadata (e.g. PI asset servers)",
+        "tags": [
+          "v2 · Connections"
+        ]
+      }
+    },
+    "/api/v2/connections/{id}/jobs": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 JOB_SCOPE_EXISTS when a non-stopped job has the same scope. `start: true` starts it (the worker claims it under a lease).",
+        "operationId": "ConnectionsV2Controller_createJob_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIngestionJobV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create an ingestion job for a scope of this connection (ING02)",
+        "tags": [
+          "v2 · Connections"
+        ]
+      }
+    },
+    "/api/v2/connections/{id}/replays": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The latest retained version of each source object in scope (window on the observation time, source object ids, exception ids) is re-delivered with its original identity and normalised with the current mappings. 202 with the replay run (`GET /replay-runs/{id}`).",
+        "operationId": "ConnectionsV2Controller_replay_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReplayV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Replay run accepted"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replay retained raw observations of this connection (ING05)",
+        "tags": [
+          "v2 · Connections"
+        ]
+      }
+    },
+    "/api/v2/ingestion-jobs": {
+      "get": {
+        "operationId": "IngestionJobsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "connectionId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "created",
+                "running",
+                "paused",
+                "draining",
+                "stopped",
+                "failed"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List ingestion jobs of the caller tenant (keyset on createdAt, id)",
+        "tags": [
+          "v2 · Ingestion Jobs"
+        ]
+      }
+    },
+    "/api/v2/ingestion-jobs/{id}": {
+      "get": {
+        "operationId": "IngestionJobsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One job: state, lease, committed cursor, retries, health; foreign ids are 404",
+        "tags": [
+          "v2 · Ingestion Jobs"
+        ]
+      }
+    },
+    "/api/v2/ingestion-jobs/{id}/transitions": {
+      "get": {
+        "operationId": "IngestionJobsV2Controller_transitions_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Audit trail of the job (commands, lease take-overs, drained, failed), oldest first",
+        "tags": [
+          "v2 · Ingestion Jobs"
+        ]
+      }
+    },
+    "/api/v2/ingestion-jobs/{id}/{action}": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. pause/stop let the in-flight page finish (its cursor is committed); drain stops once the source is caught up. 409 INVALID_TRANSITION when the state does not allow the command; 409 JOB_SCOPE_EXISTS when starting would duplicate an active scope.",
+        "operationId": "IngestionJobsV2Controller_command_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "start",
+                "pause",
+                "resume",
+                "drain",
+                "stop"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobCommandV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "start | pause | resume | drain | stop a job (audited)",
+        "tags": [
+          "v2 · Ingestion Jobs"
+        ]
+      }
+    },
+    "/api/v2/ingestion-exceptions": {
+      "get": {
+        "description": "Filters: state, errorCode, connectionId, sourceObjectId. Keyset pages, newest lastSeen first by default.",
+        "operationId": "IngestionExceptionsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "-lastSeen",
+              "enum": [
+                "lastSeen",
+                "-lastSeen",
+                "firstSeen",
+                "-firstSeen"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "open",
+                "resolved",
+                "irrecoverable"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "errorCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "unknown_template",
+                "unknown_code",
+                "unknown_unit",
+                "mapping_ambiguous",
+                "mapping_invalid_target",
+                "schema_invalid",
+                "unit_conflict",
+                "duration_conflict",
+                "order_conflict",
+                "no_handler",
+                "processing_failed"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "connectionId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceObjectId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 512,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List quarantined deliveries of the caller tenant",
+        "tags": [
+          "v2 · Ingestion Exceptions"
+        ]
+      }
+    },
+    "/api/v2/ingestion-exceptions/{id}": {
+      "get": {
+        "operationId": "IngestionExceptionsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One exception with the retained raw delivery (preview before replay); foreign ids are 404",
+        "tags": [
+          "v2 · Ingestion Exceptions"
+        ]
+      }
+    },
+    "/api/v2/ingestion-exceptions/{id}/resolve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. `replay` queues a replay run for the exception source object (fix the mapping first; the run resolves the exception once the object normalises). `irrecoverable` closes it without data. 409 EXCEPTION_NOT_OPEN when already resolved.",
+        "operationId": "IngestionExceptionsV2Controller_resolve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveIngestionExceptionV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Closed as irrecoverable"
+          },
+          "202": {
+            "description": "Replay run accepted (`GET /replay-runs/{id}`)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolve an open exception: replay (202) or irrecoverable (200)",
+        "tags": [
+          "v2 · Ingestion Exceptions"
+        ]
+      }
+    },
+    "/api/v2/replay-runs/{id}": {
+      "get": {
+        "description": "state queued → running → completed | failed; counts: objects, normalized, quarantined, unchanged, failed.",
+        "operationId": "ReplayRunsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "State and counts of a replay run; foreign ids are 404",
+        "tags": [
+          "v2 · Replay Runs"
+        ]
+      }
     }
   },
   "info": {
@@ -3523,6 +4293,159 @@
         "required": [
           "ruleKind",
           "sourceCodeId"
+        ]
+      },
+      "CreateConnectionV2Dto": {
+        "type": "object",
+        "properties": {
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "pi_web_api",
+              "mqtt",
+              "kafka",
+              "opc_ua",
+              "rest_import",
+              "file_import",
+              "db_import",
+              "manual"
+            ]
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "endpointConfig": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Adapter endpoint settings (URL, broker, topics ...). Keys that look like credentials (password, secret, token, apiKey) are rejected with 422 SECRET_IN_CONFIG: send credentials as `secret`."
+          },
+          "secret": {
+            "type": "string",
+            "description": "Credential stored AES-256-GCM encrypted in `secrets`; never returned (views show `hasSecret`)",
+            "maxLength": 4096
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "sourceType",
+          "displayName",
+          "endpointConfig"
+        ]
+      },
+      "JobCadenceV2Dto": {
+        "type": "object",
+        "properties": {
+          "intervalSeconds": {
+            "type": "number",
+            "minimum": 5,
+            "maximum": 86400,
+            "description": "Seconds between pages when caught up"
+          },
+          "pageSize": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000,
+            "default": 500
+          }
+        },
+        "required": [
+          "intervalSeconds"
+        ]
+      },
+      "CreateIngestionJobV2Dto": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Adapter scope (PI: scopeType, scopeId, templateName, lookbackMinutes). One active job per connection and scope."
+          },
+          "cadence": {
+            "$ref": "#/components/schemas/JobCadenceV2Dto"
+          },
+          "start": {
+            "type": "boolean",
+            "description": "Start the job right away",
+            "default": false
+          }
+        },
+        "required": [
+          "scope"
+        ]
+      },
+      "CreateReplayV2Dto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Why the replay runs (audited)"
+          },
+          "from": {
+            "type": "string",
+            "description": "Window start on the source observation time (inclusive)"
+          },
+          "to": {
+            "type": "string",
+            "description": "Window end (exclusive)"
+          },
+          "sourceObjectIds": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exceptionIds": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Count what would be replayed without replaying",
+            "default": false
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "JobCommandV2Dto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        }
+      },
+      "ResolveIngestionExceptionV2Dto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "replay",
+              "irrecoverable"
+            ],
+            "description": "`replay`: fix the mapping first, then replay the source object (202 + replay run); `irrecoverable`: close the exception without data (kept for audit)."
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "action",
+          "reason"
         ]
       }
     }

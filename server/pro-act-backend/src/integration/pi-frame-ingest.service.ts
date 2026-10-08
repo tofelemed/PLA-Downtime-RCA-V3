@@ -16,7 +16,10 @@ import {
 import { EventRevisionService } from '../production-event/revisions/event-revision.service';
 import { CONNECTOR_ACTOR } from '../production-event/revisions/revision-actor';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
-import { TenantMappingResolver } from '../source-mapping/source-mapping.service';
+import {
+  ResolvedMapping,
+  TenantMappingResolver,
+} from '../source-mapping/source-mapping.service';
 import { MasterDataCodeResolverService } from './master-data-code-resolver.service';
 import { NO_TEMPLATE_KEY } from './pi-event-mapper';
 import { PiUnmappedRecorder } from './pi-unmapped-recorder';
@@ -50,6 +53,10 @@ export type FrameOutcome = 'created' | 'updated' | 'unchanged' | 'unmapped';
 export interface FrameResult {
   outcome: FrameOutcome;
   diagnostics: MappingDiagnostic[];
+  /** the production event the frame created or revised (absent when unmapped) */
+  eventId?: string;
+  /** why an unmapped frame could not be placed, with the ambiguity candidates */
+  placement?: Exclude<ResolvedMapping, { status: 'mapped' }>;
 }
 
 /** One frame after typed attribute mapping and code resolution, before it is placed. */
@@ -100,7 +107,11 @@ export class PiFrameIngestService {
         mapped,
         placement,
       });
-      return { outcome: 'unmapped', diagnostics: mapped.diagnostics };
+      return {
+        outcome: 'unmapped',
+        diagnostics: mapped.diagnostics,
+        placement,
+      };
     }
     const dto: Record<string, unknown> = {
       ...mapped.dto,
@@ -112,8 +123,8 @@ export class PiFrameIngestService {
       ...mapped.facts,
       mappingDiagnostics: mapped.diagnostics,
     };
-    const outcome = await this.store(context, dto, facts, mapped.end);
-    return { outcome, diagnostics: mapped.diagnostics };
+    const stored = await this.store(context, dto, facts, mapped.end);
+    return { ...stored, diagnostics: mapped.diagnostics };
   }
 
   private async mapFrame(
@@ -158,7 +169,7 @@ export class PiFrameIngestService {
     dto: Record<string, unknown>,
     facts: EventFacts,
     end: Date | null,
-  ): Promise<FrameOutcome> {
+  ): Promise<{ outcome: FrameOutcome; eventId: string }> {
     const existing = await this.events.findOne({
       where: { eventId: String(dto.eventId), tenantId: context.tenantId },
       select: { id: true },
@@ -169,15 +180,18 @@ export class PiFrameIngestService {
         { ...sourceColumnsOf(dto), ...facts },
         { actorKind: 'connector', sourceRevision: end?.toISOString() },
       );
-      return outcome === 'revised' ? 'updated' : 'unchanged';
+      return {
+        outcome: outcome === 'revised' ? 'updated' : 'unchanged',
+        eventId: existing.id,
+      };
     }
     const classified = await this.withCodeDefaults(context.tenantId, dto);
-    await this.lifecycle.create(
+    const created = await this.lifecycle.create(
       classified as unknown as CreateProductionEventDto,
       CONNECTOR_ACTOR,
       facts,
     );
-    return 'created';
+    return { outcome: 'created', eventId: created.id };
   }
 
   /** Classification defaults of the resolved reason code (rule in force at the event start). */

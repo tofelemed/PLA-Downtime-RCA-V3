@@ -8,12 +8,8 @@ import { PISyncWatermark } from '../pi-sync-watermark/pi-sync-watermark.entity';
 import { SourceMappingService } from '../source-mapping/source-mapping.service';
 import { PIWebApiService } from './pi-web-api.service';
 import { fetchEventFrameAttributes } from './pi-event-mapper';
-import {
-  FrameContext,
-  FrameOutcome,
-  PiEventFrame,
-  PiFrameIngestService,
-} from './pi-frame-ingest.service';
+import { PiIntakeBridge, PiPullScope } from './pi-intake-bridge';
+import { FrameOutcome, PiEventFrame } from './pi-frame-ingest.service';
 
 export interface PullEventsRequest {
   tenantId: string;
@@ -57,7 +53,10 @@ const COUNTER_OF: Readonly<Record<FrameOutcome, keyof PullCounters>> = {
   unmapped: 'unmappedEventsCreated',
 };
 
-/** Pulls PI event frames, stores the raw frames and ingests each one (plan 1.2/1.3). */
+/**
+ * Pulls PI event frames, stores the raw frames (v1 `pi_events`) and ingests each one through the durable
+ * intake pipeline (plan 1.5: raw store → canonical envelope → source revision, plans 1.2/1.3).
+ */
 @Injectable()
 export class PIEventPullService {
   private readonly logger = new Logger(PIEventPullService.name);
@@ -72,7 +71,7 @@ export class PIEventPullService {
     private readonly piWebApiService: PIWebApiService,
     private readonly attributeMappings: AttributeMappingService,
     private readonly sourceMappings: SourceMappingService,
-    private readonly ingest: PiFrameIngestService,
+    private readonly bridge: PiIntakeBridge,
   ) {}
 
   async pullEvents(request: PullEventsRequest): Promise<PullEventsResponse> {
@@ -81,12 +80,9 @@ export class PIEventPullService {
     try {
       const pull = await this.fetchFrames(request);
       counters.eventsFetched = pull.frames.length;
-      const context = await this.frameContext(
-        request.tenantId,
-        pull.connection,
-      );
+      const scope = await this.pullScope(request, pull.connection);
       for (const frame of pull.frames) {
-        await this.processFrame(request, context, frame, { counters, events });
+        await this.processFrame(request, scope, frame, { counters, events });
       }
       pull.connection.lastSyncTime = new Date();
       await this.piConnectionRepository.save(pull.connection);
@@ -144,25 +140,39 @@ export class PIEventPullService {
     return this.piWebApiService.testConnection(tenantId);
   }
 
-  /** Mapping profile and resolver, loaded once per pull (no per-frame rule queries). */
-  private async frameContext(
-    tenantId: string,
+  /**
+   * Mapping profile and resolver, loaded once per pull (no per-frame rule queries), and the intake
+   * identity of the connection (mirrored into `integration_connections` when frames are ingested).
+   */
+  private async pullScope(
+    request: PullEventsRequest,
     connection: PIConnection,
-  ): Promise<FrameContext> {
+  ): Promise<PiPullScope> {
+    const tenantId = request.tenantId;
+    if (request.autoCreateProductionEvents !== false) {
+      await this.bridge.prepare(tenantId, connection);
+    }
     return {
-      tenantId,
-      organizationId: connection.organizationId,
-      profile: await this.attributeMappings.loadProfile(
+      context: {
         tenantId,
-        connection.id,
-      ),
-      resolver: await this.sourceMappings.loadResolver(tenantId, connection.id),
+        organizationId: connection.organizationId,
+        profile: await this.attributeMappings.loadProfile(
+          tenantId,
+          connection.id,
+        ),
+        resolver: await this.sourceMappings.loadResolver(
+          tenantId,
+          connection.id,
+        ),
+      },
+      connectionId: connection.id,
+      correlationId: `pi-pull:${new Date().toISOString()}`,
     };
   }
 
   private async processFrame(
     request: PullEventsRequest,
-    context: FrameContext,
+    scope: PiPullScope,
     frame: PiEventFrame,
     sink: { counters: PullCounters; events: PIEvent[] },
   ): Promise<void> {
@@ -173,10 +183,12 @@ export class PIEventPullService {
         requestFn,
         frame.WebId,
       );
-      sink.events.push(await this.storeRawFrame(context, frame, attributes));
+      sink.events.push(
+        await this.storeRawFrame(scope.context, frame, attributes),
+      );
       sink.counters.eventsStored++;
       if (request.autoCreateProductionEvents === false) return;
-      const result = await this.ingest.ingest(context, frame, attributes);
+      const result = await this.bridge.ingestFrame(scope, frame, attributes);
       sink.counters[COUNTER_OF[result.outcome]]++;
       sink.counters.diagnostics.push(
         ...result.diagnostics.map((entry) => ({
@@ -194,7 +206,7 @@ export class PIEventPullService {
   }
 
   private async storeRawFrame(
-    context: FrameContext,
+    context: PiPullScope['context'],
     frame: PiEventFrame,
     attributes: Record<string, unknown>,
   ): Promise<PIEvent> {

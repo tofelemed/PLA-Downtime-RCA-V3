@@ -43,6 +43,7 @@ import { RCAEvidenceModule } from './rca-evidence/rca-evidence.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { ReportingModule } from './reporting/reporting.module';
 import { IntegrationModule } from './integration/integration.module';
+import { IntakeModule } from './intake/intake.module';
 import { HealthModule } from './health/health.module';
 import { ConnectivityModule } from './connectivity/connectivity.module';
 import { PIProxyModule } from './pi-proxy/pi-proxy.module';
@@ -136,6 +137,8 @@ registerPgTypeParsers();
     RealtimeModule,
     ReportingModule,
     IntegrationModule,
+    // durable intake core (plan 1.5): raw store, jobs, quarantine, replay, outbox/inbox
+    IntakeModule,
     HealthModule,
     ConnectivityModule,
     PIProxyModule,

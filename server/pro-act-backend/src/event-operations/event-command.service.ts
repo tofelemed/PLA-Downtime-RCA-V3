@@ -35,8 +35,8 @@ export interface CloseInput {
 /**
  * Event operations of plan 1.4 (spec DT09–DT11): split, merge and close, each in one transaction with
  * the events locked, immutable revisions, lineage in `event_relations` and nothing deleted. Change
- * messages (`EventChanged` with the affected interval, the Phase 2 recalculation trigger) are
- * published after commit.
+ * messages (`EventChanged` with the affected interval, the Phase 2 recalculation trigger) go to the
+ * outbox in the same transaction and are broadcast to browsers after commit.
  */
 @Injectable()
 export class EventCommandService {
@@ -74,7 +74,11 @@ export class EventCommandService {
     work: (manager: EntityManager) => Promise<OperationResult>,
   ): Promise<OperationOutcome> {
     const { outcome, messages } = await withViolations(() =>
-      this.events.manager.transaction(work),
+      this.events.manager.transaction(async (manager) => {
+        const result = await work(manager);
+        await this.notifier.recordIn(manager, result.messages);
+        return result;
+      }),
     );
     for (const message of messages) this.notifier.eventChanged(message);
     for (const id of [

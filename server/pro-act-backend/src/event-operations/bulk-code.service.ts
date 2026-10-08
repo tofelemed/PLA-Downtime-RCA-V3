@@ -77,13 +77,22 @@ export class BulkCodeService {
     };
   }
 
-  /** Atomic apply: any exclusion or failure leaves every event unchanged. */
+  /**
+   * Atomic apply: any exclusion or failure leaves every event unchanged. `within` runs last in the same
+   * transaction (the job worker records the chunk there, so a crash never splits apply and record).
+   */
   async apply(
     context: RequestContext,
     command: BulkCodeCommand,
+    within?: (manager: EntityManager) => Promise<void>,
   ): Promise<BulkCodeApplied> {
     const { applied, messages } = await this.events.manager.transaction(
-      (manager) => this.applyIn(manager, context, command),
+      async (manager) => {
+        const result = await this.applyIn(manager, context, command);
+        await this.notifier.recordIn(manager, result.messages);
+        if (within) await within(manager);
+        return result;
+      },
     );
     for (const message of messages) {
       this.notifier.eventChanged(message);

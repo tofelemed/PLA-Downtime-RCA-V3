@@ -31,6 +31,16 @@ import { BulkJobService } from '../event-operations/bulk-job.service';
 import { EventCommandService } from '../event-operations/event-command.service';
 import { EventOperationsModule } from '../event-operations/event-operations.module';
 import { EventRelation } from '../event-operations/event-relation.entity';
+import { IntegrationConnectionService } from '../intake/connections/integration-connection.service';
+import { IngestionException } from '../intake/entities/ingestion-exception.entity';
+import { IngestionJobTransition } from '../intake/entities/ingestion-job-transition.entity';
+import { IngestionJob } from '../intake/entities/ingestion-job.entity';
+import { IntegrationConnection } from '../intake/entities/integration-connection.entity';
+import { ReplayRun } from '../intake/entities/replay-run.entity';
+import { IngestionExceptionsService } from '../intake/exceptions/ingestion-exceptions.service';
+import { IntakeModule } from '../intake/intake.module';
+import { IngestionJobsService } from '../intake/jobs/ingestion-jobs.service';
+import { ReplayService } from '../intake/replay/replay.service';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
 
@@ -84,6 +94,23 @@ class AttributeMappingModuleStub {}
 })
 class EventOperationsModuleStub {}
 
+/** Stands in for the plan 1.5 intake module (connections, jobs, replay, quarantine). */
+@Module({
+  providers: [
+    { provide: IntegrationConnectionService, useValue: {} },
+    { provide: IngestionJobsService, useValue: {} },
+    { provide: ReplayService, useValue: {} },
+    { provide: IngestionExceptionsService, useValue: {} },
+  ],
+  exports: [
+    IntegrationConnectionService,
+    IngestionJobsService,
+    ReplayService,
+    IngestionExceptionsService,
+  ],
+})
+class IntakeModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -111,6 +138,16 @@ async function generate(): Promise<string> {
     .useValue({})
     .overrideProvider(getRepositoryToken(EventRelation))
     .useValue({})
+    .overrideProvider(getRepositoryToken(IntegrationConnection))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(IngestionJob))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(IngestionJobTransition))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(IngestionException))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(ReplayRun))
+    .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)
     .overrideModule(CodeLibraryModule)
@@ -121,6 +158,8 @@ async function generate(): Promise<string> {
     .useModule(AttributeMappingModuleStub)
     .overrideModule(EventOperationsModule)
     .useModule(EventOperationsModuleStub)
+    .overrideModule(IntakeModule)
+    .useModule(IntakeModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "messageId": "F1FmEF-0001:sha256:6c1f0b2f0b7d1c8b5f1b2b9d3a1e7f0c4d9e2a6b8c0d1e2f3a4b5c6d7e8f9a0b",
+  "tenantId": "0b5a6f3e-2d4c-4b8a-9e1f-7c6d5e4f3a2b",
+  "connectionId": "6f1e2d3c-4b5a-4968-8776-5a4b3c2d1e0f",
+  "sourceType": "pi_web_api",
+  "sourceObjectId": "F1FmEF-0001",
+  "sourceRevision": null,
+  "operation": "observe",
+  "kind": "interval_event",
+  "observedAt": "2026-10-08T06:20:05.000Z",
+  "receivedAt": "2026-10-08T06:20:05.000Z",
+  "startTime": "2026-10-08T06:00:00.000Z",
+  "endTime": "2026-10-08T06:20:00.000Z",
+  "location": {
+    "sourcePath": "\\AF\\HDPE\\unit100",
+    "sourceElementIds": ["F1EmUNIT100"]
+  },
+  "values": {
+    "templateName": "Production Loss",
+    "attributes": [
+      { "name": "Reason", "type": "digital", "digital": { "name": "Bearing", "value": 3 } },
+      { "name": "Duration", "type": "number", "value": 20, "unit": "min" }
+    ]
+  },
+  "quality": { "status": "good" },
+  "provenance": {
+    "rawPayload": {
+      "frame": { "WebId": "F1FmEF-0001", "Name": "Extruder stop", "TemplateName": "Production Loss", "StartTime": "2026-10-08T06:00:00Z", "EndTime": "2026-10-08T06:20:00Z" },
+      "attributes": { "Reason": { "Name": "Bearing", "Value": 3, "IsSystem": false }, "Duration": 20 }
+    },
+    "payloadHash": "sha256:6c1f0b2f0b7d1c8b5f1b2b9d3a1e7f0c4d9e2a6b8c0d1e2f3a4b5c6d7e8f9a0b",
+    "mappingVersion": 1,
+    "correlationId": "pi-pull:2026-10-08T06:20:05Z"
+  },
+  "sourceControls": { "pi": { "webId": "F1FmEF-0001", "rawEndTime": "2026-10-08T06:20:00Z" } }
+}

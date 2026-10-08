@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
+import { enqueueOutbox } from '../../common/outbox/outbox-writer';
 import { RealtimeGateway } from '../../realtime.gateway';
 import { ProductionEvent } from '../production-event.entity';
 import { RevisionKind } from './event-revision.entity';
+import { isUuid } from './revision-actor';
 
 /**
  * Payload of the future `EventChanged` / `EventRetracted` outbox messages (spec API05 §15.4, plan 1.5):
@@ -21,14 +24,38 @@ export interface EventChangeMessage {
 export type EventChangeType = 'EventChanged' | 'EventRetracted';
 
 /**
- * Domain-event seam for event revisions. Until the outbox lands (1.5) messages are broadcast over the
- * realtime gateway (`productionEventChanged` / `productionEventRetracted`).
+ * Domain-event seam for event revisions. `recordIn` writes `EventChanged` / `EventRetracted` to the
+ * transactional outbox inside the revision's transaction (plan 1.5, FND02/API05: Phase 2 consumers read
+ * them through the relay); after commit the same messages are broadcast over the realtime gateway for
+ * open browsers (`productionEventChanged` / `productionEventRetracted`).
  */
 @Injectable()
 export class EventChangeNotifier {
   private readonly logger = new Logger(EventChangeNotifier.name);
 
   constructor(private readonly gateway: RealtimeGateway) {}
+
+  /** Outbox rows for `messages`, written with the caller's transaction manager. */
+  async recordIn(
+    manager: EntityManager,
+    messages: ReadonlyArray<EventChangeMessage | null>,
+  ): Promise<void> {
+    await enqueueOutbox(
+      manager,
+      messages
+        .filter((message): message is EventChangeMessage =>
+          isUuid(message?.tenantId),
+        )
+        .map((message) => ({
+          tenantId: message.tenantId,
+          aggregateType: 'production_event',
+          aggregateId: message.eventId,
+          type: changeTypeOf(message),
+          version: message.revision,
+          payload: { ...message },
+        })),
+    );
+  }
 
   eventChanged(message: EventChangeMessage): void {
     this.publish('EventChanged', message);
@@ -53,6 +80,11 @@ export class EventChangeNotifier {
       ...message,
     });
   }
+}
+
+/** A retraction revision is `EventRetracted`; every other revision is `EventChanged`. */
+export function changeTypeOf(message: EventChangeMessage): EventChangeType {
+  return message.kind === 'retraction' ? 'EventRetracted' : 'EventChanged';
 }
 
 /** Message for a revision that moved an event from `before` to `after`. */

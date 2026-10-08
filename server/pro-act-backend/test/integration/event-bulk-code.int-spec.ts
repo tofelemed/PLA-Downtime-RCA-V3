@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { BulkCodeService } from '../../src/event-operations/bulk-code.service';
 import { BulkJobService } from '../../src/event-operations/bulk-job.service';
 import { ProductionEventModule } from '../../src/production-event/production-event.module';
 import { ReasonCode } from '../../src/reason-code/reason-code.entity';
@@ -276,6 +277,58 @@ describe('bulk coding and jobs (plan 1.4)', () => {
           ),
         )
         .expect(404);
+    });
+  });
+  describe('a job abandoned by a dead worker (plan 1.5 lease)', () => {
+    it('is reclaimed after its lease expires and continues after its last recorded chunk', async () => {
+      const items = await events('2026-10-16', 501);
+      const accepted = await api.bulkCode(command(items, false)).expect(202);
+      const jobId = json<JobAcceptedBody>(accepted).jobId;
+      const bulkCode = app.get(BulkCodeService);
+      const apply = bulkCode.apply.bind(bulkCode) as BulkCodeService['apply'];
+      let calls = 0;
+      // worker A applies chunk 0, then hangs forever inside chunk 1 (process frozen / killed)
+      jest.spyOn(bulkCode, 'apply').mockImplementation((...args) => {
+        calls += 1;
+        return calls === 1 ? apply(...args) : new Promise(() => undefined);
+      });
+      void app.get(BulkJobService).runPending('worker-A');
+      const recorded = async () =>
+        (
+          await harness.dataSource.query<Array<{ chunks: unknown[] }>>(
+            `SELECT chunks FROM bulk_jobs WHERE id = $1`,
+            [jobId],
+          )
+        )[0].chunks.length;
+      for (let tries = 0; (await recorded()) < 1 && tries < 500; tries++) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      jest.restoreAllMocks();
+
+      expect(await app.get(BulkJobService).runPending('worker-B')).toBe(0);
+      await harness.dataSource.query(
+        `UPDATE bulk_jobs SET lease_expiry = now() - interval '1 second' WHERE id = $1`,
+        [jobId],
+      );
+      expect(await app.get(BulkJobService).runPending('worker-B')).toBe(1);
+
+      const job = json<JobBody>(await api.job(jobId).expect(200));
+      expect(job.state).toBe('completed');
+      expect(job.chunks.map(({ index, state }) => [index, state])).toEqual([
+        [0, 'completed'],
+        [1, 'completed'],
+        [2, 'completed'],
+      ]);
+      const [row] = await harness.dataSource.query<
+        Array<{ attempts: number; lease_owner: string | null }>
+      >(`SELECT attempts, lease_owner FROM bulk_jobs WHERE id = $1`, [jobId]);
+      expect(row).toEqual({ attempts: 2, lease_owner: null });
+      expect(
+        await codedWith(
+          items.map((i) => i.eventId),
+          world.reasonR2,
+        ),
+      ).toBe(501);
     });
   });
 });

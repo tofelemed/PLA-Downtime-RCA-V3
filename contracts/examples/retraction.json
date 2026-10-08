@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0",
+  "messageId": "F1FmEF-0001:retract:2026-10-09T08:00:00Z",
+  "tenantId": "0b5a6f3e-2d4c-4b8a-9e1f-7c6d5e4f3a2b",
+  "connectionId": "6f1e2d3c-4b5a-4968-8776-5a4b3c2d1e0f",
+  "sourceType": "pi_web_api",
+  "sourceObjectId": "F1FmEF-0001",
+  "sourceRevision": "2026-10-09T08:00:00Z",
+  "operation": "retract",
+  "kind": "retraction",
+  "observedAt": "2026-10-09T08:00:00.000Z",
+  "receivedAt": "2026-10-09T08:00:02.000Z",
+  "location": { "sourcePath": "\\AF\\HDPE\\unit100" },
+  "quality": { "status": "good" },
+  "provenance": {
+    "payloadHash": "sha256:1b3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d",
+    "mappingVersion": 1,
+    "correlationId": "pi-pull:2026-10-09T08:00:02Z"
+  },
+  "retraction": { "reason": "Event frame deleted in PI", "retractsRevision": null }
+}

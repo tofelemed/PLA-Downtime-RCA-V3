@@ -35,6 +35,17 @@ import { EventOperationsModule } from '../event-operations/event-operations.modu
 import { JobsV2Controller } from './jobs/jobs-v2.controller';
 import { ProductionEventOperationsV2Controller } from './production-events/production-event-operations-v2.controller';
 import { ProductionEventOperationsV2Service } from './production-events/production-event-operations-v2.service';
+import { IntakeModule } from '../intake/intake.module';
+import { IngestionException } from '../intake/entities/ingestion-exception.entity';
+import { IngestionJobTransition } from '../intake/entities/ingestion-job-transition.entity';
+import { IngestionJob } from '../intake/entities/ingestion-job.entity';
+import { IntegrationConnection } from '../intake/entities/integration-connection.entity';
+import { ReplayRun } from '../intake/entities/replay-run.entity';
+import { ConnectionsV2Controller } from './intake/connections-v2.controller';
+import { IngestionExceptionsV2Controller } from './intake/ingestion-exceptions-v2.controller';
+import { IngestionJobsV2Controller } from './intake/ingestion-jobs-v2.controller';
+import { IntakeQueriesV2Service } from './intake/intake-queries-v2.service';
+import { ReplayRunsV2Controller } from './intake/replay-runs-v2.controller';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -54,12 +65,18 @@ import { ProductionEventOperationsV2Service } from './production-events/producti
       SourceMapping,
       AttributeMappingVersion,
       EventRelation,
+      IntegrationConnection,
+      IngestionJob,
+      IngestionJobTransition,
+      IngestionException,
+      ReplayRun,
     ]),
     ProductionEventModule,
     CodeLibraryModule,
     SourceMappingModule,
     AttributeMappingModule,
     EventOperationsModule,
+    IntakeModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -74,6 +91,10 @@ import { ProductionEventOperationsV2Service } from './production-events/producti
     LossCategoryDefsV2Controller,
     CodeMappingRulesV2Controller,
     JobsV2Controller,
+    ConnectionsV2Controller,
+    IngestionJobsV2Controller,
+    IngestionExceptionsV2Controller,
+    ReplayRunsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -83,6 +104,7 @@ import { ProductionEventOperationsV2Service } from './production-events/producti
     EventReferencesValidator,
     SourceMappingsV2Service,
     AttributeMappingsV2Service,
+    IntakeQueriesV2Service,
   ],
 })
 export class V2Module {}

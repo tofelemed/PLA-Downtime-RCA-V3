@@ -154,12 +154,18 @@ export class IntegrationHarness {
     return rows[0]?.count ?? 0;
   }
 
-  /** Names of base tables in `public`, excluding TypeORM bookkeeping (migrations, generated-column metadata). */
+  /**
+   * Names of base tables in `public`, excluding TypeORM bookkeeping (migrations, generated-column
+   * metadata) and partitions (`raw_observations_y2026m10` ...): a partitioned table counts once.
+   */
   async tableNames(): Promise<string[]> {
     const rows: Array<{ table_name: string }> = await this.dataSource.query(
-      `SELECT table_name FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name <> ALL($1)
-        ORDER BY table_name`,
+      `SELECT t.table_name FROM information_schema.tables t
+         JOIN pg_class c ON c.relname = t.table_name
+         JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = t.table_schema
+        WHERE t.table_schema = 'public' AND t.table_type = 'BASE TABLE' AND t.table_name <> ALL($1)
+          AND NOT c.relispartition
+        ORDER BY t.table_name`,
       [[MIGRATIONS_TABLE, TYPEORM_METADATA_TABLE]],
     );
     return rows.map((row) => row.table_name);

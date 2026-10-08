@@ -5,6 +5,8 @@ import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { SchedulerModule } from './common/scheduling/scheduler.module';
 import { dataSourceOptions } from './database/data-source';
 import { EventOperationsModule } from './event-operations/event-operations.module';
+import { IntakeModule } from './intake/intake.module';
+import { IntegrationModule } from './integration/integration.module';
 import { registerPgTypeParsers } from './database/pg-type-parsers';
 import { WorkerHealthServer } from './health/worker-health.server';
 import { PISyncJobModule } from './pi-sync-job/pi-sync-job.module';
@@ -36,6 +38,10 @@ registerPgTypeParsers();
     IdempotencyModule,
     // bulk coding jobs above the atomic limit (plan 1.4, API04)
     EventOperationsModule,
+    // durable intake (plan 1.5): job runner, replay runner, outbox relay, partition maintenance; the
+    // PI adapter and normaliser come with IntegrationModule
+    IntakeModule,
+    IntegrationModule,
   ],
   providers: [WorkerHealthServer],
 })

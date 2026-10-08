@@ -68,4 +68,15 @@ export class BulkJob extends TenantScopedEntity {
 
   @Column({ name: 'finished_at', type: 'timestamptz', nullable: true })
   finishedAt: Date | null;
+
+  /** worker holding the job (plan 1.5 lease); an expired lease of a `running` job is reclaimed */
+  @Column({ name: 'lease_owner', type: 'text', nullable: true })
+  leaseOwner: string | null;
+
+  @Column({ name: 'lease_expiry', type: 'timestamptz', nullable: true })
+  leaseExpiry: Date | null;
+
+  /** claims so far (1 = first run; more = reclaimed after a crash) */
+  @Column({ name: 'attempts', type: 'int', default: 0 })
+  attempts: number;
 }

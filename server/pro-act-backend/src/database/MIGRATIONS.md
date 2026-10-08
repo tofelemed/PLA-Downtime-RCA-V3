@@ -45,4 +45,4 @@ DB_NAME=proact_scratch npm run migration:run
 
 ## Integration tests
 
-`npm run test:int` runs the Jest `integration` project (`test/integration/*.int-spec.ts`) against `proact_test` on the server from `.env` (`TEST_DB_NAME` overrides the name; it must end in `_test`). `test/integration/harness.ts` creates the database if missing, recreates the `public` schema per test file, applies all migrations and offers `truncateAll()` between tests. `migrations.int-spec.ts` is the round-trip and entity-parity check that must pass for every new migration.
+`npm run test:int` runs the Jest `integration` project (`test/integration/*.int-spec.ts`) against `proact_test` on the server from `.env` (`TEST_DB_NAME` overrides the name; it must end in `_test`). `test/integration/harness.ts` creates the database if missing, recreates the `public` schema per test file, applies all migrations and offers `truncateAll()` between tests. `migrations.int-spec.ts` is the round-trip and entity-parity check that must pass for every new migration. Partitions (`raw_observations_y2026m10`, …) are not counted as tables: a partitioned table counts once, like its entity.

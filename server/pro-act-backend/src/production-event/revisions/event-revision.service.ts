@@ -173,10 +173,15 @@ export class EventRevisionService {
     return result;
   }
 
+  /** Runs `work` and writes its change message to the outbox in the same transaction (plan 1.5). */
   private inTransaction<T>(
     work: (manager: EntityManager) => Promise<RevisionResult<T>>,
   ): Promise<RevisionResult<T>> {
-    return this.events.manager.transaction(work);
+    return this.events.manager.transaction(async (manager) => {
+      const outcome = await work(manager);
+      await this.notifier.recordIn(manager, [outcome.message]);
+      return outcome;
+    });
   }
 
   /** `legacyRefresh`: the change bypassed ProductionEventService, so v1 clients are told here. */

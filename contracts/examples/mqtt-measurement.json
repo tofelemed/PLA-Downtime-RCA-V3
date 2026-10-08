@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "messageId": "plant/hdpe/unit100/rate:boot-7:1042",
+  "tenantId": "0b5a6f3e-2d4c-4b8a-9e1f-7c6d5e4f3a2b",
+  "connectionId": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+  "sourceType": "mqtt",
+  "sourceObjectId": "plant/hdpe/unit100/rate",
+  "operation": "observe",
+  "kind": "measurement",
+  "observedAt": "2026-10-08T06:20:00.000Z",
+  "receivedAt": "2026-10-08T06:20:00.250Z",
+  "location": { "sourcePath": "plant/hdpe/unit100" },
+  "values": {
+    "sample": { "signalRef": "unit100.rate", "value": 12.5, "unit": "t/h", "semanticType": "rate", "sequence": 1042 }
+  },
+  "quality": { "status": "good", "degraded": false },
+  "provenance": {
+    "rawPayload": { "v": 12.5, "ts": 1791440400000, "seq": 1042 },
+    "payloadHash": "sha256:0f5c2a9e7b3d1c4e6a8b0d2f4e6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a",
+    "mappingVersion": 0,
+    "correlationId": "mqtt:boot-7"
+  },
+  "sourceControls": { "mqtt": { "retained": false, "duplicate": false, "qos": 1, "bootId": "boot-7", "sequence": 1042 } }
+}

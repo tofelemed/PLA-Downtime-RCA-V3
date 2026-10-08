@@ -20,6 +20,10 @@ import { UnmappedEventModule } from '../unmapped-event/unmapped-event.module';
 import { SourceMappingModule } from '../source-mapping/source-mapping.module';
 import { AttributeMappingModule } from '../attribute-mapping/attribute-mapping.module';
 import { CodeLibraryModule } from '../code-library/code-library.module';
+import { IntakeModule } from '../intake/intake.module';
+import { PiIntakeBridge } from './pi-intake-bridge';
+import { PiIntervalHandler } from './pi-interval.handler';
+import { PiWebApiAdapter } from './pi-web-api.adapter';
 
 @Module({
   imports: [
@@ -38,6 +42,8 @@ import { CodeLibraryModule } from '../code-library/code-library.module';
     SourceMappingModule,
     AttributeMappingModule,
     CodeLibraryModule,
+    // durable intake (plan 1.5): the PI adapter and normaliser register themselves on init
+    IntakeModule,
   ],
   controllers: [IntegrationController, PIBrowserController],
   providers: [
@@ -46,6 +52,9 @@ import { CodeLibraryModule } from '../code-library/code-library.module';
     MasterDataCodeResolverService,
     PiFrameIngestService,
     PiUnmappedRecorder,
+    PiIntervalHandler,
+    PiIntakeBridge,
+    PiWebApiAdapter,
   ],
   exports: [PIEventPullService, PIWebApiService, MasterDataCodeResolverService],
 })
