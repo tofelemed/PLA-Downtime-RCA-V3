@@ -3,8 +3,32 @@
  * object is a flat JSON snapshot of event fields with canonical values, so two deliveries of the same
  * content compare equal whatever shape the source or the driver produced (Dates, numeric strings).
  */
-export type FactValue = string | number | boolean | null;
+export type FactScalar = string | number | boolean | null;
+/** A structured fact: a digital state `{name, value, isSystem}` or one mapping diagnostic. */
+export type FactRecord = { readonly [key: string]: FactScalar };
+export type FactValue = FactScalar | FactRecord | readonly FactRecord[];
 export type EventFacts = Record<string, FactValue>;
+
+/**
+ * Typed attribute facts a source delivers that have no event column (plan 1.3, ING04): the raw reason /
+ * impact / OEE values as delivered (digital states keep Name and Value), a supplied duration, and the
+ * mapping diagnostics. They live in `event_revisions.source_facts` only; codes are resolved from them.
+ */
+export const SOURCE_ATTRIBUTE_FACTS = [
+  'reason',
+  'impactCode',
+  'oeeCode',
+  'suppliedDurationSeconds',
+  'mappingDiagnostics',
+] as const;
+
+/** Source facts stored as structures (compared by canonical JSON, never stringified). */
+const STRUCTURED_FIELDS: ReadonlySet<string> = new Set([
+  'reason',
+  'impactCode',
+  'oeeCode',
+  'mappingDiagnostics',
+]);
 
 /** Fields a source system (PI, CMMS, ...) owns: raw timing and attributes. */
 export const SOURCE_FIELDS = [
@@ -32,7 +56,13 @@ export const SOURCE_FIELDS = [
   'operatorName',
   'assetId',
   'planId',
+  ...SOURCE_ATTRIBUTE_FACTS,
 ] as const;
+
+/** Source fields backed by a `production_events` column (what a source revision may write). */
+export const SOURCE_COLUMN_FIELDS: readonly string[] = SOURCE_FIELDS.filter(
+  (field) => !(SOURCE_ATTRIBUTE_FACTS as readonly string[]).includes(field),
+);
 
 /** Fields a user codes (reason, impact, OEE, classification, comment). */
 export const CODING_FIELDS = [
@@ -85,6 +115,7 @@ const NUMERIC_FIELDS: ReadonlySet<string> = new Set([
   'breachDuration',
   'defectiveQuantity',
   'impactFraction',
+  'suppliedDurationSeconds',
 ]);
 
 /**
@@ -100,6 +131,9 @@ export function normalizeValue(
   if (raw instanceof Date) return isoOrNull(raw);
   if (DATE_FIELDS.has(field) && typeof raw === 'string') {
     return isoOrNull(new Date(raw)) ?? raw;
+  }
+  if (STRUCTURED_FIELDS.has(field) && typeof raw === 'object') {
+    return structuredOrNull(raw);
   }
   if (NUMERIC_FIELDS.has(field) && typeof raw === 'string') {
     const parsed = Number(raw);
@@ -146,7 +180,56 @@ export function completeFacts(
 /** Fields whose value differs; a missing key counts as null. Order: `before` keys, then new keys. */
 export function changedFields(before: EventFacts, after: EventFacts): string[] {
   const keys = unique([...Object.keys(before), ...Object.keys(after)]);
-  return keys.filter((key) => (before[key] ?? null) !== (after[key] ?? null));
+  return keys.filter(
+    (key) => !sameFact(before[key] ?? null, after[key] ?? null),
+  );
+}
+
+/** Equality of two fact values; structures compare by canonical (key-sorted) JSON. */
+export function sameFact(a: FactValue, b: FactValue): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || !a || !b) {
+    return false;
+  }
+  return canonicalJson(a) === canonicalJson(b);
+}
+
+function canonicalJson(value: FactRecord | readonly FactRecord[]): string {
+  const records: readonly FactRecord[] = isRecordArray(value) ? value : [value];
+  const sorted = records.map((record) =>
+    Object.keys(record)
+      .sort()
+      .map((key) => [key, record[key]]),
+  );
+  return JSON.stringify(isRecordArray(value) ? sorted : sorted[0]);
+}
+
+function isRecordArray(
+  value: FactRecord | readonly FactRecord[],
+): value is readonly FactRecord[] {
+  return Array.isArray(value);
+}
+
+/** A record of scalars, or an array of such records; anything else is stored as its JSON text. */
+function structuredOrNull(raw: object): FactValue {
+  if (Array.isArray(raw)) {
+    const items: unknown[] = raw;
+    return items.every(isScalarRecord) ? items : JSON.stringify(raw);
+  }
+  return isScalarRecord(raw) ? raw : JSON.stringify(raw);
+}
+
+function isScalarRecord(value: unknown): value is FactRecord {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  return Object.values(value as Record<string, unknown>).every(
+    (entry) =>
+      entry === null ||
+      typeof entry === 'string' ||
+      typeof entry === 'number' ||
+      typeof entry === 'boolean',
+  );
 }
 
 function isoOrNull(date: Date): string | null {

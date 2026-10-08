@@ -14,6 +14,7 @@ import { prepareCreate, prepareUpdate } from './event-write-model';
 import { getRequestContext } from '../common/context/request-context';
 import { EventRevisionService } from './revisions/event-revision.service';
 import { actorFromContext, RevisionActor } from './revisions/revision-actor';
+import { EventFacts } from './revisions/event-facts';
 
 /** Relations loaded on every read; `reasonCode` and `rca` were dropped at some point (B17) and are back. */
 const EVENT_RELATIONS = [
@@ -71,11 +72,13 @@ export class ProductionEventService {
    * v1 create. Interval, classification, states, `status` and the legacy `duration` (minutes) are
    * derived server-side by the write model; the client's `status` is translated and its `duration`
    * ignored (B8, DT11). Interval violations are 422. Revision 1 is recorded in the same transaction
-   * (plan 1.2); `actor` defaults to the request's user (connectors pass their own).
+   * (plan 1.2); `actor` defaults to the request's user (connectors pass their own, together with the
+   * typed attribute facts that have no column, plan 1.3).
    */
   async create(
     data: CreateProductionEventDto,
     actor: RevisionActor = actorFromContext(getRequestContext()),
+    attributeFacts: EventFacts = {},
   ): Promise<ProductionEvent> {
     const id = randomUUID();
     const fields = withoutClientDuration(data);
@@ -85,7 +88,11 @@ export class ProductionEventService {
       canonicalId: id,
       ...prepareCreate(data),
     } as Partial<ProductionEvent>);
-    const result = await this.revisions.createEvent(event, actor);
+    const result = await this.revisions.createEvent(
+      event,
+      actor,
+      attributeFacts,
+    );
     await this.publishCreated(result);
     return result;
   }

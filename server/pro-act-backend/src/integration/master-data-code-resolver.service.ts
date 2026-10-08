@@ -1,154 +1,153 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ReasonCode } from '../reason-code/reason-code.entity';
+import { ObjectLiteral, Repository } from 'typeorm';
+import {
+  diagnostic,
+  MappingDiagnostic,
+} from '../attribute-mapping/attribute-conversion';
+import { CodeEntry, matchCode } from '../code-library/code-matching';
 import { ImpactCode } from '../impact-code/impact-code.entity';
 import { OEECode } from '../oee-code/oee-code.entity';
+import {
+  EventFacts,
+  FactValue,
+} from '../production-event/revisions/event-facts';
+import { ReasonCode } from '../reason-code/reason-code.entity';
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-interface TenantCodeCache {
-  reasonCodes: ReasonCode[];
-  impactCodes: ImpactCode[];
-  oeeCodes: OEECode[];
+interface TenantCodes {
+  reasonCodeId: CodeEntry[];
+  impactCodeId: CodeEntry[];
+  oeeCodeId: CodeEntry[];
   loadedAt: number;
 }
 
+type CodeField = 'reasonCodeId' | 'impactCodeId' | 'oeeCodeId';
+
+/** Source fact → the id field it resolves to. */
+const CODE_FACTS: ReadonlyArray<[fact: string, field: CodeField]> = [
+  ['reason', 'reasonCodeId'],
+  ['impactCode', 'impactCodeId'],
+  ['oeeCode', 'oeeCodeId'],
+];
+
+export interface CodeResolution {
+  ids: Partial<Record<CodeField, string>>;
+  diagnostics: MappingDiagnostic[];
+}
+
+interface LibraryRow extends ObjectLiteral {
+  id: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+  effectiveFrom?: Date | null;
+  effectiveTo?: Date | null;
+  updatedAt: Date;
+}
+
+/**
+ * Resolves delivered code values (text or digital-state Name) to the tenant's code ids (plan 1.3):
+ * exact code or name, case-insensitive, among the tenant's own codes effective at the event start. No
+ * substring matching and no shared (tenant-less) codes. Unresolved and ambiguous values are reported
+ * as diagnostics with suggestions; the event stays uncoded instead of receiving a guessed code.
+ * Cache: per tenant, TTL 60 s (new or retired codes are picked up within a minute).
+ */
 @Injectable()
 export class MasterDataCodeResolverService {
-  private readonly logger = new Logger(MasterDataCodeResolverService.name);
-  private readonly cache = new Map<string, TenantCodeCache>();
-  private readonly ttlMs = 5 * 60 * 1000;
+  private readonly cache = new Map<string, TenantCodes>();
+  private readonly ttlMs = 60 * 1000;
 
   constructor(
     @InjectRepository(ReasonCode)
-    private readonly reasonCodeRepository: Repository<ReasonCode>,
+    private readonly reasonCodes: Repository<ReasonCode>,
     @InjectRepository(ImpactCode)
-    private readonly impactCodeRepository: Repository<ImpactCode>,
+    private readonly impactCodes: Repository<ImpactCode>,
     @InjectRepository(OEECode)
-    private readonly oeeCodeRepository: Repository<OEECode>,
+    private readonly oeeCodes: Repository<OEECode>,
   ) {}
 
-  isUuid(value: string): boolean {
-    return UUID_REGEX.test(value);
-  }
-
-  private normalize(value: unknown): string {
-    if (value === null || value === undefined) return '';
-    return String(value).trim();
-  }
-
-  private async loadTenantCache(tenantId: string): Promise<TenantCodeCache> {
-    const cached = this.cache.get(tenantId);
-    if (cached && Date.now() - cached.loadedAt < this.ttlMs) {
-      return cached;
+  async resolveFacts(
+    tenantId: string,
+    facts: EventFacts,
+    at: Date,
+  ): Promise<CodeResolution> {
+    const resolution: CodeResolution = { ids: {}, diagnostics: [] };
+    const present = CODE_FACTS.filter(([fact]) => nameOf(facts[fact]));
+    if (present.length === 0) return resolution;
+    const codes = await this.codesOf(tenantId);
+    for (const [fact, field] of present) {
+      const value = nameOf(facts[fact]) ?? '';
+      const match = matchCode(codes[field], value, at);
+      if (match.status === 'resolved') {
+        resolution.ids[field] = match.id;
+      } else if (match.status === 'ambiguous') {
+        resolution.diagnostics.push(
+          diagnostic(
+            'CODE_AMBIGUOUS',
+            fact,
+            `"${value}" matches ${match.candidates.join(', ')}`,
+          ),
+        );
+      } else {
+        const hint = match.suggestions.length
+          ? `; did you mean ${match.suggestions.join(', ')}?`
+          : '';
+        resolution.diagnostics.push(
+          diagnostic(
+            'CODE_UNRESOLVED',
+            fact,
+            `"${value}" is not a code of this tenant${hint}`,
+          ),
+        );
+      }
     }
+    return resolution;
+  }
 
-    const [reasonCodes, impactCodes, oeeCodes] = await Promise.all([
-      this.reasonCodeRepository.find({ where: { tenantId } }),
-      this.impactCodeRepository.find({ where: { tenantId } }),
-      this.oeeCodeRepository.find({ where: { tenantId } }),
+  private async codesOf(tenantId: string): Promise<TenantCodes> {
+    const cached = this.cache.get(tenantId);
+    if (cached && Date.now() - cached.loadedAt < this.ttlMs) return cached;
+    const [reasons, impacts, oees] = await Promise.all([
+      loadEntries(this.reasonCodes, tenantId),
+      loadEntries(this.impactCodes, tenantId),
+      loadEntries(this.oeeCodes, tenantId),
     ]);
-
-    const entry: TenantCodeCache = {
-      reasonCodes,
-      impactCodes,
-      oeeCodes,
+    const entry: TenantCodes = {
+      reasonCodeId: reasons,
+      impactCodeId: impacts,
+      oeeCodeId: oees,
       loadedAt: Date.now(),
     };
     this.cache.set(tenantId, entry);
     return entry;
   }
+}
 
-  private matchRecord<T extends { id: string; code?: string; name?: string }>(
-    records: T[],
-    rawValue: string,
-  ): string | undefined {
-    if (!rawValue) return undefined;
-    if (this.isUuid(rawValue)) return rawValue;
+/** Codes of one tenant; a legacy deactivated code without `effective_to` counts as retired since its last update. */
+async function loadEntries<T extends LibraryRow>(
+  repository: Repository<T>,
+  tenantId: string,
+): Promise<CodeEntry[]> {
+  const rows = await repository
+    .createQueryBuilder('code')
+    .where('code.tenantId = :tenantId', { tenantId })
+    .getMany();
+  return rows.map((row) => ({
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    effectiveFrom: row.effectiveFrom ?? null,
+    effectiveTo: row.effectiveTo ?? (row.isActive ? null : row.updatedAt),
+  }));
+}
 
-    const normalized = rawValue.toLowerCase();
-
-    const exact = records.find(
-      (r) =>
-        r.code?.toLowerCase() === normalized ||
-        r.name?.toLowerCase() === normalized,
-    );
-    if (exact) return exact.id;
-
-    const partial = records.find(
-      (r) =>
-        r.name?.toLowerCase().includes(normalized) ||
-        normalized.includes(r.name?.toLowerCase() || '') ||
-        r.code?.toLowerCase().includes(normalized),
-    );
-    return partial?.id;
+/** Text of a delivered code value: a string, or the Name of a digital state. */
+function nameOf(value: FactValue | undefined): string | null {
+  if (typeof value === 'string') return value.trim() || null;
+  if (typeof value === 'number') return String(value);
+  if (value && !Array.isArray(value) && typeof value === 'object') {
+    const name = (value as Record<string, unknown>).name;
+    return typeof name === 'string' && name.trim() ? name.trim() : null;
   }
-
-  async resolveReasonCodeId(value: unknown, tenantId: string): Promise<string | undefined> {
-    const raw = this.normalize(value);
-    if (!raw) return undefined;
-    if (this.isUuid(raw)) return raw;
-
-    const cache = await this.loadTenantCache(tenantId);
-    const resolved = this.matchRecord(cache.reasonCodes, raw);
-    if (!resolved) {
-      this.logger.debug(`Reason code not resolved for "${raw}" (tenant ${tenantId})`);
-    }
-    return resolved;
-  }
-
-  async resolveImpactCodeId(value: unknown, tenantId: string): Promise<string | undefined> {
-    const raw = this.normalize(value);
-    if (!raw) return undefined;
-    if (this.isUuid(raw)) return raw;
-
-    const cache = await this.loadTenantCache(tenantId);
-    const resolved = this.matchRecord(cache.impactCodes, raw);
-    if (!resolved) {
-      this.logger.debug(`Impact code not resolved for "${raw}" (tenant ${tenantId})`);
-    }
-    return resolved;
-  }
-
-  async resolveOeeCodeId(value: unknown, tenantId: string): Promise<string | undefined> {
-    const raw = this.normalize(value);
-    if (!raw) return undefined;
-    if (this.isUuid(raw)) return raw;
-
-    const cache = await this.loadTenantCache(tenantId);
-    const resolved = this.matchRecord(cache.oeeCodes, raw);
-    if (!resolved) {
-      this.logger.debug(`OEE code not resolved for "${raw}" (tenant ${tenantId})`);
-    }
-    return resolved;
-  }
-
-  /** Resolve PI-mapped code fields from names/codes to DB UUIDs */
-  async resolveMappedCodeFields(
-    fields: Record<string, any>,
-    tenantId: string,
-  ): Promise<Record<string, any>> {
-    const resolved = { ...fields };
-
-    if (resolved.reasonCodeId !== undefined) {
-      const id = await this.resolveReasonCodeId(resolved.reasonCodeId, tenantId);
-      if (id) resolved.reasonCodeId = id;
-      else delete resolved.reasonCodeId;
-    }
-
-    if (resolved.impactCodeId !== undefined) {
-      const id = await this.resolveImpactCodeId(resolved.impactCodeId, tenantId);
-      if (id) resolved.impactCodeId = id;
-      else delete resolved.impactCodeId;
-    }
-
-    if (resolved.oeeCodeId !== undefined) {
-      const id = await this.resolveOeeCodeId(resolved.oeeCodeId, tenantId);
-      if (id) resolved.oeeCodeId = id;
-      else delete resolved.oeeCodeId;
-    }
-
-    return resolved;
-  }
+  return null;
 }

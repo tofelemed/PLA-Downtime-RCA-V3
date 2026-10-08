@@ -13,6 +13,7 @@ import {
   completeFacts,
   EventFacts,
   normalizeFacts,
+  SOURCE_COLUMN_FIELDS,
   SOURCE_FIELDS,
 } from './event-facts';
 import { EventReviewItem } from './event-review-item.entity';
@@ -74,7 +75,11 @@ export async function applySourceIn(
     return { result: 'duplicate', message: null };
   }
   const overrides = existing.userOverrides ?? {};
-  const accepted = changed.filter((field) => overrides[field] === undefined);
+  // attribute facts without a column (plan 1.3) are kept in the revision only
+  const columns = changed.filter((field) =>
+    SOURCE_COLUMN_FIELDS.includes(field),
+  );
+  const accepted = columns.filter((field) => overrides[field] === undefined);
   const revision = await nextRevisionNumber(manager, eventId);
   const updated = await writeEvent(manager, eventId, {
     ...sourceColumns(existing, facts, accepted),
@@ -88,7 +93,7 @@ export async function applySourceIn(
     changeReason: provenance.reason,
     sourceRevision: provenance.sourceRevision,
   });
-  const conflicts = changed.filter((field) => overrides[field] !== undefined);
+  const conflicts = columns.filter((field) => overrides[field] !== undefined);
   await openConflicts(manager, updated, stored, conflicts);
   return {
     result: 'revised',

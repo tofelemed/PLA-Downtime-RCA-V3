@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
 
 @Entity('products')
+@Unique('UQ_products_tenant_code', ['tenantId', 'code'])
 export class Product {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -8,7 +9,7 @@ export class Product {
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
-  @Column({ type: 'varchar', length: 50, unique: true })
+  @Column({ type: 'varchar', length: 50 })
   code: string;
 
   @Column({ name: 'uom', type: 'varchar', length: 50, nullable: true })

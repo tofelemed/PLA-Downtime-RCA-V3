@@ -15,6 +15,21 @@ import { EventReferencesValidator } from './production-events/event-references.v
 import { ProductionEventsV2Controller } from './production-events/production-events-v2.controller';
 import { ProductionEventsV2Service } from './production-events/production-events-v2.service';
 import { ProductionEventsV2CommandService } from './production-events/production-events-v2-commands.service';
+import { AttributeMappingVersion } from '../attribute-mapping/attribute-mapping-version.entity';
+import { AttributeMappingModule } from '../attribute-mapping/attribute-mapping.module';
+import { CodeLibraryModule } from '../code-library/code-library.module';
+import { SourceMapping } from '../source-mapping/source-mapping.entity';
+import { SourceMappingModule } from '../source-mapping/source-mapping.module';
+import { AttributeMappingsV2Controller } from './attribute-mappings/attribute-mappings-v2.controller';
+import { AttributeMappingsV2Service } from './attribute-mappings/attribute-mappings-v2.service';
+import { CodeMappingRulesV2Controller } from './code-libraries/code-mapping-rules-v2.controller';
+import { FailureCodeGroupsV2Controller } from './code-libraries/failure-code-groups-v2.controller';
+import { ImpactCodesV2Controller } from './code-libraries/impact-codes-v2.controller';
+import { LossCategoryDefsV2Controller } from './code-libraries/loss-category-defs-v2.controller';
+import { OeeCodesV2Controller } from './code-libraries/oee-codes-v2.controller';
+import { ReasonCodesV2Controller } from './code-libraries/reason-codes-v2.controller';
+import { SourceMappingsV2Controller } from './source-mappings/source-mappings-v2.controller';
+import { SourceMappingsV2Service } from './source-mappings/source-mappings-v2.service';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -31,15 +46,33 @@ import { ProductionEventsV2CommandService } from './production-events/production
       EventRevision,
       EventCoding,
       EventReviewItem,
+      SourceMapping,
+      AttributeMappingVersion,
     ]),
     ProductionEventModule,
+    CodeLibraryModule,
+    SourceMappingModule,
+    AttributeMappingModule,
   ],
-  controllers: [ProductionEventsV2Controller, EventReviewItemsV2Controller],
+  controllers: [
+    ProductionEventsV2Controller,
+    EventReviewItemsV2Controller,
+    SourceMappingsV2Controller,
+    AttributeMappingsV2Controller,
+    ReasonCodesV2Controller,
+    ImpactCodesV2Controller,
+    OeeCodesV2Controller,
+    FailureCodeGroupsV2Controller,
+    LossCategoryDefsV2Controller,
+    CodeMappingRulesV2Controller,
+  ],
   providers: [
     ProductionEventsV2Service,
     ProductionEventHistoryService,
     ProductionEventsV2CommandService,
     EventReferencesValidator,
+    SourceMappingsV2Service,
+    AttributeMappingsV2Service,
   ],
 })
 export class V2Module {}

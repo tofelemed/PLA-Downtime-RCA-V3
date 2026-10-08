@@ -8,6 +8,7 @@ import {
   SCHEDULE_CLASSES,
   ScheduleClass,
 } from '../../domain/events/event-classification';
+import { CodeVersion } from '../../code-library/code-version.entity';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
 import { ProductionEvent } from '../production-event.entity';
 import { EventFacts } from './event-facts';
@@ -15,7 +16,7 @@ import { EventFacts } from './event-facts';
 /**
  * Explicit effective coding revision of an event (spec §14.2 `event_coding`, ING06): who coded what,
  * when, old and new values, and whether it overrides a source value. Own sequence per event. Code
- * columns hold plain code ids until versioned codes arrive (plan 1.3).
+ * columns hold the stable code ids; `*_version_id` the exact code versions at coding time (plan 1.3).
  */
 @Entity('event_coding')
 @Unique('UQ_event_coding_event_revision', ['eventId', 'revision'])
@@ -39,6 +40,28 @@ export class EventCoding extends TenantScopedEntity {
 
   @Column({ name: 'oee_code_id', type: 'uuid', nullable: true })
   oeeCodeId: string | null;
+
+  /** `code_versions` rows of the codes above at coding time (plan 1.3) */
+  @Column({ name: 'reason_code_version_id', type: 'uuid', nullable: true })
+  reasonCodeVersionId: string | null;
+
+  @ManyToOne(() => CodeVersion, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'reason_code_version_id' })
+  reasonCodeVersion?: CodeVersion;
+
+  @Column({ name: 'impact_code_version_id', type: 'uuid', nullable: true })
+  impactCodeVersionId: string | null;
+
+  @ManyToOne(() => CodeVersion, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'impact_code_version_id' })
+  impactCodeVersion?: CodeVersion;
+
+  @Column({ name: 'oee_code_version_id', type: 'uuid', nullable: true })
+  oeeCodeVersionId: string | null;
+
+  @ManyToOne(() => CodeVersion, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'oee_code_version_id' })
+  oeeCodeVersion?: CodeVersion;
 
   @Column({
     name: 'schedule_class',

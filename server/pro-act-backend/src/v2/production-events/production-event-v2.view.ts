@@ -8,6 +8,7 @@ import {
   ScheduleClass,
   SourceKind,
 } from '../../domain/events/event-classification';
+import { ClassificationBasis } from '../../code-library/classification-basis';
 import { durationSeconds } from '../../domain/time/interval-algebra';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { EventFacts } from '../../production-event/revisions/event-facts';
@@ -59,6 +60,9 @@ export interface ProductionEventV2View {
   elapsedSeconds: number;
   asOf: string;
   classification: EventClassificationView;
+  /** where code-driven axes came from (code rule, code default, user; `overridesDefault` flags overrides) */
+  classificationBasis: ClassificationBasis | null;
+  impactCodeId: string | null;
   states: EventStatesView;
   quantity: string | null;
   quantityUom: string | null;
@@ -109,6 +113,8 @@ export function toProductionEventV2View(
       impactMode: event.impactMode,
       impactFraction: toDecimalString(event.impactFraction),
     },
+    classificationBasis: event.classificationBasis ?? null,
+    impactCodeId: event.impactCodeId ?? null,
     states: {
       physical: event.physicalState,
       coding: event.codingState,

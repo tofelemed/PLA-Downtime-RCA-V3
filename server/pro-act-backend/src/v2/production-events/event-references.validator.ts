@@ -4,7 +4,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Asset } from '../../asset/asset.entity';
 import { ProductionPlan } from '../../production-plan/production-plan.entity';
 import { ReasonCode } from '../../reason-code/reason-code.entity';
@@ -18,8 +18,8 @@ export interface EventReferences {
 
 /**
  * Foreign ids in an event body must belong to the acting tenant (WF05): assets and plans to the
- * event's unit, reason codes to the tenant (or be one of the legacy shared codes without a tenant
- * until 1.3 makes code libraries per tenant). Answers 422 without saying whether the id exists elsewhere.
+ * event's unit, reason codes to the tenant's own library (plan 1.3, NFR01: shared tenant-less codes are
+ * no longer accepted). Answers 422 without saying whether the id exists elsewhere.
  */
 @Injectable()
 export class EventReferencesValidator {
@@ -61,12 +61,7 @@ export class EventReferencesValidator {
     }
     if (
       refs.reasonCodeId &&
-      (await this.reasons.count({
-        where: [
-          { id: refs.reasonCodeId, tenantId },
-          { id: refs.reasonCodeId, tenantId: IsNull() },
-        ],
-      })) === 0
+      (await this.reasons.countBy({ id: refs.reasonCodeId, tenantId })) === 0
     ) {
       throw invalidReference('reasonCodeId');
     }

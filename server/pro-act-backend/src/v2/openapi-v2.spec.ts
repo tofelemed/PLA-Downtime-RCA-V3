@@ -15,6 +15,17 @@ import { Asset } from '../asset/asset.entity';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { ReasonCode } from '../reason-code/reason-code.entity';
 import { Unit } from '../unit/unit.entity';
+import { AttributeMappingVersion } from '../attribute-mapping/attribute-mapping-version.entity';
+import { AttributeMappingModule } from '../attribute-mapping/attribute-mapping.module';
+import { AttributeMappingService } from '../attribute-mapping/attribute-mapping.service';
+import { CodeDefaultsService } from '../code-library/code-defaults.service';
+import { CodeLibraryCommandService } from '../code-library/code-library-commands.service';
+import { CodeLibraryModule } from '../code-library/code-library.module';
+import { CodeLibraryService } from '../code-library/code-library.service';
+import { CodeMappingRuleService } from '../code-library/code-mapping-rule.service';
+import { SourceMapping } from '../source-mapping/source-mapping.entity';
+import { SourceMappingModule } from '../source-mapping/source-mapping.module';
+import { SourceMappingService } from '../source-mapping/source-mapping.service';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
 
@@ -27,6 +38,35 @@ import { V2Module } from './v2.module';
   exports: [ProductionEventService, EventRevisionService],
 })
 class ProductionEventModuleStub {}
+
+/** Stands in for the plan 1.3 modules (code libraries, mappings): only their controllers' routes matter. */
+@Module({
+  providers: [
+    { provide: CodeLibraryService, useValue: {} },
+    { provide: CodeLibraryCommandService, useValue: {} },
+    { provide: CodeMappingRuleService, useValue: {} },
+    { provide: CodeDefaultsService, useValue: {} },
+  ],
+  exports: [
+    CodeLibraryService,
+    CodeLibraryCommandService,
+    CodeMappingRuleService,
+    CodeDefaultsService,
+  ],
+})
+class CodeLibraryModuleStub {}
+
+@Module({
+  providers: [{ provide: SourceMappingService, useValue: {} }],
+  exports: [SourceMappingService],
+})
+class SourceMappingModuleStub {}
+
+@Module({
+  providers: [{ provide: AttributeMappingService, useValue: {} }],
+  exports: [AttributeMappingService],
+})
+class AttributeMappingModuleStub {}
 
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
@@ -49,8 +89,18 @@ async function generate(): Promise<string> {
     .useValue({})
     .overrideProvider(getRepositoryToken(EventReviewItem))
     .useValue({})
+    .overrideProvider(getRepositoryToken(SourceMapping))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(AttributeMappingVersion))
+    .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)
+    .overrideModule(CodeLibraryModule)
+    .useModule(CodeLibraryModuleStub)
+    .overrideModule(SourceMappingModule)
+    .useModule(SourceMappingModuleStub)
+    .overrideModule(AttributeMappingModule)
+    .useModule(AttributeMappingModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

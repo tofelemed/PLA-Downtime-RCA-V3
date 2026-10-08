@@ -10,6 +10,7 @@ import {
   JoinColumn,
   VersionColumn,
 } from 'typeorm';
+import { ClassificationBasis } from '../code-library/classification-basis';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { Unit } from '../unit/unit.entity';
 import { Asset } from '../asset/asset.entity';
@@ -434,4 +435,8 @@ export class ProductionEvent {
   /** field → `event_coding.revision` that overrode the source value */
   @Column({ name: 'user_overrides', type: 'jsonb', default: () => "'{}'" })
   userOverrides: Record<string, number>;
+
+  /** where each code-driven classification came from (code rule, code default, user; plan 1.3) */
+  @Column({ name: 'classification_basis', type: 'jsonb', nullable: true })
+  classificationBasis?: ClassificationBasis | null;
 }

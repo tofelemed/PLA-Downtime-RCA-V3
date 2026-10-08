@@ -116,6 +116,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
     if (Array.isArray(details.fieldErrors)) {
       body.fieldErrors = details.fieldErrors as FieldError[];
     }
+    if (isPlainRecord(details.details)) {
+      body.details = details.details;
+    }
     return { status, body };
   }
 
@@ -152,4 +155,8 @@ function pickMessage(candidate: unknown, fallback: string): string | string[] {
 
 function isV2Request(request: Request): boolean {
   return V2_PATH.test(request.originalUrl ?? request.url ?? '');
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

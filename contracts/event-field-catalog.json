@@ -1,0 +1,493 @@
+{
+  "version": 1,
+  "noTemplateKey": "*NoTemplate*",
+  "fields": [
+    {
+      "name": "description",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Free text of the event"
+    },
+    {
+      "name": "quantity",
+      "types": [
+        "number"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Lost or produced quantity"
+    },
+    {
+      "name": "cost",
+      "types": [
+        "number"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Cost supplied by the source"
+    },
+    {
+      "name": "value",
+      "types": [
+        "number"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Measured value (IOW)"
+    },
+    {
+      "name": "severity",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Severity label"
+    },
+    {
+      "name": "parameter",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Process parameter (IOW)"
+    },
+    {
+      "name": "limit",
+      "types": [
+        "number"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Limit value (IOW)"
+    },
+    {
+      "name": "limitType",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Limit type (IOW)"
+    },
+    {
+      "name": "breachDuration",
+      "types": [
+        "number"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Breach duration as delivered (IOW)"
+    },
+    {
+      "name": "solType",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Safe operating limit type"
+    },
+    {
+      "name": "apmType",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "APM alert type"
+    },
+    {
+      "name": "recommendedAction",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Recommended action"
+    },
+    {
+      "name": "workOrderId",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Work order reference"
+    },
+    {
+      "name": "failureMode",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Failure mode"
+    },
+    {
+      "name": "defectiveQuantity",
+      "types": [
+        "number"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Scrap / defective quantity"
+    },
+    {
+      "name": "shift",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Shift label"
+    },
+    {
+      "name": "crew",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Crew label"
+    },
+    {
+      "name": "lossCategory",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Loss category as delivered"
+    },
+    {
+      "name": "operatorName",
+      "types": [
+        "string"
+      ],
+      "storedAs": "column",
+      "templates": [
+        "*"
+      ],
+      "description": "Operator name"
+    },
+    {
+      "name": "reason",
+      "types": [
+        "digital",
+        "string"
+      ],
+      "storedAs": "source_fact",
+      "templates": [
+        "*"
+      ],
+      "description": "Reason as delivered",
+      "resolvesTo": "reasonCodeId"
+    },
+    {
+      "name": "impactCode",
+      "types": [
+        "digital",
+        "string"
+      ],
+      "storedAs": "source_fact",
+      "templates": [
+        "*"
+      ],
+      "description": "Impact code as delivered",
+      "resolvesTo": "impactCodeId"
+    },
+    {
+      "name": "oeeCode",
+      "types": [
+        "digital",
+        "string"
+      ],
+      "storedAs": "source_fact",
+      "templates": [
+        "*"
+      ],
+      "description": "OEE code as delivered",
+      "resolvesTo": "oeeCodeId"
+    },
+    {
+      "name": "suppliedDurationSeconds",
+      "types": [
+        "duration"
+      ],
+      "storedAs": "source_fact",
+      "templates": [
+        "*"
+      ],
+      "description": "Duration supplied by the source; the timestamps stay authoritative"
+    }
+  ],
+  "templates": [
+    {
+      "name": "Production Loss",
+      "eventType": "ProductionLoss",
+      "defaultRules": [
+        {
+          "sourceAttr": "Description",
+          "targetField": "description",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "ReasonCode",
+          "targetField": "reason",
+          "type": "digital"
+        },
+        {
+          "sourceAttr": "OEECode",
+          "targetField": "oeeCode",
+          "type": "digital"
+        },
+        {
+          "sourceAttr": "ImpactCode",
+          "targetField": "impactCode",
+          "type": "digital"
+        },
+        {
+          "sourceAttr": "Quantity",
+          "targetField": "quantity",
+          "type": "number"
+        },
+        {
+          "sourceAttr": "Cost",
+          "targetField": "cost",
+          "type": "number"
+        },
+        {
+          "sourceAttr": "Shift",
+          "targetField": "shift",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "Crew",
+          "targetField": "crew",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "Duration",
+          "targetField": "suppliedDurationSeconds",
+          "type": "duration",
+          "unit": "minutes"
+        },
+        {
+          "sourceAttr": "LossCategory",
+          "targetField": "lossCategory",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "OperatorName",
+          "targetField": "operatorName",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "IOW Deviation",
+      "eventType": "IOW",
+      "defaultRules": [
+        {
+          "sourceAttr": "Parameter",
+          "targetField": "parameter",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "Value",
+          "targetField": "value",
+          "type": "number"
+        },
+        {
+          "sourceAttr": "Limit",
+          "targetField": "limit",
+          "type": "number"
+        },
+        {
+          "sourceAttr": "LimitType",
+          "targetField": "limitType",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "BreachDuration",
+          "targetField": "breachDuration",
+          "type": "number"
+        },
+        {
+          "sourceAttr": "RecommendedAction",
+          "targetField": "recommendedAction",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "Description",
+          "targetField": "description",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "Severity",
+          "targetField": "severity",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "SOL Violation",
+      "eventType": "SOL",
+      "defaultRules": [
+        {
+          "sourceAttr": "SolType",
+          "targetField": "solType",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "Description",
+          "targetField": "description",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "Severity",
+          "targetField": "severity",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "APM Alert",
+      "eventType": "APM",
+      "defaultRules": [
+        {
+          "sourceAttr": "FailureMode",
+          "targetField": "failureMode",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "RecommendedAction",
+          "targetField": "recommendedAction",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "APMType",
+          "targetField": "apmType",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "Severity",
+          "targetField": "severity",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "Description",
+          "targetField": "description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "Failure WO",
+      "eventType": "FailureWO",
+      "defaultRules": [
+        {
+          "sourceAttr": "WorkOrderId",
+          "targetField": "workOrderId",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "FailureMode",
+          "targetField": "failureMode",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "Description",
+          "targetField": "description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "Production Output",
+      "eventType": "ProductionOutput",
+      "defaultRules": [
+        {
+          "sourceAttr": "GoodQty",
+          "targetField": "quantity",
+          "type": "number",
+          "aliases": [
+            "Quantity"
+          ]
+        },
+        {
+          "sourceAttr": "ScrapQty",
+          "targetField": "defectiveQuantity",
+          "type": "number"
+        },
+        {
+          "sourceAttr": "Description",
+          "targetField": "description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "*NoTemplate*",
+      "eventType": "ProductionLoss",
+      "defaultRules": [
+        {
+          "sourceAttr": "Description",
+          "targetField": "description",
+          "type": "string"
+        },
+        {
+          "sourceAttr": "Quantity",
+          "targetField": "quantity",
+          "type": "number"
+        },
+        {
+          "sourceAttr": "Cost",
+          "targetField": "cost",
+          "type": "number"
+        }
+      ]
+    }
+  ]
+}

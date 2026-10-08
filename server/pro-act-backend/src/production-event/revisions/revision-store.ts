@@ -126,13 +126,14 @@ export interface CodingInput {
   overridesSourceRevision: number | null;
 }
 
-/** Inserts `event_coding` with the event's current coding columns. */
-export function appendCoding(
+/** Inserts `event_coding` with the event's current coding columns and their current code versions. */
+export async function appendCoding(
   manager: EntityManager,
   event: ProductionEvent,
   input: CodingInput,
 ): Promise<EventCoding> {
   const repository = manager.getRepository(EventCoding);
+  const versions = await currentCodeVersions(manager, event);
   return repository.save(
     repository.create({
       tenantId: requireTenantUuid(event),
@@ -141,6 +142,9 @@ export function appendCoding(
       reasonCodeId: event.reasonCodeId ?? null,
       impactCodeId: event.impactCodeId ?? null,
       oeeCodeId: event.oeeCodeId ?? null,
+      reasonCodeVersionId: versions.reason ?? null,
+      impactCodeVersionId: versions.impact ?? null,
+      oeeCodeVersionId: versions.oee ?? null,
       scheduleClass: event.scheduleClass,
       oeeComponent: event.oeeComponent,
       impactMode: event.impactMode,
@@ -156,6 +160,25 @@ export function appendCoding(
       updatedBy: input.actor.id,
     }),
   );
+}
+
+/** Latest `code_versions` id per library of the event's reason, impact and OEE codes. */
+async function currentCodeVersions(
+  manager: EntityManager,
+  event: ProductionEvent,
+): Promise<Partial<Record<'reason' | 'impact' | 'oee', string>>> {
+  const ids = [event.reasonCodeId, event.impactCodeId, event.oeeCodeId];
+  if (ids.every((id) => !id)) return {};
+  const rows: Array<{ library: 'reason' | 'impact' | 'oee'; id: string }> =
+    await manager.query(
+      `SELECT DISTINCT ON (library) library, id FROM code_versions
+        WHERE (library = 'reason' AND code_id = $1)
+           OR (library = 'impact' AND code_id = $2)
+           OR (library = 'oee' AND code_id = $3)
+        ORDER BY library, version DESC`,
+      ids.map((id) => id ?? null),
+    );
+  return Object.fromEntries(rows.map((row) => [row.library, row.id]));
 }
 
 /** Coding facts of an event (the baseline coding revision's `new_values`). */

@@ -1,59 +1,29 @@
 import type { PIEventRecord } from './PIStore';
+import eventFieldCatalog from '../../../contracts/event-field-catalog.json';
 
 export type AppEventType = 'ProductionLoss'|'IOW'|'SOL'|'APM'|'FailureWO'|'ProductionOutput';
 
-export const NO_TEMPLATE_KEY = '*NoTemplate*';
+/**
+ * Defaults come from the shared event field catalog (plan 1.3, ING04): the same file the backend validates
+ * attribute mappings against, so UI defaults and backend fields cannot drift (I10).
+ */
+export const NO_TEMPLATE_KEY = eventFieldCatalog.noTemplateKey;
 
-export const defaultTemplateToEventType: Record<string, AppEventType> = {
-  'Production Loss': 'ProductionLoss',
-  'IOW Deviation': 'IOW',
-  'SOL Violation': 'SOL',
-  'APM Alert': 'APM',
-  'Failure WO': 'FailureWO',
-  'Production Output': 'ProductionOutput',
-};
+/** Every event field a PI attribute may be mapped to. */
+export const mappableEventFields: string[] = eventFieldCatalog.fields.map((field) => field.name);
 
-export const defaultAttributesByTemplate: Record<string, Record<string, string>> = {
-  'Production Loss': {
-    Description: 'description',
-    ReasonCode: 'reasonCode',
-    OEECode: 'oeeCode',
-    ImpactCode: 'impactCode',
-    Quantity: 'quantity',
-    Cost: 'cost',
-    Shift: 'shift',
-    Crew: 'crew',
-  },
-  'IOW Deviation': {
-    Parameter: 'parameter',
-    Limit: 'limit',
-    LimitType: 'limitType',
-    RecommendedAction: 'recommendedAction',
-  },
-  'SOL Violation': {
-    SolType: 'solType',
-    Description: 'description',
-  },
-  'APM Alert': {
-    FailureMode: 'failureMode',
-    RecommendedAction: 'recommendedAction',
-    HealthIndex: 'healthIndex',
-  },
-  'Failure WO': {
-    WorkOrderId: 'workOrderId',
-    FailureMode: 'failureMode',
-  },
-  'Production Output': {
-    GoodQty: 'goodQty',
-    ScrapQty: 'scrapQty',
-  },
-  [NO_TEMPLATE_KEY]: {
-    // Fallback keys commonly seen in untitled EFs
-    Description: 'description',
-    Quantity: 'quantity',
-    Cost: 'cost',
-  },
-};
+export const defaultTemplateToEventType: Record<string, AppEventType> = Object.fromEntries(
+  eventFieldCatalog.templates
+    .filter((template) => template.name !== NO_TEMPLATE_KEY)
+    .map((template) => [template.name, template.eventType as AppEventType]),
+);
+
+export const defaultAttributesByTemplate: Record<string, Record<string, string>> = Object.fromEntries(
+  eventFieldCatalog.templates.map((template) => [
+    template.name,
+    Object.fromEntries(template.defaultRules.map((rule) => [rule.sourceAttr, rule.targetField])),
+  ]),
+);
 
 export function projectEFToAppEvent(ef: any, attrMap: Record<string, string>) {
   const out: Record<string, any> = {

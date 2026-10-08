@@ -8,7 +8,13 @@ import {
   EventChangeMessage,
   EventChangeNotifier,
 } from './event-change.notifier';
-import { factsOf, SOURCE_FIELDS } from './event-facts';
+import {
+  EventFacts,
+  factsOf,
+  normalizeFacts,
+  SOURCE_ATTRIBUTE_FACTS,
+  SOURCE_FIELDS,
+} from './event-facts';
 import { EventReviewItem } from './event-review-item.entity';
 import { isUuid, RevisionActor } from './revision-actor';
 import {
@@ -44,10 +50,14 @@ export class EventRevisionService {
     private readonly notifier: EventChangeNotifier,
   ) {}
 
-  /** Inserts a new event together with its revision 1 and baseline coding revision 1. */
+  /**
+   * Inserts a new event together with its revision 1 and baseline coding revision 1. `attributeFacts`
+   * are the typed source attributes without a column (plan 1.3), kept in revision 1's source facts.
+   */
   async createEvent(
     event: ProductionEvent,
     actor: RevisionActor,
+    attributeFacts: EventFacts = {},
   ): Promise<ProductionEvent> {
     const tracked = isUuid(event.tenantId);
     event.currentSourceRevision =
@@ -57,7 +67,12 @@ export class EventRevisionService {
       const saved = await manager.save(ProductionEvent, event);
       return {
         result: saved,
-        message: await this.recordCreated(saved, actor, manager),
+        message: await this.recordCreated(
+          saved,
+          actor,
+          manager,
+          attributeFacts,
+        ),
       };
     });
     this.publish(message);
@@ -72,6 +87,7 @@ export class EventRevisionService {
     event: ProductionEvent,
     actor: RevisionActor,
     manager: EntityManager,
+    attributeFacts: EventFacts = {},
   ): Promise<EventChangeMessage | null> {
     const locked = await lockEvent(manager, event.id);
     if (!locked || !hasRevisionTenant(locked)) {
@@ -85,7 +101,13 @@ export class EventRevisionService {
       revision: 1,
       kind,
       actor,
-      sourceFacts: kind === 'source' ? factsOf(locked, SOURCE_FIELDS) : null,
+      sourceFacts:
+        kind === 'source'
+          ? {
+              ...factsOf(locked, SOURCE_FIELDS),
+              ...normalizeFacts(attributeFacts, SOURCE_ATTRIBUTE_FACTS),
+            }
+          : null,
       changeReason: 'created',
     });
     await appendCoding(manager, locked, {

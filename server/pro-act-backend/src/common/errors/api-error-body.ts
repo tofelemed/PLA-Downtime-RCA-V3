@@ -14,6 +14,8 @@ export interface ApiErrorBody {
   code: string;
   message: string | string[];
   fieldErrors?: FieldError[];
+  /** structured context of a domain error, e.g. reference counts of a 409 (never internals) */
+  details?: Record<string, unknown>;
   correlationId: string;
   retryable: boolean;
 }

@@ -13,7 +13,13 @@ import {
   requireTenantId,
 } from '../../common/context/request-context';
 import { scopedQuery } from '../../common/query/scoped-query';
-import { EventClassification } from '../../domain/events/event-classification';
+import {
+  EventClassification,
+  OeeComponent,
+  ScheduleClass,
+} from '../../domain/events/event-classification';
+import { applyCodeDefaults } from '../../code-library/classification-basis';
+import { CodeDefaultsService } from '../../code-library/code-defaults.service';
 import {
   EventWriteInput,
   IntervalModelFields,
@@ -43,6 +49,7 @@ export class ProductionEventsV2CommandService {
     private readonly lifecycle: ProductionEventService,
     private readonly references: EventReferencesValidator,
     private readonly revisions: EventRevisionService,
+    private readonly codeDefaults: CodeDefaultsService,
   ) {}
 
   /** Creates a manual event in the caller's tenant; returns its id. */
@@ -53,8 +60,13 @@ export class ProductionEventsV2CommandService {
     const tenantId = requireTenantId(context);
     await this.references.assertUnitOwned(tenantId, dto.unitId);
     await this.references.assertOwned(tenantId, dto.unitId, dto);
+    const coded = await this.withCodeDefaults(
+      tenantId,
+      dto,
+      new Date(dto.startTime),
+    );
     const fields = prepareCreate({
-      ...writeInput(dto),
+      ...writeInput(coded.dto),
       eventType: dto.eventType,
       source: MANUAL_SOURCE,
     });
@@ -62,6 +74,7 @@ export class ProductionEventsV2CommandService {
     const id = randomUUID();
     const event = this.events.create({
       ...editableColumns(dto),
+      ...coded.columns,
       id,
       canonicalId: id,
       tenantId,
@@ -104,27 +117,92 @@ export class ProductionEventsV2CommandService {
     }
     assertRevision(existing.rowVersion, expectedRevision);
     await this.references.assertOwned(tenantId, existing.unitId, dto);
-    if (
-      existing.sourceKind !== 'manual' &&
-      INTERVAL_FIELDS.some((field) => dto[field] !== undefined)
-    ) {
-      throw new ConflictException({
-        code: 'SOURCE_OWNED',
-        message: 'The interval of a source event is owned by its source system',
-      });
-    }
+    assertIntervalEditable(existing, dto);
+    const coded = await this.withCodeDefaults(
+      tenantId,
+      dto,
+      existing.startTime,
+    );
     const updated = await this.revisions.applyUserChange({
       actor: actorFromContext(context),
       eventId: id,
       tenantId,
       expectedRowVersion: expectedRevision,
-      patch: (locked) => patchColumns(locked, dto),
+      patch: (locked) => ({
+        ...patchColumns(locked, coded.dto),
+        ...withoutKeptImpactCode(locked, coded.columns),
+      }),
     });
     if (!updated) {
       throw notFound();
     }
     this.lifecycle.publishUpdated(updated);
   }
+
+  /**
+   * Plan 1.3 step 5: a reason code brings its classification defaults (the `code_mapping_rules` version
+   * in force at the event start, else the code's default columns). Values the caller sent win and are
+   * flagged as overrides in `classification_basis`.
+   */
+  private async withCodeDefaults<T extends ProductionEventV2EditableDto>(
+    tenantId: string,
+    dto: T,
+    at: Date,
+  ): Promise<{ dto: T; columns: Partial<ProductionEvent> }> {
+    if (!dto.reasonCodeId) return { dto, columns: {} };
+    const defaults = await this.codeDefaults.defaultsFor(
+      tenantId,
+      dto.reasonCodeId,
+      at,
+    );
+    const { values, basis } = applyCodeDefaults(defaults, {
+      scheduleClass: dto.scheduleClass,
+      oeeComponent: dto.oeeComponent,
+    });
+    const columns: Partial<ProductionEvent> = {
+      classificationBasis: Object.keys(basis).length > 0 ? basis : null,
+    };
+    if (values.impactCodeId) columns.impactCodeId = values.impactCodeId;
+    return {
+      dto: {
+        ...dto,
+        scheduleClass:
+          dto.scheduleClass ??
+          (values.scheduleClass as ScheduleClass | undefined),
+        oeeComponent:
+          dto.oeeComponent ?? (values.oeeComponent as OeeComponent | undefined),
+      },
+      columns,
+    };
+  }
+}
+
+/** 409 SOURCE_OWNED: only manual events accept start/end changes. */
+function assertIntervalEditable(
+  existing: ProductionEvent,
+  dto: PatchProductionEventV2Dto,
+): void {
+  if (
+    existing.sourceKind !== 'manual' &&
+    INTERVAL_FIELDS.some((field) => dto[field] !== undefined)
+  ) {
+    throw new ConflictException({
+      code: 'SOURCE_OWNED',
+      message: 'The interval of a source event is owned by its source system',
+    });
+  }
+}
+
+/** An existing impact code is never replaced by a reason default (only an empty one is filled). */
+function withoutKeptImpactCode(
+  locked: ProductionEvent,
+  columns: Partial<ProductionEvent>,
+): Partial<ProductionEvent> {
+  if (!locked.impactCodeId || columns.impactCodeId === undefined)
+    return columns;
+  const rest = { ...columns };
+  delete rest.impactCodeId;
+  return rest;
 }
 
 /** Columns of a PATCH against the locked row; 422 INVALID_IMPACT on an inconsistent impact. */

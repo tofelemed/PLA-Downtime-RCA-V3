@@ -447,6 +447,2076 @@
           "v2 · Event Review Items"
         ]
       }
+    },
+    "/api/v2/source-mappings": {
+      "get": {
+        "description": "Keyset pages on (createdAt, id); inactive rules only with includeInactive=true.",
+        "operationId": "SourceMappingsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "createdAt",
+              "enum": [
+                "createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "matchKind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "exact_id",
+                "exact_path",
+                "pattern",
+                "af_binding"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "description": "Include inactive rules",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List source → plant mapping rules of the caller tenant (ING03)",
+        "tags": [
+          "v2 · Source Mappings"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. The target must be a unit or asset of the tenant (422 INVALID_REFERENCE); an active rule with the same kind and normalised value for the same connection is 409 MAPPING_EXISTS.",
+        "operationId": "SourceMappingsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceMappingV2WriteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a mapping rule",
+        "tags": [
+          "v2 · Source Mappings"
+        ]
+      }
+    },
+    "/api/v2/source-mappings/preview": {
+      "post": {
+        "description": "Each sample is resolved like an incoming record: exact id → exact path → pattern → AF binding. Returns the target (an asset target yields its unit) or `ambiguous` with the candidates, `invalid_target` (unit/asset outside the tenant) or `unmapped`, plus a summary.",
+        "operationId": "SourceMappingsV2Controller_preview_v2",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceMappingPreviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolve sample identifiers without storing anything (spec §15.2)",
+        "tags": [
+          "v2 · Source Mappings"
+        ]
+      }
+    },
+    "/api/v2/source-mappings/{id}": {
+      "get": {
+        "operationId": "SourceMappingsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one mapping rule (ETag = rowVersion); foreign ids are 404",
+        "tags": [
+          "v2 · Source Mappings"
+        ]
+      },
+      "put": {
+        "description": "Requires `If-Match: \"<rowVersion>\"` (428 without, 412 when stale). Rules mirrored from a v1 hierarchy mapping are edited through v1 (409 LEGACY_MAPPING).",
+        "operationId": "SourceMappingsV2Controller_replace_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceMappingV2WriteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace a mapping rule (next version)",
+        "tags": [
+          "v2 · Source Mappings"
+        ]
+      }
+    },
+    "/api/v2/field-catalog": {
+      "get": {
+        "description": "Every event field a source attribute may be mapped to, its accepted rule types and the default rules per PI template; the same list validates attribute mappings. Published copy: contracts/event-field-catalog.json.",
+        "operationId": "AttributeMappingsV2Controller_fieldCatalog_v2",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The event field catalog (ING04)",
+        "tags": [
+          "v2 · Attribute Mappings"
+        ]
+      }
+    },
+    "/api/v2/attribute-mappings": {
+      "get": {
+        "description": "Catalog defaults, merged field by field with the legacy pi_mappings overrides and the versioned tenant override in force (shown as `override`).",
+        "operationId": "AttributeMappingsV2Controller_effective_v2",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "required": false,
+            "in": "query",
+            "description": "Connection whose overrides apply",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Effective attribute mapping per template",
+        "tags": [
+          "v2 · Attribute Mappings"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. Rules are validated against the field catalog (422 INVALID_FIELD_RULES: unknown field, type not accepted by the field, duration without unit, field mapped twice).",
+        "operationId": "AttributeMappingsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributeMappingV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add the next version of a template override",
+        "tags": [
+          "v2 · Attribute Mappings"
+        ]
+      }
+    },
+    "/api/v2/reason-codes": {
+      "get": {
+        "description": "Tree filters `parentId` (direct children) and `rootsOnly`; `asOf` returns the codes valid at that instant, otherwise active codes unless `includeRetired`. Keyset pages on (code, id).",
+        "operationId": "ReasonCodesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "code",
+              "enum": [
+                "code",
+                "-code"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parentId",
+            "required": false,
+            "in": "query",
+            "description": "Direct children of this code",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "rootsOnly",
+            "required": false,
+            "in": "query",
+            "description": "Roots only",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "asOf",
+            "required": false,
+            "in": "query",
+            "description": "Codes valid at this instant (retired ones included)",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeRetired",
+            "required": false,
+            "in": "query",
+            "description": "Include retired and deactivated codes",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "groupKind",
+            "required": false,
+            "in": "query",
+            "description": "failure groups only",
+            "schema": {
+              "enum": [
+                "class",
+                "problem",
+                "cause",
+                "remedy"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List codes of the caller tenant",
+        "tags": [
+          "v2 · Reason Codes"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
+        "operationId": "ReasonCodesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a code (version 1)",
+        "tags": [
+          "v2 · Reason Codes"
+        ]
+      }
+    },
+    "/api/v2/reason-codes/{id}": {
+      "get": {
+        "operationId": "ReasonCodesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one code (ETag = current version); foreign ids are 404",
+        "tags": [
+          "v2 · Reason Codes"
+        ]
+      },
+      "put": {
+        "description": "Requires `If-Match: \"<version>\"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
+        "operationId": "ReasonCodesV2Controller_change_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2ChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change a code: records the next version",
+        "tags": [
+          "v2 · Reason Codes"
+        ]
+      }
+    },
+    "/api/v2/reason-codes/{id}/versions": {
+      "get": {
+        "operationId": "ReasonCodesV2Controller_versions_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Version history of a code, oldest first",
+        "tags": [
+          "v2 · Reason Codes"
+        ]
+      }
+    },
+    "/api/v2/reason-codes/{id}/retire": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
+        "operationId": "ReasonCodesV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2RetireDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a code (end of validity; history and references stay)",
+        "tags": [
+          "v2 · Reason Codes"
+        ]
+      }
+    },
+    "/api/v2/impact-codes": {
+      "get": {
+        "description": "Tree filters `parentId` (direct children) and `rootsOnly`; `asOf` returns the codes valid at that instant, otherwise active codes unless `includeRetired`. Keyset pages on (code, id).",
+        "operationId": "ImpactCodesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "code",
+              "enum": [
+                "code",
+                "-code"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parentId",
+            "required": false,
+            "in": "query",
+            "description": "Direct children of this code",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "rootsOnly",
+            "required": false,
+            "in": "query",
+            "description": "Roots only",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "asOf",
+            "required": false,
+            "in": "query",
+            "description": "Codes valid at this instant (retired ones included)",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeRetired",
+            "required": false,
+            "in": "query",
+            "description": "Include retired and deactivated codes",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "groupKind",
+            "required": false,
+            "in": "query",
+            "description": "failure groups only",
+            "schema": {
+              "enum": [
+                "class",
+                "problem",
+                "cause",
+                "remedy"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List codes of the caller tenant",
+        "tags": [
+          "v2 · Impact Codes"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
+        "operationId": "ImpactCodesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a code (version 1)",
+        "tags": [
+          "v2 · Impact Codes"
+        ]
+      }
+    },
+    "/api/v2/impact-codes/{id}": {
+      "get": {
+        "operationId": "ImpactCodesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one code (ETag = current version); foreign ids are 404",
+        "tags": [
+          "v2 · Impact Codes"
+        ]
+      },
+      "put": {
+        "description": "Requires `If-Match: \"<version>\"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
+        "operationId": "ImpactCodesV2Controller_change_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2ChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change a code: records the next version",
+        "tags": [
+          "v2 · Impact Codes"
+        ]
+      }
+    },
+    "/api/v2/impact-codes/{id}/versions": {
+      "get": {
+        "operationId": "ImpactCodesV2Controller_versions_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Version history of a code, oldest first",
+        "tags": [
+          "v2 · Impact Codes"
+        ]
+      }
+    },
+    "/api/v2/impact-codes/{id}/retire": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
+        "operationId": "ImpactCodesV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2RetireDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a code (end of validity; history and references stay)",
+        "tags": [
+          "v2 · Impact Codes"
+        ]
+      }
+    },
+    "/api/v2/oee-codes": {
+      "get": {
+        "description": "Tree filters `parentId` (direct children) and `rootsOnly`; `asOf` returns the codes valid at that instant, otherwise active codes unless `includeRetired`. Keyset pages on (code, id).",
+        "operationId": "OeeCodesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "code",
+              "enum": [
+                "code",
+                "-code"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parentId",
+            "required": false,
+            "in": "query",
+            "description": "Direct children of this code",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "rootsOnly",
+            "required": false,
+            "in": "query",
+            "description": "Roots only",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "asOf",
+            "required": false,
+            "in": "query",
+            "description": "Codes valid at this instant (retired ones included)",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeRetired",
+            "required": false,
+            "in": "query",
+            "description": "Include retired and deactivated codes",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "groupKind",
+            "required": false,
+            "in": "query",
+            "description": "failure groups only",
+            "schema": {
+              "enum": [
+                "class",
+                "problem",
+                "cause",
+                "remedy"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List codes of the caller tenant",
+        "tags": [
+          "v2 · OEE Codes"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
+        "operationId": "OeeCodesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a code (version 1)",
+        "tags": [
+          "v2 · OEE Codes"
+        ]
+      }
+    },
+    "/api/v2/oee-codes/{id}": {
+      "get": {
+        "operationId": "OeeCodesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one code (ETag = current version); foreign ids are 404",
+        "tags": [
+          "v2 · OEE Codes"
+        ]
+      },
+      "put": {
+        "description": "Requires `If-Match: \"<version>\"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
+        "operationId": "OeeCodesV2Controller_change_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2ChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change a code: records the next version",
+        "tags": [
+          "v2 · OEE Codes"
+        ]
+      }
+    },
+    "/api/v2/oee-codes/{id}/versions": {
+      "get": {
+        "operationId": "OeeCodesV2Controller_versions_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Version history of a code, oldest first",
+        "tags": [
+          "v2 · OEE Codes"
+        ]
+      }
+    },
+    "/api/v2/oee-codes/{id}/retire": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
+        "operationId": "OeeCodesV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2RetireDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a code (end of validity; history and references stay)",
+        "tags": [
+          "v2 · OEE Codes"
+        ]
+      }
+    },
+    "/api/v2/failure-code-groups": {
+      "get": {
+        "description": "Tree filters `parentId` (direct children) and `rootsOnly`; `asOf` returns the codes valid at that instant, otherwise active codes unless `includeRetired`. Keyset pages on (code, id).",
+        "operationId": "FailureCodeGroupsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "code",
+              "enum": [
+                "code",
+                "-code"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parentId",
+            "required": false,
+            "in": "query",
+            "description": "Direct children of this code",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "rootsOnly",
+            "required": false,
+            "in": "query",
+            "description": "Roots only",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "asOf",
+            "required": false,
+            "in": "query",
+            "description": "Codes valid at this instant (retired ones included)",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeRetired",
+            "required": false,
+            "in": "query",
+            "description": "Include retired and deactivated codes",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "groupKind",
+            "required": false,
+            "in": "query",
+            "description": "failure groups only",
+            "schema": {
+              "enum": [
+                "class",
+                "problem",
+                "cause",
+                "remedy"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List codes of the caller tenant",
+        "tags": [
+          "v2 · Failure Code Groups"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
+        "operationId": "FailureCodeGroupsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a code (version 1)",
+        "tags": [
+          "v2 · Failure Code Groups"
+        ]
+      }
+    },
+    "/api/v2/failure-code-groups/{id}": {
+      "get": {
+        "operationId": "FailureCodeGroupsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one code (ETag = current version); foreign ids are 404",
+        "tags": [
+          "v2 · Failure Code Groups"
+        ]
+      },
+      "put": {
+        "description": "Requires `If-Match: \"<version>\"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
+        "operationId": "FailureCodeGroupsV2Controller_change_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2ChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change a code: records the next version",
+        "tags": [
+          "v2 · Failure Code Groups"
+        ]
+      }
+    },
+    "/api/v2/failure-code-groups/{id}/versions": {
+      "get": {
+        "operationId": "FailureCodeGroupsV2Controller_versions_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Version history of a code, oldest first",
+        "tags": [
+          "v2 · Failure Code Groups"
+        ]
+      }
+    },
+    "/api/v2/failure-code-groups/{id}/retire": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
+        "operationId": "FailureCodeGroupsV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2RetireDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a code (end of validity; history and references stay)",
+        "tags": [
+          "v2 · Failure Code Groups"
+        ]
+      }
+    },
+    "/api/v2/loss-category-defs": {
+      "get": {
+        "description": "Tree filters `parentId` (direct children) and `rootsOnly`; `asOf` returns the codes valid at that instant, otherwise active codes unless `includeRetired`. Keyset pages on (code, id).",
+        "operationId": "LossCategoryDefsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "code",
+              "enum": [
+                "code",
+                "-code"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parentId",
+            "required": false,
+            "in": "query",
+            "description": "Direct children of this code",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "rootsOnly",
+            "required": false,
+            "in": "query",
+            "description": "Roots only",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "asOf",
+            "required": false,
+            "in": "query",
+            "description": "Codes valid at this instant (retired ones included)",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeRetired",
+            "required": false,
+            "in": "query",
+            "description": "Include retired and deactivated codes",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "groupKind",
+            "required": false,
+            "in": "query",
+            "description": "failure groups only",
+            "schema": {
+              "enum": [
+                "class",
+                "problem",
+                "cause",
+                "remedy"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List codes of the caller tenant",
+        "tags": [
+          "v2 · Loss Category Definitions"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
+        "operationId": "LossCategoryDefsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a code (version 1)",
+        "tags": [
+          "v2 · Loss Category Definitions"
+        ]
+      }
+    },
+    "/api/v2/loss-category-defs/{id}": {
+      "get": {
+        "operationId": "LossCategoryDefsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one code (ETag = current version); foreign ids are 404",
+        "tags": [
+          "v2 · Loss Category Definitions"
+        ]
+      },
+      "put": {
+        "description": "Requires `If-Match: \"<version>\"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
+        "operationId": "LossCategoryDefsV2Controller_change_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2ChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change a code: records the next version",
+        "tags": [
+          "v2 · Loss Category Definitions"
+        ]
+      }
+    },
+    "/api/v2/loss-category-defs/{id}/versions": {
+      "get": {
+        "operationId": "LossCategoryDefsV2Controller_versions_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Version history of a code, oldest first",
+        "tags": [
+          "v2 · Loss Category Definitions"
+        ]
+      }
+    },
+    "/api/v2/loss-category-defs/{id}/retire": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
+        "operationId": "LossCategoryDefsV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeV2RetireDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a code (end of validity; history and references stay)",
+        "tags": [
+          "v2 · Loss Category Definitions"
+        ]
+      }
+    },
+    "/api/v2/code-mapping-rules": {
+      "get": {
+        "description": "All versions by default; `asOf` keeps the version in force per (kind, source code).",
+        "operationId": "CodeMappingRulesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "createdAt",
+              "enum": [
+                "createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ruleKind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "reason_to_oee",
+                "reason_to_schedule_class",
+                "reason_to_impact",
+                "impact_to_valuation"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceCodeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "required": false,
+            "in": "query",
+            "description": "Only the version in force at this instant",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List versioned code mapping rules",
+        "tags": [
+          "v2 · Code Mapping Rules"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. A rule for an existing (kind, source code) becomes its next version; earlier versions are never changed. 422 INVALID_REFERENCE / INVALID_RULE_TARGET on bad codes or values.",
+        "operationId": "CodeMappingRulesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeMappingRuleV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a rule version (spec §3.2)",
+        "tags": [
+          "v2 · Code Mapping Rules"
+        ]
+      }
     }
   },
   "info": {
@@ -689,6 +2759,395 @@
         },
         "required": [
           "decision"
+        ]
+      },
+      "MappingSampleDto": {
+        "type": "object",
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "description": "Source id (e.g. the PI element WebId)"
+          },
+          "sourcePath": {
+            "type": "string",
+            "description": "Source path (e.g. \\\\AF\\HDPE\\unit100\\Extruder)"
+          },
+          "afElementWebIds": {
+            "description": "AF element WebIds: the referenced element first, then its ancestors",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SourceMappingPreviewDto": {
+        "type": "object",
+        "properties": {
+          "connectionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Connection whose rules apply (default: rules for every connection)"
+          },
+          "samples": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MappingSampleDto"
+            }
+          }
+        },
+        "required": [
+          "samples"
+        ]
+      },
+      "SourceMappingV2WriteDto": {
+        "type": "object",
+        "properties": {
+          "matchKind": {
+            "type": "string",
+            "enum": [
+              "exact_id",
+              "exact_path",
+              "pattern",
+              "af_binding"
+            ],
+            "description": "exact_id → exact_path → pattern → af_binding (resolution order). Paths and patterns: `\\` and `/` are separators, case-insensitive; `*` any run, `?` one character, `[*]` `[?]` `[[]` literals."
+          },
+          "matchValue": {
+            "type": "string",
+            "description": "Source id, path, glob pattern or AF element WebId"
+          },
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "unit",
+              "asset"
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unit or asset of the caller tenant"
+          },
+          "precedence": {
+            "type": "number",
+            "description": "Patterns: higher is evaluated first; equal precedence with different targets is ambiguous",
+            "default": 0
+          },
+          "connectionId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "null = every connection"
+          },
+          "sourceSystem": {
+            "type": "string",
+            "default": "PI",
+            "description": "'PI', 'MQTT', ... or '*'"
+          },
+          "effectiveFrom": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "effectiveTo": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Exclusive end"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "description": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "matchKind",
+          "matchValue",
+          "targetType",
+          "targetId"
+        ]
+      },
+      "FieldRuleDto": {
+        "type": "object",
+        "properties": {
+          "sourceAttr": {
+            "type": "string",
+            "description": "Attribute name as delivered (case-sensitive)"
+          },
+          "aliases": {
+            "description": "Further attribute names tried in order",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "targetField": {
+            "type": "string",
+            "description": "A field of GET /api/v2/field-catalog"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "number",
+              "string",
+              "bool",
+              "digital",
+              "duration",
+              "timestamp"
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "seconds",
+              "minutes",
+              "hours",
+              "timespan"
+            ],
+            "description": "Required for duration rules"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sourceAttr",
+          "targetField",
+          "type"
+        ]
+      },
+      "AttributeMappingV2CreateDto": {
+        "type": "object",
+        "properties": {
+          "templateName": {
+            "type": "string",
+            "description": "PI template name ('*NoTemplate*' for frames without one)"
+          },
+          "connectionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Connection the override applies to (default: all)"
+          },
+          "fieldRules": {
+            "description": "Merged field by field over the catalog defaults (only the listed target fields change)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldRuleDto"
+            }
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start of validity (default now)"
+          }
+        },
+        "required": [
+          "templateName",
+          "fieldRules"
+        ]
+      },
+      "CodeV2CreateDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "object",
+            "nullable": true
+          },
+          "parentId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Parent code of the same library and tenant; null makes a root (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "category": {
+            "type": "object",
+            "nullable": true,
+            "description": "reason, impact, oee (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "defaultOeeComponent": {
+            "type": "string",
+            "enum": [
+              "availability",
+              "performance",
+              "quality",
+              "idle",
+              "none"
+            ],
+            "nullable": true,
+            "description": "reason (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "defaultScheduleClass": {
+            "type": "string",
+            "enum": [
+              "planned",
+              "unplanned",
+              "external",
+              "unknown"
+            ],
+            "nullable": true,
+            "description": "reason (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "defaultImpactCodeId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "reason: default impact code (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "costPerHour": {
+            "type": "string",
+            "nullable": true,
+            "example": "1250.5",
+            "description": "impact (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "reportOrder": {
+            "type": "number",
+            "minimum": 0,
+            "description": "loss_category (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Unique per tenant and library"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "groupKind": {
+            "type": "string",
+            "enum": [
+              "class",
+              "problem",
+              "cause",
+              "remedy"
+            ],
+            "description": "failure (required there) (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start of validity (default now)"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "CodeV2ChangeDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "object",
+            "nullable": true
+          },
+          "parentId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Parent code of the same library and tenant; null makes a root (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "category": {
+            "type": "object",
+            "nullable": true,
+            "description": "reason, impact, oee (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "defaultOeeComponent": {
+            "type": "string",
+            "enum": [
+              "availability",
+              "performance",
+              "quality",
+              "idle",
+              "none"
+            ],
+            "nullable": true,
+            "description": "reason (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "defaultScheduleClass": {
+            "type": "string",
+            "enum": [
+              "planned",
+              "unplanned",
+              "external",
+              "unknown"
+            ],
+            "nullable": true,
+            "description": "reason (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "defaultImpactCodeId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "reason: default impact code (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "costPerHour": {
+            "type": "string",
+            "nullable": true,
+            "example": "1250.5",
+            "description": "impact (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "reportOrder": {
+            "type": "number",
+            "minimum": 0,
+            "description": "loss_category (only libraries that have the field accept it; others answer 422 FIELD_NOT_ALLOWED)"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          }
+        }
+      },
+      "CodeV2RetireDto": {
+        "type": "object",
+        "properties": {
+          "effectiveTo": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End of validity, exclusive (default now)"
+          }
+        }
+      },
+      "CodeMappingRuleV2CreateDto": {
+        "type": "object",
+        "properties": {
+          "ruleKind": {
+            "type": "string",
+            "enum": [
+              "reason_to_oee",
+              "reason_to_schedule_class",
+              "reason_to_impact",
+              "impact_to_valuation"
+            ]
+          },
+          "sourceCodeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Reason code (reason_* kinds) or impact code (impact_to_valuation)"
+          },
+          "targetValue": {
+            "type": "string",
+            "description": "OEE component (reason_to_oee), schedule class (reason_to_schedule_class) or decimal cost per hour (impact_to_valuation)"
+          },
+          "targetCodeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Impact code (reason_to_impact)"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start of validity (default now); not before the previous version"
+          }
+        },
+        "required": [
+          "ruleKind",
+          "sourceCodeId"
         ]
       }
     }
