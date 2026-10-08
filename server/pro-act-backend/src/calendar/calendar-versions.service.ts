@@ -24,6 +24,7 @@ import {
   notFound,
 } from './calendar-errors';
 import { definitionOf } from './calendar-resolution';
+import { assertCreatableFor, assertWritableVersion } from './calendar-scope';
 import { CalendarVersion } from './entities/calendar-version.entity';
 import { Site } from './entities/site.entity';
 import { SitesService } from './sites.service';
@@ -73,6 +74,7 @@ export class CalendarVersionsService {
     input: NewCalendarVersion,
   ): Promise<CalendarVersion> {
     const tenantId = requireTenantId(context);
+    assertCreatableFor(context, tenantId, input.unitId);
     const site = await this.scopeSite(tenantId, input);
     const content = withSiteDefaults(input, site);
     assertValid(content);
@@ -103,12 +105,22 @@ export class CalendarVersionsService {
     return version;
   }
 
+  /** A version the caller may change: unit-limited callers only reach versions of their units. */
+  async getWritable(
+    context: RequestContext,
+    id: string,
+  ): Promise<CalendarVersion> {
+    const version = await this.get(context, id);
+    assertWritableVersion(context, version);
+    return version;
+  }
+
   async update(
     context: RequestContext,
     target: { id: string; expectedRevision: number },
     patch: Partial<CalendarContent>,
   ): Promise<CalendarVersion> {
-    const current = await this.get(context, target.id);
+    const current = await this.getWritable(context, target.id);
     return this.versions.manager.transaction(async (manager) => {
       const locked = await manager.findOneOrFail(CalendarVersion, {
         where: { id: current.id },

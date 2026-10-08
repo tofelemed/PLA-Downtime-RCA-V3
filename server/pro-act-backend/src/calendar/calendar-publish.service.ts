@@ -58,7 +58,7 @@ export class CalendarPublishService {
     id: string,
     command: PublishCommand,
   ): Promise<PublishResult> {
-    const current = await this.calendarVersions.get(context, id);
+    const current = await this.calendarVersions.getWritable(context, id);
     assertCommand(current, command);
     assertValid({
       ...definitionOf(current),

@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+import { signToken } from './support/test-app';
 import { SitesService } from '../../src/calendar/sites.service';
 import {
   ApiError,
@@ -361,5 +363,52 @@ describe('calendar versions and shift instances (plan 2.1, v2 API)', () => {
     expect(
       (await env.get('crew-rotations', env.adminB).expect(200)).body.items,
     ).toEqual([]);
+  });
+
+  it('a writer limited to one unit can only write calendar versions of that unit', async () => {
+    const ds = env.harness.dataSource;
+    const userId = randomUUID();
+    await ds.query(
+      `INSERT INTO users (id, name, email, password_hash, role, tenant_id) VALUES ($1, 'unit writer', $2, 'x', 'Operator', $3)`,
+      [userId, `${userId}@test.local`, env.world.tenantA],
+    );
+    await ds.query(
+      `INSERT INTO user_scopes (tenant_id, user_id, scope_kind, scope_id, role, row_version)
+       VALUES ($1, $2, 'unit', $3, 'master_data_admin', 1)`,
+      [env.world.tenantA, userId, env.world.unitA1],
+    );
+    const token = signToken(env.app, {
+      userId,
+      tenantId: env.world.tenantA,
+      role: 'Operator',
+    });
+    const base = {
+      ...threeShiftCalendar('Asia/Tehran'),
+      effectiveFrom: await env.todayA(30),
+    };
+    const siteWide = await env
+      .post('calendar-versions', base, token)
+      .expect(403);
+    expect((siteWide.body as ApiError).code).toBe('SITE_SCOPE_REQUIRED');
+    const otherUnit = await env
+      .post('calendar-versions', { ...base, unitId: env.world.unitA2 }, token)
+      .expect(422);
+    expect((otherUnit.body as ApiError).code).toBe('INVALID_REFERENCE');
+    await env
+      .post('calendar-versions', { ...base, unitId: env.world.unitA1 }, token)
+      .expect(201);
+    // a site-wide draft made by a manager is out of reach for publish
+    const managerDraft = await env.post('calendar-versions', base).expect(201);
+    await env
+      .post(
+        `calendar-versions/${(managerDraft.body as { id: string }).id}/publish`,
+        {},
+        token,
+      )
+      .expect(404);
+    const crew = await env
+      .post('crews', { name: `scoped-${userId.slice(0, 6)}` }, token)
+      .expect(403);
+    expect((crew.body as ApiError).code).toBe('SITE_SCOPE_REQUIRED');
   });
 });

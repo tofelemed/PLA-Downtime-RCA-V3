@@ -25,6 +25,7 @@ import {
 import { HORIZON_DAYS } from './calendar-publish.service';
 import { CrewRotation } from './entities/crew-rotation.entity';
 import { Crew } from './entities/crew.entity';
+import { assertSiteWideWriter } from './calendar-scope';
 import { SitesService } from './sites.service';
 
 export interface NewRotation {
@@ -54,6 +55,7 @@ export class CrewsService {
     input: { siteId?: string; name: string },
   ): Promise<Crew> {
     const tenantId = requireTenantId(context);
+    assertSiteWideWriter(context, tenantId);
     const site = await this.sites.resolve(tenantId, input.siteId);
     const name = input.name.trim();
     if (await this.crews.exists({ where: { siteId: site.id, name } })) {
@@ -89,6 +91,7 @@ export class CrewsService {
     materialization: UnitMaterialization[];
   }> {
     const tenantId = requireTenantId(context);
+    assertSiteWideWriter(context, tenantId);
     const crew = await this.crews.findOne({
       where: { id: input.crewId, tenantId },
     });
