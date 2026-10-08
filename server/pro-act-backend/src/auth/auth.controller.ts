@@ -6,7 +6,8 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { Public } from '../common/decorators/public.decorator';
+import { Roles } from './decorators/roles.decorator';
+import { Public, PublicIf } from '../common/decorators/public.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -31,9 +32,12 @@ export class AuthController {
     return this.authService.login(user);
   }
 
-  @Public()
+  // Admin-only; public only while AUTH_ALLOW_PUBLIC_REGISTRATION=true (local dev / e2e).
+  // The first SuperAdmin of an empty database comes from `npm run db:bootstrap-admin`.
+  @PublicIf('AUTH_ALLOW_PUBLIC_REGISTRATION')
+  @Roles('SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'manager_approver')
   @Post('register')
-  @ApiOperation({ summary: 'Register new user. Can auto-create organization and tenant if names are provided.' })
+  @ApiOperation({ summary: 'Register new user (admin roles; a caller cannot grant a role above its own). Can auto-create organization and tenant if names are provided.' })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Invalid data' })

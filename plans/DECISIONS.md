@@ -263,6 +263,10 @@ Recorded 7 Oct 2026 from the answers above (product owner, via this file). Where
 | 2026-10-07 | C2 Vertical slice | Yes, M1 first | blank → "accepted" |
 | 2026-10-07 | C3 Accounting UI | Tab on Plan Dashboard with deep links | blank → "accepted" |
 | 2026-10-07 | C4 Legacy screens | Keep v1 behind flags until pilot acceptance | blank → "accepted" |
+| 2026-10-08 | 1.1 Legacy status | v1 labels ↔ three states per `src/domain/events/legacy-status.ts`: Open/Coded/RCA Required/Investigating/Completed/Closed/Cancelled are written back; "In Progress" reads as Investigating; Cancelled = retracted; the physical state always follows the interval. Existing labels are not rewritten by the migration (D11) | engineering default under DT11, not yet reviewed by the owner |
+| 2026-10-08 | 1.1 Legacy types | ProductionLoss → downtime/availability/full stop; ProductionOutput → production output; every other or unknown type → advisory with no OEE impact (T42) | engineering default under §3.2 / T42 |
+| 2026-10-08 | 1.1 Legacy durations | Only PI-sourced legacy `duration` values are assumed minutes; all others are kept in `legacy_duration` with no unit and flagged for review (MIG §18.2: never guessed) | engineering default |
+| 2026-10-08 | 1.1 Backfill | Runs as set-based SQL inside the migration (pilot volume, D07) instead of a worker job; pinned to the TS rules by an integration spec | engineering choice |
 
 ### Still needed from you (not blocking Phase 0)
 - D02 details: PI Web API base URL, auth mode and a service account; AF database/element scope for HDPE; actual event-frame template and attribute names; which tags hold production actuals for unit100–unit500. Needed before 1.6/1.7 certification.

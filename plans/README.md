@@ -42,15 +42,15 @@ Status legend: ⬜ not started · 🔄 in progress · 🧪 implemented, tests pe
 |---|---|---|---|
 | ✅ | 0.1 Baseline audit and evidence matrix | [0.1-baseline-audit.md](phase-0/0.1-baseline-audit.md) | Evidence in `plans/evidence/` (commit `913086b`); fixtures T01–T46; e2e baseline 22 passed / 18 not run |
 | ✅ | 0.2 Decision register and proposed policies | [0.2-decision-register.md](phase-0/0.2-decision-register.md) | D01–D15 recorded; 9 policy schemas + defaults in `contracts/policies/` validated (190 fixture assertions green); currency placeholder "XXX" open |
-| 🔄 | 0.3 Dev environment, migrations, worker, CI | [0.3-dev-environment-and-migrations.md](phase-0/0.3-dev-environment-and-migrations.md) | Migration up/down; worker boots; CI runs all test layers — data-source + baseline migration done; harness/worker/Compose/CI in progress (3 agents) |
-| 🔄 | 0.4 API v2 foundation: tenancy, guards, queries, errors, idempotency | [0.4-api-v2-foundation.md](phase-0/0.4-api-v2-foundation.md) | T13, T14; B1 B2 B14 B17 B18 closed — part 1 (error contract, guards, v1 fixes, v2 skeleton) in progress; part 2 (tenancy tables, idempotency) after 0.3 |
+| 🧪 | 0.3 Dev environment, migrations, worker, CI | [0.3-dev-environment-and-migrations.md](phase-0/0.3-dev-environment-and-migrations.md) | Verified 8 Oct: integration 60/60, worker smoke, Kafka + MQTT healthy, legacy SQL moved. **Open:** GitHub CI run (no remote), fresh-clone Compose check, lint-gate decision ([evidence](evidence/phase0-verification.md)) |
+| 🧪 | 0.4 API v2 foundation: tenancy, guards, queries, errors, idempotency | [0.4-api-v2-foundation.md](phase-0/0.4-api-v2-foundation.md) | All steps done; T13 + T14 core green in integration (60/60), OpenAPI v2 snapshot enforced. **Open:** GitHub CI run |
 
 ### Phase 1 — Events, intake and connectors (spec P1: E03–E06) → [phase-1/README.md](phase-1/README.md)
 | Status | Sub-phase | File | Exit tests |
 |---|---|---|---|
-| ⬜ | 1.1 Event interval model and classifications | [1.1-event-interval-model.md](phase-1/1.1-event-interval-model.md) | T01, T02, T03, T29 |
+| 🧪 | 1.1 Event interval model and classifications | [1.1-event-interval-model.md](phase-1/1.1-event-interval-model.md) | T01, T02, T03, T29, T42 green (unit + integration, 8 Oct); CI run and backfill report on the data host open |
 | ⬜ | 1.2 Event revisions and source ownership | [1.2-event-revisions-and-source-ownership.md](phase-1/1.2-event-revisions-and-source-ownership.md) | T04 |
-| ⬜ | 1.3 Hierarchy mapping and code libraries | [1.3-hierarchy-mapping-and-code-libraries.md](phase-1/1.3-hierarchy-mapping-and-code-libraries.md) | T05, T18 |
+| ⬜ | 1.3 Hierarchy mapping and code libraries | [1.3-hierarchy-mapping-and-code-libraries.md](phase-1/1.3-hierarchy-mapping-and-code-libraries.md) | T05, T18 (7 Oct agent run left no code in the repo) |
 | ⬜ | 1.4 Event operations: split, merge, bulk-code, close | [1.4-event-operations.md](phase-1/1.4-event-operations.md) | T37 |
 | ⬜ | 1.5 Durable intake core: raw store, jobs, inbox/outbox, quarantine, replay | [1.5-durable-intake-core.md](phase-1/1.5-durable-intake-core.md) | T06, T10 (inbox), replay invariance |
 | ⬜ | 1.6 PI event frames certified | [1.6-pi-event-frames-certified.md](phase-1/1.6-pi-event-frames-certified.md) | T07, T08, T46, §6.4 matrix |

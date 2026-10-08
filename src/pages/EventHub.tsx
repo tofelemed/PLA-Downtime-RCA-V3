@@ -737,7 +737,6 @@ export const EventHub: React.FC = () => {
         shift: eventForm.shift || '',
         crew: eventForm.crew || '',
         reasonCodeId: eventForm.reasonCodeId,
-        duration: eventForm.duration ? parseFloat(eventForm.duration) : undefined,
       });
 
       toast({
@@ -2314,12 +2313,9 @@ export const EventHub: React.FC = () => {
                       <div className="space-y-3 text-base">
                         <div className="flex items-center gap-2"><Calendar className="w-5 h-5 text-gray-400" /><span className="font-semibold">Start Time:</span> {selectedEvent.startTime ? new Date(selectedEvent.startTime).toLocaleString() : 'N/A'}</div>
                         <div className="flex items-center gap-2"><Clock className="w-5 h-5 text-gray-400" /><span className="font-semibold">End Time:</span> {selectedEvent.endTime ? new Date(selectedEvent.endTime).toLocaleString() : 'N/A'}</div>
-                        {selectedEvent.startTime && selectedEvent.endTime && (
-                          <div className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-400" /><span className="font-semibold">Duration (minutes):</span> {Math.max(0, Math.round((new Date(selectedEvent.endTime).getTime() - new Date(selectedEvent.startTime).getTime()) / 60000))}</div>
-                        )}
                         {selectedEvent.quantity !== undefined && <div className="flex items-center gap-2"><TrendingDown className="w-5 h-5 text-blue-400" /><span className="font-semibold">Quantity:</span> {selectedEvent.quantity}</div>}
                         {selectedEvent.defectiveQuantity !== undefined && <div className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-yellow-400" /><span className="font-semibold">Defective Quantity:</span> {selectedEvent.defectiveQuantity}</div>}
-                        {selectedEvent.duration !== undefined && <div className="flex items-center gap-2"><Clock className="w-5 h-5 text-gray-400" /><span className="font-semibold">Duration (hours):</span> {selectedEvent.duration}</div>}
+                        {selectedEvent.duration != null && <div className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-400" /><span className="font-semibold">Duration (minutes):</span> {selectedEvent.duration}</div>}
                         {(() => {
                           const plan = plans.find(p => p.id === selectedEvent.planId);
                           const product = plan ? products.find(prod => prod.id === plan.productId) : null;

@@ -1,0 +1,602 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v2/production-events": {
+      "get": {
+        "description": "Filters AND across parameters and OR within a repeated parameter; from/to is a half-open window with overlap semantics; pages are keyset-based on (startTime, id). The tenant comes from the identity.",
+        "operationId": "ProductionEventsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "-startTime",
+              "enum": [
+                "startTime",
+                "-startTime"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat the parameter for several units",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "reasonIds",
+            "required": false,
+            "in": "query",
+            "description": "Reason code ids",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "eventTypes",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "statuses",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "physicalTypes",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "downtime",
+                  "slowdown",
+                  "quality_loss",
+                  "production_output",
+                  "advisory"
+                ]
+              }
+            }
+          },
+          {
+            "name": "scheduleClasses",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "planned",
+                  "unplanned",
+                  "external",
+                  "unknown"
+                ]
+              }
+            }
+          },
+          {
+            "name": "oeeComponents",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "availability",
+                  "performance",
+                  "quality",
+                  "idle",
+                  "none"
+                ]
+              }
+            }
+          },
+          {
+            "name": "physicalStates",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "closed",
+                  "superseded",
+                  "retracted"
+                ]
+              }
+            }
+          },
+          {
+            "name": "codingStates",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "uncoded",
+                  "coded",
+                  "reviewed"
+                ]
+              }
+            }
+          },
+          {
+            "name": "rcaStates",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "required",
+                  "linked",
+                  "completed"
+                ]
+              }
+            }
+          },
+          {
+            "name": "isOpen",
+            "required": false,
+            "in": "query",
+            "description": "true: still running (no end time); false: ended",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "X-Tenant-Id",
+            "in": "header",
+            "description": "Act on another tenant the caller is a member of (SuperAdmin: any tenant)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List production events of the caller tenant",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. Give `endTime` or `durationSeconds` (both must agree within 1 s), or neither for an open event. Classifications default from `eventType`. 422 on interval violations.",
+        "operationId": "ProductionEventsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductionEventV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created; `ETag` carries the revision"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a manual production event (DT08)",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    },
+    "/api/v2/production-events/{id}": {
+      "get": {
+        "description": "Returns `ETag: \"<rowVersion>\"`; a foreign or unknown id is 404.",
+        "operationId": "ProductionEventsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one production event of the caller scope",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      },
+      "patch": {
+        "description": "Requires `If-Match: \"<rowVersion>\"` (428 without, 412 when stale). Interval fields are editable on manual events only (409 SOURCE_OWNED).",
+        "operationId": "ProductionEventsV2Controller_patch_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchProductionEventV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit user fields of a production event",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "ProAct API v2",
+    "description": "Tenant from identity, AND-combined filters, cursor pagination, standard envelopes (src/v2/CONVENTIONS.md)",
+    "version": "2.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CreateProductionEventV2Dto": {
+        "type": "object",
+        "properties": {
+          "endTime": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Exclusive end; omit or null for an open event"
+          },
+          "durationSeconds": {
+            "type": "number",
+            "description": "Alternative to endTime: seconds from start (must agree with endTime within 1 s)"
+          },
+          "assetId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "reasonCodeId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Reason (cause) code"
+          },
+          "physicalType": {
+            "type": "string",
+            "enum": [
+              "downtime",
+              "slowdown",
+              "quality_loss",
+              "production_output",
+              "advisory"
+            ]
+          },
+          "scheduleClass": {
+            "type": "string",
+            "enum": [
+              "planned",
+              "unplanned",
+              "external",
+              "unknown"
+            ]
+          },
+          "oeeComponent": {
+            "type": "string",
+            "enum": [
+              "availability",
+              "performance",
+              "quality",
+              "idle",
+              "none"
+            ]
+          },
+          "impactMode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "full_stop",
+              "fractional",
+              "measured"
+            ]
+          },
+          "impactFraction": {
+            "type": "object",
+            "example": "0.25",
+            "nullable": true,
+            "description": "0..1, required when impactMode = fractional"
+          },
+          "description": {
+            "type": "object",
+            "maxLength": 4000,
+            "nullable": true
+          },
+          "quantity": {
+            "type": "object",
+            "example": "12.5",
+            "nullable": true
+          },
+          "quantityUom": {
+            "type": "object",
+            "example": "t",
+            "nullable": true
+          },
+          "cost": {
+            "type": "object",
+            "example": "1500.00",
+            "nullable": true
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Inclusive start (UTC)"
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventType": {
+            "type": "string",
+            "description": "Legacy v1 type label (ProductionLoss, IOW, ...); sets default classifications"
+          },
+          "eventId": {
+            "type": "string",
+            "description": "Caller reference, unique per source"
+          }
+        },
+        "required": [
+          "unitId",
+          "startTime"
+        ]
+      },
+      "PatchProductionEventV2Dto": {
+        "type": "object",
+        "properties": {
+          "endTime": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Exclusive end; omit or null for an open event"
+          },
+          "durationSeconds": {
+            "type": "number",
+            "description": "Alternative to endTime: seconds from start (must agree with endTime within 1 s)"
+          },
+          "assetId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "reasonCodeId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Reason (cause) code"
+          },
+          "physicalType": {
+            "type": "string",
+            "enum": [
+              "downtime",
+              "slowdown",
+              "quality_loss",
+              "production_output",
+              "advisory"
+            ]
+          },
+          "scheduleClass": {
+            "type": "string",
+            "enum": [
+              "planned",
+              "unplanned",
+              "external",
+              "unknown"
+            ]
+          },
+          "oeeComponent": {
+            "type": "string",
+            "enum": [
+              "availability",
+              "performance",
+              "quality",
+              "idle",
+              "none"
+            ]
+          },
+          "impactMode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "full_stop",
+              "fractional",
+              "measured"
+            ]
+          },
+          "impactFraction": {
+            "type": "object",
+            "example": "0.25",
+            "nullable": true,
+            "description": "0..1, required when impactMode = fractional"
+          },
+          "description": {
+            "type": "object",
+            "maxLength": 4000,
+            "nullable": true
+          },
+          "quantity": {
+            "type": "object",
+            "example": "12.5",
+            "nullable": true
+          },
+          "quantityUom": {
+            "type": "object",
+            "example": "t",
+            "nullable": true
+          },
+          "cost": {
+            "type": "object",
+            "example": "1500.00",
+            "nullable": true
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

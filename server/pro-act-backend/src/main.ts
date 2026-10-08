@@ -5,7 +5,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { configureHttpApp } from './common/http/configure-http-app';
-import { V2Module } from './v2/v2.module';
+import { buildV2Document } from './v2/openapi-v2';
 import { getProcessRole } from './common/scheduling/process-role';
 import { bootstrapWorker } from './worker';
 
@@ -61,13 +61,7 @@ async function bootstrap() {
   );
   SwaggerModule.setup('api', app, v1Document);
 
-  const v2Config = new DocumentBuilder()
-    .setTitle('ProAct API v2')
-    .setDescription('Tenant from identity, AND-combined filters, cursor pagination, standard envelopes (src/v2/CONVENTIONS.md)')
-    .setVersion('2.0')
-    .addBearerAuth()
-    .build();
-  const v2Document = SwaggerModule.createDocument(app, v2Config, { include: [V2Module] });
+  const v2Document = buildV2Document(app);
   SwaggerModule.setup('api/docs/v2', app, v2Document);
 
   // Serve uploaded files. The upload controllers write to "./uploads" relative to the working

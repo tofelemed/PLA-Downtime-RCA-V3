@@ -1,5 +1,5 @@
 import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommonModule } from './common/common.module';
@@ -73,6 +73,13 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
 import { StreamingModule } from './streaming/streaming.module';
 import { dataSourceOptions } from './database/data-source';
 import { registerPgTypeParsers } from './database/pg-type-parsers';
+import { AccessModule } from './auth/access/access.module';
+import { RolesGuard } from './auth/guards/roles.guard';
+import { ScopeGuard } from './auth/guards/scope.guard';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { RequestContextMiddleware } from './common/context/request-context.middleware';
+import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
+import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -81,6 +88,10 @@ registerPgTypeParsers();
 @Module({
   imports: [
     CommonModule,
+    // Identity resolution, user scopes and the role/scope guards (WF05)
+    AccessModule,
+    // Idempotency-Key storage for @Idempotent() commands (API02)
+    IdempotencyModule,
     // Global rate limit (429 + Retry-After); per user when authenticated, per IP otherwise
     ThrottlerModule.forRoot(throttlerOptionsFromEnv()),
     // Cron providers are live only in PROCESS_ROLE=worker|all; the api role is HTTP-only
@@ -158,12 +169,24 @@ registerPgTypeParsers();
     // /api/v2 resources (src/v2/CONVENTIONS.md)
     V2Module,
   ],
-  providers: [{ provide: APP_GUARD, useClass: UserIpThrottlerGuard }],
+  // Global guard chain, in order: rate limit → authentication (@Public / @PublicIf skip it)
+  // → @Roles → @ScopeParam. Every route is protected unless it opts out explicitly.
+  providers: [
+    { provide: APP_GUARD, useClass: UserIpThrottlerGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: ScopeGuard },
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
+  ],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(CorrelationIdMiddleware, RequestLoggerMiddleware)
+      .apply(
+        CorrelationIdMiddleware,
+        RequestContextMiddleware,
+        RequestLoggerMiddleware,
+      )
       .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 }

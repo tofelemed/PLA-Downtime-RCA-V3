@@ -8,6 +8,8 @@ type PostgresOptions = Extract<DataSourceOptions, { type: 'postgres' }>;
 export const TEST_DB_NAME = process.env.TEST_DB_NAME || 'proact_test';
 
 const MIGRATIONS_TABLE = 'migrations';
+/** TypeORM stores generated-column expressions here (production_events.duration_seconds). */
+const TYPEORM_METADATA_TABLE = 'typeorm_metadata';
 const TEST_DB_PATTERN = /^[a-z][a-z0-9_]*_test$/;
 const DUPLICATE_DATABASE = '42P04';
 
@@ -59,7 +61,9 @@ function isDuplicateDatabase(error: unknown): boolean {
  * Creates the integration database if it is missing (via the `postgres` maintenance database on
  * the connection from .env) and makes sure uuid-ossp is available in it.
  */
-export async function ensureTestDatabase(database = TEST_DB_NAME): Promise<void> {
+export async function ensureTestDatabase(
+  database = TEST_DB_NAME,
+): Promise<void> {
   assertTestDatabaseName(database);
   const bare = { entities: [], migrations: [] };
   await withConnection(postgresOptions('postgres', bare), async (admin) => {
@@ -122,7 +126,9 @@ export class IntegrationHarness {
 
   /** Applies pending migrations; returns how many ran. */
   async runMigrations(): Promise<number> {
-    const executed = await this.dataSource.runMigrations({ transaction: 'all' });
+    const executed = await this.dataSource.runMigrations({
+      transaction: 'all',
+    });
     return executed.length;
   }
 
@@ -148,13 +154,13 @@ export class IntegrationHarness {
     return rows[0]?.count ?? 0;
   }
 
-  /** Names of base tables in `public`, excluding the migrations bookkeeping table. */
+  /** Names of base tables in `public`, excluding TypeORM bookkeeping (migrations, generated-column metadata). */
   async tableNames(): Promise<string[]> {
     const rows: Array<{ table_name: string }> = await this.dataSource.query(
       `SELECT table_name FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name <> $1
+        WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name <> ALL($1)
         ORDER BY table_name`,
-      [MIGRATIONS_TABLE],
+      [[MIGRATIONS_TABLE, TYPEORM_METADATA_TABLE]],
     );
     return rows.map((row) => row.table_name);
   }
@@ -163,12 +169,14 @@ export class IntegrationHarness {
     return (await this.tableNames()).length;
   }
 
-  /** Empties every application table (keeps the schema and the migrations table). */
+  /** Empties every application table (keeps the schema and the bookkeeping tables). */
   async truncateAll(): Promise<void> {
     const tables = await this.tableNames();
     if (tables.length === 0) return;
     const list = tables.map((name) => `"public"."${name}"`).join(', ');
-    await this.dataSource.query(`TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE`);
+    await this.dataSource.query(
+      `TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE`,
+    );
   }
 
   /** DDL that TypeORM would emit to make the database match the entities; empty means parity. */

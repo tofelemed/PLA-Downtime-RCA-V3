@@ -462,7 +462,7 @@ flowchart TB
 
 - **PostgreSQL 15**, database `proact` on the shared `instrumental-postgres` container (host port 5432). It was migrated from MS SQL Server in October 2026.
 - The schema is generated from the TypeORM entities (`DB_SYNCHRONIZE=true`): about 80 tables.
-- The `.sql` scripts in `migrations/` and `database-setup/` are the old SQL Server versions and are no longer used.
+- The `.sql` scripts in `server/pro-act-backend/legacy/` (formerly `migrations/` and `database-setup/`) are the old SQL Server versions and are no longer used.
 
 ---
 

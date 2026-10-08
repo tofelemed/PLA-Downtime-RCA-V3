@@ -42,10 +42,10 @@ Docker: `cp .env.example .env` → `docker compose up -d --build` (see `docs/DOC
 ## Architecture rules
 - Backend layering: controller → service → repository; no DB access in controllers; business rules live in services/domain modules, never in the browser.
 - Validate at the boundary with DTOs. The global `ValidationPipe` is `whitelist + forbidNonWhitelisted`: any undeclared field returns 400, so DTOs and frontend payloads must match exactly.
-- Auth: `JwtAuthGuard` is per controller today — every new controller needs it (plan 0.4 makes guards global). Resolve tenant as `plantSelection?.tenant?.id || session?.tenant?.id` in the frontend.
+- Auth: global `APP_GUARD` chain (`JwtAuthGuard` → `RolesGuard` → `ScopeGuard`); routes are protected unless `@Public()` (and listed in the route-guard allowlist test). Backend tenant/scope come from `RequestContext` (`@Ctx()`), never a query param; v2 queries start with `scopedQuery()`. Resolve tenant as `plantSelection?.tenant?.id || session?.tenant?.id` in the frontend.
 - Errors: use Nest exceptions; the filter shapes the response. Never return stack traces to clients.
 - Config and secrets only from env (`.env` files are git-ignored). Never hardcode URLs, ports, keys.
-- Database: Postgres column types only (`varchar`, `text`, `timestamptz`, `boolean`, `numeric`); `numeric` is parsed to JS number by `app.module.ts`. Schema currently comes from entity sync (`DB_SYNCHRONIZE=true`); plan 0.3 introduces migrations — once present, every schema change is a migration with `down`.
+- Database: Postgres column types only (`varchar`, `text`, `timestamptz`, `boolean`, `numeric`); `numeric` is parsed to JS number by `app.module.ts`. Schema comes from migrations (`src/database/migrations`, conventions in `src/database/MIGRATIONS.md`); `synchronize` is off. Every schema change is a migration with `down`.
 - Time: store UTC `timestamptz`, half-open intervals, durations in seconds; tenant timezone for display.
 - Audit: a global interceptor logs mutating requests; send `X-Client-Audited: true` if the client already logged the action.
 - `src/services/StorageService.ts` (IndexedDB) is legacy — never use it for new features.
@@ -66,6 +66,6 @@ Docker: `cp .env.example .env` → `docker compose up -d --build` (see `docs/DOC
 ## Don'ts
 - Don't add dependencies without asking.
 - Don't edit `.env*`, applied migrations, generated files (`src/components/ui/*`, generated API types), or `node_modules`.
-- Don't change public API contracts (routes, DTOs, response shapes) without flagging it and updating the OpenAPI snapshot.
+- Don't change public API contracts (routes, DTOs, response shapes) without flagging it and updating the OpenAPI snapshot (`npm run openapi:v2:update` → `server/pro-act-backend/openapi/v2.json`).
 - Don't put fabricated or random data in product code (no heuristic KPIs, `Math.random` fallbacks, demo defaults). Demo data belongs in isolated seeders.
 - Don't compute business numbers in the browser or write to the server on page render.

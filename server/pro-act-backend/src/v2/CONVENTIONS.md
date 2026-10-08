@@ -9,7 +9,7 @@ Spec: API01–API04, WF05 (plan `plans/phase-0/0.4-api-v2-foundation.md`). Refer
 ```ts
 @ApiTags('v2 · <Resource>')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, TenantQueryParamGuard)
+@UseGuards(TenantQueryParamGuard)
 @Controller({ path: '<resources>', version: '2' })
 export class <Resource>V2Controller { ... }
 ```
@@ -17,15 +17,20 @@ export class <Resource>V2Controller { ... }
 - `version: '2'` + `app.enableVersioning({ type: VersioningType.URI })` produces `/api/v2/<resources>`.
 - Register the controller and its service in `v2.module.ts` (the v2 Swagger document is generated from
   `V2Module` only).
-- Every route is guarded. There is no `@Public()` in v2.
+- Authentication, `@Roles()` and `@ScopeParam()` are enforced by the global `APP_GUARD` chain
+  (`JwtAuthGuard` → `RolesGuard` → `ScopeGuard`); do not add `JwtAuthGuard` per controller. There is no
+  `@Public()` in v2.
 
 ## 2. Tenant and scope come from identity, never from the query
 
-- `resolveRequestTenantId(user, xTenantIdHeader)` (`src/auth/request-tenant.ts`) returns the token tenant;
-  a SuperAdmin may select a tenant with `X-Tenant-Id`. Membership validation against `user_scopes`
-  arrives with the tenancy tables (0.4 part 2) — do not add per-resource workarounds.
+- Take `@Ctx() ctx: RequestContext` in the handler and pass it to the service. `JwtStrategy` builds it from
+  the token and `user_scopes`: roles, scopes, and the acting tenant (the token tenant, or an `X-Tenant-Id`
+  the caller is a member of; SuperAdmin may select any existing tenant; otherwise 403 `TENANT_NOT_ALLOWED`,
+  audited).
 - `TenantQueryParamGuard` rejects any `tenantId` query parameter with 400 `TENANT_FROM_IDENTITY`.
-- Every query starts with `.where('<alias>.tenantId = :tenantId')`. Foreign ids answer 404, not 403
+- Every query starts with `scopedQuery(repo, alias, { context: ctx, unitProperty: 'unitId' })`
+  (`src/common/query/scoped-query.ts`): tenant predicate always, unit restriction for unit-only grants.
+  The tenancy integration spec asserts the predicate in the executed SQL. Foreign ids answer 404, not 403
   (no existence leak).
 
 ## 3. List queries
@@ -62,7 +67,18 @@ export class <Resource>V2Controller { ... }
 - Times are ISO 8601 UTC; durations are seconds.
 - Return a dedicated view object (`<resource>-v2.view.ts`), never the entity.
 
-## 6. Errors
+## 6. Commands and concurrency (API02)
+
+- POST commands that create or trigger something carry `@Idempotent()`: callers send `Idempotency-Key`
+  (missing → 428); the same key and body replay the stored response with `Idempotent-Replayed: true`; a
+  different body is 409 `IDEMPOTENCY_MISMATCH`. Keys are per tenant and purged after 24 h by the worker.
+- Single-resource GETs of revisioned resources use `@UseInterceptors(ETagInterceptor)` and include
+  `rowVersion` in the view; the interceptor sets `ETag: "<rowVersion>"`.
+- PATCH/PUT of revisioned resources take `@IfMatch() expected: number` (missing → 428
+  `REVISION_REQUIRED`) and update with `WHERE id = :id AND row_version = :expected`; zero affected rows
+  → `assertRevision()` / 412 `STALE_REVISION` (`src/common/concurrency/revision.ts`).
+
+## 7. Errors
 
 Throw Nest exceptions; `ApiExceptionFilter` shapes them as
 `{ code, message, fieldErrors?, correlationId, retryable }`. Pass `{ code, message }` as the exception
@@ -70,7 +86,7 @@ response to set a specific code (`INVALID_TRANSITION`, `STALE_REVISION`, ...). V
 `/api/v2` are 422 `VALIDATION_FAILED` with `fieldErrors`; semantic validation uses
 `UnprocessableEntityException`. Never put stack traces or SQL in a response.
 
-## 7. Tests
+## 8. Tests
 
 - Unit: DTO validation through `createValidationPipe()` (same options as production), cursor codec,
   pure query helpers.
@@ -78,12 +94,15 @@ response to set a specific code (`INVALID_TRANSITION`, `STALE_REVISION`, ...). V
   (token of tenant B never sees tenant A rows), compound filter intersection, stable pagination while rows
   are inserted, limit bounds, `tenantId` query rejected, 401 without token.
 - Add the route to the public allowlist test only if it is genuinely public (it never is in v2).
+- Any change to a v2 route or schema changes `openapi/v2.json`; regenerate it with
+  `npm run openapi:v2:update` and review the diff (the unit suite fails on drift).
 
-## 8. Checklist
+## 9. Checklist
 
-- [ ] controller `{ path, version: '2' }`, both guards, registered in `V2Module`
+- [ ] controller `{ path, version: '2' }`, `TenantQueryParamGuard`, registered in `V2Module`
 - [ ] query DTO extends `ListQueryDto`, sort allowlist, array/boolean transformers
-- [ ] service: tenant predicate first, `parseSort`, overlap window, keyset cursor, `limit + 1`
+- [ ] service: `scopedQuery()` first, `parseSort`, overlap window, keyset cursor, `limit + 1`
 - [ ] view mapper with decimal strings and ISO times; `listResponse` envelope
 - [ ] indexes exist for every filtered/sorted column (migration with `down()`)
-- [ ] unit + integration tests; `/api/docs/v2` renders the new route
+- [ ] `@Idempotent()` on commands; ETag / `@IfMatch()` on revisioned resources
+- [ ] unit + integration tests; `/api/docs/v2` renders the new route; `openapi/v2.json` updated

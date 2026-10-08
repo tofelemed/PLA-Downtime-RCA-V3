@@ -5,6 +5,7 @@
 | Recorded | 7 Oct 2026 |
 | Repository | `E:\ProAct`, branch `main` |
 | Last commit before this work | `044cc83` "Initial commit with frontend + backend" (2025-08-23) |
+| Phase 0.2–0.4 part 1 commit | `6d31997` "feat(phase-0): decision register, migrations workflow, worker split, Compose/CI, API v2 foundation (part 1)" — 7 Oct 2026, local only |
 | Baseline commit (this working tree) | **`913086b`** "chore: baseline before PLA next-generation implementation" (7 Oct 2026, local `main`). `docs archive/` (136 stale notes, one containing an old SQL Server `sa` password) left **untracked** pending a scrub decision. **Push to `origin` failed: "Repository not found"** (`romarabbasi/APM-NW-23-08-2025`) — remote URL or access to be fixed by the owner |
 | Working tree vs `044cc83` | 922 files to add/modify, 15 deletions (root `*.md` guides moved/removed), per `git add -A -n` |
 | Node / npm | v24.11.1 / 11.6.2 |

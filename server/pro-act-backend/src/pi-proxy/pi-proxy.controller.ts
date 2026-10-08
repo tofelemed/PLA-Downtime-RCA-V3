@@ -1,27 +1,16 @@
-import {
-  Body,
-  Controller,
-  Headers,
-  HttpCode,
-  HttpStatus,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Ctx } from '../common/context/ctx.decorator';
 import {
-  resolveRequestTenantId,
-  TENANT_SELECTION_HEADER,
-} from '../auth/request-tenant';
+  RequestContext,
+  requireTenantId,
+} from '../common/context/request-context';
 import { PIProxyRequestDto } from './dto/pi-proxy-request.dto';
 import { PIProxyTargetDto } from './dto/pi-proxy-target.dto';
 import { PIProxyResponse, PIProxyService } from './pi-proxy.service';
 
 @ApiTags('PI Proxy')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('pi-proxy')
 export class PIProxyController {
   constructor(private readonly proxyService: PIProxyService) {}
@@ -33,27 +22,16 @@ export class PIProxyController {
       'Forward a request to the tenant PI Web API (allowlisted hosts, paths and methods only)',
   })
   proxyRequest(
-    @CurrentUser() user: AuthenticatedUser,
-    @Headers(TENANT_SELECTION_HEADER) tenantHeader: string | undefined,
+    @Ctx() ctx: RequestContext,
     @Body() request: PIProxyRequestDto,
   ): Promise<PIProxyResponse> {
-    return this.proxyService.forward(
-      resolveRequestTenantId(user, tenantHeader),
-      request,
-    );
+    return this.proxyService.forward(requireTenantId(ctx), request);
   }
 
   @Post('test-connection')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Test one of the tenant PI connections' })
-  testConnection(
-    @CurrentUser() user: AuthenticatedUser,
-    @Headers(TENANT_SELECTION_HEADER) tenantHeader: string | undefined,
-    @Body() target: PIProxyTargetDto,
-  ) {
-    return this.proxyService.testConnection(
-      resolveRequestTenantId(user, tenantHeader),
-      target,
-    );
+  testConnection(@Ctx() ctx: RequestContext, @Body() target: PIProxyTargetDto) {
+    return this.proxyService.testConnection(requireTenantId(ctx), target);
   }
 }

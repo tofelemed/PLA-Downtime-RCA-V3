@@ -1,11 +1,14 @@
 import {
+  Check,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  VersionColumn,
 } from 'typeorm';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { Unit } from '../unit/unit.entity';
@@ -14,8 +17,56 @@ import { ImpactCode } from '../impact-code/impact-code.entity';
 import { OEECode } from '../oee-code/oee-code.entity';
 import { RCA } from '../rca/rca.entity';
 import { ReasonCode } from '../reason-code/reason-code.entity';
+import {
+  CODING_STATES,
+  CodingState,
+  IMPACT_MODES,
+  ImpactMode,
+  OEE_COMPONENTS,
+  OeeComponent,
+  PHYSICAL_STATES,
+  PHYSICAL_TYPES,
+  PhysicalState,
+  PhysicalType,
+  RCA_STATES,
+  RcaState,
+  SCHEDULE_CLASSES,
+  ScheduleClass,
+  SOURCE_KINDS,
+  SourceKind,
+} from '../domain/events/event-classification';
+
+/** `[start, end)` in seconds; null while the event is open (spec §3.3). Postgres computes it. */
+export const DURATION_SECONDS_EXPRESSION =
+  'CASE WHEN "end_time" IS NULL THEN NULL ELSE EXTRACT(EPOCH FROM ("end_time" - "start_time")) END';
 
 @Entity('production_events')
+@Check(
+  'CHK_production_events_interval',
+  '"end_time" IS NULL OR "end_time" > "start_time"',
+)
+@Check(
+  'CHK_production_events_impact_fraction',
+  '"impact_fraction" IS NULL OR ("impact_fraction" >= 0 AND "impact_fraction" <= 1)',
+)
+@Index('IDX_production_events_tenant_unit_start', [
+  'tenantId',
+  'unitId',
+  'startTime',
+])
+@Index('IDX_production_events_tenant_asset_start', [
+  'tenantId',
+  'assetId',
+  'startTime',
+])
+@Index('IDX_production_events_tenant_type_start', [
+  'tenantId',
+  'physicalType',
+  'startTime',
+])
+@Index('IDX_production_events_open_by_unit', ['tenantId', 'unitId'], {
+  where: '"end_time" IS NULL',
+})
 export class ProductionEvent {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -73,8 +124,8 @@ export class ProductionEvent {
   @Column({
     name: 'quantity',
     type: 'decimal',
-    precision: 10,
-    scale: 2,
+    precision: 24,
+    scale: 8,
     nullable: true,
   })
   quantity?: number;
@@ -82,8 +133,8 @@ export class ProductionEvent {
   @Column({
     name: 'cost',
     type: 'decimal',
-    precision: 10,
-    scale: 2,
+    precision: 24,
+    scale: 8,
     nullable: true,
   })
   cost?: number;
@@ -222,4 +273,145 @@ export class ProductionEvent {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
+
+  /** Optimistic concurrency for v2 (`ETag` / `If-Match`, 412 on stale). */
+  @VersionColumn({ name: 'row_version', default: 1 })
+  rowVersion: number;
+
+  // --- Interval model and classifications (plan 1.1, spec §3.2/§3.3, DT11) ---
+
+  @Column({
+    name: 'duration_seconds',
+    type: 'numeric',
+    precision: 18,
+    scale: 3,
+    nullable: true,
+    generatedType: 'STORED',
+    asExpression: DURATION_SECONDS_EXPRESSION,
+    insert: false,
+    update: false,
+  })
+  durationSeconds?: number | null;
+
+  @Column({
+    name: 'physical_type',
+    type: 'enum',
+    enum: PHYSICAL_TYPES,
+    enumName: 'production_event_physical_type',
+    default: 'advisory',
+  })
+  physicalType: PhysicalType;
+
+  @Column({
+    name: 'schedule_class',
+    type: 'enum',
+    enum: SCHEDULE_CLASSES,
+    enumName: 'production_event_schedule_class',
+    default: 'unknown',
+  })
+  scheduleClass: ScheduleClass;
+
+  @Column({
+    name: 'oee_component',
+    type: 'enum',
+    enum: OEE_COMPONENTS,
+    enumName: 'production_event_oee_component',
+    default: 'none',
+  })
+  oeeComponent: OeeComponent;
+
+  @Column({
+    name: 'impact_mode',
+    type: 'enum',
+    enum: IMPACT_MODES,
+    enumName: 'production_event_impact_mode',
+    default: 'none',
+  })
+  impactMode: ImpactMode;
+
+  /** 0..1 share of capacity lost when `impact_mode = fractional` */
+  @Column({
+    name: 'impact_fraction',
+    type: 'numeric',
+    precision: 9,
+    scale: 8,
+    nullable: true,
+  })
+  impactFraction?: number | null;
+
+  @Column({
+    name: 'physical_state',
+    type: 'enum',
+    enum: PHYSICAL_STATES,
+    enumName: 'production_event_physical_state',
+    default: 'open',
+  })
+  physicalState: PhysicalState;
+
+  @Column({
+    name: 'coding_state',
+    type: 'enum',
+    enum: CODING_STATES,
+    enumName: 'production_event_coding_state',
+    default: 'uncoded',
+  })
+  codingState: CodingState;
+
+  @Column({
+    name: 'rca_state',
+    type: 'enum',
+    enum: RCA_STATES,
+    enumName: 'production_event_rca_state',
+    default: 'none',
+  })
+  rcaState: RcaState;
+
+  @Column({
+    name: 'source_kind',
+    type: 'enum',
+    enum: SOURCE_KINDS,
+    enumName: 'production_event_source_kind',
+    default: 'manual',
+  })
+  sourceKind: SourceKind;
+
+  @Column({ name: 'quantity_uom', type: 'varchar', length: 32, nullable: true })
+  quantityUom?: string | null;
+
+  /** Stable business id across revisions (1.2); equals `id` for rows created before revisions exist. */
+  @Column({ name: 'canonical_id', type: 'uuid', nullable: true })
+  canonicalId?: string | null;
+
+  /** Pre-1.1 `duration` value, kept for audit (MIG §18.2 "mixed duration units"). */
+  @Column({
+    name: 'legacy_duration',
+    type: 'numeric',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  legacyDuration?: number | null;
+
+  /** Unit the legacy duration was assumed to be in ('min'), or null when unknown and flagged for review. */
+  @Column({
+    name: 'legacy_duration_unit_assumed',
+    type: 'varchar',
+    length: 8,
+    nullable: true,
+  })
+  legacyDurationUnitAssumed?: string | null;
+
+  /** Raw PI open-frame sentinel (9999-12-31) replaced by a null end (B6). */
+  @Column({ name: 'legacy_end_sentinel', type: 'timestamptz', nullable: true })
+  legacyEndSentinel?: Date | null;
+
+  /** uuid copy of `tenant_id` kept in sync by trigger (expand step of the varchar → uuid change). */
+  @Column({
+    name: 'tenant_uuid',
+    type: 'uuid',
+    nullable: true,
+    insert: false,
+    update: false,
+  })
+  tenantUuid?: string | null;
 }

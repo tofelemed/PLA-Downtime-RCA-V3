@@ -11,12 +11,12 @@ import {
 import { IntegrationHarness } from './harness';
 
 /**
- * Every route the application registers must carry a guard, except these explicitly public ones
- * (`@Public()` AND listed here). Adding a public route is a deliberate, reviewed change to this list.
+ * Every route the application registers is guarded (global `JwtAuthGuard`), except these explicitly
+ * public ones (`@Public()` AND listed here). `register` is `@PublicIf('AUTH_ALLOW_PUBLIC_REGISTRATION')`,
+ * so it stays guarded by default. Adding a public route is a deliberate, reviewed change to this list.
  */
 export const PUBLIC_ROUTE_ALLOWLIST: ReadonlySet<string> = new Set([
   'AuthController.login',
-  'AuthController.register',
   'AuthController.refresh',
   'AuthController.logout',
   'AuthController.validateToken',
@@ -60,7 +60,9 @@ describe('route guard coverage (B14, plan 0.4)', () => {
   }
 
   it('guards every registered route or lists it as public', () => {
-    const entries = inventoryRoutes(registeredControllers());
+    const entries = inventoryRoutes(registeredControllers(), {
+      globalGuard: true,
+    });
     expect(entries.length).toBeGreaterThan(300);
 
     const unprotected = findUnprotectedRoutes(entries, PUBLIC_ROUTE_ALLOWLIST);
@@ -77,7 +79,9 @@ describe('route guard coverage (B14, plan 0.4)', () => {
   });
 
   it('closes the controllers that were unguarded at the baseline', () => {
-    const entries = inventoryRoutes(registeredControllers());
+    const entries = inventoryRoutes(registeredControllers(), {
+      globalGuard: true,
+    });
     for (const controller of FORMERLY_UNGUARDED) {
       const routes = entries.filter((entry) => entry.controller === controller);
       expect(routes.length).toBeGreaterThan(0);
@@ -86,7 +90,9 @@ describe('route guard coverage (B14, plan 0.4)', () => {
   });
 
   it('exposes the v2 reference endpoint under its own version', () => {
-    const entries = inventoryRoutes(registeredControllers());
+    const entries = inventoryRoutes(registeredControllers(), {
+      globalGuard: true,
+    });
     const v2 = entries.filter((entry) => entry.version === '2');
     expect(v2.map((entry) => `${entry.method} ${entry.path}`)).toContain(
       'GET /production-events',

@@ -29,6 +29,8 @@ x-backend-env: &backend-env
   DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
   DB_NAME: ${POSTGRES_DB:-proact}
   JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+  # Registration is admin-only unless explicitly opened (local dev / e2e)
+  AUTH_ALLOW_PUBLIC_REGISTRATION: ${AUTH_ALLOW_PUBLIC_REGISTRATION:-false}
   # Encrypts PI/connector credentials at rest; falls back to JWT_SECRET when empty
   CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
   # Message brokers as seen from inside the containers (docker-compose.shared-infra.yml points them at the host's)
@@ -168,8 +170,8 @@ services:
 
   mqtt:
     # Dev broker, anonymous access (docker/mosquitto/mosquitto.conf). The host's mosquitto keeps 1883/8883.
-    # Pinned to the same release the host's mosquitto container runs (already present locally).
-    image: eclipse-mosquitto:2.1.2
+    # 2.1.x is only published as -alpine on Docker Hub (plain 2.1.2 exists only as a local tag on some hosts).
+    image: eclipse-mosquitto:2.1.2-alpine
     restart: unless-stopped
     volumes:
       - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro

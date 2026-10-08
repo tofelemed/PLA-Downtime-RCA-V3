@@ -1,7 +1,16 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProductionEvent } from '../../production-event/production-event.entity';
+import {
+  RequestContext,
+  requireTenantId,
+} from '../../common/context/request-context';
+import { scopedQuery } from '../../common/query/scoped-query';
 import { CursorCodec } from '../common/cursor-codec';
 import { listResponse, ListResponse } from '../common/response';
 import { parseSort, SortSpec } from '../common/sort-spec';
@@ -25,8 +34,8 @@ const DEFAULT_SORT: SortSpec<ProductionEventSortField> = {
 };
 
 /**
- * Reference v2 read model: tenant from identity, AND-combined filters, overlap window and keyset paging
- * over the existing entity. The interval-model redesign (1.1) will swap the entity, not this contract.
+ * v2 event reads: tenant and scope from identity, AND-combined filters (classification and state axes
+ * included), overlap window, keyset paging; durations in seconds, open events with elapsed time.
  */
 @Injectable()
 export class ProductionEventsV2Service {
@@ -36,7 +45,7 @@ export class ProductionEventsV2Service {
   ) {}
 
   async list(
-    tenantId: string,
+    context: RequestContext,
     query: ProductionEventListQueryDto,
   ): Promise<ListResponse<ProductionEventV2View>> {
     assertWindow(query.from, query.to);
@@ -46,9 +55,10 @@ export class ProductionEventsV2Service {
       DEFAULT_SORT,
     );
 
-    const qb = this.events
-      .createQueryBuilder('event')
-      .where('event.tenantId = :tenantId', { tenantId });
+    const qb = scopedQuery(this.events, 'event', {
+      unitProperty: 'unitId',
+      context,
+    });
     applyProductionEventV2Filters(qb, query);
     applyKeysetCursor(qb, query.cursor, sort);
     qb.orderBy(`event.${sort.field}`, sort.direction)
@@ -67,9 +77,32 @@ export class ProductionEventsV2Service {
           })
         : null;
 
-    return listResponse(page.map(toProductionEventV2View), nextCursor, {
-      tenantId,
-    });
+    const asOf = new Date();
+    return listResponse(
+      page.map((event) => toProductionEventV2View(event, asOf)),
+      nextCursor,
+      {
+        tenantId: requireTenantId(context),
+      },
+      asOf,
+    );
+  }
+
+  /** One event of the caller's scope; a foreign or unknown id is the same 404 (no existence leak). */
+  async get(
+    context: RequestContext,
+    id: string,
+  ): Promise<ProductionEventV2View> {
+    const event = await scopedQuery(this.events, 'event', {
+      unitProperty: 'unitId',
+      context,
+    })
+      .andWhere('event.id = :id', { id })
+      .getOne();
+    if (!event) {
+      throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
+    }
+    return toProductionEventV2View(event, new Date());
   }
 }
 

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommonModule } from './common/common.module';
+import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { SchedulerModule } from './common/scheduling/scheduler.module';
 import { dataSourceOptions } from './database/data-source';
 import { registerPgTypeParsers } from './database/pg-type-parsers';
@@ -31,6 +32,7 @@ registerPgTypeParsers();
     }),
     SchedulerModule.register('worker'),
     PISyncJobModule,
+    IdempotencyModule,
   ],
   providers: [WorkerHealthServer],
 })

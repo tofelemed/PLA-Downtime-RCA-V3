@@ -14,7 +14,27 @@ import {
   toArrayParam,
   toBooleanParam,
 } from '../../common/dto/query-param.transformers';
+import {
+  CODING_STATES,
+  OEE_COMPONENTS,
+  PHYSICAL_STATES,
+  PHYSICAL_TYPES,
+  RCA_STATES,
+  SCHEDULE_CLASSES,
+} from '../../domain/events/event-classification';
 import { ListQueryDto } from '../common/list-query.dto';
+
+/** Repeated enum filter: `?physicalTypes=downtime&physicalTypes=slowdown` (OR within). */
+function EnumArrayParam(values: readonly string[]): PropertyDecorator {
+  return (target, key) => {
+    ApiPropertyOptional({ type: [String], enum: values })(target, key);
+    IsOptional()(target, key);
+    Transform(toArrayParam)(target, key);
+    IsArray()(target, key);
+    ArrayMaxSize(values.length)(target, key);
+    IsIn(values, { each: true })(target, key);
+  };
+}
 
 export const PRODUCTION_EVENT_SORT_FIELDS = ['startTime'] as const;
 export type ProductionEventSortField =
@@ -78,6 +98,24 @@ export class ProductionEventListQueryDto extends ListQueryDto {
   @IsString({ each: true })
   @MaxLength(50, { each: true })
   statuses?: string[];
+
+  @EnumArrayParam(PHYSICAL_TYPES)
+  physicalTypes?: string[];
+
+  @EnumArrayParam(SCHEDULE_CLASSES)
+  scheduleClasses?: string[];
+
+  @EnumArrayParam(OEE_COMPONENTS)
+  oeeComponents?: string[];
+
+  @EnumArrayParam(PHYSICAL_STATES)
+  physicalStates?: string[];
+
+  @EnumArrayParam(CODING_STATES)
+  codingStates?: string[];
+
+  @EnumArrayParam(RCA_STATES)
+  rcaStates?: string[];
 
   @ApiPropertyOptional({
     type: Boolean,

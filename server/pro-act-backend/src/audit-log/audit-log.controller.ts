@@ -8,6 +8,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { SkipAudit } from './skip-audit.decorator';
+import { Ctx } from '../common/context/ctx.decorator';
+import { RequestContext } from '../common/context/request-context';
 
 @ApiTags('Audit Logs')
 @ApiBearerAuth()
@@ -65,8 +67,21 @@ export class AuditLogController {
   @SkipAudit()
   @ApiBody({ type: CreateAuditLogDto })
   @ApiResponse({ status: 201, description: 'Create audit log', type: AuditLog })
-  create(@Body() data: CreateAuditLogDto): Promise<AuditLog> {
-    return this.auditLogService.create(data);
+  create(
+    @Ctx() ctx: RequestContext,
+    @Body() data: CreateAuditLogDto,
+  ): Promise<AuditLog> {
+    if (!ctx.userId) {
+      throw new ForbiddenException('Audit entries require an authenticated caller');
+    }
+    // Identity fields come from the token, never from the body (WF05)
+    return this.auditLogService.create({
+      ...data,
+      userId: ctx.userId,
+      tenantId: ctx.tenantId ?? undefined,
+      organizationId: ctx.organizationId ?? undefined,
+      timestamp: data.timestamp ? new Date(data.timestamp) : undefined,
+    });
   }
 
   @Put(':id')

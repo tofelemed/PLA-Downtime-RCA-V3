@@ -50,6 +50,7 @@ export function listResponse<T>(
   items: T[],
   nextCursor: string | null,
   scope: ListScope,
+  asOf: Date = new Date(),
 ): ListResponse<T> {
-  return { items, nextCursor, asOf: new Date().toISOString(), scope };
+  return { items, nextCursor, asOf: asOf.toISOString(), scope };
 }

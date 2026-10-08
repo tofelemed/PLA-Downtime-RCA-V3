@@ -1,10 +1,19 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { OrganizationService } from '../organization/organization.service';
 import { TenantService } from '../tenant/tenant.service';
 import * as bcrypt from 'bcryptjs';
 import { User } from '../users/user.entity';
+import { getRequestContext, RequestContext } from '../common/context/request-context';
+import { canGrantRole, mapLegacyRole } from './roles/role-model';
+import { UserScopesService } from './scopes/user-scopes.service';
 
 @Injectable()
 export class AuthService {
@@ -13,6 +22,7 @@ export class AuthService {
     private jwtService: JwtService,
     private organizationService: OrganizationService,
     private tenantService: TenantService,
+    private userScopes: UserScopesService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<User | null> {
@@ -94,8 +104,19 @@ export class AuthService {
     const existing = await this.usersService.findByEmail(data.email);
     if (existing) throw new ConflictException('Email already in use');
 
-    let organizationId = data.organizationId;
-    let tenantId = data.tenantId;
+    // Authenticated callers (admins) may not grant above their own rank and, unless SuperAdmin,
+    // only register into their own tenant; anonymous registration is allowed only when the route
+    // is public (AUTH_ALLOW_PUBLIC_REGISTRATION=true).
+    const caller = getRequestContext();
+    const callerIsAuthenticated = Boolean(caller?.userId);
+    if (callerIsAuthenticated) {
+      assertCallerMayRegister(caller!, data);
+    } else if (process.env.AUTH_ALLOW_PUBLIC_REGISTRATION !== 'true') {
+      throw new UnauthorizedException('Registration requires an administrator');
+    }
+
+    let organizationId = data.organizationId ?? (callerIsAuthenticated ? caller!.organizationId ?? undefined : undefined);
+    let tenantId = data.tenantId ?? (callerIsAuthenticated ? caller!.tenantId ?? undefined : undefined);
 
     // Auto-create organization if name is provided but ID is not
     if (!organizationId && data.organizationName) {
@@ -156,6 +177,49 @@ export class AuthService {
       // department: data.department,
       isActive: data.isActive,
     });
+    if (tenantId) {
+      await this.userScopes.grantTenantScope(
+        user.id,
+        tenantId,
+        mapLegacyRole(data.role),
+        caller?.userId ?? null,
+      );
+    }
+    // Self-registration signs the new user in; an administrator registering someone else must not
+    // receive that person's tokens.
+    if (callerIsAuthenticated) {
+      return { user: publicUser(user) };
+    }
     return this.login(user);
   }
+}
+
+function assertCallerMayRegister(
+  caller: RequestContext,
+  data: { role?: string; tenantId?: string },
+): void {
+  if (!data.role || !canGrantRole(caller.roles, data.role)) {
+    throw new ForbiddenException({
+      code: 'ROLE_GRANT_NOT_ALLOWED',
+      message: `Cannot grant role ${data.role}`,
+    });
+  }
+  if (!caller.isSuperAdmin && data.tenantId && data.tenantId !== caller.tenantId) {
+    throw new ForbiddenException({
+      code: 'TENANT_NOT_ALLOWED',
+      message: 'Users can only be registered into your own tenant',
+    });
+  }
+}
+
+function publicUser(user: User) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    tenantId: user.tenantId,
+    organizationId: user.organizationId,
+    isActive: user.isActive,
+  };
 } 

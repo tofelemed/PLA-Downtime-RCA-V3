@@ -8,16 +8,24 @@ import {
   RequestMethod,
   Type,
 } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Logger } from 'typeorm';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
+import { AccessModule } from '../../../src/auth/access/access.module';
 import { AuthModule } from '../../../src/auth/auth.module';
+import { RolesGuard } from '../../../src/auth/guards/roles.guard';
+import { ScopeGuard } from '../../../src/auth/guards/scope.guard';
+import { JwtAuthGuard } from '../../../src/auth/jwt-auth.guard';
 import { CommonModule } from '../../../src/common/common.module';
+import { RequestContextMiddleware } from '../../../src/common/context/request-context.middleware';
 import { configureHttpApp } from '../../../src/common/http/configure-http-app';
 import { CorrelationIdMiddleware } from '../../../src/common/http/correlation-id.middleware';
+import { IdempotencyInterceptor } from '../../../src/common/idempotency/idempotency.interceptor';
+import { IdempotencyModule } from '../../../src/common/idempotency/idempotency.module';
 import { UserIpThrottlerGuard } from '../../../src/common/throttling/user-ip-throttler.guard';
 import { RealtimeModule } from '../../../src/realtime/realtime.module';
 import { IntegrationHarness } from '../harness';
@@ -27,6 +35,8 @@ export interface IntegrationAppOptions {
   modules: Array<Type<unknown> | DynamicModule>;
   /** requests per minute before 429; generous by default so suites never trip it by accident */
   throttleLimit?: number;
+  /** receives every SQL statement the app runs (scoped-query assertions) */
+  onQuery?: (sql: string) => void;
 }
 
 export interface TestIdentity {
@@ -41,7 +51,7 @@ export interface TestIdentity {
 class HttpConventionsModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
     consumer
-      .apply(CorrelationIdMiddleware)
+      .apply(CorrelationIdMiddleware, RequestContextMiddleware)
       .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 }
@@ -58,7 +68,11 @@ export async function createIntegrationApp(
   const moduleRef = await Test.createTestingModule({
     imports: [
       HttpConventionsModule,
-      TypeOrmModule.forRoot({ ...connection, migrationsRun: false }),
+      TypeOrmModule.forRoot({
+        ...connection,
+        migrationsRun: false,
+        ...(options.onQuery ? sqlCapture(options.onQuery) : {}),
+      }),
       ThrottlerModule.forRoot({
         throttlers: [
           {
@@ -69,11 +83,20 @@ export async function createIntegrationApp(
         ],
       }),
       CommonModule,
+      AccessModule,
+      IdempotencyModule,
       RealtimeModule,
       AuthModule,
       ...options.modules,
     ],
-    providers: [{ provide: APP_GUARD, useClass: UserIpThrottlerGuard }],
+    // Same global chain as AppModule: rate limit, authentication, @Roles, @ScopeParam, idempotency
+    providers: [
+      { provide: APP_GUARD, useClass: UserIpThrottlerGuard },
+      { provide: APP_GUARD, useClass: JwtAuthGuard },
+      { provide: APP_GUARD, useClass: RolesGuard },
+      { provide: APP_GUARD, useClass: ScopeGuard },
+      { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
+    ],
   }).compile();
 
   const app = configureHttpApp(
@@ -99,4 +122,23 @@ export function signToken(
 
 export function bearer(token: string): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
+}
+
+/** TypeORM options that route every executed statement to `onQuery`. */
+function sqlCapture(onQuery: (sql: string) => void): {
+  logging: ['query'];
+  logger: Logger;
+} {
+  const ignore = (): void => undefined;
+  return {
+    logging: ['query'],
+    logger: {
+      logQuery: (sql: string) => onQuery(sql),
+      logQueryError: ignore,
+      logQuerySlow: ignore,
+      logSchemaBuild: ignore,
+      logMigration: ignore,
+      log: ignore,
+    },
+  };
 }

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { ProductionEvent } from '../production-event/production-event.entity';
+import { markRcaRequired } from '../production-event/event-write-model';
 import { RCAService } from './rca.service';
 import { RCA } from './rca.entity';
 import { RCATriggerConfigService } from '../rca-trigger-config/rca-trigger-config.service';
@@ -28,7 +29,9 @@ export class RcaAutoCreateService {
     private readonly productionEventRepository: Repository<ProductionEvent>,
   ) {}
 
-  async tryCreateForEvent(event: ProductionEvent): Promise<RcaAutoCreateResult> {
+  async tryCreateForEvent(
+    event: ProductionEvent,
+  ): Promise<RcaAutoCreateResult> {
     if (!event.tenantId) {
       return { created: false, reason: 'Event has no tenantId' };
     }
@@ -42,9 +45,14 @@ export class RcaAutoCreateService {
       return { created: false, reason: 'RCA already exists for this event' };
     }
 
-    const config = await this.triggerConfigService.getActiveConfig(event.tenantId);
+    const config = await this.triggerConfigService.getActiveConfig(
+      event.tenantId,
+    );
     if (!config?.autoCreateRca) {
-      return { created: false, reason: 'Auto-create RCA is disabled for tenant' };
+      return {
+        created: false,
+        reason: 'Auto-create RCA is disabled for tenant',
+      };
     }
 
     const evaluation = evaluateRcaTriggerRules(event, config);
@@ -79,7 +87,7 @@ export class RcaAutoCreateService {
 
     await this.productionEventRepository.update(event.id, {
       rcaId: rca.id,
-      status: event.status === 'Closed' ? event.status : 'RCA Required',
+      ...markRcaRequired(event),
     });
 
     this.logger.log(

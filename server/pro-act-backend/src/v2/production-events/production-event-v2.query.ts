@@ -10,7 +10,17 @@ import {
 
 type ArrayFilter = Extract<
   keyof ProductionEventListQueryDto,
-  'unitIds' | 'assetIds' | 'reasonIds' | 'eventTypes' | 'statuses'
+  | 'unitIds'
+  | 'assetIds'
+  | 'reasonIds'
+  | 'eventTypes'
+  | 'statuses'
+  | 'physicalTypes'
+  | 'scheduleClasses'
+  | 'oeeComponents'
+  | 'physicalStates'
+  | 'codingStates'
+  | 'rcaStates'
 >;
 
 /** query parameter → entity property; OR within a parameter (IN), AND across parameters. */
@@ -20,6 +30,12 @@ const ARRAY_FILTERS: ReadonlyArray<[ArrayFilter, string]> = [
   ['reasonIds', 'reasonCodeId'],
   ['eventTypes', 'eventType'],
   ['statuses', 'status'],
+  ['physicalTypes', 'physicalType'],
+  ['scheduleClasses', 'scheduleClass'],
+  ['oeeComponents', 'oeeComponent'],
+  ['physicalStates', 'physicalState'],
+  ['codingStates', 'codingState'],
+  ['rcaStates', 'rcaState'],
 ];
 
 export function applyProductionEventV2Filters(

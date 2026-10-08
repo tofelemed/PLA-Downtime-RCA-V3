@@ -8,7 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
-import { IS_PUBLIC_KEY } from '../common/decorators/public.decorator';
+import { isPublicRoute } from '../common/decorators/public.decorator';
 import { AuthenticatedUser } from './interfaces/jwt-payload.interface';
 
 interface PassportInfo {
@@ -25,11 +25,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   canActivate(context: ExecutionContext) {
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (isPublic) {
+    if (isPublicRoute(this.reflector, context)) {
       return true;
     }
     return super.canActivate(context);

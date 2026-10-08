@@ -10,6 +10,7 @@ import { ProductionEventQueryDto } from './dto/production-event-query.dto';
 import { RcaAutoCreateService } from '../rca/rca-auto-create.service';
 import { PagedResult } from '../common/dto/paged-result';
 import { applyProductionEventFilters } from './production-event-query.builder';
+import { prepareCreate, prepareUpdate } from './event-write-model';
 
 /** Relations loaded on every read; `reasonCode` and `rca` were dropped at some point (B17) and are back. */
 const EVENT_RELATIONS = [
@@ -62,63 +63,74 @@ export class ProductionEventService {
     return { items, total, page, pageSize };
   }
 
+  /**
+   * v1 create. Interval, classification, states, `status` and the legacy `duration` (minutes) are
+   * derived server-side by the write model; the client's `status` is translated and its `duration`
+   * ignored (B8, DT11). Interval violations are 422.
+   */
   async create(data: CreateProductionEventDto): Promise<ProductionEvent> {
-    // Convert string dates to Date objects for database
-    const eventData: any = { id: randomUUID(), ...data };
-    if (typeof data.startTime === 'string') {
-      eventData.startTime = new Date(data.startTime);
-    }
-    if (data.endTime && typeof data.endTime === 'string') {
-      eventData.endTime = new Date(data.endTime);
-    }
-    const event = this.eventRepository.create(eventData);
-    const saved = await this.eventRepository.save(event);
-    // TypeORM save() can return array or single entity, but we pass single entity so get first if array
-    const result = Array.isArray(saved) ? saved[0] : saved;
+    const id = randomUUID();
+    const fields = withoutClientDuration(data);
+    const event = this.eventRepository.create({
+      ...fields,
+      id,
+      canonicalId: id,
+      ...prepareCreate(data),
+    } as Partial<ProductionEvent>);
+    const result = await this.eventRepository.save(event);
+    await this.publishCreated(result);
+    return result;
+  }
+
+  /** Side effects of every new event, v1 or v2: realtime push and the RCA trigger rules. */
+  async publishCreated(event: ProductionEvent): Promise<void> {
     this.realtimeGateway.broadcastEntityEvent(
       'Created',
       'productionEvent',
-      result,
+      event,
     );
-    this.realtimeGateway.broadcastProductionEventCreated(result);
-
+    this.realtimeGateway.broadcastProductionEventCreated(event);
     try {
-      const autoRca = await this.rcaAutoCreateService.tryCreateForEvent(result);
+      const autoRca = await this.rcaAutoCreateService.tryCreateForEvent(event);
       if (autoRca.created) {
         this.logger.log(
-          `RCA auto-created for event ${result.id}: ${autoRca.rcaId}`,
+          `RCA auto-created for event ${event.id}: ${autoRca.rcaId}`,
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       this.logger.warn(
-        `RCA auto-create skipped for event ${result.id}: ${error.message}`,
+        `RCA auto-create skipped for event ${event.id}: ${message}`,
       );
     }
+  }
 
-    return result;
+  /** Realtime push after an update from any API version. */
+  publishUpdated(event: ProductionEvent): void {
+    this.realtimeGateway.broadcastEntityEvent(
+      'Updated',
+      'productionEvent',
+      event,
+    );
+    this.realtimeGateway.broadcastProductionEventUpdated(event);
   }
 
   async update(
     id: string,
     data: UpdateProductionEventDto,
   ): Promise<ProductionEvent | null> {
-    // Convert string dates to Date objects for database
-    const updateData: any = { ...data };
-    if (data.startTime && typeof data.startTime === 'string') {
-      updateData.startTime = new Date(data.startTime);
+    const existing = await this.eventRepository.findOneBy({ id });
+    if (!existing) {
+      return null;
     }
-    if (data.endTime && typeof data.endTime === 'string') {
-      updateData.endTime = new Date(data.endTime);
-    }
-    await this.eventRepository.update(id, updateData);
+    const fields = withoutClientDuration(data);
+    await this.eventRepository.update(id, {
+      ...fields,
+      ...prepareUpdate(existing, data),
+    } as Partial<ProductionEvent>);
     const updated = await this.findOne(id);
     if (updated) {
-      this.realtimeGateway.broadcastEntityEvent(
-        'Updated',
-        'productionEvent',
-        updated,
-      );
-      this.realtimeGateway.broadcastProductionEventUpdated(updated);
+      this.publishUpdated(updated);
     }
     return updated;
   }
@@ -143,4 +155,13 @@ export class ProductionEventService {
     applyProductionEventFilters(qb, query);
     return qb.orderBy('event.startTime', 'DESC').addOrderBy('event.id', 'DESC');
   }
+}
+
+/** v1 clients send a browser-computed `duration`; the server derives it from the interval (B8). */
+function withoutClientDuration<T extends { duration?: number }>(
+  data: T,
+): Omit<T, 'duration'> {
+  const copy = { ...data };
+  delete copy.duration;
+  return copy;
 }

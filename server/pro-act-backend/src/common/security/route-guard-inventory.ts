@@ -17,11 +17,26 @@ export interface RouteGuardEntry {
   isPublic: boolean;
 }
 
+export interface InventoryOptions {
+  /**
+   * An authentication guard is registered as `APP_GUARD` (AppModule): every route not marked
+   * `@Public()` counts as guarded. `@PublicIf()` routes stay guarded unless their env flag opens them.
+   */
+  globalGuard?: boolean;
+}
+
 /** Walks controller metadata the way Nest's route explorer does and reports guard coverage per route. */
 export function inventoryRoutes(
   controllers: Array<Type<unknown>>,
+  options: InventoryOptions = {},
 ): RouteGuardEntry[] {
-  return controllers.flatMap((controller) => routesOf(controller));
+  return controllers
+    .flatMap((controller) => routesOf(controller))
+    .map((entry) =>
+      options.globalGuard && !entry.isPublic
+        ? { ...entry, guarded: true }
+        : entry,
+    );
 }
 
 /**

@@ -1,9 +1,39 @@
+import {
+  CodingState,
+  ImpactMode,
+  OeeComponent,
+  PhysicalState,
+  PhysicalType,
+  RcaState,
+  ScheduleClass,
+  SourceKind,
+} from '../../domain/events/event-classification';
+import { durationSeconds } from '../../domain/time/interval-algebra';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { toDecimalString } from '../common/decimal-string.transformer';
 
-/** v2 read model over the existing `production_events` row; decimals are strings, times ISO 8601 UTC. */
+export interface EventClassificationView {
+  physicalType: PhysicalType;
+  scheduleClass: ScheduleClass;
+  oeeComponent: OeeComponent;
+  impactMode: ImpactMode;
+  /** decimal string 0..1 when `impactMode = fractional` */
+  impactFraction: string | null;
+}
+
+export interface EventStatesView {
+  physical: PhysicalState;
+  coding: CodingState;
+  rca: RcaState;
+}
+
+/**
+ * v2 read model of a production event (spec §3.2/§3.3, DT11): half-open UTC interval, durations in
+ * seconds, four classification axes, three state dimensions; money and quantities are decimal strings.
+ */
 export interface ProductionEventV2View {
   id: string;
+  canonicalId: string;
   eventId: string | null;
   tenantId: string | null;
   unitId: string;
@@ -11,25 +41,43 @@ export interface ProductionEventV2View {
   planId: string | null;
   reasonCodeId: string | null;
   rcaId: string | null;
+  /** legacy v1 type label */
   eventType: string | null;
+  /** legacy v1 status label, maintained by the adapter */
   status: string | null;
   source: string | null;
+  sourceKind: SourceKind;
   severity: string | null;
   description: string | null;
   startTime: string;
   endTime: string | null;
   isOpen: boolean;
-  duration: string | null;
+  /** closed events: `end - start`; null while open */
+  durationSeconds: number | null;
+  /** seconds from start to `end`, or to `asOf` while open */
+  elapsedSeconds: number;
+  asOf: string;
+  classification: EventClassificationView;
+  states: EventStatesView;
   quantity: string | null;
+  quantityUom: string | null;
   cost: string | null;
   value: string | null;
+  /** optimistic-concurrency revision; also sent as `ETag` on single reads */
+  rowVersion: number;
 }
 
 export function toProductionEventV2View(
   event: ProductionEvent,
+  asOf: Date,
 ): ProductionEventV2View {
+  const interval = {
+    start: new Date(event.startTime),
+    end: event.endTime ? new Date(event.endTime) : null,
+  };
   return {
     id: event.id,
+    canonicalId: event.canonicalId ?? event.id,
     eventId: event.eventId ?? null,
     tenantId: event.tenantId ?? null,
     unitId: event.unitId,
@@ -40,22 +88,31 @@ export function toProductionEventV2View(
     eventType: event.eventType ?? null,
     status: event.status ?? null,
     source: event.source ?? null,
+    sourceKind: event.sourceKind,
     severity: event.severity ?? null,
     description: event.description ?? null,
-    startTime: toIso(event.startTime) ?? '',
-    endTime: toIso(event.endTime),
-    isOpen: event.endTime === null || event.endTime === undefined,
-    duration: toDecimalString(event.duration),
+    startTime: interval.start.toISOString(),
+    endTime: interval.end?.toISOString() ?? null,
+    isOpen: interval.end === null,
+    durationSeconds: interval.end ? durationSeconds(interval) : null,
+    elapsedSeconds: durationSeconds(interval, asOf) ?? 0,
+    asOf: asOf.toISOString(),
+    classification: {
+      physicalType: event.physicalType,
+      scheduleClass: event.scheduleClass,
+      oeeComponent: event.oeeComponent,
+      impactMode: event.impactMode,
+      impactFraction: toDecimalString(event.impactFraction),
+    },
+    states: {
+      physical: event.physicalState,
+      coding: event.codingState,
+      rca: event.rcaState,
+    },
     quantity: toDecimalString(event.quantity),
+    quantityUom: event.quantityUom ?? null,
     cost: toDecimalString(event.cost),
     value: toDecimalString(event.value),
+    rowVersion: event.rowVersion,
   };
-}
-
-function toIso(value: Date | string | null | undefined): string | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }

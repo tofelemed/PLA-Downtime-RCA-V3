@@ -30,6 +30,7 @@
     "test:fixtures": "jest --selectProjects fixtures",
     "test:int": "jest --selectProjects integration --runInBand",
     "test:ci": "jest --selectProjects unit fixtures && jest --selectProjects integration --runInBand",
+    "openapi:v2:update": "cross-env UPDATE_OPENAPI=1 jest --selectProjects unit -t \"OpenAPI v2 snapshot\" src/v2/openapi-v2.spec.ts",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
@@ -39,7 +40,8 @@
     "db:ensure-roles-tasks": "ts-node scripts/ensure-roles-tasks.ts",
     "db:delete-all-data": "ts-node scripts/delete-all-data.ts",
     "setup:test-env": "ts-node scripts/setup-test-environment.ts",
-    "db:seed-demo-users": "ts-node scripts/seed-demo-users.ts"
+    "db:seed-demo-users": "ts-node scripts/seed-demo-users.ts",
+    "db:bootstrap-admin": "ts-node scripts/bootstrap-admin.ts"
   },
   "dependencies": {
     "@bacnet-js/client": "^3.0.0",
