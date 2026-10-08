@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Site } from '../calendar/entities/site.entity';
 
 @Entity('units')
 @Unique('UQ_units_tenant_code', ['tenantId', 'code'])
@@ -29,6 +30,15 @@ export class Unit {
 
   @Column({ name: 'organization_id', type: 'uuid', nullable: true })
   organizationId?: string;
+
+  /** Site of the unit (plan 2.1); null = the tenant's default site */
+  @Index('IDX_units_site_id')
+  @Column({ name: 'site_id', type: 'uuid', nullable: true })
+  siteId?: string | null;
+
+  @ManyToOne(() => Site, { onDelete: 'RESTRICT', nullable: true })
+  @JoinColumn({ name: 'site_id' })
+  site?: Site | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

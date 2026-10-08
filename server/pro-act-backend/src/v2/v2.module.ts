@@ -50,6 +50,16 @@ import { Signal } from '../signals/entities/signal.entity';
 import { SignalsModule } from '../signals/signals.module';
 import { SignalsV2Controller } from './signals/signals-v2.controller';
 import { SignalsV2Service } from './signals/signals-v2.service';
+import { CalendarModule } from '../calendar/calendar.module';
+import { CalendarVersion } from '../calendar/entities/calendar-version.entity';
+import { CrewRotation } from '../calendar/entities/crew-rotation.entity';
+import { Crew } from '../calendar/entities/crew.entity';
+import { ShiftInstance } from '../calendar/entities/shift-instance.entity';
+import { Site } from '../calendar/entities/site.entity';
+import { CalendarScheduleV2Controller } from './calendars/calendar-schedule-v2.controller';
+import { CalendarVersionsV2Controller } from './calendars/calendar-versions-v2.controller';
+import { CalendarsV2Service } from './calendars/calendars-v2.service';
+import { CrewsV2Controller } from './calendars/crews-v2.controller';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -75,6 +85,11 @@ import { SignalsV2Service } from './signals/signals-v2.service';
       IngestionException,
       ReplayRun,
       Signal,
+      Site,
+      CalendarVersion,
+      ShiftInstance,
+      Crew,
+      CrewRotation,
     ]),
     ProductionEventModule,
     CodeLibraryModule,
@@ -83,6 +98,7 @@ import { SignalsV2Service } from './signals/signals-v2.service';
     EventOperationsModule,
     IntakeModule,
     SignalsModule,
+    CalendarModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -102,6 +118,9 @@ import { SignalsV2Service } from './signals/signals-v2.service';
     IngestionExceptionsV2Controller,
     ReplayRunsV2Controller,
     SignalsV2Controller,
+    CalendarVersionsV2Controller,
+    CalendarScheduleV2Controller,
+    CrewsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -113,6 +132,7 @@ import { SignalsV2Service } from './signals/signals-v2.service';
     AttributeMappingsV2Service,
     IntakeQueriesV2Service,
     SignalsV2Service,
+    CalendarsV2Service,
   ],
 })
 export class V2Module {}

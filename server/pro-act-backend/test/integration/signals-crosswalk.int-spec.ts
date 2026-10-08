@@ -14,11 +14,21 @@ describe('SignalsAndSamples crosswalk from historian_tags', () => {
   let connectionId: string;
   const rows = <T>(sql: string, params: unknown[] = []): Promise<T[]> =>
     harness.dataSource.query<T[]>(sql, params);
+  const executed = async (name: string): Promise<boolean> =>
+    (
+      await rows<{ n: number }>(
+        `SELECT count(*)::int AS n FROM migrations WHERE name = $1`,
+        [name],
+      )
+    )[0].n > 0;
 
   beforeAll(async () => {
     await harness.start();
     world = await seedEventWorld(harness.dataSource);
-    await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    // undo down to (and including) SignalsAndSamples, whatever was added after it
+    while (await executed('SignalsAndSamples1792102400000')) {
+      await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    }
     connectionId = randomUUID();
     await rows(
       `INSERT INTO integration_connections (id, tenant_id, source_type, display_name, row_version)

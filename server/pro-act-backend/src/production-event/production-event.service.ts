@@ -15,6 +15,7 @@ import { getRequestContext } from '../common/context/request-context';
 import { EventRevisionService } from './revisions/event-revision.service';
 import { actorFromContext, RevisionActor } from './revisions/revision-actor';
 import { EventFacts } from './revisions/event-facts';
+import { ShiftLabelsService } from '../calendar/shift-labels.service';
 
 /** Relations loaded on every read; `reasonCode` and `rca` were dropped at some point (B17) and are back. */
 const EVENT_RELATIONS = [
@@ -38,22 +39,27 @@ export class ProductionEventService {
     private readonly realtimeGateway: RealtimeGateway,
     private readonly rcaAutoCreateService: RcaAutoCreateService,
     private readonly revisions: EventRevisionService,
+    private readonly shiftLabels: ShiftLabelsService,
   ) {}
 
   findAll(): Promise<ProductionEvent[]> {
     return this.search({});
   }
 
-  findOne(id: string): Promise<ProductionEvent | null> {
-    return this.eventRepository.findOne({
+  /** v1 reads label `shift` from the generated shift instance (plan 2.1 step 5), not the stored text. */
+  async findOne(id: string): Promise<ProductionEvent | null> {
+    const event = await this.eventRepository.findOne({
       where: { id },
       relations: [...EVENT_RELATIONS],
     });
+    if (!event) return null;
+    const [labelled] = await this.shiftLabels.apply([event]);
+    return labelled;
   }
 
   /** AND-combined filters, newest first. */
-  search(query: ProductionEventQueryDto): Promise<ProductionEvent[]> {
-    return this.buildSearch(query).getMany();
+  async search(query: ProductionEventQueryDto): Promise<ProductionEvent[]> {
+    return this.shiftLabels.apply(await this.buildSearch(query).getMany());
   }
 
   async searchPage(
@@ -65,7 +71,12 @@ export class ProductionEventService {
       .skip((page - 1) * pageSize)
       .take(pageSize)
       .getManyAndCount();
-    return { items, total, page, pageSize };
+    return {
+      items: await this.shiftLabels.apply(items),
+      total,
+      page,
+      pageSize,
+    };
   }
 
   /**

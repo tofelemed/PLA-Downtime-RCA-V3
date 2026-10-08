@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CalendarModule } from './calendar/calendar.module';
 import { CommonModule } from './common/common.module';
 import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { SchedulerModule } from './common/scheduling/scheduler.module';
@@ -42,6 +43,8 @@ registerPgTypeParsers();
     // PI adapter and normaliser come with IntegrationModule
     IntakeModule,
     IntegrationModule,
+    // shift instances kept generated 90 days ahead (plan 2.1)
+    CalendarModule,
   ],
   providers: [WorkerHealthServer],
 })

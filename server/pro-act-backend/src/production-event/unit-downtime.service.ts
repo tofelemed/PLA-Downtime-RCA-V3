@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { CalendarService } from '../calendar/calendar.service';
 import { applyOverlapWindow } from '../common/query/overlap-window';
+import {
+  DowntimeBySchedule,
+  downtimeBySchedule,
+} from '../domain/calendar/shift-downtime';
 import { ScheduleClass } from '../domain/events/event-classification';
 import {
   computeUnitDowntime,
@@ -27,7 +32,28 @@ export class UnitDowntimeService {
   constructor(
     @InjectRepository(ProductionEvent)
     private readonly events: Repository<ProductionEvent>,
+    private readonly calendar: CalendarService,
   ) {}
+
+  /**
+   * Unit downtime of a window attributed to its shift instances (plan 2.1 step 3, T29): occurrences are
+   * split at shift boundaries, counted per shift, clipped to scheduled (non-excluded) time, and a stop
+   * across a boundary stays one occurrence. Without generated instances every second is outside the
+   * schedule.
+   */
+  async byShift(
+    tenantId: string,
+    unitId: string,
+    window: BoundedInterval,
+    filter: UnitDowntimeFilter = {},
+  ): Promise<UnitDowntime & { schedule: DowntimeBySchedule }> {
+    const [downtime, shifts] = await Promise.all([
+      this.unionForWindow(tenantId, unitId, window, filter),
+      this.calendar.instancesIn(tenantId, unitId, window),
+    ]);
+    const schedule = downtimeBySchedule(downtime.occurrences, shifts, window);
+    return { ...downtime, schedule };
+  }
 
   async unionForWindow(
     tenantId: string,

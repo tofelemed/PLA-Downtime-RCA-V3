@@ -3811,6 +3811,745 @@
           "v2 · Signals"
         ]
       }
+    },
+    "/api/v2/calendar-versions": {
+      "get": {
+        "operationId": "CalendarVersionsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "siteId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "description": "Overrides of this unit",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "published"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List calendar versions of the caller tenant (keyset on createdAt, id)",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. siteId / unitId must be of the tenant (422 INVALID_REFERENCE); timezone and operational day start default to the site. Two weeks are generated to validate it (422 OVERLAPPING_SHIFTS, INVALID_TIMEZONE, DUPLICATE_SHIFT_NAME, INVALID_EXCLUSION, ...).",
+        "operationId": "CalendarVersionsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarVersionCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft calendar version (next version of the site calendar or unit override)",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      }
+    },
+    "/api/v2/calendar-versions/{id}": {
+      "get": {
+        "operationId": "CalendarVersionsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one calendar version (ETag = rowVersion); foreign ids are 404",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      },
+      "patch": {
+        "description": "Requires `If-Match: \"<rowVersion>\"` (428 without, 412 when stale). A published version is immutable: 409 CALENDAR_VERSION_PUBLISHED (create a new version instead).",
+        "operationId": "CalendarVersionsV2Controller_update_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarVersionPatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit a draft calendar version",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      }
+    },
+    "/api/v2/calendar-versions/{id}/publish": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Generates instances of the governed units from max(effectiveFrom, today − 366 d) to today + 90 d: future dates are regenerated, past dates only filled. Re-publishing needs a reason (409 ALREADY_PUBLISHED without) and may regenerate past dates from regenerateFrom (audited).",
+        "operationId": "CalendarVersionsV2Controller_publish_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarPublishDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publish a calendar version and generate its shift instances",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      }
+    },
+    "/api/v2/sites": {
+      "get": {
+        "operationId": "CalendarScheduleV2Controller_listSites_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List sites of the caller tenant (timezone, operational day start)",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      }
+    },
+    "/api/v2/sites/{id}": {
+      "get": {
+        "operationId": "CalendarScheduleV2Controller_getSite_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one site; foreign ids are 404",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      }
+    },
+    "/api/v2/shift-instances": {
+      "get": {
+        "description": "UTC bounds with the offsets (minutes east of UTC) in force at start and just before the end, and the stored local labels. Unit-scoped callers see only their units.",
+        "operationId": "CalendarScheduleV2Controller_listInstances_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "utcStart",
+              "enum": [
+                "utcStart",
+                "-utcStart"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "isExcluded",
+            "required": false,
+            "in": "query",
+            "description": "Only excluded (true) or only scheduled (false) instances",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List generated shift instances (overlap of [from, to), keyset on utcStart, id)",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      }
+    },
+    "/api/v2/calendars/preview": {
+      "post": {
+        "description": "Exactly one of candidateVersionId (a version of the unit or its site) and candidateVersion (inline). Returns the instances, DST / crew warnings and the diff against the stored instances; at most 62 days.",
+        "operationId": "CalendarScheduleV2Controller_preview_v2",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarPreviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Preview a candidate calendar for one unit without storing anything",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      }
+    },
+    "/api/v2/crews": {
+      "get": {
+        "operationId": "CrewsV2Controller_listCrews_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "siteId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List crews of the caller tenant",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. siteId must be of the tenant (422 INVALID_REFERENCE; default: the default site); a second crew of the same name on the site is 409 CREW_EXISTS.",
+        "operationId": "CrewsV2Controller_createCrew_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrewCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a crew of a site",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      }
+    },
+    "/api/v2/crews/{id}": {
+      "get": {
+        "operationId": "CrewsV2Controller_getCrew_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one crew; foreign ids are 404",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      }
+    },
+    "/api/v2/crew-rotations": {
+      "get": {
+        "operationId": "CrewsV2Controller_listRotations_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "crewId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List crew rotations of the caller tenant",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. crewId must be of the tenant (422 INVALID_REFERENCE). On operational date d the crew works cycle[(d − anchorDate) mod length] (null = off); bounds and scheduled time never change.",
+        "operationId": "CrewsV2Controller_createRotation_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrewRotationCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a rotation to a crew and re-assign crews on future instances",
+        "tags": [
+          "v2 · Calendars"
+        ]
+      }
     }
   },
   "info": {
@@ -4883,6 +5622,398 @@
         "required": [
           "from",
           "to"
+        ]
+      },
+      "ShiftTemplateDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "A"
+          },
+          "startLocal": {
+            "type": "string",
+            "example": "06:00",
+            "description": "Local start HH:mm"
+          },
+          "endLocal": {
+            "type": "string",
+            "example": "14:00",
+            "description": "Local end HH:mm; at or before the start = crosses midnight (equal = 24 h)"
+          },
+          "daysOfWeek": {
+            "description": "ISO weekdays (1 = Monday) of the operational date; every day when absent",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "startLocal",
+          "endLocal"
+        ]
+      },
+      "WorkingIntervalDto": {
+        "type": "object",
+        "properties": {
+          "startLocal": {
+            "type": "string",
+            "example": "08:00"
+          },
+          "endLocal": {
+            "type": "string",
+            "example": "12:00"
+          },
+          "daysOfWeek": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "startLocal",
+          "endLocal"
+        ]
+      },
+      "HolidayDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-03-21",
+            "description": "Operational date"
+          },
+          "name": {
+            "type": "string"
+          },
+          "treatment": {
+            "type": "string",
+            "enum": [
+              "excluded",
+              "reduced"
+            ],
+            "description": "excluded = out of scheduled time; reduced = kept (preview warning only)"
+          }
+        },
+        "required": [
+          "date",
+          "name",
+          "treatment"
+        ]
+      },
+      "ScheduleExclusionDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "example": "2026-10-07T10:00:00+03:30",
+            "description": "ISO 8601 with offset (inclusive)"
+          },
+          "to": {
+            "type": "string",
+            "example": "2026-10-07T11:00:00+03:30",
+            "description": "ISO 8601 with offset (exclusive)"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "planned_shutdown",
+              "turnaround",
+              "no_demand"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "reason",
+          "kind"
+        ]
+      },
+      "CalendarVersionCreateDto": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "example": "Asia/Tehran",
+            "description": "IANA zone; default: the site timezone"
+          },
+          "operationalDayStart": {
+            "type": "string",
+            "example": "06:00",
+            "description": "Default: the site operational day start"
+          },
+          "shiftTemplates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShiftTemplateDto"
+            }
+          },
+          "workingIntervals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingIntervalDto"
+            }
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HolidayDto"
+            }
+          },
+          "exclusions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleExclusionDto"
+            }
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-10",
+            "description": "First operational date (inclusive)"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "nullable": true,
+            "description": "Operational date the version ends (exclusive)"
+          },
+          "siteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Default: the tenant default site (or the unit site)"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Set for a unit override"
+          }
+        },
+        "required": [
+          "shiftTemplates",
+          "effectiveFrom"
+        ]
+      },
+      "CalendarVersionPatchDto": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "example": "Asia/Tehran",
+            "description": "IANA zone; default: the site timezone"
+          },
+          "operationalDayStart": {
+            "type": "string",
+            "example": "06:00",
+            "description": "Default: the site operational day start"
+          },
+          "shiftTemplates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShiftTemplateDto"
+            }
+          },
+          "workingIntervals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingIntervalDto"
+            }
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HolidayDto"
+            }
+          },
+          "exclusions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleExclusionDto"
+            }
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-10",
+            "description": "First operational date (inclusive)"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "nullable": true,
+            "description": "Operational date the version ends (exclusive)"
+          }
+        }
+      },
+      "CalendarPublishDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Required to re-publish a published version (audited)"
+          },
+          "regenerateFrom": {
+            "type": "string",
+            "example": "2026-10-01",
+            "description": "With a reason: regenerate instances from this operational date (past included)"
+          }
+        }
+      },
+      "CalendarDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "example": "Asia/Tehran",
+            "description": "IANA zone; default: the site timezone"
+          },
+          "operationalDayStart": {
+            "type": "string",
+            "example": "06:00",
+            "description": "Default: the site operational day start"
+          },
+          "shiftTemplates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShiftTemplateDto"
+            }
+          },
+          "workingIntervals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingIntervalDto"
+            }
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HolidayDto"
+            }
+          },
+          "exclusions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleExclusionDto"
+            }
+          }
+        },
+        "required": [
+          "shiftTemplates"
+        ]
+      },
+      "CalendarPreviewDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "localFrom": {
+            "type": "string",
+            "example": "2026-10-24",
+            "description": "First operational date (inclusive)"
+          },
+          "localTo": {
+            "type": "string",
+            "example": "2026-10-26",
+            "description": "Last operational date (inclusive); at most 62 days"
+          },
+          "candidateVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A stored version of the unit or its site"
+          },
+          "candidateVersion": {
+            "description": "An inline candidate definition",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CalendarDefinitionDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "unitId",
+          "localFrom",
+          "localTo"
+        ]
+      },
+      "CrewCreateDto": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Default: the tenant default site"
+          },
+          "name": {
+            "type": "string",
+            "example": "Crew A"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "RotationPatternDto": {
+        "type": "object",
+        "properties": {
+          "anchorDate": {
+            "type": "string",
+            "example": "2026-10-05",
+            "description": "Operational date of cycle[0]"
+          },
+          "cycle": {
+            "nullable": true,
+            "example": [
+              "A",
+              "A",
+              "B",
+              "B",
+              "C",
+              "C",
+              null,
+              null
+            ],
+            "description": "Shift name per day of the cycle; null = off",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "anchorDate",
+          "cycle"
+        ]
+      },
+      "CrewRotationCreateDto": {
+        "type": "object",
+        "properties": {
+          "crewId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pattern": {
+            "$ref": "#/components/schemas/RotationPatternDto"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-10"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "nullable": true,
+            "description": "Exclusive end date"
+          }
+        },
+        "required": [
+          "crewId",
+          "pattern",
+          "effectiveFrom"
         ]
       }
     }

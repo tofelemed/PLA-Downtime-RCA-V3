@@ -46,6 +46,17 @@ import { SignalBackfillService } from '../signals/signal-backfill.service';
 import { SignalPreviewService } from '../signals/signal-preview.service';
 import { SignalsModule } from '../signals/signals.module';
 import { SignalsService } from '../signals/signals.service';
+import { CalendarModule } from '../calendar/calendar.module';
+import { CalendarPreviewService } from '../calendar/calendar-preview.service';
+import { CalendarPublishService } from '../calendar/calendar-publish.service';
+import { CalendarVersionsService } from '../calendar/calendar-versions.service';
+import { CrewsService } from '../calendar/crews.service';
+import { CalendarVersion } from '../calendar/entities/calendar-version.entity';
+import { CrewRotation } from '../calendar/entities/crew-rotation.entity';
+import { Crew } from '../calendar/entities/crew.entity';
+import { ShiftInstance } from '../calendar/entities/shift-instance.entity';
+import { Site } from '../calendar/entities/site.entity';
+import { SitesService } from '../calendar/sites.service';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
 
@@ -127,6 +138,25 @@ class IntakeModuleStub {}
 })
 class SignalsModuleStub {}
 
+/** Stands in for the plan 2.1 calendar module (versions, publication, preview, crews, sites). */
+@Module({
+  providers: [
+    { provide: SitesService, useValue: {} },
+    { provide: CalendarVersionsService, useValue: {} },
+    { provide: CalendarPublishService, useValue: {} },
+    { provide: CalendarPreviewService, useValue: {} },
+    { provide: CrewsService, useValue: {} },
+  ],
+  exports: [
+    SitesService,
+    CalendarVersionsService,
+    CalendarPublishService,
+    CalendarPreviewService,
+    CrewsService,
+  ],
+})
+class CalendarModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -166,6 +196,16 @@ async function generate(): Promise<string> {
     .useValue({})
     .overrideProvider(getRepositoryToken(Signal))
     .useValue({})
+    .overrideProvider(getRepositoryToken(Site))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(CalendarVersion))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(ShiftInstance))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(Crew))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(CrewRotation))
+    .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)
     .overrideModule(CodeLibraryModule)
@@ -180,6 +220,8 @@ async function generate(): Promise<string> {
     .useModule(IntakeModuleStub)
     .overrideModule(SignalsModule)
     .useModule(SignalsModuleStub)
+    .overrideModule(CalendarModule)
+    .useModule(CalendarModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

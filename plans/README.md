@@ -62,7 +62,7 @@ Status legend: ⬜ not started · 🔄 in progress · 🧪 implemented, tests pe
 ### Phase 2 — Calendars, planning, accounting, workflow (spec P2: E07–E09) → [phase-2/README.md](phase-2/README.md)
 | Status | Sub-phase | File | Exit tests |
 |---|---|---|---|
-| ⬜ | 2.1 Calendars and shift instances | [2.1-calendars-and-shifts.md](phase-2/2.1-calendars-and-shifts.md) | T19, T29 |
+| 🧪 | 2.1 Calendars and shift instances | [2.1-calendars-and-shifts.md](phase-2/2.1-calendars-and-shifts.md) | T19, T29 green (9 Oct): DST-correct generator (Berlin, New York, Dubai, Lord Howe, Tehran), stored instances with offsets and labels, publish + 90-day materialization, cross-shift clipping, v2 calendars / preview / shift instances / crews; calendar UI is 3.4 |
 | ⬜ | 2.2 Production profiles and rates | [2.2-production-profiles-and-rates.md](phase-2/2.2-production-profiles-and-rates.md) | T30 (rates) |
 | ⬜ | 2.3 Plan versions and period generation | [2.3-plan-versions-and-period-generation.md](phase-2/2.3-plan-versions-and-period-generation.md) | T43, target-sum fixtures |
 | ⬜ | 2.4 Production periods and actuals results | [2.4-production-periods-and-actuals.md](phase-2/2.4-production-periods-and-actuals.md) | T25–T27 (persisted), T44 |
