@@ -1,17 +1,39 @@
-# Pro-Act: frontend (nginx + static Vite build), backend (NestJS) and Postgres.
+# Pro-Act: frontend (nginx + static Vite build), backend API, worker, Postgres, Kafka and MQTT.
 #
 #   cp .env.example .env            # set POSTGRES_PASSWORD and JWT_SECRET
 #   docker compose up -d --build
 #   docker compose exec backend node dist/scripts/seed-demo-users.js   # login-page demo accounts
+#   docker compose --profile tools up -d kafka-ui                      # optional Kafka UI
 #
 # Frontend: http://localhost:${FRONTEND_PORT:-8070}  (API, uploads and Socket.IO are proxied under the same origin)
 # Backend:  http://localhost:${BACKEND_PORT:-4004}/api/health, Swagger at /api
+# Kafka:    localhost:${KAFKA_PORT:-9092} from the host, kafka:29092 from other containers
+# MQTT:     mqtt://localhost:${MQTT_PORT:-1884} from the host, mqtt://mqtt:1883 from other containers
 #
-# To reuse the shared instrumental-postgres container instead of the bundled database:
-#   docker compose -f docker-compose.yml -f docker-compose.external-db.yml up -d --build
+# Overrides (combine with -f docker-compose.yml -f <override>):
+#   docker-compose.external-db.yml    reuse the shared instrumental-postgres container
+#   docker-compose.shared-infra.yml   reuse the host's instrumental-kafka-1 / mosquitto containers
 #
 # Details: docs/DOCKER.md
 name: proact
+
+# Shared by the API and worker services: one image, one database/broker configuration.
+x-backend-build: &backend-build
+  context: ./server/pro-act-backend
+
+x-backend-env: &backend-env
+  NODE_ENV: production
+  DB_HOST: ${DB_HOST:-postgres}
+  DB_PORT: ${DB_PORT:-5432}
+  DB_USERNAME: ${POSTGRES_USER:-postgres}
+  DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+  DB_NAME: ${POSTGRES_DB:-proact}
+  JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+  # Encrypts PI/connector credentials at rest; falls back to JWT_SECRET when empty
+  CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
+  # Message brokers as seen from inside the containers (docker-compose.shared-infra.yml points them at the host's)
+  KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+  MQTT_URL: ${MQTT_URL:-mqtt://mqtt:1883}
 
 services:
   postgres:
@@ -34,8 +56,9 @@ services:
       start_period: 10s
 
   backend:
-    build:
-      context: ./server/pro-act-backend
+    # API process. The same image runs the worker below (PROCESS_ROLE selects the entrypoint).
+    image: proact-backend
+    build: *backend-build
     restart: unless-stopped
     # Minimal init as PID 1: forwards signals to node and reaps zombie children so `docker stop` is clean
     init: true
@@ -43,24 +66,39 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      <<: *backend-env
+      # api = HTTP controllers only; cron jobs (PI scheduler etc.) run in the worker service
+      PROCESS_ROLE: api
       PORT: "4004"
-      DB_HOST: ${DB_HOST:-postgres}
-      DB_PORT: ${DB_PORT:-5432}
-      DB_USERNAME: ${POSTGRES_USER:-postgres}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      DB_NAME: ${POSTGRES_DB:-proact}
-      # Schema is derived from the TypeORM entities; there is no migration workflow yet (see CLAUDE.md)
-      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
-      # Encrypts PI/connector credentials at rest; falls back to JWT_SECRET when empty
-      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
+      # Pending TypeORM migrations (server/pro-act-backend/src/database/migrations) are applied on boot
+      DB_MIGRATIONS_RUN: ${DB_MIGRATIONS_RUN:-true}
       # Only affects clients calling the backend port directly; the frontend reaches it same-origin via nginx
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8070}
     volumes:
       - uploads:/app/uploads
     ports:
       - "${BACKEND_PORT:-4004}:4004"
+
+  worker:
+    # Background process: schedulers, connectors and calculations. No HTTP API apart from the probes
+    # GET /health/live and /health/ready on WORKER_PORT (4005) inside the container, which the image's
+    # role-aware HEALTHCHECK (server/pro-act-backend/docker/healthcheck.js) already polls.
+    image: proact-backend
+    build: *backend-build
+    restart: unless-stopped
+    init: true
+    depends_on:
+      # Waits for the API to be healthy so the schema (migrations) is in place before jobs start
+      backend:
+        condition: service_healthy
+    environment:
+      <<: *backend-env
+      PROCESS_ROLE: worker
+      WORKER_PORT: "4005"
+      # The API process owns migrations; two processes must never migrate the same database concurrently
+      DB_MIGRATIONS_RUN: "false"
+    volumes:
+      - uploads:/app/uploads
 
   frontend:
     build:
@@ -77,6 +115,78 @@ services:
     ports:
       - "${FRONTEND_PORT:-8070}:80"
 
+  kafka:
+    # Single-node KRaft broker (no ZooKeeper). Same image line as the host's instrumental-kafka-* cluster.
+    image: confluentinc/cp-kafka:7.5.0
+    restart: unless-stopped
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # PLAINTEXT: other containers (kafka:29092). PLAINTEXT_HOST: the host (localhost:${KAFKA_PORT}).
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:${KAFKA_PORT:-9092}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Single broker: every internal topic has replication factor 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    ports:
+      # 9092 is free unless the host's instrumental-kafka-1 container is running; change KAFKA_PORT in that case
+      - "${KAFKA_PORT:-9092}:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:29092 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 15s
+      retries: 10
+      start_period: 30s
+
+  kafka-ui:
+    # Optional topic/consumer browser: docker compose --profile tools up -d kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    profiles: ["tools"]
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: proact
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    ports:
+      # 8085 on the host: 8080 belongs to the host's instrumental-kafka-ui container
+      - "${KAFKA_UI_PORT:-8085}:8080"
+
+  mqtt:
+    # Dev broker, anonymous access (docker/mosquitto/mosquitto.conf). The host's mosquitto keeps 1883/8883.
+    # Pinned to the same release the host's mosquitto container runs (already present locally).
+    image: eclipse-mosquitto:2.1.2
+    restart: unless-stopped
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mqtt-data:/mosquitto/data
+    ports:
+      - "${MQTT_PORT:-1884}:1883"
+      # MQTT over WebSockets (browser clients)
+      - "${MQTT_WS_PORT:-8884}:9001"
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h 127.0.0.1 -p 1883 -t '$$SYS/broker/uptime' -C 1 -W 5 -i healthcheck >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 5s
+
 volumes:
   postgres-data:
   uploads:
+  kafka-data:
+  mqtt-data:

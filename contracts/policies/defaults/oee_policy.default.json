@@ -1,0 +1,18 @@
+{
+  "policyKind": "oee_policy",
+  "version": 1,
+  "effectiveFrom": "1970-01-01T00:00:00Z",
+  "effectiveTo": null,
+  "scope": { "tenantId": "00000000-0000-0000-0000-000000000000", "siteId": null, "unitId": null },
+  "notes": "Seed default recorded 2026-10-07 from D04 ('as per standard'): ISO 22400 time model, planned stops inside schedule reduce availability, derate = performance, micro-stop 60 s, ideal-time weighting, GE reconciled OEE tile on (labelled), plan ledger as default view. maxUnknownShare 0 is derived from the 100 % coverage gate (D05), not an explicit answer. scope.tenantId is a placeholder that the seeder replaces.",
+  "body": {
+    "plannedStopsInsideScheduleReduceAvailability": true,
+    "derateComponent": "performance",
+    "microStopSeconds": 60,
+    "idealTimeWeighting": true,
+    "maxUnknownShare": 0,
+    "reconciledOeeTileEnabled": true,
+    "streamCombinationRule": "per_product_and_combined_when_compatible",
+    "defaultLedgerView": "plan"
+  }
+}

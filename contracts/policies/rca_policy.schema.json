@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/rca_policy.schema.json",
+  "title": "RCA trigger policy",
+  "description": "Thresholds at which a confirmed downtime occurrence or a repeated functional failure recommends or creates an RCA case. Spec RCA01 (versioned trigger conditions on confirmed duration, quantity, approved impact and repeated failure; open events trigger once the threshold is exceeded with a provisional marker; replays never duplicate cases), RCA02 (automation creates a recommendation or a case per policy, never a proven root cause), KPI07 (functional failure taxonomy). Decision D13. Consumed by sub-phase 3.9 (`RcaTriggerService`); the per-rule thresholds of 3.8 `rules(kind=rca_trigger_hint)` default to these values.",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "rca_policy" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "body": {
+      "type": "object",
+      "required": ["durationThresholdSeconds", "costThreshold", "repeatCount", "repeatWindowDays", "autoCreate"],
+      "additionalProperties": false,
+      "properties": {
+        "durationThresholdSeconds": {
+          "$ref": "policy-envelope.schema.json#/$defs/nonNegativeSeconds",
+          "default": 3600,
+          "description": "Confirmed (or elapsed, for open occurrences - provisional) unplanned downtime duration at or above which the trigger fires (RCA01). 0 disables the duration trigger."
+        },
+        "costThreshold": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "default": null,
+          "description": "Approved valued impact (in `valuation_basis.currency`, default basis) at or above which the trigger fires on `PeriodApproved`. Null disables the cost trigger - the default until a currency and valuation policy are approved (D08)."
+        },
+        "repeatCount": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3,
+          "description": "Number of eligible functional failures (D13 taxonomy: FailureWO event or unplanned stop with failure code) on the same asset within repeatWindowDays that fires the repeated-failure trigger."
+        },
+        "repeatWindowDays": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 30,
+          "description": "Rolling window, in local operational days, for repeatCount."
+        },
+        "autoCreate": {
+          "type": "string",
+          "enum": ["recommend", "create"],
+          "default": "recommend",
+          "description": "`recommend`: emit `RCARecommended` and show a badge; a person creates or links the case. `create`: open the case automatically with its evidence package (RCA02). Advisory events (IOW/APM) can only ever recommend (T42)."
+        }
+      }
+    }
+  }
+}

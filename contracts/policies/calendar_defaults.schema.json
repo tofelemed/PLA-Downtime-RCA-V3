@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/calendar_defaults.schema.json",
+  "title": "Calendar defaults policy",
+  "description": "Timezone, operational-day rule, shift template, accounting leaf and holiday treatment used to seed the first `calendar_versions` row of a site and as the fallback when a unit has no published calendar. Spec CAL01 (timezone, operational day start, shift templates, holidays; shifts may cross midnight; production date by operational-day rule; generated UTC boundaries stored), CAL02 (DST handled by the generator, never by this policy), section 3.1 (shift vs daily leaf, never both). Decision D03. Consumed by sub-phase 2.1 (`CalendarService`); the published calendar version, not this policy, is what calculation runs record.",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "calendar_defaults" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "shiftTemplate": {
+      "type": "object",
+      "required": ["name", "startLocal", "endLocal", "daysOfWeek"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 50, "description": "Label stored on shift instances and periods (e.g. `A`, `Night`)." },
+        "startLocal": { "$ref": "policy-envelope.schema.json#/$defs/localTime" },
+        "endLocal": {
+          "$ref": "policy-envelope.schema.json#/$defs/localTime",
+          "description": "endLocal <= startLocal means the shift crosses midnight and ends on the next local date (CAL01); its production date is that of the operational day containing startLocal."
+        },
+        "daysOfWeek": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1, "maximum": 7 },
+          "description": "ISO 8601 weekday numbers of the shift start's local date: 1 = Monday ... 7 = Sunday."
+        }
+      }
+    },
+    "body": {
+      "type": "object",
+      "required": ["timezone", "operationalDayStart", "shiftTemplates", "accountingLeaf", "holidayTreatment"],
+      "additionalProperties": false,
+      "properties": {
+        "timezone": {
+          "$ref": "policy-envelope.schema.json#/$defs/ianaTimezone",
+          "description": "Site timezone. Seeding copies `tenants.timezone` when it is a valid IANA id, otherwise `UTC` with a warning flag (2.1 step 1)."
+        },
+        "operationalDayStart": {
+          "$ref": "policy-envelope.schema.json#/$defs/localTime",
+          "default": "06:00",
+          "description": "Local time at which the production (operational) day starts; a shift belongs to the operational day containing its start (CAL01)."
+        },
+        "shiftTemplates": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/shiftTemplate" },
+          "description": "Shift pattern per weekday. Templates for the same day must not overlap and should tile the operational day; the calendar generator rejects overlaps when publishing."
+        },
+        "accountingLeaf": {
+          "type": "string",
+          "enum": ["shift", "day"],
+          "default": "shift",
+          "description": "Grain of `production_periods`: one per shift instance, or one per operational day (`shift_name` null). Day and month are roll-ups; shift and day rows are never both counted (section 3.1)."
+        },
+        "holidayTreatment": {
+          "type": "string",
+          "enum": ["excluded", "planned_downtime"],
+          "default": "excluded",
+          "description": "`excluded`: holiday instances are schedule exclusions (outside S, capacity ledger `schedule_exclusion`). `planned_downtime`: holidays stay inside S as planned availability loss (KPI02)."
+        }
+      }
+    }
+  }
+}

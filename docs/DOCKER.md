@@ -6,10 +6,13 @@ Everything needed to run the platform in containers lives at the repo root:
 |------|---------|
 | `Dockerfile` | Frontend image: Vite build served by nginx, which also reverse-proxies the backend |
 | `docker/nginx/default.conf.template` | nginx config (SPA fallback + proxy for `/api`, `/uploads`, `/socket.io`, `/piwebapi`) |
-| `server/pro-act-backend/Dockerfile` | Backend image: NestJS compiled to `dist/`, production dependencies only |
-| `docker-compose.yml` | `frontend` + `backend` + bundled `postgres`, with named volumes for data and uploads |
-| `docker-compose.external-db.yml` | Override that points the backend at the shared `instrumental-postgres` container instead |
+| `server/pro-act-backend/Dockerfile` | Backend image: NestJS compiled to `dist/`, production dependencies only; `PROCESS_ROLE=api\|worker\|all` selects the entrypoint |
+| `docker/mosquitto/mosquitto.conf` | Dev MQTT broker config (anonymous access, persistence, MQTT + WebSockets listeners) |
+| `docker-compose.yml` | `frontend` + `backend` (API) + `worker` + bundled `postgres`, `kafka`, `mqtt`; `kafka-ui` behind the `tools` profile |
+| `docker-compose.external-db.yml` | Override that points backend and worker at the shared `instrumental-postgres` container instead |
+| `docker-compose.shared-infra.yml` | Override that reuses the host's `instrumental-kafka-*` cluster and `mosquitto` broker instead of the bundled ones |
 | `.env.example` | Compose settings; copy to `.env` (git-ignored) |
+| `.github/workflows/ci.yml`, `scripts/ci.*` | CI pipeline and its local wrapper (`npm run ci`), see [CI](#ci) |
 
 ## Quick start
 
@@ -24,14 +27,25 @@ Then open http://localhost:8070 and log in with `test@example.com` / `Test123!@#
 | Service | URL on the host | Notes |
 |---------|-----------------|-------|
 | frontend | http://localhost:8070 | nginx; API, uploads and Socket.IO are reachable on this same origin |
-| backend | http://localhost:4004/api/health | Swagger UI at http://localhost:4004/api |
+| backend | http://localhost:4004/api/health | API process (`PROCESS_ROLE=api`); Swagger UI at http://localhost:4004/api |
+| worker | (no host port) | Schedulers/connectors (`PROCESS_ROLE=worker`); probes on `:4005/health/live` and `/health/ready` inside the container |
 | postgres | `localhost:5433` | database `proact`; 5433 because the shared container already uses 5432 |
+| kafka | `localhost:9092` | single-node KRaft broker (cp-kafka 7.5.0); other containers use `kafka:29092` |
+| mqtt | `mqtt://localhost:1884`, WebSockets `ws://localhost:8884` | eclipse-mosquitto 2.1.2, anonymous; other containers use `mqtt://mqtt:1883` |
+| kafka-ui | http://localhost:8085 | optional: `docker compose --profile tools up -d kafka-ui` |
 
-The host ports come from `FRONTEND_PORT`, `BACKEND_PORT` and `POSTGRES_PORT` in `.env`. The defaults match the
-local dev servers, so stop `npm run dev` / `npm run start:dev` first or pick other ports.
+The host ports come from the `*_PORT` keys in `.env` (`FRONTEND_PORT`, `BACKEND_PORT`, `POSTGRES_PORT`, `KAFKA_PORT`,
+`KAFKA_UI_PORT`, `MQTT_PORT`, `MQTT_WS_PORT`). The frontend/backend defaults match the local dev servers, so stop
+`npm run dev` / `npm run start:dev` first or pick other ports. The Kafka and MQTT defaults avoid the host's own
+containers: `mosquitto` owns 1883/8883 (hence 1884/8884), `instrumental-kafka-ui` owns 8080 (hence 8085), and
+`instrumental-kafka-1` owns 9092 only while that cluster is running (change `KAFKA_PORT` or use the shared-infra
+override in that case).
 
-On the first boot the backend creates the schema from the TypeORM entities (`DB_SYNCHRONIZE=true`), which takes
-a little while; `docker compose ps` shows the backend as `healthy` once `/api/health` reports the database connected.
+On boot the API applies pending TypeORM migrations (`DB_MIGRATIONS_RUN=true`, migrations live in
+`server/pro-act-backend/src/database/migrations`); `docker compose ps` shows the backend as `healthy` once
+`/api/health` reports the database connected. The worker starts only after the API is healthy, never runs
+migrations itself (`DB_MIGRATIONS_RUN=false`), and is `healthy` once `/health/ready` on its `WORKER_PORT` sees the
+database. The backend and worker do not wait for Kafka/MQTT; connectors retry until the brokers answer.
 
 ## How the pieces fit together
 
@@ -39,10 +53,15 @@ a little while; `docker compose ps` shows the backend as `healthy` once `/api/he
 browser ──► frontend (nginx :80 → host :8070)
               ├─ /            static Vite build (SPA fallback to index.html)
               ├─ /api         ─┐
-              ├─ /uploads      ├──► backend (NestJS :4004 → host :4004) ──► postgres :5432
-              ├─ /socket.io   ─┘
-              └─ /piwebapi    ──► PI_SERVER (AVEVA PI Web API, same as the Vite dev proxy)
+              ├─ /uploads      ├──► backend (NestJS API :4004 → host :4004) ──► postgres :5432
+              ├─ /socket.io   ─┘                                            ├──► kafka :29092 (host :9092)
+              └─ /piwebapi    ──► PI_SERVER (AVEVA PI Web API)              └──► mqtt :1883   (host :1884)
+                                                                             ▲
+            worker (same image, PROCESS_ROLE=worker; schedulers + connectors) ─┘  probes :4005 (container only)
 ```
+
+The API and worker are the same image started with different `PROCESS_ROLE` values (`server/pro-act-backend/docker/entrypoint.sh`);
+`all` (the default outside Compose, e.g. `npm run start:dev`) runs both halves in one process.
 
 The frontend image is built with `VITE_API_BASE_URL=/api`, so the browser talks to the backend through nginx on
 the page's own origin. That removes CORS from the picture and means the same image works whatever hostname or IP
@@ -60,13 +79,19 @@ All settings are read by `docker compose` from `.env` (or the shell environment)
 | `FRONTEND_PORT` | `8070` | compose | Host port for nginx |
 | `BACKEND_PORT` | `4004` | compose | Host port for the API (direct access, Swagger) |
 | `POSTGRES_PORT` | `5433` | compose | Host port for the bundled Postgres |
-| `POSTGRES_USER` | `postgres` | postgres, backend | Database user |
-| `POSTGRES_PASSWORD` | required | postgres, backend | Database password |
-| `POSTGRES_DB` | `proact` | postgres, backend | Database name |
-| `DB_HOST` / `DB_PORT` | `postgres` / `5432` | backend | Database address as seen from inside the backend container |
-| `DB_SYNCHRONIZE` | `true` | backend | Let TypeORM create/alter tables from the entities on boot |
-| `JWT_SECRET` | required | backend | Signs access tokens (32+ random characters) |
-| `CREDENTIAL_ENCRYPTION_KEY` | empty → `JWT_SECRET` | backend | Encrypts PI/connector credentials at rest |
+| `KAFKA_PORT` | `9092` | compose, kafka | Host port of the bundled broker (also its advertised `localhost:` listener) |
+| `KAFKA_UI_PORT` | `8085` | compose | Host port of `kafka-ui` (`tools` profile) |
+| `MQTT_PORT` / `MQTT_WS_PORT` | `1884` / `8884` | compose | Host ports of the bundled broker (MQTT / MQTT over WebSockets) |
+| `POSTGRES_USER` | `postgres` | postgres, backend, worker | Database user |
+| `POSTGRES_PASSWORD` | required | postgres, backend, worker | Database password |
+| `POSTGRES_DB` | `proact` | postgres, backend, worker | Database name |
+| `DB_HOST` / `DB_PORT` | `postgres` / `5432` | backend, worker | Database address as seen from inside the containers |
+| `DB_MIGRATIONS_RUN` | `true` | backend | Apply pending TypeORM migrations on boot (the worker is always `false`) |
+| `KAFKA_BROKERS` | `kafka:29092` | backend, worker | Kafka bootstrap servers as seen from inside the containers |
+| `MQTT_URL` | `mqtt://mqtt:1883` | backend, worker | MQTT broker URL as seen from inside the containers |
+| `PROCESS_ROLE` | fixed per service | backend (`api`), worker (`worker`) | Which half of the backend a container runs; not read from `.env` |
+| `JWT_SECRET` | required | backend, worker | Signs access tokens (32+ random characters) |
+| `CREDENTIAL_ENCRYPTION_KEY` | empty → `JWT_SECRET` | backend, worker | Encrypts PI/connector credentials at rest |
 | `CORS_ORIGIN` | `http://localhost:8070` | backend | Browser origins allowed to call the backend port directly |
 | `PI_SERVER` | `https://87.107.103.198:7443` | frontend | Target of the `/piwebapi` proxy |
 | `VITE_API_BASE_URL` | `/api` (build arg) | frontend build | Where the bundle sends API calls; leave relative unless the backend is on another host |
@@ -92,13 +117,43 @@ containers against that same data instead of the bundled Postgres:
 docker compose -f docker-compose.yml -f docker-compose.external-db.yml up -d --build
 ```
 
-The override attaches the backend to the external `instrumental-network`, sets `DB_HOST=instrumental-postgres`,
-and parks the bundled `postgres` service behind a profile so it is not started. Use the same two `-f` flags for
-`ps`, `logs`, `down`, etc.
+The override attaches the backend and worker to the external `instrumental-network`, sets
+`DB_HOST=instrumental-postgres`, and parks the bundled `postgres` service behind a profile so it is not started. Use
+the same `-f` flags for `ps`, `logs`, `down`, etc.
+
+## Using the shared Kafka cluster and `mosquitto` broker
+
+The host also runs `mosquitto` (eclipse-mosquitto 2.x, ports 1883/8883) and has the `instrumental-kafka-1..3` +
+`instrumental-zookeeper` containers (cp-kafka 7.5.0, ZooKeeper mode) on `instrumental-network`. By default Compose
+brings up its own single-node `kafka` and `mqtt` so the stack is self-contained (decision D10). To reuse the shared
+containers instead:
+
+```bash
+docker start instrumental-zookeeper instrumental-kafka-1          # the shared cluster is usually stopped
+docker compose -f docker-compose.yml -f docker-compose.shared-infra.yml up -d --build
+# both overrides together: shared database + shared brokers
+docker compose -f docker-compose.yml -f docker-compose.external-db.yml -f docker-compose.shared-infra.yml up -d --build
+```
+
+The override parks `kafka` and `mqtt` behind the `bundled-infra` profile, attaches backend, worker and `kafka-ui`
+to `instrumental-network`, and sets `KAFKA_BROKERS=instrumental-kafka-1:9092` and `MQTT_URL=mqtt://mosquitto:1883`
+(override either in `.env`). The shared brokers advertise themselves as `kafka-1:9092` etc., which resolves on that
+network. Both `kafka` services cannot listen on host port 9092 at the same time; the bundled one is the one to
+re-map (`KAFKA_PORT`).
+
+## Profiles
+
+| Profile | Services | Enabled by |
+|---------|----------|------------|
+| (none) | frontend, backend, worker, postgres, kafka, mqtt | `docker compose up -d` |
+| `tools` | kafka-ui | `docker compose --profile tools up -d kafka-ui` |
+| `bundled-db` | postgres | only used by `docker-compose.external-db.yml` to park the bundled database |
+| `bundled-infra` | kafka, mqtt | only used by `docker-compose.shared-infra.yml` to park the bundled brokers |
 
 ## Data, uploads and maintenance
 
-* Database files live in the `proact_postgres-data` volume and uploaded evidence/attachments in `proact_uploads`.
+* Database files live in the `proact_postgres-data` volume, uploaded evidence/attachments in `proact_uploads`,
+  Kafka logs in `proact_kafka-data` and MQTT retained messages/sessions in `proact_mqtt-data`.
   `docker compose down` keeps them; `docker compose down -v` deletes them.
 * Backup / restore the bundled database:
   ```bash
@@ -112,7 +167,9 @@ and parks the bundled `postgres` service behind a profile so it is not started. 
   ```
 * After code changes: `docker compose up -d --build` rebuilds only what changed (dependency layers are cached as
   long as the lockfiles are untouched).
-* Logs: `docker compose logs -f backend` (or `frontend`, `postgres`).
+* Logs: `docker compose logs -f backend` (or `worker`, `frontend`, `postgres`, `kafka`, `mqtt`).
+* Kafka from the host: `kafka-topics --bootstrap-server localhost:9092 --list` (or `docker compose exec kafka kafka-topics --bootstrap-server kafka:29092 --list`).
+  MQTT from the host: `mosquitto_sub -h localhost -p 1884 -t 'proact/#'`.
 
 ## Troubleshooting
 
@@ -123,12 +180,37 @@ and parks the bundled `postgres` service behind a profile so it is not started. 
 | Frontend loads but API calls fail with 502 | Backend not healthy yet (`docker compose ps`), or `BACKEND_URL` points elsewhere |
 | 401 after rebuilding | `JWT_SECRET` changed; log in again |
 | Uploads return 404 | Uploads are stored in the `proact_uploads` volume; it is removed by `down -v` |
-| Port already allocated | Local dev servers (8070/4004) or another Postgres (5433) are running; change the `*_PORT` values |
+| Port already allocated | Local dev servers (8070/4004), another Postgres (5433) or the host's `instrumental-kafka-1` (9092) are running; change the `*_PORT` values |
+| Worker never becomes healthy | `docker compose logs worker`; it needs the same `DB_*`/`JWT_SECRET` as the API and the API must be healthy first |
+| Kafka restarts in a loop after a config change | KRaft metadata in `proact_kafka-data` belongs to the old `CLUSTER_ID`/listeners; `docker compose down -v` (dev data only) |
+
+## CI
+
+`.github/workflows/ci.yml` runs on pushes to `main`, pull requests and manual dispatch, on Node 24 with
+`npm ci --legacy-peer-deps` in both projects:
+
+| Job | What runs | Notes |
+|-----|-----------|-------|
+| `lint` | `npm run lint` (frontend), `eslint` without `--fix` (backend) | `continue-on-error` while the ~2400 pre-existing frontend errors are paid down |
+| `unit` | backend `npm run test:unit` + `npm run test:fixtures` (Jest `unit` and `fixtures` projects), frontend `npm run test:run` | `src/test/integration/*` is excluded: it needs a live backend |
+| `integration` | backend `npm run test:int` (Jest `integration` project, `*.int-spec.ts`) against a `postgres:15-alpine` service container; the harness creates `proact_test` and enables `uuid-ossp` | `DB_*` env points at the service container |
+| `e2e` | backend + frontend production builds, migrations + demo users, Playwright Chromium smoke (`auth`, `tasks`, `audit-auto-log` specs) | `continue-on-error` until stable; the HTML report is uploaded as the `playwright-report` artifact |
+
+The e2e job keeps `playwright.config.ts` in charge of starting both servers and only swaps the commands through
+`E2E_FRONTEND_COMMAND` / `E2E_BACKEND_COMMAND` (`vite preview` and `node dist/src/main.js`).
+
+Locally, `npm run ci` (→ `scripts/ci.ps1` on Windows, `scripts/ci.sh` elsewhere) runs the same lint, unit and
+integration steps sequentially against the local Postgres from `server/pro-act-backend/.env`; add `-- --e2e` for the
+smoke suite (uses the dev servers on 8070/4004, starting them if needed) and `--skip-lint|--skip-unit|--skip-int`
+to narrow a run.
 
 ## Production notes
 
 * Put TLS termination (a reverse proxy or load balancer) in front of the `frontend` container and drop the
   `BACKEND_PORT` mapping if the API should not be reachable directly.
-* Set `DB_SYNCHRONIZE=false` once a migration workflow exists; auto-synchronising entities against a live
-  database can drop or rewrite columns.
+* The bundled `kafka` and `mqtt` services are development conveniences: single broker, no authentication, anonymous
+  MQTT. Point `KAFKA_BROKERS` / `MQTT_URL` at managed brokers in production and run the worker as its own
+  deployment (scale the API independently; keep exactly one migration runner).
+* Schema changes are versioned migrations (`npm run migration:generate|run|revert|show` in the backend, see
+  `server/pro-act-backend/src/database/MIGRATIONS.md`). Entity auto-synchronisation is disabled everywhere.
 * Generate unique `POSTGRES_PASSWORD`, `JWT_SECRET` and `CREDENTIAL_ENCRYPTION_KEY` values per environment.

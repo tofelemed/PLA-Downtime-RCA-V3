@@ -5,7 +5,7 @@
 | Recorded | 7 Oct 2026 |
 | Repository | `E:\ProAct`, branch `main` |
 | Last commit before this work | `044cc83` "Initial commit with frontend + backend" (2025-08-23) |
-| Baseline commit (this working tree) | **pending** — awaiting decision A1 in `plans/DECISIONS.md` (includes whether `docs archive/` with old SQL Server troubleshooting notes is committed, excluded or deleted) |
+| Baseline commit (this working tree) | **`913086b`** "chore: baseline before PLA next-generation implementation" (7 Oct 2026, local `main`). `docs archive/` (136 stale notes, one containing an old SQL Server `sa` password) left **untracked** pending a scrub decision. **Push to `origin` failed: "Repository not found"** (`romarabbasi/APM-NW-23-08-2025`) — remote URL or access to be fixed by the owner |
 | Working tree vs `044cc83` | 922 files to add/modify, 15 deletions (root `*.md` guides moved/removed), per `git add -A -n` |
 | Node / npm | v24.11.1 / 11.6.2 |
 | Frontend | React ^18.3.1, Vite ^5.4.1, TypeScript ^5.5, Tailwind 3.4, shadcn/ui, TanStack Query ^5.56 (unused), Recharts ^2.15, reactflow ^11 + react-flow-renderer ^10 (duplicate) |

@@ -239,7 +239,7 @@ Recorded 7 Oct 2026 from the answers above (product owner, via this file). Where
 
 | Date | Item | Decision recorded | How I read the answer |
 |---|---|---|---|
-| 2026-10-07 | A1 Git | Commit directly to `main`; Claude commits and merges; baseline commit **and push** approved (D01 "commit and push") | "yes and you will merge", "yes do it" |
+| 2026-10-07 | A1 Git | Commit directly to `main`; Claude commits and merges. Baseline committed as `913086b`. **Push skipped for these phases** (owner instruction after `origin` returned "repository not found"); local commits only until told otherwise. Implementation work is delegated to subagents per task (owner instruction). | "yes and you will merge", "yes do it", "skip push for these phases", "use agents" |
 | 2026-10-07 | A2 Servers | May start/stop local dev servers and containers as needed | left blank → default allowed; say so if you want to be asked |
 | 2026-10-07 | A3 Dependencies | All listed packages approved; removals approved | "add them" |
 | 2026-10-07 | A4 Demo data | **Replace** seeders with new ones that exercise the real path (periods, rates, loss lines); old seeders retired when 3.1 ships | ticked |
@@ -266,4 +266,5 @@ Recorded 7 Oct 2026 from the answers above (product owner, via this file). Where
 
 ### Still needed from you (not blocking Phase 0)
 - D02 details: PI Web API base URL, auth mode and a service account; AF database/element scope for HDPE; actual event-frame template and attribute names; which tags hold production actuals for unit100–unit500. Needed before 1.6/1.7 certification.
+- **D08 Q2 — currency code** (ISO 4217, e.g. `IRR`, `USD`): the seeded `valuation_basis` policy carries the placeholder `XXX`, so every loss stays "unvalued (policy pending)" and the RCA cost trigger is disabled until this is set. Needed at 2.6.
 - D09/D10: broker/cluster endpoints and security when we reach the connector sub-phases.

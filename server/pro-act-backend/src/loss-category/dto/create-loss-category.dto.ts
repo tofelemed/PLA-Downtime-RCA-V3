@@ -31,4 +31,4 @@ export class CreateLossCategoryDto {
   @ApiProperty()
   @IsUUID()
   tenantId: string;
-} 
+}

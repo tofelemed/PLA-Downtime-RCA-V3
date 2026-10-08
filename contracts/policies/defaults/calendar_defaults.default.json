@@ -1,0 +1,19 @@
+{
+  "policyKind": "calendar_defaults",
+  "version": 1,
+  "effectiveFrom": "1970-01-01T00:00:00Z",
+  "effectiveTo": null,
+  "scope": { "tenantId": "00000000-0000-0000-0000-000000000000", "siteId": null, "unitId": null },
+  "notes": "Seed default recorded 2026-10-07 from D03 ('irani - tehran', 'industry standard'): Asia/Tehran (UTC+03:30, no DST since 2022), operational day 06:00, 3 x 8 h shifts A/B/C every day of the week, shift is the accounting leaf, holidays excluded from scheduled time. Shift C crosses midnight and belongs to the operational day of its start. scope.tenantId is a placeholder that the seeder replaces.",
+  "body": {
+    "timezone": "Asia/Tehran",
+    "operationalDayStart": "06:00",
+    "shiftTemplates": [
+      { "name": "A", "startLocal": "06:00", "endLocal": "14:00", "daysOfWeek": [1, 2, 3, 4, 5, 6, 7] },
+      { "name": "B", "startLocal": "14:00", "endLocal": "22:00", "daysOfWeek": [1, 2, 3, 4, 5, 6, 7] },
+      { "name": "C", "startLocal": "22:00", "endLocal": "06:00", "daysOfWeek": [1, 2, 3, 4, 5, 6, 7] }
+    ],
+    "accountingLeaf": "shift",
+    "holidayTreatment": "excluded"
+  }
+}

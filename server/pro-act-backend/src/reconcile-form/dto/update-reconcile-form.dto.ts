@@ -1,24 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsUUID, IsArray } from 'class-validator';
+import { PartialType } from '@nestjs/swagger';
+import { CreateReconcileFormDto } from './create-reconcile-form.dto';
 
-export class UpdateReconcileFormDto {
-  @ApiProperty({ required: false })
-  @IsUUID()
-  @IsOptional()
-  planId?: string;
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  period?: string;
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  categories?: string;
-
-  @ApiProperty({ required: false })
-  @IsUUID()
-  @IsOptional()
-  tenantId?: string;
-} 
+/** Every form column of the create DTO, all optional (B3). */
+export class UpdateReconcileFormDto extends PartialType(
+  CreateReconcileFormDto,
+) {}

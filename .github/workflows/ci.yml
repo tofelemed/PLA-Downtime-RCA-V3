@@ -1,0 +1,200 @@
+# Pro-Act CI: lint -> unit -> integration (real Postgres) -> e2e smoke (Playwright).
+# The same steps run locally with `npm run ci` (scripts/ci.sh / scripts/ci.ps1).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "24"
+  # Both lockfiles were produced with legacy peer resolution (see the Dockerfiles); plain `npm ci` fails with ERESOLVE
+  NPM_CI_FLAGS: --legacy-peer-deps --no-audit --no-fund
+  # Test-only secret; never reused outside CI
+  JWT_SECRET: ci-only-jwt-secret-0123456789abcdef0123456789abcdef
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Baseline (2026-10-07): the frontend has ~2400 pre-existing eslint errors (mostly no-explicit-any).
+    # Reported, not blocking, until they are paid down; remove this line to make lint a required check.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/pro-act-backend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci $NPM_CI_FLAGS
+      - name: Install backend dependencies
+        run: npm ci $NPM_CI_FLAGS
+        working-directory: server/pro-act-backend
+      - name: Lint frontend
+        run: npm run lint
+      - name: Lint backend
+        # `npm run lint` passes --fix and would silently rewrite files; CI only reports
+        run: npx eslint "{src,apps,libs,test}/**/*.ts"
+        working-directory: server/pro-act-backend
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/pro-act-backend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci $NPM_CI_FLAGS
+      - name: Install backend dependencies
+        run: npm ci $NPM_CI_FLAGS
+        working-directory: server/pro-act-backend
+      - name: Backend unit tests (Jest project unit)
+        run: npm run test:unit
+        working-directory: server/pro-act-backend
+      - name: Backend fixture tests (Jest project fixtures, spec acceptance fixtures)
+        run: npm run test:fixtures
+        working-directory: server/pro-act-backend
+      - name: Frontend unit tests (Vitest)
+        # src/test/integration/* talks to a running backend and belongs to the e2e layer
+        run: npm run test:run -- --exclude "src/test/integration/**"
+
+  integration:
+    name: Integration tests (Postgres 15)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: proact_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d proact_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: proact_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: server/pro-act-backend/package-lock.json
+      - name: Enable uuid-ossp
+        # The baseline migration uses uuid_generate_v4(). template1 so databases the harness creates inherit it.
+        run: |
+          for db in template1 proact_test; do
+            docker exec "${{ job.services.postgres.id }}" psql -U postgres -d "$db" -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
+          done
+      - name: Install backend dependencies
+        run: npm ci $NPM_CI_FLAGS
+        working-directory: server/pro-act-backend
+      - name: Integration tests (Jest project integration, real Postgres)
+        run: npm run test:int
+        working-directory: server/pro-act-backend
+
+  e2e:
+    name: E2E smoke (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # Being stabilised: failures are visible on the run but do not fail the workflow yet.
+    # Remove this line once the smoke suite is green on main.
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: proact
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d proact"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: proact
+      PORT: "4004"
+      # playwright.config.ts starts both servers; in CI they serve the production builds instead of the dev servers
+      E2E_BACKEND_COMMAND: cd server/pro-act-backend && node dist/src/main.js
+      E2E_FRONTEND_COMMAND: npm run preview -- --port 8070 --strictPort
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/pro-act-backend/package-lock.json
+      - name: Enable uuid-ossp
+        run: docker exec "${{ job.services.postgres.id }}" psql -U postgres -d proact -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
+      - name: Install frontend dependencies
+        run: npm ci $NPM_CI_FLAGS
+      - name: Install backend dependencies
+        run: npm ci $NPM_CI_FLAGS
+        working-directory: server/pro-act-backend
+      - name: Build backend
+        run: npm run build
+        working-directory: server/pro-act-backend
+      - name: Apply migrations and seed the demo users
+        run: |
+          npm run migration:run
+          npm run db:seed-demo-users
+        working-directory: server/pro-act-backend
+      - name: Build frontend
+        run: npm run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Smoke suite (login, task CRUD, audit interceptor)
+        run: npx playwright test e2e/auth.spec.ts e2e/tasks.spec.ts e2e/audit-auto-log.spec.ts
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+          if-no-files-found: ignore

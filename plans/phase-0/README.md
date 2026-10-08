@@ -8,10 +8,10 @@ Nothing in Phase 1+ starts before 0.3 (environment/migrations) and 0.4 (API foun
 
 | Status | Sub-phase | Depends on | Exit tests |
 |---|---|---|---|
-| ⬜ | [0.1 Baseline audit and evidence matrix](0.1-baseline-audit.md) | — | Evidence matrix committed; fixtures T01–T46 authored as test data |
-| ⬜ | [0.2 Decision register and proposed policies](0.2-decision-register.md) | — (parallel with 0.1) | D01–D15 recorded with owner, default, gate |
-| ⬜ | [0.3 Dev environment, migrations, worker, CI](0.3-dev-environment-and-migrations.md) | 0.1 | `migration:run/revert` clean; worker process boots; CI green on unit + integration + e2e |
-| ⬜ | [0.4 API v2 foundation](0.4-api-v2-foundation.md) | 0.3 | T13, T14; B1 B2 B14 B17 B18 closed; v2 conventions documented |
+| ✅ | [0.1 Baseline audit and evidence matrix](0.1-baseline-audit.md) | — | Evidence committed in `913086b`; fixtures authored; all three test suites recorded |
+| ✅ | [0.2 Decision register and proposed policies](0.2-decision-register.md) | — (parallel with 0.1) | D01–D15 recorded; policy schemas + defaults validated |
+| 🔄 | [0.3 Dev environment, migrations, worker, CI](0.3-dev-environment-and-migrations.md) | 0.1 | `migration:run/revert` clean; worker process boots; CI green on unit + integration + e2e |
+| 🔄 | [0.4 API v2 foundation](0.4-api-v2-foundation.md) | 0.3 | T13, T14; B1 B2 B14 B17 B18 closed; v2 conventions documented |
 
 ## Why Phase 0 is not optional
 

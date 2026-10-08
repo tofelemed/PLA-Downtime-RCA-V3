@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/approval_roles.schema.json",
+  "title": "Approval roles and separation-of-duties policy",
+  "description": "Which roles may submit, approve and revise accounting revisions, whether a second approver is required, and how v1 user roles map onto the spec section 13.2 roles. Spec WF02 (submit validates permissions in one transaction; approve requires a different approver with current authorization), WF05 (roles and scope enforced on every API, job, export and socket), section 13.2 role table. Decision D06 (submitter != approver, one approver). Consumed by sub-phase 2.8 (`RolesGuard` + lifecycle commands) and 0.4 (global guards, legacy mapping).",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "approval_roles" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "roleList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "policy-envelope.schema.json#/$defs/role" }
+    },
+    "body": {
+      "type": "object",
+      "required": ["submitRoles", "approveRoles", "reviseRoles", "requireTwoApprovers", "forbidSelfApproval", "legacyRoleMap"],
+      "additionalProperties": false,
+      "properties": {
+        "submitRoles": {
+          "$ref": "#/$defs/roleList",
+          "default": ["production_engineer"],
+          "description": "Roles allowed to save draft lines, request recompute and `submit` a revision (ACC10, WF02)."
+        },
+        "approveRoles": {
+          "$ref": "#/$defs/roleList",
+          "default": ["manager_approver"],
+          "description": "Roles allowed to `approve` or `reject` an in-review revision (WF01, WF02)."
+        },
+        "reviseRoles": {
+          "$ref": "#/$defs/roleList",
+          "default": ["manager_approver"],
+          "description": "Roles allowed to open a revision of an approved period (`revise`, WF04); 'Unlock' in the UI maps here."
+        },
+        "requireTwoApprovers": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true a revision needs two distinct approvers (both != submitter) before it becomes `approved` (D06 question 1)."
+        },
+        "forbidSelfApproval": {
+          "type": "boolean",
+          "const": true,
+          "default": true,
+          "description": "Always true: the submitter may never approve their own revision, whatever their roles, including legacy SuperAdmin (WF02, T36). Present so the rule is visible and recorded with the policy version."
+        },
+        "legacyRoleMap": {
+          "type": "object",
+          "description": "v1 `users.role` value -> granted section 13.2 roles, used until identities carry the new roles (0.4). Keys are the seven legacy role names; every key must be present so no legacy user is silently unmapped.",
+          "required": ["SuperAdmin", "OrgAdmin", "TenantAdmin", "Manager", "Analyst", "Engineer", "Operator"],
+          "additionalProperties": false,
+          "properties": {
+            "SuperAdmin": { "$ref": "#/$defs/roleList" },
+            "OrgAdmin": { "$ref": "#/$defs/roleList" },
+            "TenantAdmin": { "$ref": "#/$defs/roleList" },
+            "Manager": { "$ref": "#/$defs/roleList" },
+            "Analyst": { "$ref": "#/$defs/roleList" },
+            "Engineer": { "$ref": "#/$defs/roleList" },
+            "Operator": { "$ref": "#/$defs/roleList" }
+          }
+        }
+      }
+    }
+  }
+}

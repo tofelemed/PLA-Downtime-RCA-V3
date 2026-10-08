@@ -11,4 +11,4 @@ import { RCAModule } from '../rca/rca.module';
   providers: [ProductionEventService],
   exports: [ProductionEventService],
 })
-export class ProductionEventModule {} 
+export class ProductionEventModule {}

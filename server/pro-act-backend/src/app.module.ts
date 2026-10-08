@@ -1,7 +1,13 @@
 import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommonModule } from './common/common.module';
+import { CorrelationIdMiddleware } from './common/http/correlation-id.middleware';
+import { throttlerOptionsFromEnv } from './common/throttling/throttler.config';
+import { UserIpThrottlerGuard } from './common/throttling/user-ip-throttler.guard';
+import { V2Module } from './v2/v2.module';
+import { SchedulerModule } from './common/scheduling/scheduler.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { OrganizationModule } from './organization/organization.module';
@@ -65,28 +71,24 @@ import { HistorianHistoryModule } from './historian-history/historian-history.mo
 import { HierarchyMappingModule } from './hierarchy-mapping/hierarchy-mapping.module';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
 import { StreamingModule } from './streaming/streaming.module';
-import { TableInitService } from './common/database/table-init.service';
+import { dataSourceOptions } from './database/data-source';
+import { registerPgTypeParsers } from './database/pg-type-parsers';
 import * as dotenv from 'dotenv';
-import { types as pgTypes } from 'pg';
 dotenv.config();
 
-// pg returns NUMERIC/DECIMAL as strings by default; the services and frontend expect numbers
-pgTypes.setTypeParser(pgTypes.builtins.NUMERIC, (value: string) => parseFloat(value));
+registerPgTypeParsers();
 
 @Module({
   imports: [
     CommonModule,
-    ScheduleModule.forRoot(),
+    // Global rate limit (429 + Retry-After); per user when authenticated, per IP otherwise
+    ThrottlerModule.forRoot(throttlerOptionsFromEnv()),
+    // Cron providers are live only in PROCESS_ROLE=worker|all; the api role is HTTP-only
+    SchedulerModule.register(),
     TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'proact',
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      // Schema is derived from entities; set DB_SYNCHRONIZE=false once a migration workflow exists
-      synchronize: process.env.DB_SYNCHRONIZE === 'true',
+      ...dataSourceOptions,
+      // Pending migrations are applied on boot; set DB_MIGRATIONS_RUN=false where a release step runs them
+      migrationsRun: process.env.DB_MIGRATIONS_RUN !== 'false',
     }),
     AuthModule,
     UsersModule,
@@ -153,13 +155,15 @@ pgTypes.setTypeParser(pgTypes.builtins.NUMERIC, (value: string) => parseFloat(va
     HistorianHistoryModule,
     HierarchyMappingModule,
     StreamingModule,
+    // /api/v2 resources (src/v2/CONVENTIONS.md)
+    V2Module,
   ],
-  providers: [TableInitService],
+  providers: [{ provide: APP_GUARD, useClass: UserIpThrottlerGuard }],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(RequestLoggerMiddleware)
+      .apply(CorrelationIdMiddleware, RequestLoggerMiddleware)
       .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 }

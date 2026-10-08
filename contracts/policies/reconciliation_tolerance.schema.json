@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/reconciliation_tolerance.schema.json",
+  "title": "Reconciliation tolerance policy",
+  "description": "How large a signed plan-ledger residual may be at submission and how it is closed. Spec ACC09 (tolerance default 0 with epsilon 1e-6; site policy may approve percent or absolute; residual always stored; within-tolerance residual becomes a labelled `tolerance_adjustment` line; zero target allows absolute tolerance only) and ACC10 (positive residual beyond tolerance needs an explanation or an explicitly allowed `Unaccounted` classification). Decision D06. Consumed by sub-phase 2.8 on `submit`; versions recorded on every calculation run (2.5).",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "reconciliation_tolerance" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "body": {
+      "type": "object",
+      "required": ["mode", "value", "epsilon", "allowUnaccountedClassification"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["zero", "percent", "absolute"],
+          "default": "zero",
+          "description": "`zero`: any |residual| > epsilon blocks submission. `percent`: tolerance = value % of the slice target (meaningless when target = 0, so the engine falls back to zero tolerance there per ACC09). `absolute`: tolerance = value in the slice unit of measure."
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0,
+          "description": "Tolerance magnitude. Percentage points for `percent` (0.1 = 0.1 %), quantity in the slice UoM for `absolute`, must be 0 for `zero`."
+        },
+        "epsilon": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 0.001,
+          "default": 0.000001,
+          "description": "Decimal comparison epsilon: |residual| <= epsilon is treated as exactly zero (ACC09). Not a tolerance; never creates an adjustment line."
+        },
+        "allowUnaccountedClassification": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true a positive residual beyond tolerance may be closed with an explicit `unaccounted_classified` line that the approver accepts (ACC10). Off by default (D06)."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "mode": { "const": "zero" } } },
+          "then": { "properties": { "value": { "type": "number", "const": 0 } } }
+        },
+        {
+          "if": { "properties": { "mode": { "const": "percent" } } },
+          "then": { "properties": { "value": { "type": "number", "maximum": 100 } } }
+        }
+      ]
+    }
+  }
+}

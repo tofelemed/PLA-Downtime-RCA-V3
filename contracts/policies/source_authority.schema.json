@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/source_authority.schema.json",
+  "title": "Source authority policy",
+  "description": "Which source is authoritative for one measurement (output, state or rate) on a unit, when and to what it falls back, and who may override. Spec SRC01 (one authority per unit/product/measurement/interval; fallback segments with banner; overlaps reconciled on return), SRC02 (explicit and derived events for the same stop become one impact occurrence), ACT02/ACT05 (output counted once; coverage from the active source). Decision D05 (PI Production Output event frames primary, totalizer delta fallback). Consumed by sub-phase 1.10 (`AuthorityService`, `source_segments`) and 2.4 (ActualsRunner method selection).",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "source_authority" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "source": {
+      "type": "string",
+      "enum": ["pi_output_ef", "pi_counter", "pi_rate", "mqtt", "kafka", "manual"],
+      "description": "`pi_output_ef` Production Output event frames (incremental quantities); `pi_counter` totalizer delta with rollover rule; `pi_rate` rate tag integration; `mqtt`/`kafka` counter or rate signals from those adapters; `manual` governed manual entry (ACT06)."
+    },
+    "body": {
+      "type": "object",
+      "required": ["measurement", "primarySource", "fallback", "cadenceSeconds", "conflictTolerance", "overrideRole"],
+      "additionalProperties": false,
+      "properties": {
+        "measurement": {
+          "type": "string",
+          "enum": ["output", "state", "rate"],
+          "description": "The measurement this policy governs. One policy per (scope, productId, measurement) is effective at a time (SRC01)."
+        },
+        "productId": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "default": null,
+          "description": "Restrict to one product; null applies to every product on the scoped unit(s)."
+        },
+        "primarySource": { "$ref": "#/$defs/source" },
+        "fallback": {
+          "type": ["object", "null"],
+          "default": null,
+          "description": "Fallback source and the conditions that activate it. Null = no fallback: when the primary is unavailable the interval is `missing` (null quantity), never estimated (ACT05).",
+          "required": ["conditions", "source"],
+          "additionalProperties": false,
+          "properties": {
+            "conditions": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": ["primary_stale", "primary_bad_quality", "primary_missing", "primary_conflict"]
+              },
+              "description": "`primary_stale`: no primary observation within cadenceSeconds x staleSampleFactor; `primary_bad_quality`: quality bad/uncertain; `primary_missing`: no primary mapping for the interval; `primary_conflict`: primary disagrees with the fallback beyond conflictTolerance (fallback is then used only after review)."
+            },
+            "source": { "$ref": "#/$defs/source", "description": "Must differ from primarySource (checked by the service, not expressible here)." }
+          }
+        },
+        "cadenceSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 60,
+          "description": "Expected delivery cadence of the primary source (PI05 default polling 60 s); drives staleness detection together with `state_rules.staleSampleFactor`."
+        },
+        "conflictTolerance": {
+          "$ref": "policy-envelope.schema.json#/$defs/ratio",
+          "default": 0,
+          "description": "Relative disagreement |primary - fallback| / |primary| above which a `source_conflict` review item is raised when both sources cover the same interval (T12). 0 = any disagreement is recorded. Only the primary quantity is ever used; this never averages sources."
+        },
+        "overrideRole": {
+          "$ref": "policy-envelope.schema.json#/$defs/role",
+          "default": "integration_admin",
+          "description": "Minimum role allowed to force a different active source for an interval; the override is audited and creates a `source_segments` row with reason."
+        }
+      }
+    }
+  }
+}

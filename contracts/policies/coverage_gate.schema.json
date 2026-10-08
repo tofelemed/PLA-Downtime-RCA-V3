@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/coverage_gate.schema.json",
+  "title": "Actuals coverage gate policy",
+  "description": "What share of a production period must be covered by accepted actuals evidence before the period may be submitted for approval, and which substitutes count. Spec ACT05 (coverageRatio, measured vs estimated quantity; approval needs 100 % accepted coverage, approved substitutions count, estimated share exposed, unless a versioned policy says otherwise), ACT02 (spanning output events need measured distribution or an approved proportional estimate marked Estimated). Decision D05. Consumed by sub-phase 2.4 (ActualsRunner) and 2.8 (submit gate).",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "coverage_gate" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "body": {
+      "type": "object",
+      "required": ["requiredCoverageRatio", "allowProportionalEstimate", "countApprovedSubstitutionsAsAccepted"],
+      "additionalProperties": false,
+      "properties": {
+        "requiredCoverageRatio": {
+          "$ref": "policy-envelope.schema.json#/$defs/ratio",
+          "default": 1,
+          "description": "Minimum `actuals_results.coverage_ratio` (accepted seconds / period seconds) for every slice before `submit` succeeds (ACT05). 1 = 100 %."
+        },
+        "allowProportionalEstimate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Permit a time-proportional split of an output event that spans a period boundary when the event carries no measured distribution; the split quantity is marked `estimated` and exposed as `estimatedQuantity` (ACT02, ACT05). False leaves the slice `partial`."
+        },
+        "countApprovedSubstitutionsAsAccepted": {
+          "type": "boolean",
+          "default": true,
+          "description": "Approved manual adjustments and approved fallback-source segments count toward coverage (ACT05 'approved substitutions count'); their share is still reported separately."
+        }
+      }
+    }
+  }
+}

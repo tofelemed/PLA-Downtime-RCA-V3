@@ -20,13 +20,14 @@ COPY src ./src
 # puts the app at dist/src/main.js and the scripts at dist/scripts/*.js.
 COPY scripts ./scripts
 
-RUN npm run build && test -f dist/src/main.js && test -f dist/scripts/seed-demo-users.js
+RUN npm run build && test -f dist/src/main.js && test -f dist/src/worker.js && test -f dist/scripts/seed-demo-users.js
 RUN npm prune --omit=dev --legacy-peer-deps
 
 
 FROM node:24-bookworm-slim AS runtime
 ENV NODE_ENV=production \
-    PORT=4004
+    PORT=4004 \
+    WORKER_PORT=4005
 WORKDIR /app
 
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
@@ -37,11 +38,18 @@ COPY --chown=node:node package.json ./
 RUN mkdir -p /app/uploads && chown node:node /app/uploads
 VOLUME ["/app/uploads"]
 
+# Role-aware entrypoint and probe (PROCESS_ROLE=api|worker|all, default all). The CR strip guards
+# against CRLF checkouts on Windows hosts.
+COPY docker/entrypoint.sh docker/healthcheck.js ./docker/
+RUN sed -i 's/\r$//' docker/entrypoint.sh && chmod 755 docker/entrypoint.sh
+
 USER node
-EXPOSE 4004
+# 4004 = API (PORT); 4005 = worker health probes (WORKER_PORT)
+EXPOSE 4004 4005
 
-# /api/health is public and checks the database connection
+# api|all: GET /api/health (public, checks the database); worker: GET /health/ready on WORKER_PORT
 HEALTHCHECK --interval=15s --timeout=5s --start-period=40s --retries=5 \
-  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 4004) + '/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+  CMD ["node", "docker/healthcheck.js"]
 
-CMD ["node", "dist/src/main.js"]
+# api|all -> node dist/src/main.js; worker -> node dist/src/worker.js
+ENTRYPOINT ["/app/docker/entrypoint.sh"]

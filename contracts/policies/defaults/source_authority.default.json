@@ -1,0 +1,20 @@
+{
+  "policyKind": "source_authority",
+  "version": 1,
+  "effectiveFrom": "1970-01-01T00:00:00Z",
+  "effectiveTo": null,
+  "scope": { "tenantId": "00000000-0000-0000-0000-000000000000", "siteId": null, "unitId": null },
+  "notes": "Seed default recorded 2026-10-07 from D05 ('based on proposed and standard'): PI Production Output event frames are the authority for output; PI totalizer (counter delta) is the fallback when the primary is stale, bad or missing; PI polling cadence 60 s (PI05); any disagreement between the two is recorded as a conflict (tolerance 0, derived - not an explicit answer); integration admins may override. Separate policies for measurement `state` and `rate` are commissioning inputs of 1.10 and are not seeded. scope.tenantId is a placeholder that the seeder replaces.",
+  "body": {
+    "measurement": "output",
+    "productId": null,
+    "primarySource": "pi_output_ef",
+    "fallback": {
+      "conditions": ["primary_stale", "primary_bad_quality", "primary_missing"],
+      "source": "pi_counter"
+    },
+    "cadenceSeconds": 60,
+    "conflictTolerance": 0,
+    "overrideRole": "integration_admin"
+  }
+}

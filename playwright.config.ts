@@ -42,16 +42,17 @@ export default defineConfig({
     },
   ],
 
-  // Run local dev server before starting tests
+  // Run local dev servers before starting tests. CI overrides the commands to serve the production
+  // builds instead (E2E_FRONTEND_COMMAND / E2E_BACKEND_COMMAND, see .github/workflows/ci.yml).
   webServer: [
     {
-      command: 'npm run dev',
+      command: process.env.E2E_FRONTEND_COMMAND || 'npm run dev',
       url: 'http://localhost:8070',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },
     {
-      command: 'cd server/pro-act-backend && npm run start:dev',
+      command: process.env.E2E_BACKEND_COMMAND || 'cd server/pro-act-backend && npm run start:dev',
       url: 'http://localhost:4004/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,

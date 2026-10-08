@@ -1,11 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UsePipes, ValidationPipe } from '@nestjs/common';
-import { ApiTags, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UsePipes, ValidationPipe, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UnmappedEventService } from './unmapped-event.service';
 import { UnmappedEvent } from './unmapped-event.entity';
 import { CreateUnmappedEventDto } from './dto/create-unmapped-event.dto';
 import { UpdateUnmappedEventDto } from './dto/update-unmapped-event.dto';
 
 @ApiTags('Unmapped Events')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('unmapped-events')
 export class UnmappedEventController {
   constructor(private readonly eventService: UnmappedEventService) {}

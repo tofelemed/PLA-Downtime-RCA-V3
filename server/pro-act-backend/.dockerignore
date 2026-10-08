@@ -22,3 +22,5 @@ fix-entities.js
 Dockerfile
 .dockerignore
 .prettierrc
+# keep the container entrypoint despite the *.sh rule above
+!docker/entrypoint.sh

@@ -1,0 +1,47 @@
+# Override: reuse the host's shared messaging containers instead of the bundled kafka/mqtt services:
+#   - Kafka:  instrumental-kafka-1..3 (confluentinc/cp-kafka:7.5.0, ZooKeeper mode) on `instrumental-network`
+#   - MQTT:   mosquitto (eclipse-mosquitto:2.x) on `instrumental-network`
+#
+#   docker compose -f docker-compose.yml -f docker-compose.shared-infra.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.shared-infra.yml --profile tools up -d kafka-ui
+#
+# Combine with docker-compose.external-db.yml to reuse instrumental-postgres as well.
+# The shared Kafka containers must be running (`docker start instrumental-zookeeper instrumental-kafka-1`);
+# the brokers advertise themselves as kafka-1:9092 etc., which resolves on instrumental-network.
+services:
+  kafka:
+    # Parked behind a profile so it is neither pulled nor started
+    profiles: ["bundled-infra"]
+
+  mqtt:
+    profiles: ["bundled-infra"]
+
+  backend:
+    environment:
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-instrumental-kafka-1:9092}
+      MQTT_URL: ${MQTT_URL:-mqtt://mosquitto:1883}
+    networks:
+      - default
+      - instrumental-network
+
+  worker:
+    environment:
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-instrumental-kafka-1:9092}
+      MQTT_URL: ${MQTT_URL:-mqtt://mosquitto:1883}
+    networks:
+      - default
+      - instrumental-network
+
+  kafka-ui:
+    # Still behind the "tools" profile; browses the shared cluster instead of the bundled broker
+    depends_on: !reset []
+    environment:
+      KAFKA_CLUSTERS_0_NAME: instrumental
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: ${KAFKA_BROKERS:-instrumental-kafka-1:9092}
+    networks:
+      - default
+      - instrumental-network
+
+networks:
+  instrumental-network:
+    external: true

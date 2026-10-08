@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/oee_policy.schema.json",
+  "title": "OEE and loss-ledger policy",
+  "description": "Site interpretation of the ISO 22400 time model used by the loss-accounting engine and the KPI engine. Spec KPI01 (S, D, R, U, V with ideal-time weighting and stream boundaries), KPI02 (micro-stops stay in R and reduce P; planned stops inside S reduce A; unknown intervals never counted as running), KPI04 (GE-style reconciled OEE shown separately and labelled), ACC02 (derate component). Decision D04. Consumed by sub-phases 2.5 (engine) and 2.7 (KPIs); versions recorded on every calculation run.",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "oee_policy" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "body": {
+      "type": "object",
+      "required": [
+        "plannedStopsInsideScheduleReduceAvailability",
+        "derateComponent",
+        "microStopSeconds",
+        "idealTimeWeighting",
+        "maxUnknownShare",
+        "reconciledOeeTileEnabled",
+        "streamCombinationRule",
+        "defaultLedgerView"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "plannedStopsInsideScheduleReduceAvailability": {
+          "type": "boolean",
+          "default": true,
+          "description": "ISO 22400 default (KPI02): planned maintenance inside scheduled time S is an availability stop (counted in D). False would move such stops out of S, which the spec only allows through explicit calendar exclusions (D04)."
+        },
+        "derateComponent": {
+          "type": "string",
+          "enum": ["performance", "availability"],
+          "default": "performance",
+          "description": "OEE component charged for reduced-rate (derate) running (ACC02). `availability` means a fractional availability loss."
+        },
+        "microStopSeconds": {
+          "$ref": "policy-envelope.schema.json#/$defs/nonNegativeSeconds",
+          "default": 60,
+          "description": "Stops shorter than this stay in R and reduce P (performance); stops >= this are availability stops in D (KPI02, DT03). Must equal `state_rules.body.microStopSeconds` for the same scope; the engine refuses a run when they differ."
+        },
+        "idealTimeWeighting": {
+          "type": "boolean",
+          "default": true,
+          "description": "KPI01: U and V are ideal production times (quantity / sustained rate) summed over product and rate segments, so multi-product periods weight by ideal time rather than averaging percentages."
+        },
+        "maxUnknownShare": {
+          "$ref": "policy-envelope.schema.json#/$defs/ratio",
+          "default": 0,
+          "description": "If unknown_time / S exceeds this share the OEE factors are reported with quality `provisional` (and `unavailable` when no good/gross evidence exists) instead of `ok` (KPI02, KPI03). 0 = any unknown time makes the KPI provisional."
+        },
+        "reconciledOeeTileEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the GE-style reconciled OEE (from G, LA, LP, LQ) as a separately labelled tile next to operational OEE (KPI04, D04)."
+        },
+        "streamCombinationRule": {
+          "type": "string",
+          "enum": ["per_product_only", "per_product_and_combined_when_compatible", "combined_only_with_declared_boundary"],
+          "default": "per_product_and_combined_when_compatible",
+          "description": "How KPIs for concurrent product streams on one unit are reported (KPI01 last sentence, AN03). Combined values are produced only from compatible denominators (same S policy and declared stream boundary); otherwise `unavailable` with reason."
+        },
+        "defaultLedgerView": {
+          "type": "string",
+          "enum": ["plan", "capacity"],
+          "default": "plan",
+          "description": "Both ledgers are always computed (ACC01); this picks the ledger the period UI opens on (D04)."
+        }
+      }
+    }
+  }
+}

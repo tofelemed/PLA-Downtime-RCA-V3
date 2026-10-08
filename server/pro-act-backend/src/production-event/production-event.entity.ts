@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { Unit } from '../unit/unit.entity';
 import { Asset } from '../asset/asset.entity';
@@ -62,10 +70,22 @@ export class ProductionEvent {
   @Column({ name: 'source', type: 'varchar', length: 50, nullable: true })
   source?: string; // Manual, Simulated PI, CMMS
 
-  @Column({ name: 'quantity', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'quantity',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   quantity?: number;
 
-  @Column({ name: 'cost', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'cost',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   cost?: number;
 
   @Column({ name: 'status', type: 'varchar', length: 50, nullable: true })
@@ -84,10 +104,22 @@ export class ProductionEvent {
   @Column({ name: 'parameter', type: 'varchar', length: 255, nullable: true })
   parameter?: string;
 
-  @Column({ name: 'value', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'value',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   value?: number;
 
-  @Column({ name: 'limit_value', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'limit_value',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   limit?: number;
 
   @Column({ name: 'limit_type', type: 'varchar', length: 10, nullable: true })
@@ -108,13 +140,29 @@ export class ProductionEvent {
   @Column({ name: 'recommended_action', type: 'text', nullable: true })
   recommendedAction?: string;
 
-  @Column({ name: 'work_order_id', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'work_order_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   workOrderId?: string;
 
-  @Column({ name: 'failure_mode', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'failure_mode',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   failureMode?: string;
 
-  @Column({ name: 'defective_quantity', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'defective_quantity',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   defectiveQuantity?: number;
 
   @Column({ name: 'shift', type: 'varchar', length: 50, nullable: true })
@@ -126,10 +174,20 @@ export class ProductionEvent {
   @Column({ name: 'audit_trail', type: 'text', nullable: true })
   auditTrail?: string;
 
-  @Column({ name: 'loss_category', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'loss_category',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   lossCategory?: string;
 
-  @Column({ name: 'operator_name', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'operator_name',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   operatorName?: string;
 
   @Column({ name: 'reason_code_id', type: 'uuid', nullable: true })
@@ -139,13 +197,24 @@ export class ProductionEvent {
   @JoinColumn({ name: 'reason_code_id' })
   reasonCode?: ReasonCode;
 
-  @Column({ name: 'duration', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'duration',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   duration?: number;
 
   @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
   tenantId?: string;
 
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
@@ -153,4 +222,4 @@ export class ProductionEvent {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

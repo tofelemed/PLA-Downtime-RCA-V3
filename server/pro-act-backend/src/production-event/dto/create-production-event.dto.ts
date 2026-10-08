@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsNumber, IsDateString, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  IsOptional,
+  IsNumber,
+  IsDateString,
+  IsEnum,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export class CreateProductionEventDto {
@@ -61,7 +69,18 @@ export class CreateProductionEventDto {
   @IsNumber()
   cost?: number;
 
-  @ApiProperty({ enum: ['Open', 'Coded', 'RCA Required', 'Closed', 'Investigating', 'In Progress', 'Completed', 'Cancelled'] })
+  @ApiProperty({
+    enum: [
+      'Open',
+      'Coded',
+      'RCA Required',
+      'Closed',
+      'Investigating',
+      'In Progress',
+      'Completed',
+      'Cancelled',
+    ],
+  })
   @IsString()
   @IsNotEmpty()
   status: string;
@@ -71,7 +90,16 @@ export class CreateProductionEventDto {
   @IsUUID()
   rcaId?: string;
 
-  @ApiProperty({ enum: ['ProductionLoss', 'IOW', 'SOL', 'APM', 'FailureWO', 'ProductionOutput'] })
+  @ApiProperty({
+    enum: [
+      'ProductionLoss',
+      'IOW',
+      'SOL',
+      'APM',
+      'FailureWO',
+      'ProductionOutput',
+    ],
+  })
   @IsString()
   @IsNotEmpty()
   eventType: string;
@@ -175,4 +203,4 @@ export class CreateProductionEventDto {
   @IsOptional()
   @IsUUID()
   organizationId?: string;
-} 
+}

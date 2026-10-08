@@ -1,7 +1,12 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { DashboardConfigurationService } from './dashboard-configuration.service';
 import { DashboardConfigApiPayload, DashboardConfigApiRecord } from './dashboard-configuration.mapper';
 
+@ApiTags('Dashboard Configurations')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('dashboard-configurations')
 export class DashboardConfigurationController {
   constructor(private readonly configService: DashboardConfigurationService) {}

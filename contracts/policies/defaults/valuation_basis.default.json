@@ -1,0 +1,14 @@
+{
+  "policyKind": "valuation_basis",
+  "version": 1,
+  "effectiveFrom": "1970-01-01T00:00:00Z",
+  "effectiveTo": null,
+  "scope": { "tenantId": "00000000-0000-0000-0000-000000000000", "siteId": null, "unitId": null },
+  "notes": "Seed default recorded 2026-10-07 from D08 ('use as proposed'): contribution margin default, exclusive time/quantity basis, single currency, no FX. currency is the ISO 4217 'no currency' placeholder XXX because D08 question 2 was not answered; valuation stays unvalued (reason policy_unapproved) until finance sets the code and approves this policy. scope.tenantId is a placeholder that the seeder replaces.",
+  "body": {
+    "defaultBasis": "contribution_margin",
+    "timeBasisRule": "exclusive",
+    "currency": "XXX",
+    "fxPolicy": "none"
+  }
+}

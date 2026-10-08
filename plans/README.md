@@ -40,10 +40,10 @@ Status legend: ⬜ not started · 🔄 in progress · 🧪 implemented, tests pe
 ### Phase 0 — Verify, decide, found (spec P0: E01, E02) → [phase-0/README.md](phase-0/README.md)
 | Status | Sub-phase | File | Exit tests |
 |---|---|---|---|
-| 🔄 | 0.1 Baseline audit and evidence matrix | [0.1-baseline-audit.md](phase-0/0.1-baseline-audit.md) | Evidence matrix; fixtures T01–T46 authored |
-| 🔄 | 0.2 Decision register and proposed policies | [0.2-decision-register.md](phase-0/0.2-decision-register.md) | D01–D15 assigned with defaults — **DECISIONS.md awaiting answers** |
-| ⬜ | 0.3 Dev environment, migrations, worker, CI | [0.3-dev-environment-and-migrations.md](phase-0/0.3-dev-environment-and-migrations.md) | Migration up/down; worker boots; CI runs all test layers |
-| ⬜ | 0.4 API v2 foundation: tenancy, guards, queries, errors, idempotency | [0.4-api-v2-foundation.md](phase-0/0.4-api-v2-foundation.md) | T13, T14; B1 B2 B14 B17 B18 closed |
+| ✅ | 0.1 Baseline audit and evidence matrix | [0.1-baseline-audit.md](phase-0/0.1-baseline-audit.md) | Evidence in `plans/evidence/` (commit `913086b`); fixtures T01–T46; e2e baseline 22 passed / 18 not run |
+| ✅ | 0.2 Decision register and proposed policies | [0.2-decision-register.md](phase-0/0.2-decision-register.md) | D01–D15 recorded; 9 policy schemas + defaults in `contracts/policies/` validated (190 fixture assertions green); currency placeholder "XXX" open |
+| 🔄 | 0.3 Dev environment, migrations, worker, CI | [0.3-dev-environment-and-migrations.md](phase-0/0.3-dev-environment-and-migrations.md) | Migration up/down; worker boots; CI runs all test layers — data-source + baseline migration done; harness/worker/Compose/CI in progress (3 agents) |
+| 🔄 | 0.4 API v2 foundation: tenancy, guards, queries, errors, idempotency | [0.4-api-v2-foundation.md](phase-0/0.4-api-v2-foundation.md) | T13, T14; B1 B2 B14 B17 B18 closed — part 1 (error contract, guards, v1 fixes, v2 skeleton) in progress; part 2 (tenancy tables, idempotency) after 0.3 |
 
 ### Phase 1 — Events, intake and connectors (spec P1: E03–E06) → [phase-1/README.md](phase-1/README.md)
 | Status | Sub-phase | File | Exit tests |

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/valuation_basis.schema.json",
+  "title": "Valuation basis policy",
+  "description": "Which monetary basis values loss lines by default, how quantity-based and time-based valuations combine, and the tenant currency and FX rule. Spec VAL01 (effective-dated margin or standard cost with currency; default commercial view = contribution margin; standard cost separately named; financial policy approval recorded before production use), VAL02 (duration cost and quantity cost are alternative bases unless categories are independent cost components), VAL03 (snapshot currency and FX version; never aggregate currencies without an approved conversion snapshot). Decision D08. Consumed by sub-phase 2.6 (`valuation_policies` is `accounting_policies` kind `valuation_basis`); approval is the `POST /valuation-policies/{id}/approve` command and lives on the row, not in this document.",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "valuation_basis" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "body": {
+      "type": "object",
+      "required": ["defaultBasis", "timeBasisRule", "currency", "fxPolicy"],
+      "additionalProperties": false,
+      "properties": {
+        "defaultBasis": {
+          "type": "string",
+          "enum": ["contribution_margin", "standard_cost"],
+          "default": "contribution_margin",
+          "description": "Basis of the default commercial view (VAL01). The other basis stays available as a separately named view; neither is a realized saving."
+        },
+        "timeBasisRule": {
+          "type": "string",
+          "enum": ["exclusive", "independent_components"],
+          "default": "exclusive",
+          "description": "`exclusive`: a loss is valued on one basis per view; lost margin is never added to a cost-per-hour rate that already includes it (VAL02). `independent_components`: summation allowed only for impact categories explicitly marked as independent cost components."
+        },
+        "currency": {
+          "$ref": "policy-envelope.schema.json#/$defs/currencyCode",
+          "description": "Tenant reporting currency (VAL03). `XXX` (ISO 4217 'no currency') means undecided: valuation stays `unvalued` with reason `policy_unapproved` until a real code is set and the policy is approved."
+        },
+        "fxPolicy": {
+          "type": "string",
+          "enum": ["none", "snapshot"],
+          "default": "none",
+          "description": "`none`: single currency per tenant, cross-currency totals are null with reason `fx_missing`. `snapshot`: convert with an `fx_rate_snapshots` row effective on the valuation date and record its `fxVersionId` (VAL03)."
+        }
+      }
+    }
+  }
+}

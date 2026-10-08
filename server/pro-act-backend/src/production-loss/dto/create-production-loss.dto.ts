@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID, IsString, IsNumber, IsNotEmpty } from 'class-validator';
+import {
+  IsUUID,
+  IsString,
+  IsNumber,
+  IsNotEmpty,
+  IsOptional,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateProductionLossDto {
   @ApiProperty()
@@ -31,7 +38,34 @@ export class CreateProductionLossDto {
   @IsString()
   action: string;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  lossType?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  lossCategory?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  quantity?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  cost?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
   @ApiProperty()
   @IsUUID()
   tenantId: string;
-} 
+}

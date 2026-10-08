@@ -1,4 +1,4 @@
-# Override: run the backend against the shared `instrumental-postgres` container
+# Override: run the backend and worker against the shared `instrumental-postgres` container
 # (database "proact", the one local development uses) instead of the bundled postgres service.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.external-db.yml up -d --build
@@ -11,6 +11,14 @@ services:
 
   backend:
     depends_on: !reset []
+    environment:
+      DB_HOST: ${DB_HOST:-instrumental-postgres}
+    networks:
+      - default
+      - instrumental-network
+
+  worker:
+    # Keeps its dependency on the healthy backend; only the database address changes
     environment:
       DB_HOST: ${DB_HOST:-instrumental-postgres}
     networks:

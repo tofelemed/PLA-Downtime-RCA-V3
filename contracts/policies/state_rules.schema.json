@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/state_rules.schema.json",
+  "title": "Equipment state engine default rules",
+  "description": "Timing defaults the downtime state engine applies to every state/rate signal unless an equipment-class or asset `state_rules` row (1.10 migration 0008) overrides them. Spec DT01 (rules effective-dated with preview), DT02 (5 s debounce, 60 s micro-stop, 10 s restart confirmation, staleness = max(60 s, 3 x sample interval); states outside schedule detected but excluded from the OEE denominator), DT03 (close at first qualifying recovery; micro-stops -> performance, stops >= threshold -> availability), DT04 (stale/bad -> Unknown). Decision D04 (micro-stop). Consumed by sub-phase 1.10.",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "state_rules" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "body": {
+      "type": "object",
+      "required": [
+        "debounceSeconds",
+        "microStopSeconds",
+        "restartConfirmSeconds",
+        "staleSeconds",
+        "staleSampleFactor",
+        "monitorOutsideSchedule",
+        "gapPolicyMaxGapSeconds"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "debounceSeconds": {
+          "$ref": "policy-envelope.schema.json#/$defs/nonNegativeSeconds",
+          "default": 5,
+          "description": "A stop candidate becomes a confirmed Stopped segment only after the condition has held this long; effective start is the first qualifying observation, the confirmation delay is not added (DT02, DT03)."
+        },
+        "microStopSeconds": {
+          "$ref": "policy-envelope.schema.json#/$defs/nonNegativeSeconds",
+          "default": 60,
+          "description": "Confirmed stops shorter than this become micro-stop events (oee_component performance); longer stops become downtime events (availability) - never both (DT03). Must equal `oee_policy.body.microStopSeconds`."
+        },
+        "restartConfirmSeconds": {
+          "$ref": "policy-envelope.schema.json#/$defs/nonNegativeSeconds",
+          "default": 10,
+          "description": "Running must hold this long before a stop is closed; the stop end is the first qualifying recovery observation (DT02, DT03)."
+        },
+        "staleSeconds": {
+          "$ref": "policy-envelope.schema.json#/$defs/nonNegativeSeconds",
+          "default": 60,
+          "description": "Minimum staleness window. maxStale = max(staleSeconds, staleSampleFactor x signal sample interval); after it the segment closes provisionally and Unknown opens (DT02, DT04)."
+        },
+        "staleSampleFactor": {
+          "type": "number",
+          "minimum": 1,
+          "default": 3,
+          "description": "Multiplier on the signal's nominal sample interval for the staleness window (DT02)."
+        },
+        "monitorOutsideSchedule": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect and store state segments outside scheduled time (flagged `outside_schedule`); they never enter the OEE denominator (DT02, KPI02). False discards observations outside the calendar."
+        },
+        "gapPolicyMaxGapSeconds": {
+          "$ref": "policy-envelope.schema.json#/$defs/nonNegativeSeconds",
+          "default": 0,
+          "description": "Longest Running gap between two consecutive confirmed stops that the correlator may bridge into one impact occurrence (SRC02). 0 = never bridge; every qualifying recovery closes the occurrence (DT03)."
+        }
+      }
+    }
+  }
+}

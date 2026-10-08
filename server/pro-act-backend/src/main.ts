@@ -4,12 +4,16 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { ValidationPipe } from '@nestjs/common';
+import { configureHttpApp } from './common/http/configure-http-app';
+import { V2Module } from './v2/v2.module';
+import { getProcessRole } from './common/scheduling/process-role';
+import { bootstrapWorker } from './worker';
 
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // SIGTERM/SIGINT run the shutdown hooks (ShutdownCoordinator drains in-flight jobs in role "all")
+  app.enableShutdownHooks();
 
   // Enable CORS - Allow all origins in development, configured origins in production
   const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -26,8 +30,8 @@ async function bootstrap() {
           : true),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Correlation-Id', 'X-Tenant-Id', 'X-Client-Audited', 'If-Match', 'Idempotency-Key'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Correlation-Id', 'Retry-After', 'ETag'],
     maxAge: 86400,
     preflightContinue: false,
     optionsSuccessStatus: 204,
@@ -41,33 +45,30 @@ async function bootstrap() {
     console.log(`   CORS: Allowing origins: ${Array.isArray(corsOptions.origin) ? corsOptions.origin.join(', ') : 'ALL'}`);
   }
 
-  // Set global prefix
-  app.setGlobalPrefix('api');
+  // /api prefix, URI versioning (/api/v2), API03 error filter, global validation pipe
+  configureHttpApp(app);
 
-  // Global exception filter
-  app.useGlobalFilters(new HttpExceptionFilter());
-
-  // Global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    }),
-  );
-
-  // Swagger setup
-  const config = new DocumentBuilder()
+  // Swagger: v1 at /api (everything except /api/v2), v2 at /api/docs/v2 (V2Module only)
+  const v1Config = new DocumentBuilder()
     .setTitle('ProAct API')
-    .setDescription('ProAct Backend API Reference')
+    .setDescription('ProAct Backend API Reference (v1)')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  const v1Document = SwaggerModule.createDocument(app, v1Config);
+  v1Document.paths = Object.fromEntries(
+    Object.entries(v1Document.paths).filter(([path]) => !path.startsWith('/api/v2/')),
+  );
+  SwaggerModule.setup('api', app, v1Document);
+
+  const v2Config = new DocumentBuilder()
+    .setTitle('ProAct API v2')
+    .setDescription('Tenant from identity, AND-combined filters, cursor pagination, standard envelopes (src/v2/CONVENTIONS.md)')
+    .setVersion('2.0')
+    .addBearerAuth()
+    .build();
+  const v2Document = SwaggerModule.createDocument(app, v2Config, { include: [V2Module] });
+  SwaggerModule.setup('api/docs/v2', app, v2Document);
 
   // Serve uploaded files. The upload controllers write to "./uploads" relative to the working
   // directory (multer diskStorage), so resolve the same way here rather than relative to the
@@ -82,8 +83,15 @@ async function bootstrap() {
   await app.listen(port);
   console.log('');
   console.log('✅ Application is running on: http://localhost:' + port);
-  console.log('✅ API documentation available at: http://localhost:' + port + '/api');
+  console.log('✅ API documentation available at: http://localhost:' + port + '/api (v2: /api/docs/v2)');
   console.log('✅ CORS enabled - Frontend can connect from any origin in development');
+  console.log(`✅ Process role: ${getProcessRole()} (schedulers ${getProcessRole() === 'api' ? 'off' : 'on'})`);
   console.log('');
 }
-bootstrap();
+
+// PROCESS_ROLE=worker never serves HTTP; dist/src/worker.js is the dedicated entry for that role
+if (getProcessRole() === 'worker') {
+  bootstrapWorker();
+} else {
+  bootstrap();
+}

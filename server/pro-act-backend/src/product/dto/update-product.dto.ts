@@ -1,34 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsUUID, IsNumber } from 'class-validator';
+import { PartialType } from '@nestjs/swagger';
+import { CreateProductDto } from './create-product.dto';
 
-export class UpdateProductDto {
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  code?: string;
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  name?: string;
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  description?: string;
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  unitOfMeasure?: string;
-
-  @ApiProperty({ required: false })
-  @IsNumber()
-  @IsOptional()
-  standardCost?: number;
-
-  @ApiProperty({ required: false })
-  @IsUUID()
-  @IsOptional()
-  tenantId?: string;
-}
+/** Same fields as the create DTO (incl. tenantId, unitId, organizationId, isActive), all optional. */
+export class UpdateProductDto extends PartialType(CreateProductDto) {}

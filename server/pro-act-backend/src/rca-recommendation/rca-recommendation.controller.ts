@@ -1,11 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
-import { ApiTags, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RCARecommendationService } from './rca-recommendation.service';
 import { RCARecommendation } from './rca-recommendation.entity';
 import { CreateRCARecommendationDto } from './dto/create-rca-recommendation.dto';
 import { UpdateRCARecommendationDto } from './dto/update-rca-recommendation.dto';
 
 @ApiTags('RCA Recommendations')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('rca-recommendations')
 export class RCARecommendationController {
   constructor(private readonly recommendationService: RCARecommendationService) {}

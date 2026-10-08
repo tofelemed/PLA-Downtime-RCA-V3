@@ -1,0 +1,15 @@
+{
+  "policyKind": "rca_policy",
+  "version": 1,
+  "effectiveFrom": "1970-01-01T00:00:00Z",
+  "effectiveTo": null,
+  "scope": { "tenantId": "00000000-0000-0000-0000-000000000000", "siteId": null, "unitId": null },
+  "notes": "Seed default recorded 2026-10-07 from D13 ('added', no values -> proposed defaults): RCA recommended (not auto-created) when confirmed unplanned downtime >= 60 min or 3 functional failures of the same asset within 30 days. Cost trigger disabled (null) until a currency and valuation policy are approved (D08). scope.tenantId is a placeholder that the seeder replaces.",
+  "body": {
+    "durationThresholdSeconds": 3600,
+    "costThreshold": null,
+    "repeatCount": 3,
+    "repeatWindowDays": 30,
+    "autoCreate": "recommend"
+  }
+}

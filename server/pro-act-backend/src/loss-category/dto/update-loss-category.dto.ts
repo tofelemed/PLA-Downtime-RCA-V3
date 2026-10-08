@@ -1,19 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsUUID } from 'class-validator';
+import { PartialType } from '@nestjs/swagger';
+import { CreateLossCategoryDto } from './create-loss-category.dto';
 
-export class UpdateLossCategoryDto {
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  name?: string;
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
-  description?: string;
-
-  @ApiProperty({ required: false })
-  @IsUUID()
-  @IsOptional()
-  tenantId?: string;
-} 
+/** Same fields as the create DTO (`categoryName`, not `name`), all optional (B4). */
+export class UpdateLossCategoryDto extends PartialType(CreateLossCategoryDto) {}

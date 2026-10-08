@@ -21,6 +21,24 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   server: Server;
 
   private logger: Logger = new Logger('RealtimeGateway');
+  private warnedNoServer = false;
+
+  /**
+   * Nest only attaches the Socket.IO server inside an HTTP application. The worker process is an
+   * application context, so there `server` is undefined and broadcasts are dropped (logged once).
+   */
+  private emit(event: string, payload: unknown): void {
+    if (!this.server) {
+      if (!this.warnedNoServer) {
+        this.warnedNoServer = true;
+        this.logger.log(
+          'No Socket.IO server in this process; realtime broadcasts are disabled',
+        );
+      }
+      return;
+    }
+    this.server.emit(event, payload);
+  }
 
   afterInit(server: Server) {
     this.logger.log('Socket.IO Gateway Initialized');
@@ -36,117 +54,117 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
   // Broadcast entity events
   broadcastEntityEvent(event: string, entity: string, data: any) {
-    this.server.emit(`${entity}${event}`, data);
+    this.emit(`${entity}${event}`, data);
   }
 
   // Entity-specific event broadcasting methods
   broadcastUserCreated(user: any) {
-    this.server.emit('userCreated', user);
+    this.emit('userCreated', user);
   }
 
   broadcastUserUpdated(user: any) {
-    this.server.emit('userUpdated', user);
+    this.emit('userUpdated', user);
   }
 
   broadcastUserDeleted(userId: string) {
-    this.server.emit('userDeleted', { id: userId });
+    this.emit('userDeleted', { id: userId });
   }
 
   broadcastOrganizationCreated(organization: any) {
-    this.server.emit('organizationCreated', organization);
+    this.emit('organizationCreated', organization);
   }
 
   broadcastOrganizationUpdated(organization: any) {
-    this.server.emit('organizationUpdated', organization);
+    this.emit('organizationUpdated', organization);
   }
 
   broadcastOrganizationDeleted(organizationId: string) {
-    this.server.emit('organizationDeleted', { id: organizationId });
+    this.emit('organizationDeleted', { id: organizationId });
   }
 
   broadcastTenantCreated(tenant: any) {
-    this.server.emit('tenantCreated', tenant);
+    this.emit('tenantCreated', tenant);
   }
 
   broadcastTenantUpdated(tenant: any) {
-    this.server.emit('tenantUpdated', tenant);
+    this.emit('tenantUpdated', tenant);
   }
 
   broadcastTenantDeleted(tenantId: string) {
-    this.server.emit('tenantDeleted', { id: tenantId });
+    this.emit('tenantDeleted', { id: tenantId });
   }
 
   broadcastUnitCreated(unit: any) {
-    this.server.emit('unitCreated', unit);
+    this.emit('unitCreated', unit);
   }
 
   broadcastUnitUpdated(unit: any) {
-    this.server.emit('unitUpdated', unit);
+    this.emit('unitUpdated', unit);
   }
 
   broadcastUnitDeleted(unitId: string) {
-    this.server.emit('unitDeleted', { id: unitId });
+    this.emit('unitDeleted', { id: unitId });
   }
 
   broadcastAssetCreated(asset: any) {
-    this.server.emit('assetCreated', asset);
+    this.emit('assetCreated', asset);
   }
 
   broadcastAssetUpdated(asset: any) {
-    this.server.emit('assetUpdated', asset);
+    this.emit('assetUpdated', asset);
   }
 
   broadcastAssetDeleted(assetId: string) {
-    this.server.emit('assetDeleted', { id: assetId });
+    this.emit('assetDeleted', { id: assetId });
   }
 
   broadcastProductionEventCreated(event: any) {
-    this.server.emit('productionEventCreated', event);
+    this.emit('productionEventCreated', event);
   }
 
   broadcastProductionEventUpdated(event: any) {
-    this.server.emit('productionEventUpdated', event);
+    this.emit('productionEventUpdated', event);
   }
 
   broadcastProductionEventDeleted(eventId: string) {
-    this.server.emit('productionEventDeleted', { id: eventId });
+    this.emit('productionEventDeleted', { id: eventId });
   }
 
   broadcastRCACreated(rca: any) {
-    this.server.emit('rcaCreated', rca);
+    this.emit('rcaCreated', rca);
   }
 
   broadcastRCAUpdated(rca: any) {
-    this.server.emit('rcaUpdated', rca);
+    this.emit('rcaUpdated', rca);
   }
 
   broadcastRCADeleted(rcaId: string) {
-    this.server.emit('rcaDeleted', { id: rcaId });
+    this.emit('rcaDeleted', { id: rcaId });
   }
 
   broadcastTaskCreated(task: any) {
-    this.server.emit('taskCreated', task);
+    this.emit('taskCreated', task);
   }
 
   broadcastTaskUpdated(task: any) {
-    this.server.emit('taskUpdated', task);
+    this.emit('taskUpdated', task);
   }
 
   broadcastTaskDeleted(taskId: string) {
-    this.server.emit('taskDeleted', { id: taskId });
+    this.emit('taskDeleted', { id: taskId });
   }
 
   // Generic method for any entity
   broadcastEntityCreated(entityType: string, entity: any) {
-    this.server.emit(`${entityType}Created`, entity);
+    this.emit(`${entityType}Created`, entity);
   }
 
   broadcastEntityUpdated(entityType: string, entity: any) {
-    this.server.emit(`${entityType}Updated`, entity);
+    this.emit(`${entityType}Updated`, entity);
   }
 
   broadcastEntityDeleted(entityType: string, entityId: string) {
-    this.server.emit(`${entityType}Deleted`, { id: entityId });
+    this.emit(`${entityType}Deleted`, { id: entityId });
   }
 
   // Join room for specific entity updates

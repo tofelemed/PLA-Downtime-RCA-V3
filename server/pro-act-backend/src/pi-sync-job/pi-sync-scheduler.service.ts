@@ -6,6 +6,7 @@ import { PISyncJob } from '../pi-sync-job/pi-sync-job.entity';
 import { PISyncWatermark } from '../pi-sync-watermark/pi-sync-watermark.entity';
 import { PIConnection } from '../pi-connection/pi-connection.entity';
 import { PIEventPullService } from '../integration/pi-event-pull.service';
+import { ShutdownCoordinator } from '../common/scheduling/shutdown-coordinator.service';
 
 interface SyncJobConfigExtras {
   intervalMinutes?: number;
@@ -36,10 +37,14 @@ export class PISyncSchedulerService {
     @InjectRepository(PIConnection)
     private readonly piConnectionRepository: Repository<PIConnection>,
     private readonly piEventPullService: PIEventPullService,
+    private readonly shutdown: ShutdownCoordinator,
   ) {}
 
+  // Only fires where ScheduleModule is loaded (PROCESS_ROLE=worker|all, see SchedulerModule)
   @Cron(CronExpression.EVERY_MINUTE)
   async handleScheduledSyncs(): Promise<void> {
+    if (this.shutdown.isShuttingDown) return;
+
     const jobs = await this.piSyncJobRepository.find({
       where: { isActive: true },
     });
@@ -50,6 +55,10 @@ export class PISyncSchedulerService {
     this.logger.log(`Running ${dueJobs.length} due PI sync job(s)`);
 
     for (const job of dueJobs) {
+      if (this.shutdown.isShuttingDown) {
+        this.logger.log('Shutdown in progress: remaining due PI sync jobs run after the next start');
+        return;
+      }
       if (!job.tenantId) continue;
       await this.runJob(job);
     }
@@ -63,24 +72,30 @@ export class PISyncSchedulerService {
     }
 
     this.runningJobs.add(job.id);
+    // Tracked so SIGTERM waits for the pull to finish before the DB connection closes (ING02).
+    // A pull cannot be cancelled midway; ShutdownCoordinator bounds the wait.
+    await this.shutdown.track(this.executeJob(job, job.tenantId));
+  }
+
+  private async executeJob(job: PISyncJob, tenantId: string): Promise<void> {
     const startedAt = new Date();
 
     try {
       const extras = this.parseJobConfig(job.jobConfig);
       const connection = await this.piConnectionRepository.findOne({
-        where: { tenantId: job.tenantId, isActive: true },
+        where: { tenantId, isActive: true },
       });
 
       if (!connection) {
-        throw new Error(`No active PI connection for tenant ${job.tenantId}`);
+        throw new Error(`No active PI connection for tenant ${tenantId}`);
       }
 
       const { scopeType, scopeId } = this.resolveScope(connection, extras);
       const endTimeUtc = new Date().toISOString();
-      const startTimeUtc = await this.resolveStartTime(job.tenantId, scopeType, scopeId, extras);
+      const startTimeUtc = await this.resolveStartTime(tenantId, scopeType, scopeId, extras);
 
       const result = await this.piEventPullService.pullEvents({
-        tenantId: job.tenantId,
+        tenantId,
         startTimeUtc,
         endTimeUtc,
         scopeType,
