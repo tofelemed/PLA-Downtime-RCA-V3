@@ -39,16 +39,20 @@ export const v2 = {
     });
   },
 
-  /** POST command; `idempotencyKey` is the key of this attempt (see `idempotency.ts`). */
+  /**
+   * POST command; `idempotencyKey` is the key of this attempt (see `idempotency.ts`); `ifMatch` for
+   * commands on one revisioned resource (split, close: 412 when stale).
+   */
   post<T, P extends PathsWith<'post'>>(
     path: P,
-    args: CommandArgs<P, 'post'> & { idempotencyKey: string },
+    args: CommandArgs<P, 'post'> & { idempotencyKey: string; ifMatch?: string },
   ): Promise<V2Response<T>> {
     return v2Request<T>({
       method: 'POST',
       path: target(path, args.path),
       body: args.body ?? {},
       idempotencyKey: args.idempotencyKey,
+      ifMatch: args.ifMatch,
       signal: args.signal,
     });
   },

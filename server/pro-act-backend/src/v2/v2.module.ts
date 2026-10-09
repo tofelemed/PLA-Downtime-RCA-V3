@@ -104,6 +104,8 @@ import { LossValueReportV2Controller } from './reports/loss-value-v2.controller'
 import { LossValueReportV2Service } from './reports/loss-value-v2.service';
 import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
 import { FeatureFlagsV2Controller } from './feature-flags/feature-flags-v2.controller';
+import { UnitsV2Controller } from './units/units-v2.controller';
+import { UnitsV2Service } from './units/units-v2.service';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -202,6 +204,7 @@ import { FeatureFlagsV2Controller } from './feature-flags/feature-flags-v2.contr
     ValuationPoliciesV2Controller,
     LossValueReportV2Controller,
     FeatureFlagsV2Controller,
+    UnitsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -214,6 +217,7 @@ import { FeatureFlagsV2Controller } from './feature-flags/feature-flags-v2.contr
     IntakeQueriesV2Service,
     SignalsV2Service,
     CalendarsV2Service,
+    UnitsV2Service,
     ProfilesV2Service,
     PlansV2Service,
     PeriodsV2Service,

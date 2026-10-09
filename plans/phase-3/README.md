@@ -7,7 +7,7 @@
 | Status | Sub-phase | Depends on | Exit tests |
 |---|---|---|---|
 | 🧪 | [3.1 Frontend foundation](3.1-frontend-foundation.md) | 0.4, 1.9, 2.9 | T23 (client), T24 (shared snapshot) — implemented 9 Oct 2026; T23 green (client + server scope), T24 rule unit-tested, Playwright T24 with the first report page |
-| ⬜ | [3.2 Event Hub on v2](3.2-event-hub.md) | 3.1, 1.1–1.4 | UX04 journey e2e |
+| 🧪 | [3.2 Event Hub on v2](3.2-event-hub.md) | 3.1, 1.1–1.4 | UX04 journey e2e — implemented 9 Oct 2026; UX04 Playwright journey green (3 tests), v1 kept behind the flag until pilot acceptance |
 | ⬜ | [3.3 Downtime Analysis page](3.3-downtime-analysis-page.md) | 3.1, 2.7, 1.10 | AN01; T24 |
 | ⬜ | [3.4 Plans, profiles, calendars UI](3.4-plans-profiles-calendars-ui.md) | 3.1, 2.1–2.3 | PLAN03/CAL preview e2e |
 | ⬜ | [3.5 Plan Dashboard period grid and reconciliation](3.5-plan-dashboard-and-reconciliation.md) | 3.1, 2.4–2.8 | UX05 journey; T33 (UI) |

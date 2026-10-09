@@ -391,3 +391,37 @@ Frontend foundation (UX01–UX03, API05 client side, §3.3 display) plus its bac
 
 **Formatting evidence** (`ux-kit.test.tsx`): `DurationText(5400)` "1 h 30 min", compact "90 min", clock "1:30"; `PlantTime` 02:00Z in Asia/Dubai "06:00 (+04:00 Asia/Dubai)", 02:30Z in Asia/Tehran "2026-10-09 06:00 (+03:30 Asia/Tehran)", unknown zone → UTC; decimals `0.125` → `0.13`, `9.995` → `10.00`, `12345678.905` → `12,345,678.91`; quantity without unit flagged; decimal input keeps `0.30000000`, refuses 9 dp; the seven UX states, error with correlation id, `ScopeHeader` with zone offset, unit, baseline, provisional and freshness.
 
+
+# Plan 3.2 verification (9 Oct 2026)
+
+Event Hub on v2 (§16.2, UX04, UX03, DT08–DT11 UI, ING06 display) behind the `v2.eventHub` flag, in `src/features/event-hub/`; v1 `pages/EventHub.tsx` unchanged and served while the flag is off (C4). No new dependency, no new environment variable, no migration. Backend change (flagged): `GET /api/v2/units`.
+
+| Step | Result | Notes |
+|---|---|---|
+| Backend `npx tsc --noEmit -p tsconfig.json` | ✅ exit 0 | |
+| Backend `npx jest --selectProjects unit fixtures` | ✅ **82 suites, 1398 tests** | OpenAPI snapshot regenerated (`npm run openapi:v2:update`): 1 operation added (`GET /units`), none changed |
+| Backend `npx jest --selectProjects integration --runInBand` | ✅ **66 suites, 446 tests** (1269 s) | new: `units-api` (4) — tenant units only, tenant B sees only B1, a unit-limited operator sees only A1 with `scope.unitIds`, keyset pages without repeats, `tenantId` query → 400, anonymous → 401 |
+| Backend ESLint on created files | ✅ 0 errors, 1 warning (`request(app.getHttpServer())` unsafe-argument, as every spec) | |
+| Frontend `npx tsc --noEmit -p tsconfig.app.json` | ⚠️ exit 2 — **490 pre-existing errors, 0 new** (none in `features/event-hub`, `api/v2`, `App.tsx`, `app/lazy-pages.ts`) | |
+| Frontend `npm run test:run` | ⚠️ 13 files: **10 passed, 3 failed** (baseline: `StorageService.test.ts`, `MultiAttributeSelector.test.tsx`, `master-data.integration.test.ts`); tests 57 passed, 1 failed (baseline), 5 skipped | new: `event-hub-model.test.ts` (10), `event-hub-flows.test.tsx` (6), `event-hub-hygiene.test.ts` (1) |
+| `npm run api:types:check` | ✅ | `schema.d.ts` regenerated for `/units` |
+| `npm run build` | ✅ | lazy chunk `event-hub-page` 99.6 kB (30.7 kB gzip) |
+| `npm run size` | ✅ **155.76 kB** gzip (budget 300 kB; 149.97 after 3.1 — the `/events` `FlaggedRoute` brings `DataState` into the route table) | |
+| Frontend ESLint on created / changed files | ✅ 0 errors, 0 warnings in authored code; `e2e/event-pull-and-rca.spec.ts` keeps its 7 pre-existing errors (`prefer-const`, `no-explicit-any`; only the route changed) | |
+| Playwright `e2e/event-hub-v2-ux04.spec.ts` (built API on :4004, dev frontend) | ✅ **3 passed** (run twice, the second on the final code) | |
+| Playwright `event-pull-and-rca`, `production`, `auth` | ⚠️ **15 passed, 4 failed, 1 skipped** | failures: RCA severity, RCA create arrays (`recommendations` / `evidence` must be strings), plan template UI (`production` create plan via UI) — known; WORKFLOW full event pull now reaches `/events` (route fixed) and fails because the event is created in the fixture's new tenant while the UI shows the selected Demo Plant, then would hit the RCA-arrays 400 — pre-existing test drift. The EVENTHUB display test that failed on `/eventhub` in 3.1 now passes |
+
+**UX04 evidence** (`e2e/event-hub-v2-ux04.spec.ts`, demo tenant, flag switched on by `manager@acme.com` through `PUT /v2/feature-flags/v2.eventHub` and off in `afterAll`; a fresh unit and two reason codes per run; journey as `operator@acme.com`): the unit filter reaches the API as `unitIds=<unit>` and no list request carries `tenantId`; an open stop created 40 min earlier is in Current stops with elapsed `0:40`; open → Edit / code → reason "Conveyor jam" with the impacted-periods preview shown → save → chip "Coding state: Coded"; Split (preview "Part 2", reason) → response has one ended and one running child, both rows listed, the parent gone (superseded); the running part recoded "Motor trip"; Close stop from the panel → gone from Current stops, its row no longer "Running"; an event created through the API afterwards appears in the list without a reload (scoped realtime). Reconnect: description typed, a PATCH by someone else (`If-Match` of the first revision), page reload → reopened form shows "restored" and "changed on the server", the typed description kept; Save → 412 → conflict dialog with "theirs" → apply mine → saved, server description = mine with a higher revision. Create with end 08:00–09:00 and 30 min → 422 `DURATION_CONFLICT` shown on the duration input (tablet viewport 1024 × 768), dialog closes with Escape. Screenshot `event-hub-v2.png` attached to the journey.
+
+**Unit / hook evidence:** filters → v2 parameters 1:1 (sorted arrays, omitted when empty, `isOpen` true / false), the same selection in any order gives the same query, current stops query; network assertion of repeated `unitIds`, `codingStates`, `physicalStates`, `isOpen`, `from`, no `tenantId`; plant clock conversion Tehran 08:30 → 05:00Z and back, New York summer / winter; form request checks only (end before start left to the server), minutes → seconds, PATCH of changed fields only (a duration alone sends `endTime: null`); 422 field errors → inputs, list messages joined, 412 → conflict flow; PATCH sent with `If-Match "3"` → 412 → retry with `"5"` and the same body → saved, draft cleared (a bug where a late state update re-stored the draft after saving was found and fixed by this test); create sends an Idempotency-Key; draft restored after unmount with the server revision change flagged; bulk coding preview body (`expectedVersion` per event, chosen codes only) then apply → 202 → job step; state chips with text labels for all three dimensions; static check: no `Math.random`, `localStorage`, IndexedDB, `StorageService` or `console.log` in `features/event-hub` and `api/v2`.
+
+**Dev DB `proact`:** test data from the e2e runs (units `E2E UX04 …`, reason codes `E2E-JAM-…` / `E2E-MOT-…`, their events) remains in Demo Plant; `v2.eventHub` is off again.
+
+
+---
+
+# Fixes after 3.2 (9 Oct 2026, coordinating session)
+
+- **Read-only roles:** `WriteAccessGuard` + `@ReadOnlyAllowed()`; `write-access.int-spec.ts` (viewer reads 200, create/patch 403 `READ_ONLY_ROLE`, preview allowed, operator still writes) and `write-access.guard.spec.ts`.
+- **Flaky `event-revisions.int-spec.ts`** (10/10 failed in one full run, green alone and in the next full run): its fixed test day was `2026-10-09` = today, and its tests share one event in sequence, so a time-dependent failure cascades. Fixed dates near "now" moved off today: event-revisions / event-interval / source-mapping to September 2026, event-bulk-code days to 2026-09-11…16; typed-attribute-mapping uses today + 2 days (its codes become valid at creation, so it needs a future day).
+- **Flaky `export-storage.spec.ts` "abort leaves nothing behind"** (one unit run): `abort()` removed the partial file before the destroyed write stream released its handle; it now waits for `close` before `rm`.

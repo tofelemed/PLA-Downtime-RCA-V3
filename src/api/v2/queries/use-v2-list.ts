@@ -14,6 +14,8 @@ export interface V2ListOptions {
   query: QueryParams;
   key: V2ListParts;
   enabled?: boolean;
+  /** periodic refetch in ms (e.g. running stops, whose elapsed time the server computes) */
+  refetchInterval?: number;
 }
 
 /**
@@ -37,6 +39,7 @@ export function useV2InfiniteList<TItem>(options: V2ListOptions) {
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
     staleTime: STALE_TIME[options.resource],
+    refetchInterval: options.refetchInterval,
   });
 }
 

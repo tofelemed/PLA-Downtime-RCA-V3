@@ -11,6 +11,8 @@ export const AdminPanel = lazyNamed(() => import('@/pages/AdminPanel'), 'AdminPa
 export const PermissionsManagement = lazyNamed(() => import('@/pages/PermissionsManagement'), 'PermissionsManagement');
 export const MasterData = lazy(() => import('@/pages/MasterData'));
 export const EventHub = lazyNamed(() => import('@/pages/EventHub'), 'EventHub');
+/** Event Hub on v2 (plan 3.2), served at `/events` while the `v2.eventHub` flag is on. */
+export const EventHubV2 = lazyNamed(() => import('@/features/event-hub/event-hub-page'), 'EventHubPage');
 export const RCAModule = lazyNamed(() => import('@/pages/RCAModule'), 'RCAModule');
 export const RCAKnowledgeBase = lazyNamed(() => import('@/pages/RCAKnowledgeBase'), 'RCAKnowledgeBase');
 export const TestRCAAnalysisTools = lazy(() => import('@/pages/TestRCAAnalysisTools'));

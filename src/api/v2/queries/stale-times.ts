@@ -9,6 +9,8 @@ const MINUTE = 60_000;
 export const STALE_TIME: Readonly<Record<V2Resource, number>> = {
   codes: 5 * MINUTE,
   sites: 5 * MINUTE,
+  units: 5 * MINUTE,
+  'shift-instances': 5 * MINUTE,
   plans: 5 * MINUTE,
   profiles: 5 * MINUTE,
   'feature-flags': MINUTE,

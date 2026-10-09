@@ -12,6 +12,8 @@ export type V2Resource =
   | 'plans'
   | 'profiles'
   | 'sites'
+  | 'units'
+  | 'shift-instances'
   | 'feature-flags'
   | 'jobs';
 

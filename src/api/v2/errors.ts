@@ -69,6 +69,13 @@ function fieldErrorsOf(value: unknown): FieldError[] | undefined {
   }));
 }
 
+/** The envelope's message: a string, or the joined list some 422 bodies carry (`message: [..]`). */
+function messageOf(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && value.every((entry) => typeof entry === 'string') && value.length > 0) return value.join('; ');
+  return null;
+}
+
 /** Envelope from any body; a non-envelope body (proxy page, network error) becomes a generic one. */
 export function parseErrorEnvelope(
   status: number,
@@ -78,7 +85,7 @@ export function parseErrorEnvelope(
   if (isRecord(body) && typeof body.code === 'string') {
     return {
       code: body.code,
-      message: typeof body.message === 'string' ? body.message : body.code,
+      message: messageOf(body.message) ?? body.code,
       fieldErrors: fieldErrorsOf(body.fieldErrors),
       correlationId: typeof body.correlationId === 'string' ? body.correlationId : fallbackCorrelationId,
       retryable: body.retryable === true,

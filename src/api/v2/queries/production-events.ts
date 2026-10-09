@@ -13,13 +13,18 @@ import { useV2TenantId } from './use-v2-tenant';
 export type ProductionEventFilters = Omit<QueryOf<'/api/v2/production-events', 'get'>, 'cursor'>;
 
 /** Keyset list of production events, filtered on the server (UX02: never the whole tenant). */
-export function useProductionEvents(filters: ProductionEventFilters, tz?: string) {
+export function useProductionEvents(
+  filters: ProductionEventFilters,
+  tz?: string,
+  options: { refetchInterval?: number; enabled?: boolean } = {},
+) {
   const { from, to, unitIds, ...rest } = filters;
   return useV2InfiniteList<ProductionEventView>({
     resource: 'production-events',
     path: '/production-events',
     query: filters as QueryParams,
     key: { scope: { unitIds }, window: { from, to, tz }, filters: rest },
+    ...options,
   });
 }
 

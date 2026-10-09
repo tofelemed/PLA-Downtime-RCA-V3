@@ -12,6 +12,7 @@ import { createAppQueryClient } from "./app/query-client";
 import * as Pages from "./app/lazy-pages";
 import { V2SessionBridge } from "./features/v2-foundation/v2-session-bridge";
 import { RealtimeBridge } from "./features/v2-foundation/realtime-bridge";
+import { FlaggedRoute } from "./features/v2-foundation/flagged-route";
 
 const queryClient = createAppQueryClient();
 
@@ -57,7 +58,7 @@ const PROTECTED_ROUTES: Array<[path: string, element: ReactNode]> = [
   ["/admin", <Pages.AdminPanel />],
   ["/permissions", <Pages.PermissionsManagement />],
   ["/master-data", <Pages.MasterData />],
-  ["/events", <Pages.EventHub />],
+  ["/events", <FlaggedRoute flag="v2.eventHub" v1={<Pages.EventHub />} v2={<Pages.EventHubV2 />} />],
   ["/rca", <Pages.RCAModule />],
   ["/rca-knowledge-base", <Pages.RCAKnowledgeBase />],
   ["/test-rca-tools", <Pages.TestRCAAnalysisTools />],

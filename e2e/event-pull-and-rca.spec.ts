@@ -205,7 +205,7 @@ test.describe('Event Pulling and RCA Creation', () => {
 
   test('EVENTHUB: should display events in EventHub UI', async ({ page }) => {
     await loginViaAPI(page);
-    await page.goto('/eventhub');
+    await page.goto('/events');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
@@ -226,7 +226,7 @@ test.describe('Event Pulling and RCA Creation', () => {
 
   test('EVENTHUB: should filter events by type', async ({ page }) => {
     await loginViaAPI(page);
-    await page.goto('/eventhub');
+    await page.goto('/events');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
@@ -243,7 +243,7 @@ test.describe('Event Pulling and RCA Creation', () => {
 
   test('EVENTHUB: should search events', async ({ page }) => {
     await loginViaAPI(page);
-    await page.goto('/eventhub');
+    await page.goto('/events');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
@@ -326,7 +326,7 @@ test.describe('Event Pulling and RCA Creation', () => {
     createdEventIds.push(event.id);
 
     await loginViaAPI(page);
-    await page.goto('/eventhub');
+    await page.goto('/events');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
@@ -433,7 +433,7 @@ test.describe('Event Pulling and RCA Creation', () => {
     createdEventIds.push(event.id);
 
     await loginViaAPI(page);
-    await page.goto('/eventhub');
+    await page.goto('/events');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
@@ -509,7 +509,7 @@ test.describe('Event Pulling and RCA Creation', () => {
 
     // Step 2: Verify event appears in EventHub
     await loginViaAPI(page);
-    await page.goto('/eventhub');
+    await page.goto('/events');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
@@ -598,7 +598,7 @@ test.describe('Event Pulling and RCA Creation', () => {
     createdEventIds.push(event.id);
 
     await loginViaAPI(page);
-    await page.goto('/eventhub');
+    await page.goto('/events');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 

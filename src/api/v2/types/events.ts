@@ -59,15 +59,58 @@ export interface EventRevisionView {
   changeReason: string | null;
   actorId: string | null;
   actorKind: string;
+  sourceRevision: string | null;
   createdAt: string;
   effectiveFacts: Record<string, unknown>;
   sourceFacts: Record<string, unknown> | null;
 }
 
+/** One coding revision (backend `EventCodingView`). */
+export interface EventCodingView {
+  id: string;
+  revision: number;
+  reasonCodeId: string | null;
+  impactCodeId: string | null;
+  oeeCodeId: string | null;
+  scheduleClass: string;
+  oeeComponent: string;
+  impactMode: string;
+  impactFraction: string | null;
+  comment: string | null;
+  isOverride: boolean;
+  reason: string | null;
+  authorId: string | null;
+  createdAt: string;
+}
+
+export type ReviewItemState = 'open' | 'kept_override' | 'accepted_source' | 'dismissed';
+
+/** A decision owed on an event (backend `EventReviewItemView`, spec §5.3). */
+export interface EventReviewItemView {
+  id: string;
+  eventId: string;
+  kind: string;
+  field: string | null;
+  state: ReviewItemState;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+}
+
+/** Lineage row (backend `EventRelationView`): split_child_of / merged_from. */
+export interface EventRelationView {
+  id: string;
+  relationType: string;
+  fromEventId: string;
+  toEventId: string;
+  occurrenceId: string | null;
+  createdAt: string;
+}
+
 /** `GET /production-events/{id}/revisions` (backend `production-event-history.view.ts`). */
 export interface ProductionEventHistoryView {
   revisions: EventRevisionView[];
-  coding: Array<Record<string, unknown>>;
-  reviewItems: Array<Record<string, unknown>>;
-  relations: Array<Record<string, unknown>>;
+  coding: EventCodingView[];
+  reviewItems: EventReviewItemView[];
+  relations: EventRelationView[];
 }
