@@ -9,7 +9,7 @@
 | 🧪 | [2.1 Calendars and shift instances](2.1-calendars-and-shifts.md) | 0.4 | T19 T29 — green (9 Oct); calendar UI in 3.4 |
 | 🧪 | [2.2 Production profiles and rates](2.2-production-profiles-and-rates.md) | 0.4, 1.3 | rate-version fixtures (T30 input) — green (9 Oct); profiles UI in 3.4 |
 | 🧪 | [2.3 Plan versions and period generation](2.3-plan-versions-and-period-generation.md) | 2.1, 2.2 | T43; exact target distribution — green (9 Oct); plans UI in 3.4 |
-| ⬜ | [2.4 Production periods and actuals results](2.4-production-periods-and-actuals.md) | 2.1, 2.3, 1.7, 1.10 | T25–T27 persisted; T12; T44 |
+| 🧪 | [2.4 Production periods and actuals results](2.4-production-periods-and-actuals.md) | 2.1, 2.3, 1.7, 1.10 | T25–T27 persisted; T12; T44 (2.4 half) — green (9 Oct); D05 authority applied in the runner until 1.10; revision half of T44 in 2.8; UI in Phase 3 |
 | ⬜ | [2.5 Loss accounting engine and calculation runs](2.5-loss-accounting-engine.md) | 1.1, 1.2, 1.10, 2.2, 2.4 | T15 T16 T17 T28 T30 (+T37 conservation) |
 | ⬜ | [2.6 Valuation](2.6-valuation.md) | 2.2, 2.5 | T38 T45 |
 | ⬜ | [2.7 KPI engine: OEE, downtime, reliability](2.7-kpi-engine.md) | 2.1, 2.4, 2.5 | T20 T21 T31 T41 |

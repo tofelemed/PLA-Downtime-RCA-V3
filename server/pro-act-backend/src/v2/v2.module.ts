@@ -77,6 +77,13 @@ import { PlanGenerationJobsV2Controller } from './plans/plan-generation-jobs-v2.
 import { PlanScenariosV2Controller } from './plans/plan-scenarios-v2.controller';
 import { PlansV2Service } from './plans/plans-v2.service';
 import { ProductionPlansV2Controller } from './plans/production-plans-v2.controller';
+import { ProductionPeriod } from '../periods/entities/production-period.entity';
+import { PeriodsModule } from '../periods/periods.module';
+import { ActualsAdjustmentsV2Controller } from './periods/actuals-adjustments-v2.controller';
+import { ActualsJobsV2Controller } from './periods/actuals-jobs-v2.controller';
+import { ExternalReportsV2Controller } from './periods/external-reports-v2.controller';
+import { PeriodsV2Service } from './periods/periods-v2.service';
+import { ProductionPeriodsV2Controller } from './periods/production-periods-v2.controller';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -113,6 +120,7 @@ import { ProductionPlansV2Controller } from './plans/production-plans-v2.control
       PlanVersion,
       PlanPeriod,
       PlanScenario,
+      ProductionPeriod,
     ]),
     ProductionEventModule,
     CodeLibraryModule,
@@ -124,6 +132,7 @@ import { ProductionPlansV2Controller } from './plans/production-plans-v2.control
     CalendarModule,
     ProfilesModule,
     PlansModule,
+    PeriodsModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -153,6 +162,10 @@ import { ProductionPlansV2Controller } from './plans/production-plans-v2.control
     ProductionPlansV2Controller,
     PlanScenariosV2Controller,
     PlanGenerationJobsV2Controller,
+    ProductionPeriodsV2Controller,
+    ActualsAdjustmentsV2Controller,
+    ExternalReportsV2Controller,
+    ActualsJobsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -167,6 +180,7 @@ import { ProductionPlansV2Controller } from './plans/production-plans-v2.control
     CalendarsV2Service,
     ProfilesV2Service,
     PlansV2Service,
+    PeriodsV2Service,
   ],
 })
 export class V2Module {}

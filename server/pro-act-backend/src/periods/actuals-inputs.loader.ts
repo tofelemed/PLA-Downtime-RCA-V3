@@ -1,0 +1,223 @@
+import { Injectable } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
+import { EngineSample } from '../domain/actuals/actuals.types';
+import { ExternalLineInput } from '../domain/actuals/period/external-line-candidate';
+import { ExternalReportLine } from '../domain/actuals/period/external-report';
+import { PeriodOutputEvent } from '../domain/actuals/period/output-distribution';
+import { ActualsSource } from '../domain/actuals/period/period-actuals.types';
+import { Signal } from '../signals/entities/signal.entity';
+import { SampleStore } from '../signals/sample-store';
+import { ActualsAdjustment } from './entities/actuals-adjustment.entity';
+import { ProductionPeriod } from './entities/production-period.entity';
+
+/** Samples read per signal for one period at most (more → `too_many_samples`, not quantified). */
+export const PERIOD_SAMPLE_CAP = 50_000;
+
+/** A counter or rate signal of the unit (latest version over the period) with its samples. */
+export interface SignalInput {
+  signal: Signal;
+  source: ActualsSource;
+  /** latest revision per timestamp, oldest first, boundary neighbours included */
+  samples: EngineSample[];
+  versions: number;
+  truncated: boolean;
+}
+
+export interface PeriodInputs {
+  events: PeriodOutputEvent[];
+  signals: SignalInput[];
+  adjustments: ActualsAdjustment[];
+  reportLines: Array<ExternalLineInput & { unitId: string; productId: string }>;
+}
+
+/**
+ * Everything the actuals of one period depend on (plan 2.4 step 2), loaded once per run: production
+ * output events of the unit overlapping the period (not retracted or superseded; latest state per event),
+ * counter and rate signals of the unit (PI, MQTT or Kafka connections) with their latest sample
+ * revisions in `[start − maxGap, end + maxGap]`, approved adjustments of the period, and lines of current
+ * certified external reports overlapping the period.
+ */
+@Injectable()
+export class ActualsInputsLoader {
+  constructor(private readonly samples: SampleStore) {}
+
+  async load(
+    manager: EntityManager,
+    period: ProductionPeriod,
+  ): Promise<PeriodInputs> {
+    const [events, signals, adjustments, reportLines] = await Promise.all([
+      this.events(manager, period),
+      this.signals(manager, period),
+      manager.find(ActualsAdjustment, {
+        where: { periodId: period.id, state: 'approved' },
+        order: { decidedAt: 'ASC', id: 'ASC' },
+      }),
+      this.reportLines(manager, period),
+    ]);
+    return { events, signals, adjustments, reportLines };
+  }
+
+  private async events(
+    manager: EntityManager,
+    period: ProductionPeriod,
+  ): Promise<PeriodOutputEvent[]> {
+    const rows: Array<Record<string, unknown>> = await manager.query(
+      `SELECT "id", "canonical_id", "current_source_revision", "row_version", "start_time", "end_time",
+              "quantity"::text AS "quantity", "defective_quantity"::text AS "rejects", "quantity_uom"
+         FROM "production_events"
+        WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "physical_type" = 'production_output'
+          AND "physical_state" IN ('open', 'closed') AND "start_time" < $4
+          AND ("end_time" IS NULL OR "end_time" > $3)
+        ORDER BY "start_time", "id"`,
+      [period.tenantId, period.unitId, period.utcStart, period.utcEnd],
+    );
+    return rows.map((row) => ({
+      identity: (row.canonical_id as string | null) ?? (row.id as string),
+      revision: row.row_version as number,
+      start: new Date(row.start_time as string),
+      end: row.end_time ? new Date(row.end_time as string) : null,
+      quantity: (row.quantity as string | null) ?? null,
+      rejects: (row.rejects as string | null) ?? null,
+      uom: (row.quantity_uom as string | null) ?? null,
+    }));
+  }
+
+  private async signals(
+    manager: EntityManager,
+    period: ProductionPeriod,
+  ): Promise<SignalInput[]> {
+    const versions = await manager
+      .getRepository(Signal)
+      .createQueryBuilder('g')
+      .where('g.tenantId = :tenantId AND g.unitId = :unitId', {
+        tenantId: period.tenantId,
+        unitId: period.unitId,
+      })
+      .andWhere(`g.semanticType IN ('counter', 'rate')`)
+      .andWhere(
+        'g.effectiveFrom < :to AND (g.effectiveTo IS NULL OR g.effectiveTo > :from)',
+        {
+          from: period.utcStart,
+          to: period.utcEnd,
+        },
+      )
+      .orderBy('g.version', 'ASC')
+      .getMany();
+    if (versions.length === 0) return [];
+    const types = await this.connectionTypes(manager, versions);
+    const groups = new Map<string, Signal[]>();
+    for (const version of versions) {
+      const key = `${version.connectionId}|${version.sourceKey}`;
+      groups.set(key, [...(groups.get(key) ?? []), version]);
+    }
+    const inputs: SignalInput[] = [];
+    for (const group of groups.values()) {
+      const latest = group[group.length - 1];
+      const source = sourceOf(
+        types.get(latest.connectionId),
+        latest.semanticType,
+      );
+      if (!source) continue;
+      inputs.push(await this.withSamples(manager, period, group, source));
+    }
+    return inputs;
+  }
+
+  private async withSamples(
+    manager: EntityManager,
+    period: ProductionPeriod,
+    group: Signal[],
+    source: ActualsSource,
+  ): Promise<SignalInput> {
+    const latest = group[group.length - 1];
+    const margin = latest.maxGapSeconds * 1000;
+    const all: EngineSample[] = [];
+    let truncated = false;
+    for (const version of group) {
+      const rows = await this.samples.latestSamples(manager, {
+        tenantId: period.tenantId,
+        signalId: version.id,
+        from: new Date(period.utcStart.getTime() - margin),
+        to: new Date(period.utcEnd.getTime() + margin),
+        limit: PERIOD_SAMPLE_CAP + 1,
+      });
+      truncated ||= rows.length > PERIOD_SAMPLE_CAP;
+      all.push(
+        ...rows.map((row) => ({
+          at: row.observedAt,
+          value: row.value,
+          quality: row.quality,
+        })),
+      );
+    }
+    all.sort((a, b) => a.at.getTime() - b.at.getTime());
+    return {
+      signal: latest,
+      source,
+      samples: all,
+      versions: group.length,
+      truncated,
+    };
+  }
+
+  private async connectionTypes(
+    manager: EntityManager,
+    signals: Signal[],
+  ): Promise<Map<string, string>> {
+    const ids = [...new Set(signals.map((signal) => signal.connectionId))];
+    const rows: Array<{ id: string; source_type: string }> =
+      await manager.query(
+        `SELECT "id", "source_type" FROM "integration_connections" WHERE "id" = ANY($1::uuid[])`,
+        [ids],
+      );
+    return new Map(rows.map((row) => [row.id, row.source_type]));
+  }
+
+  private async reportLines(
+    manager: EntityManager,
+    period: ProductionPeriod,
+  ): Promise<PeriodInputs['reportLines']> {
+    const rows: Array<Record<string, unknown>> = await manager.query(
+      `SELECT "id", "external_report_id", "external_revision", "utc_start", "utc_end", "basis", "lines"
+         FROM "external_production_reports"
+        WHERE "tenant_id" = $1 AND "state" = 'current' AND "certified_eligible"
+          AND "utc_start" < $3 AND "utc_end" > $2
+          AND "lines" @> jsonb_build_array(jsonb_build_object('unitId', $4::text))
+        ORDER BY "utc_start", "id"`,
+      [period.tenantId, period.utcStart, period.utcEnd, period.unitId],
+    );
+    return rows.flatMap((row) =>
+      (row.lines as ExternalReportLine[])
+        .filter((line) => line.unitId === period.unitId)
+        .map((line) => ({
+          reportId: row.id as string,
+          externalReportId: row.external_report_id as string,
+          externalRevision: row.external_revision as string,
+          window: {
+            from: new Date(row.utc_start as string),
+            to: new Date(row.utc_end as string),
+          },
+          basis: row.basis as 'gross' | 'good',
+          gross: line.gross,
+          good: line.good,
+          reject: line.reject,
+          uom: line.uom,
+          unitId: line.unitId,
+          productId: line.productId,
+        })),
+    );
+  }
+}
+
+/** Policy source of a signal: PI counters / rates, MQTT and Kafka signals; other connections none. */
+export function sourceOf(
+  connectionType: string | undefined,
+  semanticType: string,
+): ActualsSource | null {
+  if (connectionType === 'pi_web_api') {
+    return semanticType === 'counter' ? 'pi_counter' : 'pi_rate';
+  }
+  if (connectionType === 'mqtt' || connectionType === 'kafka')
+    return connectionType;
+  return null;
+}

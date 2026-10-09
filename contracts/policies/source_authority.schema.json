@@ -18,8 +18,8 @@
   "$defs": {
     "source": {
       "type": "string",
-      "enum": ["pi_output_ef", "pi_counter", "pi_rate", "mqtt", "kafka", "manual"],
-      "description": "`pi_output_ef` Production Output event frames (incremental quantities); `pi_counter` totalizer delta with rollover rule; `pi_rate` rate tag integration; `mqtt`/`kafka` counter or rate signals from those adapters; `manual` governed manual entry (ACT06)."
+      "enum": ["pi_output_ef", "pi_counter", "pi_rate", "mqtt", "kafka", "manual", "external_report"],
+      "description": "`pi_output_ef` Production Output event frames (incremental quantities); `pi_counter` totalizer delta with rollover rule; `pi_rate` rate tag integration; `mqtt`/`kafka` counter or rate signals from those adapters; `manual` governed manual entry (ACT06); `external_report` a certified external daily-production record (ACT08) whose UTC boundaries equal the period (added in 2.4)."
     },
     "body": {
       "type": "object",

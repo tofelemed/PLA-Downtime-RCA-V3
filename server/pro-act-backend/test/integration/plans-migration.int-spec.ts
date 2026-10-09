@@ -169,7 +169,10 @@ describe('PlanVersions migration: scenarios and draft version 1 per legacy plan'
   });
 
   it('reverts cleanly and re-applies', async () => {
-    await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    // later migrations (PeriodsActuals, …) are undone first
+    while (await executed(PLAN_VERSIONS)) {
+      await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    }
     expect(await executed(PLAN_VERSIONS)).toBe(false);
     await harness.runMigrations();
     expect(await executed(PLAN_VERSIONS)).toBe(true);

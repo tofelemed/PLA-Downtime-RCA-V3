@@ -6153,6 +6153,533 @@
           "v2 · Production plans"
         ]
       }
+    },
+    "/api/v2/production-periods": {
+      "get": {
+        "description": "Filters: unitIds, productIds (active slice of the product), readiness, from/to (overlap). Unit-limited callers see their units only. Decimals are strings; null = unknown, never zero.",
+        "operationId": "ProductionPeriodsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "utcStart"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "productIds",
+            "required": false,
+            "in": "query",
+            "description": "Periods with an active slice of these products",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "readiness",
+            "required": false,
+            "in": "query",
+            "description": "Display readiness (workflow states come with 2.8)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "complete_inputs",
+                  "reconciled"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Period grid with the authoritative actuals of every active slice (keyset on utcStart, id)",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/production-periods/materialize": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. unitIds must be of the tenant and the caller’s scope (422 INVALID_REFERENCE); without unitIds every unit with an approved profile is materialized (403 TENANT_SCOPE_REQUIRED for unit-limited callers). Existing periods are kept; instances overlapping a period with other bounds are skipped.",
+        "operationId": "ProductionPeriodsV2Controller_materialize_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaterializePeriodsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create the periods of stored shift instances starting in [from, to) (backfill, ≤ 92 days)",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}": {
+      "get": {
+        "description": "`calculationRunId` is the current actuals run (2.5 calculation runs reference it). Foreign ids are 404.",
+        "operationId": "ProductionPeriodsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One period: slices, actuals with method, coverage, provenance segments and findings, adjustments",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/recompute": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. A new actuals run is written only when an input changed; otherwise the current result is kept (`reused: true` in the job result).",
+        "operationId": "ProductionPeriodsV2Controller_recompute_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Queue a recomputation of the period’s actuals (202 + job)",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/actuals/adjustments": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The slice must be active and of a unit in the caller’s scope (422 INVALID_REFERENCE; 422 SLICE_SUPERSEDED); the measurement window lies inside the slice (422 INVALID_RANGE).",
+        "operationId": "ActualsAdjustmentsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustmentCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Propose an actuals adjustment of a period slice (reason and evidence required)",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/actuals/adjustments/{id}": {
+      "get": {
+        "operationId": "ActualsAdjustmentsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One adjustment; foreign or out-of-scope ids are 404",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/actuals/adjustments/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.",
+        "operationId": "ActualsAdjustmentsV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustmentApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a proposed adjustment (independent approver); the period is recalculated",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/actuals/adjustments/{id}/reject": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.",
+        "operationId": "ActualsAdjustmentsV2Controller_reject_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustmentRejectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reject a proposed adjustment with a reason (independent approver)",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/external-production-reports": {
+      "post": {
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED: a site document). Lines must name units and products of the tenant (422 INVALID_REFERENCE). Same id + revision with the same content → `outcome: duplicate`; with other content → 409 REPORT_REVISION_CONFLICT. A higher revision supersedes the current one (never summed) and is a correction candidate; a lower one is stored superseded (`stale`). Certified eligibility follows the status mapping (EXTERNAL_REPORT_CERTIFIED_STATUSES, default COMPLETED, RELEASED).",
+        "operationId": "ExternalReportsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExternalReportCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Import one external daily-production record (JSON)",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/external-production-reports/import": {
+      "post": {
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant. Rows of one report id + revision form one record; each record is stored or reported in the job result (`problems`), never all-or-nothing across records.",
+        "operationId": "ExternalReportsV2Controller_importCsv_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExternalReportCsvDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Import a CSV file of external records (202 + job)",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/external-production-reports/{id}": {
+      "get": {
+        "operationId": "ExternalReportsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One imported record with its state (current | superseded); foreign ids are 404",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/actuals-jobs/{id}": {
+      "get": {
+        "description": "state queued → running → completed | failed; a recompute result has `runId` and `reused`, an import `imported`, `duplicates`, `stale` and `problems`; `errorCode` e.g. UNIT_SCOPE. Foreign ids are 404.",
+        "operationId": "ActualsJobsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Status of an actuals job (recompute | report_import)",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
     }
   },
   "info": {
@@ -8191,6 +8718,220 @@
         },
         "required": [
           "name"
+        ]
+      },
+      "MaterializePeriodsDto": {
+        "type": "object",
+        "properties": {
+          "unitIds": {
+            "description": "Omit for every unit (tenant-wide grant required)",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "from": {
+            "type": "string",
+            "description": "Shift starts from (inclusive), ISO 8601 with offset"
+          },
+          "to": {
+            "type": "string",
+            "description": "Shift starts until (exclusive); at most 92 days after from"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ]
+      },
+      "AdjustmentCreateDto": {
+        "type": "object",
+        "properties": {
+          "sliceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Active slice of a period in the caller’s scope"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "gross",
+              "good",
+              "reject",
+              "rework"
+            ]
+          },
+          "quantity": {
+            "type": "string",
+            "example": "-2.5",
+            "description": "Signed decimal in the slice quantity unit, not zero"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "measured",
+              "estimated"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "evidenceRef": {
+            "type": "string",
+            "description": "Reference to the evidence (weighbridge ticket, lab report, ...)"
+          },
+          "windowFrom": {
+            "type": "string",
+            "description": "Measurement window start, inside the slice window"
+          },
+          "windowTo": {
+            "type": "string",
+            "description": "Measurement window end (exclusive)"
+          }
+        },
+        "required": [
+          "sliceId",
+          "kind",
+          "quantity",
+          "basis",
+          "reason",
+          "evidenceRef"
+        ]
+      },
+      "AdjustmentApproveDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "AdjustmentRejectDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "ExternalReportLineDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gross": {
+            "type": "object",
+            "nullable": true,
+            "example": "1200"
+          },
+          "good": {
+            "type": "object",
+            "nullable": true
+          },
+          "reject": {
+            "type": "object",
+            "nullable": true
+          },
+          "uom": {
+            "type": "object",
+            "nullable": true,
+            "example": "t"
+          }
+        },
+        "required": [
+          "unitId",
+          "productId"
+        ]
+      },
+      "ExternalReportCreateDto": {
+        "type": "object",
+        "properties": {
+          "externalReportId": {
+            "type": "string",
+            "example": "MX-DP-2027-03-01"
+          },
+          "externalRevision": {
+            "type": "string",
+            "example": "1",
+            "description": "A higher (numeric) revision supersedes the current one"
+          },
+          "siteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Default: the tenant’s default site"
+          },
+          "localProductionDate": {
+            "type": "string",
+            "example": "2027-03-01"
+          },
+          "timezone": {
+            "type": "string",
+            "example": "Asia/Tehran",
+            "description": "Default: the site timezone"
+          },
+          "utcStart": {
+            "type": "string",
+            "description": "UTC start of the production day (inclusive)"
+          },
+          "utcEnd": {
+            "type": "string",
+            "description": "UTC end of the production day (exclusive)"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "gross",
+              "good"
+            ]
+          },
+          "sourceStatus": {
+            "type": "string",
+            "example": "COMPLETED"
+          },
+          "approvedAtSource": {
+            "type": "string"
+          },
+          "evidenceRef": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExternalReportLineDto"
+            }
+          }
+        },
+        "required": [
+          "externalReportId",
+          "externalRevision",
+          "localProductionDate",
+          "utcStart",
+          "utcEnd",
+          "basis",
+          "sourceStatus",
+          "lines"
+        ]
+      },
+      "ExternalReportCsvDto": {
+        "type": "object",
+        "properties": {
+          "csv": {
+            "type": "string",
+            "description": "CSV document (≤ 1 MB): externalReportId, externalRevision, localProductionDate, utcStart, utcEnd, basis, sourceStatus, unitId, productId and optionally siteId, timezone, approvedAtSource, evidenceRef, gross, good, reject, uom"
+          }
+        },
+        "required": [
+          "csv"
         ]
       }
     }

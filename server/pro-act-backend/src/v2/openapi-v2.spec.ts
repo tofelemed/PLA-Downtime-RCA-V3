@@ -76,6 +76,12 @@ import { PlanPeriodGeneratorService } from '../plans/plan-period-generator.servi
 import { PlanScenariosService } from '../plans/plan-scenarios.service';
 import { PlanVersionsService } from '../plans/plan-versions.service';
 import { PlansModule } from '../plans/plans.module';
+import { ProductionPeriod } from '../periods/entities/production-period.entity';
+import { ActualsAdjustmentsService } from '../periods/actuals-adjustments.service';
+import { ActualsJobsService } from '../periods/actuals-jobs.service';
+import { ExternalReportsService } from '../periods/external-reports.service';
+import { PeriodsModule } from '../periods/periods.module';
+import { PeriodsService } from '../periods/periods.service';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
 
@@ -216,6 +222,23 @@ class ProfilesModuleStub {}
 })
 class PlansModuleStub {}
 
+/** Stands in for the plan 2.4 periods module (materializer, actuals jobs, adjustments, external reports). */
+@Module({
+  providers: [
+    { provide: PeriodsService, useValue: {} },
+    { provide: ActualsJobsService, useValue: {} },
+    { provide: ActualsAdjustmentsService, useValue: {} },
+    { provide: ExternalReportsService, useValue: {} },
+  ],
+  exports: [
+    PeriodsService,
+    ActualsJobsService,
+    ActualsAdjustmentsService,
+    ExternalReportsService,
+  ],
+})
+class PeriodsModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -277,6 +300,8 @@ async function generate(): Promise<string> {
     .useValue({})
     .overrideProvider(getRepositoryToken(PlanScenario))
     .useValue({})
+    .overrideProvider(getRepositoryToken(ProductionPeriod))
+    .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)
     .overrideModule(CodeLibraryModule)
@@ -297,6 +322,8 @@ async function generate(): Promise<string> {
     .useModule(ProfilesModuleStub)
     .overrideModule(PlansModule)
     .useModule(PlansModuleStub)
+    .overrideModule(PeriodsModule)
+    .useModule(PeriodsModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

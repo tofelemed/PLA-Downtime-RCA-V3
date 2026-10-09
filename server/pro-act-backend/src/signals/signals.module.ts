@@ -37,6 +37,11 @@ import { Product } from '../product/product.entity';
     SignalPreviewService,
     SignalBackfillService,
   ],
-  exports: [SignalsService, SignalPreviewService, SignalBackfillService],
+  exports: [
+    SignalsService,
+    SignalPreviewService,
+    SignalBackfillService,
+    SampleStore,
+  ],
 })
 export class SignalsModule {}
