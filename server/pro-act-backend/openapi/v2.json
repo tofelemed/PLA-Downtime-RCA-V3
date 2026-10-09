@@ -6341,7 +6341,7 @@
     },
     "/api/v2/production-periods/{id}/recompute": {
       "post": {
-        "description": "Requires `Idempotency-Key`. A new actuals run is written only when an input changed; otherwise the current result is kept (`reused: true` in the job result).",
+        "description": "Requires `Idempotency-Key`. A new actuals run is written only when an input changed; otherwise the current result is kept (`reused: true` in the job result). A stale in-review revision returns to draft first (plan 2.8: recompute, then resubmit); the request is recorded on the revision history.",
         "operationId": "ProductionPeriodsV2Controller_recompute_v2",
         "parameters": [
           {
@@ -6361,6 +6361,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecomputeRequestDto"
+              }
+            }
+          }
+        },
         "responses": {
           "202": {
             "description": ""
@@ -6371,7 +6381,7 @@
             "bearer": []
           }
         ],
-        "summary": "Queue a recomputation of the period’s actuals (202 + job)",
+        "summary": "Queue a recomputation of the period’s actuals and loss ledgers (202 + job)",
         "tags": [
           "v2 · Production periods"
         ]
@@ -6850,6 +6860,630 @@
         "summary": "Calculation runs of a period, newest first (keyset on createdAt, id)",
         "tags": [
           "v2 · Loss accounting"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/reconciliation": {
+      "get": {
+        "description": "Default: the open revision, else the published one. ETag = the revision row version (If-Match of draft-lines).",
+        "operationId": "ReconciliationV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "view",
+            "required": false,
+            "in": "query",
+            "description": "current (default): the open revision, else the published one; approved: the published revision",
+            "schema": {
+              "enum": [
+                "current",
+                "approved"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "revision",
+            "required": false,
+            "in": "query",
+            "description": "A revision number (wins over view)",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reconciliation of a revision: per-slice target, actual, signed gap, attributed, tolerance adjustment, residual, over-accounted; candidates with decisions; saved lines; content hash",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/draft-lines": {
+      "put": {
+        "description": "Requires `If-Match` (428 / 412 STALE_REVISION). 409 RUN_CHANGED with the candidate diff when baseRunId is not the current run; 422 with `details.issues[].line` for invalid lines (INVALID_REFERENCE, UNKNOWN_CANDIDATE, CODE_COMBINATION_INVALID, EVIDENCE_OUTSIDE_SEGMENT, ALLOCATION_EXCEEDED with expectedRemainingAllocation, …).",
+        "operationId": "ReconciliationV2Controller_saveDraftLines_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftLinesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace the full set of decisions and manual lines of the draft atomically (§15.3)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/submit": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 RUN_CHANGED / CONTENT_CHANGED for a stale view; 422 RESIDUAL_UNEXPLAINED, OVER_ACCOUNTED, OVERPRODUCTION_CONFLICT, ACTUALS_INCOMPLETE, SOURCE_CONFLICT, RECALCULATION_PENDING, MISSING_CODE, BASELINE_CHANGED, OPEN_REVIEW_ITEMS (details.issues lists all).",
+        "operationId": "ReconciliationV2Controller_submit_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitRevisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit the draft for approval (gates, tolerance adjustments, submitted hash)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter (any role); 409 STALE_SUBMISSION when inputs changed after submission or the hash differs.",
+        "operationId": "ReconciliationV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveRevisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve the submitted revision (snapshot, immutable afterwards)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/reject": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter.",
+        "operationId": "ReconciliationV2Controller_reject_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonedRevisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reject the submitted revision back to draft with a reason",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/revise": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 REVISION_MISMATCH when approvedRevision is not the published one, REVISION_OPEN when a revision is open. A recalculation is queued for the new draft.",
+        "operationId": "ReconciliationV2Controller_revise_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviseRevisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Open a new draft revision over the published approved one (\"Unlock\"); the approved revision stays published",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/cancel": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 INVALID_TRANSITION unless the revision is a draft.",
+        "operationId": "ReconciliationV2Controller_cancel_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonedRevisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a draft revision (kept and audited)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/approval-actions": {
+      "get": {
+        "operationId": "ReconciliationV2Controller_approvalActions_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "-createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Workflow history of the period’s revisions, newest first (keyset)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/change-proposals": {
+      "get": {
+        "operationId": "ReconciliationV2Controller_proposals_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "-createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change proposals of the period’s approved revisions (before / after), newest first (keyset)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/period-change-proposals/{id}": {
+      "get": {
+        "operationId": "ChangeProposalsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One change proposal; foreign or out-of-scope ids are 404",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/period-change-proposals/{id}/accept": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 INVALID_TRANSITION unless open; 409 REVISION_OPEN / REVISION_MISMATCH as revise.",
+        "operationId": "ChangeProposalsV2Controller_accept_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Accept an open proposal: a revise draft over the approved revision (never an edit of approved figures)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/period-change-proposals/{id}/dismiss": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 INVALID_TRANSITION unless open.",
+        "operationId": "ChangeProposalsV2Controller_dismiss_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dismiss an open proposal with a reason (the approved revision stays as it is)",
+        "tags": [
+          "v2 · Reconciliation and approval"
         ]
       }
     }
@@ -8917,6 +9551,15 @@
           "to"
         ]
       },
+      "RecomputeRequestDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Why the period is recomputed (recorded on the revision history)"
+          }
+        }
+      },
       "AdjustmentCreateDto": {
         "type": "object",
         "properties": {
@@ -9129,6 +9772,212 @@
         "required": [
           "from",
           "to"
+        ]
+      },
+      "DraftLineDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "accept",
+              "adjust",
+              "replace",
+              "reject",
+              "manual"
+            ]
+          },
+          "autoKey": {
+            "type": "string",
+            "description": "Candidate auto key (accept / adjust / replace / reject)"
+          },
+          "sliceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Slice of the period (required for manual lines)"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "availability",
+              "performance",
+              "quality",
+              "bridge",
+              "gain",
+              "unaccounted_classified"
+            ],
+            "description": "manual and replace lines"
+          },
+          "quantity": {
+            "type": "string",
+            "description": "Decimal string, ≤ 8 decimals; negative only for bridge / gain"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "sustained_rate",
+              "planning_rate",
+              "measured",
+              "declared"
+            ]
+          },
+          "reasonCodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "impactCodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventIds": {
+            "description": "Evidence events (must overlap the slice)",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "adjustmentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "An approved actuals adjustment of the period"
+          },
+          "missingCode": {
+            "type": "boolean",
+            "description": "The cause is known to be uncoded"
+          },
+          "missingEvent": {
+            "type": "boolean",
+            "description": "A cause without an event (needs a reason code or missingCode)"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Required for adjust / replace / reject"
+          },
+          "comment": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "DraftLinesDto": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "number",
+            "minimum": 1,
+            "description": "The draft revision number"
+          },
+          "baseRunId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The run the editor read (baseRunId of the view)"
+          },
+          "lines": {
+            "description": "The full set of decisions and manual lines",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DraftLineDto"
+            }
+          }
+        },
+        "required": [
+          "revision",
+          "baseRunId",
+          "lines"
+        ]
+      },
+      "SubmitRevisionDto": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "baseRunId of the view the submitter read"
+          },
+          "contentHash": {
+            "type": "string",
+            "description": "contentHash of the view the submitter read"
+          },
+          "comment": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision",
+          "runId",
+          "contentHash"
+        ]
+      },
+      "ApproveRevisionDto": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "number",
+            "minimum": 1,
+            "description": "The submitted revision number"
+          },
+          "submittedHash": {
+            "type": "string",
+            "description": "submittedHash of the revision the approver read"
+          },
+          "comment": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision",
+          "submittedHash"
+        ]
+      },
+      "ReasonedRevisionDto": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision",
+          "reason"
+        ]
+      },
+      "ReviseRevisionDto": {
+        "type": "object",
+        "properties": {
+          "approvedRevision": {
+            "type": "number",
+            "minimum": 1,
+            "description": "The published approved revision number"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "approvedRevision",
+          "reason"
+        ]
+      },
+      "ProposalDecisionDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
         ]
       }
     }

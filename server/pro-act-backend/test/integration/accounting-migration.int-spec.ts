@@ -107,7 +107,10 @@ describe('AccountingEngine migration', () => {
   });
 
   it('down: removes everything and restores the 2.4 view; up again re-applies', async () => {
-    await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    // later migrations (ReconciliationWorkflow, …) are undone first
+    while (await executed()) {
+      await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    }
     for (const table of [...TABLES, 'loss_categories_v'])
       expect(await present(table)).toBe(false);
     expect(await present('production_losses_v')).toBe(true);

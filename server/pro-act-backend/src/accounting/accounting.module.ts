@@ -10,15 +10,14 @@ import { CalculationRun } from './entities/calculation-run.entity';
 import { LossLineEvidence } from './entities/loss-line-evidence.entity';
 import { LossLine } from './entities/loss-line.entity';
 import { PeriodLedgerTotal } from './entities/period-ledger-total.entity';
-import {
-  AccountingRevisionHooks,
-  DeferredRevisionHooks,
-} from './revision-hooks';
+import { WorkflowRevisionHooks } from '../reconciliation/workflow-revision-hooks';
+import { AccountingRevisionHooks } from './revision-hooks';
 
 /**
  * Loss accounting engine and calculation runs of plan 2.5 (ACC01–ACC08, FND03): accounting revisions,
  * immutable runs with both ledgers, evidence and totals. Registers the full recalculation on the 2.4
- * recompute port, so every `PeriodRecalculateRequested` job runs actuals first and then the ledgers.
+ * recompute port, so every `PeriodRecalculateRequested` job runs actuals first and then the ledgers. The
+ * revision hooks are bound to the 2.8 workflow (stale marking, change proposals).
  */
 @Module({
   imports: [
@@ -36,7 +35,7 @@ import {
     AccountingInputsLoader,
     AccountingRunService,
     AccountingCommandsService,
-    { provide: AccountingRevisionHooks, useClass: DeferredRevisionHooks },
+    { provide: AccountingRevisionHooks, useClass: WorkflowRevisionHooks },
   ],
   exports: [AccountingRunService, AccountingCommandsService],
 })

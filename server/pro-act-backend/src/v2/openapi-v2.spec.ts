@@ -78,6 +78,13 @@ import { PlanVersionsService } from '../plans/plan-versions.service';
 import { PlansModule } from '../plans/plans.module';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { ActualsAdjustmentsService } from '../periods/actuals-adjustments.service';
+import { AccountingPoliciesService } from '../periods/accounting-policies.service';
+import { ApprovalService } from '../reconciliation/approval.service';
+import { ChangeProposalsService } from '../reconciliation/change-proposals.service';
+import { DraftLinesService } from '../reconciliation/draft-lines.service';
+import { ReconciliationModule } from '../reconciliation/reconciliation.module';
+import { RevisionLifecycleService } from '../reconciliation/revision-lifecycle.service';
+import { SubmissionService } from '../reconciliation/submission.service';
 import { ActualsJobsService } from '../periods/actuals-jobs.service';
 import { ExternalReportsService } from '../periods/external-reports.service';
 import { PeriodsModule } from '../periods/periods.module';
@@ -232,12 +239,14 @@ class PlansModuleStub {}
     { provide: ActualsJobsService, useValue: {} },
     { provide: ActualsAdjustmentsService, useValue: {} },
     { provide: ExternalReportsService, useValue: {} },
+    { provide: AccountingPoliciesService, useValue: {} },
   ],
   exports: [
     PeriodsService,
     ActualsJobsService,
     ActualsAdjustmentsService,
     ExternalReportsService,
+    AccountingPoliciesService,
   ],
 })
 class PeriodsModuleStub {}
@@ -248,6 +257,25 @@ class PeriodsModuleStub {}
   exports: [AccountingCommandsService],
 })
 class AccountingModuleStub {}
+
+/** Stands in for the plan 2.8 workflow module (draft lines, submission, approval, lifecycle, proposals). */
+@Module({
+  providers: [
+    { provide: DraftLinesService, useValue: {} },
+    { provide: SubmissionService, useValue: {} },
+    { provide: ApprovalService, useValue: {} },
+    { provide: RevisionLifecycleService, useValue: {} },
+    { provide: ChangeProposalsService, useValue: {} },
+  ],
+  exports: [
+    DraftLinesService,
+    SubmissionService,
+    ApprovalService,
+    RevisionLifecycleService,
+    ChangeProposalsService,
+  ],
+})
+class ReconciliationModuleStub {}
 
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
@@ -338,6 +366,8 @@ async function generate(): Promise<string> {
     .useModule(PeriodsModuleStub)
     .overrideModule(AccountingModule)
     .useModule(AccountingModuleStub)
+    .overrideModule(ReconciliationModule)
+    .useModule(ReconciliationModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

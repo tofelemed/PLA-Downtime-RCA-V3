@@ -105,7 +105,14 @@ export class AccountingRunService implements OnModuleInit {
       trigger.requestedBy,
     );
     if (revision.lifecycle !== 'draft') {
-      await this.hooks.onInputsChanged(manager, revision, prepared.inputHash);
+      await this.hooks.onInputsChanged(manager, revision, {
+        inputHash: prepared.inputHash,
+        trigger,
+        preview: () =>
+          computePeriodAccounting(
+            engineInput(prepared.period, prepared.inputs, prepared.engine),
+          ),
+      });
       return outcome(revision.currentRunId, 'revision_locked');
     }
     const unchanged = await unchangedRun(manager, revision, prepared.inputHash);

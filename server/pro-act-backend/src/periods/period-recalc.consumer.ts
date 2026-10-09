@@ -11,6 +11,7 @@ import {
   RecalculationPayload,
   requestRecalculation,
 } from './period-recalc';
+import { PeriodRestatementPort } from './period-restatement.port';
 import { SliceResolverService } from './slice-resolver.service';
 
 const CONSUMER = 'period-actuals';
@@ -30,8 +31,8 @@ const RECALCULATING_TYPES = new Set([
  *   request, so the 2.5 calculation run re-derives the ledgers while the actuals run is reused (its input
  *   hash is unchanged, T44);
  * - `PlanVersionApproved` in the accounting-baseline scenario → slices of the unit's not-reconciled
- *   periods in the version window are re-resolved and changed periods recalculated (restatement of
- *   reconciled periods is 2.8: `period_change_proposals`);
+ *   periods in the version window are re-resolved and changed periods recalculated; reconciled periods
+ *   are handed to the 2.8 workflow (`PeriodRestatementPort`), which opens `period_change_proposals`;
  * - `PeriodRecalculateRequested` → one queued recompute job per overlapping period.
  */
 @Injectable()
@@ -43,6 +44,7 @@ export class PeriodRecalcConsumer implements OnModuleInit {
     private readonly inbox: InboxService,
     private readonly jobs: ActualsJobsService,
     private readonly slices: SliceResolverService,
+    private readonly restatement: PeriodRestatementPort,
   ) {}
 
   onModuleInit(): void {
@@ -121,11 +123,18 @@ export class PeriodRecalcConsumer implements OnModuleInit {
       );
     }
     const reconciled = await periodsIn(manager, baseline, true);
-    if (baseline.restatementRequired && reconciled.length > 0) {
+    if (!baseline.restatementRequired || reconciled.length === 0) return;
+    const restate = this.restatement.registered;
+    if (!restate) {
       this.logger.warn(
-        `Plan version ${message.aggregateId} superseded a baseline used by ${reconciled.length} reconciled period(s); restatement proposals come with 2.8`,
+        `Plan version ${message.aggregateId} superseded a baseline used by ${reconciled.length} reconciled period(s); no workflow is loaded to propose restatements`,
       );
+      return;
     }
+    await restate(manager, {
+      planVersionId: message.aggregateId,
+      periods: reconciled,
+    });
   }
 
   private async onRecalculate(

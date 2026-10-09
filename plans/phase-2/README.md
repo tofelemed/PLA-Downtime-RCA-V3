@@ -13,7 +13,7 @@
 | 🧪 | [2.5 Loss accounting engine and calculation runs](2.5-loss-accounting-engine.md) | 1.1, 1.2, 1.10, 2.2, 2.4 | T15 T16 T17 T28 T30 (+T03 allocation, T37 conservation) — green (9 Oct); equal shares per occurrence until 1.10; manual lines, stale / proposal hooks in 2.8; UI in Phase 3 |
 | ⬜ | [2.6 Valuation](2.6-valuation.md) | 2.2, 2.5 | T38 T45 |
 | ⬜ | [2.7 KPI engine: OEE, downtime, reliability](2.7-kpi-engine.md) | 2.1, 2.4, 2.5 | T20 T21 T31 T41 |
-| ⬜ | [2.8 Reconciliation editor backend and approval workflow](2.8-reconciliation-and-approval-workflow.md) | 2.5 | T32 T33 T34 T35 T36 T44 |
+| 🧪 | [2.8 Reconciliation editor backend and approval workflow](2.8-reconciliation-and-approval-workflow.md) | 2.5 | T32 T33 T34 T35 T36 T44 (revision half) + T15/T16 gates — green (9 Oct); one approver (D06); PeriodApproved delivery / exports in 2.9; editor UI in 3.5 |
 | ⬜ | [2.9 Exports, domain events, downstream delivery](2.9-exports-and-downstream-events.md) | 2.8, 1.9 | T39; API04/API05 |
 
 ## The accounting data model in one picture

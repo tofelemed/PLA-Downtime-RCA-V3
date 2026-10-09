@@ -1,0 +1,236 @@
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiHeader,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { ETagInterceptor } from '../../common/concurrency/etag.interceptor';
+import { IfMatch } from '../../common/concurrency/revision';
+import { Ctx } from '../../common/context/ctx.decorator';
+import { RequestContext } from '../../common/context/request-context';
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
+import { ApprovalService } from '../../reconciliation/approval.service';
+import { DraftLinesService } from '../../reconciliation/draft-lines.service';
+import { RevisionLifecycleService } from '../../reconciliation/revision-lifecycle.service';
+import { SubmissionService } from '../../reconciliation/submission.service';
+import { ListResponse } from '../common/response';
+import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
+import { PERIOD_WRITERS, REVISION_APPROVERS } from '../periods/period-roles';
+import {
+  ApproveRevisionDto,
+  DraftLinesDto,
+  ReasonedRevisionDto,
+  ReconciliationQueryDto,
+  ReviseRevisionDto,
+  SubmitRevisionDto,
+  WorkflowListQueryDto,
+} from './reconciliation-v2.dto';
+import { ReconciliationV2Service } from './reconciliation-v2.service';
+import {
+  ApprovalActionV2View,
+  ChangeProposalV2View,
+  ReconciliationV2View,
+} from './reconciliation-v2.view';
+
+const IDEMPOTENT = 'Requires `Idempotency-Key`. ';
+
+/**
+ * Reconciliation editor backend and approval workflow of production periods (plan 2.8, §15.2/§15.3,
+ * ACC07–ACC10, WF01–WF05). Every command answers the reconciliation view of the revision it touched,
+ * with `ETag` = the revision's row version.
+ */
+@ApiTags('v2 · Reconciliation and approval')
+@ApiBearerAuth()
+@UseGuards(TenantQueryParamGuard)
+@Controller({ path: 'production-periods', version: '2' })
+export class ReconciliationV2Controller {
+  constructor(
+    private readonly reads: ReconciliationV2Service,
+    private readonly drafts: DraftLinesService,
+    private readonly submissions: SubmissionService,
+    private readonly approvals: ApprovalService,
+    private readonly lifecycle: RevisionLifecycleService,
+  ) {}
+
+  @Get(':id/reconciliation')
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary:
+      'Reconciliation of a revision: per-slice target, actual, signed gap, attributed, tolerance adjustment, residual, over-accounted; candidates with decisions; saved lines; content hash',
+    description:
+      'Default: the open revision, else the published one. ETag = the revision row version (If-Match of draft-lines).',
+  })
+  get(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query() query: ReconciliationQueryDto,
+  ): Promise<ReconciliationV2View> {
+    return this.reads.view(ctx, id, query);
+  }
+
+  @Put(':id/draft-lines')
+  @Roles(...PERIOD_WRITERS)
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary:
+      'Replace the full set of decisions and manual lines of the draft atomically (§15.3)',
+    description:
+      'Requires `If-Match` (428 / 412 STALE_REVISION). 409 RUN_CHANGED with the candidate diff when baseRunId is not ' +
+      'the current run; 422 with `details.issues[].line` for invalid lines (INVALID_REFERENCE, UNKNOWN_CANDIDATE, ' +
+      'CODE_COMBINATION_INVALID, EVIDENCE_OUTSIDE_SEGMENT, ALLOCATION_EXCEEDED with expectedRemainingAllocation, …).',
+  })
+  @ApiHeader({ name: 'If-Match', required: true })
+  async saveDraftLines(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @IfMatch() expected: number,
+    @Body() body: DraftLinesDto,
+  ): Promise<ReconciliationV2View> {
+    const revision = await this.drafts.save(ctx, id, expected, body);
+    return this.reads.viewOf(ctx, revision);
+  }
+
+  @Post(':id/submit')
+  @HttpCode(HttpStatus.OK)
+  @Idempotent()
+  @Roles(...PERIOD_WRITERS)
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary:
+      'Submit the draft for approval (gates, tolerance adjustments, submitted hash)',
+    description:
+      IDEMPOTENT +
+      '409 RUN_CHANGED / CONTENT_CHANGED for a stale view; 422 RESIDUAL_UNEXPLAINED, OVER_ACCOUNTED, ' +
+      'OVERPRODUCTION_CONFLICT, ACTUALS_INCOMPLETE, SOURCE_CONFLICT, RECALCULATION_PENDING, MISSING_CODE, ' +
+      'BASELINE_CHANGED, OPEN_REVIEW_ITEMS (details.issues lists all).',
+  })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  async submit(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: SubmitRevisionDto,
+  ): Promise<ReconciliationV2View> {
+    return this.reads.viewOf(ctx, await this.submissions.submit(ctx, id, body));
+  }
+
+  @Post(':id/approve')
+  @HttpCode(HttpStatus.OK)
+  @Idempotent()
+  @Roles(...REVISION_APPROVERS)
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary: 'Approve the submitted revision (snapshot, immutable afterwards)',
+    description:
+      IDEMPOTENT +
+      '403 SEPARATION_OF_DUTIES for the submitter (any role); 409 STALE_SUBMISSION when inputs changed after ' +
+      'submission or the hash differs.',
+  })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  async approve(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: ApproveRevisionDto,
+  ): Promise<ReconciliationV2View> {
+    return this.reads.viewOf(ctx, await this.approvals.approve(ctx, id, body));
+  }
+
+  @Post(':id/reject')
+  @HttpCode(HttpStatus.OK)
+  @Idempotent()
+  @Roles(...REVISION_APPROVERS)
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary: 'Reject the submitted revision back to draft with a reason',
+    description: IDEMPOTENT + '403 SEPARATION_OF_DUTIES for the submitter.',
+  })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  async reject(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: ReasonedRevisionDto,
+  ): Promise<ReconciliationV2View> {
+    return this.reads.viewOf(ctx, await this.approvals.reject(ctx, id, body));
+  }
+
+  @Post(':id/revise')
+  @HttpCode(HttpStatus.CREATED)
+  @Idempotent()
+  @Roles(...REVISION_APPROVERS)
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary:
+      'Open a new draft revision over the published approved one ("Unlock"); the approved revision stays published',
+    description:
+      IDEMPOTENT +
+      '409 REVISION_MISMATCH when approvedRevision is not the published one, REVISION_OPEN when a revision is ' +
+      'open. A recalculation is queued for the new draft.',
+  })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  async revise(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: ReviseRevisionDto,
+  ): Promise<ReconciliationV2View> {
+    return this.reads.viewOf(ctx, await this.lifecycle.revise(ctx, id, body));
+  }
+
+  @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  @Idempotent()
+  @Roles(...PERIOD_WRITERS)
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary: 'Cancel a draft revision (kept and audited)',
+    description:
+      IDEMPOTENT + '409 INVALID_TRANSITION unless the revision is a draft.',
+  })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  async cancel(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: ReasonedRevisionDto,
+  ): Promise<ReconciliationV2View> {
+    return this.reads.viewOf(ctx, await this.lifecycle.cancel(ctx, id, body));
+  }
+
+  @Get(':id/approval-actions')
+  @ApiOperation({
+    summary:
+      'Workflow history of the period’s revisions, newest first (keyset)',
+  })
+  approvalActions(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query() query: WorkflowListQueryDto,
+  ): Promise<ListResponse<ApprovalActionV2View>> {
+    return this.reads.approvalActions(ctx, id, query);
+  }
+
+  @Get(':id/change-proposals')
+  @ApiOperation({
+    summary:
+      'Change proposals of the period’s approved revisions (before / after), newest first (keyset)',
+  })
+  proposals(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query() query: WorkflowListQueryDto,
+  ): Promise<ListResponse<ChangeProposalV2View>> {
+    return this.reads.proposals(ctx, id, query);
+  }
+}

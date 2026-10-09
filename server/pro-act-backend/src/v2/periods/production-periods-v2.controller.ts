@@ -23,6 +23,8 @@ import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { ActualsJobsService } from '../../periods/actuals-jobs.service';
 import { MaterializeResult } from '../../periods/period-materializer.service';
 import { PeriodsService } from '../../periods/periods.service';
+import { RevisionLifecycleService } from '../../reconciliation/revision-lifecycle.service';
+import { RecomputeRequestDto } from '../reconciliation/reconciliation-v2.dto';
 import {
   AnalyticsResponse,
   JobAccepted,
@@ -44,6 +46,7 @@ export class ProductionPeriodsV2Controller {
     private readonly reads: PeriodsV2Service,
     private readonly periods: PeriodsService,
     private readonly jobs: ActualsJobsService,
+    private readonly lifecycle: RevisionLifecycleService,
   ) {}
 
   @Get()
@@ -100,16 +103,20 @@ export class ProductionPeriodsV2Controller {
   @Idempotent()
   @Roles(...PERIOD_WRITERS)
   @ApiOperation({
-    summary: 'Queue a recomputation of the period’s actuals (202 + job)',
+    summary:
+      'Queue a recomputation of the period’s actuals and loss ledgers (202 + job)',
     description:
       'Requires `Idempotency-Key`. A new actuals run is written only when an input changed; otherwise the ' +
-      'current result is kept (`reused: true` in the job result).',
+      'current result is kept (`reused: true` in the job result). A stale in-review revision returns to draft ' +
+      'first (plan 2.8: recompute, then resubmit); the request is recorded on the revision history.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async recompute(
     @Ctx() ctx: RequestContext,
     @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: RecomputeRequestDto,
   ): Promise<JobAccepted> {
+    await this.lifecycle.prepareRecompute(ctx, id, body.reason ?? null);
     const job = await this.jobs.requestRecompute(ctx, id);
     return { jobId: job.id, statusUrl: `/api/v2/actuals-jobs/${job.id}` };
   }
