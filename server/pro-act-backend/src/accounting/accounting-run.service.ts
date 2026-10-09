@@ -3,7 +3,10 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { createHash } from 'crypto';
 import { DataSource, EntityManager, IsNull } from 'typeorm';
 import { enqueueOutbox } from '../common/outbox/outbox-writer';
-import { PeriodAccountingInput } from '../domain/accounting/accounting.types';
+import {
+  PeriodAccounting,
+  PeriodAccountingInput,
+} from '../domain/accounting/accounting.types';
 import {
   ACCOUNTING_ENGINE_VERSION,
   computePeriodAccounting,
@@ -15,6 +18,10 @@ import {
 import { ActualsRunnerService } from '../periods/actuals-runner.service';
 import { PeriodProductSlice } from '../periods/entities/period-product-slice.entity';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
+import {
+  computePeriodKpis,
+  KPI_ENGINE_VERSION,
+} from '../domain/kpi/period-kpis';
 import {
   PeriodRecomputePort,
   RecomputeTrigger,
@@ -31,7 +38,12 @@ import {
 import { draftRevisionOf } from './accounting-revisions';
 import { AccountingRevision } from './entities/accounting-revision.entity';
 import { CalculationRun } from './entities/calculation-run.entity';
+import { kpiHashMaterial } from './kpi-inputs.loader';
+import { writeKpiResults } from './kpi-persistence';
 import { AccountingRevisionHooks } from './revision-hooks';
+
+/** Recorded on every run: the ledger engine (2.5) and the KPI engine (2.7) it applied. */
+export const RUN_ENGINE_VERSION = `${ACCOUNTING_ENGINE_VERSION}+kpi.${KPI_ENGINE_VERSION}`;
 
 /** Message type: a period has a new validated calculation run (2.6 / 2.7 / realtime consumers). */
 export const PERIOD_LOSSES_CALCULATED = 'PeriodLossesCalculated';
@@ -165,9 +177,8 @@ export class AccountingRunService implements OnModuleInit {
   ): Promise<CalculationRun> {
     const { period, revision, inputs, engine } = draft;
     const run = await manager.save(newRun(manager, draft));
-    const accounting = computePeriodAccounting(
-      engineInput(period, inputs, engine),
-    );
+    const input = engineInput(period, inputs, engine);
+    const accounting = computePeriodAccounting(input);
     if (accounting.issues.length > 0) {
       await failRun(manager, run, accounting.issues);
       return { ...run, status: 'failed' };
@@ -179,13 +190,49 @@ export class AccountingRunService implements OnModuleInit {
       revisionId: revision.id,
     };
     const written = await writeRunResults(manager, scope, accounting);
+    const kpis = await writeKpis(
+      manager,
+      { ...scope, draft, input },
+      accounting,
+    );
     await switchPointer(manager, revision, run, {
       ...written,
+      kpis,
       segments: accounting.segmentCount,
     });
     await recordCalculated(manager, period, run, revision.currentRunId);
     return { ...run, status: 'validated' };
   }
+}
+
+/** The run's KPIs (plan 2.7) from the same frozen inputs and ledger totals, written with the run. */
+function writeKpis(
+  manager: EntityManager,
+  target: { tenantId: string; periodId: string; runId: string } & {
+    draft: RunDraft;
+    input: PeriodAccountingInput;
+  },
+  accounting: PeriodAccounting,
+): Promise<number> {
+  const { draft, input } = target;
+  const scope = {
+    tenantId: target.tenantId,
+    periodId: target.periodId,
+    runId: target.runId,
+    policyId:
+      draft.engine.refs.find((p) => p.kind === 'oee_policy')?.id ?? null,
+    asOf: draft.inputs.asOf,
+  };
+  return writeKpiResults(
+    manager,
+    scope,
+    computePeriodKpis({
+      accounting: input,
+      totals: accounting.totals,
+      occurrences: draft.inputs.kpi.occurrences,
+      failures: draft.inputs.kpi.failures,
+    }),
+  );
 }
 
 /** The run row, `running` until validated or failed. */
@@ -197,7 +244,7 @@ function newRun(manager: EntityManager, draft: RunDraft): CalculationRun {
     revisionId: revision.id,
     actualsRunId: draft.actualsRunId,
     trigger: trigger.reason.slice(0, 64),
-    engineVersion: ACCOUNTING_ENGINE_VERSION,
+    engineVersion: RUN_ENGINE_VERSION,
     policyVersions: draft.engine.refs,
     inputFingerprint: draft.inputs.fingerprint,
     inputHash: draft.inputHash,
@@ -267,8 +314,9 @@ function hashOf(
   engine: EnginePolicies,
 ): string {
   const material = {
-    engine: ACCOUNTING_ENGINE_VERSION,
+    engine: RUN_ENGINE_VERSION,
     policies: engine.refs,
+    kpi: kpiHashMaterial(inputs.kpi),
     fingerprint: inputs.fingerprint,
     excluded: [period.isExcluded, period.exclusionKind],
     schedule: inputs.schedule.map((s) => [

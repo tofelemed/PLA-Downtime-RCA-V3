@@ -71,6 +71,8 @@ export interface LossEvent {
   reasonCodeId: string | null;
   impactCodeId: string | null;
   failureMode: string | null;
+  /** asset of the event (plan 2.7 breakdowns); absent in 2.5 fixtures */
+  assetId?: string | null;
 }
 
 /** The actuals of a slice (2.4 result of the run's actuals run). */
@@ -78,6 +80,9 @@ export interface SliceActualsInput {
   gross: string | null;
   good: string | null;
   uom: string | null;
+  /** 2.4 quality state and coverage (plan 2.7 data quality); absent in 2.5 fixtures */
+  qualityState?: string | null;
+  coverageRatio?: string | null;
 }
 
 export interface SliceInput {
@@ -92,6 +97,8 @@ export interface SliceInput {
   actuals: SliceActualsInput | null;
   /** another slice shares the same window (concurrent products) */
   concurrent: boolean;
+  /** product of the slice (plan 2.7 KPI scope); absent in 2.5 fixtures */
+  productId?: string;
 }
 
 /** `oee_policy` (D04) and `reconciliation_tolerance` (D06) values the engine applies. */

@@ -7,6 +7,7 @@ import { AccountingInputsLoader } from './accounting-inputs.loader';
 import { AccountingRunService } from './accounting-run.service';
 import { AccountingRevision } from './entities/accounting-revision.entity';
 import { CalculationRun } from './entities/calculation-run.entity';
+import { KpiResult } from './entities/kpi-result.entity';
 import { LossLineEvidence } from './entities/loss-line-evidence.entity';
 import { LossLine } from './entities/loss-line.entity';
 import { PeriodLedgerTotal } from './entities/period-ledger-total.entity';
@@ -27,6 +28,7 @@ import { AccountingRevisionHooks } from './revision-hooks';
       LossLine,
       LossLineEvidence,
       PeriodLedgerTotal,
+      KpiResult,
     ]),
     OutboxModule,
     PeriodsModule,

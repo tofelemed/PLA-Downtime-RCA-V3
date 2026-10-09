@@ -12,6 +12,7 @@ import { RateTimebase } from '../domain/actuals/actuals.types';
 import { PeriodProductSlice } from '../periods/entities/period-product-slice.entity';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { InputFingerprint } from './entities/calculation-run.entity';
+import { KpiInputs, loadKpiInputs } from './kpi-inputs.loader';
 
 /** Everything a calculation run reads, frozen once per run (plan 2.5 step 1). */
 export interface AccountingInputs {
@@ -20,6 +21,8 @@ export interface AccountingInputs {
   slices: SliceInput[];
   asOf: Date;
   fingerprint: InputFingerprint;
+  /** occurrence extents and failure candidates of the KPI engine (plan 2.7) */
+  kpi: KpiInputs;
 }
 
 interface EventRow {
@@ -36,6 +39,7 @@ interface EventRow {
   reason_code_id: string | null;
   impact_code_id: string | null;
   failure_mode: string | null;
+  asset_id: string | null;
   row_version: number;
   revision_id: string | null;
   revision: number | null;
@@ -61,7 +65,7 @@ interface InstanceRow {
 
 const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", e."start_time", e."end_time", e."schedule_class",
        e."oee_component", e."impact_mode", e."impact_fraction"::text AS "impact_fraction", e."quantity"::text AS "quantity",
-       e."reason_code_id", e."impact_code_id", e."failure_mode", e."row_version", r."id" AS "revision_id", r."revision"
+       e."reason_code_id", e."impact_code_id", e."failure_mode", e."asset_id", e."row_version", r."id" AS "revision_id", r."revision"
   FROM "production_events" e
   LEFT JOIN LATERAL (SELECT er."id", er."revision" FROM "event_revisions" er WHERE er."event_id" = e."id"
                       ORDER BY er."revision" DESC LIMIT 1) r ON true
@@ -106,6 +110,7 @@ function toEvent(row: EventRow): LossEvent {
     reasonCodeId: row.reason_code_id,
     impactCodeId: row.impact_code_id,
     failureMode: row.failure_mode,
+    assetId: row.asset_id,
   };
 }
 
@@ -120,6 +125,14 @@ function toRate(row: RateRow): RateVersion {
 }
 
 const sorted = (values: Iterable<string>) => [...new Set(values)].sort();
+
+/** $1 tenant, $2 unit, $3 period start, $4 period end. */
+const windowParams = (period: ProductionPeriod) => [
+  period.tenantId,
+  period.unitId,
+  period.utcStart,
+  period.utcEnd,
+];
 
 interface FingerprintSource {
   period: ProductionPeriod;
@@ -177,6 +190,7 @@ function toSliceInput(
   const own = lookups.rates.filter((r) => r.profile_id === slice.profileId);
   return {
     sliceId: slice.id,
+    productId: slice.productId,
     window: { start: slice.windowFrom, end: slice.windowTo },
     uom: slice.quantityUom,
     sustainedRates: slice.profileId
@@ -213,12 +227,7 @@ export class AccountingInputsLoader {
     const now = new Date(Math.floor(Date.now() / 1000) * 1000);
     const running = period.utcEnd > now;
     const asOf = running ? now : period.utcEnd;
-    const params = [
-      period.tenantId,
-      period.unitId,
-      period.utcStart,
-      period.utcEnd,
-    ];
+    const params = windowParams(period);
     const instances: InstanceRow[] = await manager.query(INSTANCES_SQL, params);
     const events: EventRow[] = await manager.query(EVENTS_SQL, params);
     const sliceInputs = await this.sliceInputs(
@@ -233,6 +242,7 @@ export class AccountingInputsLoader {
       events: events.map(toEvent),
       slices: sliceInputs.inputs,
       asOf,
+      kpi: await loadKpiInputs(manager, period),
       fingerprint: fingerprintOf({
         period,
         slices,
@@ -296,14 +306,24 @@ export class AccountingInputsLoader {
       gross: string | null;
       good: string | null;
       uom: string | null;
+      quality_state: string;
+      coverage_ratio: string | null;
     }> = await manager.query(
-      `SELECT "slice_id", "gross"::text AS "gross", "good"::text AS "good", "uom" FROM "actuals_results" WHERE "actuals_run_id" = $1`,
+      `SELECT "slice_id", "gross"::text AS "gross", "good"::text AS "good", "uom", "quality_state",
+              "coverage_ratio"::text AS "coverage_ratio"
+         FROM "actuals_results" WHERE "actuals_run_id" = $1`,
       [actualsRunId],
     );
     return new Map(
       rows.map((r) => [
         r.slice_id,
-        { gross: r.gross, good: r.good, uom: r.uom },
+        {
+          gross: r.gross,
+          good: r.good,
+          uom: r.uom,
+          qualityState: r.quality_state,
+          coverageRatio: r.coverage_ratio,
+        },
       ]),
     );
   }

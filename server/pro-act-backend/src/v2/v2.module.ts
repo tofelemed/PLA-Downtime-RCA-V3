@@ -95,6 +95,8 @@ import { ProductionPeriodsV2Controller } from './periods/production-periods-v2.c
 import { ExportsModule } from '../exports/exports.module';
 import { DeliveriesV2Controller } from './exports/deliveries-v2.controller';
 import { ExportsV2Controller } from './exports/exports-v2.controller';
+import { KpiReportsV2Controller } from './reports/kpi-reports-v2.controller';
+import { KpiReportsV2Service } from './reports/kpi-reports-v2.service';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -186,6 +188,7 @@ import { ExportsV2Controller } from './exports/exports-v2.controller';
     ChangeProposalsV2Controller,
     ExportsV2Controller,
     DeliveriesV2Controller,
+    KpiReportsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -203,6 +206,7 @@ import { ExportsV2Controller } from './exports/exports-v2.controller';
     PeriodsV2Service,
     PeriodAccountingV2Service,
     ReconciliationV2Service,
+    KpiReportsV2Service,
   ],
 })
 export class V2Module {}

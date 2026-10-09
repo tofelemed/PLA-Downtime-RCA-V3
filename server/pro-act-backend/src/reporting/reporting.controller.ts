@@ -1,7 +1,14 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ReportingService } from './reporting.service';
+
+/**
+ * Deprecated reads (plan 2.7 step 4): these average stored `oee_summaries` percentages (a mean of
+ * percentages, not ISO 22400 terms); `GET /api/v2/reports/oee` replaces them. Removed with plan 3.6.
+ */
+const DEPRECATED_OEE_READ =
+  'Deprecated (plan 2.7): averages legacy percentages; use GET /api/v2/reports/oee (sum of numerators / denominators). Removed with plan 3.6.';
 
 @ApiTags('Reporting')
 @ApiBearerAuth()
@@ -11,7 +18,8 @@ export class ReportingController {
   constructor(private readonly reportingService: ReportingService) {}
 
   @Get('oee-summary')
-  @ApiOperation({ summary: 'Get OEE summary report with aggregates' })
+  @Header('Deprecation', 'true')
+  @ApiOperation({ summary: 'Get OEE summary report with aggregates', deprecated: true, description: DEPRECATED_OEE_READ })
   @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
@@ -41,7 +49,8 @@ export class ReportingController {
   }
 
   @Get('oee-trends')
-  @ApiOperation({ summary: 'Get OEE trends report' })
+  @Header('Deprecation', 'true')
+  @ApiOperation({ summary: 'Get OEE trends report', deprecated: true, description: DEPRECATED_OEE_READ })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   @ApiQuery({ name: 'tenantId', required: false })

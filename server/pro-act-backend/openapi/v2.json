@@ -7796,6 +7796,296 @@
           "v2 · Exports"
         ]
       }
+    },
+    "/api/v2/reports/oee": {
+      "get": {
+        "description": "Reads stored KPI terms of the shown runs (approved revision, else the open draft — provisional); never computes on read. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days by period start.",
+        "operationId": "KpiReportsV2Controller_oee_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "day",
+              "enum": [
+                "period",
+                "shift",
+                "day",
+                "week",
+                "month",
+                "unit",
+                "product",
+                "crew"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "policy",
+            "required": false,
+            "in": "query",
+            "description": "`reconciled` = the GE-style quantity OEE (labelled), never mixed with operational OEE",
+            "schema": {
+              "default": "operational",
+              "enum": [
+                "operational",
+                "reconciled"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Operational (ISO 22400) or reconciled (GE PLA, labelled) OEE per site-local group: Σ numerators / Σ denominators",
+        "tags": [
+          "v2 · KPI reports"
+        ]
+      }
+    },
+    "/api/v2/reports/downtime": {
+      "get": {
+        "description": "Reads stored KPI terms of the shown runs (approved revision, else the open draft — provisional); never computes on read. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days by period start.",
+        "operationId": "KpiReportsV2Controller_downtime_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "reason",
+              "enum": [
+                "reason",
+                "reasonLevel1",
+                "impact",
+                "oee",
+                "asset",
+                "shift",
+                "crew",
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "metric",
+            "required": false,
+            "in": "query",
+            "description": "duration = seconds (allocated, adds up to the union); frequency = stop occurrences starting in the window",
+            "schema": {
+              "default": "duration",
+              "enum": [
+                "duration",
+                "frequency"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "scheduleClass",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "planned",
+                "unplanned",
+                "external",
+                "unknown"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeMicroStops",
+            "required": false,
+            "in": "query",
+            "description": "Include micro-stops (shorter than the oee_policy threshold); default availability stops only",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Downtime seconds or stop frequency by reason, reason level 1, impact, OEE component, asset, shift, crew or time",
+        "tags": [
+          "v2 · KPI reports"
+        ]
+      }
+    },
+    "/api/v2/reports/reliability": {
+      "get": {
+        "description": "Reads stored KPI terms of the shown runs (approved revision, else the open draft — provisional); never computes on read. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days by period start. assetIds must be assets of the tenant on those units (422 INVALID_REFERENCE).",
+        "operationId": "KpiReportsV2Controller_reliability_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several assets; assets of the tenant on units of the caller’s scope (422 INVALID_REFERENCE)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "MTBF, mean downtime to restore and MTTR (repair evidence only) per unit and asset (D13 failure definition)",
+        "tags": [
+          "v2 · KPI reports"
+        ]
+      }
     }
   },
   "info": {
