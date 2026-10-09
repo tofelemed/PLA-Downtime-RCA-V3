@@ -66,6 +66,16 @@ import { ProfilesService } from '../profiles/profiles.service';
 import { RateImportsService } from '../profiles/rate-imports.service';
 import { RatesService } from '../profiles/rates.service';
 import { ValuationRatesService } from '../profiles/valuation-rates.service';
+import { PlanPeriod } from '../plans/entities/plan-period.entity';
+import { PlanScenario } from '../plans/entities/plan-scenario.entity';
+import { PlanVersion } from '../plans/entities/plan-version.entity';
+import { PlanApprovalService } from '../plans/plan-approval.service';
+import { PlanGenerationJobsService } from '../plans/plan-generation-jobs.service';
+import { PlanLegacyBridge } from '../plans/plan-legacy-bridge.service';
+import { PlanPeriodGeneratorService } from '../plans/plan-period-generator.service';
+import { PlanScenariosService } from '../plans/plan-scenarios.service';
+import { PlanVersionsService } from '../plans/plan-versions.service';
+import { PlansModule } from '../plans/plans.module';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
 
@@ -185,6 +195,27 @@ class CalendarModuleStub {}
 })
 class ProfilesModuleStub {}
 
+/** Stands in for the plan 2.3 plans module (versions, generation, approval, scenarios, jobs). */
+@Module({
+  providers: [
+    { provide: PlanScenariosService, useValue: {} },
+    { provide: PlanVersionsService, useValue: {} },
+    { provide: PlanPeriodGeneratorService, useValue: {} },
+    { provide: PlanApprovalService, useValue: {} },
+    { provide: PlanGenerationJobsService, useValue: {} },
+    { provide: PlanLegacyBridge, useValue: {} },
+  ],
+  exports: [
+    PlanScenariosService,
+    PlanVersionsService,
+    PlanPeriodGeneratorService,
+    PlanApprovalService,
+    PlanGenerationJobsService,
+    PlanLegacyBridge,
+  ],
+})
+class PlansModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -240,6 +271,12 @@ async function generate(): Promise<string> {
     .useValue({})
     .overrideProvider(getRepositoryToken(ValuationRate))
     .useValue({})
+    .overrideProvider(getRepositoryToken(PlanVersion))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(PlanPeriod))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(PlanScenario))
+    .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)
     .overrideModule(CodeLibraryModule)
@@ -258,6 +295,8 @@ async function generate(): Promise<string> {
     .useModule(CalendarModuleStub)
     .overrideModule(ProfilesModule)
     .useModule(ProfilesModuleStub)
+    .overrideModule(PlansModule)
+    .useModule(PlansModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

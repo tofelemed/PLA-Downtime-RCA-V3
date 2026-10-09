@@ -5,6 +5,8 @@ import { ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateProductionPlanDto } from './dto/create-production-plan.dto';
 import { UpdateProductionPlanDto } from './dto/update-production-plan.dto';
+import { Ctx } from '../common/context/ctx.decorator';
+import { RequestContext } from '../common/context/request-context';
 
 @ApiTags('Production Plans')
 @ApiBearerAuth()
@@ -35,22 +37,26 @@ export class ProductionPlanController {
   @Post()
   @ApiBody({ type: CreateProductionPlanDto })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  create(@Body() data: CreateProductionPlanDto): Promise<ProductionPlan> {
+  create(@Ctx() ctx: RequestContext, @Body() data: CreateProductionPlanDto): Promise<ProductionPlan | null> {
     const payload = this.transformDateFields(data);
-    return this.planService.create(payload);
+    return this.planService.create(ctx, payload);
   }
 
   @Put(':id')
   @ApiBody({ type: UpdateProductionPlanDto })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  update(@Param('id') id: string, @Body() data: UpdateProductionPlanDto): Promise<ProductionPlan | null> {
+  update(
+    @Ctx() ctx: RequestContext,
+    @Param('id') id: string,
+    @Body() data: UpdateProductionPlanDto,
+  ): Promise<ProductionPlan | null> {
     const payload = this.transformDateFields(data);
-    return this.planService.update(id, payload);
+    return this.planService.update(ctx, id, payload);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string): Promise<void> {
-    return this.planService.remove(id);
+  remove(@Ctx() ctx: RequestContext, @Param('id') id: string): Promise<void> {
+    return this.planService.remove(ctx, id);
   }
 
   private transformDateFields(data: unknown): Partial<ProductionPlan> {

@@ -38,6 +38,7 @@ import { ValuationRatesService } from './valuation-rates.service';
     RateImportProcessor,
   ],
   exports: [
+    ProfileReferences,
     ProfilesService,
     RatesService,
     ValuationRatesService,

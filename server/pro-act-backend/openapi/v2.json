@@ -5512,6 +5512,647 @@
           "v2 · Profiles"
         ]
       }
+    },
+    "/api/v2/production-plans": {
+      "get": {
+        "operationId": "ProductionPlansV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "scenarioId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "approvalState",
+            "required": false,
+            "in": "query",
+            "description": "State of the current version",
+            "schema": {
+              "enum": [
+                "draft",
+                "submitted",
+                "approved",
+                "superseded"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List plans with their current version (keyset on createdAt, id)",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. unitId, products, profile pins and scenarioId must be of the tenant and, for unit-limited callers, of their units (422 INVALID_REFERENCE). Default scenario: the accounting baseline.",
+        "operationId": "ProductionPlansV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a plan header and its draft version 1",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      }
+    },
+    "/api/v2/production-plans/{id}": {
+      "get": {
+        "operationId": "ProductionPlansV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A plan with its current version and slices; foreign ids are 404",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      }
+    },
+    "/api/v2/production-plans/{id}/versions": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 DRAFT_EXISTS while an open version exists.",
+        "operationId": "ProductionPlansV2Controller_newVersion_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanVersionChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Open the next draft version from the current one plus changes (PLAN04)",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      }
+    },
+    "/api/v2/production-plans/{id}/versions/{version}": {
+      "get": {
+        "operationId": "ProductionPlansV2Controller_getVersion_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One plan version with its slices (ETag = rowVersion)",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      },
+      "patch": {
+        "description": "Requires `If-Match: \"<rowVersion>\"` (428 / 412). 409 VERSION_NOT_DRAFT for other states.",
+        "operationId": "ProductionPlansV2Controller_patchVersion_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanVersionChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit a draft version (its periods are discarded until the next generation)",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      }
+    },
+    "/api/v2/production-plans/{id}/generate-periods": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. preview=true returns every leaf period with UTC bounds, local date, shift, slice, target, sustained capacity and source versions, plus totals per quantity unit and warnings, without storing anything. Otherwise 202 with a job; the worker replaces the draft periods. 422: NO_ELIGIBLE_TIME, CAMPAIGN_OVERLAP, INFEASIBLE_PRODUCT_MIX, CONCURRENT_PRODUCTS_DISABLED, MIXED_UOM, TARGET_REQUIRED, TARGET_SUM_MISMATCH; 409 VERSION_NOT_DRAFT.",
+        "operationId": "ProductionPlansV2Controller_generate_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneratePeriodsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preview (nothing stored)"
+          },
+          "202": {
+            "description": "Job accepted (`GET /plan-generation-jobs/{id}`)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Preview (200) or generate (202 job) the periods of an open version (PLAN03)",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      }
+    },
+    "/api/v2/production-plans/{id}/versions/{version}/periods": {
+      "get": {
+        "operationId": "ProductionPlansV2Controller_periods_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "utcStart"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stored periods of a version (keyset on utcStart, id; from/to overlap)",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      }
+    },
+    "/api/v2/production-plans/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 PLAN_OVERLAP (details.conflicts) when an approved version of another plan in the same scenario plans the unit and product in an overlapping interval; 409 PERIODS_NOT_GENERATED; 409 INVALID_TRANSITION for an approved or superseded version.",
+        "operationId": "ProductionPlansV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve the open version (PLAN04); the previous approved version is superseded",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      }
+    },
+    "/api/v2/plan-scenarios": {
+      "get": {
+        "operationId": "PlanScenariosV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the tenant scenarios (keyset on createdAt, id)",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED for unit-limited callers). 409 SCENARIO_EXISTS for a duplicate name.",
+        "operationId": "PlanScenariosV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a scenario (optionally moving the accounting-baseline flag to it)",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      }
+    },
+    "/api/v2/plan-generation-jobs/{id}": {
+      "get": {
+        "description": "state queued → running → completed | failed; `result` has the period count, totals per unit and warnings, `errorCode` the refusal (NO_ELIGIBLE_TIME, UNIT_SCOPE, ...). Foreign ids are 404.",
+        "operationId": "PlanGenerationJobsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Status of a plan period generation",
+        "tags": [
+          "v2 · Production plans"
+        ]
+      }
     }
   },
   "info": {
@@ -7278,6 +7919,278 @@
         "required": [
           "kind",
           "externalId"
+        ]
+      },
+      "PlanSliceDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "profileId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Profile of the plan unit and this product whose operating mode the slice runs in (default normal)"
+          },
+          "campaignFrom": {
+            "type": "object",
+            "nullable": true,
+            "description": "Campaign start (inclusive); absent = plan start"
+          },
+          "campaignTo": {
+            "type": "object",
+            "nullable": true,
+            "description": "Campaign end (exclusive); absent = plan end"
+          },
+          "weight": {
+            "type": "object",
+            "nullable": true,
+            "example": "1",
+            "description": "Weight for explicit_weights"
+          },
+          "target": {
+            "type": "object",
+            "nullable": true,
+            "example": "500",
+            "description": "Own target of the slice (quantity basis without a header target; needed when units differ)"
+          },
+          "stream": {
+            "type": "string",
+            "enum": [
+              "sequential",
+              "independent",
+              "shared"
+            ],
+            "default": "sequential",
+            "description": "independent / shared need CONCURRENT_PRODUCTS (D14); all slices of a version share one kind"
+          }
+        },
+        "required": [
+          "productId"
+        ]
+      },
+      "ManualTargetDto": {
+        "type": "object",
+        "properties": {
+          "slicePosition": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Index of the slice in `slices`"
+          },
+          "utcStart": {
+            "type": "string",
+            "description": "UTC start of the leaf (shift instance) the target is for"
+          },
+          "target": {
+            "type": "string",
+            "example": "120.5"
+          }
+        },
+        "required": [
+          "slicePosition",
+          "utcStart",
+          "target"
+        ]
+      },
+      "PlanCreateDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "validFrom": {
+            "type": "string",
+            "example": "2026-11-01T02:30:00Z",
+            "description": "Plan window start (inclusive)"
+          },
+          "validTo": {
+            "type": "string",
+            "example": "2026-12-01T02:30:00Z",
+            "description": "Plan window end (exclusive)"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "time",
+              "quantity",
+              "manual"
+            ],
+            "description": "time = schedule × planning rate; quantity = header (or slice) target distributed; manual = per-leaf targets"
+          },
+          "headerTarget": {
+            "type": "object",
+            "nullable": true,
+            "example": "1000"
+          },
+          "distribution": {
+            "type": "string",
+            "enum": [
+              "scheduled_capacity",
+              "explicit_weights",
+              "equal"
+            ],
+            "default": "scheduled_capacity"
+          },
+          "slices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanSliceDto"
+            }
+          },
+          "manualTargets": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManualTargetDto"
+            }
+          },
+          "changeReason": {
+            "type": "object",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "example": "HDPE unit100 November"
+          },
+          "scenarioId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Default: the tenant accounting-baseline scenario"
+          }
+        },
+        "required": [
+          "unitId",
+          "validFrom",
+          "validTo",
+          "basis",
+          "slices",
+          "name"
+        ]
+      },
+      "PlanVersionChangeDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "validFrom": {
+            "type": "string",
+            "example": "2026-11-01T02:30:00Z",
+            "description": "Plan window start (inclusive)"
+          },
+          "validTo": {
+            "type": "string",
+            "example": "2026-12-01T02:30:00Z",
+            "description": "Plan window end (exclusive)"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "time",
+              "quantity",
+              "manual"
+            ],
+            "description": "time = schedule × planning rate; quantity = header (or slice) target distributed; manual = per-leaf targets"
+          },
+          "headerTarget": {
+            "type": "object",
+            "nullable": true,
+            "example": "1000"
+          },
+          "distribution": {
+            "type": "string",
+            "enum": [
+              "scheduled_capacity",
+              "explicit_weights",
+              "equal"
+            ],
+            "default": "scheduled_capacity"
+          },
+          "slices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanSliceDto"
+            }
+          },
+          "manualTargets": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManualTargetDto"
+            }
+          },
+          "changeReason": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "GeneratePeriodsDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "The open (draft or submitted) version to generate"
+          },
+          "distribution": {
+            "type": "string",
+            "enum": [
+              "scheduled_capacity",
+              "explicit_weights",
+              "equal"
+            ],
+            "description": "Overrides (and on a run stores) the distribution"
+          },
+          "preview": {
+            "type": "boolean",
+            "default": false,
+            "description": "true = return the periods without storing them"
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "PlanApproveDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Number of the version being approved (the one reviewed)"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      },
+      "ScenarioCreateDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Budget 2027"
+          },
+          "description": {
+            "type": "object",
+            "nullable": true
+          },
+          "isAccountingBaseline": {
+            "type": "boolean",
+            "default": false,
+            "description": "Move the accounting-baseline flag to this scenario (exactly one per tenant)"
+          }
+        },
+        "required": [
+          "name"
         ]
       }
     }

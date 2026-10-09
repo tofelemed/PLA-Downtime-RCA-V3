@@ -12,6 +12,7 @@ import { registerPgTypeParsers } from './database/pg-type-parsers';
 import { WorkerHealthServer } from './health/worker-health.server';
 import { PISyncJobModule } from './pi-sync-job/pi-sync-job.module';
 import { ProfilesModule } from './profiles/profiles.module';
+import { PlansModule } from './plans/plans.module';
 import { RealtimeModule } from './realtime/realtime.module';
 
 registerPgTypeParsers();
@@ -48,6 +49,8 @@ registerPgTypeParsers();
     CalendarModule,
     // budget / forecast / MPC rate imports (plan 2.2)
     ProfilesModule,
+    // plan period generation jobs (plan 2.3)
+    PlansModule,
   ],
   providers: [WorkerHealthServer],
 })

@@ -2,13 +2,31 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { RequestContext } from '../common/context/request-context';
+import { PlanLegacyBridge } from '../plans/plan-legacy-bridge.service';
 import { ProductionPlan } from './production-plan.entity';
 
+/** Approval columns the client may no longer write (plan 2.3: they come from the identity). */
+const CLIENT_APPROVAL_FIELDS = [
+  'approvedBy',
+  'approvedAt',
+  'submittedBy',
+  'submittedAt',
+  'reviewedBy',
+  'reviewedAt',
+] as const;
+
+/**
+ * v1 plan headers (legacy screens, C4). Since plan 2.3 writes are limited to the caller's tenant and unit
+ * scope, every create or content edit keeps a draft plan version in step (`PlanLegacyBridge`), and an
+ * approval label change goes through the version approval service.
+ */
 @Injectable()
 export class ProductionPlanService {
   constructor(
     @InjectRepository(ProductionPlan)
     private readonly planRepository: Repository<ProductionPlan>,
+    private readonly bridge: PlanLegacyBridge,
   ) {}
 
   findAll(): Promise<ProductionPlan[]> {
@@ -21,20 +39,60 @@ export class ProductionPlanService {
     });
   }
 
-  create(data: Partial<ProductionPlan>): Promise<ProductionPlan> {
-    const plan = this.planRepository.create({
-      ...data,
-      id: data.id ?? randomUUID(),
+  async create(
+    context: RequestContext,
+    data: Partial<ProductionPlan>,
+  ): Promise<ProductionPlan | null> {
+    const refs = await this.bridge.assertCreatable(context, {
+      unitId: data.unitId ?? '',
+      productId: data.productId ?? null,
     });
-    return this.planRepository.save(plan);
+    const { approvalStatus, rest } = splitApproval(data);
+    const plan = await this.planRepository.save(
+      this.planRepository.create({
+        ...rest,
+        id: data.id ?? randomUUID(),
+        tenantId: refs.tenantId,
+        approvalStatus: 'Draft',
+      }),
+    );
+    await this.bridge.syncFromHeader(context, null, plan);
+    await this.applyApprovalLabel(context, plan.id, approvalStatus, 'Draft');
+    return this.findOne(plan.id);
   }
 
-  async update(id: string, data: Partial<ProductionPlan>): Promise<ProductionPlan | null> {
-    await this.planRepository.update(id, data);
+  async update(
+    context: RequestContext,
+    id: string,
+    data: Partial<ProductionPlan>,
+  ): Promise<ProductionPlan | null> {
+    const before = await this.findOne(id);
+    if (!before) return null;
+    await this.bridge.assertWritable(context, before);
+    if (data.unitId !== undefined || data.productId !== undefined) {
+      await this.bridge.assertCreatable(context, {
+        unitId: data.unitId ?? before.unitId,
+        productId: data.productId ?? before.productId ?? null,
+      });
+    }
+    const { approvalStatus, rest } = splitApproval(data);
+    if (Object.keys(rest).length > 0)
+      await this.planRepository.update(id, rest);
+    const after = await this.planRepository.findOneByOrFail({ id });
+    await this.bridge.syncFromHeader(context, before, after);
+    await this.applyApprovalLabel(
+      context,
+      id,
+      approvalStatus,
+      before.approvalStatus,
+    );
     return this.findOne(id);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(context: RequestContext, id: string): Promise<void> {
+    const plan = await this.findOne(id);
+    if (!plan) return;
+    await this.bridge.assertDeletable(context, plan);
     await this.planRepository.delete(id);
   }
 
@@ -49,4 +107,36 @@ export class ProductionPlanService {
       where: { status },
     });
   }
-} 
+
+  /** Runs the label's version transition (approve / submit / reopen); stores the label it returns. */
+  private async applyApprovalLabel(
+    context: RequestContext,
+    id: string,
+    label: string | undefined,
+    previous: string | null | undefined,
+  ): Promise<void> {
+    if (label === undefined) return;
+    const plan = await this.planRepository.findOneByOrFail({ id });
+    plan.approvalStatus = label;
+    const stored = await this.bridge.applyApprovalLabel(
+      context,
+      plan,
+      previous,
+    );
+    if (stored !== null) {
+      await this.planRepository.update(id, { approvalStatus: stored });
+    }
+  }
+}
+
+function splitApproval(data: Partial<ProductionPlan>): {
+  approvalStatus: string | undefined;
+  rest: Partial<ProductionPlan>;
+} {
+  const rest: Partial<ProductionPlan> = { ...data };
+  const approvalStatus = rest.approvalStatus;
+  delete rest.approvalStatus;
+  delete rest.id;
+  for (const field of CLIENT_APPROVAL_FIELDS) delete rest[field];
+  return { approvalStatus, rest };
+}

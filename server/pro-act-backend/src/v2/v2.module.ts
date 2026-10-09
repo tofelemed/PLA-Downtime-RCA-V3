@@ -69,6 +69,14 @@ import { ProfilesV2Service } from './profiles/profiles-v2.service';
 import { RateImportsV2Controller } from './profiles/rate-imports-v2.controller';
 import { RatesV2Controller } from './profiles/rates-v2.controller';
 import { ValuationRatesV2Controller } from './profiles/valuation-rates-v2.controller';
+import { PlanPeriod } from '../plans/entities/plan-period.entity';
+import { PlanScenario } from '../plans/entities/plan-scenario.entity';
+import { PlanVersion } from '../plans/entities/plan-version.entity';
+import { PlansModule } from '../plans/plans.module';
+import { PlanGenerationJobsV2Controller } from './plans/plan-generation-jobs-v2.controller';
+import { PlanScenariosV2Controller } from './plans/plan-scenarios-v2.controller';
+import { PlansV2Service } from './plans/plans-v2.service';
+import { ProductionPlansV2Controller } from './plans/production-plans-v2.controller';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -102,6 +110,9 @@ import { ValuationRatesV2Controller } from './profiles/valuation-rates-v2.contro
       ProductionProfile,
       UnitProductRate,
       ValuationRate,
+      PlanVersion,
+      PlanPeriod,
+      PlanScenario,
     ]),
     ProductionEventModule,
     CodeLibraryModule,
@@ -112,6 +123,7 @@ import { ValuationRatesV2Controller } from './profiles/valuation-rates-v2.contro
     SignalsModule,
     CalendarModule,
     ProfilesModule,
+    PlansModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -138,6 +150,9 @@ import { ValuationRatesV2Controller } from './profiles/valuation-rates-v2.contro
     RatesV2Controller,
     ValuationRatesV2Controller,
     RateImportsV2Controller,
+    ProductionPlansV2Controller,
+    PlanScenariosV2Controller,
+    PlanGenerationJobsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -151,6 +166,7 @@ import { ValuationRatesV2Controller } from './profiles/valuation-rates-v2.contro
     SignalsV2Service,
     CalendarsV2Service,
     ProfilesV2Service,
+    PlansV2Service,
   ],
 })
 export class V2Module {}
