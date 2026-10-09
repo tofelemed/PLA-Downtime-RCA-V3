@@ -4550,6 +4550,968 @@
           "v2 · Calendars"
         ]
       }
+    },
+    "/api/v2/profiles": {
+      "get": {
+        "operationId": "ProfilesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "operatingMode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "approved",
+                "retired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List profile versions (keyset on createdAt, id)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. unitId / productId must be of the tenant (422 INVALID_REFERENCE); effectiveTo after effectiveFrom (422 INVALID_EFFECTIVE_DATES).",
+        "operationId": "ProfilesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft profile version (next version of unit, product and operating mode)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/profiles/resolve": {
+      "get": {
+        "description": "unitId / productId must be of the tenant (422 INVALID_REFERENCE). No approved profile → `profile: null, reason: \"no_profile\"`.",
+        "operationId": "ProfilesV2Controller_resolve_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "operatingMode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "normal",
+              "type": "string"
+            }
+          },
+          {
+            "name": "at",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-10-09T10:15:00Z",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The approved profile and the approved rate of each kind in force at `at`",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/profiles/{id}": {
+      "get": {
+        "operationId": "ProfilesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one profile version (ETag = rowVersion); foreign ids are 404",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      },
+      "patch": {
+        "description": "Requires `If-Match: \"<rowVersion>\"` (428 without, 412 when stale). Approved and retired versions are immutable: 409 VERSION_NOT_DRAFT.",
+        "operationId": "ProfilesV2Controller_update_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilePatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit a draft profile version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/profiles/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same unit, product and mode, unless `supersede` closes the predecessor at its effectiveFrom; 422 PROFILE_INCOMPLETE without quantityUom and rateTimebase.",
+        "operationId": "ProfilesV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft profile version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/profiles/{id}/retire": {
+      "post": {
+        "operationId": "ProfilesV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a draft or approved profile version (never deleted)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/profiles/{id}/rates": {
+      "get": {
+        "operationId": "ProfilesV2Controller_listRates_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rateKind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "nameplate",
+                "demonstrated",
+                "sustained",
+                "planning",
+                "budget",
+                "forecast"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "approved",
+                "retired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rate versions of a profile (keyset on effectiveFrom, id)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. 422 INVALID_RATE (negative, or zero for nameplate/demonstrated/sustained/planning), RATE_OUTSIDE_PROFILE (effectiveFrom outside the profile version), INVALID_EFFECTIVE_DATES.",
+        "operationId": "ProfilesV2Controller_createRate_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RateCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft rate version of the profile (next version of its kind)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/rates/{id}": {
+      "get": {
+        "operationId": "RatesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one rate version; foreign ids are 404",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/rates/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "operationId": "RatesV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft rate version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/rates/{id}/retire": {
+      "post": {
+        "operationId": "RatesV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a draft or approved rate version (never deleted)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/valuation-rates": {
+      "get": {
+        "operationId": "ValuationRatesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "profileId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "impactCodeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "basis",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "contribution_margin",
+                "standard_cost",
+                "cost_per_hour"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "approved",
+                "retired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List valuation rate versions (keyset on effectiveFrom, id)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. profileId xor impactCodeId, of the tenant (422 INVALID_REFERENCE); contribution_margin needs a profile, cost_per_hour an impact code (422 INVALID_OWNER); perUom is the profile quantity unit or \"h\" (422 UOM_MISMATCH).",
+        "operationId": "ValuationRatesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValuationRateCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft valuation rate version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/valuation-rates/{id}": {
+      "get": {
+        "operationId": "ValuationRatesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one valuation rate version; foreign ids are 404",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/valuation-rates/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "operationId": "ValuationRatesV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft valuation rate version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/valuation-rates/{id}/retire": {
+      "post": {
+        "operationId": "ValuationRatesV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a draft or approved valuation rate version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/rate-imports": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. rows xor csv. The worker applies the document whole or not at all: every row must name a unit and product of the tenant with an approved profile at effectiveFrom and must not overlap another row or an approved rate of another document; otherwise the import is `failed` with a report per line. A later revision of the same externalId retires the rows of earlier revisions (correction). Imported rows are approved versions (`source = import`); mpc rows are sustained rates.",
+        "operationId": "RateImportsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RateImportCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Import one revision of a budget, forecast or MPC document (202 job)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/rate-imports/{id}": {
+      "get": {
+        "description": "state queued → completed | failed; `report` lists each invalid line. Foreign ids are 404.",
+        "operationId": "RateImportsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Status and validation report of a rate import",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
     }
   },
   "info": {
@@ -6014,6 +6976,308 @@
           "crewId",
           "pattern",
           "effectiveFrom"
+        ]
+      },
+      "ProfileCreateDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "example": "2027-01-01T02:30:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = open-ended"
+          },
+          "quantityUom": {
+            "type": "string",
+            "example": "t",
+            "description": "Quantity unit of every rate of the profile"
+          },
+          "rateTimebase": {
+            "type": "string",
+            "enum": [
+              "s",
+              "min",
+              "h",
+              "d"
+            ],
+            "description": "Default timebase of the profile rates"
+          },
+          "capacityModel": {
+            "type": "string",
+            "enum": [
+              "single_stream",
+              "shared_capacity",
+              "independent_streams"
+            ],
+            "default": "single_stream",
+            "description": "shared_capacity / independent_streams are used by plans only behind CONCURRENT_PRODUCTS (D14)"
+          },
+          "productMixConstraints": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Joint recipe of a shared_capacity profile (used by plan generation, 2.3)"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "operatingMode": {
+            "type": "string",
+            "default": "normal",
+            "example": "normal"
+          }
+        },
+        "required": [
+          "effectiveFrom",
+          "quantityUom",
+          "rateTimebase",
+          "unitId",
+          "productId"
+        ]
+      },
+      "ProfilePatchDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "example": "2027-01-01T02:30:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = open-ended"
+          },
+          "quantityUom": {
+            "type": "string",
+            "example": "t",
+            "description": "Quantity unit of every rate of the profile"
+          },
+          "rateTimebase": {
+            "type": "string",
+            "enum": [
+              "s",
+              "min",
+              "h",
+              "d"
+            ],
+            "description": "Default timebase of the profile rates"
+          },
+          "capacityModel": {
+            "type": "string",
+            "enum": [
+              "single_stream",
+              "shared_capacity",
+              "independent_streams"
+            ],
+            "default": "single_stream",
+            "description": "shared_capacity / independent_streams are used by plans only behind CONCURRENT_PRODUCTS (D14)"
+          },
+          "productMixConstraints": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Joint recipe of a shared_capacity profile (used by plan generation, 2.3)"
+          }
+        }
+      },
+      "ApproveDto": {
+        "type": "object",
+        "properties": {
+          "supersede": {
+            "type": "boolean",
+            "default": false,
+            "description": "Close the one approved predecessor that starts before this version exactly at its effectiveFrom (any other overlap is still 409 VERSION_OVERLAP)"
+          }
+        }
+      },
+      "RateCreateDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "example": "2027-01-01T02:30:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = open-ended"
+          },
+          "rateKind": {
+            "type": "string",
+            "enum": [
+              "nameplate",
+              "demonstrated",
+              "sustained",
+              "planning",
+              "budget",
+              "forecast"
+            ]
+          },
+          "rate": {
+            "type": "string",
+            "example": "120",
+            "description": "Quantity (profile quantityUom) per timebase; > 0 except budget/forecast"
+          },
+          "timebase": {
+            "type": "string",
+            "enum": [
+              "s",
+              "min",
+              "h",
+              "d"
+            ]
+          }
+        },
+        "required": [
+          "effectiveFrom",
+          "rateKind",
+          "rate",
+          "timebase"
+        ]
+      },
+      "ValuationRateCreateDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "example": "2027-01-01T02:30:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = open-ended"
+          },
+          "profileId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "contribution_margin / standard_cost per quantity"
+          },
+          "impactCodeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "cost_per_hour (or standard_cost per unit)"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "contribution_margin",
+              "standard_cost",
+              "cost_per_hour"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "example": "42.5"
+          },
+          "currency": {
+            "type": "string",
+            "example": "IRR",
+            "description": "ISO 4217"
+          },
+          "perUom": {
+            "type": "string",
+            "description": "Defaults to the profile quantityUom (must match it) or \"h\" for cost_per_hour"
+          }
+        },
+        "required": [
+          "effectiveFrom",
+          "basis",
+          "value",
+          "currency"
+        ]
+      },
+      "RateImportRowDto": {
+        "type": "object",
+        "properties": {
+          "unitCode": {
+            "type": "string",
+            "example": "unit100"
+          },
+          "productCode": {
+            "type": "string",
+            "example": "HDPE-A"
+          },
+          "operatingMode": {
+            "type": "string",
+            "default": "normal"
+          },
+          "rate": {
+            "type": "string",
+            "example": "115.5"
+          },
+          "timebase": {
+            "type": "string",
+            "enum": [
+              "s",
+              "min",
+              "h",
+              "d"
+            ]
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-11-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "string",
+            "example": "2026-12-01T02:30:00Z"
+          }
+        },
+        "required": [
+          "unitCode",
+          "productCode",
+          "rate",
+          "timebase",
+          "effectiveFrom"
+        ]
+      },
+      "RateImportCreateDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "budget",
+              "forecast",
+              "mpc"
+            ],
+            "description": "mpc rows become sustained rates"
+          },
+          "externalId": {
+            "type": "string",
+            "example": "FC-2026-11",
+            "description": "Document id; a later delivery of the same id is a correction (next revision)"
+          },
+          "fileRef": {
+            "type": "string",
+            "example": "forecast-nov.csv"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RateImportRowDto"
+            }
+          },
+          "csv": {
+            "type": "string",
+            "description": "CSV with header unitCode,productCode,operatingMode,rate,timebase,effectiveFrom,effectiveTo"
+          }
+        },
+        "required": [
+          "kind",
+          "externalId"
         ]
       }
     }

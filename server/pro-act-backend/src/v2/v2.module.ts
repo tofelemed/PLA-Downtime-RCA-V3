@@ -60,6 +60,15 @@ import { CalendarScheduleV2Controller } from './calendars/calendar-schedule-v2.c
 import { CalendarVersionsV2Controller } from './calendars/calendar-versions-v2.controller';
 import { CalendarsV2Service } from './calendars/calendars-v2.service';
 import { CrewsV2Controller } from './calendars/crews-v2.controller';
+import { ProductionProfile } from '../profiles/entities/production-profile.entity';
+import { UnitProductRate } from '../profiles/entities/unit-product-rate.entity';
+import { ValuationRate } from '../profiles/entities/valuation-rate.entity';
+import { ProfilesModule } from '../profiles/profiles.module';
+import { ProfilesV2Controller } from './profiles/profiles-v2.controller';
+import { ProfilesV2Service } from './profiles/profiles-v2.service';
+import { RateImportsV2Controller } from './profiles/rate-imports-v2.controller';
+import { RatesV2Controller } from './profiles/rates-v2.controller';
+import { ValuationRatesV2Controller } from './profiles/valuation-rates-v2.controller';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -90,6 +99,9 @@ import { CrewsV2Controller } from './calendars/crews-v2.controller';
       ShiftInstance,
       Crew,
       CrewRotation,
+      ProductionProfile,
+      UnitProductRate,
+      ValuationRate,
     ]),
     ProductionEventModule,
     CodeLibraryModule,
@@ -99,6 +111,7 @@ import { CrewsV2Controller } from './calendars/crews-v2.controller';
     IntakeModule,
     SignalsModule,
     CalendarModule,
+    ProfilesModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -121,6 +134,10 @@ import { CrewsV2Controller } from './calendars/crews-v2.controller';
     CalendarVersionsV2Controller,
     CalendarScheduleV2Controller,
     CrewsV2Controller,
+    ProfilesV2Controller,
+    RatesV2Controller,
+    ValuationRatesV2Controller,
+    RateImportsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -133,6 +150,7 @@ import { CrewsV2Controller } from './calendars/crews-v2.controller';
     IntakeQueriesV2Service,
     SignalsV2Service,
     CalendarsV2Service,
+    ProfilesV2Service,
   ],
 })
 export class V2Module {}

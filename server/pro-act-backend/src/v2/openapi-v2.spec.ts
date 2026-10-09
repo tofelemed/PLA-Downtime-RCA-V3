@@ -57,6 +57,15 @@ import { Crew } from '../calendar/entities/crew.entity';
 import { ShiftInstance } from '../calendar/entities/shift-instance.entity';
 import { Site } from '../calendar/entities/site.entity';
 import { SitesService } from '../calendar/sites.service';
+import { ProductionProfile } from '../profiles/entities/production-profile.entity';
+import { UnitProductRate } from '../profiles/entities/unit-product-rate.entity';
+import { ValuationRate } from '../profiles/entities/valuation-rate.entity';
+import { ProfileResolutionService } from '../profiles/profile-resolution.service';
+import { ProfilesModule } from '../profiles/profiles.module';
+import { ProfilesService } from '../profiles/profiles.service';
+import { RateImportsService } from '../profiles/rate-imports.service';
+import { RatesService } from '../profiles/rates.service';
+import { ValuationRatesService } from '../profiles/valuation-rates.service';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
 
@@ -157,6 +166,25 @@ class SignalsModuleStub {}
 })
 class CalendarModuleStub {}
 
+/** Stands in for the plan 2.2 profiles module (profiles, rates, valuation rates, imports, resolution). */
+@Module({
+  providers: [
+    { provide: ProfilesService, useValue: {} },
+    { provide: RatesService, useValue: {} },
+    { provide: ValuationRatesService, useValue: {} },
+    { provide: ProfileResolutionService, useValue: {} },
+    { provide: RateImportsService, useValue: {} },
+  ],
+  exports: [
+    ProfilesService,
+    RatesService,
+    ValuationRatesService,
+    ProfileResolutionService,
+    RateImportsService,
+  ],
+})
+class ProfilesModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -206,6 +234,12 @@ async function generate(): Promise<string> {
     .useValue({})
     .overrideProvider(getRepositoryToken(CrewRotation))
     .useValue({})
+    .overrideProvider(getRepositoryToken(ProductionProfile))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(UnitProductRate))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(ValuationRate))
+    .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)
     .overrideModule(CodeLibraryModule)
@@ -222,6 +256,8 @@ async function generate(): Promise<string> {
     .useModule(SignalsModuleStub)
     .overrideModule(CalendarModule)
     .useModule(CalendarModuleStub)
+    .overrideModule(ProfilesModule)
+    .useModule(ProfilesModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

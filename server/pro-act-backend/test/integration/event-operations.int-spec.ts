@@ -7,7 +7,12 @@ import { CONNECTOR_ACTOR } from '../../src/production-event/revisions/revision-a
 import { UnitDowntimeService } from '../../src/production-event/unit-downtime.service';
 import { V2Module } from '../../src/v2/v2.module';
 import { IntegrationHarness } from './harness';
-import { at, EventWorld, seedEventWorld } from './support/seed-event-world';
+import {
+  at,
+  DAY as SEED_DAY,
+  EventWorld,
+  seedEventWorld,
+} from './support/seed-event-world';
 import { bearer, createIntegrationApp, signToken } from './support/test-app';
 import {
   ErrorBody,
@@ -17,8 +22,13 @@ import {
   V2EventClient,
 } from './support/v2-event-client';
 
-/** Two days ago: every instant of the day is in the past (close rejects future ends). */
-const DAY = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
+/**
+ * Two days ago (three when that is the seed world's day, whose event e5 is on unit A3): every instant
+ * of the day is in the past (close rejects future ends) and no seeded event shares the window.
+ */
+const daysAgo = (n: number) =>
+  new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+const DAY = daysAgo(2) === SEED_DAY ? daysAgo(3) : daysAgo(2);
 const t = (time: string) => at(time, DAY).toISOString();
 const DAY_WINDOW = {
   start: at('00:00', DAY),
