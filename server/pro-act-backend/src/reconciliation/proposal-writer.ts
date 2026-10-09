@@ -8,6 +8,7 @@ import {
 import { reconcile } from '../domain/reconciliation/reconcile';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import {
+  AffectedReport,
   ChangeTrigger,
   PeriodChangeProposal,
 } from './entities/period-change-proposal.entity';
@@ -113,8 +114,38 @@ export interface ProposalDraft {
   detail: Record<string, unknown>;
 }
 
+/**
+ * Completed exports that contain the approved revision (plan 2.9): the reports a restatement would make
+ * stale. Capped; the export ids lead to their sources.
+ */
+async function affectedReportsOf(
+  manager: EntityManager,
+  revisionId: string,
+): Promise<AffectedReport[]> {
+  const rows: Array<{
+    id: string;
+    report_type: string;
+    content_hash: string | null;
+    generated_at: Date | null;
+  }> = await manager.query(
+    `SELECT j."id", j."report_type", j."content_hash", j."generated_at"
+       FROM "export_job_sources" s JOIN "export_jobs" j ON j."id" = s."export_job_id"
+      WHERE s."revision_id" = $1 AND j."state" = 'completed'
+      ORDER BY j."created_at", j."id" LIMIT 100`,
+    [revisionId],
+  );
+  return rows.map((row) => ({
+    exportId: row.id,
+    reportType: row.report_type,
+    contentHash: row.content_hash,
+    generatedAt: row.generated_at
+      ? new Date(row.generated_at).toISOString()
+      : null,
+  }));
+}
+
 /** The open proposal refreshed with the draft, or a new open proposal. */
-function saveProposal(
+async function saveProposal(
   manager: EntityManager,
   open: PeriodChangeProposal | null,
   draft: ProposalDraft,
@@ -126,6 +157,7 @@ function saveProposal(
     before: draft.before,
     after: draft.after,
     detail: draft.detail,
+    affectedReports: await affectedReportsOf(manager, draft.approved.id),
     updatedBy: actor.userId,
   };
   if (open) return manager.save(PeriodChangeProposal, { ...open, ...values });
@@ -137,7 +169,6 @@ function saveProposal(
       unitId: draft.period.unitId,
       approvedRevisionId: draft.approved.id,
       state: 'open',
-      affectedReports: [],
       createdBy: actor.userId,
     }),
   );

@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Type } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import * as request from 'supertest';
 import { CalendarMaterializerService } from '../../../src/calendar/calendar-materializer.service';
@@ -85,7 +85,12 @@ export class PlanWorld {
     this.world = await seedEventWorld(this.harness.dataSource);
     await this.seedProducts();
     this.app = await createIntegrationApp(this.harness, {
-      modules: [ProductionEventModule, ProductionPlanModule, V2Module],
+      modules: [
+        ProductionEventModule,
+        ProductionPlanModule,
+        V2Module,
+        ...this.extraModules(),
+      ],
     });
     const token = (tenantId: string, role: string) =>
       signToken(this.app, { userId: randomUUID(), tenantId, role });
@@ -98,6 +103,11 @@ export class PlanWorld {
         await this.profile(unit, product);
       }
     }
+  }
+
+  /** Feature modules a derived world adds to the application (e.g. the PI integration). */
+  protected extraModules(): Array<Type<unknown>> {
+    return [];
   }
 
   async stop(): Promise<void> {

@@ -92,6 +92,11 @@ import { PeriodsService } from '../periods/periods.service';
 import { AccountingCommandsService } from '../accounting/accounting-commands.service';
 import { AccountingModule } from '../accounting/accounting.module';
 import { CalculationRun } from '../accounting/entities/calculation-run.entity';
+import { DeliveryReconciliationService } from '../exports/delivery-reconciliation.service';
+import { ExportJobsService } from '../exports/export-jobs.service';
+import { ExportReadsService } from '../exports/export-reads.service';
+import { ExportRequestsService } from '../exports/export-requests.service';
+import { ExportsModule } from '../exports/exports.module';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
 
@@ -277,6 +282,23 @@ class AccountingModuleStub {}
 })
 class ReconciliationModuleStub {}
 
+/** Stands in for the plan 2.9 exports module (requests, reads, render jobs, delivery reconciliation). */
+@Module({
+  providers: [
+    { provide: ExportRequestsService, useValue: {} },
+    { provide: ExportReadsService, useValue: {} },
+    { provide: ExportJobsService, useValue: {} },
+    { provide: DeliveryReconciliationService, useValue: {} },
+  ],
+  exports: [
+    ExportRequestsService,
+    ExportReadsService,
+    ExportJobsService,
+    DeliveryReconciliationService,
+  ],
+})
+class ExportsModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -368,6 +390,8 @@ async function generate(): Promise<string> {
     .useModule(AccountingModuleStub)
     .overrideModule(ReconciliationModule)
     .useModule(ReconciliationModuleStub)
+    .overrideModule(ExportsModule)
+    .useModule(ExportsModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

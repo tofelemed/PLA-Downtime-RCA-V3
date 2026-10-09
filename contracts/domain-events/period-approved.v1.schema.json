@@ -1,0 +1,283 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/domain-events/period-approved.v1.schema.json",
+  "title": "PeriodApproved v1",
+  "description": "An accounting revision of a production period was approved (WF03). Carries the approved per-product totals, actuals quality, unit of measure, policy versions and the prior revision; values are unvalued until plan 2.6 (D08).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "domainEventId",
+    "tenantId",
+    "entityType",
+    "entityId",
+    "entityRevision",
+    "occurredAt",
+    "correlationId",
+    "periodId",
+    "revisionId",
+    "revision",
+    "unitId",
+    "utcStart",
+    "utcEnd",
+    "priorRevisionId",
+    "snapshotId",
+    "snapshotHash",
+    "submittedHash",
+    "calculationRunId",
+    "approvedBy",
+    "policyVersions",
+    "products",
+    "quality",
+    "valuation"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "domainEventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "entityType": {
+      "const": "production_period"
+    },
+    "entityId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "entityRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlationId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "periodId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "revisionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "unitId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "utcStart": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "utcEnd": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "priorRevisionId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "snapshotId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "snapshotHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "submittedHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "calculationRunId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "approvedBy": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "policyVersions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sliceId",
+          "productId",
+          "uom",
+          "target",
+          "actual",
+          "gap",
+          "attributed",
+          "toleranceAdjustment",
+          "residual",
+          "overAccounted",
+          "overproduction"
+        ],
+        "properties": {
+          "sliceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "uom": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+          },
+          "actual": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+          },
+          "gap": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+          },
+          "attributed": {
+            "type": "string",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+          },
+          "toleranceAdjustment": {
+            "type": "string",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+          },
+          "residual": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+          },
+          "overAccounted": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+          },
+          "overproduction": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+          }
+        }
+      }
+    },
+    "quality": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sliceId",
+          "qualityState",
+          "coverageRatio"
+        ],
+        "properties": {
+          "sliceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "qualityState": {
+            "type": "string"
+          },
+          "coverageRatio": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+          }
+        }
+      }
+    },
+    "valuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "currency",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "const": "unvalued"
+        },
+        "currency": {
+          "type": "null"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

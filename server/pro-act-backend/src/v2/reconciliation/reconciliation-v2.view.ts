@@ -1,7 +1,10 @@
 import { AccountingRevision } from '../../accounting/entities/accounting-revision.entity';
 import { ApprovalAction } from '../../reconciliation/entities/approval-action.entity';
 import { LineEvidenceRef } from '../../reconciliation/entities/reconciliation-line.entity';
-import { PeriodChangeProposal } from '../../reconciliation/entities/period-change-proposal.entity';
+import {
+  AffectedReport,
+  PeriodChangeProposal,
+} from '../../reconciliation/entities/period-change-proposal.entity';
 import { RevisionState } from '../../reconciliation/revision-state';
 import {
   candidatesPart,
@@ -201,7 +204,8 @@ export interface ChangeProposalV2View {
   inputHash: string | null;
   before: Record<string, unknown>;
   after: Record<string, unknown> | null;
-  affectedReports: string[];
+  /** completed exports containing the approved revision (plan 2.9) */
+  affectedReports: AffectedReport[];
   detail: Record<string, unknown>;
   resolvedBy: string | null;
   resolvedAt: string | null;

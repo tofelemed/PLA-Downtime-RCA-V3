@@ -153,6 +153,7 @@ re-map (`KAFKA_PORT`).
 ## Data, uploads and maintenance
 
 * Database files live in the `proact_postgres-data` volume, uploaded evidence/attachments in `proact_uploads`,
+  report export files (plan 2.9, private, never served under `/uploads`) in `proact_exports`,
   Kafka logs in `proact_kafka-data` and MQTT retained messages/sessions in `proact_mqtt-data`.
   `docker compose down` keeps them; `docker compose down -v` deletes them.
 * Backup / restore the bundled database:

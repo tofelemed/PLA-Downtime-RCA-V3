@@ -92,6 +92,9 @@ import { ActualsJobsV2Controller } from './periods/actuals-jobs-v2.controller';
 import { ExternalReportsV2Controller } from './periods/external-reports-v2.controller';
 import { PeriodsV2Service } from './periods/periods-v2.service';
 import { ProductionPeriodsV2Controller } from './periods/production-periods-v2.controller';
+import { ExportsModule } from '../exports/exports.module';
+import { DeliveriesV2Controller } from './exports/deliveries-v2.controller';
+import { ExportsV2Controller } from './exports/exports-v2.controller';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -144,6 +147,7 @@ import { ProductionPeriodsV2Controller } from './periods/production-periods-v2.c
     PeriodsModule,
     AccountingModule,
     ReconciliationModule,
+    ExportsModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -180,6 +184,8 @@ import { ProductionPeriodsV2Controller } from './periods/production-periods-v2.c
     PeriodAccountingV2Controller,
     ReconciliationV2Controller,
     ChangeProposalsV2Controller,
+    ExportsV2Controller,
+    DeliveriesV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,

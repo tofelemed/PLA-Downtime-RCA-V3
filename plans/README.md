@@ -27,7 +27,7 @@ Status legend: ⬜ not started · 🔄 in progress · 🧪 implemented, tests pe
 | Milestone | Meaning | Sub-phases |
 |---|---|---|
 | **M0 Verified baseline** | Phase 0 complete; v2 API foundation live; blocking bugs B1 B2 B14 B17 B18 resolved | 0.1–0.4 |
-| **M1 Vertical slice** (spec §20) | One PI event frame → raw observation → canonical event → shift period → loss line → approved revision → export, end to end with real persistence | 1.1, 1.2, 1.5, 1.6 (EF only), 2.1, 2.2, 2.3 (minimal), 2.4, 2.5, 2.8, 2.9 (export only) |
+| **M1 Vertical slice** (spec §20) — 🧪 reached 9 Oct 2026 (backend; evidence: `test/integration/m1-vertical-slice.int-spec.ts`, "M1 vertical slice" in `evidence/phase0-verification.md`; UI in Phase 3) | One PI event frame → raw observation → canonical event → shift period → loss line → approved revision → export, end to end with real persistence | 1.1, 1.2, 1.5, 1.6 (EF only), 2.1, 2.2, 2.3 (minimal), 2.4, 2.5, 2.8, 2.9 (export only) |
 | **M2 Three connectors certified** | PI (EF + actuals), MQTT, Kafka pass §6.4/§7 certification tests | 1.3–1.10 |
 | **M3 Accounting complete** | Both ledgers, valuation, KPIs, workflow, exports | 2.6, 2.7, remaining 2.x |
 | **M4 Frontend on v2** | All retained screens use v2 APIs; heuristics removed; Downtime Analysis and integration console live | 3.1–3.9 |
@@ -70,7 +70,7 @@ Status legend: ⬜ not started · 🔄 in progress · 🧪 implemented, tests pe
 | ⬜ | 2.6 Valuation | [2.6-valuation.md](phase-2/2.6-valuation.md) | T38, T45 |
 | ⬜ | 2.7 KPI engine: OEE, downtime, reliability | [2.7-kpi-engine.md](phase-2/2.7-kpi-engine.md) | T20, T21, T31, T41 |
 | 🧪 | 2.8 Reconciliation editor backend and approval workflow | [2.8-reconciliation-and-approval-workflow.md](phase-2/2.8-reconciliation-and-approval-workflow.md) | T32, T33, T34, T35, T36 green (9 Oct) + T15 / T16 submission gates and the revision half of T44: atomic draft-lines saves as immutable line sets (If-Match, RUN_CHANGED diff, line-indexed 422s, allocation budget), tolerance adjustments, submit / approve / reject / revise / cancel with content hashes, approval snapshots, separation of duties (also SuperAdmin and dual-role users), approved revisions immutable by trigger, stale marking and change proposals (also plan restatements), append-only `audit_log`; delivery / exports are 2.9, the editor UI 3.5 |
-| ⬜ | 2.9 Exports, domain events, downstream delivery | [2.9-exports-and-downstream-events.md](phase-2/2.9-exports-and-downstream-events.md) | T39, API04/05 |
+| 🧪 | 2.9 Exports, domain events, downstream delivery | [2.9-exports-and-downstream-events.md](phase-2/2.9-exports-and-downstream-events.md) | T39 (export half), API04, API05 (contracts, once per outbox id) green (9 Oct): immutable CSV exports bound to approved revisions pinned at request time (leased render job, streamed sha256, injection-safe cells, cancellation with `partial`, expiry, re-authorized unit-scoped downloads), versioned `PeriodSubmitted` / `PeriodApproved` / `PeriodRestated` contracts validated by the outbox relay, delivery reconciliation, proposals list affected exports; PDF, webhook / CMMS / Kafka republish targets (D12) and realtime sequences (3.1) deferred; restore half of T39 in 3.12 |
 
 ### Phase 3 — Frontend, analytics, RCA, production readiness (spec P3: E10–E12) → [phase-3/README.md](phase-3/README.md)
 | Status | Sub-phase | File | Exit tests |

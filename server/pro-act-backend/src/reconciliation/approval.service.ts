@@ -7,6 +7,7 @@ import { AccountingPoliciesService } from '../periods/accounting-policies.servic
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { invalidTransition } from '../profiles/profile-errors';
 import { ApprovalSnapshot } from './entities/approval-snapshot.entity';
+import { publishApproval } from './period-approval-event';
 import {
   lockPeriod,
   periodInScope,
@@ -143,7 +144,7 @@ export class ApprovalService {
   }
 }
 
-/** Snapshot, `approved`, reconciled label, history and outbox `PeriodApproved` — one transaction. */
+/** Snapshot, `approved`, reconciled label, history and outbox `PeriodApproved` / `PeriodRestated` — one transaction. */
 async function markApproved(
   manager: EntityManager,
   state: RevisionState,
@@ -175,14 +176,7 @@ async function markApproved(
     afterHash: snapshot.contentHash,
     detail: { snapshotId: snapshot.id },
   });
-  await publishWorkflowEvent(manager, revision, WORKFLOW_EVENTS.approved, {
-    unitId: period.unitId,
-    submittedHash: revision.submittedHash,
-    snapshotId: snapshot.id,
-    calculationRunId: revision.currentRunId,
-    supersedesId: revision.supersedesId,
-    approvedBy: approver,
-  });
+  await publishApproval(manager, state, snapshot, approver);
 }
 
 /** WF03: the reviewed content plus who submitted and approved, when, and their comments. */

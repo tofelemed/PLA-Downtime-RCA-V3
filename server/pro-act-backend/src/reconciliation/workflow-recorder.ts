@@ -2,6 +2,7 @@ import { EntityManager } from 'typeorm';
 import { AccountingRevision } from '../accounting/entities/accounting-revision.entity';
 import { appendAudit, AuditDraft } from '../common/audit/audit-trail';
 import { RequestContext } from '../common/context/request-context';
+import { domainEnvelope } from '../common/domain-events/domain-event-envelope';
 import { enqueueOutbox } from '../common/outbox/outbox-writer';
 import {
   ApprovalAction,
@@ -89,7 +90,10 @@ export async function recordTransition(
   await appendAudit(manager, [auditOf(step)]);
 }
 
-/** Outbox message of a workflow step; consumers run after commit and cannot undo it (WF03). */
+/**
+ * Outbox message of a workflow step with the v1 domain-message envelope (§15.4, plan 2.9); consumers run
+ * after commit and cannot undo it (WF03). Types with a contract are schema-checked by the relay.
+ */
 export async function publishWorkflowEvent(
   manager: EntityManager,
   revision: AccountingRevision,
@@ -102,7 +106,14 @@ export async function publishWorkflowEvent(
       aggregateType: 'production_period',
       aggregateId: revision.periodId,
       type,
+      version: revision.revision,
       payload: {
+        ...domainEnvelope({
+          tenantId: revision.tenantId,
+          entityType: 'production_period',
+          entityId: revision.periodId,
+          entityRevision: revision.revision,
+        }),
         periodId: revision.periodId,
         revisionId: revision.id,
         revision: revision.revision,
@@ -112,10 +123,11 @@ export async function publishWorkflowEvent(
   ]);
 }
 
-/** Message types of plan 2.8 (delivery and exports in 2.9). */
+/** Message types of plan 2.8 (`PeriodRestated` and the versioned contracts: plan 2.9). */
 export const WORKFLOW_EVENTS = {
   submitted: 'PeriodSubmitted',
   approved: 'PeriodApproved',
+  restated: 'PeriodRestated',
   rejected: 'PeriodRejected',
   revised: 'PeriodRevisionOpened',
   cancelled: 'PeriodRevisionCancelled',

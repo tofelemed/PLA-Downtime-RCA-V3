@@ -7486,6 +7486,316 @@
           "v2 · Reconciliation and approval"
         ]
       }
+    },
+    "/api/v2/exports": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 422 INVALID_SELECTOR / INVALID_RANGE / WINDOW_TOO_LARGE / EXPORT_TOO_LARGE / REVISION_NOT_APPROVED; 422 INVALID_REFERENCE for units or revisions outside the tenant or the caller’s unit scope; 403 TENANT_SCOPE_REQUIRED for a unit-limited caller without unitIds.",
+        "operationId": "ExportsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Request a report export (202 + job); the approved revisions it contains are pinned now",
+        "tags": [
+          "v2 · Exports"
+        ]
+      },
+      "get": {
+        "operationId": "ExportsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Export jobs the caller may see, newest first",
+        "tags": [
+          "v2 · Exports"
+        ]
+      }
+    },
+    "/api/v2/exports/{id}": {
+      "get": {
+        "description": "state queued → running → completed | failed | cancelled; counts {accepted, processed, quarantined, rejected, pending}; downloadUrl while the file is available. Another tenant’s or an out-of-scope job is 404.",
+        "operationId": "ExportsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Status of an export job",
+        "tags": [
+          "v2 · Exports"
+        ]
+      }
+    },
+    "/api/v2/exports/{id}/sources": {
+      "get": {
+        "operationId": "ExportsV2Controller_sources_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The approved revisions, snapshots and calculation runs an export is built from",
+        "tags": [
+          "v2 · Exports"
+        ]
+      }
+    },
+    "/api/v2/exports/{id}/cancel": {
+      "post": {
+        "description": "Requires `Idempotency-Key`.",
+        "operationId": "ExportsV2Controller_cancel_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a queued or running export (no file is kept; 409 once finished)",
+        "tags": [
+          "v2 · Exports"
+        ]
+      }
+    },
+    "/api/v2/exports/{id}/download": {
+      "get": {
+        "description": "409 EXPORT_NOT_READY while queued or running; 410 EXPORT_CANCELLED / EXPORT_FAILED / EXPORT_EXPIRED. Header `X-Content-SHA256` = the job’s contentHash. Audited.",
+        "operationId": "ExportsV2Controller_download_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Download the export file (streamed; re-authorized now)",
+        "tags": [
+          "v2 · Exports"
+        ]
+      }
+    },
+    "/api/v2/deliveries/reconciliation": {
+      "get": {
+        "description": "Every revision approved in [from, to) with its outbox delivery: delivered, pending (retrying with backoff), dead (dead-lettered) or missing; unit-scoped; keyset paging.",
+        "operationId": "DeliveriesV2Controller_reconciliation_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "approvedAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Approval time window start (inclusive), ISO 8601",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Approval time window end (exclusive), ISO 8601",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat to filter by several units",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approved revisions vs the delivery of their PeriodApproved message",
+        "tags": [
+          "v2 · Exports"
+        ]
+      }
     }
   },
   "info": {
@@ -9978,6 +10288,60 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "CreateExportDto": {
+        "type": "object",
+        "properties": {
+          "reportType": {
+            "type": "string",
+            "enum": [
+              "period_summary",
+              "loss_lines"
+            ]
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "csv"
+            ],
+            "description": "CSV only in R1 (PDF: Phase 3)"
+          },
+          "revisionSelector": {
+            "type": "string",
+            "enum": [
+              "published",
+              "revision_ids"
+            ],
+            "description": "`published`: the latest approved revision of every period overlapping [from, to) (needs from/to, optional unitIds). `revision_ids`: the named approved revisions (needs revisionIds only). Draft or in-review content is never exported."
+          },
+          "from": {
+            "type": "string",
+            "description": "Window start (inclusive), ISO 8601"
+          },
+          "to": {
+            "type": "string",
+            "description": "Window end (exclusive), ISO 8601"
+          },
+          "unitIds": {
+            "description": "Units to export; omitted = every unit (needs a tenant-wide grant)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "revisionIds": {
+            "description": "Approved revision ids (revision_ids selector)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "reportType",
+          "format",
+          "revisionSelector"
         ]
       }
     }

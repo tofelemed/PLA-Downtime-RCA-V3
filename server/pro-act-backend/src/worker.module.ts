@@ -16,6 +16,7 @@ import { PlansModule } from './plans/plans.module';
 import { PeriodsModule } from './periods/periods.module';
 import { AccountingModule } from './accounting/accounting.module';
 import { ReconciliationModule } from './reconciliation/reconciliation.module';
+import { ExportsModule } from './exports/exports.module';
 import { RealtimeModule } from './realtime/realtime.module';
 
 registerPgTypeParsers();
@@ -58,6 +59,8 @@ registerPgTypeParsers();
     PeriodsModule,
     AccountingModule,
     ReconciliationModule,
+    // export render jobs and expired-file purge (plan 2.9)
+    ExportsModule,
   ],
   providers: [WorkerHealthServer],
 })

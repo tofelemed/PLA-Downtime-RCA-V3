@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/domain-events/period-submitted.v1.schema.json",
+  "title": "PeriodSubmitted v1",
+  "description": "A draft accounting revision of a production period was submitted for approval (plan 2.8, WF01).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "domainEventId",
+    "tenantId",
+    "entityType",
+    "entityId",
+    "entityRevision",
+    "occurredAt",
+    "correlationId",
+    "periodId",
+    "revisionId",
+    "revision",
+    "submittedHash",
+    "calculationRunId",
+    "submittedBy"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "domainEventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "entityType": {
+      "const": "production_period"
+    },
+    "entityId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "entityRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlationId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "periodId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "revisionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "submittedHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "calculationRunId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "submittedBy": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    }
+  }
+}

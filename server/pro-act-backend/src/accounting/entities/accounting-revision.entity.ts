@@ -26,6 +26,10 @@ export type RevisionLifecycle = (typeof REVISION_LIFECYCLES)[number];
 })
 @Index('IDX_accounting_revisions_current_run', ['currentRunId'])
 @Index('IDX_accounting_revisions_supersedes', ['supersedesId'])
+/** approved revisions by approval time (2.9 delivery reconciliation) */
+@Index('IDX_accounting_revisions_tenant_approved', ['tenantId', 'approvedAt'], {
+  where: `"lifecycle" = 'approved'`,
+})
 export class AccountingRevision extends TenantScopedEntity {
   @Column({ name: 'period_id', type: 'uuid' })
   periodId: string;

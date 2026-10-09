@@ -17,6 +17,14 @@ export type ChangeTrigger = (typeof CHANGE_TRIGGERS)[number];
 export const PROPOSAL_STATES = ['open', 'accepted', 'dismissed'] as const;
 export type ProposalState = (typeof PROPOSAL_STATES)[number];
 
+/** A completed export containing the approved revision (plan 2.9), listed on its change proposal. */
+export interface AffectedReport {
+  exportId: string;
+  reportType: string;
+  contentHash: string | null;
+  generatedAt: string | null;
+}
+
 /**
  * A change that reached an approved period (spec §14.2 `period_change_proposals`, WF04): the approved
  * revision it concerns, what triggered it, the approved totals (`before`) and a preview computed from the
@@ -88,7 +96,7 @@ export class PeriodChangeProposal extends TenantScopedEntity {
   after: Record<string, unknown> | null;
 
   @Column({ name: 'affected_reports', type: 'jsonb', default: () => "'[]'" })
-  affectedReports: string[];
+  affectedReports: AffectedReport[];
 
   @Column({ name: 'detail', type: 'jsonb', default: () => "'{}'" })
   detail: Record<string, unknown>;

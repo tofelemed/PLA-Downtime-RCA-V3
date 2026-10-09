@@ -37,6 +37,9 @@ COPY --chown=node:node package.json ./
 # Multer writes uploads to ./uploads (relative to the working directory); mount a volume here.
 RUN mkdir -p /app/uploads && chown node:node /app/uploads
 VOLUME ["/app/uploads"]
+# Report export files (plan 2.9): private, never served; shared by the API and the worker via a volume.
+RUN mkdir -p /app/storage/exports && chown -R node:node /app/storage
+VOLUME ["/app/storage/exports"]
 
 # Role-aware entrypoint and probe (PROCESS_ROLE=api|worker|all, default all). The CR strip guards
 # against CRLF checkouts on Windows hosts.

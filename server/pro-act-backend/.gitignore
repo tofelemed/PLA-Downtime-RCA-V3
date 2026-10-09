@@ -57,3 +57,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # local env backups
 .env.*.bak
+
+# Report export files written by the local API/worker (plan 2.9)
+/storage

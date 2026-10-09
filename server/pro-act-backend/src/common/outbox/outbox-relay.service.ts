@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
+import { domainEventViolations } from '../domain-events/domain-event-validator';
 import { backoffSeconds, envInt, withTimeout } from '../helpers/time-bounds';
 import {
   OUTBOX_TRANSPORT,
@@ -28,14 +29,18 @@ export interface RelayResult {
 }
 
 const BACKOFF_BASE_SECONDS = 2;
+/** last_error prefix of a payload that violates its domain-event contract (API05) */
+export const SCHEMA_INVALID = 'SCHEMA_INVALID';
 const BACKOFF_CAP_SECONDS = 600;
 
 /**
  * Outbox relay (FND02, API05): claims due `pending` rows with `FOR UPDATE SKIP LOCKED` (so two relays
  * never publish the same row concurrently), publishes them in id order through the bound transport
  * with a timeout, and marks them `published` in the same transaction. A failed publish is retried with
- * exponential backoff; after OUTBOX_MAX_ATTEMPTS the row is `failed` (dead letter). Later rows of an
- * aggregate wait while an earlier row of it is backing off (per-aggregate order).
+ * exponential backoff; after OUTBOX_MAX_ATTEMPTS the row is `failed` (dead letter, logged as an error).
+ * Payloads of versioned domain messages are validated against their contract before publishing (plan
+ * 2.9, API05); a violation is never published and dead-letters at once (`SCHEMA_INVALID`). Later rows of
+ * an aggregate wait while an earlier row of it is backing off (per-aggregate order).
  */
 @Injectable()
 export class OutboxRelayService {
@@ -78,14 +83,17 @@ export class OutboxRelayService {
         result.deferred += 1;
         continue;
       }
-      const error = await this.publishOne(row);
+      const violation = domainEventViolations(row.type, row.payload);
+      const error = violation
+        ? `${SCHEMA_INVALID}: ${violation}`.slice(0, 2000)
+        : await this.publishOne(row);
       if (!error) {
         published.push(row.id);
         continue;
       }
       blocked.add(aggregate);
       result.failed += 1;
-      await this.recordFailure(manager, row, error);
+      await this.recordFailure(manager, row, error, violation !== null);
     }
     if (published.length > 0) {
       await manager.query(
@@ -115,13 +123,21 @@ export class OutboxRelayService {
     }
   }
 
+  /** A permanent failure (schema violation) dead-letters at once: retrying cannot fix the payload. */
   private async recordFailure(
     manager: EntityManager,
     row: OutboxRow,
     error: string,
+    permanent: boolean,
   ): Promise<void> {
     const attempts = row.attempts + 1;
-    const exhausted = attempts >= envInt('OUTBOX_MAX_ATTEMPTS', 12);
+    const exhausted =
+      permanent || attempts >= envInt('OUTBOX_MAX_ATTEMPTS', 12);
+    if (exhausted) {
+      this.logger.error(
+        `Outbox ${row.type} #${row.id} dead-lettered after ${attempts} attempt(s): ${error}`,
+      );
+    }
     const delay = backoffSeconds(
       row.attempts,
       BACKOFF_BASE_SECONDS,
