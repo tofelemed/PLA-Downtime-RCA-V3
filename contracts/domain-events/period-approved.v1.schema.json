@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://proact.local/contracts/domain-events/period-approved.v1.schema.json",
   "title": "PeriodApproved v1",
-  "description": "An accounting revision of a production period was approved (WF03). Carries the approved per-product totals, actuals quality, unit of measure, policy versions and the prior revision; values are unvalued until plan 2.6 (D08).",
+  "description": "An accounting revision of a production period was approved (WF03). Carries the approved per-product totals, actuals quality, unit of measure, policy versions and the prior revision, and their valuation per slice, view and reporting currency (plan 2.6, D08: IRR and USD; null amounts when unvalued or without an approved FX rate).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -268,14 +268,112 @@
       ],
       "properties": {
         "status": {
-          "const": "unvalued"
+          "enum": [
+            "unvalued",
+            "valued",
+            "mixed"
+          ]
         },
         "currency": {
           "type": "null"
         },
         "reason": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1
+        },
+        "policyVersion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "version"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "version": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        },
+        "defaultView": {
+          "type": "string"
+        },
+        "currencies": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          }
+        },
+        "totals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sliceId",
+              "view",
+              "currency",
+              "amount",
+              "status",
+              "reasons",
+              "unvaluedQuantity"
+            ],
+            "properties": {
+              "sliceId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "view": {
+                "enum": [
+                  "contribution_margin",
+                  "standard_cost",
+                  "cost_per_hour",
+                  "independent_components"
+                ]
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              },
+              "amount": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+              },
+              "status": {
+                "enum": [
+                  "valued",
+                  "unvalued",
+                  "mixed"
+                ]
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "unvaluedQuantity": {
+                "type": "string",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+              }
+            }
+          }
         }
       }
     }

@@ -35,7 +35,9 @@ import {
   toRevisionView,
   toRunView,
   toTotalsView,
+  toValuationTotalView,
 } from './period-accounting-v2.view';
+import { PeriodValuationTotal } from '../../valuation/entities/period-valuation-total.entity';
 
 /**
  * v2 reads of plan 2.5: a period's accounting (revision, run, both ledgers' totals, lines with evidence)
@@ -61,7 +63,8 @@ export class PeriodAccountingV2Service {
     const run = revision?.currentRunId
       ? await this.runs.findOneBy({ id: revision.currentRunId })
       : null;
-    const { lines, totals, evidence } = await this.content(run);
+    const { lines, totals, evidence, valuationTotals } =
+      await this.content(run);
     const data: PeriodAccountingV2View = {
       periodId: period.id,
       unitId: period.unitId,
@@ -71,6 +74,7 @@ export class PeriodAccountingV2Service {
       revision: revision ? toRevisionView(revision) : null,
       run: run ? toRunView(run) : null,
       totals: totals.map(toTotalsView),
+      valuationTotals: valuationTotals.map(toValuationTotalView),
       lines: lines.map((line) => toLineView(line, evidence)),
       coverageRatio: run ? await this.coverageOf(run) : null,
     };
@@ -108,8 +112,9 @@ export class PeriodAccountingV2Service {
   /** Lines, evidence and totals of a run (none without a run). */
   private async content(run: CalculationRun | null) {
     const manager = this.periods.manager;
-    if (!run) return { lines: [], totals: [], evidence: [] };
-    const [lines, totals] = await Promise.all([
+    if (!run)
+      return { lines: [], totals: [], evidence: [], valuationTotals: [] };
+    const [lines, totals, valuationTotals] = await Promise.all([
       manager.find(LossLine, {
         where: { runId: run.id },
         order: {
@@ -123,13 +128,23 @@ export class PeriodAccountingV2Service {
         where: { runId: run.id },
         order: { sliceId: 'ASC', ledger: 'ASC' },
       }),
+      manager.find(PeriodValuationTotal, {
+        where: { tenantId: run.tenantId, runId: run.id },
+        order: {
+          sliceId: 'ASC',
+          ledger: 'ASC',
+          kind: 'ASC',
+          view: 'ASC',
+          currency: 'ASC',
+        },
+      }),
     ]);
     const evidence = lines.length
       ? await manager.find(LossLineEvidence, {
           where: { lossLineId: In(lines.map((l) => l.id)) },
         })
       : [];
-    return { lines, totals, evidence };
+    return { lines, totals, evidence, valuationTotals };
   }
 
   private async period(

@@ -84,15 +84,63 @@ const POLICY_VERSION = {
   },
 };
 
-/** D08: valuation is plan 2.6; until then every figure is unvalued and says why. */
+const VALUATION_TOTAL = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'sliceId',
+    'view',
+    'currency',
+    'amount',
+    'status',
+    'reasons',
+    'unvaluedQuantity',
+  ],
+  properties: {
+    sliceId: UUID,
+    view: {
+      enum: [
+        'contribution_margin',
+        'standard_cost',
+        'cost_per_hour',
+        'independent_components',
+      ],
+    },
+    currency: { type: 'string', pattern: '^[A-Z]{3}$' },
+    amount: NULLABLE_DECIMAL,
+    status: { enum: ['valued', 'unvalued', 'mixed'] },
+    reasons: { type: 'array', items: { type: 'string' } },
+    unvaluedQuantity: DECIMAL,
+  },
+};
+
+/**
+ * Valuation of the approved figures (plan 2.6, D08). Widened additively in v1: every payload valid before
+ * (`unvalued`, `currency: null`, a reason) is still valid; valued payloads add the policy version, the
+ * default view, the reporting currencies (IRR and USD) and per-slice totals per view and currency, whose
+ * amount is null when unvalued or when no approved FX rate covers the date. `currency` stays null: values
+ * are always in several currencies, named on each total.
+ */
 const VALUATION = {
   type: 'object',
   additionalProperties: false,
   required: ['status', 'currency', 'reason'],
   properties: {
-    status: { const: 'unvalued' },
+    status: { enum: ['unvalued', 'valued', 'mixed'] },
     currency: { type: 'null' },
-    reason: { type: 'string', minLength: 1 },
+    reason: { type: ['string', 'null'], minLength: 1 },
+    policyVersion: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['id', 'version'],
+      properties: { id: NULLABLE_UUID, version: { type: ['integer', 'null'] } },
+    },
+    defaultView: { type: 'string' },
+    currencies: {
+      type: 'array',
+      items: { type: 'string', pattern: '^[A-Z]{3}$' },
+    },
+    totals: { type: 'array', items: VALUATION_TOTAL },
   },
 };
 
@@ -144,7 +192,7 @@ export const DOMAIN_EVENT_SCHEMAS: Readonly<
   ),
   PeriodApproved: messageSchema(
     'PeriodApproved',
-    'An accounting revision of a production period was approved (WF03). Carries the approved per-product totals, actuals quality, unit of measure, policy versions and the prior revision; values are unvalued until plan 2.6 (D08).',
+    'An accounting revision of a production period was approved (WF03). Carries the approved per-product totals, actuals quality, unit of measure, policy versions and the prior revision, and their valuation per slice, view and reporting currency (plan 2.6, D08: IRR and USD; null amounts when unvalued or without an approved FX rate).',
     APPROVAL_PROPERTIES,
   ),
   PeriodRestated: messageSchema(

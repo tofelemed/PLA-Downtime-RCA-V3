@@ -114,8 +114,8 @@ const LEGACY_ROWS: LegacyRow[] = [
 /** Migrations after EventIntervalModel; reverted so legacy rows are inserted in the pre-1.1 shape. */
 // EventRevisions, HierarchyMappingAndCodeLibraries, EventOperations, IntakeCore, PiConnectionsToIntegrationConnections,
 // PiCertifiedIntake, SignalsAndSamples, Calendars, ProfilesAndRates, PlanVersions, PeriodsActuals, AccountingEngine,
-// ReconciliationWorkflow, ExportsAndDomainEvents, KpiResults
-const MIGRATIONS_AFTER_INTERVAL_MODEL = 15;
+// ReconciliationWorkflow, ExportsAndDomainEvents, KpiResults, Valuation
+const MIGRATIONS_AFTER_INTERVAL_MODEL = 16;
 
 /**
  * Plan 1.1 step 4: the migration's SQL backfill gives the same answers as the TypeScript rules.

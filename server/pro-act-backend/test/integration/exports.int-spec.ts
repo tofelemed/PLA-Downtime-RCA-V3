@@ -75,9 +75,13 @@ describe('report exports (plan 2.9)', () => {
       gap: '150',
       attributed: '150',
       residual: '0',
-      value: '',
-      currency: '',
+      valuation_view: 'contribution_margin',
+      value_1: '',
+      currency_1: 'IRR',
+      value_2: '',
+      currency_2: 'USD',
       valuation_status: 'unvalued',
+      valuation_reason: 'policy_unapproved',
     });
     expect(first.product_name).toBe(`'=HYPERLINK("http://evil.example","x")`);
     expect((await env.exportJob(jobId)).downloadCount).toBe(1);

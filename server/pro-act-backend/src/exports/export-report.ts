@@ -1,7 +1,13 @@
-import { UNVALUED } from '../reconciliation/period-approval-event';
+import { ReviewedValuation } from '../reconciliation/reviewed-valuation';
 import { CsvValue } from './csv';
 import { SliceProductLabel } from './entities/export-job-source.entity';
 import { ExportFilters, ExportReportType } from './entities/export-job.entity';
+import {
+  lineValuationCells,
+  sliceValuationCells,
+  VALUATION_COLUMNS,
+  VALUATION_HEADER,
+} from './export-valuation';
 
 /** What the renderer reads of an approval snapshot (`content.reviewed`, plan 2.8 `reviewedContent`). */
 export interface ReviewedSnapshot {
@@ -52,6 +58,8 @@ export interface ReviewedSnapshot {
     impactCodeId: string | null;
     reason: string | null;
   }>;
+  /** plan 2.6: valuation of the reviewed content; absent in snapshots approved before 2.6 */
+  valuation?: ReviewedValuation;
 }
 
 /** One pinned source with its snapshot, as the renderer loads it. */
@@ -93,12 +101,6 @@ const SOURCE_COLUMNS = [
   'product_id',
   'product_name',
 ];
-const VALUATION_COLUMNS = [
-  'value',
-  'currency',
-  'valuation_status',
-  'valuation_reason',
-];
 
 export const REPORT_COLUMNS: Record<ExportReportType, readonly string[]> = {
   period_summary: [
@@ -136,12 +138,6 @@ export const REPORT_COLUMNS: Record<ExportReportType, readonly string[]> = {
   ],
 };
 
-const VALUATION_CELLS: CsvValue[] = [
-  null,
-  null,
-  UNVALUED.status,
-  UNVALUED.reason,
-];
 
 /** Lines that add a quantity of their own (decisions on candidates are shown on the candidate rows). */
 const OWN_QUANTITY_ACTIONS = new Set(['manual', 'replace', 'tolerance']);
@@ -165,7 +161,7 @@ export function headerRecords(header: ExportHeader): CsvValue[][] {
     ['filter_unit_ids', joined(filters.unitIds)],
     ['filter_revision_ids', joined(filters.revisionIds)],
     ['source_revisions', header.sourceCount],
-    ['valuation', `${UNVALUED.status}: ${UNVALUED.reason}`],
+    ['valuation', VALUATION_HEADER],
   ];
 }
 
@@ -207,7 +203,7 @@ function summaryRows(source: RenderSource): CsvValue[][] {
       actuals?.qualityState ?? null,
       actuals?.coverageRatio ?? null,
       joined(slice.flags),
-      ...VALUATION_CELLS,
+      ...sliceValuationCells(source.reviewed.valuation, slice.sliceId),
     ];
   });
 }
@@ -232,7 +228,10 @@ function candidateRows(source: RenderSource): CsvValue[][] {
     c.impactCodeId,
     c.causeEventId,
     null,
-    ...VALUATION_CELLS,
+    ...lineValuationCells(source.reviewed.valuation, {
+      source: 'candidate',
+      id: c.lossLineId,
+    }),
   ]);
 }
 
@@ -254,7 +253,10 @@ function ownLineRows(source: RenderSource): CsvValue[][] {
       l.impactCodeId,
       null,
       l.reason,
-      ...VALUATION_CELLS,
+      ...lineValuationCells(source.reviewed.valuation, {
+        source: 'line',
+        id: l.id,
+      }),
     ]);
 }
 

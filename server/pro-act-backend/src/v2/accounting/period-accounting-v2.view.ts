@@ -8,6 +8,8 @@ import { LossLineEvidence } from '../../accounting/entities/loss-line-evidence.e
 import { LossLine } from '../../accounting/entities/loss-line.entity';
 import { PeriodLedgerTotal } from '../../accounting/entities/period-ledger-total.entity';
 import { PolicyVersionRef } from '../../periods/entities/actuals-run.entity';
+import { StoredLineValuation } from '../../domain/valuation/valuation-snapshot';
+import { PeriodValuationTotal } from '../../valuation/entities/period-valuation-total.entity';
 import { Dec, formatDec } from '../../domain/actuals/decimal';
 import { toDecimalString as rawDecimal } from '../common/decimal-string.transformer';
 
@@ -74,6 +76,29 @@ export interface LossLineV2View {
   occurrenceId: string | null;
   flags: string[];
   evidence: EvidenceV2View[];
+  /** plan 2.6 valuation snapshot (views, rate / FX versions, amounts per reporting currency); null before 2.6 */
+  valuation: StoredLineValuation | null;
+}
+
+/** Valuation totals of the run per slice, ledger, kind, view and reporting currency (plan 2.6). */
+export interface ValuationTotalV2View {
+  sliceId: string;
+  ledger: string;
+  kind: string;
+  view: string;
+  currency: string;
+  uom: string | null;
+  /** null when nothing is valued or an approved FX rate is missing (`fx_rate_missing`) — never zero */
+  amount: string | null;
+  nativeAmount: string | null;
+  status: string;
+  reasons: string[];
+  valuedLines: number;
+  unvaluedLines: number;
+  fxMissingLines: number;
+  unvaluedQuantity: string | null;
+  unvaluedSeconds: string | null;
+  fxRateIds: string[];
 }
 
 export interface LedgerTotalsV2View {
@@ -107,6 +132,8 @@ export interface PeriodAccountingV2View {
   revision: RevisionV2View | null;
   run: RunV2View | null;
   totals: LedgerTotalsV2View[];
+  /** plan 2.6: the run's valuation totals (empty for runs before 2.6) */
+  valuationTotals: ValuationTotalV2View[];
   lines: LossLineV2View[];
   /** lowest actuals coverage ratio of the slices (the run's actuals run); null without a run */
   coverageRatio: number | null;
@@ -182,6 +209,7 @@ export function toLineView(
     evidence: evidence
       .filter((e) => e.lossLineId === line.id)
       .map(toEvidenceView),
+    valuation: line.valuation,
   };
 }
 
@@ -205,5 +233,28 @@ export function toTotalsView(totals: PeriodLedgerTotal): LedgerTotalsV2View {
     overproduction: toDecimalString(totals.overproductionQty),
     overAccounted: toDecimalString(totals.overAccountedQty),
     flags: totals.flags,
+  };
+}
+
+export function toValuationTotalView(
+  total: PeriodValuationTotal,
+): ValuationTotalV2View {
+  return {
+    sliceId: total.sliceId,
+    ledger: total.ledger,
+    kind: total.kind,
+    view: total.view,
+    currency: total.currency,
+    uom: total.uom,
+    amount: toDecimalString(total.amount),
+    nativeAmount: toDecimalString(total.nativeAmount),
+    status: total.status,
+    reasons: total.reasons,
+    valuedLines: total.valuedLines,
+    unvaluedLines: total.unvaluedLines,
+    fxMissingLines: total.fxMissingLines,
+    unvaluedQuantity: toDecimalString(total.unvaluedQuantity),
+    unvaluedSeconds: toDecimalString(total.unvaluedSeconds),
+    fxRateIds: total.fxRateIds,
   };
 }

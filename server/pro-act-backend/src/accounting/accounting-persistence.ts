@@ -7,6 +7,7 @@ import {
   PeriodAccounting,
 } from '../domain/accounting/accounting.types';
 import { Dec, formatDec } from '../domain/actuals/decimal';
+import { StoredLineValuation } from '../domain/valuation/valuation-snapshot';
 import { AccountingRevision } from './entities/accounting-revision.entity';
 import { CalculationRun, RunError } from './entities/calculation-run.entity';
 import { LossLineEvidence } from './entities/loss-line-evidence.entity';
@@ -37,6 +38,7 @@ function lineRow(
   line: LossLineDraft,
   scope: RunScope,
   id: string,
+  valuation: StoredLineValuation | null,
 ): QueryDeepPartialEntity<LossLine> {
   const cause = line.cause;
   return {
@@ -67,6 +69,7 @@ function lineRow(
     causeEventId: cause?.eventId ?? null,
     occurrenceId: cause?.occurrenceId ?? null,
     flags: line.flags,
+    valuation,
     createdBy: null,
   };
 }
@@ -102,12 +105,16 @@ function totalsRow(
   };
 }
 
-/** Lines, their evidence and the ledger totals of a validated run (one bulk insert per table). */
+/**
+ * Lines (with their 2.6 valuation snapshot, index-aligned), their evidence and the ledger totals of a
+ * validated run (one bulk insert per table); returns the line ids in line order.
+ */
 export async function writeRunResults(
   manager: EntityManager,
   scope: RunScope,
   accounting: PeriodAccounting,
-): Promise<{ lines: number; evidence: number }> {
+  valuations: readonly StoredLineValuation[] = [],
+): Promise<{ lines: number; evidence: number; ids: string[] }> {
   const ids = accounting.lines.map(() => randomUUID());
   const evidence = accounting.lines.flatMap((line, i) =>
     line.evidence.map(
@@ -126,7 +133,9 @@ export async function writeRunResults(
   await insertAll(
     manager,
     LossLine,
-    accounting.lines.map((line, i) => lineRow(line, scope, ids[i])),
+    accounting.lines.map((line, i) =>
+      lineRow(line, scope, ids[i], valuations[i] ?? null),
+    ),
   );
   await insertAll(manager, LossLineEvidence, evidence);
   await insertAll(
@@ -134,7 +143,7 @@ export async function writeRunResults(
     PeriodLedgerTotal,
     accounting.totals.map((t) => totalsRow(t, scope)),
   );
-  return { lines: ids.length, evidence: evidence.length };
+  return { lines: ids.length, evidence: evidence.length, ids };
 }
 
 /** `running → failed` with the validation errors; the draft keeps pointing at its previous run. */

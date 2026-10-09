@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://proact.local/contracts/policies/valuation_basis.schema.json",
   "title": "Valuation basis policy",
-  "description": "Which monetary basis values loss lines by default, how quantity-based and time-based valuations combine, and the tenant currency and FX rule. Spec VAL01 (effective-dated margin or standard cost with currency; default commercial view = contribution margin; standard cost separately named; financial policy approval recorded before production use), VAL02 (duration cost and quantity cost are alternative bases unless categories are independent cost components), VAL03 (snapshot currency and FX version; never aggregate currencies without an approved conversion snapshot). Decision D08. Consumed by sub-phase 2.6 (`valuation_policies` is `accounting_policies` kind `valuation_basis`); approval is the `POST /valuation-policies/{id}/approve` command and lives on the row, not in this document.",
+  "description": "Which monetary basis values loss lines by default, how quantity-based and time-based valuations combine, and the reporting currencies and FX rule. Spec VAL01 (effective-dated margin or standard cost with currency; default commercial view = contribution margin; standard cost separately named; financial policy approval recorded before production use), VAL02 (duration cost and quantity cost are alternative bases unless categories are independent cost components), VAL03 (snapshot currency and FX version; never aggregate currencies without an approved conversion snapshot). Decision D08. Consumed by sub-phase 2.6 (`valuation_policies` is `accounting_policies` kind `valuation_basis`); approval is the `POST /valuation-policies/{id}/approve` command and lives on the row, not in this document.",
   "type": "object",
   "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
   "additionalProperties": false,
@@ -18,7 +18,11 @@
   "$defs": {
     "body": {
       "type": "object",
-      "required": ["defaultBasis", "timeBasisRule", "currency", "fxPolicy"],
+      "required": ["defaultBasis", "timeBasisRule", "fxPolicy"],
+      "oneOf": [
+        { "required": ["currency"], "properties": { "currency": true } },
+        { "required": ["reportingCurrencies"], "properties": { "reportingCurrencies": true } }
+      ],
       "additionalProperties": false,
       "properties": {
         "defaultBasis": {
@@ -35,13 +39,28 @@
         },
         "currency": {
           "$ref": "policy-envelope.schema.json#/$defs/currencyCode",
-          "description": "Tenant reporting currency (VAL03). `XXX` (ISO 4217 'no currency') means undecided: valuation stays `unvalued` with reason `policy_unapproved` until a real code is set and the policy is approved."
+          "description": "Version 1 only: the single tenant currency (VAL03). `XXX` (ISO 4217 'no currency') means undecided: valuation stays `unvalued` with reason `policy_unapproved`. From version 2 use `reportingCurrencies`; exactly one of the two is present."
+        },
+        "reportingCurrencies": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "policy-envelope.schema.json#/$defs/currencyCode" },
+          "description": "From version 2 (D08 answer 2026-10-09: IRR and USD): every valued loss is reported in each of these currencies, converted through approved, dated `fx_rates` (VAL03); when no approved rate covers the valuation date the amount in that currency is null with reason `fx_rate_missing`, never estimated."
+        },
+        "independentImpactCodeIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "default": [],
+          "items": { "type": "string", "format": "uuid" },
+          "description": "Impact codes whose cost per hour is an independent cost component (VAL02 `independent_components`): only for these are margin and time cost summed, in the separately named `independent_components` view."
         },
         "fxPolicy": {
           "type": "string",
           "enum": ["none", "snapshot"],
           "default": "none",
-          "description": "`none`: single currency per tenant, cross-currency totals are null with reason `fx_missing`. `snapshot`: convert with an `fx_rate_snapshots` row effective on the valuation date and record its `fxVersionId` (VAL03)."
+          "description": "`none`: no conversion; an amount in another currency is null with reason `fx_rate_missing`. `snapshot`: convert with the approved `fx_rates` version in force on the valuation date and record its id (VAL03)."
         }
       }
     }

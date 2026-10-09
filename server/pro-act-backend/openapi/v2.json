@@ -8086,6 +8086,538 @@
           "v2 · KPI reports"
         ]
       }
+    },
+    "/api/v2/fx-rates": {
+      "get": {
+        "operationId": "FxRatesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromCurrency",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "USD",
+              "type": "string"
+            }
+          },
+          {
+            "name": "toCurrency",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "IRR",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "approved",
+                "retired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List FX rate versions (keyset on effectiveFrom, id)",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 SAME_CURRENCY, INVALID_VALUE (rate ≤ 0).",
+        "operationId": "FxRatesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FxRateCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft FX rate version (1 fromCurrency = rate toCurrency)",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/fx-rates/{id}": {
+      "get": {
+        "operationId": "FxRatesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one FX rate version; foreign ids are 404",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/fx-rates/{id}/approve": {
+      "post": {
+        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "operationId": "FxRatesV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft FX rate version",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/fx-rates/{id}/retire": {
+      "post": {
+        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). ",
+        "operationId": "FxRatesV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a draft or approved FX rate version",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/valuation-policies": {
+      "get": {
+        "operationId": "ValuationPoliciesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List valuation policy versions of the tenant (newest first)",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. Tenant-wide setting: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). independentImpactCodeIds must be impact codes of the tenant (422 INVALID_REFERENCE). Older versions are never changed.",
+        "operationId": "ValuationPoliciesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValuationPolicyCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new (unapproved) valuation policy version",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/valuation-policies/{id}": {
+      "get": {
+        "operationId": "ValuationPoliciesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one valuation policy version; foreign ids are 404",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/valuation-policies/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 CURRENCY_UNDECIDED for the XXX placeholder. Periods are revalued on their next recalculation.",
+        "operationId": "ValuationPoliciesV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record the finance approval of a valuation policy version",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/reports/loss-value": {
+      "get": {
+        "description": "Sums the stored valuation totals of the shown runs (approved revision, else the open draft — provisional); views are never added to each other; an amount is null when a contributing line has no approved FX rate (fx_rate_missing) or nothing is valued; unvalued quantities are listed per unit of measure. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days by period start.",
+        "operationId": "LossValueReportV2Controller_lossValue_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "metric",
+            "required": false,
+            "in": "query",
+            "description": "margin = commercial opportunity (contribution margin), standard_cost = standard cost view, operational_cost = cost per hour of downtime, independent_components = margin + time cost of the impact codes the policy marks independent. Views are never added to each other.",
+            "schema": {
+              "default": "margin",
+              "enum": [
+                "margin",
+                "standard_cost",
+                "operational_cost",
+                "independent_components"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "ledger",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "plan",
+              "enum": [
+                "plan",
+                "capacity"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "description": "kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only",
+            "schema": {
+              "default": "kind",
+              "enum": [
+                "kind",
+                "unit",
+                "day",
+                "month"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Loss value of one view (margin, standard cost, operational cost) per group and reporting currency (IRR, USD)",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
     }
   },
   "info": {
@@ -10632,6 +11164,103 @@
           "reportType",
           "format",
           "revisionSelector"
+        ]
+      },
+      "FxRateCreateDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "example": "2027-01-01T02:30:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = open-ended"
+          },
+          "fromCurrency": {
+            "type": "string",
+            "example": "USD"
+          },
+          "toCurrency": {
+            "type": "string",
+            "example": "IRR"
+          },
+          "rate": {
+            "type": "string",
+            "example": "500000",
+            "description": "Units of toCurrency per 1 fromCurrency; > 0, ≤ 10 decimals"
+          },
+          "source": {
+            "type": "object",
+            "description": "Where the rate comes from (free text)",
+            "nullable": true
+          }
+        },
+        "required": [
+          "effectiveFrom",
+          "fromCurrency",
+          "toCurrency",
+          "rate"
+        ]
+      },
+      "ValuationPolicyCreateDto": {
+        "type": "object",
+        "properties": {
+          "defaultBasis": {
+            "type": "string",
+            "enum": [
+              "contribution_margin",
+              "standard_cost"
+            ]
+          },
+          "timeBasisRule": {
+            "type": "string",
+            "enum": [
+              "exclusive",
+              "independent_components"
+            ]
+          },
+          "reportingCurrencies": {
+            "example": [
+              "IRR",
+              "USD"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fxPolicy": {
+            "type": "string",
+            "enum": [
+              "none",
+              "snapshot"
+            ]
+          },
+          "independentImpactCodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2027-01-01T00:00:00Z"
+          },
+          "notes": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "defaultBasis",
+          "timeBasisRule",
+          "reportingCurrencies",
+          "fxPolicy",
+          "effectiveFrom"
         ]
       }
     }

@@ -92,6 +92,44 @@ describe('domain event contracts (plan 2.9, §15.4)', () => {
     ).toBeNull();
   });
 
+  it('accepts a valued payload in both reporting currencies (plan 2.6, additive widening)', () => {
+    const sliceId = randomUUID();
+    const total = (currency: string, amount: string | null) => ({
+      sliceId,
+      view: 'contribution_margin',
+      currency,
+      amount,
+      status: amount === null ? 'mixed' : 'valued',
+      reasons: amount === null ? ['fx_rate_missing'] : [],
+      unvaluedQuantity: '0',
+    });
+    const valuation = {
+      status: 'mixed',
+      currency: null,
+      reason: 'fx_rate_missing',
+      policyVersion: { id: randomUUID(), version: 2 },
+      defaultView: 'contribution_margin',
+      currencies: ['IRR', 'USD'],
+      totals: [total('IRR', '2500000'), total('USD', null)],
+    };
+    expect(
+      domainEventViolations('PeriodApproved', {
+        ...periodApproved(),
+        valuation,
+      }),
+    ).toBeNull();
+    const numeric = {
+      ...valuation,
+      totals: [{ ...total('IRR', '1'), amount: 1 }],
+    };
+    expect(
+      domainEventViolations('PeriodApproved', {
+        ...periodApproved(),
+        valuation: numeric,
+      }),
+    ).toEqual(expect.any(String));
+  });
+
   it.each([
     ['a missing envelope field', { domainEventId: undefined }],
     ['an undeclared field', { rawEvents: [] }],

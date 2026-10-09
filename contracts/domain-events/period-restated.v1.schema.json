@@ -268,14 +268,112 @@
       ],
       "properties": {
         "status": {
-          "const": "unvalued"
+          "enum": [
+            "unvalued",
+            "valued",
+            "mixed"
+          ]
         },
         "currency": {
           "type": "null"
         },
         "reason": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1
+        },
+        "policyVersion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "version"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "version": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        },
+        "defaultView": {
+          "type": "string"
+        },
+        "currencies": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          }
+        },
+        "totals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sliceId",
+              "view",
+              "currency",
+              "amount",
+              "status",
+              "reasons",
+              "unvaluedQuantity"
+            ],
+            "properties": {
+              "sliceId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "view": {
+                "enum": [
+                  "contribution_margin",
+                  "standard_cost",
+                  "cost_per_hour",
+                  "independent_components"
+                ]
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              },
+              "amount": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+              },
+              "status": {
+                "enum": [
+                  "valued",
+                  "unvalued",
+                  "mixed"
+                ]
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "unvaluedQuantity": {
+                "type": "string",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+              }
+            }
+          }
         }
       }
     }

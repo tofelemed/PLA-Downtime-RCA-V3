@@ -27,7 +27,10 @@ import {
 const SEED_NOTE =
   'Seeded on first use from the D04 / D05 / D06 default (DECISIONS.md, 2026-10-07); change by a new version.';
 
-const DEFAULT_BODIES: Readonly<Record<PolicyKind, object>> = {
+/** Kinds seeded approved on first use; `valuation_basis` is seeded unapproved by the valuation module (VAL01). */
+type EngineKind = Exclude<PolicyKind, 'valuation_basis'>;
+
+const DEFAULT_BODIES: Readonly<Record<EngineKind, object>> = {
   coverage_gate: COVERAGE_GATE_DEFAULT,
   source_authority: SOURCE_AUTHORITY_DEFAULT,
   oee_policy: OEE_POLICY_DEFAULT,
@@ -115,7 +118,7 @@ export class AccountingPoliciesService {
   private async inForce(
     manager: EntityManager,
     scope: { tenantId: string; unitId: string },
-    kind: PolicyKind,
+    kind: EngineKind,
     at: Date,
   ): Promise<AccountingPolicy> {
     const found = await this.find(manager, scope, kind, at);
@@ -156,7 +159,7 @@ export class AccountingPoliciesService {
   private async seedDefault(
     manager: EntityManager,
     tenantId: string,
-    kind: PolicyKind,
+    kind: EngineKind,
   ): Promise<void> {
     const body = DEFAULT_BODIES[kind];
     await manager.query(

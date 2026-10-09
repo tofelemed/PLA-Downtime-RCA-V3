@@ -97,6 +97,11 @@ import { DeliveriesV2Controller } from './exports/deliveries-v2.controller';
 import { ExportsV2Controller } from './exports/exports-v2.controller';
 import { KpiReportsV2Controller } from './reports/kpi-reports-v2.controller';
 import { KpiReportsV2Service } from './reports/kpi-reports-v2.service';
+import { ValuationModule } from '../valuation/valuation.module';
+import { FxRatesV2Controller } from './valuation/fx-rates-v2.controller';
+import { ValuationPoliciesV2Controller } from './valuation/valuation-policies-v2.controller';
+import { LossValueReportV2Controller } from './reports/loss-value-v2.controller';
+import { LossValueReportV2Service } from './reports/loss-value-v2.service';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -150,6 +155,7 @@ import { KpiReportsV2Service } from './reports/kpi-reports-v2.service';
     AccountingModule,
     ReconciliationModule,
     ExportsModule,
+    ValuationModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -189,6 +195,9 @@ import { KpiReportsV2Service } from './reports/kpi-reports-v2.service';
     ExportsV2Controller,
     DeliveriesV2Controller,
     KpiReportsV2Controller,
+    FxRatesV2Controller,
+    ValuationPoliciesV2Controller,
+    LossValueReportV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -207,6 +216,7 @@ import { KpiReportsV2Service } from './reports/kpi-reports-v2.service';
     PeriodAccountingV2Service,
     ReconciliationV2Service,
     KpiReportsV2Service,
+    LossValueReportV2Service,
   ],
 })
 export class V2Module {}

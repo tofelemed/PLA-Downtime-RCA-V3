@@ -16,6 +16,7 @@ import { recordBaselineChanges } from './profile-events';
 import { ProfileReferences } from './profile-references';
 import { ProfilesService, validityOf } from './profiles.service';
 import { approveVersion, nextVersion, retireVersion } from './versioning';
+import { reportingCurrencies } from '../valuation/valuation-policy.store';
 
 export interface NewValuationRate {
   profileId?: string;
@@ -56,6 +57,7 @@ export class ValuationRatesService {
       throw invalid('INVALID_VALUE', 'value must be a decimal ≥ 0');
     }
     const validity = validityOf(input);
+    await this.assertReportedCurrency(owner.tenantId, input.currency);
     return this.rates.manager.transaction(async (manager) => {
       const key = {
         profileId: owner.profileId,
@@ -79,6 +81,20 @@ export class ValuationRatesService {
         }),
       );
     });
+  }
+
+  /** D08 (2026-10-09): rates are entered in a reporting currency of the tenant's valuation policy (IRR or USD). */
+  private async assertReportedCurrency(
+    tenantId: string,
+    currency: string,
+  ): Promise<void> {
+    const allowed = await reportingCurrencies(this.rates.manager, tenantId);
+    if (!allowed.includes(currency)) {
+      throw invalid(
+        'CURRENCY_NOT_REPORTED',
+        `currency must be one of the reporting currencies (${allowed.join(', ') || 'none decided'})`,
+      );
+    }
   }
 
   /** Tenant-wide valuation rates (no profile) need a tenant-wide grant; profile rates are unit-scoped. */

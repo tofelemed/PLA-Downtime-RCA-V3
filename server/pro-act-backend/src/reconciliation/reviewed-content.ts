@@ -3,6 +3,7 @@ import { canonicalJson } from '../common/idempotency/idempotency.service';
 import { Dec, formatDec } from '../domain/actuals/decimal';
 import { SliceReconciliation } from '../domain/reconciliation/reconciliation.types';
 import { decOf, RevisionState } from './revision-state';
+import { reviewedValuation } from './reviewed-valuation';
 
 /** Canonical decimal string of a stored or computed quantity (no trailing zeros); null stays null. */
 export function canon(value: string | number | Dec | null): string | null {
@@ -134,7 +135,8 @@ export function linesPart(state: RevisionState) {
 /**
  * The content a reviewer approves (WF02/WF03): period and revision identity, the run with its input
  * fingerprint, engine and policy versions, the actuals results, both ledgers' totals, the candidates with
- * their decisions, the saved lines, the tolerance policy and the per-slice reconciliation. Built only from
+ * their decisions, the saved lines, the tolerance policy, the per-slice reconciliation and (plan 2.6) its
+ * valuation from the run's frozen context. Built only from
  * stored rows, so it is reproducible: its sha256 is the content hash shown to the editor and, after
  * submission, the submitted hash an approval must match.
  */
@@ -166,7 +168,14 @@ export function reviewedContent(state: RevisionState): Record<string, unknown> {
     candidates: candidatesPart(state),
     lines: linesPart(state),
     slices: state.reconciliation.slices.map(sliceView),
+    ...valuationPart(state),
   };
+}
+
+/** Plan 2.6: the reviewed valuation, omitted for runs before 2.6 so their content hash is unchanged. */
+function valuationPart(state: RevisionState) {
+  const valuation = reviewedValuation(state);
+  return valuation ? { valuation } : {};
 }
 
 export function contentHashOf(state: RevisionState): string {

@@ -88,6 +88,66 @@ function source(): RenderSource {
   };
 }
 
+function valuation(): NonNullable<RenderSource['reviewed']['valuation']> {
+  const amounts = (irr: string) => [
+    { currency: 'IRR', amount: irr, reason: null, fxRateIds: [] },
+    { currency: 'USD', amount: null, reason: 'fx_rate_missing', fxRateIds: [] },
+  ];
+  const view = (irr: string) => ({
+    view: 'contribution_margin',
+    status: 'valued',
+    reason: null,
+    rateVersionIds: ['rate-1'],
+    amounts: amounts(irr),
+  });
+  return {
+    engineVersion: '2.6.0',
+    policyId: 'policy-2',
+    policyVersion: 2,
+    approved: true,
+    defaultView: 'contribution_margin',
+    currencies: ['IRR', 'USD'],
+    timeBasisRule: 'exclusive',
+    fxPolicy: 'snapshot',
+    lines: [
+      { source: 'candidate', id: 'line-a', sliceId: SLICE, kind: 'availability', quantity: '0', views: [view('0')] },
+      { source: 'line', id: 'manual-1', sliceId: SLICE, kind: 'availability', quantity: '150', views: [view('15000.125')] },
+    ],
+    slices: [
+      {
+        sliceId: SLICE,
+        view: 'contribution_margin',
+        currency: 'IRR',
+        amount: '15000.125',
+        nativeAmount: '15000.125',
+        status: 'valued',
+        reasons: [],
+        unvaluedQuantity: '0',
+        unvaluedSeconds: '0',
+        valuedLines: 2,
+        unvaluedLines: 0,
+        fxMissingLines: 0,
+        fxRateIds: [],
+      },
+      {
+        sliceId: SLICE,
+        view: 'contribution_margin',
+        currency: 'USD',
+        amount: null,
+        nativeAmount: '0',
+        status: 'mixed',
+        reasons: ['fx_rate_missing'],
+        unvaluedQuantity: '0',
+        unvaluedSeconds: '0',
+        valuedLines: 2,
+        unvaluedLines: 0,
+        fxMissingLines: 2,
+        fxRateIds: [],
+      },
+    ],
+  };
+}
+
 describe('export report rows (plan 2.9, AN03)', () => {
   it('period summary: one row per slice with decimal strings, run id, product and unvalued valuation', () => {
     const [row] = reportRows('period_summary', source());
@@ -104,11 +164,47 @@ describe('export report rows (plan 2.9, AN03)', () => {
       gap: '150',
       residual: '0',
       actuals_quality: 'good',
-      value: null,
-      currency: null,
+      value_1: null,
+      currency_1: null,
       valuation_status: 'unvalued',
     });
     expect(row).toHaveLength(REPORT_COLUMNS.period_summary.length);
+  });
+
+  it('valued snapshot: both currencies rounded half-even to 2 decimals, status and reason per row (plan 2.6)', () => {
+    const valued = source();
+    valued.reviewed.valuation = valuation();
+    const [summary] = reportRows('period_summary', valued);
+    const s = (name: string) =>
+      summary[REPORT_COLUMNS.period_summary.indexOf(name)];
+    expect([
+      s('valuation_view'),
+      s('value_1'),
+      s('currency_1'),
+      s('value_2'),
+      s('currency_2'),
+      s('valuation_status'),
+      s('valuation_reason'),
+    ]).toEqual([
+      'contribution_margin',
+      '15000.12',
+      'IRR',
+      null,
+      'USD',
+      'mixed',
+      'fx_rate_missing',
+    ]);
+    const rows = reportRows('loss_lines', valued);
+    const l = (row: number, name: string) =>
+      rows[row][REPORT_COLUMNS.loss_lines.indexOf(name)];
+    expect([l(1, 'value_1'), l(1, 'valuation_status')]).toEqual([
+      '15000.12',
+      'valued',
+    ]);
+    expect([l(0, 'value_1'), l(0, 'valuation_reason')]).toEqual([
+      '0.00',
+      'fx_rate_missing',
+    ]);
   });
 
   it('loss lines: candidates with their decision, and only lines carrying their own quantity', () => {

@@ -1,16 +1,12 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { createHash } from 'crypto';
 import { DataSource, EntityManager, IsNull } from 'typeorm';
 import { enqueueOutbox } from '../common/outbox/outbox-writer';
 import {
   PeriodAccounting,
   PeriodAccountingInput,
 } from '../domain/accounting/accounting.types';
-import {
-  ACCOUNTING_ENGINE_VERSION,
-  computePeriodAccounting,
-} from '../domain/accounting/period-accounting';
+import { computePeriodAccounting } from '../domain/accounting/period-accounting';
 import {
   AccountingPoliciesService,
   EnginePolicies,
@@ -18,10 +14,7 @@ import {
 import { ActualsRunnerService } from '../periods/actuals-runner.service';
 import { PeriodProductSlice } from '../periods/entities/period-product-slice.entity';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
-import {
-  computePeriodKpis,
-  KPI_ENGINE_VERSION,
-} from '../domain/kpi/period-kpis';
+import { computePeriodKpis } from '../domain/kpi/period-kpis';
 import {
   PeriodRecomputePort,
   RecomputeTrigger,
@@ -38,12 +31,20 @@ import {
 import { draftRevisionOf } from './accounting-revisions';
 import { AccountingRevision } from './entities/accounting-revision.entity';
 import { CalculationRun } from './entities/calculation-run.entity';
-import { kpiHashMaterial } from './kpi-inputs.loader';
+import { hashOf, RUN_ENGINE_VERSION } from './run-input-hash';
 import { writeKpiResults } from './kpi-persistence';
 import { AccountingRevisionHooks } from './revision-hooks';
+import {
+  LoadedValuation,
+  loadValuationContext,
+} from '../valuation/valuation-context.loader';
+import {
+  storedValuations,
+  valueRunLines,
+  writeRunValuations,
+} from '../valuation/run-valuation';
 
-/** Recorded on every run: the ledger engine (2.5) and the KPI engine (2.7) it applied. */
-export const RUN_ENGINE_VERSION = `${ACCOUNTING_ENGINE_VERSION}+kpi.${KPI_ENGINE_VERSION}`;
+export { RUN_ENGINE_VERSION } from './run-input-hash';
 
 /** Message type: a period has a new validated calculation run (2.6 / 2.7 / realtime consumers). */
 export const PERIOD_LOSSES_CALCULATED = 'PeriodLossesCalculated';
@@ -162,11 +163,20 @@ export class AccountingRunService implements OnModuleInit {
       slices,
       actualsRunId,
     );
+    const profiles = new Map(slices.map((s) => [s.id, s.profileId]));
+    const valuation = await loadValuationContext(manager, period, {
+      profileIds: slices.flatMap((s) => (s.profileId ? [s.profileId] : [])),
+      impactCodeIds: inputs.events.flatMap((e) =>
+        e.impactCodeId ? [e.impactCodeId] : [],
+      ),
+    });
     return {
       period,
       engine,
       inputs,
-      inputHash: hashOf(period, inputs, engine),
+      profiles,
+      valuation,
+      inputHash: hashOf(period, inputs, { engine, valuation }),
     };
   }
 
@@ -189,7 +199,7 @@ export class AccountingRunService implements OnModuleInit {
       runId: run.id,
       revisionId: revision.id,
     };
-    const written = await writeRunResults(manager, scope, accounting);
+    const written = await writeValuedResults(manager, scope, accounting, draft);
     const kpis = await writeKpis(
       manager,
       { ...scope, draft, input },
@@ -203,6 +213,33 @@ export class AccountingRunService implements OnModuleInit {
     await recordCalculated(manager, period, run, revision.currentRunId);
     return { ...run, status: 'validated' };
   }
+}
+
+/**
+ * Lines with their valuation snapshot (plan 2.6), evidence and ledger totals, then the normalized line
+ * valuations and valuation totals — all from the run's frozen inputs, in the run's transaction.
+ */
+async function writeValuedResults(
+  manager: EntityManager,
+  scope: { tenantId: string; periodId: string; runId: string; revisionId: string },
+  accounting: PeriodAccounting,
+  draft: RunDraft,
+): Promise<{ lines: number; evidence: number; valuedViews: number }> {
+  const context = draft.valuation.context;
+  const valuations = valueRunLines(accounting.lines, context, draft.profiles);
+  const { ids, ...written } = await writeRunResults(
+    manager,
+    scope,
+    accounting,
+    storedValuations(valuations, context),
+  );
+  const valuedViews = await writeRunValuations(manager, scope, {
+    lines: accounting.lines,
+    ids,
+    valuations,
+    context,
+  });
+  return { ...written, valuedViews };
 }
 
 /** The run's KPIs (plan 2.7) from the same frozen inputs and ledger totals, written with the run. */
@@ -245,7 +282,7 @@ function newRun(manager: EntityManager, draft: RunDraft): CalculationRun {
     actualsRunId: draft.actualsRunId,
     trigger: trigger.reason.slice(0, 64),
     engineVersion: RUN_ENGINE_VERSION,
-    policyVersions: draft.engine.refs,
+    policyVersions: [...draft.engine.refs, draft.valuation.ref],
     inputFingerprint: draft.inputs.fingerprint,
     inputHash: draft.inputHash,
     status: 'running',
@@ -253,6 +290,7 @@ function newRun(manager: EntityManager, draft: RunDraft): CalculationRun {
     requestedBy: trigger.requestedBy,
     createdBy: trigger.requestedBy,
     supersedesRunId: revision.currentRunId,
+    valuationContext: draft.valuation.context,
   });
 }
 
@@ -260,6 +298,9 @@ interface Prepared {
   period: ProductionPeriod;
   engine: EnginePolicies;
   inputs: AccountingInputs;
+  /** slice id → profile id (valuation of quantity bases) */
+  profiles: Map<string, string | null>;
+  valuation: LoadedValuation;
   inputHash: string;
 }
 
@@ -305,35 +346,6 @@ function engineInput(
       epsilon: String(engine.tolerance.epsilon),
     },
   };
-}
-
-/** sha256 over the fingerprint and every value the engine reads that an id does not pin down. */
-function hashOf(
-  period: ProductionPeriod,
-  inputs: AccountingInputs,
-  engine: EnginePolicies,
-): string {
-  const material = {
-    engine: RUN_ENGINE_VERSION,
-    policies: engine.refs,
-    kpi: kpiHashMaterial(inputs.kpi),
-    fingerprint: inputs.fingerprint,
-    excluded: [period.isExcluded, period.exclusionKind],
-    schedule: inputs.schedule.map((s) => [
-      s.start.getTime(),
-      s.end.getTime(),
-      s.excluded,
-      s.exclusionKind,
-    ]),
-    slices: inputs.slices.map((s) => [
-      s.sliceId,
-      s.window.start.getTime(),
-      s.window.end.getTime(),
-      s.uom,
-      s.target,
-    ]),
-  };
-  return createHash('sha256').update(JSON.stringify(material)).digest('hex');
 }
 
 /** Outbox `PeriodLossesCalculated`, committed with the pointer switch. */

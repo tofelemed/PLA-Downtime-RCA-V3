@@ -1,0 +1,22 @@
+{
+  "policyKind": "valuation_basis",
+  "version": 2,
+  "effectiveFrom": "1970-01-01T00:00:00Z",
+  "effectiveTo": null,
+  "scope": {
+    "tenantId": "00000000-0000-0000-0000-000000000000",
+    "siteId": null,
+    "unitId": null
+  },
+  "notes": "Version 2 recorded 2026-10-09 from the owner's D08 Q2 answer ('for currency we should have both irr & $'): every valued loss reported in IRR and USD through approved, dated FX rates (fx_rates); version 1 (placeholder XXX) is kept as history and never rewritten. Seeded unapproved: finance (manager_approver) approves it before any valuation runs (VAL01). scope.tenantId is a placeholder that the seeder replaces.",
+  "body": {
+    "defaultBasis": "contribution_margin",
+    "timeBasisRule": "exclusive",
+    "reportingCurrencies": [
+      "IRR",
+      "USD"
+    ],
+    "fxPolicy": "snapshot",
+    "independentImpactCodeIds": []
+  }
+}

@@ -10,6 +10,7 @@ import {
 } from '../../domain/accounting/accounting.types';
 import { PeriodProductSlice } from '../../periods/entities/period-product-slice.entity';
 import { UnitProductRate } from '../../profiles/entities/unit-product-rate.entity';
+import { StoredLineValuation } from '../../domain/valuation/valuation-snapshot';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
 import { AccountingRevision } from './accounting-revision.entity';
 import { CalculationRun } from './calculation-run.entity';
@@ -24,7 +25,7 @@ export type LineState = (typeof LINE_STATES)[number];
  * One loss line of a run (spec §14.2 `loss_lines`, ACC01–ACC08): ledger, kind, signed quantity (negative
  * only for residual / gain / bridge), basis and rate version, the cause's codes and classification, the
  * clipped segment, and the deterministic `auto_key` of automatic lines (unique per run). Manual lines and
- * overrides come with 2.8, valuation with 2.6. Immutable (trigger `trg_loss_lines_immutable`).
+ * overrides are 2.8 reconciliation lines, the valuation snapshot is 2.6. Immutable (trigger `trg_loss_lines_immutable`).
  */
 @Entity('loss_lines')
 @Index('UQ_loss_lines_run_auto_key', ['runId', 'autoKey'], {
@@ -173,8 +174,9 @@ export class LossLine extends TenantScopedEntity {
   @Column({ name: 'author_id', type: 'uuid', nullable: true })
   authorId: string | null;
 
+  /** plan 2.6 valuation snapshot (VAL03); null on lines of runs before 2.6 */
   @Column({ name: 'valuation', type: 'jsonb', nullable: true })
-  valuation: Record<string, unknown> | null;
+  valuation: StoredLineValuation | null;
 
   @Column({ name: 'cause_event_id', type: 'uuid', nullable: true })
   causeEventId: string | null;

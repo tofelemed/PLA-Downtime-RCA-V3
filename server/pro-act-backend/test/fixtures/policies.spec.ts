@@ -13,6 +13,7 @@ const POLICIES_DIR = resolve(__dirname, '../../../../contracts/policies');
 const DEFAULTS_DIR = resolve(POLICIES_DIR, 'defaults');
 const SCHEMA_BASE = 'https://proact.local/contracts/policies/';
 const PLACEHOLDER_TENANT = '00000000-0000-0000-0000-000000000000';
+const VERSIONED_DEFAULT = /^([a-z_]+)\.v(\d+)\.default\.json$/;
 
 type JsonObject = Record<string, unknown>;
 
@@ -79,8 +80,12 @@ const schemaFiles = readdirSync(POLICIES_DIR)
   )
   .map((f) => f.replace(/\.schema\.json$/, ''));
 const defaultFiles = readdirSync(DEFAULTS_DIR)
-  .filter((f) => f.endsWith('.default.json'))
+  .filter((f) => f.endsWith('.default.json') && !VERSIONED_DEFAULT.test(f))
   .map((f) => f.replace(/\.default\.json$/, ''));
+/** Later seeded versions of a kind (`<kind>.v<n>.default.json`), e.g. the D08 IRR / USD valuation policy. */
+const versionedFiles = readdirSync(DEFAULTS_DIR).filter((f) =>
+  VERSIONED_DEFAULT.test(f),
+);
 
 const ajv = new Ajv2020({
   strict: true,
@@ -207,6 +212,37 @@ describe('contracts/policies', () => {
     }
     templates[0].daysOfWeek = [0];
     expect(validate(weekday)).toBe(false);
+  });
+
+  it.each(versionedFiles)(
+    '%s validates as a later version of its kind',
+    (file) => {
+      const [, kind, version] = VERSIONED_DEFAULT.exec(file) ?? [];
+      const doc = readJson(resolve(DEFAULTS_DIR, file));
+      const validate = validatorFor(kind);
+      expect(validate(doc)).toBe(true);
+      expect(formatErrors(validate.errors)).toBe('[]');
+      expect(doc.policyKind).toBe(kind);
+      expect(doc.version).toBe(Number(version));
+      expect(Number(version)).toBeGreaterThan(1);
+    },
+  );
+
+  it('valuation_basis: version 2 reports IRR and USD, version 1 keeps the XXX placeholder', () => {
+    const v1 = readPolicyDefault('valuation_basis');
+    const v2 = readJson(
+      resolve(DEFAULTS_DIR, 'valuation_basis.v2.default.json'),
+    ) as PolicyDocument;
+    expect(v1.body.currency).toBe('XXX');
+    expect(v2.body.reportingCurrencies).toEqual(['IRR', 'USD']);
+    expect(v2.body.fxPolicy).toBe('snapshot');
+    const validate = validatorFor('valuation_basis');
+    const both = clone(v2);
+    both.body.currency = 'IRR';
+    expect(validate(both)).toBe(false);
+    const neither = clone(v2);
+    delete neither.body.reportingCurrencies;
+    expect(validate(neither)).toBe(false);
   });
 
   it('micro-stop thresholds agree between oee_policy and state_rules defaults', () => {

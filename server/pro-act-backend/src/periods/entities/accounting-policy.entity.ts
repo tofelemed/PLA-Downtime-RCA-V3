@@ -6,6 +6,7 @@ export const POLICY_KINDS = [
   'source_authority',
   'oee_policy',
   'reconciliation_tolerance',
+  'valuation_basis',
 ] as const;
 export type PolicyKind = (typeof POLICY_KINDS)[number];
 
@@ -14,7 +15,8 @@ export type PolicyKind = (typeof POLICY_KINDS)[number];
  * `unit_id` is null, else one unit), effective interval `[from, to)` and the kind's body validated by the
  * kind's JSON schema shape in the service. Plan 2.4 stores the kinds it consumes — `coverage_gate`
  * (ACT05) and `source_authority` (SRC01 / D05); results record the policy versions they used (FND03).
- * Plan 2.5 adds `oee_policy` (D04) and `reconciliation_tolerance` (D06) for the accounting engine.
+ * Plan 2.5 adds `oee_policy` (D04) and `reconciliation_tolerance` (D06) for the accounting engine; plan
+ * 2.6 adds `valuation_basis` (D08: unapproved versions never value, VAL01).
  * The D04 / D05 / D06 defaults are seeded per tenant (migration, or first use for a new tenant).
  */
 @Entity('accounting_policies')

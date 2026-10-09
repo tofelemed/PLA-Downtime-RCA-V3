@@ -9,6 +9,7 @@ Plan sub-phase **0.2** steps 3–5 (`plans/phase-0/0.2-decision-register.md`, ta
 | `policy-envelope.schema.json` | Shared `$defs` (scope, version, effective dates, §13.2 role vocabulary, IANA/`HH:MM`/ISO 4217 patterns). Not a document schema itself; every kind schema `$ref`s it. |
 | `<kind>.schema.json` | One JSON Schema 2020-12 per policy kind (nine kinds, listed below). |
 | `defaults/<kind>.default.json` | The seed instance that encodes the decisions confirmed in `plans/DECISIONS.md` section D on 2026-10-07. |
+| `defaults/<kind>.v<n>.default.json` | A later seeded version of a kind (e.g. `valuation_basis.v2`, D08 answer of 2026-10-09); earlier versions are never rewritten. |
 | `../../server/pro-act-backend/test/fixtures/policies.spec.ts` | Validation test: every schema compiles (strict 2020-12 + formats) and every default validates. |
 
 ## Document shape
@@ -59,7 +60,7 @@ Cross-kind invariant: `oee_policy.body.microStopSeconds` must equal `state_rules
 - `scope.tenantId` is the all-zero placeholder `00000000-0000-0000-0000-000000000000`; the seeder (sub-phase 2.x seeders, A4) replaces it with the real tenant id and writes `siteId` once `sites` exist (2.1).
 - `effectiveFrom` is the epoch sentinel `1970-01-01T00:00:00Z` so every historical period resolves to version 1; later versions use real dates.
 - **Open values needing a decision** (defaults chosen so nothing is fabricated):
-  - `valuation_basis.body.currency` = `XXX` (ISO 4217 "no currency") — D08 question 2 unanswered. Valuation stays `unvalued` until set and approved.
+  - `valuation_basis.body.currency` = `XXX` (ISO 4217 "no currency") in version 1 — D08 question 2 was unanswered on 2026-10-07. Answered 2026-10-09 (IRR and USD): `defaults/valuation_basis.v2.default.json` is version 2 with `reportingCurrencies` `["IRR", "USD"]` and `fxPolicy` `snapshot`; version 1 is kept as history. Both are seeded unapproved (migration `Valuation1792880000000`); nothing is valued until finance approves a version (plan 2.6).
   - `rca_policy.body.costThreshold` = `null` — disabled until a currency exists.
   - `oee_policy.body.maxUnknownShare` = `0`, `source_authority.body.conflictTolerance` = `0`, `coverage_gate.body.allowProportionalEstimate` = `true` — derived from the spirit of the recorded answers (100 % coverage, tolerance zero, estimates allowed only when labelled), not explicit answers; confirm at the 2.4/2.7 gates.
   - Only the `output` measurement is seeded for `source_authority`; `state` and `rate` policies are 1.10 commissioning inputs.

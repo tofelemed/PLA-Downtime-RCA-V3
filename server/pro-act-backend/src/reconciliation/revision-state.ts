@@ -1,4 +1,4 @@
-import { EntityManager, In } from 'typeorm';
+import { EntityManager, In, IsNull } from 'typeorm';
 import { AccountingRevision } from '../accounting/entities/accounting-revision.entity';
 import { CalculationRun } from '../accounting/entities/calculation-run.entity';
 import { LossLine } from '../accounting/entities/loss-line.entity';
@@ -15,6 +15,7 @@ import {
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
 import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
 import { ActualsResult } from '../periods/entities/actuals-result.entity';
+import { PeriodProductSlice } from '../periods/entities/period-product-slice.entity';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import {
   parseReconciliationTolerance,
@@ -43,6 +44,8 @@ export interface RevisionState {
   actuals: ActualsResult[];
   lineSet: ReconciliationLineSet | null;
   lines: ReconciliationLine[];
+  /** active product slices of the period (profile and window: valuation of manual lines, plan 2.6) */
+  slices: PeriodProductSlice[];
   tolerance: TolerancePolicy;
   reconciliation: Reconciliation;
 }
@@ -127,6 +130,10 @@ export async function loadRevisionState(
     : [[], [], []];
   const [lineSet, lines] = await lineSetOf(manager, revision);
   const tolerance = await tolerancePolicy(manager, period, run, policies);
+  const slices = await manager.find(PeriodProductSlice, {
+    where: { periodId: period.id, supersededAt: IsNull() },
+    order: { windowFrom: 'ASC', productId: 'ASC' },
+  });
   const partial = {
     period,
     revision,
@@ -136,6 +143,7 @@ export async function loadRevisionState(
     actuals,
     lineSet,
     lines,
+    slices,
     tolerance,
   };
   const reconciliation = reconcile({

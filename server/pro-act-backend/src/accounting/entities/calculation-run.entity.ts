@@ -1,5 +1,6 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { ValuationContext } from '../../domain/valuation/valuation.types';
 import {
   ActualsRun,
   PolicyVersionRef,
@@ -123,4 +124,8 @@ export class CalculationRun extends TenantScopedEntity {
 
   @Column({ name: 'supersedes_run_id', type: 'uuid', nullable: true })
   supersedesRunId: string | null;
+
+  /** plan 2.6: the frozen valuation inputs (policy, rate and FX versions with values); null before 2.6 */
+  @Column({ name: 'valuation_context', type: 'jsonb', nullable: true })
+  valuationContext: ValuationContext | null;
 }

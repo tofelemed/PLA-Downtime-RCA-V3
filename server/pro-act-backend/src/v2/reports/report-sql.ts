@@ -9,7 +9,7 @@ import { ReportScope } from './report-scope';
  * approved revision's run, else (unless approvedOnly) the open revision's run. $1 tenant, $2 units,
  * $3 from, $4 to, $5 approvedOnly.
  */
-const SHOWN = `WITH shown AS (
+export const SHOWN = `WITH shown AS (
   SELECT p."id" AS "period_id", p."unit_id", p."local_date", p."shift_name", si."crew_id",
          cur."current_run_id" AS "run_id", cur."lifecycle"::text AS "lifecycle"
     FROM "production_periods" p
@@ -31,7 +31,7 @@ export const TIME_GROUPS: Readonly<Record<string, string>> = {
   crew: `s."crew_id"::text`,
 };
 
-const params = (scope: ReportScope) => [
+export const params = (scope: ReportScope) => [
   scope.tenantId,
   scope.unitIds,
   scope.from,

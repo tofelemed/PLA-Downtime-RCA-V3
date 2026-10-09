@@ -96,6 +96,9 @@ import { DeliveryReconciliationService } from '../exports/delivery-reconciliatio
 import { ExportJobsService } from '../exports/export-jobs.service';
 import { ExportReadsService } from '../exports/export-reads.service';
 import { ExportRequestsService } from '../exports/export-requests.service';
+import { FxRatesService } from '../valuation/fx-rates.service';
+import { ValuationPoliciesService } from '../valuation/valuation-policies.service';
+import { ValuationModule } from '../valuation/valuation.module';
 import { ExportsModule } from '../exports/exports.module';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
@@ -299,6 +302,16 @@ class ReconciliationModuleStub {}
 })
 class ExportsModuleStub {}
 
+/** Stands in for the plan 2.6 valuation module (FX rates, valuation policies). */
+@Module({
+  providers: [
+    { provide: FxRatesService, useValue: {} },
+    { provide: ValuationPoliciesService, useValue: {} },
+  ],
+  exports: [FxRatesService, ValuationPoliciesService],
+})
+class ValuationModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -392,6 +405,8 @@ async function generate(): Promise<string> {
     .useModule(ReconciliationModuleStub)
     .overrideModule(ExportsModule)
     .useModule(ExportsModuleStub)
+    .overrideModule(ValuationModule)
+    .useModule(ValuationModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),
