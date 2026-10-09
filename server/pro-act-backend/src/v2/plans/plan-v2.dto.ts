@@ -287,6 +287,14 @@ export class PlanPeriodListQueryDto extends ListQueryDto {
   sort?: string = undefined;
 }
 
+/** GET /production-plans/{id}/versions: the version history, newest first (plan 3.4). */
+export class PlanVersionListQueryDto extends ListQueryDto {
+  @ApiPropertyOptional({ enum: ['-createdAt'] })
+  @IsOptional()
+  @IsIn(['-createdAt'])
+  sort?: string = undefined;
+}
+
 export class ScenarioListQueryDto extends ListQueryDto {
   @ApiPropertyOptional({ enum: ['createdAt'] })
   @IsOptional()

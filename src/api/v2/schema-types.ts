@@ -43,7 +43,10 @@ type RepairField<V> = [NonNullable<V>] extends [Untyped]
   ? Untyped extends NonNullable<V>
     ? string | number | boolean | null | Exclude<V, Untyped>
     : V
-  : V;
+  : NonNullable<V> extends object
+    ? RepairUntyped<NonNullable<V>> | Extract<V, null | undefined>
+    : V;
+/** Repairs nested bodies too (plan 3.4: plan slices, calendar templates are arrays of DTOs). */
 export type RepairUntyped<T> = T extends object ? { [K in keyof T]: RepairField<T[K]> } : T;
 
 export type BodyOf<P extends V2Path, M extends HttpMethod> = OperationOf<P, M> extends {

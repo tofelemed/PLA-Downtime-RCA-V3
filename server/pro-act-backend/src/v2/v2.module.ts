@@ -6,6 +6,7 @@ import { Asset } from '../asset/asset.entity';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { ReasonCode } from '../reason-code/reason-code.entity';
 import { Unit } from '../unit/unit.entity';
+import { Product } from '../product/product.entity';
 import { EventCoding } from '../production-event/revisions/event-coding.entity';
 import { EventReviewItem } from '../production-event/revisions/event-review-item.entity';
 import { EventRevision } from '../production-event/revisions/event-revision.entity';
@@ -106,6 +107,8 @@ import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
 import { FeatureFlagsV2Controller } from './feature-flags/feature-flags-v2.controller';
 import { UnitsV2Controller } from './units/units-v2.controller';
 import { UnitsV2Service } from './units/units-v2.service';
+import { ProductsV2Controller } from './products/products-v2.controller';
+import { ProductsV2Service } from './products/products-v2.service';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -116,6 +119,7 @@ import { UnitsV2Service } from './units/units-v2.service';
     TypeOrmModule.forFeature([
       ProductionEvent,
       Unit,
+      Product,
       Asset,
       ReasonCode,
       ProductionPlan,
@@ -205,6 +209,7 @@ import { UnitsV2Service } from './units/units-v2.service';
     LossValueReportV2Controller,
     FeatureFlagsV2Controller,
     UnitsV2Controller,
+    ProductsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -218,6 +223,7 @@ import { UnitsV2Service } from './units/units-v2.service';
     SignalsV2Service,
     CalendarsV2Service,
     UnitsV2Service,
+    ProductsV2Service,
     ProfilesV2Service,
     PlansV2Service,
     PeriodsV2Service,

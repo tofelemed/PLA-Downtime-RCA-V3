@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { LegacyField } from '@/features/plans-profiles-calendars/legacy/legacy-field';
 
 interface ProductFormData {
   name: string;
@@ -224,11 +225,11 @@ const ProductList: React.FC = () => {
               <Input value={formData.unitOfMeasure} onChange={e => setFormData({ ...formData, unitOfMeasure: e.target.value })} required />
               {formErrors.unitOfMeasure && <div className="text-red-500 text-xs mt-1">{formErrors.unitOfMeasure}</div>}
             </div>
-            <div>
+            <LegacyField label="Standard cost (unconfirmed legacy cost, D08 Q3)" replacement="an approved valuation rate in IRR or USD on a production profile"><div>
               <Label>Standard Cost</Label>
               <Input type="number" value={formData.standardCost} onChange={e => setFormData({ ...formData, standardCost: Number(e.target.value) })} required />
               {formErrors.standardCost && <div className="text-red-500 text-xs mt-1">{formErrors.standardCost}</div>}
-            </div>
+            </div></LegacyField>
             <div>
               <Label>Description</Label>
               <Input value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />

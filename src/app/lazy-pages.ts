@@ -17,7 +17,11 @@ export const EventHubV2 = lazyNamed(() => import('@/features/event-hub/event-hub
 export const DowntimeAnalysis = lazyNamed(() => import('@/features/downtime-analysis/downtime-page'), 'DowntimeAnalysisPage');
 /** What `/downtime` shows while the flag is off: the screen has no v1 binding. */
 export const DowntimeAnalysisOff = lazyNamed(() => import('@/features/downtime-analysis/downtime-off'), 'DowntimeAnalysisOff');
-export const RCAModule = lazyNamed(() => import('@/pages/RCAModule'), 'RCAModule');
+/** Plans, profiles & calendars (plan 3.4), served at `/planning` while `v2.plansProfilesCalendars` is on. */
+export const Planning = lazyNamed(() => import('@/features/plans-profiles-calendars/planning-page'), 'PlanningPage');
+/** What `/planning` shows while the flag is off (the v1 plans, units and products screens stay). */
+export const PlanningOff = lazyNamed(() => import('@/features/plans-profiles-calendars/planning-off'), 'PlanningOff');
+export const RCAModule =lazyNamed(() => import('@/pages/RCAModule'), 'RCAModule');
 export const RCAKnowledgeBase = lazyNamed(() => import('@/pages/RCAKnowledgeBase'), 'RCAKnowledgeBase');
 export const TestRCAAnalysisTools = lazy(() => import('@/pages/TestRCAAnalysisTools'));
 export const Connectivity = lazyNamed(() => import('@/pages/Connectivity'), 'Connectivity');

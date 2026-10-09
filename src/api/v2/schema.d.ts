@@ -1628,7 +1628,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Version history of a plan, newest first (keyset on createdAt, id; no slices)
+         * @description States, supersession and approval of every version; foreign or out-of-scope plans are 404.
+         */
+        get: operations["ProductionPlansV2Controller_versions_v2"];
         put?: never;
         /**
          * Open the next draft version from the current one plus changes (PLAN04)
@@ -2668,6 +2672,26 @@ export interface paths {
          * @description Tenant from the identity; a caller with unit-level grants sees only those units (`scope.unitIds`).
          */
         get: operations["UnitsV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the products of the caller tenant (keyset on createdAt, id)
+         * @description Tenant from the identity; products are tenant master data, the same list for every member.
+         */
+        get: operations["ProductsV2Controller_list_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6488,6 +6512,35 @@ export interface operations {
             };
         };
     };
+    ProductionPlansV2Controller_versions_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ProductionPlansV2Controller_newVersion_v2: {
         parameters: {
             query?: never;
@@ -7896,6 +7949,33 @@ export interface operations {
         };
     };
     UnitsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductsV2Controller_list_v2: {
         parameters: {
             query?: {
                 /** @description Opaque cursor returned as nextCursor by the previous page */

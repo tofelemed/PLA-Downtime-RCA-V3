@@ -21,6 +21,7 @@ import { listResponse, ListResponse, ListScope } from '../common/response';
 import {
   PlanListQueryDto,
   PlanPeriodListQueryDto,
+  PlanVersionListQueryDto,
   ScenarioListQueryDto,
 } from './plan-v2.dto';
 import {
@@ -29,9 +30,11 @@ import {
   PlanPreviewV2View,
   PlanScenarioV2View,
   PlanV2View,
+  PlanVersionV2View,
   toPlanView,
   toPreviewView,
   toScenarioView,
+  toVersionView,
 } from './plan-v2.view';
 
 /** v2 reads of plan 2.3: tenant- and unit-scoped through the plan version, keyset pages; previews. */
@@ -76,6 +79,34 @@ export class PlansV2Service {
       return plan ? [toPlanView(plan, version)] : [];
     });
     return listResponse(items, page.nextCursor, scopeOf(context));
+  }
+
+  /**
+   * Version history of a visible plan, newest first (plan 3.4): states, supersession and approval of
+   * every version, without slices (one query per page). Versions outside the caller's units are hidden.
+   */
+  async listVersions(
+    context: RequestContext,
+    planId: string,
+    query: PlanVersionListQueryDto,
+  ): Promise<ListResponse<PlanVersionV2View>> {
+    await this.plans.getPlan(context, planId);
+    const qb = scopedQuery(this.versions, 'v', {
+      context,
+      unitProperty: 'unitId',
+    }).andWhere('v.planId = :planId', { planId });
+    const page = await keysetPage(qb, {
+      alias: 'v',
+      property: 'createdAt',
+      direction: 'DESC',
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+    return listResponse(
+      page.items.map((version) => toVersionView(version)),
+      page.nextCursor,
+      scopeOf(context),
+    );
   }
 
   /** Stored periods of one version (keyset on utcStart, id; `from`/`to` overlap window). */

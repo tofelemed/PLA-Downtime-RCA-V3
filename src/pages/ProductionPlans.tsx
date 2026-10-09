@@ -11,6 +11,7 @@ import { PlanDashboard } from '../components/production-plans/PlanDashboard';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { usePlantSelection } from '../contexts/PlantSelectionContext';
+import { PlanningLinkBanner } from '@/features/plans-profiles-calendars/legacy/planning-link-banner';
 
 // Time handling utilities
 const HOURS = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
@@ -408,43 +409,13 @@ export const ProductionPlans: React.FC = () => {
 
   // Template selector actions
   const handleUseTemplate = (template: ProductionPlanTemplate) => {
-    // Calculate default planned quantity based on template
-    const calculateDefaultQuantity = () => {
-      if (!template.usefulProductionTime) return 0;
-      
-      let totalHours = 0;
-      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      
-      days.forEach(day => {
-        const daySchedule = template.usefulProductionTime[day];
-        if (daySchedule?.start && daySchedule?.end) {
-          const startHour = parseInt(daySchedule.start.split(':')[0]);
-          const endHour = parseInt(daySchedule.end.split(':')[0]);
-          const startMinute = parseInt(daySchedule.start.split(':')[1]);
-          const endMinute = parseInt(daySchedule.end.split(':')[1]);
-          
-          let hours = endHour - startHour;
-          let minutes = endMinute - startMinute;
-          
-          if (minutes < 0) {
-            hours -= 1;
-            minutes += 60;
-          }
-          
-          totalHours += hours + (minutes / 60);
-        }
-      });
-      
-      // Assume 100 units per hour as default production rate
-      return Math.round(totalHours * 100);
-    };
-
     setEditPlan({
       id: '',
       name: `Plan from ${template.name}`,
       unitId: template.unitId,
       productId: template.productIds[0] || '',
-      plannedQuantity: calculateDefaultQuantity(),
+      // no default quantity (no 100 units / h): targets come from rates — v2 plan preview (plan 3.4)
+      plannedQuantity: 0,
       toleranceLimit: 5,
       startDate: template.startDate,
       endDate: template.endDate,
@@ -508,6 +479,7 @@ export const ProductionPlans: React.FC = () => {
           <p className="text-muted-foreground">
             Manage production plans and templates
           </p>
+          <PlanningLinkBanner />
         </div>
         
         <div className="flex space-x-2">

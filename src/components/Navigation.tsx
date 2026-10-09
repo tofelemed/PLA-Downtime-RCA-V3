@@ -82,6 +82,14 @@ const navigationItems = [
     description: 'Manage and review production plans',
   },
   {
+    name: 'Plans, Profiles & Calendars',
+    href: '/planning',
+    icon: Calendar,
+    roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Analyst', 'Engineer'],
+    description: 'Versioned plans, production profiles and calendars (v2)',
+    flag: 'v2.plansProfilesCalendars' as FeatureFlagKey,
+  },
+  {
     name: 'Event Hub',
     href: '/events',
     icon: AlertTriangle,
@@ -198,9 +206,12 @@ export const Navigation: React.FC<NavigationProps> = ({ collapsed, setCollapsed 
   const { session } = useAuth();
   const location = useLocation();
 
-  const downtimeFlag = useFlag('v2.downtimeAnalysis');
+  const flagsOn: Partial<Record<FeatureFlagKey, boolean>> = {
+    'v2.downtimeAnalysis': useFlag('v2.downtimeAnalysis').enabled,
+    'v2.plansProfilesCalendars': useFlag('v2.plansProfilesCalendars').enabled,
+  };
   const allowedItems = navigationItems.filter(item =>
-    session && item.roles.includes(session.user.role) && (!('flag' in item) || downtimeFlag.enabled)
+    session && item.roles.includes(session.user.role) && (!('flag' in item) || flagsOn[item.flag] === true)
   );
 
   return (

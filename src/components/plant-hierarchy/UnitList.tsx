@@ -15,6 +15,7 @@ import { piStore } from '@/services/pi/PIStore';
 import { PIClient, createTenantPIClient } from '@/services/pi/PIClient';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Database } from 'lucide-react';
+import { LegacyField } from '@/features/plans-profiles-calendars/legacy/legacy-field';
 
 interface UnitFormData {
   name: string;
@@ -431,7 +432,7 @@ const UnitList: React.FC = () => {
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <LegacyField label="Capacity" replacement="an approved sustained rate on a production profile"><div>
               <Label htmlFor="capacity">Capacity</Label>
               <Input
                 id="capacity"
@@ -440,7 +441,7 @@ const UnitList: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, capacity: parseFloat(e.target.value) || 0 })}
               />
               {formErrors.capacity && <div className="text-red-500 text-xs mt-1">{formErrors.capacity}</div>}
-            </div>
+            </div></LegacyField>
             <div>
               <Label htmlFor="unitOfMeasure">Unit of Measure</Label>
               <Input
@@ -451,7 +452,7 @@ const UnitList: React.FC = () => {
               />
             </div>
           </div>
-          <div>
+          <LegacyField label="Ideal cycle time" replacement="the sustained rate of a production profile (ideal time comes from it)"><div>
             <Label htmlFor="idealCycleTime">Ideal Cycle Time (seconds/unit)</Label>
             <Input
               id="idealCycleTime"
@@ -462,8 +463,7 @@ const UnitList: React.FC = () => {
               min={0.01}
               required
             />
-            <p className="text-xs text-gray-500">The minimum time (in seconds) required to produce one unit at full speed. Used for OEE Performance.</p>
-          </div>
+          </div></LegacyField>
           <div className="flex justify-end space-x-2 pt-4">
             <Button
               type="button"

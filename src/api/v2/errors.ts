@@ -11,6 +11,8 @@ export interface ErrorEnvelope {
   fieldErrors?: FieldError[];
   correlationId: string | null;
   retryable: boolean;
+  /** structured context of some refusals, e.g. `conflicts` of 409 VERSION_OVERLAP / PLAN_OVERLAP */
+  details?: Record<string, unknown>;
 }
 
 /** A failed v2 call: status plus the parsed envelope (never a stack trace or token). */
@@ -20,6 +22,7 @@ export class V2ApiError extends Error {
   readonly fieldErrors: FieldError[];
   readonly correlationId: string | null;
   readonly retryable: boolean;
+  readonly details: Record<string, unknown> | null;
 
   constructor(status: number, envelope: ErrorEnvelope) {
     super(envelope.message);
@@ -29,6 +32,7 @@ export class V2ApiError extends Error {
     this.fieldErrors = envelope.fieldErrors ?? [];
     this.correlationId = envelope.correlationId;
     this.retryable = envelope.retryable;
+    this.details = envelope.details ?? null;
   }
 
   /** `{ field: message }` for react-hook-form `setError` and inline form messages. */
@@ -89,6 +93,7 @@ export function parseErrorEnvelope(
       fieldErrors: fieldErrorsOf(body.fieldErrors),
       correlationId: typeof body.correlationId === 'string' ? body.correlationId : fallbackCorrelationId,
       retryable: body.retryable === true,
+      ...(isRecord(body.details) ? { details: body.details } : {}),
     };
   }
   return {

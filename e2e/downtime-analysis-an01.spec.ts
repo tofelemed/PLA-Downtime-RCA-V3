@@ -24,7 +24,10 @@ let world: DowntimeWorld;
 async function openPage(page: Page, reports: ReportCall[]): Promise<void> {
   page.on('response', async (response: Response) => {
     if (!response.url().includes('/v2/reports/') || response.status() !== 200) return;
-    reports.push({ url: new URL(response.url()), body: await response.json() });
+    // The browser discards bodies of superseded loads (e.g. the re-render after a viewport resize);
+    // reading one throws "No data found", so those calls are skipped instead of failing the test.
+    const body = await response.json().catch(() => null);
+    if (body) reports.push({ url: new URL(response.url()), body });
   });
   await loginViaUI(page, MANAGER.email, MANAGER.password);
   const params = new URLSearchParams({ from: world.from, to: world.to, window: 'E2E day', units: world.unitId });

@@ -152,8 +152,7 @@ const PlanForm: React.FC<PlanFormProps> = ({
         usefulProductionTime: template.usefulProductionTime,
         startDate: template.startDate,
         endDate: template.endDate,
-        // Calculate default planned quantity based on template
-        plannedQuantity: calculateDefaultPlannedQuantity(template),
+        // no default quantity: v1 has no rates; versioned plans take targets from the v2 preview (plan 3.4)
       }));
     } else if (template && initialPlan) {
       // When editing a plan with a matching template, merge template data only for missing fields
@@ -166,38 +165,6 @@ const PlanForm: React.FC<PlanFormProps> = ({
       }));
     }
   }, [template, initialPlan]);
-
-  // Calculate default planned quantity based on template settings
-  const calculateDefaultPlannedQuantity = (template: ProductionPlanTemplate): number => {
-    if (!template.usefulProductionTime) return 0;
-    
-    let totalHours = 0;
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    
-    days.forEach(day => {
-      const daySchedule = template.usefulProductionTime[day];
-      if (daySchedule?.start && daySchedule?.end) {
-        const startHour = parseInt(daySchedule.start.split(':')[0]);
-        const endHour = parseInt(daySchedule.end.split(':')[0]);
-        const startMinute = parseInt(daySchedule.start.split(':')[1]);
-        const endMinute = parseInt(daySchedule.end.split(':')[1]);
-        
-        let hours = endHour - startHour;
-        let minutes = endMinute - startMinute;
-        
-        if (minutes < 0) {
-          hours -= 1;
-          minutes += 60;
-        }
-        
-        totalHours += hours + (minutes / 60);
-      }
-    });
-    
-    // Assume 100 units per hour as default production rate
-    // This could be enhanced with actual production rates from the unit/product
-    return Math.round(totalHours * 100);
-  };
 
   useEffect(() => {
     if (session) {

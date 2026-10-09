@@ -15,6 +15,8 @@ import StepUnit from './template-wizard-steps/StepUnit';
 import StepProductionTime from './template-wizard-steps/StepProductionTime';
 import StepSchedule from './template-wizard-steps/StepSchedule';
 import StepReview from './template-wizard-steps/StepReview';
+import { StepCalendar } from '@/features/plans-profiles-calendars/template/step-calendar';
+import { useFlag } from '@/api/v2/queries/feature-flags';
 
 type TemplateWizardProps = {
   isOpen: boolean;
@@ -34,6 +36,8 @@ const steps = [
   { id: 'schedule', title: 'Schedule', component: StepSchedule },
   { id: 'review', title: 'Review', component: StepReview },
 ];
+// v2.plansProfilesCalendars: the production-time step becomes the unit's published calendar (plan 3.4)
+const calendarSteps = steps.map((step) => (step.id === 'productionTime' ? { ...step, title: 'Calendar', component: StepCalendar } : step));
 
 // Step validation logic
 const isStepValid = (stepIdx, template) => {
@@ -86,6 +90,7 @@ const TemplateWizard: React.FC<TemplateWizardProps> = ({
   products = []
 }) => {
   const { session } = useAuth();
+  const activeSteps = useFlag('v2.plansProfilesCalendars').enabled ? calendarSteps : steps;
   const [currentStep, setCurrentStep] = useState(0);
   const [template, setTemplate] = useState<Partial<ProductionPlanTemplate>>(
     getInitialTemplate(session, initialTemplate)
@@ -133,7 +138,7 @@ const TemplateWizard: React.FC<TemplateWizardProps> = ({
     }
   };
 
-  const CurrentStepComponent = steps[currentStep].component;
+  const CurrentStepComponent = activeSteps[currentStep].component;
   const progress = ((currentStep + 1) / steps.length) * 100;
 
   useEffect(() => {
@@ -186,7 +191,7 @@ const TemplateWizard: React.FC<TemplateWizardProps> = ({
           {/* Step Navigation - Static */}
           <div className="flex items-center justify-between flex-shrink-0 mb-4">
             <div className="flex space-x-1">
-              {steps.map((step, index) => (
+              {activeSteps.map((step, index) => (
                 <div
                   key={step.id}
                   className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${

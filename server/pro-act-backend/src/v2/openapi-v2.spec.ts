@@ -15,6 +15,7 @@ import { Asset } from '../asset/asset.entity';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { ReasonCode } from '../reason-code/reason-code.entity';
 import { Unit } from '../unit/unit.entity';
+import { Product } from '../product/product.entity';
 import { AttributeMappingVersion } from '../attribute-mapping/attribute-mapping-version.entity';
 import { AttributeMappingModule } from '../attribute-mapping/attribute-mapping.module';
 import { AttributeMappingService } from '../attribute-mapping/attribute-mapping.service';
@@ -329,6 +330,8 @@ async function generate(): Promise<string> {
     .overrideProvider(getRepositoryToken(ProductionEvent))
     .useValue({})
     .overrideProvider(getRepositoryToken(Unit))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(Product))
     .useValue({})
     .overrideProvider(getRepositoryToken(Asset))
     .useValue({})

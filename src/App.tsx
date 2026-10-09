@@ -60,6 +60,7 @@ const PROTECTED_ROUTES: Array<[path: string, element: ReactNode]> = [
   ["/master-data", <Pages.MasterData />],
   ["/events", <FlaggedRoute flag="v2.eventHub" v1={<Pages.EventHub />} v2={<Pages.EventHubV2 />} />],
   ["/downtime", <FlaggedRoute flag="v2.downtimeAnalysis" v1={<Pages.DowntimeAnalysisOff />} v2={<Pages.DowntimeAnalysis />} />],
+  ["/planning", <FlaggedRoute flag="v2.plansProfilesCalendars" v1={<Pages.PlanningOff />} v2={<Pages.Planning />} />],
   ["/rca", <Pages.RCAModule />],
   ["/rca-knowledge-base", <Pages.RCAKnowledgeBase />],
   ["/test-rca-tools", <Pages.TestRCAAnalysisTools />],

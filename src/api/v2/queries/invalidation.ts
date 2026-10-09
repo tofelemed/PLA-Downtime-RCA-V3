@@ -19,6 +19,8 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   production_plan: ['plans', 'production-periods', 'period-accounting', 'reports'],
   production_profile: ['profiles', 'production-periods', 'period-accounting', 'reports'],
   rate_import: ['profiles', 'production-periods', 'period-accounting', 'reports'],
+  calendar_version: ['calendars', 'shift-instances', 'sites', 'production-periods', 'plans'],
+  crew: ['crews', 'shift-instances'],
   export_job: ['jobs'],
   feature_flag: ['feature-flags'],
 };

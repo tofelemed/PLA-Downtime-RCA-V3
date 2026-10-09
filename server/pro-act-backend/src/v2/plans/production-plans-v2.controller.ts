@@ -40,6 +40,7 @@ import {
   PlanListQueryDto,
   PlanPeriodListQueryDto,
   PlanVersionChangeDto,
+  PlanVersionListQueryDto,
   PlanVersionParamsDto,
 } from './plan-v2.dto';
 import {
@@ -123,6 +124,21 @@ export class ProductionPlansV2Controller {
   ): Promise<PlanVersionV2View> {
     const version = await this.plans.newDraft(ctx, id, body);
     return toVersionView(version, await this.plans.slicesOf(version.id));
+  }
+
+  @Get(':id/versions')
+  @ApiOperation({
+    summary:
+      'Version history of a plan, newest first (keyset on createdAt, id; no slices)',
+    description:
+      'States, supersession and approval of every version; foreign or out-of-scope plans are 404.',
+  })
+  versions(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query() query: PlanVersionListQueryDto,
+  ): Promise<ListResponse<PlanVersionV2View>> {
+    return this.reads.listVersions(ctx, id, query);
   }
 
   @Get(':id/versions/:version')
