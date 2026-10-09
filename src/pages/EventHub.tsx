@@ -30,7 +30,7 @@ import { PIHistorianProvider } from '@/services/historian/providers/pi/PIHistori
 import { TimeSeriesChart } from '@/components/historian/TimeSeriesChart';
 import { tabVisibilityService, defaultTabVisibility } from '@/services/TabVisibilityService';
 import { TabVisibilitySettings as TabVisibilitySettingsDialog } from '@/components/TabVisibilitySettings';
-import { productionEventsWebSocket } from '@/services/api/productionEventsWebSocket';
+import { useEventHubLiveRefresh } from '@/features/event-hub/use-event-hub-live-refresh';
 
 // --- Status Automation Config ---
 export const defaultStatusAutomationRules = [
@@ -290,28 +290,8 @@ export const EventHub: React.FC = () => {
     loadData();
   }, [session, plantSelection?.tenant?.id]);
 
-  // Real-time refresh when PI/backend creates or updates production events
-  useEffect(() => {
-    if (!session) return;
-
-    productionEventsWebSocket.connect();
-
-    const unsubCreated = productionEventsWebSocket.on('productionEventCreated', () => {
-      loadData();
-    });
-    const unsubUpdated = productionEventsWebSocket.on('productionEventUpdated', () => {
-      loadData();
-    });
-    const unsubDeleted = productionEventsWebSocket.on('productionEventDeleted', () => {
-      loadData();
-    });
-
-    return () => {
-      unsubCreated();
-      unsubUpdated();
-      unsubDeleted();
-    };
-  }, [session?.user?.id, plantSelection?.tenant?.id]);
+  // Real-time refresh: scoped v2 channel behind the v2.eventHub flag, else the v1 broadcast (plan 3.1)
+  useEventHubLiveRefresh(Boolean(session), () => loadData(), `${session?.user?.id}|${plantSelection?.tenant?.id}`);
 
   // Load RCA trigger configuration
   useEffect(() => {

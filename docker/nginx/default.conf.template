@@ -48,8 +48,8 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Socket.IO: the realtime (/socket.io namespace) and connectivity (/connectivity namespace)
-    # gateways both use this transport path
+    # Socket.IO: the v1 realtime (/socket.io namespace), scoped v2 realtime (/realtime, plan 3.1) and
+    # connectivity (/connectivity namespace) gateways all use this transport path
     location /socket.io {
         proxy_pass $backend;
         proxy_http_version 1.1;

@@ -99,6 +99,8 @@ import { ExportRequestsService } from '../exports/export-requests.service';
 import { FxRatesService } from '../valuation/fx-rates.service';
 import { ValuationPoliciesService } from '../valuation/valuation-policies.service';
 import { ValuationModule } from '../valuation/valuation.module';
+import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
+import { FeatureFlagsService } from '../feature-flags/feature-flags.service';
 import { ExportsModule } from '../exports/exports.module';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
@@ -312,6 +314,13 @@ class ExportsModuleStub {}
 })
 class ValuationModuleStub {}
 
+/** Stands in for the plan 3.1 feature-flag module. */
+@Module({
+  providers: [{ provide: FeatureFlagsService, useValue: {} }],
+  exports: [FeatureFlagsService],
+})
+class FeatureFlagsModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -407,6 +416,8 @@ async function generate(): Promise<string> {
     .useModule(ExportsModuleStub)
     .overrideModule(ValuationModule)
     .useModule(ValuationModuleStub)
+    .overrideModule(FeatureFlagsModule)
+    .useModule(FeatureFlagsModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

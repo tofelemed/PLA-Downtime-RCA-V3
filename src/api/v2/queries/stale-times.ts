@@ -1,0 +1,20 @@
+import type { V2Resource } from './query-keys';
+
+const MINUTE = 60_000;
+
+/**
+ * How long a cached v2 result is fresh, by resource class (plan 3.1): master data 5 min, periods and
+ * events 30 s (realtime notices invalidate sooner), reports until invalidated (a notice or a mutation).
+ */
+export const STALE_TIME: Readonly<Record<V2Resource, number>> = {
+  codes: 5 * MINUTE,
+  sites: 5 * MINUTE,
+  plans: 5 * MINUTE,
+  profiles: 5 * MINUTE,
+  'feature-flags': MINUTE,
+  'production-events': 30_000,
+  'production-periods': 30_000,
+  'period-accounting': 30_000,
+  reports: Number.POSITIVE_INFINITY,
+  jobs: 0,
+};

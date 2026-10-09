@@ -162,13 +162,18 @@ const navigationItems = [
     roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin'],
     description: 'System settings',
   },
-  {
-    name: 'Data Seeding',
-    href: '/data-seeding',
-    icon: Database,
-    roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin'],
-    description: 'Manage test data for PLA and RCA',
-  },
+  // legacy demo seeding: development builds only (plan 3.1 step 7, decision A4)
+  ...(import.meta.env.DEV
+    ? [
+        {
+          name: 'Data Seeding',
+          href: '/data-seeding',
+          icon: Database,
+          roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin'],
+          description: 'Manage test data for PLA and RCA',
+        },
+      ]
+    : []),
 ];
 
 // Add prop types for collapsed and setCollapsed

@@ -14,6 +14,8 @@ import { isUuid } from './revision-actor';
 export interface EventChangeMessage {
   tenantId: string;
   eventId: string;
+  /** unit of the event after the change; routes the scoped realtime message (plan 3.1) */
+  unitId?: string | null;
   /** `event_revisions.revision` that caused the message */
   revision: number;
   affectedFrom: string;
@@ -97,6 +99,7 @@ export function changeMessage(
   return {
     tenantId: after.tenantUuid ?? after.tenantId ?? '',
     eventId: after.id,
+    unitId: after.unitId ?? null,
     revision,
     ...affectedWindow(before, after),
     kind,

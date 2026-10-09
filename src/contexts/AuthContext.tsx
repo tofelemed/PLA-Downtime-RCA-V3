@@ -23,6 +23,12 @@ interface AuthContextType {
   logout: () => Promise<void>;
   selectTenant: (tenantId: string) => Promise<void>;
   isLoading: boolean;
+  /** current access token, read at call time by the v2 client (never logged or stored elsewhere) */
+  getAccessToken: () => string | null;
+  /** renews the tokens with the refresh token; resolves false when it is no longer valid */
+  refreshSession: () => Promise<boolean>;
+  /** the session ended (401 after a refresh): clear it so the login screen shows */
+  expireSession: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -265,6 +271,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshInFlight = useRef<Promise<boolean> | null>(null);
+
+  const refreshSession = (): Promise<boolean> => {
+    const refreshToken = tokensRef.current?.refreshToken;
+    if (!refreshToken) return Promise.resolve(false);
+    refreshInFlight.current ??= refreshTokens(refreshToken)
+      .then((next) => {
+        if (session) persistAuthState(session, next);
+        return true;
+      })
+      .catch(() => false)
+      .finally(() => {
+        refreshInFlight.current = null;
+      });
+    return refreshInFlight.current;
+  };
+
   const selectTenant = async (tenantId: string) => {
     if (!session) return;
     try {
@@ -290,6 +313,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout,
       selectTenant,
       isLoading,
+      getAccessToken: () => tokensRef.current?.accessToken ?? null,
+      refreshSession,
+      expireSession: clearAuthState,
       }}
     >
       {children}

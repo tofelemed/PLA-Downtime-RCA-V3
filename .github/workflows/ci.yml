@@ -47,6 +47,8 @@ jobs:
         working-directory: server/pro-act-backend
       - name: Lint frontend
         run: npm run lint
+      - name: Generated v2 API types match the OpenAPI snapshot (plan 3.1)
+        run: npm run api:types:check
       - name: Lint backend
         # `npm run lint` passes --fix and would silently rewrite files; CI only reports
         run: npx eslint "{src,apps,libs,test}/**/*.ts"
@@ -184,6 +186,8 @@ jobs:
         run: npm run build
         env:
           NODE_OPTIONS: --max-old-space-size=4096
+      - name: Bundle budget (initial JS <= 300 kB gzip, plan 3.1)
+        run: npm run size
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Smoke suite (login, task CRUD, audit interceptor)

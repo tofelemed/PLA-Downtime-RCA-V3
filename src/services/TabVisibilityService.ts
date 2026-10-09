@@ -1,10 +1,11 @@
-/**
- * Service for managing tab visibility settings in IndexedDB
- */
+import { appSettingsApi } from './api/appSettingsApi';
+import { createLogger } from '@/lib/logger';
 
-const DB_NAME = 'ProActSettings';
-const DB_VERSION = 1;
-const STORE_NAME = 'tabVisibility';
+/**
+ * Event Hub tab visibility per user and tenant, stored server-side in app-settings (plan 3.1 step 7:
+ * IndexedDB is out of product paths). Same interface as before, so the Event Hub is unchanged.
+ */
+const log = createLogger('TabVisibility');
 
 export interface TabVisibilitySettings {
   userId: string;
@@ -29,119 +30,48 @@ export const defaultTabVisibility = {
   ProductionOutput: true,
 };
 
+type VisibleTabs = TabVisibilitySettings['visibleTabs'];
+
+export function tabVisibilityKey(userId: string, tenantId: string): string {
+  return `tabVisibility.${tenantId}.${userId}`;
+}
+
+function defaults(userId: string, tenantId: string): TabVisibilitySettings {
+  return { userId, tenantId, visibleTabs: { ...defaultTabVisibility }, updatedAt: new Date().toISOString() };
+}
+
 class TabVisibilityService {
-  private dbPromise: Promise<IDBDatabase> | null = null;
-
-  private async getDB(): Promise<IDBDatabase> {
-    if (this.dbPromise) {
-      return this.dbPromise;
-    }
-
-    this.dbPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-      request.onerror = () => {
-        reject(request.error);
-      };
-
-      request.onsuccess = () => {
-        resolve(request.result);
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        
-        // Create object store if it doesn't exist
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-          store.createIndex('userId', 'userId', { unique: false });
-          store.createIndex('tenantId', 'tenantId', { unique: false });
-        }
-      };
-    });
-
-    return this.dbPromise;
-  }
-
-  private getKey(userId: string, tenantId: string): string {
-    return `${userId}_${tenantId}`;
-  }
-
   async getVisibilitySettings(userId: string, tenantId: string): Promise<TabVisibilitySettings> {
     try {
-      const db = await this.getDB();
-      const transaction = db.transaction(STORE_NAME, 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const key = this.getKey(userId, tenantId);
-
-      return new Promise((resolve, reject) => {
-        const request = store.get(key);
-
-        request.onsuccess = () => {
-          if (request.result) {
-            resolve(request.result);
-          } else {
-            // Return default settings if none exist
-            resolve({
-              userId,
-              tenantId,
-              visibleTabs: { ...defaultTabVisibility },
-              updatedAt: new Date().toISOString(),
-            });
-          }
-        };
-
-        request.onerror = () => {
-          reject(request.error);
-        };
-      });
-    } catch (error) {
-      console.error('Error getting tab visibility settings:', error);
-      // Return defaults on error
+      const stored = await appSettingsApi.getValue<Partial<TabVisibilitySettings> | null>(
+        tabVisibilityKey(userId, tenantId),
+        null,
+      );
+      if (!stored?.visibleTabs) return defaults(userId, tenantId);
       return {
         userId,
         tenantId,
-        visibleTabs: { ...defaultTabVisibility },
-        updatedAt: new Date().toISOString(),
+        visibleTabs: { ...defaultTabVisibility, ...(stored.visibleTabs as Partial<VisibleTabs>) },
+        updatedAt: stored.updatedAt ?? new Date().toISOString(),
       };
+    } catch (error) {
+      log.warn('Could not load tab visibility; showing every tab', error);
+      return defaults(userId, tenantId);
     }
   }
 
   async saveVisibilitySettings(settings: TabVisibilitySettings): Promise<void> {
-    try {
-      const db = await this.getDB();
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const key = this.getKey(settings.userId, settings.tenantId);
-
-      const dataToSave = {
-        id: key,
-        ...settings,
-        updatedAt: new Date().toISOString(),
-      };
-
-      return new Promise((resolve, reject) => {
-        const request = store.put(dataToSave);
-
-        request.onsuccess = () => {
-          resolve();
-        };
-
-        request.onerror = () => {
-          reject(request.error);
-        };
-      });
-    } catch (error) {
-      console.error('Error saving tab visibility settings:', error);
-      throw error;
-    }
+    await appSettingsApi.setValue(tabVisibilityKey(settings.userId, settings.tenantId), {
+      ...settings,
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   async toggleTab(
     userId: string,
     tenantId: string,
     tabName: keyof typeof defaultTabVisibility,
-    visible: boolean
+    visible: boolean,
   ): Promise<void> {
     const settings = await this.getVisibilitySettings(userId, tenantId);
     settings.visibleTabs[tabName] = visible;
@@ -149,15 +79,8 @@ class TabVisibilityService {
   }
 
   async resetToDefaults(userId: string, tenantId: string): Promise<void> {
-    const settings: TabVisibilitySettings = {
-      userId,
-      tenantId,
-      visibleTabs: { ...defaultTabVisibility },
-      updatedAt: new Date().toISOString(),
-    };
-    await this.saveVisibilitySettings(settings);
+    await this.saveVisibilitySettings(defaults(userId, tenantId));
   }
 }
 
 export const tabVisibilityService = new TabVisibilityService();
-

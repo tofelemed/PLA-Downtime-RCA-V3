@@ -57,14 +57,14 @@ export async function createTestFixture(): Promise<TestFixture> {
     }),
   });
 
-  // Create product (Product DTO doesn't accept tenantId in create)
-  // Note: Product API may not support PATCH, so we skip tenantId assignment
+  // Products belong to a tenant (B18); plans refuse products of another or no tenant (plan 2.3)
   const product = await apiRequest('/products', {
     method: 'POST',
     token: tokens.accessToken,
     body: JSON.stringify({
       name: `E2E Test Product ${Date.now()}`,
       code: `E2E-PRODUCT-${Date.now()}`,
+      tenantId: tenant.id,
     }),
   });
 

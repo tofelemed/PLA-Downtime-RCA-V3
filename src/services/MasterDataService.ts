@@ -1,4 +1,4 @@
-import { BaseEntity } from './StorageService';
+import type { BaseEntity } from './StorageService';
 import { masterDataApi, RCATemplateDto } from './api/masterDataApi';
 import { taskApi, TaskDto } from './api/taskApi';
 import { unmappedEventApi, UnmappedEventDto, mapUnmappedEventDto } from './api/unmappedEventApi';

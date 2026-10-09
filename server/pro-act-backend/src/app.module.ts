@@ -41,6 +41,7 @@ import { LossCategoryModule } from './loss-category/loss-category.module';
 import { UnmappedEventModule } from './unmapped-event/unmapped-event.module';
 import { RCAEvidenceModule } from './rca-evidence/rca-evidence.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { ScopedRealtimeModule } from './realtime/scoped-realtime.module';
 import { ReportingModule } from './reporting/reporting.module';
 import { IntegrationModule } from './integration/integration.module';
 import { IntakeModule } from './intake/intake.module';
@@ -135,6 +136,8 @@ registerPgTypeParsers();
     LossCategoryModule,
     UnmappedEventModule,
     RealtimeModule,
+    // authenticated, tenant/unit-scoped channel fed from the outbox (plan 3.1)
+    ScopedRealtimeModule,
     ReportingModule,
     IntegrationModule,
     // durable intake core (plan 1.5): raw store, jobs, quarantine, replay, outbox/inbox

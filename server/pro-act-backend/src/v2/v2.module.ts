@@ -102,6 +102,8 @@ import { FxRatesV2Controller } from './valuation/fx-rates-v2.controller';
 import { ValuationPoliciesV2Controller } from './valuation/valuation-policies-v2.controller';
 import { LossValueReportV2Controller } from './reports/loss-value-v2.controller';
 import { LossValueReportV2Service } from './reports/loss-value-v2.service';
+import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
+import { FeatureFlagsV2Controller } from './feature-flags/feature-flags-v2.controller';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -156,6 +158,7 @@ import { LossValueReportV2Service } from './reports/loss-value-v2.service';
     ReconciliationModule,
     ExportsModule,
     ValuationModule,
+    FeatureFlagsModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -198,6 +201,7 @@ import { LossValueReportV2Service } from './reports/loss-value-v2.service';
     FxRatesV2Controller,
     ValuationPoliciesV2Controller,
     LossValueReportV2Controller,
+    FeatureFlagsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,

@@ -31,6 +31,8 @@ step() { printf '\n==> %s\n' "$*"; }
 if [[ $RUN_LINT == 1 ]]; then
   step "Lint frontend"
   (cd "$ROOT" && npm run lint)
+  step "Generated v2 API types match the OpenAPI snapshot"
+  (cd "$ROOT" && npm run api:types:check)
   step "Lint backend"
   (cd "$BACKEND" && npx eslint "{src,apps,libs,test}/**/*.ts")
 fi

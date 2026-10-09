@@ -75,7 +75,7 @@ Status legend: ⬜ not started · 🔄 in progress · 🧪 implemented, tests pe
 ### Phase 3 — Frontend, analytics, RCA, production readiness (spec P3: E10–E12) → [phase-3/README.md](phase-3/README.md)
 | Status | Sub-phase | File | Exit tests |
 |---|---|---|---|
-| ⬜ | 3.1 Frontend foundation: typed v2 client, query cache, scoped realtime | [3.1-frontend-foundation.md](phase-3/3.1-frontend-foundation.md) | T23 (client), T24 |
+| 🧪 | 3.1 Frontend foundation: typed v2 client, query cache, scoped realtime | [3.1-frontend-foundation.md](phase-3/3.1-frontend-foundation.md) | T23 (client + server scope) green, T24 rule unit-tested (9 Oct): generated v2 types with CI drift check, typed fetch client (auth only to the API base, correlation / tenant headers, idempotency key per attempt, If-Match / ETag cache, 412 / 429 / 401 handling), TanStack query keys / hooks / invalidation / cache clear on tenant change, authenticated `/realtime` channel with tenant / unit rooms fed from the outbox (`seq` / `prevSeq` / `sinceSeq` resync), UX kit, server feature flags (`feature_flags`), lazy routes, initial JS 794 → 150 kB gzip with a 300 kB budget; Event Hub live refresh behind `v2.eventHub`; Playwright T24 with the first report page (3.3 / 3.6), remaining IndexedDB users with 3.7 |
 | ⬜ | 3.2 Event Hub on v2 | [3.2-event-hub.md](phase-3/3.2-event-hub.md) | UX04 journey |
 | ⬜ | 3.3 Downtime Analysis page | [3.3-downtime-analysis-page.md](phase-3/3.3-downtime-analysis-page.md) | AN01, T24 |
 | ⬜ | 3.4 Plans, profiles, calendars UI | [3.4-plans-profiles-calendars-ui.md](phase-3/3.4-plans-profiles-calendars-ui.md) | PLAN03 preview |

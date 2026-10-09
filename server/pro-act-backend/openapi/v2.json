@@ -8618,6 +8618,67 @@
           "v2 · Valuation"
         ]
       }
+    },
+    "/api/v2/feature-flags": {
+      "get": {
+        "description": "Registry defaults (all off) overlaid with the tenant settings; readable by any tenant member.",
+        "operationId": "FeatureFlagsV2Controller_list_v2",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Every known flag with its value for the caller tenant",
+        "tags": [
+          "v2 · Feature flags"
+        ]
+      }
+    },
+    "/api/v2/feature-flags/{key}": {
+      "put": {
+        "description": "Idempotent set. Needs manager_approver and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); unknown keys are 404.",
+        "operationId": "FeatureFlagsV2Controller_set_v2",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureFlagSetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Switch one flag for the whole tenant",
+        "tags": [
+          "v2 · Feature flags"
+        ]
+      }
     }
   },
   "info": {
@@ -11261,6 +11322,18 @@
           "reportingCurrencies",
           "fxPolicy",
           "effectiveFrom"
+        ]
+      },
+      "FeatureFlagSetDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "New value of the flag for the whole tenant"
+          }
+        },
+        "required": [
+          "enabled"
         ]
       }
     }
