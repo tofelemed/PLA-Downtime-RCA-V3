@@ -6680,6 +6680,178 @@
           "v2 · Production periods"
         ]
       }
+    },
+    "/api/v2/production-periods/recalculate": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. unitIds must be units of the tenant and of the caller’s scope (422 INVALID_REFERENCE); without unitIds every unit is recalculated (403 TENANT_SCOPE_REQUIRED for unit-limited callers). ≤ 92 days. Returns the number of queued period jobs; an unchanged input set creates no run.",
+        "operationId": "PeriodAccountingV2Controller_recalculate_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecalculatePeriodsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Queue calculation runs (actuals, then both loss ledgers) for the periods overlapping [from, to) (202)",
+        "tags": [
+          "v2 · Loss accounting"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/accounting": {
+      "get": {
+        "description": "Default: the approved revision when one exists, else the draft. Quantities are decimal strings; residuals are signed and null when not computable. Foreign or out-of-scope periods are 404.",
+        "operationId": "PeriodAccountingV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "view",
+            "required": false,
+            "in": "query",
+            "description": "Which revision to show; default: the approved revision when one exists, else the draft",
+            "schema": {
+              "enum": [
+                "draft",
+                "approved"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "revision",
+            "required": false,
+            "in": "query",
+            "description": "A specific revision number (wins over view)",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Both loss ledgers of a period: revision, run (engine and policy versions, input fingerprint), totals, lines with evidence",
+        "tags": [
+          "v2 · Loss accounting"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/runs": {
+      "get": {
+        "operationId": "PeriodAccountingV2Controller_runs_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "-createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Calculation runs of a period, newest first (keyset on createdAt, id)",
+        "tags": [
+          "v2 · Loss accounting"
+        ]
+      }
     }
   },
   "info": {
@@ -8932,6 +9104,31 @@
         },
         "required": [
           "csv"
+        ]
+      },
+      "RecalculatePeriodsDto": {
+        "type": "object",
+        "properties": {
+          "unitIds": {
+            "description": "Omit for every unit (tenant-wide grant required)",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "from": {
+            "type": "string",
+            "description": "Periods overlapping [from, to), ISO 8601 with offset"
+          },
+          "to": {
+            "type": "string",
+            "description": "Window end (exclusive); at most 92 days after from"
+          }
+        },
+        "required": [
+          "from",
+          "to"
         ]
       }
     }

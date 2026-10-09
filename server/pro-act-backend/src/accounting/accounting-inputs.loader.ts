@@ -1,0 +1,310 @@
+import { Injectable } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
+import {
+  LossEvent,
+  LossEventType,
+  RateVersion,
+  ScheduleSpan,
+  SliceActualsInput,
+  SliceInput,
+} from '../domain/accounting/accounting.types';
+import { RateTimebase } from '../domain/actuals/actuals.types';
+import { PeriodProductSlice } from '../periods/entities/period-product-slice.entity';
+import { ProductionPeriod } from '../periods/entities/production-period.entity';
+import { InputFingerprint } from './entities/calculation-run.entity';
+
+/** Everything a calculation run reads, frozen once per run (plan 2.5 step 1). */
+export interface AccountingInputs {
+  schedule: ScheduleSpan[];
+  events: LossEvent[];
+  slices: SliceInput[];
+  asOf: Date;
+  fingerprint: InputFingerprint;
+}
+
+interface EventRow {
+  id: string;
+  occurrence_id: string;
+  physical_type: LossEventType;
+  start_time: Date;
+  end_time: Date | null;
+  schedule_class: string;
+  oee_component: string;
+  impact_mode: string;
+  impact_fraction: string | null;
+  quantity: string | null;
+  reason_code_id: string | null;
+  impact_code_id: string | null;
+  failure_mode: string | null;
+  row_version: number;
+  revision_id: string | null;
+  revision: number | null;
+}
+
+interface RateRow {
+  id: string;
+  profile_id: string;
+  rate_kind: 'sustained' | 'planning';
+  rate: string;
+  timebase: RateTimebase;
+  effective_from: Date;
+  effective_to: Date | null;
+}
+
+interface InstanceRow {
+  utc_start: Date;
+  utc_end: Date;
+  is_excluded: boolean;
+  exclusion_kind: string | null;
+  calendar_version_id: string | null;
+}
+
+const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", e."start_time", e."end_time", e."schedule_class",
+       e."oee_component", e."impact_mode", e."impact_fraction"::text AS "impact_fraction", e."quantity"::text AS "quantity",
+       e."reason_code_id", e."impact_code_id", e."failure_mode", e."row_version", r."id" AS "revision_id", r."revision"
+  FROM "production_events" e
+  LEFT JOIN LATERAL (SELECT er."id", er."revision" FROM "event_revisions" er WHERE er."event_id" = e."id"
+                      ORDER BY er."revision" DESC LIMIT 1) r ON true
+ WHERE e."tenant_id" = $1 AND e."unit_id" = $2
+   AND e."physical_type" IN ('downtime', 'slowdown', 'quality_loss') AND e."physical_state" IN ('open', 'closed')
+   AND e."start_time" < $4 AND (e."end_time" IS NULL OR e."end_time" > $3 OR e."start_time" >= $3)
+ ORDER BY e."start_time", e."id"`;
+
+const RATES_SQL = `SELECT "id", "profile_id", "rate_kind", "rate"::text AS "rate", "timebase", "effective_from", "effective_to"
+  FROM "unit_product_rates"
+ WHERE "profile_id" = ANY($1::uuid[]) AND "state" = 'approved' AND "rate_kind" IN ('sustained', 'planning')
+   AND "effective_from" < $3 AND ("effective_to" IS NULL OR "effective_to" > $2)
+ ORDER BY "effective_from", "id"`;
+
+const INSTANCES_SQL = `SELECT "utc_start", "utc_end", "is_excluded", "exclusion_kind", "calendar_version_id"
+  FROM "shift_instances" WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "utc_start" < $4 AND "utc_end" > $3
+ ORDER BY "utc_start"`;
+
+function toSpan(row: InstanceRow): ScheduleSpan {
+  return {
+    start: new Date(row.utc_start),
+    end: new Date(row.utc_end),
+    excluded: row.is_excluded,
+    exclusionKind: row.exclusion_kind,
+  };
+}
+
+function toEvent(row: EventRow): LossEvent {
+  return {
+    eventId: row.id,
+    revisionId: row.revision_id,
+    revision: row.revision,
+    occurrenceId: row.occurrence_id,
+    physicalType: row.physical_type,
+    start: new Date(row.start_time),
+    end: row.end_time ? new Date(row.end_time) : null,
+    scheduleClass: row.schedule_class,
+    oeeComponent: row.oee_component,
+    impactMode: row.impact_mode,
+    impactFraction: row.impact_fraction,
+    quantity: row.quantity,
+    reasonCodeId: row.reason_code_id,
+    impactCodeId: row.impact_code_id,
+    failureMode: row.failure_mode,
+  };
+}
+
+function toRate(row: RateRow): RateVersion {
+  return {
+    id: row.id,
+    rate: row.rate,
+    timebase: row.timebase,
+    from: new Date(row.effective_from),
+    to: row.effective_to ? new Date(row.effective_to) : null,
+  };
+}
+
+const sorted = (values: Iterable<string>) => [...new Set(values)].sort();
+
+interface FingerprintSource {
+  period: ProductionPeriod;
+  slices: readonly PeriodProductSlice[];
+  events: readonly EventRow[];
+  instances: readonly InstanceRow[];
+  rateIds: string[];
+  actualsRunId: string | null;
+  /** set while the period is running and an open event is measured to it */
+  asOf: Date | null;
+}
+
+function fingerprintOf(source: FingerprintSource): InputFingerprint {
+  const { period, slices, events, instances } = source;
+  return {
+    periodId: period.id,
+    window: {
+      start: period.utcStart.toISOString(),
+      end: period.utcEnd.toISOString(),
+    },
+    sliceIds: slices.map((s) => s.id),
+    eventRevisions: events.map((e) => ({
+      eventId: e.id,
+      revisionId: e.revision_id,
+      rowVersion: e.row_version,
+    })),
+    occurrenceIds: sorted(events.map((e) => e.occurrence_id)),
+    actualsRunId: source.actualsRunId,
+    planVersionId: period.selectedPlanVersionId,
+    planPeriodIds: sorted(
+      slices.flatMap((s) => (s.planPeriodId ? [s.planPeriodId] : [])),
+    ),
+    rateVersionIds: source.rateIds,
+    calendarVersionIds: sorted(
+      [
+        period.calendarVersionId,
+        ...instances.map((i) => i.calendar_version_id),
+      ].flatMap((v) => (v ? [v] : [])),
+    ),
+    asOf: source.asOf ? source.asOf.toISOString() : null,
+  };
+}
+
+interface SliceLookups {
+  slices: readonly PeriodProductSlice[];
+  rates: readonly RateRow[];
+  targets: Map<string, string>;
+  actuals: Map<string, SliceActualsInput>;
+}
+
+function toSliceInput(
+  slice: PeriodProductSlice,
+  lookups: SliceLookups,
+): SliceInput {
+  const own = lookups.rates.filter((r) => r.profile_id === slice.profileId);
+  return {
+    sliceId: slice.id,
+    window: { start: slice.windowFrom, end: slice.windowTo },
+    uom: slice.quantityUom,
+    sustainedRates: slice.profileId
+      ? own.filter((r) => r.rate_kind === 'sustained').map(toRate)
+      : null,
+    planningRates: own.filter((r) => r.rate_kind === 'planning').map(toRate),
+    target: slice.planPeriodId
+      ? (lookups.targets.get(slice.planPeriodId) ?? null)
+      : null,
+    actuals: lookups.actuals.get(slice.id) ?? null,
+    concurrent: lookups.slices.some(
+      (other) =>
+        other.id !== slice.id &&
+        other.windowFrom < slice.windowTo &&
+        other.windowTo > slice.windowFrom,
+    ),
+  };
+}
+
+/**
+ * Loads a period's accounting inputs in the run's transaction: stored shift instances (exclusions),
+ * downtime / slowdown / quality events effective now with their latest revision, the approved sustained
+ * and planning rate versions of each slice's profile, the slices' plan targets and the actuals of the
+ * actuals run — and the fingerprint naming each of them by id and version (FND03).
+ */
+@Injectable()
+export class AccountingInputsLoader {
+  async load(
+    manager: EntityManager,
+    period: ProductionPeriod,
+    slices: readonly PeriodProductSlice[],
+    actualsRunId: string | null,
+  ): Promise<AccountingInputs> {
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+    const running = period.utcEnd > now;
+    const asOf = running ? now : period.utcEnd;
+    const params = [
+      period.tenantId,
+      period.unitId,
+      period.utcStart,
+      period.utcEnd,
+    ];
+    const instances: InstanceRow[] = await manager.query(INSTANCES_SQL, params);
+    const events: EventRow[] = await manager.query(EVENTS_SQL, params);
+    const sliceInputs = await this.sliceInputs(
+      manager,
+      period,
+      slices,
+      actualsRunId,
+    );
+    const openMeasured = running && events.some((e) => e.end_time === null);
+    return {
+      schedule: instances.map(toSpan),
+      events: events.map(toEvent),
+      slices: sliceInputs.inputs,
+      asOf,
+      fingerprint: fingerprintOf({
+        period,
+        slices,
+        events,
+        instances,
+        rateIds: sliceInputs.rateIds,
+        actualsRunId,
+        asOf: openMeasured ? asOf : null,
+      }),
+    };
+  }
+
+  private async sliceInputs(
+    manager: EntityManager,
+    period: ProductionPeriod,
+    slices: readonly PeriodProductSlice[],
+    actualsRunId: string | null,
+  ): Promise<{ inputs: SliceInput[]; rateIds: string[] }> {
+    const profileIds = sorted(
+      slices.flatMap((s) => (s.profileId ? [s.profileId] : [])),
+    );
+    const rates: RateRow[] = profileIds.length
+      ? await manager.query(RATES_SQL, [
+          profileIds,
+          period.utcStart,
+          period.utcEnd,
+        ])
+      : [];
+    const lookups: SliceLookups = {
+      slices,
+      rates,
+      targets: await this.targets(manager, slices),
+      actuals: await this.actuals(manager, actualsRunId),
+    };
+    return {
+      inputs: slices.map((slice) => toSliceInput(slice, lookups)),
+      rateIds: sorted(rates.map((r) => r.id)),
+    };
+  }
+
+  private async targets(
+    manager: EntityManager,
+    slices: readonly PeriodProductSlice[],
+  ): Promise<Map<string, string>> {
+    const ids = slices.flatMap((s) => (s.planPeriodId ? [s.planPeriodId] : []));
+    if (ids.length === 0) return new Map();
+    const rows: Array<{ id: string; target: string }> = await manager.query(
+      `SELECT "id", "target"::text AS "target" FROM "plan_periods" WHERE "id" = ANY($1::uuid[])`,
+      [ids],
+    );
+    return new Map(rows.map((r) => [r.id, r.target]));
+  }
+
+  private async actuals(
+    manager: EntityManager,
+    actualsRunId: string | null,
+  ): Promise<Map<string, SliceActualsInput>> {
+    if (!actualsRunId) return new Map();
+    const rows: Array<{
+      slice_id: string;
+      gross: string | null;
+      good: string | null;
+      uom: string | null;
+    }> = await manager.query(
+      `SELECT "slice_id", "gross"::text AS "gross", "good"::text AS "good", "uom" FROM "actuals_results" WHERE "actuals_run_id" = $1`,
+      [actualsRunId],
+    );
+    return new Map(
+      rows.map((r) => [
+        r.slice_id,
+        { gross: r.gross, good: r.good, uom: r.uom },
+      ]),
+    );
+  }
+}

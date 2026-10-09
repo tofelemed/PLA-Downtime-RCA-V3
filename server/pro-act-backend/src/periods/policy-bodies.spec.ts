@@ -7,6 +7,12 @@ import {
   PolicyBodyError,
   SOURCE_AUTHORITY_DEFAULT,
 } from './policy-bodies';
+import {
+  OEE_POLICY_DEFAULT,
+  parseOeePolicy,
+  parseReconciliationTolerance,
+  RECONCILIATION_TOLERANCE_DEFAULT,
+} from './engine-policy-bodies';
 
 const DEFAULTS_DIR = resolve(
   __dirname,
@@ -49,6 +55,33 @@ describe('accounting policy bodies (plan 2.4, D05)', () => {
       parseSourceAuthority({
         ...SOURCE_AUTHORITY_DEFAULT,
         measurement: 'state',
+      }),
+    ).toThrow(PolicyBodyError);
+  });
+});
+
+describe('engine policy bodies (plan 2.5, D04 / D06)', () => {
+  it('the seeded defaults equal the contracts defaults and parse unchanged', () => {
+    expect(OEE_POLICY_DEFAULT).toEqual(defaultBody('oee_policy'));
+    expect(RECONCILIATION_TOLERANCE_DEFAULT).toEqual(
+      defaultBody('reconciliation_tolerance'),
+    );
+    expect(parseOeePolicy(defaultBody('oee_policy'))).toEqual(
+      OEE_POLICY_DEFAULT,
+    );
+    expect(
+      parseReconciliationTolerance(defaultBody('reconciliation_tolerance')),
+    ).toEqual(RECONCILIATION_TOLERANCE_DEFAULT);
+  });
+
+  it('refuses malformed bodies', () => {
+    expect(() =>
+      parseOeePolicy({ ...OEE_POLICY_DEFAULT, derateComponent: 'quality' }),
+    ).toThrow(PolicyBodyError);
+    expect(() =>
+      parseReconciliationTolerance({
+        ...RECONCILIATION_TOLERANCE_DEFAULT,
+        epsilon: -1,
       }),
     ).toThrow(PolicyBodyError);
   });

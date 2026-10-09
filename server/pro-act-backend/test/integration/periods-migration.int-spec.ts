@@ -69,7 +69,8 @@ describe('PeriodsActuals migration', () => {
       version: number;
       body: Record<string, unknown>;
     }>(
-      `SELECT tenant_id, policy_kind, version, body FROM accounting_policies WHERE unit_id IS NULL ORDER BY policy_kind`,
+      `SELECT tenant_id, policy_kind, version, body FROM accounting_policies
+        WHERE unit_id IS NULL AND policy_kind IN ('coverage_gate', 'source_authority') ORDER BY policy_kind`,
     );
     for (const tenant of tenants) {
       const own = policies.filter((p) => p.tenant_id === tenant);
@@ -86,7 +87,10 @@ describe('PeriodsActuals migration', () => {
   });
 
   it('down: removes everything; up again restores it', async () => {
-    await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    // later migrations (AccountingEngine, …) are undone first
+    while (await executed(PERIODS_ACTUALS)) {
+      await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    }
     for (const table of [...TABLES, 'production_losses_v'])
       expect(await present(table)).toBe(false);
     const functions = await q(

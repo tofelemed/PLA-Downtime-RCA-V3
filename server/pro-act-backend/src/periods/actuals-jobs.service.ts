@@ -10,6 +10,7 @@ import { ActualsRunnerService } from './actuals-runner.service';
 import { ActualsJob } from './entities/actuals-job.entity';
 import { ProductionPeriod } from './entities/production-period.entity';
 import { ExternalReportsService } from './external-reports.service';
+import { PeriodRecomputePort } from './period-recompute.port';
 import {
   assertPeriodUnitInScope,
   periodScopeUnits,
@@ -45,6 +46,7 @@ export class ActualsJobsService {
     @InjectRepository(ActualsJob) private readonly jobs: Repository<ActualsJob>,
     private readonly runner: ActualsRunnerService,
     private readonly reports: ExternalReportsService,
+    private readonly recompute: PeriodRecomputePort,
   ) {}
 
   /** 202 recompute of one period of the caller's scope (404 otherwise); returns the queued job. */
@@ -239,11 +241,16 @@ export class ActualsJobsService {
         message: 'the period unit is outside the requester’s unit scope',
       };
     }
-    const run = await this.runner.run(period.id, {
+    const trigger = {
       reason: job.request.trigger,
       requestedBy: job.requestedBy,
-    });
-    return { state: 'completed', result: { ...run } };
+    };
+    // 2.5: the calculation run (actuals first, then the loss ledgers) when the accounting module is loaded
+    const full = this.recompute.registered;
+    const result = full
+      ? await full(period.id, trigger)
+      : { ...(await this.runner.run(period.id, trigger)) };
+    return { state: 'completed', result };
   }
 
   /** Error code and message for the job record; never SQL or stack traces. */

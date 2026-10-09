@@ -15,10 +15,20 @@ import { SliceResolverService } from './slice-resolver.service';
 
 const CONSUMER = 'period-actuals';
 
+/** Event types whose change recalculates a period: output (actuals) and loss explanations (2.5 ledgers). */
+const RECALCULATING_TYPES = new Set([
+  'production_output',
+  'downtime',
+  'slowdown',
+  'quality_loss',
+]);
+
 /**
  * Recalculation triggers of plan 2.4 step 5, consumed once each through the inbox (`runOnce`):
  * - `EventChanged` / `EventRetracted` of a production output event → `PeriodRecalculateRequested` for its
- *   unit and affected interval (other event types are loss explanations: actuals are not touched, T44);
+ *   unit and affected interval; of a downtime / slowdown / quality event (loss explanation) → the same
+ *   request, so the 2.5 calculation run re-derives the ledgers while the actuals run is reused (its input
+ *   hash is unchanged, T44);
  * - `PlanVersionApproved` in the accounting-baseline scenario → slices of the unit's not-reconciled
  *   periods in the version window are re-resolved and changed periods recalculated (restatement of
  *   reconciled periods is 2.8: `period_change_proposals`);
@@ -74,7 +84,8 @@ export class PeriodRecalcConsumer implements OnModuleInit {
         [message.aggregateId],
       );
     const event = rows[0];
-    if (!event || event.physical_type !== 'production_output') return;
+    if (!event || !RECALCULATING_TYPES.has(event.physical_type)) return;
+    const output = event.physical_type === 'production_output';
     const payload = message.payload as {
       affectedFrom?: string;
       affectedTo?: string | null;
@@ -85,10 +96,9 @@ export class PeriodRecalcConsumer implements OnModuleInit {
       unitIds: [event.unit_id],
       from: new Date(payload.affectedFrom),
       to: payload.affectedTo ? new Date(payload.affectedTo) : null,
-      reason:
-        message.type === 'EventRetracted'
-          ? 'output_event_retracted'
-          : 'output_event_changed',
+      reason: `${output ? 'output' : 'loss'}_event_${
+        message.type === 'EventRetracted' ? 'retracted' : 'changed'
+      }`,
       scopeUnitIds: null,
       requestedBy: null,
     });

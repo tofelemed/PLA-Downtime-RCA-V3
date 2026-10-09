@@ -82,6 +82,9 @@ import { ActualsJobsService } from '../periods/actuals-jobs.service';
 import { ExternalReportsService } from '../periods/external-reports.service';
 import { PeriodsModule } from '../periods/periods.module';
 import { PeriodsService } from '../periods/periods.service';
+import { AccountingCommandsService } from '../accounting/accounting-commands.service';
+import { AccountingModule } from '../accounting/accounting.module';
+import { CalculationRun } from '../accounting/entities/calculation-run.entity';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
 
@@ -239,6 +242,13 @@ class PlansModuleStub {}
 })
 class PeriodsModuleStub {}
 
+/** Stands in for the plan 2.5 accounting module (calculation runs, recalculation command). */
+@Module({
+  providers: [{ provide: AccountingCommandsService, useValue: {} }],
+  exports: [AccountingCommandsService],
+})
+class AccountingModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -302,6 +312,8 @@ async function generate(): Promise<string> {
     .useValue({})
     .overrideProvider(getRepositoryToken(ProductionPeriod))
     .useValue({})
+    .overrideProvider(getRepositoryToken(CalculationRun))
+    .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)
     .overrideModule(CodeLibraryModule)
@@ -324,6 +336,8 @@ async function generate(): Promise<string> {
     .useModule(PlansModuleStub)
     .overrideModule(PeriodsModule)
     .useModule(PeriodsModuleStub)
+    .overrideModule(AccountingModule)
+    .useModule(AccountingModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

@@ -79,6 +79,10 @@ import { PlansV2Service } from './plans/plans-v2.service';
 import { ProductionPlansV2Controller } from './plans/production-plans-v2.controller';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { PeriodsModule } from '../periods/periods.module';
+import { AccountingModule } from '../accounting/accounting.module';
+import { CalculationRun } from '../accounting/entities/calculation-run.entity';
+import { PeriodAccountingV2Controller } from './accounting/period-accounting-v2.controller';
+import { PeriodAccountingV2Service } from './accounting/period-accounting-v2.service';
 import { ActualsAdjustmentsV2Controller } from './periods/actuals-adjustments-v2.controller';
 import { ActualsJobsV2Controller } from './periods/actuals-jobs-v2.controller';
 import { ExternalReportsV2Controller } from './periods/external-reports-v2.controller';
@@ -121,6 +125,7 @@ import { ProductionPeriodsV2Controller } from './periods/production-periods-v2.c
       PlanPeriod,
       PlanScenario,
       ProductionPeriod,
+      CalculationRun,
     ]),
     ProductionEventModule,
     CodeLibraryModule,
@@ -133,6 +138,7 @@ import { ProductionPeriodsV2Controller } from './periods/production-periods-v2.c
     ProfilesModule,
     PlansModule,
     PeriodsModule,
+    AccountingModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -166,6 +172,7 @@ import { ProductionPeriodsV2Controller } from './periods/production-periods-v2.c
     ActualsAdjustmentsV2Controller,
     ExternalReportsV2Controller,
     ActualsJobsV2Controller,
+    PeriodAccountingV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -181,6 +188,7 @@ import { ProductionPeriodsV2Controller } from './periods/production-periods-v2.c
     ProfilesV2Service,
     PlansV2Service,
     PeriodsV2Service,
+    PeriodAccountingV2Service,
   ],
 })
 export class V2Module {}

@@ -14,6 +14,7 @@ import { PISyncJobModule } from './pi-sync-job/pi-sync-job.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { PlansModule } from './plans/plans.module';
 import { PeriodsModule } from './periods/periods.module';
+import { AccountingModule } from './accounting/accounting.module';
 import { RealtimeModule } from './realtime/realtime.module';
 
 registerPgTypeParsers();
@@ -54,6 +55,7 @@ registerPgTypeParsers();
     PlansModule,
     // period materialization, actuals jobs and recalculation triggers (plan 2.4)
     PeriodsModule,
+    AccountingModule,
   ],
   providers: [WorkerHealthServer],
 })

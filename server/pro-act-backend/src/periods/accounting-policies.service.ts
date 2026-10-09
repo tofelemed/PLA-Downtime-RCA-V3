@@ -15,9 +15,31 @@ import {
   parseSourceAuthority,
   SOURCE_AUTHORITY_DEFAULT,
 } from './policy-bodies';
+import {
+  OEE_POLICY_DEFAULT,
+  OeePolicy,
+  parseOeePolicy,
+  parseReconciliationTolerance,
+  RECONCILIATION_TOLERANCE_DEFAULT,
+  ReconciliationTolerance,
+} from './engine-policy-bodies';
 
 const SEED_NOTE =
-  'Seeded on first use from the D05 default (DECISIONS.md, 2026-10-07); change by a new version.';
+  'Seeded on first use from the D04 / D05 / D06 default (DECISIONS.md, 2026-10-07); change by a new version.';
+
+const DEFAULT_BODIES: Readonly<Record<PolicyKind, object>> = {
+  coverage_gate: COVERAGE_GATE_DEFAULT,
+  source_authority: SOURCE_AUTHORITY_DEFAULT,
+  oee_policy: OEE_POLICY_DEFAULT,
+  reconciliation_tolerance: RECONCILIATION_TOLERANCE_DEFAULT,
+};
+
+/** Policies of the accounting engine (plan 2.5): D04 OEE policy and D06 tolerance, with their versions. */
+export interface EnginePolicies {
+  oee: OeePolicy;
+  tolerance: ReconciliationTolerance;
+  refs: PolicyVersionRef[];
+}
 
 export interface ResolvedPolicies {
   coverageGate: CoverageGatePolicy;
@@ -54,6 +76,30 @@ export class AccountingPoliciesService {
         version: policy.version,
       })),
       sourceAuthorityId: authority.id,
+    };
+  }
+
+  /** `oee_policy` and `reconciliation_tolerance` in force for the unit at the instant (plan 2.5). */
+  async resolveEngine(
+    manager: EntityManager,
+    scope: { tenantId: string; unitId: string },
+    at: Date,
+  ): Promise<EnginePolicies> {
+    const oee = await this.inForce(manager, scope, 'oee_policy', at);
+    const tolerance = await this.inForce(
+      manager,
+      scope,
+      'reconciliation_tolerance',
+      at,
+    );
+    return {
+      oee: parseOeePolicy(oee.body),
+      tolerance: parseReconciliationTolerance(tolerance.body),
+      refs: [oee, tolerance].map((policy) => ({
+        id: policy.id,
+        kind: policy.policyKind,
+        version: policy.version,
+      })),
     };
   }
 
@@ -106,16 +152,13 @@ export class AccountingPoliciesService {
       .getOne();
   }
 
-  /** Version 1 of the D05 default for a tenant that has none of this kind (idempotent). */
+  /** Version 1 of the D04 / D05 / D06 default for a tenant that has none of this kind (idempotent). */
   private async seedDefault(
     manager: EntityManager,
     tenantId: string,
     kind: PolicyKind,
   ): Promise<void> {
-    const body =
-      kind === 'coverage_gate'
-        ? COVERAGE_GATE_DEFAULT
-        : SOURCE_AUTHORITY_DEFAULT;
+    const body = DEFAULT_BODIES[kind];
     await manager.query(
       `INSERT INTO "accounting_policies" ("tenant_id", "row_version", "policy_kind", "unit_id", "scope_key",
               "version", "body", "effective_from", "approved_at", "notes")

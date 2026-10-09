@@ -20,6 +20,7 @@ import { ProductionPeriod } from './entities/production-period.entity';
 import { ExternalReportsService } from './external-reports.service';
 import { PeriodMaterializerService } from './period-materializer.service';
 import { PeriodRecalcConsumer } from './period-recalc.consumer';
+import { PeriodRecomputePort } from './period-recompute.port';
 import { PeriodSweepJob } from './period-sweep.job';
 import { PeriodsService } from './periods.service';
 import { SliceResolverService } from './slice-resolver.service';
@@ -58,8 +59,10 @@ import { SliceResolverService } from './slice-resolver.service';
     PeriodRecalcConsumer,
     ActualsProcessor,
     PeriodSweepJob,
+    PeriodRecomputePort,
   ],
   exports: [
+    PeriodRecomputePort,
     PeriodsService,
     ActualsRunnerService,
     ActualsJobsService,
