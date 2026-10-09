@@ -72,4 +72,20 @@ describe('KPI report queries (plan 2.7)', () => {
       await rejectedFields(OeeReportQueryDto, { ...WINDOW, oee: '0.87' }),
     ).toEqual(['oee']);
   });
+
+  it('reason drill-down (plan 3.3): groupBy reasonChild with a uuid parentReasonId', async () => {
+    const parsed = await parse(DowntimeReportQueryDto, {
+      ...WINDOW,
+      groupBy: 'reasonChild',
+      parentReasonId: UNIT,
+    });
+    expect(parsed.parentReasonId).toBe(UNIT);
+    expect(
+      await rejectedFields(DowntimeReportQueryDto, {
+        ...WINDOW,
+        groupBy: 'reasonChild',
+        parentReasonId: 'root',
+      }),
+    ).toEqual(['parentReasonId']);
+  });
 });

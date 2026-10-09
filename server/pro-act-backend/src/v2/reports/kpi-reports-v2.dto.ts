@@ -30,6 +30,7 @@ export type OeeGroup = (typeof OEE_GROUPS)[number];
 export const DOWNTIME_GROUPS = [
   'reason',
   'reasonLevel1',
+  'reasonChild',
   'impact',
   'oee',
   'asset',
@@ -108,7 +109,12 @@ export class OeeReportQueryDto extends ReportWindowQueryDto {
 }
 
 export class DowntimeReportQueryDto extends ReportWindowQueryDto {
-  @ApiPropertyOptional({ enum: DOWNTIME_GROUPS, default: 'reason' })
+  @ApiPropertyOptional({
+    enum: DOWNTIME_GROUPS,
+    default: 'reason',
+    description:
+      '`reasonChild` = the reason codes one level below `parentReasonId` (Pareto drill-down, plan 3.3)',
+  })
   @IsOptional()
   @IsIn(DOWNTIME_GROUPS)
   groupBy?: DowntimeGroup;
@@ -137,6 +143,16 @@ export class DowntimeReportQueryDto extends ReportWindowQueryDto {
   @Transform(toBooleanParam)
   @IsBoolean()
   includeMicroStops?: boolean;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description:
+      'Reason subtree: only cells coded with this reason code or one below it; required with groupBy=reasonChild, ' +
+      'allowed with the reason groupings only; a reason code of the tenant (422 INVALID_REFERENCE)',
+  })
+  @IsOptional()
+  @IsUUID()
+  parentReasonId?: string;
 }
 
 export class ReliabilityReportQueryDto extends ReportWindowQueryDto {

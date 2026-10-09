@@ -74,6 +74,8 @@ export interface DowntimeGroupView {
   value: string;
   /** share of the total, 0..1 (decimal string); null when the total is 0 */
   share: string | null;
+  /** share of this group and every larger one before it (Pareto line), 0..1; null when the total is 0 */
+  cumulativeShare: string | null;
   periods: number;
 }
 
@@ -83,8 +85,16 @@ export interface DowntimeReportView {
   unit: 's' | 'count';
   scheduleClass: string | null;
   includeMicroStops: boolean;
+  /** reason subtree of the groups (drill-down), null = every reason */
+  parentReasonId: string | null;
   groups: DowntimeGroupView[];
   total: string;
+  /**
+   * Period KPIs of the whole scope (KPI05 / KPI06: total, planned, unplanned, micro-stop and unknown time,
+   * stop and carry-in count, mean completed-stop duration, scheduled availability, onstream factor),
+   * independent of groupBy, metric, scheduleClass and parentReasonId
+   */
+  summary: KpiAggregateView[];
   calculationRunIds: string[];
 }
 

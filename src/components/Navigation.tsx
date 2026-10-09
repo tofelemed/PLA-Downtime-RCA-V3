@@ -16,9 +16,12 @@ import {
   Calendar,
   CheckSquare,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  TrendingDown
 } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { useFlag } from '@/api/v2/queries/feature-flags';
+import type { FeatureFlagKey } from '@/api/v2/types/flags';
 
 // Custom scrollbar styles
 const scrollbarStyles = `
@@ -84,6 +87,15 @@ const navigationItems = [
     icon: AlertTriangle,
     roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Analyst', 'Engineer', 'Operator'],
     description: 'Monitor and analyze events',
+  },
+  {
+    name: 'Downtime Analysis',
+    href: '/downtime',
+    icon: TrendingDown,
+    roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Analyst', 'Engineer', 'Operator'],
+    description: 'What is down, why, how often and where (v2)',
+    // UX01 entry point of the plan 3.3 screen: listed only while its flag is on for the plant
+    flag: 'v2.downtimeAnalysis' as FeatureFlagKey,
   },
   {
     name: 'RCA Analysis',
@@ -186,8 +198,9 @@ export const Navigation: React.FC<NavigationProps> = ({ collapsed, setCollapsed 
   const { session } = useAuth();
   const location = useLocation();
 
-  const allowedItems = navigationItems.filter(item => 
-    session && item.roles.includes(session.user.role)
+  const downtimeFlag = useFlag('v2.downtimeAnalysis');
+  const allowedItems = navigationItems.filter(item =>
+    session && item.roles.includes(session.user.role) && (!('flag' in item) || downtimeFlag.enabled)
   );
 
   return (

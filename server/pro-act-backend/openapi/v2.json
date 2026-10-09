@@ -7941,11 +7941,13 @@
             "name": "groupBy",
             "required": false,
             "in": "query",
+            "description": "`reasonChild` = the reason codes one level below `parentReasonId` (Pareto drill-down, plan 3.3)",
             "schema": {
               "default": "reason",
               "enum": [
                 "reason",
                 "reasonLevel1",
+                "reasonChild",
                 "impact",
                 "oee",
                 "asset",
@@ -7994,6 +7996,16 @@
             "schema": {
               "default": false,
               "type": "boolean"
+            }
+          },
+          {
+            "name": "parentReasonId",
+            "required": false,
+            "in": "query",
+            "description": "Reason subtree: only cells coded with this reason code or one below it; required with groupBy=reasonChild, allowed with the reason groupings only; a reason code of the tenant (422 INVALID_REFERENCE)",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],

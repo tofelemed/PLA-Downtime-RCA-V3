@@ -7564,12 +7564,15 @@ export interface operations {
                 unitIds?: string[];
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
-                groupBy?: "reason" | "reasonLevel1" | "impact" | "oee" | "asset" | "shift" | "crew" | "day" | "week" | "month";
+                /** @description `reasonChild` = the reason codes one level below `parentReasonId` (Pareto drill-down, plan 3.3) */
+                groupBy?: "reason" | "reasonLevel1" | "reasonChild" | "impact" | "oee" | "asset" | "shift" | "crew" | "day" | "week" | "month";
                 /** @description duration = seconds (allocated, adds up to the union); frequency = stop occurrences starting in the window */
                 metric?: "duration" | "frequency";
                 scheduleClass?: "planned" | "unplanned" | "external" | "unknown";
                 /** @description Include micro-stops (shorter than the oee_policy threshold); default availability stops only */
                 includeMicroStops?: boolean;
+                /** @description Reason subtree: only cells coded with this reason code or one below it; required with groupBy=reasonChild, allowed with the reason groupings only; a reason code of the tenant (422 INVALID_REFERENCE) */
+                parentReasonId?: string;
             };
             header?: never;
             path?: never;

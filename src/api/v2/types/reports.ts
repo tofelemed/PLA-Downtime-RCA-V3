@@ -32,6 +32,8 @@ export interface DowntimeGroupView {
   /** seconds (duration) or stop count (frequency) */
   value: string;
   share: string | null;
+  /** share of this group and every larger one before it (Pareto line), 0..1; null when the total is 0 */
+  cumulativeShare: string | null;
   periods: number;
 }
 
@@ -41,8 +43,12 @@ export interface DowntimeReportView {
   unit: 's' | 'count';
   scheduleClass: string | null;
   includeMicroStops: boolean;
+  /** reason subtree of the groups (plan 3.3 drill-down), null = every reason */
+  parentReasonId: string | null;
   groups: DowntimeGroupView[];
   total: string;
+  /** period KPIs of the whole scope (KPI05 / KPI06), independent of groupBy, metric, class and reason */
+  summary: KpiAggregateView[];
   calculationRunIds: string[];
 }
 

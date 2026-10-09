@@ -168,6 +168,9 @@ export interface BreakdownSpec {
   includeMicroStops: boolean;
   /** extra join (reason tree) */
   join?: string;
+  /** extra predicate over the joined rows; its parameters are `extraParams` from $10 on */
+  where?: string;
+  extraParams?: readonly unknown[];
 }
 
 /** Σ downtime breakdown cells per group (seconds or occurrences), largest first (Pareto). */
@@ -190,6 +193,7 @@ export async function breakdownGroups(
                            AND ($8::text IS NULL OR k."scope"->>'scheduleClass' = $8)
                            AND ($9 OR k."scope"->>'stopKind' = 'availability')
        ${spec.join ?? ''}
+       ${spec.where ? `WHERE ${spec.where}` : ''}
       GROUP BY 1 ORDER BY sum(k."numerator") DESC, 1`,
     [
       ...params(scope),
@@ -197,6 +201,7 @@ export async function breakdownGroups(
       spec.dimension,
       spec.scheduleClass,
       spec.includeMicroStops,
+      ...(spec.extraParams ?? []),
     ],
   );
   return rows.map((r) => ({

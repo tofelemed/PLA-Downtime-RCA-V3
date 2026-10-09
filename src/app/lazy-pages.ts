@@ -13,6 +13,10 @@ export const MasterData = lazy(() => import('@/pages/MasterData'));
 export const EventHub = lazyNamed(() => import('@/pages/EventHub'), 'EventHub');
 /** Event Hub on v2 (plan 3.2), served at `/events` while the `v2.eventHub` flag is on. */
 export const EventHubV2 = lazyNamed(() => import('@/features/event-hub/event-hub-page'), 'EventHubPage');
+/** Downtime Analysis (plan 3.3), served at `/downtime` while the `v2.downtimeAnalysis` flag is on. */
+export const DowntimeAnalysis = lazyNamed(() => import('@/features/downtime-analysis/downtime-page'), 'DowntimeAnalysisPage');
+/** What `/downtime` shows while the flag is off: the screen has no v1 binding. */
+export const DowntimeAnalysisOff = lazyNamed(() => import('@/features/downtime-analysis/downtime-off'), 'DowntimeAnalysisOff');
 export const RCAModule = lazyNamed(() => import('@/pages/RCAModule'), 'RCAModule');
 export const RCAKnowledgeBase = lazyNamed(() => import('@/pages/RCAKnowledgeBase'), 'RCAKnowledgeBase');
 export const TestRCAAnalysisTools = lazy(() => import('@/pages/TestRCAAnalysisTools'));

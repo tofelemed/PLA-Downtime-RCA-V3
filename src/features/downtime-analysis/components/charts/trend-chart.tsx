@@ -1,0 +1,43 @@
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { formatDuration } from '@/features/ux-kit/format/duration';
+import type { ScheduleClass } from '../../model/downtime-filters';
+import { formatCount } from '../../model/kpi-display';
+import type { TrendRow } from '../../model/trend-rows';
+
+const COLORS: Record<ScheduleClass, string> = {
+  planned: 'hsl(210 70% 50%)',
+  unplanned: 'hsl(0 70% 50%)',
+  external: 'hsl(35 85% 50%)',
+  unknown: 'hsl(0 0% 55%)',
+};
+
+export interface TrendChartProps {
+  rows: readonly TrendRow[];
+  classes: readonly ScheduleClass[];
+  unit: 's' | 'count';
+}
+
+/** Stacked bars per site-local bucket and schedule class (lazy chunk with Recharts). */
+export function TrendChart({ rows, classes, unit }: TrendChartProps) {
+  const data = rows.map((row) => ({
+    label: row.label,
+    ...Object.fromEntries(classes.map((scheduleClass) => [scheduleClass, Number(row.values[scheduleClass] ?? 0)])),
+  }));
+  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact') : formatCount(String(value)));
+  return (
+    <div className="h-64 w-full" aria-hidden>
+      <ResponsiveContainer>
+        <BarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+          <YAxis tickFormatter={format} allowDecimals={unit === 's'} tick={{ fontSize: 11 }} />
+          <Tooltip formatter={(value: unknown) => format(value)} />
+          <Legend />
+          {classes.map((scheduleClass) => (
+            <Bar key={scheduleClass} dataKey={scheduleClass} stackId="class" fill={COLORS[scheduleClass]} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}

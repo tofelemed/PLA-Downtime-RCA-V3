@@ -1,0 +1,54 @@
+import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import type { DowntimeGroupView } from '@/api/v2/types/reports';
+import { formatDuration } from '@/features/ux-kit/format/duration';
+import { formatCount, formatRatio } from '../../model/kpi-display';
+
+export interface ParetoChartProps {
+  groups: readonly DowntimeGroupView[];
+  unit: 's' | 'count';
+  labelOf: (group: DowntimeGroupView) => string;
+  onBar: (group: DowntimeGroupView) => void;
+}
+
+interface Point {
+  group: DowntimeGroupView;
+  name: string;
+  value: number;
+  /** the server's cumulative share, scaled to the 0–100 axis for drawing */
+  cumulative: number | null;
+}
+
+/**
+ * Pareto of the server groups (lazy chunk with Recharts): bars = the server value, line = the server's
+ * cumulative share. Numbers are only scaled for drawing; labels use the shared formatters.
+ */
+export function ParetoChart({ groups, unit, labelOf, onBar }: ParetoChartProps) {
+  const points: Point[] = groups.map((group) => ({
+    group,
+    name: labelOf(group),
+    value: Number(group.value),
+    cumulative: group.cumulativeShare === null ? null : Number(group.cumulativeShare) * 100,
+  }));
+  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact') : formatCount(String(value)));
+  return (
+    <div className="h-72 w-full" aria-hidden>
+      <ResponsiveContainer>
+        <ComposedChart data={points} margin={{ top: 16, right: 16, bottom: 8, left: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} />
+          <YAxis yAxisId="value" tickFormatter={format} allowDecimals={unit === 's'} tick={{ fontSize: 11 }} />
+          <YAxis yAxisId="share" orientation="right" domain={[0, 100]} tickFormatter={(v: number) => `${v} %`} tick={{ fontSize: 11 }} />
+          <Tooltip
+            formatter={(value: unknown, name: string, item: { payload?: Point }) =>
+              name === 'cumulative' ? formatRatio(item.payload?.group.cumulativeShare) : format(value)
+            }
+          />
+          <Bar yAxisId="value" dataKey="value" fill="hsl(var(--primary))" onClick={(point: { payload?: Point }) => point.payload && onBar(point.payload.group)} cursor="pointer">
+            <LabelList dataKey="value" position="top" formatter={format} fontSize={11} />
+          </Bar>
+          <Line yAxisId="share" dataKey="cumulative" stroke="hsl(var(--destructive))" dot />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
