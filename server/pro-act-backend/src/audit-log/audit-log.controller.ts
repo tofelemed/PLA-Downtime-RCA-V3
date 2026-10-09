@@ -1,3 +1,4 @@
+import { ReadOnlyAllowed } from '../auth/decorators/read-only-allowed.decorator';
 import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, ForbiddenException } from '@nestjs/common';
 import { AuditLogService } from './audit-log.service';
 import { AuditLog } from './audit-log.entity';
@@ -63,6 +64,7 @@ export class AuditLogController {
     return this.auditLogService.findOne(id);
   }
 
+  @ReadOnlyAllowed()
   @Post()
   @SkipAudit()
   @ApiBody({ type: CreateAuditLogDto })

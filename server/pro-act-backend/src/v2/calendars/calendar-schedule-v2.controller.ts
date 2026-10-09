@@ -1,3 +1,4 @@
+import { ReadOnlyAllowed } from '../../auth/decorators/read-only-allowed.decorator';
 import {
   Body,
   Controller,
@@ -79,6 +80,7 @@ export class CalendarScheduleV2Controller {
     return this.lists.listInstances(ctx, query);
   }
 
+  @ReadOnlyAllowed()
   @Post('calendars/preview')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

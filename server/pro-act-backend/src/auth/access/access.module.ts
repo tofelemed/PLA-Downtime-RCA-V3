@@ -6,6 +6,7 @@ import { Unit } from '../../unit/unit.entity';
 import { RequestContextFactory } from '../context/request-context.factory';
 import { RolesGuard } from '../guards/roles.guard';
 import { ScopeGuard } from '../guards/scope.guard';
+import { WriteAccessGuard } from '../guards/write-access.guard';
 import { AccessDenialAuditService } from '../scopes/access-denial-audit.service';
 import { ScopeMembershipService } from '../scopes/scope-membership.service';
 import { UserScope } from '../scopes/user-scope.entity';
@@ -26,6 +27,7 @@ import { UserScopesService } from '../scopes/user-scopes.service';
     RequestContextFactory,
     RolesGuard,
     ScopeGuard,
+    WriteAccessGuard,
   ],
   exports: [
     UserScopesService,
@@ -34,6 +36,7 @@ import { UserScopesService } from '../scopes/user-scopes.service';
     RequestContextFactory,
     RolesGuard,
     ScopeGuard,
+    WriteAccessGuard,
   ],
 })
 export class AccessModule {}

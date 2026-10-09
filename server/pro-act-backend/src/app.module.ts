@@ -78,6 +78,7 @@ import { registerPgTypeParsers } from './database/pg-type-parsers';
 import { AccessModule } from './auth/access/access.module';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { ScopeGuard } from './auth/guards/scope.guard';
+import { WriteAccessGuard } from './auth/guards/write-access.guard';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RequestContextMiddleware } from './common/context/request-context.middleware';
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
@@ -182,6 +183,7 @@ registerPgTypeParsers();
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: ScopeGuard },
+    { provide: APP_GUARD, useClass: WriteAccessGuard },
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
   ],
 })

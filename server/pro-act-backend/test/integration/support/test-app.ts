@@ -19,6 +19,7 @@ import { AccessModule } from '../../../src/auth/access/access.module';
 import { AuthModule } from '../../../src/auth/auth.module';
 import { RolesGuard } from '../../../src/auth/guards/roles.guard';
 import { ScopeGuard } from '../../../src/auth/guards/scope.guard';
+import { WriteAccessGuard } from '../../../src/auth/guards/write-access.guard';
 import { JwtAuthGuard } from '../../../src/auth/jwt-auth.guard';
 import { CommonModule } from '../../../src/common/common.module';
 import { RequestContextMiddleware } from '../../../src/common/context/request-context.middleware';
@@ -95,6 +96,7 @@ export async function createIntegrationApp(
       { provide: APP_GUARD, useClass: JwtAuthGuard },
       { provide: APP_GUARD, useClass: RolesGuard },
       { provide: APP_GUARD, useClass: ScopeGuard },
+      { provide: APP_GUARD, useClass: WriteAccessGuard },
       { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     ],
   }).compile();

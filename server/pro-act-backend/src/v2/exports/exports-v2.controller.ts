@@ -1,3 +1,4 @@
+import { ReadOnlyAllowed } from '../../auth/decorators/read-only-allowed.decorator';
 import {
   Body,
   Controller,
@@ -73,6 +74,7 @@ export class ExportsV2Controller {
     private readonly reads: ExportReadsService,
   ) {}
 
+  @ReadOnlyAllowed()
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   @Idempotent()
@@ -152,6 +154,7 @@ export class ExportsV2Controller {
     return listResponse(items, nextCursor, scopeOf(ctx));
   }
 
+  @ReadOnlyAllowed()
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
   @Idempotent()

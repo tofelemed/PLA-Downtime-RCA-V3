@@ -1,3 +1,4 @@
+import { ReadOnlyAllowed } from '../../auth/decorators/read-only-allowed.decorator';
 import {
   Body,
   Controller,
@@ -59,6 +60,7 @@ export class SourceMappingsV2Controller {
     return this.service.list(ctx, query);
   }
 
+  @ReadOnlyAllowed()
   @Post('preview')
   @HttpCode(200)
   @ApiOperation({

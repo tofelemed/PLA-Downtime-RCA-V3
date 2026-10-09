@@ -93,7 +93,9 @@ export class ExportStorage {
         await fs.rename(partial, path);
       },
       abort: async () => {
-        stream.destroy();
+        // destroy() returns before the handle is closed (or even opened); removing the file earlier
+        // races the stream and can leave the partial behind (seen on Windows)
+        await releaseStream(stream);
         await fs.rm(partial, { force: true });
       },
     };
@@ -115,4 +117,13 @@ export class ExportStorage {
   async remove(key: string): Promise<void> {
     await fs.rm(this.pathOf(key), { force: true });
   }
+}
+
+/** Destroys `stream` and resolves once its file handle is released. */
+function releaseStream(stream: WriteStream): Promise<void> {
+  if (stream.closed) return Promise.resolve();
+  return new Promise((resolve) => {
+    stream.once('close', () => resolve());
+    stream.destroy();
+  });
 }

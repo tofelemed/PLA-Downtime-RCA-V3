@@ -15,7 +15,8 @@ import { IntegrationHarness } from './harness';
 import { at, EventWorld, seedEventWorld } from './support/seed-event-world';
 import { bearer, createIntegrationApp, signToken } from './support/test-app';
 
-const DAY = '2026-10-10';
+// Two days ahead: after the codes' validity start (they are created now) and never today
+const DAY = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
 const t = (time: string) => at(time, DAY).toISOString();
 
 /** Plan 1.3 (ING04): T05 typed mapping, field catalog, versioned tenant overrides. */

@@ -8,7 +8,7 @@ import { IntegrationHarness } from './harness';
 import { at, EventWorld, seedEventWorld } from './support/seed-event-world';
 import { bearer, createIntegrationApp, signToken } from './support/test-app';
 
-const DAY = '2026-10-08';
+const DAY = '2026-09-08'; // fixed past date: never today, never the seed world's day
 const t = (time: string) => at(time, DAY).toISOString();
 
 /** Plan 1.1: T01, T02 (open events), T03, T42, DT08 validation, DT11 adapter, If-Match on PATCH. */

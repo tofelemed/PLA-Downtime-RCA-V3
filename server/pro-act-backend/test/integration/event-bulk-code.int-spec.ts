@@ -107,7 +107,7 @@ describe('bulk coding and jobs (plan 1.4)', () => {
   });
 
   it('preview: before/after per event, exclusions and affected windows; nothing changes', async () => {
-    const items = await events('2026-10-11', 3);
+    const items = await events('2026-09-11', 3);
     const stale = { ...items[1], expectedVersion: 5 };
     const response = await api
       .bulkCode(
@@ -150,7 +150,7 @@ describe('bulk coding and jobs (plan 1.4)', () => {
   });
 
   it('500 events apply atomically: an injected failure leaves all 500 unchanged', async () => {
-    const items = await events('2026-10-12', 500);
+    const items = await events('2026-09-12', 500);
     await harness.dataSource.query(
       `CREATE FUNCTION fail_injected() RETURNS trigger LANGUAGE plpgsql AS $fn$
        BEGIN IF NEW.id = '${items[250].eventId}' THEN RAISE EXCEPTION 'injected failure'; END IF; RETURN NEW; END $fn$`,
@@ -180,7 +180,7 @@ describe('bulk coding and jobs (plan 1.4)', () => {
   });
 
   it('an excluded item refuses the whole atomic batch (412 stale, 404 foreign)', async () => {
-    const items = await events('2026-10-13', 3);
+    const items = await events('2026-09-13', 3);
     const stale = await api
       .bulkCode(command([items[0], { ...items[1], expectedVersion: 9 }], false))
       .expect(412);
@@ -202,7 +202,7 @@ describe('bulk coding and jobs (plan 1.4)', () => {
   });
 
   it('a foreign reason code → 422 INVALID_REFERENCE; no codes → 422', async () => {
-    const items = await events('2026-10-14', 1);
+    const items = await events('2026-09-14', 1);
     const foreign = await api
       .bulkCode(command(items, false, foreignReason))
       .expect(422);
@@ -219,7 +219,7 @@ describe('bulk coding and jobs (plan 1.4)', () => {
     const key = randomUUID();
 
     beforeAll(async () => {
-      items = await events('2026-10-15', 501);
+      items = await events('2026-09-15', 501);
       items[450] = { ...items[450], expectedVersion: 3 };
     });
 
@@ -281,7 +281,7 @@ describe('bulk coding and jobs (plan 1.4)', () => {
   });
   describe('a job abandoned by a dead worker (plan 1.5 lease)', () => {
     it('is reclaimed after its lease expires and continues after its last recorded chunk', async () => {
-      const items = await events('2026-10-16', 501);
+      const items = await events('2026-09-16', 501);
       const accepted = await api.bulkCode(command(items, false)).expect(202);
       const jobId = json<JobAcceptedBody>(accepted).jobId;
       const bulkCode = app.get(BulkCodeService);

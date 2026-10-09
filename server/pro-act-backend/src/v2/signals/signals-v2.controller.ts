@@ -1,3 +1,4 @@
+import { ReadOnlyAllowed } from '../../auth/decorators/read-only-allowed.decorator';
 import {
   Body,
   Controller,
@@ -87,6 +88,7 @@ export class SignalsV2Controller {
     return this.service.create(ctx, body);
   }
 
+  @ReadOnlyAllowed()
   @Post(':id/preview')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

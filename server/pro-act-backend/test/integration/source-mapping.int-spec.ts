@@ -16,7 +16,7 @@ import { IntegrationHarness } from './harness';
 import { at, EventWorld, seedEventWorld } from './support/seed-event-world';
 import { bearer, createIntegrationApp, signToken } from './support/test-app';
 
-const DAY = '2026-10-10';
+const DAY = '2026-09-10'; // fixed past date: never today, never the seed world's day
 const t = (time: string) => at(time, DAY).toISOString();
 
 interface PreviewBody {
