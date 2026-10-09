@@ -8907,6 +8907,186 @@
           "v2 · Products"
         ]
       }
+    },
+    "/api/v2/period-summaries": {
+      "get": {
+        "description": "Keyset on utcStart (ascending). Periods overlapping [from, to); unitIds must be units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Figures are the shown revision’s plan ledger after its saved decisions (the same arithmetic as GET …/reconciliation), slices summed per period only when they share one unit (else null with flag uom_mixed). Read-only.",
+        "operationId": "PeriodSummariesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "utcStart"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "workflowState",
+            "required": false,
+            "in": "query",
+            "description": "Workflow state of the shown revision (none = no revision yet; stale = in review with changed inputs)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "draft",
+                  "in_review",
+                  "stale",
+                  "approved"
+                ]
+              }
+            }
+          },
+          {
+            "name": "view",
+            "required": false,
+            "in": "query",
+            "description": "current: the open revision, else the published one; approved: the published revision only",
+            "schema": {
+              "default": "current",
+              "enum": [
+                "current",
+                "approved"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Period grid: target, actual, signed gap, attributed, residual (state), workflow state, run and actuals quality per period",
+        "tags": [
+          "v2 · Plan Dashboard"
+        ]
+      }
+    },
+    "/api/v2/reports/waterfall": {
+      "get": {
+        "description": "Plan ledger: target → availability → performance → quality → bridge / classified / gain → tolerance adjustment → unaccounted / over-accounted / overproduction → actual, after the saved decisions of the shown revision. Capacity ledger: capacity → exclusion → A → P → Q → gain → residual → good. `closes` = opening + Σ steps equals actual exactly; slices with unknown figures are listed in `excluded`. Periods of another tenant or outside the caller’s scope are 422 INVALID_REFERENCE; different units of measure 422 UOM_MIXED.",
+        "operationId": "WaterfallReportV2Controller_waterfall_v2",
+        "parameters": [
+          {
+            "name": "periodIds",
+            "required": true,
+            "in": "query",
+            "description": "Periods of the tenant and the caller’s scope (repeat the parameter)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "ledger",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "plan",
+              "enum": [
+                "plan",
+                "capacity"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "view",
+            "required": false,
+            "in": "query",
+            "description": "current: the open revision (with its saved decisions), else the published one; approved: the published revision",
+            "schema": {
+              "default": "current",
+              "enum": [
+                "current",
+                "approved"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Waterfall of one ledger for 1–31 periods: opening (plan target or capacity), signed steps with start / end, closing actual",
+        "tags": [
+          "v2 · Plan Dashboard"
+        ]
+      }
     }
   },
   "info": {

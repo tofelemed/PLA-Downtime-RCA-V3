@@ -7,7 +7,7 @@ import TemplateWizard from '../components/production-plans/TemplateWizard';
 import TemplateSelector from '../components/production-plans/TemplateSelector';
 import PlanForm from '../components/production-plans/PlanForm';
 import PlanList from '../components/production-plans/PlanList';
-import { PlanDashboard } from '../components/production-plans/PlanDashboard';
+import { PlanDashboardSwitch } from '@/features/plan-dashboard/plan-dashboard-switch';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { usePlantSelection } from '../contexts/PlantSelectionContext';
@@ -463,7 +463,7 @@ export const ProductionPlans: React.FC = () => {
   // Show dashboard if selected
   if (showDashboard && selectedPlanForDashboard) {
     return (
-      <PlanDashboard 
+      <PlanDashboardSwitch
         plan={selectedPlanForDashboard} 
         onClose={handleCloseDashboard}
         onPlanUpdate={handlePlanUpdate}

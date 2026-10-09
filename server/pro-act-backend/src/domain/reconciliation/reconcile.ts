@@ -68,7 +68,7 @@ function flagsOf(
 }
 
 /** Quantity a line adds itself (manual lines, replacements of a candidate still present). */
-function ownQuantity(
+export function ownQuantity(
   line: DecisionLine,
   candidates: ReadonlyMap<string, Candidate>,
 ): Dec {

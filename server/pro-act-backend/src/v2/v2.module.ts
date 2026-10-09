@@ -109,6 +109,11 @@ import { UnitsV2Controller } from './units/units-v2.controller';
 import { UnitsV2Service } from './units/units-v2.service';
 import { ProductsV2Controller } from './products/products-v2.controller';
 import { ProductsV2Service } from './products/products-v2.service';
+import {
+  PeriodSummariesV2Controller,
+  WaterfallReportV2Controller,
+} from './period-overview/period-overview-v2.controller';
+import { PeriodOverviewService } from './period-overview/period-overview.service';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -210,6 +215,8 @@ import { ProductsV2Service } from './products/products-v2.service';
     FeatureFlagsV2Controller,
     UnitsV2Controller,
     ProductsV2Controller,
+    PeriodSummariesV2Controller,
+    WaterfallReportV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -231,6 +238,7 @@ import { ProductsV2Service } from './products/products-v2.service';
     ReconciliationV2Service,
     KpiReportsV2Service,
     LossValueReportV2Service,
+    PeriodOverviewService,
   ],
 })
 export class V2Module {}

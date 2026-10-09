@@ -21,6 +21,10 @@ export const DowntimeAnalysisOff = lazyNamed(() => import('@/features/downtime-a
 export const Planning = lazyNamed(() => import('@/features/plans-profiles-calendars/planning-page'), 'PlanningPage');
 /** What `/planning` shows while the flag is off (the v1 plans, units and products screens stay). */
 export const PlanningOff = lazyNamed(() => import('@/features/plans-profiles-calendars/planning-off'), 'PlanningOff');
+/** Plan Dashboard period accounting (plan 3.5), served at `/plans/:planId` while `v2.planDashboard` is on. */
+export const PlanDashboardV2 = lazyNamed(() => import('@/features/plan-dashboard/plan-dashboard-page'), 'PlanDashboardPage');
+/** What `/plans/:planId` shows while the flag is off (the v1 Plan Dashboard opens from Production Plans). */
+export const PlanDashboardOff = lazyNamed(() => import('@/features/plan-dashboard/plan-dashboard-off'), 'PlanDashboardOff');
 export const RCAModule =lazyNamed(() => import('@/pages/RCAModule'), 'RCAModule');
 export const RCAKnowledgeBase = lazyNamed(() => import('@/pages/RCAKnowledgeBase'), 'RCAKnowledgeBase');
 export const TestRCAAnalysisTools = lazy(() => import('@/pages/TestRCAAnalysisTools'));

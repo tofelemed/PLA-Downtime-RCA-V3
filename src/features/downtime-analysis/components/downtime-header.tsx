@@ -22,7 +22,7 @@ export function DowntimeHeader({ filters }: { filters: DowntimeFilters }) {
     if (!snapshot?.exportRequest) return;
     try {
       const job = await exporter.submit(snapshot.exportRequest);
-      toast({ title: 'Export queued', description: `Job ${job.id}` });
+      toast({ title: 'Export queued', description: `Job ${job.jobId}` });
     } catch {
       toast({ title: 'Export could not be started', variant: 'destructive' });
     }

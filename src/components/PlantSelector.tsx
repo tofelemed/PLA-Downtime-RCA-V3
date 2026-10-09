@@ -40,7 +40,8 @@ const PlantSelector: React.FC = () => {
 
   // Auto-select the first tenant (plant) in the hierarchy if no selection is set
   useEffect(() => {
-    if (!initialized && organizations.length && tenants.length && !currentSelection?.tenant && !currentSelection?.unit && !currentSelection?.asset) {
+    // wait for the saved selection: choosing a default before it loads would write on every page load
+    if (!selectionLoading && !initialized && organizations.length && tenants.length && !currentSelection?.tenant && !currentSelection?.unit && !currentSelection?.asset) {
       // Find the first tenant in the hierarchy
       for (const org of organizations) {
         const orgTenants = tenants.filter(t => t.organizationId === org.id);
@@ -53,7 +54,7 @@ const PlantSelector: React.FC = () => {
       }
       setInitialized(true);
     }
-  }, [organizations, tenants, currentSelection, onSelectionChange, initialized]);
+  }, [organizations, tenants, currentSelection, onSelectionChange, initialized, selectionLoading]);
 
   const loadData = async () => {
     try {

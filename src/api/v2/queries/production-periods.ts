@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import type { QueryParams } from '../request-url';
 import type { QueryOf } from '../schema-types';
-import type { ProductionPeriodView } from '../types/periods';
+import type { AnalyticsResponse } from '../types/envelopes';
+import type { PeriodAccountingView } from '../types/period-overview';
+import type { PeriodDetailView, ProductionPeriodView } from '../types/periods';
 import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
@@ -28,17 +30,14 @@ export function useProductionPeriod(id: string | null) {
     enabled: Boolean(tenantId && id),
     staleTime: STALE_TIME['production-periods'],
     queryFn: async ({ signal }) =>
-      (await v2.get<ProductionPeriodView, '/api/v2/production-periods/{id}'>('/api/v2/production-periods/{id}', {
+      (await v2.get<AnalyticsResponse<PeriodDetailView>, '/api/v2/production-periods/{id}'>('/api/v2/production-periods/{id}', {
         path: { id: id as string },
         signal,
       })).data,
   });
 }
 
-/**
- * Accounting of one period for a ledger and revision selector (plan 2.5 read model). The body is passed
- * through untyped until 3.5 binds the Plan Dashboard grid to it.
- */
+/** Accounting of one period for a revision selector (plan 2.5 read model): run, policy versions, both ledgers. */
 export function usePeriodAccounting(id: string | null, query: QueryOf<'/api/v2/production-periods/{id}/accounting', 'get'> = {}) {
   const tenantId = useV2TenantId();
   return useQuery({
@@ -46,7 +45,7 @@ export function usePeriodAccounting(id: string | null, query: QueryOf<'/api/v2/p
     enabled: Boolean(tenantId && id),
     staleTime: STALE_TIME['period-accounting'],
     queryFn: async ({ signal }) =>
-      (await v2.get<Record<string, unknown>, '/api/v2/production-periods/{id}/accounting'>(
+      (await v2.get<AnalyticsResponse<PeriodAccountingView>, '/api/v2/production-periods/{id}/accounting'>(
         '/api/v2/production-periods/{id}/accounting',
         { path: { id: id as string }, query, signal },
       )).data,

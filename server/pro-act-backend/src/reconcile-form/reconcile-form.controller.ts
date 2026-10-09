@@ -5,14 +5,15 @@ import { ReconcileForm } from './reconcile-form.entity';
 import { CreateReconcileFormDto } from './dto/create-reconcile-form.dto';
 import { UpdateReconcileFormDto } from './dto/update-reconcile-form.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PlanDashboardV1WriteGuard } from '../feature-flags/plan-dashboard-v1-write.guard';
 
 /**
  * Deprecated writes (plan 2.8, §14.3): reconciliation lines are saved atomically and validated through
  * `PUT /api/v2/production-periods/{id}/draft-lines` (decisions, manual lines with event evidence, audit);
- * these writes answer with `Deprecation: true` and become 410 Gone when the 3.5 reconciliation UI ships.
+ * these writes answer with `Deprecation: true` and answer 410 Gone (`V1_WRITE_GONE`) for tenants whose `v2.planDashboard` flag is on (plan 3.5).
  */
 const DEPRECATED_WRITE =
-  'Deprecated (plan 2.8): use PUT /api/v2/production-periods/{id}/draft-lines; this write becomes 410 Gone with plan 3.5.';
+  'Deprecated (plan 2.8): use PUT /api/v2/production-periods/{id}/draft-lines; 410 Gone while the tenant’s v2.planDashboard flag is on (plan 3.5).';
 
 @ApiTags('Reconcile Forms')
 @ApiBearerAuth()
@@ -37,6 +38,7 @@ export class ReconcileFormController {
 
   @Post()
   @Header('Deprecation', 'true')
+  @UseGuards(PlanDashboardV1WriteGuard)
   @ApiOperation({ deprecated: true, description: DEPRECATED_WRITE })
   @ApiBody({ type: CreateReconcileFormDto })
   @ApiResponse({ status: 201, description: 'Create reconcile form', type: ReconcileForm })
@@ -47,6 +49,7 @@ export class ReconcileFormController {
 
   @Put(':id')
   @Header('Deprecation', 'true')
+  @UseGuards(PlanDashboardV1WriteGuard)
   @ApiOperation({ deprecated: true, description: DEPRECATED_WRITE })
   @ApiBody({ type: UpdateReconcileFormDto })
   @ApiResponse({ status: 200, description: 'Update reconcile form', type: ReconcileForm })
@@ -57,6 +60,7 @@ export class ReconcileFormController {
 
   @Delete(':id')
   @Header('Deprecation', 'true')
+  @UseGuards(PlanDashboardV1WriteGuard)
   @ApiOperation({ deprecated: true, description: DEPRECATED_WRITE })
   @ApiResponse({ status: 200, description: 'Delete reconcile form' })
   remove(@Param('id') id: string): Promise<void> {

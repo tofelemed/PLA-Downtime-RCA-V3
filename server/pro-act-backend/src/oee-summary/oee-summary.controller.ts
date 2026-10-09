@@ -5,13 +5,14 @@ import { OEESummary } from './oee-summary.entity';
 import { CreateOEESummaryDto } from './dto/create-oee-summary.dto';
 import { UpdateOeeSummaryDto } from './dto/update-oee-summary.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PlanDashboardV1WriteGuard } from '../feature-flags/plan-dashboard-v1-write.guard';
 
 /**
  * Deprecated writes (plan 2.5 step 6, §14.3): OEE is computed on the server from calculation runs (2.5 / 2.7);
- * the write routes answer with `Deprecation: true` and become 410 Gone when the 3.5 dashboard ships.
+ * the write routes answer with `Deprecation: true` and answer 410 Gone (`V1_WRITE_GONE`) for tenants whose `v2.planDashboard` flag is on (plan 3.5).
  */
 const DEPRECATED_WRITE =
-  'Deprecated (plan 2.5): OEE comes from server calculation runs; this write becomes 410 Gone with plan 3.5.';
+  'Deprecated (plan 2.5): OEE comes from server calculation runs; 410 Gone while the tenant’s v2.planDashboard flag is on (plan 3.5).';
 
 @ApiTags('OEE Summaries')
 @ApiBearerAuth()
@@ -36,6 +37,7 @@ export class OEESummaryController {
 
   @Post()
   @Header('Deprecation', 'true')
+  @UseGuards(PlanDashboardV1WriteGuard)
   @ApiOperation({ deprecated: true, description: DEPRECATED_WRITE })
   @ApiBody({ type: CreateOEESummaryDto })
   @ApiResponse({ status: 201, description: 'Create OEE summary', type: OEESummary })
@@ -46,6 +48,7 @@ export class OEESummaryController {
 
   @Put(':id')
   @Header('Deprecation', 'true')
+  @UseGuards(PlanDashboardV1WriteGuard)
   @ApiOperation({ deprecated: true, description: DEPRECATED_WRITE })
   @ApiBody({ type: UpdateOeeSummaryDto })
   @ApiResponse({ status: 200, description: 'Update OEE summary', type: OEESummary })
@@ -56,6 +59,7 @@ export class OEESummaryController {
 
   @Delete(':id')
   @Header('Deprecation', 'true')
+  @UseGuards(PlanDashboardV1WriteGuard)
   @ApiOperation({ deprecated: true, description: DEPRECATED_WRITE })
   @ApiResponse({ status: 200, description: 'Delete OEE summary' })
   remove(@Param('id') id: string): Promise<void> {

@@ -49,3 +49,48 @@ export interface ProductionPeriodView {
   warnings: PeriodWarningView[];
   slices: PeriodSliceView[];
 }
+
+export interface SourceSegmentView {
+  source: string;
+  from: string;
+  to: string;
+  quantity: string | null;
+  method: string;
+  quality: 'measured' | 'estimated' | 'excluded' | 'missing';
+}
+
+export interface PeriodFindingView {
+  code: string;
+  severity: 'problem' | 'info';
+  from?: string;
+  to?: string;
+  detail?: Record<string, unknown>;
+}
+
+export interface SliceActualsDetailView extends SliceActualsView {
+  resultId: string;
+  sourceSegments: SourceSegmentView[];
+  exceptions: PeriodFindingView[];
+  adjustmentIds: string[];
+  computedAt: string;
+}
+
+export interface PeriodAdjustmentView {
+  id: string;
+  sliceId: string;
+  kind: string;
+  quantity: string | null;
+  uom: string | null;
+  basis: string;
+  reason: string;
+  evidenceRef: string;
+  state: string;
+  authorId: string;
+  decidedBy: string | null;
+}
+
+/** `GET /production-periods/{id}` (data of the analytics envelope): slices with actuals provenance. */
+export interface PeriodDetailView extends Omit<ProductionPeriodView, 'slices'> {
+  slices: Array<Omit<PeriodSliceView, 'actuals'> & { actuals: SliceActualsDetailView | null }>;
+  adjustments: PeriodAdjustmentView[];
+}

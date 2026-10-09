@@ -1,0 +1,122 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import { configureV2Session } from '@/api/v2/config';
+import type { ReconciliationView } from '@/api/v2/types/reconciliation';
+
+vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ session: { tenant: { id: 'tenant-a' }, user: { id: 'user-me' } } }) }));
+vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
+
+const { LossLineEditor } = await import('./editor/loss-line-editor');
+const { WorkflowBar } = await import('./workflow/workflow-bar');
+
+interface Call {
+  method: string;
+  url: URL;
+  headers: Headers;
+  body: Record<string, unknown> | null;
+}
+
+const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+const refusal = (code: string, details?: Record<string, unknown>) => ({ code, message: code, correlationId: 'corr-1', retryable: false, ...(details ? { details } : {}) });
+
+const VIEW: ReconciliationView = {
+  periodId: 'p1', unitId: 'unit-1', utcStart: '2026-10-08T06:00:00.000Z', utcEnd: '2026-10-08T14:00:00.000Z', rowVersion: 4,
+  revision: {
+    id: 'rev-1', revision: 1, lifecycle: 'draft', supersedesId: null, currentRunId: 'run-1', currentLineSetId: null, isStale: false, staleReason: null,
+    submittedBy: null, submittedAt: null, submittedHash: null, submittedRunId: null, approvedBy: null, approvedAt: null, approvalSnapshotId: null,
+    rejectedBy: null, rejectedAt: null, rejectReason: null, cancelledBy: null, cancelledAt: null, comment: null,
+  },
+  publishedRevision: null, baseRunId: 'run-1', contentHash: 'a'.repeat(64),
+  tolerance: { policyId: null, version: 1, mode: 'zero', value: 0, epsilon: 0.000001, allowUnaccountedClassification: false },
+  slices: [{ sliceId: 's1', uom: 't', target: '1000', actual: '850', gap: '150', attributed: '90', toleranceAdjustment: '0', unadjustedResidual: '60', residual: '60', overAccounted: '0', overproduction: '0', tolerance: '0', flags: ['unaccounted'] }],
+  candidates: [{ lossLineId: 'l1', autoKey: 'k1', sliceId: 's1', kind: 'availability', quantity: '90', basis: 'planning_rate', reasonCodeId: null, impactCodeId: null, causeEventId: 'e1', state: 'proposed', effectiveQuantity: '90' }],
+  lines: [],
+  openProposalId: null,
+};
+
+describe('plan dashboard editor and workflow (plan 3.5)', () => {
+  let calls: Call[];
+  let reply: (call: Call) => Response;
+  let client: QueryClient;
+  const wrap = (node: ReactNode) => render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
+
+  beforeEach(() => {
+    calls = [];
+    client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
+      const call = { method: init.method ?? 'GET', url: new URL(url), headers: new Headers(init.headers), body: init.body ? JSON.parse(String(init.body)) : null };
+      calls.push(call);
+      return reply(call);
+    }));
+    configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const acceptAndSave = () => {
+    fireEvent.change(screen.getByTestId('candidate-decision'), { target: { value: 'accept' } });
+    fireEvent.click(screen.getByTestId('save-lines'));
+  };
+
+  it('a failed save (T33) shows the error, keeps the unsaved decision and sends one atomic PUT with If-Match and baseRunId', async () => {
+    reply = () => json(500, refusal('INTERNAL_ERROR'));
+    wrap(<LossLineEditor view={VIEW} timezone="UTC" />);
+    acceptAndSave();
+    await waitFor(() => expect(screen.getByTestId('workflow-problem').getAttribute('data-code')).toBe('INTERNAL_ERROR'));
+    const puts = calls.filter((c) => c.method === 'PUT');
+    expect(puts).toHaveLength(1);
+    expect(puts[0].url.pathname).toMatch(/\/v2\/production-periods\/p1\/draft-lines$/);
+    expect(puts[0].headers.get('If-Match')).toBe('"4"');
+    expect(puts[0].body).toEqual({ revision: 1, baseRunId: 'run-1', lines: [{ action: 'accept', autoKey: 'k1' }] });
+    expect(screen.getByTestId('loss-line-editor').getAttribute('data-dirty')).toBe('true');
+  });
+
+  it('409 RUN_CHANGED opens the candidate diff; rebase reloads the view', async () => {
+    reply = (call) =>
+      call.method === 'PUT'
+        ? json(409, refusal('RUN_CHANGED', { currentRunId: 'run-2', added: [], removed: [], changed: [{ autoKey: 'k1', before: '90', after: '95' }] }))
+        : json(200, { ...VIEW, baseRunId: 'run-2', candidates: [{ ...VIEW.candidates[0], quantity: '95' }] });
+    wrap(<LossLineEditor view={VIEW} timezone="UTC" />);
+    acceptAndSave();
+    await waitFor(() => expect(screen.getByTestId('candidate-diff').textContent).toContain('90 → 95'));
+    fireEvent.click(screen.getByTestId('rebase'));
+    await waitFor(() => expect(screen.queryByTestId('conflict-dialog')).toBeNull());
+  });
+
+  it('a new run arriving while the user edits (realtime) rebases the draft and says which decisions were dropped', () => {
+    reply = () => json(200, {});
+    const { rerender } = wrap(<LossLineEditor view={VIEW} timezone="UTC" />);
+    fireEvent.change(screen.getByTestId('candidate-decision'), { target: { value: 'accept' } });
+    const next: ReconciliationView = { ...VIEW, rowVersion: 5, baseRunId: 'run-2', candidates: [{ ...VIEW.candidates[0], autoKey: 'k9' }] };
+    rerender(<QueryClientProvider client={client}><LossLineEditor view={next} timezone="UTC" /></QueryClientProvider>);
+    expect(screen.getByTestId('rebase-dropped').textContent).toContain('1 decision(s) dropped');
+    expect(screen.getByTestId('loss-line-editor').getAttribute('data-dirty')).toBe('true');
+  });
+
+  it('a 422 allocation refusal is shown on the line with the server’s remaining allocation', async () => {
+    reply = () => json(422, refusal('ALLOCATION_EXCEEDED', { issues: [{ code: 'ALLOCATION_EXCEEDED', message: 'line 0: over budget', sliceId: 's1', line: 0, expectedRemainingAllocation: '60' }] }));
+    wrap(<LossLineEditor view={VIEW} timezone="UTC" />);
+    acceptAndSave();
+    await waitFor(() => expect(screen.getByTestId('line-issue').textContent).toContain('remaining allocation (server)'));
+    expect(screen.getByTestId('line-issue').textContent).toContain('60');
+  });
+
+  it('the submitter sees approve disabled with the separation-of-duties reason', () => {
+    reply = () => json(200, { items: [] });
+    const submitted: ReconciliationView = { ...VIEW, revision: { ...VIEW.revision, lifecycle: 'in_review', submittedBy: 'user-me', submittedHash: 'b'.repeat(64) } };
+    wrap(<WorkflowBar view={submitted} shown="current" onShowCurrent={() => undefined} />);
+    expect((screen.getByTestId('wf-approve') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId('approve-gate').getAttribute('data-code')).toBe('SEPARATION_OF_DUTIES');
+  });
+
+  it('submit sends the run and content hash the user read; 422 gates are listed', async () => {
+    reply = () => json(422, refusal('RESIDUAL_UNEXPLAINED', { issues: [{ code: 'RESIDUAL_UNEXPLAINED', message: 'residual 60', sliceId: 's1' }] }));
+    wrap(<WorkflowBar view={VIEW} shown="current" onShowCurrent={() => undefined} />);
+    fireEvent.click(screen.getByTestId('wf-submit'));
+    await waitFor(() => expect(screen.getByTestId('gate-issues').textContent).toContain('RESIDUAL_UNEXPLAINED'));
+    const post = calls.find((c) => c.method === 'POST');
+    expect(post?.body).toEqual({ revision: 1, runId: 'run-1', contentHash: 'a'.repeat(64) });
+    expect(post?.headers.get('Idempotency-Key')).toBeTruthy();
+  });
+});

@@ -48,6 +48,15 @@ export class FeatureFlagsService {
     );
   }
 
+  /** One flag of a tenant (registry default when the tenant has no row); used by guards. */
+  async isEnabled(tenantId: string, key: FeatureFlagKey): Promise<boolean> {
+    const row = await this.flags.findOne({
+      where: { tenantId, key },
+      select: { id: true, enabled: true },
+    });
+    return row ? row.enabled : FEATURE_FLAG_DEFAULTS[key];
+  }
+
   /** Sets one flag for the whole tenant (tenant-wide grant required); unknown keys are 404. */
   async set(
     ctx: RequestContext,

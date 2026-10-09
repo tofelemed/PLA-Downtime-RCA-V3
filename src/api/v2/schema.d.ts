@@ -2700,6 +2700,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/period-summaries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Period grid: target, actual, signed gap, attributed, residual (state), workflow state, run and actuals quality per period
+         * @description Keyset on utcStart (ascending). Periods overlapping [from, to); unitIds must be units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Figures are the shown revision’s plan ledger after its saved decisions (the same arithmetic as GET …/reconciliation), slices summed per period only when they share one unit (else null with flag uom_mixed). Read-only.
+         */
+        get: operations["PeriodSummariesV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/reports/waterfall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Waterfall of one ledger for 1–31 periods: opening (plan target or capacity), signed steps with start / end, closing actual
+         * @description Plan ledger: target → availability → performance → quality → bridge / classified / gain → tolerance adjustment → unaccounted / over-accounted / overproduction → actual, after the saved decisions of the shown revision. Capacity ledger: capacity → exclusion → A → P → Q → gain → residual → good. `closes` = opening + Σ steps equals actual exactly; slices with unknown figures are listed in `excluded`. Periods of another tenant or outside the caller’s scope are 422 INVALID_REFERENCE; different units of measure 422 UOM_MIXED.
+         */
+        get: operations["WaterfallReportV2Controller_waterfall_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7987,6 +8027,62 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PeriodSummariesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "utcStart";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read. */
+                unitIds?: string[];
+                /** @description Workflow state of the shown revision (none = no revision yet; stale = in review with changed inputs) */
+                workflowState?: ("none" | "draft" | "in_review" | "stale" | "approved")[];
+                /** @description current: the open revision, else the published one; approved: the published revision only */
+                view?: "current" | "approved";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WaterfallReportV2Controller_waterfall_v2: {
+        parameters: {
+            query: {
+                /** @description Periods of the tenant and the caller’s scope (repeat the parameter) */
+                periodIds: string[];
+                ledger?: "plan" | "capacity";
+                /** @description current: the open revision (with its saved decisions), else the published one; approved: the published revision */
+                view?: "current" | "approved";
             };
             header?: never;
             path?: never;

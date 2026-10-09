@@ -10,7 +10,7 @@
 | 🧪 | [3.2 Event Hub on v2](3.2-event-hub.md) | 3.1, 1.1–1.4 | UX04 journey e2e — implemented 9 Oct 2026; UX04 Playwright journey green (3 tests), v1 kept behind the flag until pilot acceptance |
 | 🧪 | [3.3 Downtime Analysis page](3.3-downtime-analysis-page.md) | 3.1, 2.7, 1.10 | AN01; T24 — implemented 9 Oct 2026; AN01 / T24 Playwright journey green (3 tests), page behind `v2.downtimeAnalysis` (on for Demo Plant); timeline from events until 1.10 |
 | 🧪 | [3.4 Plans, profiles, calendars UI](3.4-plans-profiles-calendars-ui.md) | 3.1, 2.1–2.3 | PLAN03/CAL preview e2e — implemented 9 Oct 2026; PLAN03 + CAL DST preview Playwright green (4 tests), screens at `/planning` behind `v2.plansProfilesCalendars` (on for Demo Plant); v1 Production Plans / Master Data kept and linked (legacy fields folded) |
-| ⬜ | [3.5 Plan Dashboard period grid and reconciliation](3.5-plan-dashboard-and-reconciliation.md) | 3.1, 2.4–2.8 | UX05 journey; T33 (UI) |
+| 🧪 | [3.5 Plan Dashboard period grid and reconciliation](3.5-plan-dashboard-and-reconciliation.md) | 3.1, 2.4–2.8 | UX05 journey; T33 (UI) — implemented 10 Oct 2026; UX05 engineer + manager, T36 and T33 / RUN_CHANGED Playwright green (4 tests), `/plans/:planId` behind `v2.planDashboard` (on for Demo Plant); v1 dashboard kept for flag-off plants, its v1 writes 410 for flag-on plants; additive `GET /v2/period-summaries`, `GET /v2/reports/waterfall` |
 | ⬜ | [3.6 PLA Analytics and Reports](3.6-pla-analytics-and-reports.md) | 3.1, 2.6, 2.7, 2.9 | AN02 AN03; T24 T41 |
 | ⬜ | [3.7 Integration console](3.7-integration-console.md) | 3.1, 1.5–1.9 | UX06 journey |
 | ⬜ | [3.8 Codes, profiles and declarative admin rules](3.8-codes-and-admin-rules.md) | 3.1, 1.3 | T18 (UI); T22 |

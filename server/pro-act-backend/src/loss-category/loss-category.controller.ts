@@ -5,14 +5,15 @@ import { LossCategory } from './loss-category.entity';
 import { CreateLossCategoryDto } from './dto/create-loss-category.dto';
 import { UpdateLossCategoryDto } from './dto/update-loss-category.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PlanDashboardV1WriteGuard } from '../feature-flags/plan-dashboard-v1-write.guard';
 
 /**
  * Deprecated writes (plan 2.8, §14.3): reconciliation lines are saved atomically and validated through
  * `PUT /api/v2/production-periods/{id}/draft-lines` (decisions, manual lines with event evidence, audit);
- * these writes answer with `Deprecation: true` and become 410 Gone when the 3.5 reconciliation UI ships.
+ * these writes answer with `Deprecation: true` and answer 410 Gone (`V1_WRITE_GONE`) for tenants whose `v2.planDashboard` flag is on (plan 3.5).
  */
 const DEPRECATED_WRITE =
-  'Deprecated (plan 2.8): use PUT /api/v2/production-periods/{id}/draft-lines; this write becomes 410 Gone with plan 3.5.';
+  'Deprecated (plan 2.8): use PUT /api/v2/production-periods/{id}/draft-lines; 410 Gone while the tenant’s v2.planDashboard flag is on (plan 3.5).';
 
 @ApiTags('Loss Categories')
 @ApiBearerAuth()
@@ -37,6 +38,7 @@ export class LossCategoryController {
 
   @Post()
   @Header('Deprecation', 'true')
+  @UseGuards(PlanDashboardV1WriteGuard)
   @ApiOperation({ deprecated: true, description: DEPRECATED_WRITE })
   @ApiBody({ type: CreateLossCategoryDto })
   @ApiResponse({ status: 201, description: 'Create loss category', type: LossCategory })
@@ -47,6 +49,7 @@ export class LossCategoryController {
 
   @Put(':id')
   @Header('Deprecation', 'true')
+  @UseGuards(PlanDashboardV1WriteGuard)
   @ApiOperation({ deprecated: true, description: DEPRECATED_WRITE })
   @ApiBody({ type: UpdateLossCategoryDto })
   @ApiResponse({ status: 200, description: 'Update loss category', type: LossCategory })
@@ -57,6 +60,7 @@ export class LossCategoryController {
 
   @Delete(':id')
   @Header('Deprecation', 'true')
+  @UseGuards(PlanDashboardV1WriteGuard)
   @ApiOperation({ deprecated: true, description: DEPRECATED_WRITE })
   @ApiResponse({ status: 200, description: 'Delete loss category' })
   remove(@Param('id') id: string): Promise<void> {
