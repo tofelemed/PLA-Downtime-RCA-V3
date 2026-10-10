@@ -17,6 +17,8 @@ import {
 } from '../common/context/request-context';
 import { canGrantRole, mapLegacyRole } from './roles/role-model';
 import { UserScopesService } from './scopes/user-scopes.service';
+import { AuthTokenService, IssuedTokens } from './tokens/auth-token.service';
+import { isAccessToken } from './tokens/token-config';
 
 @Injectable()
 export class AuthService {
@@ -26,6 +28,7 @@ export class AuthService {
     private organizationService: OrganizationService,
     private tenantService: TenantService,
     private userScopes: UserScopesService,
+    private tokens: AuthTokenService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<User | null> {
@@ -36,38 +39,32 @@ export class AuthService {
     return null;
   }
 
+  /** Signs a short-lived access token and a new refresh family (plan 3.11). */
   async login(user: User) {
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      tenantId: user.tenantId,
-      organizationId: user.organizationId,
-    };
+    const tokens = await this.tokens.issue(user);
+    return this.sessionResponse(user, tokens);
+  }
 
-    // Log JWT_SECRET status when signing (don't log the actual secret)
-    const jwtSecretLength = process.env.JWT_SECRET?.length || 0;
-    console.log(
-      `[AuthService] Signing token with JWT_SECRET length: ${jwtSecretLength}`,
-    );
+  /** Spends a refresh token (single use, rotated) and returns the next pair. */
+  async refreshToken(refreshToken: string) {
+    let current: User | undefined;
+    const tokens = await this.tokens.rotate(refreshToken, async (id) => {
+      current = await this.usersService.findOne(id);
+      return current;
+    });
+    return this.sessionResponse(current as User, tokens);
+  }
 
-    const access_token = this.jwtService.sign(payload, { expiresIn: '24h' });
-    const refresh_token = this.jwtService.sign(
-      { sub: user.id },
-      { expiresIn: '7d' },
-    );
+  /** Revokes the refresh family of the presented token, if any (logout). */
+  async logout(refreshToken?: string): Promise<void> {
+    if (refreshToken) await this.tokens.revoke(refreshToken);
+  }
 
-    console.log(
-      `[AuthService] Token signed successfully for user: ${user.email}`,
-    );
-    console.log(
-      `[AuthService] Token preview: ${access_token.substring(0, 30)}...`,
-    );
-
+  private sessionResponse(user: User, tokens: IssuedTokens) {
     return {
-      access_token,
-      refresh_token,
-      expires_in: 86400, // 24 hours in seconds
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
+      expires_in: tokens.expiresIn,
       token_type: 'Bearer',
       user: {
         id: user.id,
@@ -81,28 +78,15 @@ export class AuthService {
     };
   }
 
-  async refreshToken(refreshToken: string) {
-    try {
-      const payload = this.jwtService.verify(refreshToken);
-      const user = await this.usersService.findOne(payload.sub);
-
-      if (!user || !user.isActive) {
-        throw new UnauthorizedException('Invalid refresh token');
-      }
-
-      return this.login(user);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-  }
-
   async validateToken(token: string) {
+    let payload: { typ?: unknown };
     try {
-      const payload = this.jwtService.verify(token);
-      return payload;
-    } catch (error) {
+      payload = await this.jwtService.verifyAsync(token);
+    } catch {
       throw new UnauthorizedException('Invalid token');
     }
+    if (!isAccessToken(payload)) throw new UnauthorizedException('Invalid token');
+    return payload;
   }
 
   async register(

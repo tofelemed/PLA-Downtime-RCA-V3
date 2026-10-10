@@ -9,7 +9,7 @@ export class RCARecommendation {
 
   @Column({ type: 'uuid' })
   rcaId: string;
-  @ManyToOne(() => RCA)
+  @ManyToOne(() => RCA, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'rcaId' })
   rca: RCA;
 

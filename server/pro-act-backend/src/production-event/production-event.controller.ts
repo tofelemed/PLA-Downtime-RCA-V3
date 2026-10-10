@@ -12,6 +12,7 @@ import {
   ValidationPipe,
   UploadedFile,
   UseInterceptors,
+  Req,
 } from '@nestjs/common';
 import { ProductionEventService } from './production-event.service';
 import { ProductionEvent } from './production-event.entity';
@@ -28,8 +29,11 @@ import { UpdateProductionEventDto } from './dto/update-production-event.dto';
 import { ProductionEventQueryDto } from './dto/production-event-query.dto';
 import { PagedResult } from '../common/dto/paged-result';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import {
+  attachmentUploadOptions,
+  uploadedFileView,
+} from '../common/http/upload-options';
+import type { Request } from 'express';
 
 @ApiTags('Production Events')
 @ApiBearerAuth()
@@ -96,25 +100,11 @@ export class ProductionEventController {
       },
     },
   })
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, uniqueSuffix + extname(file.originalname));
-        },
-      }),
-    }),
-  )
-  uploadEventAttachment(@UploadedFile() file: Express.Multer.File) {
-    return {
-      originalName: file.originalname,
-      filename: file.filename,
-      path: `/uploads/${file.filename}`,
-      size: file.size,
-      mimetype: file.mimetype,
-    };
+  @UseInterceptors(FileInterceptor('file', attachmentUploadOptions()))
+  uploadEventAttachment(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() request: Request,
+  ) {
+    return uploadedFileView(file, request);
   }
 }

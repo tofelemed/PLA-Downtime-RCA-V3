@@ -5,7 +5,7 @@
 #   docker compose exec backend node dist/scripts/seed-demo-users.js   # login-page demo accounts
 #   docker compose --profile tools up -d kafka-ui                      # optional Kafka UI
 #
-# Frontend: http://localhost:${FRONTEND_PORT:-8070}  (API, uploads and Socket.IO are proxied under the same origin)
+# Frontend: http://localhost:${FRONTEND_PORT:-8070}  (API and Socket.IO are proxied under the same origin; uploads download through /api with a token)
 # Backend:  http://localhost:${BACKEND_PORT:-4004}/api/health, Swagger at /api
 # Kafka:    localhost:${KAFKA_PORT:-9092} from the host, kafka:29092 from other containers
 # MQTT:     mqtt://localhost:${MQTT_PORT:-1884} from the host, mqtt://mqtt:1883 from other containers
@@ -29,10 +29,17 @@ x-backend-env: &backend-env
   DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
   DB_NAME: ${POSTGRES_DB:-proact}
   JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+  # Refresh tokens are signed with their own key (plan 3.11, owner decision 2026-10-10)
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env (different from JWT_SECRET)}
   # Registration is admin-only unless explicitly opened (local dev / e2e)
   AUTH_ALLOW_PUBLIC_REGISTRATION: ${AUTH_ALLOW_PUBLIC_REGISTRATION:-false}
   # Encrypts PI/connector credentials at rest; falls back to JWT_SECRET when empty
   CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
+  # Named credential keys for rotation ("id:secret,...") and the current one (plan 3.11)
+  CREDENTIAL_ENCRYPTION_KEYS: ${CREDENTIAL_ENCRYPTION_KEYS:-}
+  CREDENTIAL_ENCRYPTION_KEY_ID: ${CREDENTIAL_ENCRYPTION_KEY_ID:-}
+  # Hosts PI connector / proxy calls may reach (empty = unrestricted; set it in production)
+  CONNECTOR_EGRESS_ALLOWLIST: ${CONNECTOR_EGRESS_ALLOWLIST:-}
   # Message brokers as seen from inside the containers (docker-compose.shared-infra.yml points them at the host's)
   KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
   MQTT_URL: ${MQTT_URL:-mqtt://mqtt:1883}
@@ -79,6 +86,8 @@ services:
       DB_MIGRATIONS_RUN: ${DB_MIGRATIONS_RUN:-true}
       # Only affects clients calling the backend port directly; the frontend reaches it same-origin via nginx
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8070}
+      # Row-level security per request (plan 3.11; on by default, owner decision 2026-10-10)
+      DB_RLS_TENANT_BINDING: ${DB_RLS_TENANT_BINDING:-true}
     volumes:
       - uploads:/app/uploads
       - exports:/app/storage/exports

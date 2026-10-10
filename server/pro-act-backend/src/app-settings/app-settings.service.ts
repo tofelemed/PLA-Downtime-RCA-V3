@@ -1,9 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { AppSettings } from './app-settings.entity';
+import { Brackets, Repository } from 'typeorm';
+import { RequestContext } from '../common/context/request-context';
 import { RealtimeGateway } from '../realtime.gateway';
+import {
+  canReadSetting,
+  canWriteSetting,
+  ownerForKey,
+  SettingOwner,
+} from './app-settings-access.policy';
+import { AppSettings } from './app-settings.entity';
 
+function notAllowed(): ForbiddenException {
+  return new ForbiddenException({
+    code: 'SETTING_NOT_WRITABLE',
+    message: 'This setting cannot be changed by the caller',
+  });
+}
+
+function serialize(value: unknown): string {
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
+/**
+ * Key/value settings with an owner (plan 3.11): application-wide rows are read by everyone signed in and
+ * written by a SuperAdmin; tenant rows by the tenant's members / administrators; per-user rows
+ * (`tabVisibility.<tenant>.<user>`) only by their user. Unreadable rows behave as missing.
+ */
 @Injectable()
 export class AppSettingsService {
   constructor(
@@ -12,78 +35,120 @@ export class AppSettingsService {
     private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
-  findAll(): Promise<AppSettings[]> {
-    return this.settingsRepository.find();
+  /** Application-wide rows, the caller's own rows and the rows of tenants it belongs to. */
+  findAll(context: RequestContext): Promise<AppSettings[]> {
+    const tenants = memberTenants(context);
+    const qb = this.settingsRepository
+      .createQueryBuilder('s')
+      .where(
+        new Brackets((where) => {
+          where
+            .where('s.tenant_id IS NULL AND s.user_id IS NULL')
+            .orWhere('s.user_id = :userId', { userId: context.userId });
+          if (context.isSuperAdmin) {
+            where.orWhere('s.user_id IS NULL AND s.tenant_id IS NOT NULL');
+          } else if (tenants.length > 0) {
+            where.orWhere(
+              's.user_id IS NULL AND s.tenant_id IN (:...tenants)',
+              {
+                tenants,
+              },
+            );
+          }
+        }),
+      )
+      .orderBy('s.key', 'ASC');
+    return qb.getMany();
   }
 
-  findOne(key: string): Promise<AppSettings | null> {
-    return this.settingsRepository.findOneBy({ key });
+  async findOne(
+    key: string,
+    context: RequestContext,
+  ): Promise<AppSettings | null> {
+    const setting = await this.settingsRepository.findOneBy({ key });
+    return setting && canReadSetting(setting, context) ? setting : null;
   }
 
-  async create(data: Partial<AppSettings>): Promise<AppSettings> {
-    // Serialize value to JSON string if it's an object/array
-    const serializedData = {
-      ...data,
-      value: typeof data.value === 'string' ? data.value : JSON.stringify(data.value),
-    };
-    const setting = this.settingsRepository.create(serializedData);
-    const saved = await this.settingsRepository.save(setting);
-    this.realtimeGateway.broadcastEntityEvent('Created', 'appSettings', saved);
+  async create(
+    data: { key: string; value: unknown },
+    context: RequestContext,
+  ): Promise<AppSettings> {
+    const existing = await this.settingsRepository.findOneBy({ key: data.key });
+    const owner = existing ?? ownerForKey(data.key);
+    this.assertWritable(owner, context);
+    const saved = await this.settingsRepository.save(
+      this.settingsRepository.create({
+        key: data.key,
+        value: serialize(data.value),
+        tenantId: owner.tenantId,
+        userId: owner.userId,
+      }),
+    );
+    this.publish(existing ? 'Updated' : 'Created', saved);
     return saved;
   }
 
-  async update(key: string, data: Partial<AppSettings>): Promise<AppSettings | null> {
-    // Serialize value to JSON string if it's an object/array
-    const updateData: any = {};
+  async update(
+    key: string,
+    data: { value?: unknown },
+    context: RequestContext,
+  ): Promise<AppSettings | null> {
+    const existing = await this.findOne(key, context);
+    if (!existing) return null;
+    this.assertWritable(existing, context);
     if (data.value !== undefined) {
-      updateData.value = typeof data.value === 'string' 
-        ? data.value 
-        : JSON.stringify(data.value);
+      await this.settingsRepository.update(key, {
+        value: serialize(data.value),
+      });
     }
-    
-    // Only update if there's something to update
-    if (Object.keys(updateData).length > 0) {
-      await this.settingsRepository.update(key, updateData);
-    }
-    
-    const updated = await this.findOne(key);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'appSettings', updated);
-    }
+    const updated = await this.settingsRepository.findOneBy({ key });
+    if (updated) this.publish('Updated', updated);
     return updated;
   }
 
-  async remove(key: string): Promise<void> {
-    const setting = await this.findOne(key);
+  async remove(key: string, context: RequestContext): Promise<void> {
+    const setting = await this.findOne(key, context);
+    if (!setting) return;
+    this.assertWritable(setting, context);
     await this.settingsRepository.delete(key);
-    if (setting) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'appSettings', { key });
-    }
+    this.publish('Deleted', { ...setting, value: '' });
   }
 
-  async upsert(key: string, value: any): Promise<AppSettings> {
-    const existing = await this.findOne(key);
-    if (existing) {
-      await this.update(key, { value });
-      return this.findOne(key) as Promise<AppSettings>;
-    } else {
-      return this.create({ key, value });
-    }
-  }
-
-  async getValue(key: string, defaultValue?: any): Promise<any> {
-    const setting = await this.findOne(key);
-    if (!setting) return defaultValue;
-    
-    // Try to parse as JSON, fallback to string if it's not valid JSON
+  async getValue(key: string, context: RequestContext): Promise<unknown> {
+    const setting = await this.findOne(key, context);
+    if (!setting) return undefined;
+    // JSON values come back parsed; anything else as the stored string
     try {
-      return JSON.parse(setting.value);
+      return JSON.parse(setting.value) as unknown;
     } catch {
       return setting.value;
     }
   }
 
-  async setValue(key: string, value: any): Promise<AppSettings> {
-    return this.upsert(key, value);
+  setValue(
+    key: string,
+    value: unknown,
+    context: RequestContext,
+  ): Promise<AppSettings> {
+    return this.create({ key, value }, context);
   }
-} 
+
+  private assertWritable(owner: SettingOwner, context: RequestContext): void {
+    if (!canWriteSetting(owner, context)) throw notAllowed();
+  }
+
+  /** Tenant settings reach the tenant's rooms; per-user and application-wide ones are not broadcast. */
+  private publish(event: string, setting: AppSettings): void {
+    if (!setting.tenantId || setting.userId) return;
+    const payload = event === 'Deleted' ? { key: setting.key } : setting;
+    this.realtimeGateway.broadcastEntityEvent(event, 'appSettings', payload, {
+      tenantId: setting.tenantId,
+    });
+  }
+}
+
+function memberTenants(context: RequestContext): string[] {
+  const ids = context.scopes.map((scope) => scope.tenantId);
+  if (context.tenantId) ids.push(context.tenantId);
+  return [...new Set(ids)];
+}

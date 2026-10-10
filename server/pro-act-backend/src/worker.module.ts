@@ -4,7 +4,7 @@ import { CalendarModule } from './calendar/calendar.module';
 import { CommonModule } from './common/common.module';
 import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { SchedulerModule } from './common/scheduling/scheduler.module';
-import { dataSourceOptions } from './database/data-source';
+import { runtimeDataSourceOptions } from './database/data-source';
 import { EventOperationsModule } from './event-operations/event-operations.module';
 import { IntakeModule } from './intake/intake.module';
 import { IntegrationModule } from './integration/integration.module';
@@ -19,6 +19,7 @@ import { ReconciliationModule } from './reconciliation/reconciliation.module';
 import { ExportsModule } from './exports/exports.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { RcaCaseModule } from './rca-case/rca-case.module';
+import { AuthTokensModule } from './auth/tokens/auth-tokens.module';
 
 registerPgTypeParsers();
 
@@ -36,11 +37,8 @@ registerPgTypeParsers();
     // process its broadcasts are no-ops (browser pushes for worker-created events need the
     // event bus planned for a later phase).
     RealtimeModule,
-    TypeOrmModule.forRoot({
-      ...dataSourceOptions,
-      // The API process applies migrations on boot; the worker must never race it.
-      migrationsRun: false,
-    }),
+    // The API process applies migrations on boot; the worker must never race it (migrationsRun: false)
+    TypeOrmModule.forRoot(runtimeDataSourceOptions()),
     SchedulerModule.register('worker'),
     PISyncJobModule,
     IdempotencyModule,
@@ -64,6 +62,8 @@ registerPgTypeParsers();
     ExportsModule,
     // RCA trigger consumer, open-event sweep and action verification (plan 3.9)
     RcaCaseModule,
+    // hourly purge of expired refresh-token records (plan 3.11)
+    AuthTokensModule,
   ],
   providers: [WorkerHealthServer],
 })

@@ -13,7 +13,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Logger } from 'typeorm';
+import { DataSource, Logger } from 'typeorm';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 import { AccessModule } from '../../../src/auth/access/access.module';
 import { AuthModule } from '../../../src/auth/auth.module';
@@ -29,6 +29,7 @@ import { IdempotencyInterceptor } from '../../../src/common/idempotency/idempote
 import { IdempotencyModule } from '../../../src/common/idempotency/idempotency.module';
 import { UserIpThrottlerGuard } from '../../../src/common/throttling/user-ip-throttler.guard';
 import { RealtimeModule } from '../../../src/realtime/realtime.module';
+import { installTenantSessionBinding } from '../../../src/database/rls/tenant-session-binding';
 import { IntegrationHarness } from '../harness';
 
 export interface IntegrationAppOptions {
@@ -38,6 +39,10 @@ export interface IntegrationAppOptions {
   throttleLimit?: number;
   /** receives every SQL statement the app runs (scoped-query assertions) */
   onQuery?: (sql: string) => void;
+  /**
+   * Row-level-security tenant binding (plan 3.11): on, like production, unless `DB_RLS_TENANT_BINDING=false`.
+   */
+  rlsBinding?: boolean;
 }
 
 export interface TestIdentity {
@@ -105,6 +110,9 @@ export async function createIntegrationApp(
     moduleRef.createNestApplication({ logger: false }),
   );
   await app.init();
+  if (options.rlsBinding ?? process.env.DB_RLS_TENANT_BINDING !== 'false') {
+    installTenantSessionBinding(app.get(DataSource));
+  }
   return app;
 }
 
@@ -119,6 +127,7 @@ export function signToken(
     role: identity.role ?? 'Analyst',
     tenantId: identity.tenantId,
     organizationId: identity.organizationId,
+    typ: 'access',
   });
 }
 

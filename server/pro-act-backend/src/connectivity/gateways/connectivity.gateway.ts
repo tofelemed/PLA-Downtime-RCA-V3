@@ -6,19 +6,29 @@ import {
   ConnectedSocket,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Injectable, Logger } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { EventEmitter } from 'events';
+import { RealtimeAuthenticator } from '../../realtime/realtime-authenticator';
+import { authenticateSockets, sessionOf } from '../../realtime/socket-auth';
 
+/**
+ * Connector status / data pushes. Plan 3.11: the handshake needs an access token (same check as the
+ * `/realtime` and `/socket.io` namespaces) and `subscribe_tenant` only admits the caller's tenants.
+ * Connection and protocol rooms are not tenant-checked yet (recorded in the 3.11 evidence).
+ */
 @Injectable()
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-  },
+  // the token travels in the handshake, not in cookies: no credentialed CORS needed
+  cors: { origin: true, credentials: false },
   namespace: '/connectivity',
 })
-export class ConnectivityGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ConnectivityGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -26,7 +36,23 @@ export class ConnectivityGateway implements OnGatewayConnection, OnGatewayDiscon
   private readonly eventEmitter = new EventEmitter();
   private connectedClients = new Map<string, Socket>();
 
+  constructor(private readonly moduleRef: ModuleRef) {}
+
+  afterInit(server: Server): void {
+    authenticateSockets(server, () => {
+      try {
+        return this.moduleRef.get(RealtimeAuthenticator, { strict: false });
+      } catch {
+        return null;
+      }
+    });
+  }
+
   handleConnection(client: Socket) {
+    if (!sessionOf(client)) {
+      client.disconnect(true);
+      return;
+    }
     this.logger.log(`Client connected: ${client.id}`);
     this.connectedClients.set(client.id, client);
     
@@ -81,6 +107,16 @@ export class ConnectivityGateway implements OnGatewayConnection, OnGatewayDiscon
     @MessageBody() data: { tenantId: string },
     @ConnectedSocket() client: Socket,
   ) {
+    const context = sessionOf(client)?.context;
+    const member =
+      !!context &&
+      (context.isSuperAdmin ||
+        context.tenantId === data?.tenantId ||
+        context.scopes.some((scope) => scope.tenantId === data?.tenantId));
+    if (!member) {
+      client.emit('tenant_subscription_denied', { tenantId: data?.tenantId });
+      return;
+    }
     this.logger.log(`Client ${client.id} subscribing to tenant ${data.tenantId}`);
     client.join(`tenant_${data.tenantId}`);
     

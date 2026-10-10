@@ -96,7 +96,11 @@ export class BulkCodeService {
     );
     for (const message of messages) {
       this.notifier.eventChanged(message);
-      this.notifier.legacyUpdated(message.eventId);
+      this.notifier.legacyUpdated(
+        message.eventId,
+        message.tenantId,
+        message.unitId,
+      );
     }
     return applied;
   }

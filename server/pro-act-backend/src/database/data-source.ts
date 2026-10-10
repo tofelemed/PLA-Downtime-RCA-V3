@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { SlowQueryLogger } from './slow-query.logger';
 
 // `.env` is read from the working directory (server/pro-act-backend), the same way app.module.ts
 // loads it. Resolving relative to __dirname would break under the compiled layout (dist/src/database).
@@ -30,3 +31,30 @@ export const dataSourceOptions: DataSourceOptions = {
 };
 
 export const AppDataSource = new DataSource(dataSourceOptions);
+
+function positiveInt(raw: string | undefined, fallback: number): number {
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+/**
+ * Connection settings of the long-running API and worker processes (plan 3.11, ENGINEERING_STANDARDS):
+ * pool size `DB_POOL_MAX` (10), `statement_timeout` `DB_STATEMENT_TIMEOUT_MS` (30 s), connect timeout
+ * `DB_CONNECT_TIMEOUT_MS` (10 s), slow-query warning above `DB_SLOW_QUERY_MS` (500 ms). Migrations and
+ * CLIs keep `dataSourceOptions` (no statement timeout: a backfill may legitimately run longer).
+ */
+export function runtimeDataSourceOptions(
+  env: NodeJS.ProcessEnv = process.env,
+): DataSourceOptions {
+  return {
+    ...dataSourceOptions,
+    migrationsRun: false,
+    maxQueryExecutionTime: positiveInt(env.DB_SLOW_QUERY_MS, 500),
+    logger: new SlowQueryLogger(env.DB_LOGGING === 'true'),
+    extra: {
+      max: positiveInt(env.DB_POOL_MAX, 10),
+      statement_timeout: positiveInt(env.DB_STATEMENT_TIMEOUT_MS, 30_000),
+      connectionTimeoutMillis: positiveInt(env.DB_CONNECT_TIMEOUT_MS, 10_000),
+    },
+  } as DataSourceOptions;
+}

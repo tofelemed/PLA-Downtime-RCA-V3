@@ -169,10 +169,13 @@ export class ProductionEventService {
   async remove(id: string): Promise<void> {
     const event = await this.findOne(id);
     await this.eventRepository.delete(id);
-    if (event) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'productionEvent', {
-        id,
-      });
+    if (event?.tenantId) {
+      this.realtimeGateway.broadcastEntityEvent(
+        'Deleted',
+        'productionEvent',
+        { id },
+        { tenantId: event.tenantId, unitId: event.unitId },
+      );
     }
   }
 

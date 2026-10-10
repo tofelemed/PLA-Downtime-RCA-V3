@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import axios, { AxiosBasicCredentials, AxiosRequestConfig } from 'axios';
+import { isEgressAllowed } from '../common/security/egress-allowlist';
 import * as https from 'https';
 import { Repository } from 'typeorm';
 import { CredentialEncryptionService } from '../common/services/credential-encryption.service';
@@ -67,6 +68,12 @@ export class PIProxyService {
       });
     }
 
+    if (!isEgressAllowed(resolved.url)) {
+      throw new ForbiddenException({
+        code: 'PI_EGRESS_DENIED',
+        message: 'The connection host is not in the connector egress allowlist',
+      });
+    }
     const method = request.method ?? 'GET';
     const config: AxiosRequestConfig = {
       method,

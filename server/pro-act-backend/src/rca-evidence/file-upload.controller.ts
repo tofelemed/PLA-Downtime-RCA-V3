@@ -1,27 +1,38 @@
-import { Controller, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  Res,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { ApiConsumes, ApiBody, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { extname } from 'path';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  ApiConsumes,
+  ApiBody,
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+} from '@nestjs/swagger';
+import type { Request, Response } from 'express';
+import { createReadStream } from 'fs';
+import { resolveAttachment } from '../common/http/attachment-download';
+import {
+  attachmentUploadOptions,
+  uploadedFileView,
+} from '../common/http/upload-options';
+import { Ctx } from '../common/context/ctx.decorator';
+import { RequestContext } from '../common/context/request-context';
 
 @ApiTags('File Upload')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('uploads')
 export class FileUploadController {
   @Post('evidence')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, uniqueSuffix + extname(file.originalname));
-        },
-      }),
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file', attachmentUploadOptions()))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -34,12 +45,33 @@ export class FileUploadController {
       },
     },
   })
-  uploadEvidenceFile(@UploadedFile() file: Express.Multer.File) {
-    return {
-      originalname: file.originalname,
-      filename: file.filename,
-      path: `/uploads/${file.filename}`,
-      size: file.size,
-    };
+  uploadEvidenceFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() request: Request,
+  ) {
+    const view = uploadedFileView(file, request);
+    // `originalname` kept for existing v1 callers
+    return { ...view, originalname: view.originalName };
   }
-} 
+
+  @Get('files/:tenantId/:name')
+  @ApiOperation({
+    summary:
+      'Download an uploaded file (token required; members of the tenant only, others 404)',
+  })
+  download(
+    @Ctx() ctx: RequestContext,
+    @Param('tenantId') tenantId: string,
+    @Param('name') name: string,
+    @Res({ passthrough: true }) res: Response,
+  ): StreamableFile {
+    const file = resolveAttachment(ctx, tenantId, name);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+    res.setHeader('Cache-Control', 'private, no-store');
+    return new StreamableFile(createReadStream(file.absolutePath), {
+      type: file.contentType,
+      disposition: `${file.inline ? 'inline' : 'attachment'}; filename="${name.toLowerCase()}"`,
+    });
+  }
+}

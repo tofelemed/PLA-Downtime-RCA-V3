@@ -200,3 +200,70 @@ describe('ApiExceptionFilter', () => {
     );
   });
 });
+
+describe('ApiExceptionFilter database refusals (plan 3.11)', () => {
+  const { QueryFailedError } = jest.requireActual<typeof import('typeorm')>('typeorm');
+  const failure = (code: string) =>
+    new QueryFailedError('INSERT INTO x VALUES ($1)', ['secret-value'], Object.assign(new Error('driver says no'), { code }));
+
+  beforeEach(() => {
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('answers a missing reference with INVALID_REFERENCE (400 v1, 422 v2) and no SQL', () => {
+    const v1 = createHost('/api/five-why-analyses');
+    new ApiExceptionFilter().catch(failure('23503'), v1.host);
+    expect(v1.response.statusCode).toBe(400);
+    expect(v1.response.body?.code).toBe('INVALID_REFERENCE');
+    expect(JSON.stringify(v1.response.body)).not.toContain('INSERT');
+    const v2 = createHost('/api/v2/rcas');
+    new ApiExceptionFilter().catch(failure('23503'), v2.host);
+    expect(v2.response.statusCode).toBe(422);
+  });
+
+  it('answers a delete blocked by referencing rows with 409 RECORD_IN_USE', () => {
+    const { host, response } = createHost('/api/rca-templates/1');
+    const error = new QueryFailedError('DELETE', [], Object.assign(new Error('x'), {
+      code: '23503',
+      detail: 'Key (id)=(1) is still referenced from table "rcas".',
+    }));
+    new ApiExceptionFilter().catch(error, host);
+    expect(response.statusCode).toBe(409);
+    expect(response.body?.code).toBe('RECORD_IN_USE');
+  });
+
+  it('answers a row-level-security refusal with 403 TENANT_NOT_ALLOWED', () => {
+    const { host, response } = createHost('/api/production-events');
+    new ApiExceptionFilter().catch(failure('42501'), host);
+    expect(response.statusCode).toBe(403);
+    expect(response.body?.code).toBe('TENANT_NOT_ALLOWED');
+  });
+
+  it('keeps other database errors a generic 500', () => {
+    const { host, response } = createHost('/api/x');
+    new ApiExceptionFilter().catch(failure('40001'), host);
+    expect(response.statusCode).toBe(500);
+    expect(response.body?.message).toBe('Internal server error');
+  });
+});
+
+describe('ApiExceptionFilter body-parser refusals (plan 3.11)', () => {
+  beforeEach(() => {
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('answers an oversized body with 413 PAYLOAD_TOO_LARGE', () => {
+    const { host, response } = createHost('/api/v2/production-events');
+    const error = Object.assign(new Error('request entity too large'), {
+      status: 413,
+      expose: true,
+      type: 'entity.too.large',
+    });
+    new ApiExceptionFilter().catch(error, host);
+    expect(response.statusCode).toBe(413);
+    expect(response.body?.code).toBe('PAYLOAD_TOO_LARGE');
+  });
+});

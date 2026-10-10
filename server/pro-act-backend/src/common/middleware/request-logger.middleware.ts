@@ -1,12 +1,15 @@
 import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import { redactSecrets } from '../logging/redact';
 
 @Injectable()
 export class RequestLoggerMiddleware implements NestMiddleware {
   private readonly logger = new Logger('HTTP');
 
   use(req: Request, res: Response, next: NextFunction) {
-    const { method, originalUrl, ip } = req;
+    const { method, ip } = req;
+    // query strings may carry secrets; user agents are logged as sent
+    const originalUrl = redactSecrets(req.originalUrl);
     const userAgent = req.get('User-Agent') || '';
     const startTime = Date.now();
 

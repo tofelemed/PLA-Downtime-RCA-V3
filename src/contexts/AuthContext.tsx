@@ -255,7 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     const current = session;
     try {
-      await authApi.logout();
+      await authApi.logout(tokensRef.current?.refreshToken);
     } catch (error) {
       console.warn('Failed to notify backend about logout', error);
     } finally {
@@ -287,6 +287,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     return refreshInFlight.current;
   };
+
+  // v1 requests retry once after a refresh: access tokens live 15 minutes (plan 3.11)
+  const refreshSessionRef = useRef(refreshSession);
+  refreshSessionRef.current = refreshSession;
+  useEffect(() => {
+    httpClient.setRefreshHandler(() => refreshSessionRef.current());
+    return () => httpClient.setRefreshHandler(undefined);
+  }, []);
 
   const selectTenant = async (tenantId: string) => {
     if (!session) return;

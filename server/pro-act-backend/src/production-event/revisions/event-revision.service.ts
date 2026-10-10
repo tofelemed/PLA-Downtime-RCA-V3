@@ -155,7 +155,11 @@ export class EventRevisionService {
     );
     if (message) {
       this.notifier.eventRetracted(message);
-      this.notifier.legacyUpdated(message.eventId);
+      this.notifier.legacyUpdated(
+        message.eventId,
+        message.tenantId,
+        message.unitId,
+      );
     }
     return result;
   }
@@ -191,6 +195,12 @@ export class EventRevisionService {
   ): void {
     if (!message) return;
     this.notifier.eventChanged(message);
-    if (legacyRefresh) this.notifier.legacyUpdated(message.eventId);
+    if (legacyRefresh) {
+      this.notifier.legacyUpdated(
+        message.eventId,
+        message.tenantId,
+        message.unitId,
+      );
+    }
   }
 }

@@ -4,6 +4,7 @@ import { IntegrationConnectionService } from '../../intake/connections/integrati
 import { IntegrationConnection } from '../../intake/entities/integration-connection.entity';
 import { connectionBaseUrl } from '../../pi-proxy/pi-proxy-policy';
 import { PiHttpClient, PiRequestError } from './pi-http-client';
+import { isEgressAllowed } from '../../common/security/egress-allowlist';
 
 /**
  * Builds the PI Web API client of an `integration_connections` row: base URL and user from
@@ -29,6 +30,12 @@ export class PiClientFactory {
       throw new PiRequestError(
         `Connection ${connection.id} has no valid piWebApiUrl`,
         'rejected',
+      );
+    }
+    if (!isEgressAllowed(base.toString())) {
+      throw new PiRequestError(
+        `Connection ${connection.id}: ${base.host} is not in CONNECTOR_EGRESS_ALLOWLIST`,
+        'egress_denied',
       );
     }
     const insecure = config.allowInsecureTls === true;

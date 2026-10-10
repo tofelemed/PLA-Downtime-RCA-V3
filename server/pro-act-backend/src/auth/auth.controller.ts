@@ -5,6 +5,7 @@ import { ApiBody, ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nes
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { LogoutDto } from './dto/logout.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Roles } from './decorators/roles.decorator';
 import { Public, PublicIf } from '../common/decorators/public.decorator';
@@ -86,11 +87,11 @@ export class AuthController {
   @Public()
   @Post('logout')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Logout user (client should discard token)' })
+  @ApiOperation({ summary: 'Logout: revokes the refresh token family sent in the body; the client discards its tokens' })
+  @ApiBody({ type: LogoutDto, required: false })
   @ApiResponse({ status: 200, description: 'Logout successful' })
-  async logout() {
-    // Logout is public - client just needs to discard token locally
-    // No server-side token invalidation needed for stateless JWT
+  async logout(@Body() body: LogoutDto) {
+    await this.authService.logout(body?.refreshToken);
     return { message: 'Logout successful. Please discard your token.' };
   }
 

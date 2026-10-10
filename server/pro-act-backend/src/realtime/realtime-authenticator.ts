@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { RequestContext } from '../common/context/request-context';
 import { RequestContextFactory } from '../auth/context/request-context.factory';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { isAccessToken } from '../auth/tokens/token-config';
 
 /** Credentials a socket presents in its handshake `auth` object (never in the query string). */
 export interface RealtimeCredentials {
@@ -78,7 +79,9 @@ export class RealtimeAuthenticator {
   private async verify(token: string): Promise<JwtPayload> {
     try {
       const payload = await this.jwt.verifyAsync<JwtPayload>(token);
-      if (!payload?.sub) throw new Error('no subject');
+      if (!payload?.sub || !isAccessToken(payload)) {
+        throw new Error('not an access token');
+      }
       return payload;
     } catch {
       throw new RealtimeAuthError('UNAUTHENTICATED');

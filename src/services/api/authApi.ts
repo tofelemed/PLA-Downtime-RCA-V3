@@ -23,7 +23,7 @@ export interface LoginResponse {
   user: AuthenticatedUser;
 }
 
-export interface RefreshResponse extends LoginResponse {}
+export type RefreshResponse = LoginResponse;
 
 interface ValidateTokenResponse {
   valid: boolean;
@@ -47,11 +47,12 @@ export const authApi = {
     });
   },
 
-  logout() {
-    // Logout is now public (no auth required) - just clear local token
+  /** Public; revokes the refresh token's sign-in family on the server (plan 3.11). */
+  logout(refreshToken?: string) {
     return httpClient.request<{ message: string }>('auth/logout', {
       method: 'POST',
-      skipAuth: true, // Logout doesn't require authentication
+      body: refreshToken ? { refreshToken } : {},
+      skipAuth: true,
     });
   },
 

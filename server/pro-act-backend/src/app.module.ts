@@ -43,6 +43,7 @@ import { UnmappedEventModule } from './unmapped-event/unmapped-event.module';
 import { RCAEvidenceModule } from './rca-evidence/rca-evidence.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { ScopedRealtimeModule } from './realtime/scoped-realtime.module';
+import { TenantSessionBinding } from './database/rls/tenant-session-binding';
 import { ReportingModule } from './reporting/reporting.module';
 import { IntegrationModule } from './integration/integration.module';
 import { IntakeModule } from './intake/intake.module';
@@ -74,7 +75,7 @@ import { HistorianHistoryModule } from './historian-history/historian-history.mo
 import { HierarchyMappingModule } from './hierarchy-mapping/hierarchy-mapping.module';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
 import { StreamingModule } from './streaming/streaming.module';
-import { dataSourceOptions } from './database/data-source';
+import { runtimeDataSourceOptions } from './database/data-source';
 import { registerPgTypeParsers } from './database/pg-type-parsers';
 import { AccessModule } from './auth/access/access.module';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -100,11 +101,9 @@ registerPgTypeParsers();
     ThrottlerModule.forRoot(throttlerOptionsFromEnv()),
     // Cron providers are live only in PROCESS_ROLE=worker|all; the api role is HTTP-only
     SchedulerModule.register(),
-    TypeOrmModule.forRoot({
-      ...dataSourceOptions,
-      // Pending migrations are applied on boot; set DB_MIGRATIONS_RUN=false where a release step runs them
-      migrationsRun: process.env.DB_MIGRATIONS_RUN !== 'false',
-    }),
+    // Pool, statement timeout and slow-query log (plan 3.11). Pending migrations are applied by main.ts
+    // before the app starts (runMigrationsOnBoot; DB_MIGRATIONS_RUN=false where a release step runs them)
+    TypeOrmModule.forRoot(runtimeDataSourceOptions()),
     AuthModule,
     UsersModule,
     OrganizationModule,
@@ -188,6 +187,8 @@ registerPgTypeParsers();
     { provide: APP_GUARD, useClass: ScopeGuard },
     { provide: APP_GUARD, useClass: WriteAccessGuard },
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
+    // Plan 3.11: per-connection tenant binding for row-level security (on unless DB_RLS_TENANT_BINDING=false)
+    TenantSessionBinding,
   ],
 })
 export class AppModule {

@@ -81,12 +81,15 @@ export class EventCommandService {
       }),
     );
     for (const message of messages) this.notifier.eventChanged(message);
+    // one command acts in one tenant; without messages nothing changed
+    const tenantId = messages[0]?.tenantId;
+    if (!tenantId) return outcome;
     for (const id of [
       ...outcome.createdEventIds,
       ...outcome.supersededEventIds,
       ...outcome.updatedEventIds,
     ]) {
-      this.notifier.legacyUpdated(id);
+      this.notifier.legacyUpdated(id, tenantId);
     }
     return outcome;
   }

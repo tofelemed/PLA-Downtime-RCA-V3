@@ -4,7 +4,7 @@
  * Resolution order:
  *  1. `window.__PROACT_API_BASE_URL__` — runtime override a host page can set.
  *  2. `VITE_API_BASE_URL` — baked in at build time. The Docker image sets it to "/api",
- *     meaning "same origin": nginx in front of the app proxies /api, /uploads and /socket.io
+ *     meaning "same origin": nginx in front of the app proxies /api (uploads are downloaded through /api) and /socket.io
  *     to the backend container.
  *  3. The local development backend.
  */

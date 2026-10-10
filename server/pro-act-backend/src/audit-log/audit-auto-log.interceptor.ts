@@ -9,6 +9,7 @@ import { Reflector } from '@nestjs/core';
 import { Observable, tap } from 'rxjs';
 import { AuditLogService } from './audit-log.service';
 import { SKIP_AUDIT_KEY } from './skip-audit.decorator';
+import { AUDIT_READ_KEY } from './audit-read.decorator';
 import {
   methodToAuditAction,
   resolveEntityType,
@@ -55,7 +56,14 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
 
     const method = request.method || 'GET';
     const path = request.originalUrl || request.url || request.path || '';
+    const readEntity = this.reflector.get<string | undefined>(
+      AUDIT_READ_KEY,
+      context.getHandler(),
+    );
 
+    if (readEntity && method === 'GET') {
+      return this.auditRead(next, request, path, readEntity);
+    }
     if (shouldSkipAudit(path, method)) {
       return next.handle();
     }
@@ -74,6 +82,37 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
         void this.record(request, method, path, responseBody, user).catch((err) => {
           this.logger.warn(`Auto-audit failed for ${method} ${path}: ${err?.message || err}`);
         });
+      }),
+    );
+  }
+
+  /** `@AuditRead()`: who read which raw / sensitive record, after a successful response. */
+  private auditRead(
+    next: CallHandler,
+    request: { params?: Record<string, string>; user?: JwtUser },
+    path: string,
+    entityType: string,
+  ): Observable<unknown> {
+    const user = request.user;
+    if (!user?.userId) return next.handle();
+    return next.handle().pipe(
+      tap(() => {
+        void this.auditLogService
+          .create({
+            userId: user.userId,
+            userName: user.email || user.userId,
+            action: 'READ',
+            entityType,
+            entityId: request.params?.id || 'unknown',
+            details: `READ ${entityType} via API GET ${path.split('?')[0]}`,
+            organizationId: user.organizationId || '',
+            tenantId: user.tenantId || '',
+            timestamp: new Date(),
+          })
+          .catch((err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            this.logger.warn(`Read audit failed for ${path}: ${message}`);
+          });
       }),
     );
   }

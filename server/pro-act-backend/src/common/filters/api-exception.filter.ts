@@ -7,10 +7,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { QueryFailedError } from 'typeorm';
 import { ApiErrorBody, FieldError } from '../errors/api-error-body';
 import { apiErrorCode, isRetryableStatus } from '../errors/api-error-codes';
 import { ValidationFailedException } from '../errors/validation-failed.exception';
 import { resolveCorrelationId } from '../http/correlation-id';
+import { redactSecrets } from '../logging/redact';
 
 interface DescribedError {
   status: number;
@@ -73,6 +75,10 @@ export class ApiExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       return this.describeHttpException(exception, correlationId);
     }
+    const database = describeDatabaseRefusal(exception, request, correlationId);
+    if (database) return database;
+    const body = describeBodyParserError(exception, correlationId);
+    if (body) return body;
     return {
       status: HttpStatus.INTERNAL_SERVER_ERROR,
       body: {
@@ -128,19 +134,117 @@ export class ApiExceptionFilter implements ExceptionFilter {
     status: number,
     body: ApiErrorBody,
   ): void {
-    const line = `${request.method} ${request.originalUrl ?? request.url} -> ${status} ${body.code} [${body.correlationId}]`;
+    const line = redactSecrets(
+      `${request.method} ${request.originalUrl ?? request.url} -> ${status} ${body.code} [${body.correlationId}]`,
+    );
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
         line,
-        exception instanceof Error ? exception.stack : String(exception),
+        redactSecrets(
+          exception instanceof Error
+            ? (exception.stack ?? exception.message)
+            : String(exception),
+        ),
       );
       return;
     }
     const summary = Array.isArray(body.message)
       ? body.message.join('; ')
       : body.message;
-    this.logger.warn(`${line}: ${summary}`);
+    this.logger.warn(redactSecrets(`${line}: ${summary}`));
   }
+}
+
+/**
+ * Database refusals a caller can cause (plan 3.11): a reference to a row that does not exist (23503, e.g. an
+ * RCA analysis for a missing RCA; 409 when a delete is blocked by rows still referencing it) and a
+ * row-level-security refusal (42501, a row of another tenant). Never echoes the SQL or the driver message.
+ */
+function describeDatabaseRefusal(
+  exception: unknown,
+  request: Request,
+  correlationId: string,
+): DescribedError | null {
+  if (!(exception instanceof QueryFailedError)) return null;
+  const driver = exception.driverError as
+    | { code?: unknown; detail?: unknown }
+    | undefined;
+  const code = driver?.code;
+  if (
+    code === '23503' &&
+    typeof driver?.detail === 'string' &&
+    driver.detail.includes('still referenced')
+  ) {
+    return {
+      status: HttpStatus.CONFLICT,
+      body: {
+        code: 'RECORD_IN_USE',
+        message: 'The record is still referenced by other records',
+        correlationId,
+        retryable: false,
+      },
+    };
+  }
+  if (code === '23503') {
+    return {
+      status: isV2Request(request)
+        ? HttpStatus.UNPROCESSABLE_ENTITY
+        : HttpStatus.BAD_REQUEST,
+      body: {
+        code: 'INVALID_REFERENCE',
+        message: 'A referenced record does not exist',
+        correlationId,
+        retryable: false,
+      },
+    };
+  }
+  if (code === '42501') {
+    return {
+      status: HttpStatus.FORBIDDEN,
+      body: {
+        code: 'TENANT_NOT_ALLOWED',
+        message: 'The record belongs to a tenant outside your access',
+        correlationId,
+        retryable: false,
+      },
+    };
+  }
+  return null;
+}
+
+/**
+ * Body-parser refusals (plan 3.11 request limits): a body above 1 MiB is 413, malformed JSON 400. They
+ * are plain errors with an exposed 4xx `status`, not HttpExceptions.
+ */
+function describeBodyParserError(
+  exception: unknown,
+  correlationId: string,
+): DescribedError | null {
+  const error = exception as {
+    status?: unknown;
+    expose?: unknown;
+    type?: unknown;
+  } | null;
+  if (
+    !error ||
+    error.expose !== true ||
+    typeof error.status !== 'number' ||
+    error.status < 400 ||
+    error.status >= 500
+  ) {
+    return null;
+  }
+  const status = error.status;
+  return {
+    status,
+    body: {
+      code: status === 413 ? 'PAYLOAD_TOO_LARGE' : apiErrorCode(status),
+      message:
+        status === 413 ? 'Request body too large' : 'Malformed request body',
+      correlationId,
+      retryable: false,
+    },
+  };
 }
 
 function pickMessage(candidate: unknown, fallback: string): string | string[] {

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditLog } from '../../audit-log/audit-log.entity';
 import { Tenant } from '../../tenant/tenant.entity';
 import { Unit } from '../../unit/unit.entity';
+import { User } from '../../users/user.entity';
 import { RequestContextFactory } from '../context/request-context.factory';
 import { RolesGuard } from '../guards/roles.guard';
 import { ScopeGuard } from '../guards/scope.guard';
@@ -19,7 +20,9 @@ import { UserScopesService } from '../scopes/user-scopes.service';
  */
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([UserScope, Tenant, Unit, AuditLog])],
+  imports: [
+    TypeOrmModule.forFeature([UserScope, Tenant, Unit, AuditLog, User]),
+  ],
   providers: [
     UserScopesService,
     ScopeMembershipService,

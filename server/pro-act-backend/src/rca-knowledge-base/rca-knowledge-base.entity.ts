@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { RCA } from '../rca/rca.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('rca_knowledge_base')
@@ -27,8 +28,13 @@ export class RCAKnowledgeBase {
   organizationId?: string;
 
   @ApiProperty({ description: 'Source RCA ID' })
-  @Column({ name: 'rca_id', type: 'varchar', length: 36 })
-  rcaId: string;
+  /** The article outlives its source RCA: deleting the RCA clears the link (plan 3.11). */
+  @Column({ name: 'rca_id', type: 'uuid', nullable: true })
+  rcaId?: string | null;
+
+  @ManyToOne(() => RCA, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'rca_id' })
+  rca?: RCA;
 
   @ApiProperty({ description: 'Article title' })
   @Column({ type: 'varchar', length: 255 })

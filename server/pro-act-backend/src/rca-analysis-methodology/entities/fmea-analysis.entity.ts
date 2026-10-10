@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Column, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { RCA } from '../../rca/rca.entity';
 
 @Entity('rca_fmea_analyses')
 @Index(['tenantId'])
@@ -27,8 +28,13 @@ export class RcaFmeaAnalysis {
   organizationId?: string;
 
   @ApiProperty({ description: 'Associated RCA ID' })
-  @Column({ name: 'rca_id', type: 'varchar', length: 36 })
+  /** Child of its RCA: deleted with it; the row's tenant follows the RCA's (DB trigger, plan 3.11). */
+  @Column({ name: 'rca_id', type: 'uuid' })
   rcaId: string;
+
+  @ManyToOne(() => RCA, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'rca_id' })
+  rca?: RCA;
 
   @ApiProperty({ description: 'Failure mode' })
   @Column({ name: 'failure_mode', type: 'varchar', length: 255 })

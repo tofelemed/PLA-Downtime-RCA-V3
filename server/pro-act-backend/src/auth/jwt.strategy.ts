@@ -9,6 +9,7 @@ import { RequestWithContext } from '../common/context/request-context.middleware
 import { RequestContextFactory } from './context/request-context.factory';
 import { AuthenticatedUser, JwtPayload } from './interfaces/jwt-payload.interface';
 import { JWT_SECRET } from './jwt.constants';
+import { isAccessToken } from './tokens/token-config';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -36,7 +37,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     request: RequestWithContext,
     payload: JwtPayload,
   ): Promise<AuthenticatedUser> {
-    if (!payload?.sub) {
+    // a refresh token (or a token issued before plan 3.11) is never an access token
+    if (!payload?.sub || !isAccessToken(payload)) {
       throw new UnauthorizedException('Invalid token payload');
     }
     const context = await this.contextFactory.build({

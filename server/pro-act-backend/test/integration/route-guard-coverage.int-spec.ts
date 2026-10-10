@@ -9,20 +9,7 @@ import {
   routeKey,
 } from '../../src/common/security/route-guard-inventory';
 import { IntegrationHarness } from './harness';
-
-/**
- * Every route the application registers is guarded (global `JwtAuthGuard`), except these explicitly
- * public ones (`@Public()` AND listed here). `register` is `@PublicIf('AUTH_ALLOW_PUBLIC_REGISTRATION')`,
- * so it stays guarded by default. Adding a public route is a deliberate, reviewed change to this list.
- */
-export const PUBLIC_ROUTE_ALLOWLIST: ReadonlySet<string> = new Set([
-  'AuthController.login',
-  'AuthController.refresh',
-  'AuthController.logout',
-  'AuthController.validateToken',
-  'HealthController.check',
-  'HealthController.detailedCheck',
-]);
+import { PUBLIC_ROUTE_ALLOWLIST } from './support/route-allowlists';
 
 /** Controllers that had no guard at the 0.1 baseline (B14). */
 const FORMERLY_UNGUARDED = [

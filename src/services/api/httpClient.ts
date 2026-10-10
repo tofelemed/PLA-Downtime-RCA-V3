@@ -13,7 +13,7 @@ export class ApiError extends Error {
     // Extract validation error message if available
     let errorMessage = `API request failed with status ${status}: ${statusText}`;
     if (body && typeof body === 'object') {
-      const errorBody = body as any;
+      const errorBody = body as { message?: unknown };
       if (Array.isArray(errorBody.message)) {
         errorMessage = `Validation failed: ${errorBody.message.join(', ')}`;
       } else if (errorBody.message) {
@@ -26,9 +26,9 @@ export class ApiError extends Error {
   
   getValidationErrors(): string[] {
     if (this.body && typeof this.body === 'object') {
-      const errorBody = this.body as any;
+      const errorBody = this.body as { message?: unknown };
       if (Array.isArray(errorBody.message)) {
-        return errorBody.message;
+        return errorBody.message.filter((item): item is string => typeof item === 'string');
       }
     }
     return [];
@@ -36,11 +36,14 @@ export class ApiError extends Error {
 }
 
 type TokenProvider = () => string | null | undefined;
+/** Renews the access token; resolves false when the session can no longer be refreshed. */
+type RefreshHandler = () => Promise<boolean>;
 
 import { API_BASE_URL } from './apiBaseUrl';
 
 export class HttpClient {
   private tokenProvider?: TokenProvider;
+  private refreshHandler?: RefreshHandler;
   private readonly baseUrl: string;
 
   constructor(baseUrl: string = API_BASE_URL) {
@@ -49,6 +52,11 @@ export class HttpClient {
 
   setTokenProvider(provider: TokenProvider) {
     this.tokenProvider = provider;
+  }
+
+  /** Access tokens live 15 minutes (plan 3.11): a 401 is retried once after a refresh. */
+  setRefreshHandler(handler: RefreshHandler | undefined) {
+    this.refreshHandler = handler;
   }
 
   // Enhanced token getter that also checks localStorage directly as fallback
@@ -125,30 +133,37 @@ export class HttpClient {
   }
 
   async request<TResponse = unknown>(path: string, options: RequestOptions = {}): Promise<TResponse> {
+    try {
+      return await this.send<TResponse>(path, options);
+    } catch (error) {
+      if (!(await this.renewedAfter(error, options))) throw error;
+      return this.send<TResponse>(path, options);
+    }
+  }
+
+  /** True when a 401 on an authenticated, non-auth request was followed by a successful refresh. */
+  private async renewedAfter(error: unknown, options: RequestOptions): Promise<boolean> {
+    if (!(error instanceof ApiError) || error.status !== 401) return false;
+    if (options.skipAuth || !this.refreshHandler || error.url.includes('/auth/')) return false;
+    try {
+      return await this.refreshHandler();
+    } catch {
+      return false;
+    }
+  }
+
+  private async send<TResponse>(path: string, options: RequestOptions): Promise<TResponse> {
     const { query, skipAuth, headers, body, ...rest } = options;
     const url = this.buildUrl(path, query);
 
     const requestHeaders = new Headers(headers);
     const token = skipAuth ? null : this.getToken();
     
+    // never log the token or a part of it (plan 3.11, NFR03)
     if (token) {
       requestHeaders.set('Authorization', `Bearer ${token}`);
-      console.log(`[HttpClient] ✅ Token attached to request: ${path}`, { 
-        tokenLength: token.length, 
-        tokenPreview: token.substring(0, 20) + '...',
-        hasAuthHeader: true
-      });
     } else if (!skipAuth) {
-      console.error(`[HttpClient] ❌ No token available for authenticated request to ${path}`);
-      console.error(`[HttpClient] Token provider:`, this.tokenProvider);
-      console.error(`[HttpClient] localStorage token:`, (() => {
-        try {
-          const auth = JSON.parse(localStorage.getItem('proact_auth_state') || '{}');
-          return auth?.tokens?.accessToken ? 'EXISTS' : 'MISSING';
-        } catch {
-          return 'ERROR';
-        }
-      })());
+      console.warn(`[HttpClient] No token available for authenticated request to ${path}`);
     }
 
     let resolvedBody = body;
@@ -169,13 +184,8 @@ export class HttpClient {
 
     if (!response.ok) {
       if (response.status === 401) {
-        console.error(`[HttpClient] ❌ 401 Unauthorized for ${path}`);
-        console.error(`[HttpClient] Request had token:`, !!token);
-        console.error(`[HttpClient] Token preview:`, token ? token.substring(0, 30) + '...' : 'N/A');
-        console.error(`[HttpClient] Response body:`, responseBody);
-        
-        // Don't automatically clear/redirect - let AuthContext handle token refresh/clearing
-        // The AuthContext will handle token refresh or clearing on persistent 401s
+        // request() retries once after a refresh; AuthContext / V2SessionBridge end a dead session
+        console.warn(`[HttpClient] 401 Unauthorized for ${path}`);
       } else if (response.status === 400) {
         // Log validation errors for 400 Bad Request
         console.error(`[HttpClient] ❌ 400 Bad Request for ${path}`);

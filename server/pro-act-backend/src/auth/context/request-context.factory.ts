@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -6,6 +10,7 @@ import {
   ScopeGrant,
 } from '../../common/context/request-context';
 import { Tenant } from '../../tenant/tenant.entity';
+import { User } from '../../users/user.entity';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { rolesForLegacyRole } from '../roles/role-model';
 import { AccessDenialAuditService } from '../scopes/access-denial-audit.service';
@@ -46,12 +51,16 @@ export class RequestContextFactory {
     private readonly denials: AccessDenialAuditService,
     @InjectRepository(Tenant)
     private readonly tenants: Repository<Tenant>,
+    @InjectRepository(User)
+    private readonly users: Repository<User>,
   ) {}
 
   async build(input: RequestContextInput): Promise<RequestContext> {
     const { payload } = input;
-    const scopes = await this.userScopes.grantsForUser(payload.sub);
-    const legacyRole = payload.role ?? null;
+    const [scopes, legacyRole] = await Promise.all([
+      this.userScopes.grantsForUser(payload.sub),
+      this.currentLegacyRole(payload),
+    ]);
     const homeTenant = payload.tenantId ?? null;
     const context: RequestContext = {
       userId: payload.sub,
@@ -87,6 +96,21 @@ export class RequestContextFactory {
         scopesIn(scopes, selected),
       ),
     };
+  }
+
+  /**
+   * The user's role as stored now, so a downgrade or deactivation applies on the next request rather
+   * than at token expiry (plan 3.11). An identity without a `users` row keeps the token's role.
+   */
+  private async currentLegacyRole(payload: JwtPayload): Promise<string | null> {
+    if (!UUID.test(payload.sub)) return payload.role ?? null;
+    const user = await this.users.findOne({
+      where: { id: payload.sub },
+      select: { id: true, role: true, isActive: true },
+    });
+    if (!user) return payload.role ?? null;
+    if (!user.isActive) throw new UnauthorizedException('Account is inactive');
+    return user.role ?? null;
   }
 
   /**

@@ -37,6 +37,7 @@ import {
   IngestionExceptionV2View,
   toExceptionView,
 } from './intake-v2.view';
+import { AuditRead } from '../../audit-log/audit-read.decorator';
 
 /** Quarantine of the durable intake (plan 1.5, spec ING05, §15.2 `/ingestion-exceptions`). */
 @ApiTags('v2 · Ingestion Exceptions')
@@ -63,6 +64,7 @@ export class IngestionExceptionsV2Controller {
   }
 
   @Get(':id')
+  @AuditRead('IngestionExceptionRaw')
   @ApiOperation({
     summary:
       'One exception with the retained raw delivery (preview before replay); foreign ids are 404',

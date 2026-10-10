@@ -7,6 +7,3 @@
 
 // Get JWT_SECRET from environment, ensuring it's trimmed and consistent
 export const JWT_SECRET = (process.env.JWT_SECRET || 'changeme').trim();
-
-console.log(`[JWT Constants] JWT_SECRET loaded with length: ${JWT_SECRET.length}`);
-

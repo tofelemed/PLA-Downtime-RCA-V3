@@ -67,9 +67,15 @@ export class EventChangeNotifier {
     this.publish('EventRetracted', message);
   }
 
-  /** v1 clients refetch on `productionEventUpdated`; used for changes that bypass ProductionEventService. */
-  legacyUpdated(eventId: string): void {
-    this.gateway.broadcastProductionEventUpdated({ id: eventId });
+  /**
+   * v1 clients refetch on `productionEventUpdated`; used for changes that bypass ProductionEventService.
+   * Sent to the tenant's (and unit's) rooms only (plan 3.11).
+   */
+  legacyUpdated(eventId: string, tenantId: string, unitId?: string | null): void {
+    this.gateway.broadcastProductionEventUpdated(
+      { id: eventId },
+      { tenantId, unitId },
+    );
   }
 
   private publish(type: EventChangeType, message: EventChangeMessage): void {

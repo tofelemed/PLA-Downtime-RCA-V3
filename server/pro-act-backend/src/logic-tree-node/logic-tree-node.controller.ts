@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UsePipes, ValidationPipe, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UsePipes, ValidationPipe, UploadedFile, UseInterceptors, Req } from '@nestjs/common';
 import { LogicTreeNodeService } from './logic-tree-node.service';
 import { LogicTreeNode } from './logic-tree-node.entity';
 import { ApiTags, ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
@@ -6,8 +6,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateLogicTreeNodeDto } from './dto/create-logic-tree-node.dto';
 import { UpdateLogicTreeNodeDto } from './dto/update-logic-tree-node.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import {
+  attachmentUploadOptions,
+  uploadedFileView,
+} from '../common/http/upload-options';
+import type { Request } from 'express';
 
 @ApiTags('Logic Tree Nodes')
 @ApiBearerAuth()
@@ -80,22 +83,11 @@ export class LogicTreeNodeController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, uniqueSuffix + extname(file.originalname));
-      },
-    }),
-  }))
-  uploadEvidenceFile(@UploadedFile() file: Express.Multer.File) {
-    return {
-      originalName: file.originalname,
-      filename: file.filename,
-      path: `/uploads/${file.filename}`,
-      size: file.size,
-      mimetype: file.mimetype,
-    };
+  @UseInterceptors(FileInterceptor('file', attachmentUploadOptions()))
+  uploadEvidenceFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() request: Request,
+  ) {
+    return uploadedFileView(file, request);
   }
 } 

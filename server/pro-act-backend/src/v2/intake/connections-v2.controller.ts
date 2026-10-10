@@ -53,6 +53,7 @@ import {
   toConnectionView,
   toJobView,
 } from './intake-v2.view';
+import { AuditRead } from '../../audit-log/audit-read.decorator';
 
 const IDEMPOTENCY_HEADER = { name: 'Idempotency-Key', required: true };
 const SAMPLE_WINDOW_MS = 31 * 86_400_000;
@@ -162,6 +163,7 @@ export class ConnectionsV2Controller {
 
   @Get(':id/sample')
   @Roles(...INTEGRATION_WRITERS)
+  @AuditRead('ConnectionSample')
   @ApiOperation({
     summary:
       'Sample recent source records of one scope with their attribute values (nothing is stored)',

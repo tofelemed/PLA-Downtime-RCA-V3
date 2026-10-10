@@ -1,12 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseInterceptors, UploadedFile, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiConsumes, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { RCAEvidenceService } from './rca-evidence.service';
 import { RCAEvidence } from './rca-evidence.entity';
 import { CreateRCAEvidenceDto } from './dto/create-rca-evidence.dto';
 import { UpdateRCAEvidenceDto } from './dto/update-rca-evidence.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import {
+  attachmentUploadOptions,
+  uploadedFileView,
+} from '../common/http/upload-options';
+import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('RCA Evidence')
@@ -57,22 +60,11 @@ export class RCAEvidenceController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, uniqueSuffix + extname(file.originalname));
-      },
-    }),
-  }))
-  uploadEvidenceFile(@UploadedFile() file: Express.Multer.File) {
-    return {
-      originalName: file.originalname,
-      filename: file.filename,
-      path: `/uploads/${file.filename}`,
-      size: file.size,
-      mimetype: file.mimetype,
-    };
+  @UseInterceptors(FileInterceptor('file', attachmentUploadOptions()))
+  uploadEvidenceFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() request: Request,
+  ) {
+    return uploadedFileView(file, request);
   }
 } 

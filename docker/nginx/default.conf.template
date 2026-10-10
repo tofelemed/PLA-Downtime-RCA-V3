@@ -39,15 +39,6 @@ server {
         proxy_read_timeout 300s;
     }
 
-    # Files uploaded through the API, served statically by the backend
-    location /uploads {
-        proxy_pass $backend;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
     # Socket.IO: the v1 realtime (/socket.io namespace), scoped v2 realtime (/realtime, plan 3.1) and
     # connectivity (/connectivity namespace) gateways all use this transport path
     location /socket.io {

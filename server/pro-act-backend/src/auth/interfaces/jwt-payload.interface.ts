@@ -4,6 +4,8 @@ export interface JwtPayload {
   role: string;
   tenantId?: string;
   organizationId?: string;
+  /** `access` on access tokens (plan 3.11); refresh tokens never reach the JWT strategy */
+  typ?: 'access' | 'refresh';
   iat?: number;
   exp?: number;
 }

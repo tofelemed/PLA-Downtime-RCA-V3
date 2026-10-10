@@ -662,3 +662,45 @@ Migration and cutover tooling (MIG01–MIG06, §18.2, D11, C4): migration `Migra
 **Not done (needs the data host or the owner):** report + 1.1 backfill re-run on `E:\ProAct` (commands in runbook §3); staging rehearsal from a restored backup (runbook §4); pilot ≥ 2 weeks incl. month-end (MIG03, D02 PI details); cutover execution and sign-off (runbook §5, C4); answers listed in runbook §2 and DECISIONS "Still needed" (3.10 bullet). `src/services/streaming/` (unused, 3.7) not deleted — left for the owner.
 
 **Servers / flags at the end:** API :4004 running (rebuilt build with the 3.10 migration and the freeze interceptor), Vite :8070 running (not restarted); Demo Plant: all 8 v2 flags on, no v1 write freeze.
+
+---
+
+# Plan 3.11 verification (10 Oct 2026)
+
+Security, tenant isolation and performance under D15 (local JWT; OIDC dropped). Details, T14 matrix, ASVS-lite checklist, audit and load numbers: [security-performance.md](security-performance.md). Decisions: DECISIONS §D rows "3.11 …". Migrations `AppSettingsScopeAndRefreshTokens1793312000000`, `RcaChildIntegrity1793398400000`, `TenantRowLevelSecurity1793484800000`, `ProductionEventsTenantStartIndex1793571200000`. **No new dependency; v2 OpenAPI snapshot unchanged** (unit suite includes the drift check); v1 contract changes listed in the plan file ("Contract changes").
+
+| Step | Result | Notes |
+|---|---|---|
+| Backend `npx tsc --noEmit -p tsconfig.json` | ✅ exit 0 | after the last change |
+| Backend `npm test -- --selectProjects unit fixtures` | ✅ **97 suites, 1498 tests** | new: `credential-encryption.service.spec.ts` (5), `redact.spec.ts` (8), `egress-allowlist.spec.ts` (3), filter database / body-parser refusals (5) |
+| Backend `npm run test:int` (full, default config: RLS binding off) | ⚠️ **84 suites: 83 passed, 1 failed; 545 tests: 544 passed, 1 failed** (4239 s, log `311-int-final.log`) | the failure was `security-limits` "refuses JSON bodies above 1 MiB with 413" → **500** (body-parser errors were not mapped); fixed in `ApiExceptionFilter` |
+| Re-run after the fix: `security-limits.int-spec.ts` + `migrations.int-spec.ts` | ✅ **2 suites, 9 tests** (log `311-int-rerun.log`) | migrations: round trip, entity parity, no pending schema change |
+| Backend `npm run test:int` with `DB_RLS_TENANT_BINDING=true` (every integration app binds RLS) | ✅ **82 suites, 541 tests** (4060 s, log `311-int-rls-on.log`; run before `query-budget` / `security-limits` existed) | proves the policies + `SET ROLE proact_rls_user` do not break any v2 / v1 path the suite covers |
+| New integration specs | ✅ | `auth-tokens` (6), `app-settings-scope` (3), `legacy-realtime-scope` (3), `tenant-rls` (5), `write-access-coverage` (3: every non-public mutating route refused to a viewer except 9 reviewed), `query-budget` (1), `security-limits` (3) |
+| Backend ESLint on created files | ✅ 0 errors (only the usual supertest `App` warnings in int-specs) | edited legacy files: no new non-prettier errors (several fewer) |
+| Migration proof on a fresh scratch DB | ✅ run → `migration:generate` "No changes in database schema were found"; RCA migration up / down with seeded orphans, misaligned tenants and a dangling knowledge link: rows quarantined in `migration_review`, tenant aligned, link cleared, cascade + triggers work, `down()` restored all | scratch DBs dropped |
+| Frontend `npx tsc --noEmit` | ✅ exit 0 | |
+| Frontend `npm run lint` | ⚠️ exit 1 — 2368 problems (2288 errors, 80 warnings), pre-existing; the four touched files have 0 errors (3 pre-existing errors in `httpClient.ts` / `authApi.ts` fixed) | `AuthContext.tsx` keeps 3 pre-existing warnings |
+| Frontend `npm run test:run` | ⚠️ **40 files: 37 passed, 3 failed; 204 tests: 198 passed, 6 failed** — the same 6 baseline failures as before 3.11 | `master-data.integration.test.ts` ×5 (its helper reads `data.accessToken`, the API answers `access_token`, so no token is sent → "No auth token" 401; unchanged by 3.11), `MultiAttributeSelector.test.tsx`, `StorageService.test.ts` (`jest is not defined`). New `httpClient-refresh.test.ts` (3) passes. A first run hung with idle workers and was killed / re-run |
+| Load script, EXPLAIN | see security-performance.md §3 | perf runs on `proact_perf` (fresh dumps of dev) on :4014, dropped afterwards |
+| API rebuilt and restarted on :4004 (`PORT=4004 PROCESS_ROLE=all node dist/src/main.js`) | ✅ health 200; "Applied 4 migration(s)" on dev `proact`; 137 `tenant_isolation` policies; `plantSelection` attributed to its tenant; RCA integrity report summary `{}` (nothing orphaned) | smoke: login `expires_in` 900, v2 list 200, refresh token as bearer 401, refresh 200, branding write by a manager 403, logout 200 |
+
+**Dev DB `proact`:** the four migrations applied; no data changed except `app_settings.plantSelection.tenant_id` (attributed) and one `migration_reports` bookkeeping row (`rca-child-integrity`). Cluster role `proact_rls_user` exists (NOLOGIN); RLS binding is **off**. `log_lock_waits` was switched on for the measurement and reset afterwards. Existing browser sessions must sign in again once (pre-3.11 tokens carry no `typ`). Vite :8070 untouched.
+
+
+### Plan 3.11 — owner decisions applied (10–11 Oct 2026)
+
+Owner answers (DECISIONS §D rows "3.11 Q1–Q4"): RLS on; environment values yes; upload downloads need a token, no virus scanning for now; dependency upgrades yes.
+
+| Step | Result | Notes |
+|---|---|---|
+| Changes | — | RLS binding on by default (`DB_RLS_TENANT_BINDING=false` to disable; Compose passes `true`); Compose requires `JWT_REFRESH_SECRET` and passes the keyring / egress variables; uploads stored per tenant and served only by `GET /api/uploads/files/:tenantId/:name` (static `/uploads` and the nginx `/uploads` proxy removed); `npm audit fix` (both projects), `sqlite3` 6, `node-opcua` `~2.170.1` + `overrides.hexy = 0.3.5` (the in-range update to 2.187 pulled ES-module-only packages that the CommonJS build and Jest cannot load) |
+| Backend `npx tsc --noEmit -p tsconfig.json` | ✅ exit 0 | |
+| Backend `npm test -- --selectProjects unit fixtures` | ✅ **97 suites, 1498 tests** | |
+| Backend `npm run test:int` (binding now on by default) | ⚠️ **84 suites: 83 passed, 1 failed; 545 tests: 540 passed, 5 failed** (2291 s, log `311c-int-final.log`) | the 5 failures are all of `rca-triggers.int-spec.ts` with a bare `AggregateError` (connection error, during the run the dev API was restarted next to it); re-run of that spec alone: ✅ **5 / 5** (log `311c-rca-rerun.log`). An earlier attempt (`311b-int-final.log`) was abandoned: the `node-opcua` 2.187 ESM modules broke the two AppModule specs, fixed by the pin above |
+| `security-limits.int-spec.ts` (token-protected download: member 200 `nosniff` / attachment, no token 401, other tenant 404, traversal 404, `/uploads/<file>` 404) | ✅ 3 / 3 | |
+| Audit `npm audit --omit=dev` | backend **8** (1 critical `tar` + high `@mapbox/node-pre-gyp`: install-time chain of `sqlite3`; high `js-yaml`, `lodash` via `@nestjs/swagger` < 12), frontend **4** moderate, 0 high | |
+| Frontend `npx tsc --noEmit` / `npm run lint` / `npm run test:run` / `npm run build` | ✅ / ⚠️ same 2288 pre-existing errors / ⚠️ same 6 baseline failures (198 / 204 passed) / ✅ | after the frontend `npm audit fix` |
+| API rebuilt and restarted on :4004 | ✅ health 200, "Row-level security tenant binding is on", v1 `GET /api/production-events` as `manager@acme.com` returns only Demo Plant rows (386, 1 tenant), `/uploads/x.png` 404 | Vite :8070 not restarted (its `node_modules` changed with the frontend audit fix; restart it if it shows stale optimized dependencies) |
+
+**Not done (owner):** `JWT_REFRESH_SECRET` in the root `.env` and `.env.example` (no `.env*` edits allowed — `docker compose up` now stops with "Set JWT_REFRESH_SECRET in .env" until it is added); production keyring / egress values; `compression`, k6, Lighthouse CI (new dependencies — kept out under this task's "no new dependencies" rule); `@nestjs/swagger` 12 (major; regenerates OpenAPI); virus scanning (deferred by the owner); pre-3.11 files at the `uploads/` root are no longer served (none on dev; check the data host).

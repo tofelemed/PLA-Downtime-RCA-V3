@@ -5,6 +5,7 @@ import {
   PATH_METADATA,
   VERSION_METADATA,
 } from '@nestjs/common/constants';
+import { READ_ONLY_ALLOWED_KEY } from '../../auth/decorators/read-only-allowed.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 export interface RouteGuardEntry {
@@ -15,6 +16,8 @@ export interface RouteGuardEntry {
   version?: string;
   guarded: boolean;
   isPublic: boolean;
+  /** `@ReadOnlyAllowed()`: a read-only (`viewer`) caller may use this mutating route (plan 3.11) */
+  readOnlyAllowed: boolean;
 }
 
 export interface InventoryOptions {
@@ -68,6 +71,8 @@ function routesOf(controller: Type<unknown>): RouteGuardEntry[] {
     Reflect.getMetadata(GUARDS_METADATA, controller),
   );
   const classPublic = Reflect.getMetadata(IS_PUBLIC_KEY, controller) === true;
+  const classReadOnly =
+    Reflect.getMetadata(READ_ONLY_ALLOWED_KEY, controller) === true;
   const version = normalizeVersion(
     Reflect.getMetadata(VERSION_METADATA, controller),
   );
@@ -99,6 +104,9 @@ function routesOf(controller: Type<unknown>): RouteGuardEntry[] {
             hasGuards(Reflect.getMetadata(GUARDS_METADATA, handler)),
           isPublic:
             classPublic || Reflect.getMetadata(IS_PUBLIC_KEY, handler) === true,
+          readOnlyAllowed:
+            classReadOnly ||
+            Reflect.getMetadata(READ_ONLY_ALLOWED_KEY, handler) === true,
         },
       ];
     });

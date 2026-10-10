@@ -65,6 +65,8 @@ export const DURATION_SECONDS_EXPRESSION =
   'physicalType',
   'startTime',
 ])
+// tenant-wide first page, newest first (plan 3.11: 158 ms → 1 ms at 50k events)
+@Index('IDX_production_events_tenant_start', ['tenantId', 'startTime', 'id'])
 @Index('IDX_production_events_tenant_occurrence', ['tenantId', 'occurrenceId'])
 @Index('IDX_production_events_tenant_reason_start', [
   'tenantId',

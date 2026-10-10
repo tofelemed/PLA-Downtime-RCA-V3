@@ -12,7 +12,8 @@ export type PiFailureKind =
   | 'unavailable'
   | 'network'
   | 'tls'
-  | 'too_large';
+  | 'too_large'
+  | 'egress_denied';
 
 const FAILURES: Readonly<
   Record<PiFailureKind, { code: string; retryable: boolean; health: string }>
@@ -41,6 +42,11 @@ const FAILURES: Readonly<
     code: 'PI_RESPONSE_TOO_LARGE',
     retryable: false,
     health: 'response_too_large',
+  },
+  egress_denied: {
+    code: 'PI_EGRESS_DENIED',
+    retryable: false,
+    health: 'egress_denied',
   },
 };
 

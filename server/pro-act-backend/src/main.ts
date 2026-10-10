@@ -2,15 +2,16 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { configureHttpApp } from './common/http/configure-http-app';
 import { buildV2Document } from './v2/openapi-v2';
 import { getProcessRole } from './common/scheduling/process-role';
 import { bootstrapWorker } from './worker';
+import { runMigrationsOnBoot } from './database/run-migrations-on-boot';
 
 
 async function bootstrap() {
+  await runMigrationsOnBoot();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   // SIGTERM/SIGINT run the shutdown hooks (ShutdownCoordinator drains in-flight jobs in role "all")
   app.enableShutdownHooks();
@@ -64,12 +65,8 @@ async function bootstrap() {
   const v2Document = buildV2Document(app);
   SwaggerModule.setup('api/docs/v2', app, v2Document);
 
-  // Serve uploaded files. The upload controllers write to "./uploads" relative to the working
-  // directory (multer diskStorage), so resolve the same way here rather than relative to the
-  // compiled output, whose depth differs between local builds (dist/src) and other layouts.
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  });
+  // Uploaded files are no longer served statically: downloads need a token and tenant membership
+  // (GET /api/uploads/files/:tenantId/:name, plan 3.11, owner decision 2026-10-10).
 
 
 

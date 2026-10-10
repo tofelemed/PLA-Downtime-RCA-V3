@@ -1,54 +1,89 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+} from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { AppSettingsService } from './app-settings.service';
 import { AppSettings } from './app-settings.entity';
-import { ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateAppSettingsDto } from './dto/create-app-settings.dto';
 import { UpdateAppSettingsDto } from './dto/update-app-settings.dto';
+import { Ctx } from '../common/context/ctx.decorator';
+import { RequestContext } from '../common/context/request-context';
+import { ReadOnlyAllowed } from '../auth/decorators/read-only-allowed.decorator';
 
+/**
+ * Settings scoped by owner (plan 3.11): application-wide keys are SuperAdmin-only to change, tenant keys
+ * tenant-admin-only, per-user keys (`tabVisibility.<tenant>.<user>`) only their user's. A row the caller
+ * may not read answers as missing; a write it may not make is 403 `SETTING_NOT_WRITABLE`.
+ */
 @ApiTags('App Settings')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('app-settings')
 export class AppSettingsController {
   constructor(private readonly settingsService: AppSettingsService) {}
 
   @Get()
-  findAll(): Promise<AppSettings[]> {
-    return this.settingsService.findAll();
+  findAll(@Ctx() ctx: RequestContext): Promise<AppSettings[]> {
+    return this.settingsService.findAll(ctx);
   }
 
   @Get(':key')
-  findOne(@Param('key') key: string): Promise<AppSettings | null> {
-    return this.settingsService.findOne(key);
+  findOne(
+    @Param('key') key: string,
+    @Ctx() ctx: RequestContext,
+  ): Promise<AppSettings | null> {
+    return this.settingsService.findOne(key, ctx);
   }
 
   @Post()
   @ApiBody({ type: CreateAppSettingsDto })
-  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  create(@Body() data: CreateAppSettingsDto): Promise<AppSettings> {
-    return this.settingsService.create(data);
+  create(
+    @Body() data: CreateAppSettingsDto,
+    @Ctx() ctx: RequestContext,
+  ): Promise<AppSettings> {
+    return this.settingsService.create(data, ctx);
   }
 
   @Put(':key')
   @ApiBody({ type: UpdateAppSettingsDto })
-  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  update(@Param('key') key: string, @Body() data: UpdateAppSettingsDto): Promise<AppSettings | null> {
-    return this.settingsService.update(key, data);
+  update(
+    @Param('key') key: string,
+    @Body() data: UpdateAppSettingsDto,
+    @Ctx() ctx: RequestContext,
+  ): Promise<AppSettings | null> {
+    return this.settingsService.update(key, data, ctx);
   }
 
   @Delete(':key')
-  remove(@Param('key') key: string): Promise<void> {
-    return this.settingsService.remove(key);
+  remove(@Param('key') key: string, @Ctx() ctx: RequestContext): Promise<void> {
+    return this.settingsService.remove(key, ctx);
   }
 
+  // A viewer may keep its own preferences; the service refuses every key it does not own
   @Post(':key/value')
-  setValue(@Param('key') key: string, @Body() body: { value: any }): Promise<AppSettings> {
-    return this.settingsService.setValue(key, body.value);
+  @ReadOnlyAllowed()
+  @ApiOperation({
+    summary:
+      'Set a value (own per-user keys for every role; others need their admin)',
+  })
+  setValue(
+    @Param('key') key: string,
+    @Body() body: { value: unknown },
+    @Ctx() ctx: RequestContext,
+  ): Promise<AppSettings> {
+    return this.settingsService.setValue(key, body.value, ctx);
   }
 
   @Get(':key/value')
-  getValue(@Param('key') key: string): Promise<any> {
-    return this.settingsService.getValue(key);
+  getValue(
+    @Param('key') key: string,
+    @Ctx() ctx: RequestContext,
+  ): Promise<unknown> {
+    return this.settingsService.getValue(key, ctx);
   }
-} 
+}

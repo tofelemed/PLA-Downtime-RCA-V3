@@ -1,33 +1,112 @@
+import { Logger } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import {
-  WebSocketGateway,
-  WebSocketServer,
-  OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  SubscribeMessage,
+  OnGatewayInit,
+  WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { RealtimeAuthenticator } from './realtime/realtime-authenticator';
+import { roomsForContext, roomsForMessage } from './realtime/realtime-rooms';
+import {
+  authenticateSockets,
+  sessionOf,
+  scheduleTokenExpiry,
+  clearTokenExpiry,
+} from './realtime/socket-auth';
 
+/** Tenant and unit a v1 broadcast is about, read from the entity it carries. */
+export interface BroadcastScope {
+  tenantId: string;
+  unitId?: string | null;
+}
+
+/**
+ * Legacy v1 entity broadcasts on the `/socket.io` namespace (v1 screens, decision C4).
+ *
+ * Plan 3.11 (T14): the handshake must carry `auth: { token, tenantId? }` (the same JWT and tenant
+ * selection as HTTP, via `RealtimeAuthenticator`); a socket joins only the tenant / unit rooms of its
+ * RequestContext (`realtime-rooms.ts`) and is disconnected when its token expires. A broadcast goes only to
+ * the rooms of the entity's tenant (and unit); one whose tenant cannot be determined is dropped, never
+ * sent to everyone. Clients cannot join rooms themselves.
+ */
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-    credentials: true,
-  },
+  // the token travels in the handshake, not in cookies: no credentialed CORS needed
+  cors: { origin: true, credentials: false },
   namespace: '/socket.io',
 })
-export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+export class RealtimeGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
-  server: Server;
+  server?: Server;
 
-  private logger: Logger = new Logger('RealtimeGateway');
+  private readonly logger = new Logger('RealtimeGateway');
   private warnedNoServer = false;
+
+  constructor(private readonly moduleRef: ModuleRef) {}
+
+  afterInit(server: Server): void {
+    authenticateSockets(server, () => this.authenticator());
+  }
+
+  handleConnection(client: Socket): void {
+    const session = sessionOf(client);
+    if (!session) {
+      client.disconnect(true);
+      return;
+    }
+    void client.join(roomsForContext(session.context));
+    scheduleTokenExpiry(client, session, this.logger);
+  }
+
+  handleDisconnect(client: Socket): void {
+    clearTokenExpiry(client);
+  }
+
+  /** `<entity><event>` (e.g. `productionEventUpdated`) to the entity's tenant / unit rooms. */
+  broadcastEntityEvent(
+    event: string,
+    entity: string,
+    data: unknown,
+    scope?: BroadcastScope,
+  ): void {
+    this.emit(`${entity}${event}`, data, scope);
+  }
+
+  broadcastProductionEventCreated(
+    event: unknown,
+    scope?: BroadcastScope,
+  ): void {
+    this.emit('productionEventCreated', event, scope);
+  }
+
+  broadcastProductionEventUpdated(
+    event: unknown,
+    scope?: BroadcastScope,
+  ): void {
+    this.emit('productionEventUpdated', event, scope);
+  }
+
+  broadcastEntityCreated(entityType: string, entity: unknown): void {
+    this.emit(`${entityType}Created`, entity);
+  }
+
+  broadcastEntityUpdated(entityType: string, entity: unknown): void {
+    this.emit(`${entityType}Updated`, entity);
+  }
+
+  broadcastEntityDeleted(entityType: string, entityId: string): void {
+    this.emit(`${entityType}Deleted`, { id: entityId });
+  }
 
   /**
    * Nest only attaches the Socket.IO server inside an HTTP application. The worker process is an
    * application context, so there `server` is undefined and broadcasts are dropped (logged once).
    */
-  private emit(event: string, payload: unknown): void {
+  private emit(event: string, payload: unknown, scope?: BroadcastScope): void {
     if (!this.server) {
       if (!this.warnedNoServer) {
         this.warnedNoServer = true;
@@ -37,147 +116,38 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       }
       return;
     }
-    this.server.emit(event, payload);
+    const target = scope ?? scopeOfPayload(payload);
+    if (!target) {
+      this.logger.debug(`Dropped ${event}: no tenant to address it to`);
+      return;
+    }
+    const units = target.unitId ? [target.unitId] : [];
+    this.server
+      .to(roomsForMessage(target.tenantId, units))
+      .emit(event, payload);
   }
 
-  afterInit(server: Server) {
-    this.logger.log('Socket.IO Gateway Initialized');
+  private authenticator(): RealtimeAuthenticator | null {
+    try {
+      return this.moduleRef.get(RealtimeAuthenticator, { strict: false });
+    } catch {
+      return null;
+    }
   }
+}
 
-  handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
-  }
+/** Tenant (and unit) of a v1 entity payload: `tenantId` / `tenant_id`, `unitId` / `unit_id`. */
+export function scopeOfPayload(payload: unknown): BroadcastScope | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const record = payload as Record<string, unknown>;
+  const tenantId = firstString(record.tenantId, record.tenant_id);
+  if (!tenantId) return null;
+  return { tenantId, unitId: firstString(record.unitId, record.unit_id) };
+}
 
-  handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected: ${client.id}`);
-  }
-
-  // Broadcast entity events
-  broadcastEntityEvent(event: string, entity: string, data: any) {
-    this.emit(`${entity}${event}`, data);
-  }
-
-  // Entity-specific event broadcasting methods
-  broadcastUserCreated(user: any) {
-    this.emit('userCreated', user);
-  }
-
-  broadcastUserUpdated(user: any) {
-    this.emit('userUpdated', user);
-  }
-
-  broadcastUserDeleted(userId: string) {
-    this.emit('userDeleted', { id: userId });
-  }
-
-  broadcastOrganizationCreated(organization: any) {
-    this.emit('organizationCreated', organization);
-  }
-
-  broadcastOrganizationUpdated(organization: any) {
-    this.emit('organizationUpdated', organization);
-  }
-
-  broadcastOrganizationDeleted(organizationId: string) {
-    this.emit('organizationDeleted', { id: organizationId });
-  }
-
-  broadcastTenantCreated(tenant: any) {
-    this.emit('tenantCreated', tenant);
-  }
-
-  broadcastTenantUpdated(tenant: any) {
-    this.emit('tenantUpdated', tenant);
-  }
-
-  broadcastTenantDeleted(tenantId: string) {
-    this.emit('tenantDeleted', { id: tenantId });
-  }
-
-  broadcastUnitCreated(unit: any) {
-    this.emit('unitCreated', unit);
-  }
-
-  broadcastUnitUpdated(unit: any) {
-    this.emit('unitUpdated', unit);
-  }
-
-  broadcastUnitDeleted(unitId: string) {
-    this.emit('unitDeleted', { id: unitId });
-  }
-
-  broadcastAssetCreated(asset: any) {
-    this.emit('assetCreated', asset);
-  }
-
-  broadcastAssetUpdated(asset: any) {
-    this.emit('assetUpdated', asset);
-  }
-
-  broadcastAssetDeleted(assetId: string) {
-    this.emit('assetDeleted', { id: assetId });
-  }
-
-  broadcastProductionEventCreated(event: any) {
-    this.emit('productionEventCreated', event);
-  }
-
-  broadcastProductionEventUpdated(event: any) {
-    this.emit('productionEventUpdated', event);
-  }
-
-  broadcastProductionEventDeleted(eventId: string) {
-    this.emit('productionEventDeleted', { id: eventId });
-  }
-
-  broadcastRCACreated(rca: any) {
-    this.emit('rcaCreated', rca);
-  }
-
-  broadcastRCAUpdated(rca: any) {
-    this.emit('rcaUpdated', rca);
-  }
-
-  broadcastRCADeleted(rcaId: string) {
-    this.emit('rcaDeleted', { id: rcaId });
-  }
-
-  broadcastTaskCreated(task: any) {
-    this.emit('taskCreated', task);
-  }
-
-  broadcastTaskUpdated(task: any) {
-    this.emit('taskUpdated', task);
-  }
-
-  broadcastTaskDeleted(taskId: string) {
-    this.emit('taskDeleted', { id: taskId });
-  }
-
-  // Generic method for any entity
-  broadcastEntityCreated(entityType: string, entity: any) {
-    this.emit(`${entityType}Created`, entity);
-  }
-
-  broadcastEntityUpdated(entityType: string, entity: any) {
-    this.emit(`${entityType}Updated`, entity);
-  }
-
-  broadcastEntityDeleted(entityType: string, entityId: string) {
-    this.emit(`${entityType}Deleted`, { id: entityId });
-  }
-
-  // Join room for specific entity updates
-  @SubscribeMessage('joinEntityRoom')
-  handleJoinEntityRoom(client: Socket, payload: { entityType: string; entityId: string }) {
-    client.join(`${payload.entityType}:${payload.entityId}`);
-    this.logger.log(`Client ${client.id} joined room ${payload.entityType}:${payload.entityId}`);
-  }
-
-  // Leave room for specific entity updates
-  @SubscribeMessage('leaveEntityRoom')
-  handleLeaveEntityRoom(client: Socket, payload: { entityType: string; entityId: string }) {
-    client.leave(`${payload.entityType}:${payload.entityId}`);
-    this.logger.log(`Client ${client.id} left room ${payload.entityType}:${payload.entityId}`);
-  }
-} 
+function firstString(...values: unknown[]): string | null {
+  const found = values.find(
+    (value): value is string => typeof value === 'string' && value.length > 0,
+  );
+  return found ?? null;
+}
