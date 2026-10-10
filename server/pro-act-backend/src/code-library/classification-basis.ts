@@ -10,8 +10,11 @@ export const CODE_DRIVEN_AXES = [
 export type CodeDrivenAxis = (typeof CODE_DRIVEN_AXES)[number];
 
 export type AxisBasis = {
-  /** `code_rule`: a `code_mapping_rules` version; `code_default`: the reason code's default column */
-  source: 'code_rule' | 'code_default' | 'user';
+  /**
+   * `code_rule`: a `code_mapping_rules` version; `code_default`: the reason code's default column;
+   * `declarative_rule`: an active `coding_default` rule version (plan 3.8; `ruleId` is the rule)
+   */
+  source: 'code_rule' | 'code_default' | 'declarative_rule' | 'user';
   ruleId: string | null;
   ruleVersion: number | null;
   /** the value the rule or default proposes */

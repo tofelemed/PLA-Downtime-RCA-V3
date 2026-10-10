@@ -106,6 +106,8 @@ import { LossValueReportV2Controller } from './reports/loss-value-v2.controller'
 import { LossValueReportV2Service } from './reports/loss-value-v2.service';
 import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
 import { FeatureFlagsV2Controller } from './feature-flags/feature-flags-v2.controller';
+import { RulesModule } from '../rules/rules.module';
+import { RulesV2Controller } from './rules/rules-v2.controller';
 import { UnitsV2Controller } from './units/units-v2.controller';
 import { UnitsV2Service } from './units/units-v2.service';
 import { ProductsV2Controller } from './products/products-v2.controller';
@@ -173,6 +175,7 @@ import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
     ExportsModule,
     ValuationModule,
     FeatureFlagsModule,
+    RulesModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -216,6 +219,7 @@ import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
     ValuationPoliciesV2Controller,
     LossValueReportV2Controller,
     FeatureFlagsV2Controller,
+    RulesV2Controller,
     UnitsV2Controller,
     ProductsV2Controller,
     PeriodSummariesV2Controller,

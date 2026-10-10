@@ -66,6 +66,11 @@ export const DURATION_SECONDS_EXPRESSION =
   'startTime',
 ])
 @Index('IDX_production_events_tenant_occurrence', ['tenantId', 'occurrenceId'])
+@Index('IDX_production_events_tenant_reason_start', [
+  'tenantId',
+  'reasonCodeId',
+  'startTime',
+])
 @Index('IDX_production_events_open_by_unit', ['tenantId', 'unitId'], {
   where: '"end_time" IS NULL',
 })

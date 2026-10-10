@@ -111,16 +111,27 @@ const LEGACY_ROWS: LegacyRow[] = [
   },
 ];
 
-/** Migrations after EventIntervalModel; reverted so legacy rows are inserted in the pre-1.1 shape. */
-// EventRevisions, HierarchyMappingAndCodeLibraries, EventOperations, IntakeCore, PiConnectionsToIntegrationConnections,
-// PiCertifiedIntake, SignalsAndSamples, Calendars, ProfilesAndRates, PlanVersions, PeriodsActuals, AccountingEngine,
-// ReconciliationWorkflow, ExportsAndDomainEvents, KpiResults, Valuation, FeatureFlags
-const MIGRATIONS_AFTER_INTERVAL_MODEL = 17;
+/**
+ * Reverted (with every later migration) so legacy rows are inserted in the pre-1.1 shape. Reverting by
+ * name instead of a fixed count keeps this spec valid when new migrations are added.
+ */
+const INTERVAL_MODEL_MIGRATION = 'EventIntervalModel1791584000000';
 
 /**
  * Plan 1.1 step 4: the migration's SQL backfill gives the same answers as the TypeScript rules.
  * Plan 1.2 step 2: EventRevisions then snapshots the same rows exactly as `factsOf()` would.
  */
+async function migrationExecuted(
+  harness: IntegrationHarness,
+  name: string,
+): Promise<boolean> {
+  const rows: Array<{ n: number }> = await harness.dataSource.query(
+    'SELECT count(*)::int AS n FROM migrations WHERE name = $1',
+    [name],
+  );
+  return rows[0].n > 0;
+}
+
 describe('EventIntervalModel + EventRevisions backfill', () => {
   const harness = new IntegrationHarness();
   let world: EventWorld;
@@ -131,7 +142,7 @@ describe('EventIntervalModel + EventRevisions backfill', () => {
     await harness.start();
     world = await seedEventWorld(harness.dataSource);
     const rca = await insertRca(world);
-    for (let undo = 0; undo <= MIGRATIONS_AFTER_INTERVAL_MODEL; undo++) {
+    while (await migrationExecuted(harness, INTERVAL_MODEL_MIGRATION)) {
       await harness.dataSource.undoLastMigration({ transaction: 'all' });
     }
     await harness.dataSource.query(

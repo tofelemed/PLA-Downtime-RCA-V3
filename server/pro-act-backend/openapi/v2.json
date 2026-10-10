@@ -1017,6 +1017,47 @@
         ]
       }
     },
+    "/api/v2/reason-codes/{id}/mapping-preview": {
+      "get": {
+        "description": "The defaults in force now (mapping rule version, else the code columns) and how the events coded with the code in the last `days` days (caller scope) are classified today, with the count that would differ.",
+        "operationId": "ReasonCodesV2Controller_mappingPreview_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 92,
+              "default": 30,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Default mapping preview of a reason code",
+        "tags": [
+          "v2 · Reason Codes"
+        ]
+      }
+    },
     "/api/v2/reason-codes": {
       "get": {
         "description": "Tree filters `parentId` (direct children) and `rootsOnly`; `asOf` returns the codes valid at that instant, otherwise active codes unless `includeRetired`. Keyset pages on (code, id).",
@@ -1144,7 +1185,7 @@
         ]
       },
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
         "operationId": "ReasonCodesV2Controller_create_v2",
         "parameters": [
           {
@@ -1211,7 +1252,7 @@
         ]
       },
       "put": {
-        "description": "Requires `If-Match: \"<version>\"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
+        "description": "Requires `If-Match: \"<version>\"` (428/412) and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
         "operationId": "ReasonCodesV2Controller_change_v2",
         "parameters": [
           {
@@ -1286,9 +1327,39 @@
         ]
       }
     },
+    "/api/v2/reason-codes/{id}/references": {
+      "get": {
+        "description": "Active child codes, events coded with it and mapping rules naming it — the counts a retire answers with in 409 CODE_HAS_CHILDREN.",
+        "operationId": "ReasonCodesV2Controller_references_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "What points at a code now (retire impact)",
+        "tags": [
+          "v2 · Reason Codes"
+        ]
+      }
+    },
     "/api/v2/reason-codes/{id}/retire": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
         "operationId": "ReasonCodesV2Controller_retire_v2",
         "parameters": [
           {
@@ -1461,7 +1532,7 @@
         ]
       },
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
         "operationId": "ImpactCodesV2Controller_create_v2",
         "parameters": [
           {
@@ -1528,7 +1599,7 @@
         ]
       },
       "put": {
-        "description": "Requires `If-Match: \"<version>\"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
+        "description": "Requires `If-Match: \"<version>\"` (428/412) and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
         "operationId": "ImpactCodesV2Controller_change_v2",
         "parameters": [
           {
@@ -1603,9 +1674,39 @@
         ]
       }
     },
+    "/api/v2/impact-codes/{id}/references": {
+      "get": {
+        "description": "Active child codes, events coded with it and mapping rules naming it — the counts a retire answers with in 409 CODE_HAS_CHILDREN.",
+        "operationId": "ImpactCodesV2Controller_references_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "What points at a code now (retire impact)",
+        "tags": [
+          "v2 · Impact Codes"
+        ]
+      }
+    },
     "/api/v2/impact-codes/{id}/retire": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
         "operationId": "ImpactCodesV2Controller_retire_v2",
         "parameters": [
           {
@@ -1778,7 +1879,7 @@
         ]
       },
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
         "operationId": "OeeCodesV2Controller_create_v2",
         "parameters": [
           {
@@ -1845,7 +1946,7 @@
         ]
       },
       "put": {
-        "description": "Requires `If-Match: \"<version>\"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
+        "description": "Requires `If-Match: \"<version>\"` (428/412) and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
         "operationId": "OeeCodesV2Controller_change_v2",
         "parameters": [
           {
@@ -1920,9 +2021,39 @@
         ]
       }
     },
+    "/api/v2/oee-codes/{id}/references": {
+      "get": {
+        "description": "Active child codes, events coded with it and mapping rules naming it — the counts a retire answers with in 409 CODE_HAS_CHILDREN.",
+        "operationId": "OeeCodesV2Controller_references_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "What points at a code now (retire impact)",
+        "tags": [
+          "v2 · OEE Codes"
+        ]
+      }
+    },
     "/api/v2/oee-codes/{id}/retire": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
         "operationId": "OeeCodesV2Controller_retire_v2",
         "parameters": [
           {
@@ -2095,7 +2226,7 @@
         ]
       },
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
         "operationId": "FailureCodeGroupsV2Controller_create_v2",
         "parameters": [
           {
@@ -2162,7 +2293,7 @@
         ]
       },
       "put": {
-        "description": "Requires `If-Match: \"<version>\"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
+        "description": "Requires `If-Match: \"<version>\"` (428/412) and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
         "operationId": "FailureCodeGroupsV2Controller_change_v2",
         "parameters": [
           {
@@ -2237,9 +2368,39 @@
         ]
       }
     },
+    "/api/v2/failure-code-groups/{id}/references": {
+      "get": {
+        "description": "Active child codes, events coded with it and mapping rules naming it — the counts a retire answers with in 409 CODE_HAS_CHILDREN.",
+        "operationId": "FailureCodeGroupsV2Controller_references_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "What points at a code now (retire impact)",
+        "tags": [
+          "v2 · Failure Code Groups"
+        ]
+      }
+    },
     "/api/v2/failure-code-groups/{id}/retire": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
         "operationId": "FailureCodeGroupsV2Controller_retire_v2",
         "parameters": [
           {
@@ -2412,7 +2573,7 @@
         ]
       },
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.",
         "operationId": "LossCategoryDefsV2Controller_create_v2",
         "parameters": [
           {
@@ -2479,7 +2640,7 @@
         ]
       },
       "put": {
-        "description": "Requires `If-Match: \"<version>\"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
+        "description": "Requires `If-Match: \"<version>\"` (428/412) and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
         "operationId": "LossCategoryDefsV2Controller_change_v2",
         "parameters": [
           {
@@ -2554,9 +2715,39 @@
         ]
       }
     },
+    "/api/v2/loss-category-defs/{id}/references": {
+      "get": {
+        "description": "Active child codes, events coded with it and mapping rules naming it — the counts a retire answers with in 409 CODE_HAS_CHILDREN.",
+        "operationId": "LossCategoryDefsV2Controller_references_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "What points at a code now (retire impact)",
+        "tags": [
+          "v2 · Loss Category Definitions"
+        ]
+      }
+    },
     "/api/v2/loss-category-defs/{id}/retire": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.",
         "operationId": "LossCategoryDefsV2Controller_retire_v2",
         "parameters": [
           {
@@ -8937,6 +9128,500 @@
         ]
       }
     },
+    "/api/v2/rules/schema": {
+      "get": {
+        "operationId": "RulesV2Controller_schema_v2",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rule grammar: allowlisted fields, operators, actions per kind and limits",
+        "tags": [
+          "v2 · Rules"
+        ]
+      }
+    },
+    "/api/v2/rules": {
+      "get": {
+        "operationId": "RulesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "coding_default",
+                "status_derivation",
+                "rca_trigger_hint",
+                "validation"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "active",
+                "retired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List rules of the tenant (newest first)",
+        "tags": [
+          "v2 · Rules"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 RULE_INVALID / INVALID_REFERENCE; 409 RULE_EXISTS.",
+        "operationId": "RulesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a rule as a draft",
+        "tags": [
+          "v2 · Rules"
+        ]
+      }
+    },
+    "/api/v2/rules/{id}": {
+      "get": {
+        "operationId": "RulesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one rule (ETag = rowVersion); foreign ids are 404",
+        "tags": [
+          "v2 · Rules"
+        ]
+      },
+      "put": {
+        "description": "Requires `If-Match` (428/412). Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 409 RULE_RETIRED; 422 RULE_INVALID.",
+        "operationId": "RulesV2Controller_change_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleV2ChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change the draft and descriptive fields (the version in force is unchanged)",
+        "tags": [
+          "v2 · Rules"
+        ]
+      }
+    },
+    "/api/v2/rules/{id}/versions": {
+      "get": {
+        "operationId": "RulesV2Controller_versions_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approved versions of a rule, newest first (activation and rollback history)",
+        "tags": [
+          "v2 · Rules"
+        ]
+      }
+    },
+    "/api/v2/rules/validate": {
+      "post": {
+        "description": "Same checks as create/update: `{ valid, fieldErrors, conditionCount }`; nothing is stored.",
+        "operationId": "RulesV2Controller_validate_v2",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleV2ValidateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Validate a definition without storing it (live builder feedback)",
+        "tags": [
+          "v2 · Rules"
+        ]
+      }
+    },
+    "/api/v2/rules/{id}/simulate": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Events of the caller's scope overlapping [from, to) (≤ 92 days, latest 5000); before/after counts per set field, flag counts, sample diffs. 409 NO_DRAFT when there is nothing to simulate; 422 INVALID_RANGE / INVALID_REFERENCE.",
+        "operationId": "RulesV2Controller_simulate_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleV2SimulateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Simulate the draft (or a version) over stored events; recorded as a rule run",
+        "tags": [
+          "v2 · Rules"
+        ]
+      }
+    },
+    "/api/v2/rules/{id}/activate": {
+      "post": {
+        "description": "Requires `Idempotency-Key` and `If-Match`. Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). The draft author cannot activate it (403 SEPARATION_OF_DUTIES); 409 NO_DRAFT / RULE_RETIRED. Earlier versions are kept unchanged.",
+        "operationId": "RulesV2Controller_activate_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleV2ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activate the draft as the next version",
+        "tags": [
+          "v2 · Rules"
+        ]
+      }
+    },
+    "/api/v2/rules/{id}/rollback": {
+      "post": {
+        "description": "Requires `Idempotency-Key` and `If-Match`. Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 INVALID_REFERENCE for an unknown version; 409 INVALID_TRANSITION when it is already in force, RULE_RETIRED when retired.",
+        "operationId": "RulesV2Controller_rollback_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleV2RollbackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Restore an earlier version as the next version",
+        "tags": [
+          "v2 · Rules"
+        ]
+      }
+    },
+    "/api/v2/rules/{id}/retire": {
+      "post": {
+        "description": "Requires `Idempotency-Key` and `If-Match`. Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 409 RULE_RETIRED.",
+        "operationId": "RulesV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a rule (no longer applied; versions and runs stay)",
+        "tags": [
+          "v2 · Rules"
+        ]
+      }
+    },
     "/api/v2/units": {
       "get": {
         "description": "Tenant from the identity; a caller with unit-level grants sees only those units (`scope.unitIds`).",
@@ -12386,6 +13071,152 @@
         },
         "required": [
           "enabled"
+        ]
+      },
+      "RuleV2ValidateDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "coding_default",
+              "status_derivation",
+              "rca_trigger_hint",
+              "validation"
+            ]
+          },
+          "definition": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Rule definition (contracts/rules/rule-definition.schema.json): `{ when: { all?, any? }, then: [...] }`. Validated on the server; 422 RULE_INVALID with `fieldErrors` paths such as `definition.when.all.0.op`."
+          }
+        },
+        "required": [
+          "kind",
+          "definition"
+        ]
+      },
+      "RuleV2CreateDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "priority": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000,
+            "default": 100,
+            "description": "Evaluation order among active rules of one kind (lower first)"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "coding_default",
+              "status_derivation",
+              "rca_trigger_hint",
+              "validation"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Unique per tenant"
+          },
+          "definition": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Rule definition (contracts/rules/rule-definition.schema.json): `{ when: { all?, any? }, then: [...] }`. Validated on the server; 422 RULE_INVALID with `fieldErrors` paths such as `definition.when.all.0.op`."
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "definition"
+        ]
+      },
+      "RuleV2ChangeDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "priority": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000,
+            "default": 100,
+            "description": "Evaluation order among active rules of one kind (lower first)"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "definition": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Rule definition (contracts/rules/rule-definition.schema.json): `{ when: { all?, any? }, then: [...] }`. Validated on the server; 422 RULE_INVALID with `fieldErrors` paths such as `definition.when.all.0.op`."
+          }
+        }
+      },
+      "RuleV2SimulateDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Exclusive; at most 92 days after `from`"
+          },
+          "unitIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Version to simulate; omitted = the draft, else the version in force"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ]
+      },
+      "RuleV2ReasonDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "RuleV2RollbackDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "toVersion": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Version whose definition becomes the next version"
+          }
+        },
+        "required": [
+          "toVersion"
         ]
       }
     }

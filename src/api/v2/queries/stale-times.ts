@@ -30,4 +30,7 @@ export const STALE_TIME: Readonly<Record<V2Resource, number>> = {
   'source-mappings': 30_000,
   'attribute-mappings': 30_000,
   signals: 30_000,
+  // codes and admin rules (plan 3.8): configuration, refreshed by the writes that change it
+  'code-mapping-rules': 30_000,
+  rules: 30_000,
 };

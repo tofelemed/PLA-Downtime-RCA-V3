@@ -11,6 +11,7 @@ import {
   SCHEDULE_CLASSES,
 } from '../domain/events/event-classification';
 import { ImpactCode } from '../impact-code/impact-code.entity';
+import { assertTenantWideWriter } from '../profiles/profile-scope';
 import { ReasonCode } from '../reason-code/reason-code.entity';
 import { CursorCodec, invalidCursor } from '../v2/common/cursor-codec';
 import { listResponse, ListResponse } from '../v2/common/response';
@@ -62,6 +63,7 @@ export class CodeMappingRuleService {
     input: CodeMappingRuleInput,
   ): Promise<CodeMappingRuleView> {
     const tenantId = requireTenantId(context);
+    assertTenantWideWriter(context, tenantId);
     await this.assertReferences(tenantId, input);
     const at = input.effectiveFrom ? new Date(input.effectiveFrom) : new Date();
     const saved = await this.manager.transaction(async (manager) => {

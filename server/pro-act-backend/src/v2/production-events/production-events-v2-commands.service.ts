@@ -18,7 +18,10 @@ import {
   OeeComponent,
   ScheduleClass,
 } from '../../domain/events/event-classification';
-import { applyCodeDefaults } from '../../code-library/classification-basis';
+import {
+  applyCodeDefaults,
+  CodeDrivenAxis,
+} from '../../code-library/classification-basis';
 import { CodeDefaultsService } from '../../code-library/code-defaults.service';
 import {
   EventWriteInput,
@@ -30,6 +33,7 @@ import { ProductionEvent } from '../../production-event/production-event.entity'
 import { ProductionEventService } from '../../production-event/production-event.service';
 import { EventRevisionService } from '../../production-event/revisions/event-revision.service';
 import { actorFromContext } from '../../production-event/revisions/revision-actor';
+import { RuleClassificationService } from '../../rules/rule-classification.service';
 import { EventReferencesValidator } from './event-references.validator';
 import {
   CreateProductionEventV2Dto,
@@ -50,6 +54,7 @@ export class ProductionEventsV2CommandService {
     private readonly references: EventReferencesValidator,
     private readonly revisions: EventRevisionService,
     private readonly codeDefaults: CodeDefaultsService,
+    private readonly ruleDefaults: RuleClassificationService,
   ) {}
 
   /** Creates a manual event in the caller's tenant; returns its id. */
@@ -60,10 +65,10 @@ export class ProductionEventsV2CommandService {
     const tenantId = requireTenantId(context);
     await this.references.assertUnitOwned(tenantId, dto.unitId);
     await this.references.assertOwned(tenantId, dto.unitId, dto);
-    const coded = await this.withCodeDefaults(
+    const coded = await this.withRuleDefaults(
       tenantId,
       dto,
-      new Date(dto.startTime),
+      await this.withCodeDefaults(tenantId, dto, new Date(dto.startTime)),
     );
     const fields = prepareCreate({
       ...writeInput(coded.dto),
@@ -173,6 +178,65 @@ export class ProductionEventsV2CommandService {
           dto.oeeComponent ?? (values.oeeComponent as OeeComponent | undefined),
       },
       columns,
+    };
+  }
+
+  /**
+   * Plan 3.8: active `coding_default` rules fill the axes the user and the reason code left open
+   * (schedule class, OEE component, impact code); each filled axis records its rule version.
+   */
+  private async withRuleDefaults(
+    tenantId: string,
+    dto: CreateProductionEventV2Dto,
+    coded: {
+      dto: CreateProductionEventV2Dto;
+      columns: Partial<ProductionEvent>;
+    },
+  ): Promise<{
+    dto: CreateProductionEventV2Dto;
+    columns: Partial<ProductionEvent>;
+  }> {
+    const draft = prepareCreate({
+      ...writeInput(coded.dto),
+      eventType: dto.eventType,
+      source: MANUAL_SOURCE,
+    });
+    const open = new Set<CodeDrivenAxis>();
+    if (coded.dto.scheduleClass === undefined) open.add('scheduleClass');
+    if (coded.dto.oeeComponent === undefined) open.add('oeeComponent');
+    if (!coded.columns.impactCodeId) open.add('impactCodeId');
+    const ruled = await this.ruleDefaults.fillOpenAxes(
+      tenantId,
+      {
+        ...draft,
+        eventType: dto.eventType,
+        source: MANUAL_SOURCE,
+        reasonCodeId: dto.reasonCodeId,
+        impactCodeId: coded.columns.impactCodeId,
+        unitId: dto.unitId,
+        assetId: dto.assetId,
+      },
+      open,
+    );
+    const { scheduleClass, oeeComponent, impactCodeId } = ruled.values;
+    if (!scheduleClass && !oeeComponent && !impactCodeId) return coded;
+    return {
+      dto: {
+        ...coded.dto,
+        scheduleClass:
+          (scheduleClass as ScheduleClass | undefined) ??
+          coded.dto.scheduleClass,
+        oeeComponent:
+          (oeeComponent as OeeComponent | undefined) ?? coded.dto.oeeComponent,
+      },
+      columns: {
+        ...coded.columns,
+        ...(impactCodeId ? { impactCodeId } : {}),
+        classificationBasis: {
+          ...(coded.columns.classificationBasis ?? {}),
+          ...ruled.basis,
+        },
+      },
     };
   }
 }

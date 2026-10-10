@@ -33,7 +33,7 @@ import { TabVisibilitySettings as TabVisibilitySettingsDialog } from '@/componen
 import { useEventHubLiveRefresh } from '@/features/event-hub/use-event-hub-live-refresh';
 
 // --- Status Automation Config ---
-export const defaultStatusAutomationRules = [
+const defaultStatusAutomationRules = [
   {
     id: 'apm-completed',
     eventType: 'APM',
@@ -64,22 +64,13 @@ export const defaultStatusAutomationRules = [
   }
 ];
 
+/**
+ * v1 status derivation uses only the built-in rules above (plan 3.8: user rules are no longer read from
+ * localStorage or compiled in the browser — declarative rules live on the server, v2 Event Hub shows
+ * server-derived states).
+ */
 function useStatusAutomationConfig() {
-  // Load from localStorage if present
-  const [rules, setRules] = useState(() => {
-    const saved = localStorage.getItem('statusAutomationRules');
-    return saved ? JSON.parse(saved) : defaultStatusAutomationRules;
-  });
-  // Listen for changes in localStorage (e.g., from AdminPanel)
-  useEffect(() => {
-    const handler = () => {
-      const saved = localStorage.getItem('statusAutomationRules');
-      if (saved) setRules(JSON.parse(saved));
-    };
-    window.addEventListener('storage', handler);
-    return () => window.removeEventListener('storage', handler);
-  }, []);
-  return { rules, setRules };
+  return { rules: defaultStatusAutomationRules };
 }
 
 export const EventHub: React.FC = () => {
@@ -194,7 +185,7 @@ export const EventHub: React.FC = () => {
     }, 100); // Small delay to let form render
   }
 
-  const { rules, setRules } = useStatusAutomationConfig();
+  const { rules } = useStatusAutomationConfig();
 
   // Helper: Determine status based on event type and fields, using config
   function getAutomatedStatus(event: any): string {

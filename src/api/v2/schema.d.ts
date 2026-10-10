@@ -301,6 +301,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reason-codes/{id}/mapping-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Default mapping preview of a reason code
+         * @description The defaults in force now (mapping rule version, else the code columns) and how the events coded with the code in the last `days` days (caller scope) are classified today, with the count that would differ.
+         */
+        get: operations["ReasonCodesV2Controller_mappingPreview_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/reason-codes": {
         parameters: {
             query?: never;
@@ -316,7 +336,7 @@ export interface paths {
         put?: never;
         /**
          * Create a code (version 1)
-         * @description Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.
          */
         post: operations["ReasonCodesV2Controller_create_v2"];
         delete?: never;
@@ -336,7 +356,7 @@ export interface paths {
         get: operations["ReasonCodesV2Controller_get_v2"];
         /**
          * Change a code: records the next version
-         * @description Requires `If-Match: "<version>"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.
+         * @description Requires `If-Match: "<version>"` (428/412) and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.
          */
         put: operations["ReasonCodesV2Controller_change_v2"];
         post?: never;
@@ -363,6 +383,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reason-codes/{id}/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What points at a code now (retire impact)
+         * @description Active child codes, events coded with it and mapping rules naming it — the counts a retire answers with in 409 CODE_HAS_CHILDREN.
+         */
+        get: operations["ReasonCodesV2Controller_references_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/reason-codes/{id}/retire": {
         parameters: {
             query?: never;
@@ -374,7 +414,7 @@ export interface paths {
         put?: never;
         /**
          * Retire a code (end of validity; history and references stay)
-         * @description Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.
          */
         post: operations["ReasonCodesV2Controller_retire_v2"];
         delete?: never;
@@ -398,7 +438,7 @@ export interface paths {
         put?: never;
         /**
          * Create a code (version 1)
-         * @description Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.
          */
         post: operations["ImpactCodesV2Controller_create_v2"];
         delete?: never;
@@ -418,7 +458,7 @@ export interface paths {
         get: operations["ImpactCodesV2Controller_get_v2"];
         /**
          * Change a code: records the next version
-         * @description Requires `If-Match: "<version>"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.
+         * @description Requires `If-Match: "<version>"` (428/412) and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.
          */
         put: operations["ImpactCodesV2Controller_change_v2"];
         post?: never;
@@ -445,6 +485,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/impact-codes/{id}/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What points at a code now (retire impact)
+         * @description Active child codes, events coded with it and mapping rules naming it — the counts a retire answers with in 409 CODE_HAS_CHILDREN.
+         */
+        get: operations["ImpactCodesV2Controller_references_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/impact-codes/{id}/retire": {
         parameters: {
             query?: never;
@@ -456,7 +516,7 @@ export interface paths {
         put?: never;
         /**
          * Retire a code (end of validity; history and references stay)
-         * @description Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.
          */
         post: operations["ImpactCodesV2Controller_retire_v2"];
         delete?: never;
@@ -480,7 +540,7 @@ export interface paths {
         put?: never;
         /**
          * Create a code (version 1)
-         * @description Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.
          */
         post: operations["OeeCodesV2Controller_create_v2"];
         delete?: never;
@@ -500,7 +560,7 @@ export interface paths {
         get: operations["OeeCodesV2Controller_get_v2"];
         /**
          * Change a code: records the next version
-         * @description Requires `If-Match: "<version>"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.
+         * @description Requires `If-Match: "<version>"` (428/412) and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.
          */
         put: operations["OeeCodesV2Controller_change_v2"];
         post?: never;
@@ -527,6 +587,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/oee-codes/{id}/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What points at a code now (retire impact)
+         * @description Active child codes, events coded with it and mapping rules naming it — the counts a retire answers with in 409 CODE_HAS_CHILDREN.
+         */
+        get: operations["OeeCodesV2Controller_references_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/oee-codes/{id}/retire": {
         parameters: {
             query?: never;
@@ -538,7 +618,7 @@ export interface paths {
         put?: never;
         /**
          * Retire a code (end of validity; history and references stay)
-         * @description Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.
          */
         post: operations["OeeCodesV2Controller_retire_v2"];
         delete?: never;
@@ -562,7 +642,7 @@ export interface paths {
         put?: never;
         /**
          * Create a code (version 1)
-         * @description Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.
          */
         post: operations["FailureCodeGroupsV2Controller_create_v2"];
         delete?: never;
@@ -582,7 +662,7 @@ export interface paths {
         get: operations["FailureCodeGroupsV2Controller_get_v2"];
         /**
          * Change a code: records the next version
-         * @description Requires `If-Match: "<version>"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.
+         * @description Requires `If-Match: "<version>"` (428/412) and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.
          */
         put: operations["FailureCodeGroupsV2Controller_change_v2"];
         post?: never;
@@ -609,6 +689,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/failure-code-groups/{id}/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What points at a code now (retire impact)
+         * @description Active child codes, events coded with it and mapping rules naming it — the counts a retire answers with in 409 CODE_HAS_CHILDREN.
+         */
+        get: operations["FailureCodeGroupsV2Controller_references_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/failure-code-groups/{id}/retire": {
         parameters: {
             query?: never;
@@ -620,7 +720,7 @@ export interface paths {
         put?: never;
         /**
          * Retire a code (end of validity; history and references stay)
-         * @description Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.
          */
         post: operations["FailureCodeGroupsV2Controller_retire_v2"];
         delete?: never;
@@ -644,7 +744,7 @@ export interface paths {
         put?: never;
         /**
          * Create a code (version 1)
-         * @description Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of another library.
          */
         post: operations["LossCategoryDefsV2Controller_create_v2"];
         delete?: never;
@@ -664,7 +764,7 @@ export interface paths {
         get: operations["LossCategoryDefsV2Controller_get_v2"];
         /**
          * Change a code: records the next version
-         * @description Requires `If-Match: "<version>"` (428/412). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.
+         * @description Requires `If-Match: "<version>"` (428/412) and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). A new parent re-paths the subtree; a parent inside the code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.
          */
         put: operations["LossCategoryDefsV2Controller_change_v2"];
         post?: never;
@@ -691,6 +791,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/loss-category-defs/{id}/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What points at a code now (retire impact)
+         * @description Active child codes, events coded with it and mapping rules naming it — the counts a retire answers with in 409 CODE_HAS_CHILDREN.
+         */
+        get: operations["LossCategoryDefsV2Controller_references_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/loss-category-defs/{id}/retire": {
         parameters: {
             query?: never;
@@ -702,7 +822,7 @@ export interface paths {
         put?: never;
         /**
          * Retire a code (end of validity; history and references stay)
-         * @description Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_HAS_CHILDREN with `details.references` (activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.
          */
         post: operations["LossCategoryDefsV2Controller_retire_v2"];
         delete?: never;
@@ -2704,6 +2824,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/rules/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rule grammar: allowlisted fields, operators, actions per kind and limits */
+        get: operations["RulesV2Controller_schema_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List rules of the tenant (newest first) */
+        get: operations["RulesV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a rule as a draft
+         * @description Requires `Idempotency-Key`. Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 RULE_INVALID / INVALID_REFERENCE; 409 RULE_EXISTS.
+         */
+        post: operations["RulesV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one rule (ETag = rowVersion); foreign ids are 404 */
+        get: operations["RulesV2Controller_get_v2"];
+        /**
+         * Change the draft and descriptive fields (the version in force is unchanged)
+         * @description Requires `If-Match` (428/412). Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 409 RULE_RETIRED; 422 RULE_INVALID.
+         */
+        put: operations["RulesV2Controller_change_v2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rules/{id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Approved versions of a rule, newest first (activation and rollback history) */
+        get: operations["RulesV2Controller_versions_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rules/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate a definition without storing it (live builder feedback)
+         * @description Same checks as create/update: `{ valid, fieldErrors, conditionCount }`; nothing is stored.
+         */
+        post: operations["RulesV2Controller_validate_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rules/{id}/simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Simulate the draft (or a version) over stored events; recorded as a rule run
+         * @description Requires `Idempotency-Key`. Events of the caller's scope overlapping [from, to) (≤ 92 days, latest 5000); before/after counts per set field, flag counts, sample diffs. 409 NO_DRAFT when there is nothing to simulate; 422 INVALID_RANGE / INVALID_REFERENCE.
+         */
+        post: operations["RulesV2Controller_simulate_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rules/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate the draft as the next version
+         * @description Requires `Idempotency-Key` and `If-Match`. Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). The draft author cannot activate it (403 SEPARATION_OF_DUTIES); 409 NO_DRAFT / RULE_RETIRED. Earlier versions are kept unchanged.
+         */
+        post: operations["RulesV2Controller_activate_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rules/{id}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore an earlier version as the next version
+         * @description Requires `Idempotency-Key` and `If-Match`. Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 INVALID_REFERENCE for an unknown version; 409 INVALID_TRANSITION when it is already in force, RULE_RETIRED when retired.
+         */
+        post: operations["RulesV2Controller_rollback_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rules/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire a rule (no longer applied; versions and runs stay)
+         * @description Requires `Idempotency-Key` and `If-Match`. Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 409 RULE_RETIRED.
+         */
+        post: operations["RulesV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/units": {
         parameters: {
             query?: never;
@@ -4100,6 +4396,63 @@ export interface components {
             /** @description New value of the flag for the whole tenant */
             enabled: boolean;
         };
+        RuleV2ValidateDto: {
+            /** @enum {string} */
+            kind: "coding_default" | "status_derivation" | "rca_trigger_hint" | "validation";
+            /** @description Rule definition (contracts/rules/rule-definition.schema.json): `{ when: { all?, any? }, then: [...] }`. Validated on the server; 422 RULE_INVALID with `fieldErrors` paths such as `definition.when.all.0.op`. */
+            definition: {
+                [key: string]: unknown;
+            };
+        };
+        RuleV2CreateDto: {
+            description?: Record<string, never> | null;
+            /**
+             * @description Evaluation order among active rules of one kind (lower first)
+             * @default 100
+             */
+            priority: number;
+            /** @enum {string} */
+            kind: "coding_default" | "status_derivation" | "rca_trigger_hint" | "validation";
+            /** @description Unique per tenant */
+            name: string;
+            /** @description Rule definition (contracts/rules/rule-definition.schema.json): `{ when: { all?, any? }, then: [...] }`. Validated on the server; 422 RULE_INVALID with `fieldErrors` paths such as `definition.when.all.0.op`. */
+            definition: {
+                [key: string]: unknown;
+            };
+        };
+        RuleV2ChangeDto: {
+            description?: Record<string, never> | null;
+            /**
+             * @description Evaluation order among active rules of one kind (lower first)
+             * @default 100
+             */
+            priority: number;
+            name?: string;
+            /** @description Rule definition (contracts/rules/rule-definition.schema.json): `{ when: { all?, any? }, then: [...] }`. Validated on the server; 422 RULE_INVALID with `fieldErrors` paths such as `definition.when.all.0.op`. */
+            definition?: {
+                [key: string]: unknown;
+            };
+        };
+        RuleV2SimulateDto: {
+            /** Format: date-time */
+            from: string;
+            /**
+             * Format: date-time
+             * @description Exclusive; at most 92 days after `from`
+             */
+            to: string;
+            unitIds?: string[];
+            /** @description Version to simulate; omitted = the draft, else the version in force */
+            version?: number;
+        };
+        RuleV2ReasonDto: {
+            reason?: string;
+        };
+        RuleV2RollbackDto: {
+            reason?: string;
+            /** @description Version whose definition becomes the next version */
+            toVersion: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -4576,6 +4929,27 @@ export interface operations {
             };
         };
     };
+    ReasonCodesV2Controller_mappingPreview_v2: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ReasonCodesV2Controller_list_v2: {
         parameters: {
             query?: {
@@ -4681,6 +5055,25 @@ export interface operations {
         };
     };
     ReasonCodesV2Controller_versions_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReasonCodesV2Controller_references_v2: {
         parameters: {
             query?: never;
             header?: never;
@@ -4847,6 +5240,25 @@ export interface operations {
             };
         };
     };
+    ImpactCodesV2Controller_references_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ImpactCodesV2Controller_retire_v2: {
         parameters: {
             query?: never;
@@ -4977,6 +5389,25 @@ export interface operations {
         };
     };
     OeeCodesV2Controller_versions_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OeeCodesV2Controller_references_v2: {
         parameters: {
             query?: never;
             header?: never;
@@ -5143,6 +5574,25 @@ export interface operations {
             };
         };
     };
+    FailureCodeGroupsV2Controller_references_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     FailureCodeGroupsV2Controller_retire_v2: {
         parameters: {
             query?: never;
@@ -5273,6 +5723,25 @@ export interface operations {
         };
     };
     LossCategoryDefsV2Controller_versions_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LossCategoryDefsV2Controller_references_v2: {
         parameters: {
             query?: never;
             header?: never;
@@ -8230,6 +8699,258 @@ export interface operations {
                 "application/json": components["schemas"]["FeatureFlagSetDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RulesV2Controller_schema_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RulesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                kind?: "coding_default" | "status_derivation" | "rca_trigger_hint" | "validation";
+                state?: "draft" | "active" | "retired";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RulesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleV2CreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RulesV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RulesV2Controller_change_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleV2ChangeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RulesV2Controller_versions_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RulesV2Controller_validate_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleV2ValidateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RulesV2Controller_simulate_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleV2SimulateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RulesV2Controller_activate_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleV2ReasonDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RulesV2Controller_rollback_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleV2RollbackDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RulesV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

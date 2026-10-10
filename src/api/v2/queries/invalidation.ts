@@ -30,6 +30,9 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   source_mapping: ['source-mappings', 'ingestion-exceptions'],
   attribute_mapping: ['attribute-mappings'],
   signal: ['signals'],
+  code: ['codes', 'code-mapping-rules'],
+  code_mapping_rule: ['code-mapping-rules', 'codes'],
+  rule: ['rules'],
 };
 
 /** Resources to refresh for an entity type; an unknown type refreshes the whole tenant (safe default). */

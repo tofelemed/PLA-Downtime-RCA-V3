@@ -1,0 +1,9 @@
+{
+  "when": {
+    "all": [
+      { "field": "physicalType", "op": "eq", "value": "downtime" },
+      { "field": "durationSeconds", "op": "gte", "value": 3600 }
+    ]
+  },
+  "then": [{ "set": "scheduleClass", "value": "unplanned" }]
+}

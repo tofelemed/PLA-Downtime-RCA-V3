@@ -14,6 +14,7 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import { CodeLibraryKind } from '../../code-library/code-library-kind';
 import { CodeLibraryCommandService } from '../../code-library/code-library-commands.service';
 import { CodeLibraryService } from '../../code-library/code-library.service';
+import { CodeReferences } from '../../code-library/code-references';
 import { CodeSnapshot } from '../../code-library/code-version.entity';
 import { CodeV2View } from '../../code-library/code-view';
 import { ETagInterceptor } from '../../common/concurrency/etag.interceptor';
@@ -101,6 +102,20 @@ export abstract class CodeLibraryV2Controller {
     }));
   }
 
+  @Get(':id/references')
+  @ApiOperation({
+    summary: 'What points at a code now (retire impact)',
+    description:
+      'Active child codes, events coded with it and mapping rules naming it — the counts a retire ' +
+      'answers with in 409 CODE_HAS_CHILDREN.',
+  })
+  references(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<CodeReferences> {
+    return this.reads.references(ctx, this.library, id);
+  }
+
   @Post()
   @Idempotent()
   @Roles(...CODE_WRITERS)
@@ -108,7 +123,8 @@ export abstract class CodeLibraryV2Controller {
   @ApiOperation({
     summary: 'Create a code (version 1)',
     description:
-      'Requires `Idempotency-Key`. 409 CODE_EXISTS for a duplicate code in the tenant; 422 INVALID_REFERENCE ' +
+      'Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_EXISTS for a ' +
+      'duplicate code in the tenant; 422 INVALID_REFERENCE ' +
       'for a parent outside the library/tenant or a retired parent; 422 FIELD_NOT_ALLOWED for fields of ' +
       'another library.',
   })
@@ -126,7 +142,8 @@ export abstract class CodeLibraryV2Controller {
   @ApiOperation({
     summary: 'Change a code: records the next version',
     description:
-      'Requires `If-Match: "<version>"` (428/412). A new parent re-paths the subtree; a parent inside the ' +
+      'Requires `If-Match: "<version>"` (428/412) and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). A new ' +
+      'parent re-paths the subtree; a parent inside the ' +
       "code's own subtree is 422 CODE_CYCLE. Retired codes are 409 CODE_RETIRED.",
   })
   @ApiHeader({ name: 'If-Match', required: true })
@@ -151,7 +168,8 @@ export abstract class CodeLibraryV2Controller {
   @ApiOperation({
     summary: 'Retire a code (end of validity; history and references stay)',
     description:
-      'Requires `Idempotency-Key`. 409 CODE_HAS_CHILDREN with `details.references` ' +
+      'Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 CODE_HAS_CHILDREN ' +
+      'with `details.references` ' +
       '(activeChildren, events, mappingRules) while active child codes exist; 409 CODE_RETIRED when already retired.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })

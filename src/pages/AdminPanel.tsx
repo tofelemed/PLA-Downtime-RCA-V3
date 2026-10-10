@@ -14,12 +14,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, Factory, Wrench, Users, Plus, Edit, Trash2, Settings, Palette } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { defaultStatusAutomationRules } from './EventHub'; // Reuse the config
-import { Switch } from '@/components/ui/switch';
 import DashboardConfiguration from '@/components/DashboardConfiguration';
 import AttributeManagementPanel from '@/components/AttributeManagementPanel';
 import CustomAttributeForm from '@/components/CustomAttributeForm';
 import BrandingSettings from '@/components/BrandingSettings';
+import { StatusRulesMoved } from '@/features/codes-admin/status-rules-moved';
 
 interface HierarchyFormData {
   name: string;
@@ -53,30 +52,6 @@ export const AdminPanel: React.FC = () => {
     organizationId: '',
     tenantId: '',
   });
-
-  // --- Status Automation Rules State ---
-  const [automationRules, setAutomationRules] = useState(() => {
-    const saved = localStorage.getItem('statusAutomationRules');
-    return saved ? JSON.parse(saved) : defaultStatusAutomationRules;
-  });
-  const [editingRule, setEditingRule] = useState<any | null>(null);
-  const [isRuleDialogOpen, setIsRuleDialogOpen] = useState(false);
-  const [ruleMode, setRuleMode] = useState<'simple' | 'advanced'>('simple');
-  const [simpleRule, setSimpleRule] = useState({
-    eventType: '*',
-    field: '',
-    operator: 'isset',
-    value: '',
-    status: '',
-    description: '',
-  });
-
-  // Save rules to localStorage
-  const saveRules = (rules: any[]) => {
-    setAutomationRules(rules);
-    localStorage.setItem('statusAutomationRules', JSON.stringify(rules));
-    toast({ title: 'Saved', description: 'Automation rules updated.' });
-  };
 
   // Only show to SuperAdmin or TenantAdmin
   const canEditRules = session?.user?.role === 'SuperAdmin' || session?.user?.role === 'TenantAdmin';
@@ -358,24 +333,6 @@ export const AdminPanel: React.FC = () => {
     );
   }
 
-  const eventTypes = ['*', 'ProductionLoss', 'IOW', 'SOL', 'APM', 'FailureWO'];
-  const fields = ['recommendedAction', 'failureMode', 'endTime', 'rcaId', 'status'];
-  const operators = [
-    { label: 'is set', value: 'isset' },
-    { label: 'is not set', value: 'notset' },
-    { label: 'equals', value: 'eq' },
-    { label: 'not equals', value: 'neq' },
-  ];
-
-  const statusOptionsByType: Record<string, string[]> = {
-    '*': ['Open', 'Coded', 'RCA Required', 'Closed', 'Investigating', 'In Progress', 'Completed', 'Cancelled'],
-    'ProductionLoss': ['Open', 'Coded', 'RCA Required', 'Closed', 'Investigating', 'In Progress', 'Completed', 'Cancelled'],
-    'IOW': ['Open', 'Investigating', 'Closed', 'Completed', 'Cancelled'],
-    'SOL': ['Open', 'Investigating', 'Closed', 'Completed', 'Cancelled'],
-    'APM': ['Open', 'Completed', 'Closed', 'Cancelled'],
-    'FailureWO': ['Open', 'In Progress', 'Completed', 'Closed', 'Cancelled'],
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -592,171 +549,7 @@ export const AdminPanel: React.FC = () => {
 
         {canEditRules && (
           <TabsContent value="automation">
-            <Card>
-              <CardHeader>
-                <CardTitle>Status Automation Rules</CardTitle>
-                <CardDescription>Configure event status automation. Changes are saved locally for now.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4">
-                  <Button onClick={() => { setEditingRule({ eventType: '', status: '', description: '', condition: '' }); setIsRuleDialogOpen(true); }}>
-                    Add Rule
-                  </Button>
-                </div>
-                <table className="min-w-full text-sm border">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="p-2">Event Type</th>
-                      <th className="p-2">Status</th>
-                      <th className="p-2">Description</th>
-                      <th className="p-2">Condition (JS)</th>
-                      <th className="p-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {automationRules.map((rule, idx) => (
-                      <tr key={rule.id || idx} className="border-t">
-                        <td className="p-2">{rule.eventType}</td>
-                        <td className="p-2">{rule.status}</td>
-                        <td className="p-2">{rule.description}</td>
-                        <td className="p-2 font-mono text-xs">{rule.condition.toString()}</td>
-                        <td className="p-2">
-                          <Button size="sm" variant="outline" onClick={() => { setEditingRule(rule); setIsRuleDialogOpen(true); }}>Edit</Button>
-                          <Button size="sm" variant="destructive" onClick={() => saveRules(automationRules.filter((_, i) => i !== idx))}>Delete</Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
-            {/* Rule Edit Dialog */}
-            <Dialog open={isRuleDialogOpen} onOpenChange={setIsRuleDialogOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingRule?.id ? 'Edit Rule' : 'Add Rule'}</DialogTitle>
-                </DialogHeader>
-                <div className="flex items-center gap-4 mb-2">
-                  <span className="font-medium">Simple</span>
-                  <Switch checked={ruleMode === 'advanced'} onCheckedChange={v => setRuleMode(v ? 'advanced' : 'simple')} />
-                  <span className="font-medium">Advanced</span>
-                </div>
-                {ruleMode === 'simple' ? (
-                  <div className="space-y-2">
-                    <Label>Event Type</Label>
-                    <Select value={simpleRule.eventType} onValueChange={v => setSimpleRule(r => ({ ...r, eventType: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select event type" /></SelectTrigger>
-                      <SelectContent>
-                        {eventTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Label>Field</Label>
-                    <Select value={simpleRule.field} onValueChange={v => setSimpleRule(r => ({ ...r, field: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select field" /></SelectTrigger>
-                      <SelectContent>
-                        {fields.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Label>Operator</Label>
-                    <Select value={simpleRule.operator} onValueChange={v => setSimpleRule(r => ({ ...r, operator: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select operator" /></SelectTrigger>
-                      <SelectContent>
-                        {operators.map(op => <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    {(simpleRule.operator === 'eq' || simpleRule.operator === 'neq') && (
-                      <>
-                        <Label>Value</Label>
-                        <Input value={simpleRule.value} onChange={e => setSimpleRule(r => ({ ...r, value: e.target.value }))} placeholder="Enter value (e.g. Completed)" />
-                      </>
-                    )}
-                    <Label>Status to Set</Label>
-                    <Select value={simpleRule.status} onValueChange={v => setSimpleRule(r => ({ ...r, status: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-                      <SelectContent>
-                        {(statusOptionsByType[simpleRule.eventType] || statusOptionsByType['*']).map(status => (
-                          <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Label>Description</Label>
-                    <Input value={simpleRule.description} onChange={e => setSimpleRule(r => ({ ...r, description: e.target.value }))} placeholder="Describe this rule in plain English" />
-                    {/* Preview */}
-                    <div className="bg-gray-50 p-2 rounded text-xs mt-2">
-                      <b>Preview:</b> If <b>{simpleRule.eventType}</b> event's <b>{simpleRule.field}</b> {operators.find(o => o.value === simpleRule.operator)?.label} {simpleRule.value && (simpleRule.operator === 'eq' || simpleRule.operator === 'neq') ? <b>{simpleRule.value}</b> : null}, set status to <b>{simpleRule.status}</b>.<br />
-                      <span className="text-gray-500">JS: <code>{(() => {
-                        if (!simpleRule.field) return '';
-                        if (simpleRule.operator === 'isset') return `return !!event.${simpleRule.field};`;
-                        if (simpleRule.operator === 'notset') return `return !event.${simpleRule.field};`;
-                        if (simpleRule.operator === 'eq') return `return event.${simpleRule.field} === '${simpleRule.value}';`;
-                        if (simpleRule.operator === 'neq') return `return event.${simpleRule.field} !== '${simpleRule.value}';`;
-                        return '';
-                      })()}</code></span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label>Event Type</Label>
-                    <Input value={editingRule?.eventType || ''} onChange={e => setEditingRule(r => ({ ...r, eventType: e.target.value }))} placeholder="APM, FailureWO, *" />
-                    <Label>Status</Label>
-                    <Input value={editingRule?.status || ''} onChange={e => setEditingRule(r => ({ ...r, status: e.target.value }))} placeholder="Completed, Coded, etc." />
-                    <Label>Description</Label>
-                    <Textarea value={editingRule?.description || ''} onChange={e => setEditingRule(r => ({ ...r, description: e.target.value }))} />
-                    <Label>Condition (JS, function body, use 'event')</Label>
-                    <Textarea value={editingRule?.conditionBody || ''} onChange={e => setEditingRule(r => ({ ...r, conditionBody: e.target.value }))} placeholder="return !!event.recommendedAction;" />
-                    <div className="text-xs text-gray-500 mt-1">Advanced users: write a JS function body, e.g. <code>return !!event.recommendedAction;</code></div>
-                  </div>
-                )}
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="outline" onClick={() => setIsRuleDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={() => {
-                    let newRule;
-                    if (ruleMode === 'simple') {
-                      // Generate JS condition
-                      let conditionBody = '';
-                      if (simpleRule.operator === 'isset') conditionBody = `return !!event.${simpleRule.field};`;
-                      if (simpleRule.operator === 'notset') conditionBody = `return !event.${simpleRule.field};`;
-                      if (simpleRule.operator === 'eq') conditionBody = `return event.${simpleRule.field} === '${simpleRule.value}';`;
-                      if (simpleRule.operator === 'neq') conditionBody = `return event.${simpleRule.field} !== '${simpleRule.value}';`;
-                      let condition;
-                      try {
-                        // eslint-disable-next-line no-new-func
-                        condition = new Function('event', conditionBody);
-                      } catch (e) {
-                        toast({ title: 'Error', description: 'Invalid generated JS condition.' });
-                        return;
-                      }
-                      newRule = {
-                        id: editingRule?.id || Math.random().toString(36).slice(2),
-                        eventType: simpleRule.eventType,
-                        status: simpleRule.status,
-                        description: simpleRule.description,
-                        condition,
-                        conditionBody,
-                      };
-                    } else {
-                      let condition;
-                      try {
-                        // eslint-disable-next-line no-new-func
-                        condition = new Function('event', editingRule.conditionBody);
-                      } catch (e) {
-                        toast({ title: 'Error', description: 'Invalid JS condition.' });
-                        return;
-                      }
-                      newRule = { ...editingRule, condition, id: editingRule.id || Math.random().toString(36).slice(2) };
-                    }
-                    let updated;
-                    if (editingRule?.id) {
-                      updated = automationRules.map(r => r.id === (editingRule.id || newRule.id) ? newRule : r);
-                    } else {
-                      updated = [...automationRules, newRule];
-                    }
-                    saveRules(updated);
-                    setIsRuleDialogOpen(false);
-                  }}>Save</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <StatusRulesMoved />
           </TabsContent>
         )}
       </Tabs>

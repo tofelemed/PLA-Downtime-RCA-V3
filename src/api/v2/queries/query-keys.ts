@@ -25,7 +25,9 @@ export type V2Resource =
   | 'replay-runs'
   | 'source-mappings'
   | 'attribute-mappings'
-  | 'signals';
+  | 'signals'
+  | 'code-mapping-rules'
+  | 'rules';
 
 export interface V2Window {
   from?: string;

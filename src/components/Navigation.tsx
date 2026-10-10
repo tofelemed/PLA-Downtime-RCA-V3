@@ -127,6 +127,14 @@ const navigationItems = [
     description: 'Configure master data',
   },
   {
+    name: 'Codes & Rules',
+    href: '/codes-admin',
+    icon: Code,
+    roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Analyst', 'Engineer'],
+    description: 'Versioned code libraries and declarative rules (v2)',
+    flag: 'v2.codesAdmin' as FeatureFlagKey,
+  },
+  {
     name: 'User Management',
     href: '/users',
     icon: Users,

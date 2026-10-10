@@ -105,6 +105,12 @@ import { FeatureFlagsService } from '../feature-flags/feature-flags.service';
 import { ExportsModule } from '../exports/exports.module';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
+import { CodeMappingPreviewService } from '../code-library/code-mapping-preview.service';
+import { RuleClassificationService } from '../rules/rule-classification.service';
+import { RuleCommandsService } from '../rules/rule-commands.service';
+import { RuleSimulationService } from '../rules/rule-simulation.service';
+import { RulesModule } from '../rules/rules.module';
+import { RulesService } from '../rules/rules.service';
 
 /** Stands in for the v1 event module (and its RCA/realtime graph): only the document is needed. */
 @Module({
@@ -123,12 +129,14 @@ class ProductionEventModuleStub {}
     { provide: CodeLibraryCommandService, useValue: {} },
     { provide: CodeMappingRuleService, useValue: {} },
     { provide: CodeDefaultsService, useValue: {} },
+    { provide: CodeMappingPreviewService, useValue: {} },
   ],
   exports: [
     CodeLibraryService,
     CodeLibraryCommandService,
     CodeMappingRuleService,
     CodeDefaultsService,
+    CodeMappingPreviewService,
   ],
 })
 class CodeLibraryModuleStub {}
@@ -322,6 +330,19 @@ class ValuationModuleStub {}
 })
 class FeatureFlagsModuleStub {}
 
+/** Stands in for the plan 3.8 declarative rules module. */
+const RULE_SERVICES = [
+  RulesService,
+  RuleCommandsService,
+  RuleSimulationService,
+  RuleClassificationService,
+];
+@Module({
+  providers: RULE_SERVICES.map((provide) => ({ provide, useValue: {} })),
+  exports: RULE_SERVICES,
+})
+class RulesModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -421,6 +442,8 @@ async function generate(): Promise<string> {
     .useModule(ValuationModuleStub)
     .overrideModule(FeatureFlagsModule)
     .useModule(FeatureFlagsModuleStub)
+    .overrideModule(RulesModule)
+    .useModule(RulesModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

@@ -58,6 +58,7 @@ const PROTECTED_ROUTES: Array<[path: string, element: ReactNode]> = [
   ["/admin", <Pages.AdminPanel />],
   ["/permissions", <Pages.PermissionsManagement />],
   ["/master-data", <Pages.MasterData />],
+  ["/codes-admin", <FlaggedRoute flag="v2.codesAdmin" v1={<Pages.CodesAdminOff />} v2={<Pages.CodesAdmin />} />],
   ["/events", <FlaggedRoute flag="v2.eventHub" v1={<Pages.EventHub />} v2={<Pages.EventHubV2 />} />],
   ["/downtime", <FlaggedRoute flag="v2.downtimeAnalysis" v1={<Pages.DowntimeAnalysisOff />} v2={<Pages.DowntimeAnalysis />} />],
   ["/planning", <FlaggedRoute flag="v2.plansProfilesCalendars" v1={<Pages.PlanningOff />} v2={<Pages.Planning />} />],

@@ -8,6 +8,7 @@ import {
   requireTenantId,
 } from '../common/context/request-context';
 import { ImpactCode } from '../impact-code/impact-code.entity';
+import { assertTenantWideWriter } from '../profiles/profile-scope';
 import { CodeLibraryKind } from './code-library-kind';
 import {
   CODE_LIBRARY_DESCRIPTORS,
@@ -365,9 +366,12 @@ function isRetired(row: CodeRow, at: Date): boolean {
   );
 }
 
+/** Codes are tenant-wide: a unit-limited writer gets 403 TENANT_SCOPE_REQUIRED (plan 3.8). */
 function stampOf(context: RequestContext, at?: string): VersionStamp {
+  const tenantId = requireTenantId(context);
+  assertTenantWideWriter(context, tenantId);
   return {
-    tenantId: requireTenantId(context),
+    tenantId,
     actorId: context.userId,
     at: at ? new Date(at) : new Date(),
   };

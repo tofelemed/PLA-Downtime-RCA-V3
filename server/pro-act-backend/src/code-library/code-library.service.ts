@@ -14,6 +14,7 @@ import { CursorCodec, invalidCursor } from '../v2/common/cursor-codec';
 import { listResponse, ListResponse } from '../v2/common/response';
 import { CodeLibraryKind, FailureGroupKind } from './code-library-kind';
 import { CODE_LIBRARY_DESCRIPTORS, CodeRow } from './code-library.descriptors';
+import { codeReferences, CodeReferences } from './code-references';
 import { CodeVersion } from './code-version.entity';
 import { CodeV2View, toCodeView } from './code-view';
 
@@ -75,6 +76,16 @@ export class CodeLibraryService {
     id: string,
   ): Promise<CodeV2View> {
     return toCodeView(library, await this.find(context, library, id));
+  }
+
+  /** What points at a code now (the retire impact dialog, plan 3.8; retire answers 409 with the same). */
+  async references(
+    context: RequestContext,
+    library: CodeLibraryKind,
+    id: string,
+  ): Promise<CodeReferences> {
+    const row = await this.find(context, library, id);
+    return codeReferences(this.manager, library, row);
   }
 
   /** The row of the caller's tenant; 404 for unknown or foreign ids. */

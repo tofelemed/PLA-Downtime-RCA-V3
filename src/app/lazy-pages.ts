@@ -31,6 +31,10 @@ export const TestRCAAnalysisTools = lazy(() => import('@/pages/TestRCAAnalysisTo
 export const Connectivity = lazyNamed(() => import('@/pages/Connectivity'), 'Connectivity');
 /** Integration console (plan 3.7), served at `/connectivity` while the `v2.integrationConsole` flag is on. */
 export const IntegrationConsole = lazyNamed(() => import('@/features/integration-console/integration-console-page'), 'IntegrationConsolePage');
+/** Codes and declarative admin rules (plan 3.8), served at `/codes-admin` while `v2.codesAdmin` is on. */
+export const CodesAdmin = lazyNamed(() => import('@/features/codes-admin/codes-admin-page'), 'CodesAdminPage');
+/** What `/codes-admin` shows while the flag is off (the v1 code screens in Master Data stay). */
+export const CodesAdminOff = lazyNamed(() => import('@/features/codes-admin/codes-admin-off'), 'CodesAdminOff');
 export const EnhancedHistorian = lazyNamed(() => import('@/pages/EnhancedHistorian'), 'EnhancedHistorian');
 export const PLADashboard = lazy(() => import('@/pages/PLADashboard'));
 export const Reports = lazy(() => import('@/pages/Reports'));
