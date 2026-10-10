@@ -26,8 +26,11 @@ import {
   slicesOf,
 } from '../../reconciliation/revision-state';
 
-/** Which revision a read shows: the latest not cancelled one (open, else published), or the published one. */
-export type RevisionSelector = 'current' | 'approved';
+/**
+ * Which revision a read shows: the latest not cancelled one (open, else published), the published one, or
+ * — like the KPI reports (plan 2.7) — the published one, else the open draft (`shown`, plan 3.6).
+ */
+export type RevisionSelector = 'current' | 'approved' | 'shown';
 
 /** What the grid and the waterfall need of one period, loaded for a whole page at once (no N+1). */
 export interface PeriodState {
@@ -50,8 +53,9 @@ function pickRevision(
   selector: RevisionSelector,
 ): AccountingRevision | null {
   const live = revisions.filter((r) => r.lifecycle !== 'cancelled');
-  if (selector === 'approved')
-    return live.find((r) => r.lifecycle === 'approved') ?? null;
+  const published = live.find((r) => r.lifecycle === 'approved') ?? null;
+  if (selector === 'approved') return published;
+  if (selector === 'shown') return published ?? live[0] ?? null;
   return live[0] ?? null;
 }
 

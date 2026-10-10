@@ -1,5 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { loginViaAPI } from './test-utils/auth-helpers';
+
+/** Which Reports binding the plant shows: v2 while its `v2.plaAnalytics` flag is on (plan 3.6), else v1 (C4). */
+async function reportsBinding(page: Page): Promise<'v1' | 'v2'> {
+  await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible({ timeout: 15000 });
+  return (await page.getByTestId('reports-v2').count()) > 0 ? 'v2' : 'v1';
+}
 
 test.describe('Reports Module', () => {
   test.beforeEach(async ({ page }) => {
@@ -8,7 +14,10 @@ test.describe('Reports Module', () => {
 
   test('reports page loads with overview tab and charts', async ({ page }) => {
     await page.goto('/reports');
-    await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible({ timeout: 15000 });
+    if ((await reportsBinding(page)) === 'v2') {
+      await expect(page.getByTestId('report-oee')).toBeVisible({ timeout: 15000 });
+      return;
+    }
 
     // Overview tab is default
     await expect(page.getByRole('tab', { name: /Overview/i })).toBeVisible();
@@ -18,9 +27,8 @@ test.describe('Reports Module', () => {
 
   test('all report tabs render', async ({ page }) => {
     await page.goto('/reports');
-    await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible({ timeout: 15000 });
-
-    for (const tab of ['OEE', 'Loss', 'RCA', 'Audit', 'Tasks']) {
+    const tabs = (await reportsBinding(page)) === 'v2' ? ['OEE', 'Downtime', 'Reconciliation', 'Loss value', 'Exports'] : ['OEE', 'Loss', 'RCA', 'Audit', 'Tasks'];
+    for (const tab of tabs) {
       await page.getByRole('tab', { name: new RegExp(tab, 'i') }).click();
       await page.waitForTimeout(500);
     }

@@ -8,12 +8,21 @@ import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
 import { useV2TenantId } from './use-v2-tenant';
 
-export type ReportKind = 'oee' | 'downtime' | 'reliability' | 'loss-value';
+export type ReportKind =
+  | 'oee'
+  | 'downtime'
+  | 'reliability'
+  | 'loss-value'
+  | 'scope-waterfall'
+  | 'loss-tree'
+  | 'reconciliation-trend'
+  | 'reconciliation-status'
+  | 'actuals-quality';
 export type DowntimeReportQuery = QueryOf<'/api/v2/reports/downtime', 'get'>;
 export type OeeReportQuery = QueryOf<'/api/v2/reports/oee', 'get'>;
 export type ReliabilityReportQuery = QueryOf<'/api/v2/reports/reliability', 'get'>;
 
-interface ReportQueryBase {
+export interface ReportQueryBase {
   from: string;
   to: string;
   unitIds?: string[];
@@ -31,7 +40,8 @@ export function reportKey(tenantId: string, kind: ReportKind, query: ReportQuery
   });
 }
 
-function useReport<TData>(kind: ReportKind, query: ReportQueryBase | null, tz?: string) {
+/** One `GET /reports/{kind}` analytics read, cached under its report key (T24); null query = idle. */
+export function useReport<TData>(kind: ReportKind, query: ReportQueryBase | null, tz?: string) {
   const tenantId = useV2TenantId();
   return useQuery({
     queryKey: query ? reportKey(tenantId ?? '-', kind, query, tz) : ['v2', tenantId, 'reports', 'idle'],

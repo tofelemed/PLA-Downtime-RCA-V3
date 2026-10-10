@@ -114,6 +114,8 @@ import {
   WaterfallReportV2Controller,
 } from './period-overview/period-overview-v2.controller';
 import { PeriodOverviewService } from './period-overview/period-overview.service';
+import { PlaReportsV2Controller } from './pla-reports/pla-reports-v2.controller';
+import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -217,6 +219,7 @@ import { PeriodOverviewService } from './period-overview/period-overview.service
     ProductsV2Controller,
     PeriodSummariesV2Controller,
     WaterfallReportV2Controller,
+    PlaReportsV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -239,6 +242,7 @@ import { PeriodOverviewService } from './period-overview/period-overview.service
     KpiReportsV2Service,
     LossValueReportV2Service,
     PeriodOverviewService,
+    PlaReportsV2Service,
   ],
 })
 export class V2Module {}

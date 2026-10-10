@@ -9087,6 +9087,421 @@
           "v2 · Plan Dashboard"
         ]
       }
+    },
+    "/api/v2/reports/scope-waterfall": {
+      "get": {
+        "description": "Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, ≤ 1500 periods: 422 TOO_MANY_PERIODS); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Same bars and closure check as GET /reports/waterfall (plan 3.5); different units of measure 422 UOM_MIXED.",
+        "operationId": "PlaReportsV2Controller_scopeWaterfall_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "ledger",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "plan",
+              "enum": [
+                "plan",
+                "capacity"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ledger waterfall of every period of a window and units: opening, signed steps with start / end, closing actual",
+        "tags": [
+          "v2 · PLA analytics"
+        ]
+      }
+    },
+    "/api/v2/reports/loss-tree": {
+      "get": {
+        "description": "Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, ≤ 1500 periods: 422 TOO_MANY_PERIODS); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Calculation-run loss lines (decisions of an open draft are in the waterfall); unvalued lines never count as 0.",
+        "operationId": "PlaReportsV2Controller_lossTree_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "reason",
+              "enum": [
+                "reason",
+                "impact",
+                "oee",
+                "kind",
+                "unit"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "metric",
+            "required": false,
+            "in": "query",
+            "description": "qty = lost quantity per unit of measure; margin / standard_cost / operational_cost = that stored valuation view per reporting currency (never added to each other; unvalued lines never count as zero)",
+            "schema": {
+              "default": "qty",
+              "enum": [
+                "qty",
+                "margin",
+                "standard_cost",
+                "operational_cost"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "ledger",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "plan",
+              "enum": [
+                "plan",
+                "capacity"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Largest groups per unit / currency only (top opportunities); totals always cover every group",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Loss lines per reason, impact, OEE component, kind or unit: quantity per unit of measure or one valuation view per currency, largest first with cumulative share",
+        "tags": [
+          "v2 · PLA analytics"
+        ]
+      }
+    },
+    "/api/v2/reports/reconciliation-trend": {
+      "get": {
+        "description": "Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, ≤ 1500 periods: 422 TOO_MANY_PERIODS); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only.",
+        "operationId": "PlaReportsV2Controller_reconciliationTrend_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "day",
+              "enum": [
+                "shift",
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Unaccounted, over-accounted and overproduction quantity per site-local shift, day, week or month (plan ledger, after decisions)",
+        "tags": [
+          "v2 · PLA analytics"
+        ]
+      }
+    },
+    "/api/v2/reports/reconciliation-status": {
+      "get": {
+        "description": "Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, ≤ 1500 periods: 422 TOO_MANY_PERIODS); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Workflow uses each period's current revision (open, else published) like the Plan Dashboard grid; approvedOnly does not apply.",
+        "operationId": "PlaReportsV2Controller_reconciliationStatus_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "overdueAfterHours",
+            "required": false,
+            "in": "query",
+            "description": "A period not approved this many hours after its end is overdue",
+            "schema": {
+              "minimum": 1,
+              "maximum": 2160,
+              "default": 48,
+              "type": "number"
+            }
+          },
+          {
+            "name": "asOf",
+            "required": false,
+            "in": "query",
+            "description": "Instant the ages are measured at (ISO 8601 with offset); default: now",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Workflow and residual state of every period, age of the periods not approved, and the overdue periods",
+        "tags": [
+          "v2 · PLA analytics"
+        ]
+      }
+    },
+    "/api/v2/reports/actuals-quality": {
+      "get": {
+        "description": "Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, ≤ 1500 periods: 422 TOO_MANY_PERIODS); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only.",
+        "operationId": "PlaReportsV2Controller_actualsQuality_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actuals quality coverage: quality state and coverage band per product slice, lowest coverage, measured vs estimated output",
+        "tags": [
+          "v2 · PLA analytics"
+        ]
+      }
     }
   },
   "info": {

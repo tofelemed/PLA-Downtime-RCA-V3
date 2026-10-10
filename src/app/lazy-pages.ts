@@ -32,6 +32,10 @@ export const Connectivity = lazyNamed(() => import('@/pages/Connectivity'), 'Con
 export const EnhancedHistorian = lazyNamed(() => import('@/pages/EnhancedHistorian'), 'EnhancedHistorian');
 export const PLADashboard = lazy(() => import('@/pages/PLADashboard'));
 export const Reports = lazy(() => import('@/pages/Reports'));
+/** PLA Analytics, Reports and the Dashboard on v2 (plan 3.6), served while `v2.plaAnalytics` is on. */
+export const PlaAnalyticsV2 = lazyNamed(() => import('@/features/pla-analytics/pla-analytics-page'), 'PlaAnalyticsPage');
+export const ReportsV2 = lazyNamed(() => import('@/features/pla-analytics/reports/reports-page'), 'ReportsV2Page');
+export const DashboardV2 = lazyNamed(() => import('@/features/pla-analytics/dashboard/analytics-dashboard'), 'AnalyticsDashboard');
 export const AuditLogs = lazy(() => import('@/pages/AuditLogs'));
 export const Tasks = lazy(() => import('@/pages/Tasks'));
 export const ProductionPlans = lazy(() => import('@/pages/ProductionPlans'));

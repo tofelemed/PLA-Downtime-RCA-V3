@@ -53,7 +53,7 @@ const SettingsPlaceholder = () => (
 
 /** Protected routes; each page is a lazily loaded chunk (plan 3.1 step 6). */
 const PROTECTED_ROUTES: Array<[path: string, element: ReactNode]> = [
-  ["/dashboard", <Pages.Dashboard />],
+  ["/dashboard", <FlaggedRoute flag="v2.plaAnalytics" v1={<Pages.Dashboard />} v2={<Pages.DashboardV2 />} />],
   ["/users", <Pages.UserManagement />],
   ["/admin", <Pages.AdminPanel />],
   ["/permissions", <Pages.PermissionsManagement />],
@@ -68,8 +68,8 @@ const PROTECTED_ROUTES: Array<[path: string, element: ReactNode]> = [
   ["/test-rca-tools", <Pages.TestRCAAnalysisTools />],
   ["/connectivity", <Pages.Connectivity />],
   ["/enhanced-historian", <Pages.EnhancedHistorian />],
-  ["/pla-analytics", <Pages.PLADashboard />],
-  ["/reports", <Pages.Reports />],
+  ["/pla-analytics", <FlaggedRoute flag="v2.plaAnalytics" v1={<Pages.PLADashboard />} v2={<Pages.PlaAnalyticsV2 />} />],
+  ["/reports", <FlaggedRoute flag="v2.plaAnalytics" v1={<Pages.Reports />} v2={<Pages.ReportsV2 />} />],
   ["/audit", <Pages.AuditLogs />],
   ["/tasks", <Pages.Tasks />],
   ["/settings", <SettingsPlaceholder />],
