@@ -1,3 +1,4 @@
+import { defaultTenantFor } from '@/contexts/plant-selection-store';
 import React, { useState, useEffect } from 'react';
 import {
   Popover,
@@ -42,19 +43,13 @@ const PlantSelector: React.FC = () => {
   useEffect(() => {
     // wait for the saved selection: choosing a default before it loads would write on every page load
     if (!selectionLoading && !initialized && organizations.length && tenants.length && !currentSelection?.tenant && !currentSelection?.unit && !currentSelection?.asset) {
-      // Find the first tenant in the hierarchy
-      for (const org of organizations) {
-        const orgTenants = tenants.filter(t => t.organizationId === org.id);
-        if (orgTenants.length > 0) {
-          // Select the first tenant (plant) only, not the unit
-          onSelectionChange({ organization: org, tenant: orgTenants[0] });
-          setInitialized(true);
-          return;
-        }
-      }
+      // The user's own plant; only global admins without one fall back to the first plant listed
+      const tenant = session ? defaultTenantFor(session.user, tenants) : null;
+      const org = tenant ? organizations.find(o => o.id === tenant.organizationId) : undefined;
+      if (tenant) onSelectionChange({ organization: org, tenant });
       setInitialized(true);
     }
-  }, [organizations, tenants, currentSelection, onSelectionChange, initialized, selectionLoading]);
+  }, [organizations, tenants, currentSelection, onSelectionChange, initialized, selectionLoading, session]);
 
   const loadData = async () => {
     try {
