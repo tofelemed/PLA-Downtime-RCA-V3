@@ -7,6 +7,7 @@ import { CorrelationIdMiddleware } from './common/http/correlation-id.middleware
 import { throttlerOptionsFromEnv } from './common/throttling/throttler.config';
 import { UserIpThrottlerGuard } from './common/throttling/user-ip-throttler.guard';
 import { V2Module } from './v2/v2.module';
+import { MigrationCutoverModule } from './migration-cutover/migration-cutover.module';
 import { SchedulerModule } from './common/scheduling/scheduler.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -175,6 +176,8 @@ registerPgTypeParsers();
     StreamingModule,
     // /api/v2 resources (src/v2/CONVENTIONS.md)
     V2Module,
+    // Plan 3.10: MIG05 v1 write freeze (423) for a tenant being cut over
+    MigrationCutoverModule,
   ],
   // Global guard chain, in order: rate limit → authentication (@Public / @PublicIf skip it)
   // → @Roles → @ScopeParam. Every route is protected unless it opts out explicitly.
