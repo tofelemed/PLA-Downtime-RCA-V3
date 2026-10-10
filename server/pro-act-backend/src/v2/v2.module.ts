@@ -1,4 +1,9 @@
 import { Module } from '@nestjs/common';
+import { RcaCaseModule } from '../rca-case/rca-case.module';
+import { EventRcaLinkV2Controller } from './rca/event-rca-link-v2.controller';
+import { RcaActionsV2Controller } from './rca/rca-actions-v2.controller';
+import { RcaCasesV2Controller } from './rca/rca-cases-v2.controller';
+import { RcaLinksV2Controller } from './rca/rca-links-v2.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { ProductionEventModule } from '../production-event/production-event.module';
@@ -176,6 +181,7 @@ import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
     ValuationModule,
     FeatureFlagsModule,
     RulesModule,
+    RcaCaseModule,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -220,6 +226,10 @@ import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
     LossValueReportV2Controller,
     FeatureFlagsV2Controller,
     RulesV2Controller,
+    RcaCasesV2Controller,
+    RcaLinksV2Controller,
+    EventRcaLinkV2Controller,
+    RcaActionsV2Controller,
     UnitsV2Controller,
     ProductsV2Controller,
     PeriodSummariesV2Controller,

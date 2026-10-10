@@ -1,0 +1,17 @@
+{
+  "id": "RCA03",
+  "title": "Action verification: claimed, approved and realized kept apart",
+  "kind": "scenario",
+  "spec_ref": "RCA03",
+  "owner_subphase": "3.9",
+  "given": "An action with a 30-day baseline of 6 recurrences and a 15-day verification window in which 1 recurrence was observed; the owner claims 1000 USD avoided",
+  "inputs": {
+    "baseline": { "metric": "recurrences", "windowDays": 30, "value": "6", "declared": true },
+    "post": { "windowDays": 15, "recurrences": 1, "observedLossSeconds": "1800" }
+  },
+  "expected": {
+    "realized": { "metric": "recurrences", "expected": "3", "observed": "1", "difference": "2" },
+    "claimedStaysSeparate": true
+  },
+  "status": "authored"
+}

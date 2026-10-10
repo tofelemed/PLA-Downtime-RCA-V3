@@ -1,0 +1,22 @@
+{
+  "title": "Repeated trips of feed pump P-101",
+  "description": "Three trips in two weeks",
+  "status": "In Progress",
+  "priority": "High",
+  "unitId": "2f1b4a6e-1111-4c3d-8e9f-000000000001",
+  "assetId": null,
+  "teamLeadId": "2f1b4a6e-2222-4c3d-8e9f-000000000001",
+  "teamMemberIds": ["2f1b4a6e-2222-4c3d-8e9f-000000000001", "2f1b4a6e-2222-4c3d-8e9f-000000000002"],
+  "targetCloseDate": "2026-11-30T00:00:00.000Z",
+  "rootCause": null,
+  "recommendations": [
+    { "id": "rec-1", "title": "Replace the coupling", "description": null, "priority": "High", "ownerId": "2f1b4a6e-2222-4c3d-8e9f-000000000002", "dueDate": "2026-11-15T00:00:00.000Z", "status": "open" }
+  ],
+  "evidence": [
+    { "id": "ev-1", "title": "Vibration trend", "description": "Peak at 7.1 mm/s before each trip", "type": "Trend", "source": "PI tag P101.VIB", "collectedAt": "2026-10-09T08:00:00.000Z", "collectedBy": null }
+  ],
+  "logicTree": [
+    { "id": "n1", "parentId": null, "label": "Pump trips", "kind": "event", "status": "open", "notes": null },
+    { "id": "n2", "parentId": "n1", "label": "Coupling misalignment", "kind": "hypothesis", "status": "verified", "notes": "Laser alignment 0.4 mm" }
+  ]
+}

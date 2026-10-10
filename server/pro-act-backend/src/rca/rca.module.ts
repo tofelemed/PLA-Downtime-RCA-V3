@@ -6,14 +6,16 @@ import { RcaAutoCreateService } from './rca-auto-create.service';
 import { RCA } from './rca.entity';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { RCATriggerConfigModule } from '../rca-trigger-config/rca-trigger-config.module';
+import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([RCA, ProductionEvent]),
     RCATriggerConfigModule,
+    FeatureFlagsModule,
   ],
   controllers: [RCAController],
   providers: [RCAService, RcaAutoCreateService],
   exports: [RCAService, RcaAutoCreateService],
 })
-export class RCAModule {} 
+export class RCAModule {}

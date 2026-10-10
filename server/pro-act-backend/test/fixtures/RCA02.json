@@ -1,0 +1,11 @@
+{
+  "id": "RCA02",
+  "title": "Case links with evidence package; automation never proves a root cause",
+  "kind": "scenario",
+  "spec_ref": "RCA02, §15.2 rca-link, §16.2",
+  "owner_subphase": "3.9",
+  "given": "Two downtime events and one approved loss line in the caller's unit; an existing case",
+  "action": "Link both events and the loss line to the case; link the first event again",
+  "assertion": "Three unique links (event, event, loss_line); each evidence package carries event revisions, cause codes with versions, recurrence and approved impact; the repeated link answers 200 with the existing link; the event RCA state becomes linked; no root cause is set by automation",
+  "status": "authored"
+}

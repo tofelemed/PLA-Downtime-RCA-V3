@@ -1,4 +1,5 @@
 import { httpClient } from './httpClient';
+import type { RCADto, buildCreateRcaPayload, buildUpdateRcaPayload } from './rca-v1-payload';
 import {
   ProductionPlan,
   ProductionPlanTemplate,
@@ -7,7 +8,6 @@ import {
   OEESummary,
   LossCategory,
   ReconcileForm,
-  RCA,
   UsefulProductionTime,
   AuditTrailEntry,
 } from '../MasterDataService';
@@ -680,101 +680,8 @@ export const mapReconcileFormDto = (dto: ReconcileFormDto): ReconcileForm => ({
 /*                                      RCA                                   */
 /* -------------------------------------------------------------------------- */
 
-export interface RCADto {
-  id: string;
-  title: string;
-  description: string;
-  eventId: string;
-  status: string;
-  priority: string;
-  teamLeadId?: string | null;
-  teamMembers?: string | null;
-  startDate?: string | null;
-  targetCompletionDate?: string | null;
-  actualCompletionDate?: string | null;
-  planId?: string | null;
-  tenantId?: string | null;
-  organizationId?: string | null;
-  unitId?: string | null;
-  assetId?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  additionalData?: string | null;
-}
-
-export const mapRcaDto = (dto: RCADto): RCA => ({
-  id: dto.id,
-  title: dto.title,
-  description: dto.description,
-  eventId: dto.eventId,
-  status: dto.status as RCA['status'],
-  priority: dto.priority as RCA['priority'],
-  teamLeadId: dto.teamLeadId ?? undefined,
-  teamMembers: parseJson<string[] | undefined>(dto.teamMembers, undefined),
-  startDate: toISOString(dto.startDate),
-  targetCompletionDate: toISOString(dto.targetCompletionDate),
-  actualCompletionDate: toISOString(dto.actualCompletionDate),
-  planId: dto.planId ?? undefined,
-  tenantId: dto.tenantId ?? undefined,
-  organizationId: dto.organizationId ?? undefined,
-  unitId: dto.unitId ?? undefined,
-  assetId: dto.assetId ?? undefined,
-  createdAt: toISOString(dto.createdAt) ?? '',
-  updatedAt: toISOString(dto.updatedAt) ?? '',
-  additionalData: parseJson<Record<string, any> | undefined>(dto.additionalData, undefined),
-});
-
-export const buildCreateRcaPayload = (
-  data: Omit<RCA, 'id' | 'createdAt' | 'updatedAt'>,
-) =>
-  sanitizePayload({
-    title: data.title,
-    description: data.description,
-    eventId: data.eventId,
-    status: data.status,
-    priority: data.priority,
-    teamLeadId: data.teamLeadId ?? null,
-    teamMembers: data.teamMembers ? JSON.stringify(data.teamMembers) : null,
-    startDate: data.startDate ?? null,
-    targetCompletionDate: data.targetCompletionDate ?? null,
-    actualCompletionDate: data.actualCompletionDate ?? null,
-    planId: data.planId ?? null,
-    tenantId: data.tenantId ?? null,
-    organizationId: data.organizationId ?? null,
-    unitId: data.unitId ?? null,
-    assetId: data.assetId ?? null,
-    additionalData: data.additionalData ? JSON.stringify(data.additionalData) : null,
-  });
-
-export const buildUpdateRcaPayload = (data: Partial<RCA>) =>
-  sanitizePayload({
-    title: data.title,
-    description: data.description,
-    eventId: data.eventId,
-    status: data.status,
-    priority: data.priority,
-    teamLeadId: data.teamLeadId ?? null,
-    teamMembers:
-      data.teamMembers !== undefined
-        ? data.teamMembers
-          ? JSON.stringify(data.teamMembers)
-          : null
-        : undefined,
-    startDate: data.startDate ?? null,
-    targetCompletionDate: data.targetCompletionDate ?? null,
-    actualCompletionDate: data.actualCompletionDate ?? null,
-    planId: data.planId ?? null,
-    tenantId: data.tenantId ?? null,
-    organizationId: data.organizationId ?? null,
-    unitId: data.unitId ?? null,
-    assetId: data.assetId ?? null,
-    additionalData:
-      data.additionalData !== undefined
-        ? data.additionalData
-          ? JSON.stringify(data.additionalData)
-          : null
-        : undefined,
-  });
+export { buildCreateRcaPayload, buildUpdateRcaPayload, mapRcaDto } from './rca-v1-payload';
+export type { RCADto } from './rca-v1-payload';
 
 /* -------------------------------------------------------------------------- */
 /*                                API METHODS                                 */

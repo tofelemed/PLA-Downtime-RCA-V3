@@ -3000,6 +3000,227 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/rcas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search cases of your scope (newest first)
+         * @description Filters: status, unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), title (q).
+         */
+        get: operations["RcaCasesV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Open a case
+         * @description Requires `Idempotency-Key`. Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit).
+         */
+        post: operations["RcaCasesV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One case with its nested content (ETag = rowVersion); foreign ids are 404 */
+        get: operations["RcaCasesV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a case (nested content replaced as sent)
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). Setting status Closed feeds the knowledge base (unpublished entry) and marks linked events RCA completed.
+         */
+        patch: operations["RcaCasesV2Controller_update_v2"];
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Approved historical loss, claimed avoided loss and realized difference (kept apart) */
+        get: operations["RcaCasesV2Controller_outcome_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Links of a case with their evidence packages (targets of your units) */
+        get: operations["RcaLinksV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Link an event, loss line, work order or occurrence to the case
+         * @description Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). 422 INVALID_REFERENCE for a target outside your scope.
+         */
+        post: operations["RcaLinksV2Controller_link_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-events/{id}/rca-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link the event to an existing case or create one with it
+         * @description Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). Body: exactly one of `rcaId` / `create`. The event's RCA state becomes linked and its open recommendations accepted; no coding or loss changes.
+         */
+        post: operations["EventRcaLinkV2Controller_link_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-events/{id}/rca-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Evidence package the event would be linked with now (nothing stored) */
+        get: operations["EventRcaLinkV2Controller_evidence_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Actions of a case with their verification status */
+        get: operations["RcaActionsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Add an action
+         * @description Requires `Idempotency-Key`. A baseline without value is counted from history over its windowDays before the verification window (422 BASELINE_NEEDS_WINDOW without one); a claim needs its currency.
+         */
+        post: operations["RcaActionsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-actions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change an action
+         * @description Requires `If-Match` (428/412).
+         */
+        patch: operations["RcaActionsV2Controller_update_v2"];
+        trace?: never;
+    };
+    "/api/v2/rca-actions/{id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify now (the worker also does it hourly once the window has ended)
+         * @description Requires `Idempotency-Key` and `If-Match`. 409 VERIFICATION_WINDOW_OPEN / VERIFICATION_NOT_PLANNED.
+         */
+        post: operations["RcaActionsV2Controller_verify_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * RCA recommendations recorded by the trigger service (badges), newest first
+         * @description Default state open; filter by events (repeat eventIds) or unit.
+         */
+        get: operations["RcaActionsV2Controller_listRecommendations_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-recommendations/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss an open recommendation with a reason
+         * @description Requires `Idempotency-Key`.
+         */
+        post: operations["RcaActionsV2Controller_dismiss_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/units": {
         parameters: {
             query?: never;
@@ -4452,6 +4673,149 @@ export interface components {
             reason?: string;
             /** @description Version whose definition becomes the next version */
             toVersion: number;
+        };
+        RcaRecommendationItemDto: {
+            id?: string;
+            title: string;
+            description?: Record<string, never> | null;
+            priority?: Record<string, never> | null;
+            ownerId?: Record<string, never> | null;
+            dueDate?: Record<string, never> | null;
+            status?: Record<string, never> | null;
+        };
+        RcaEvidenceItemDto: {
+            id?: string;
+            title: string;
+            description?: Record<string, never> | null;
+            type?: Record<string, never> | null;
+            source?: Record<string, never> | null;
+            collectedAt?: Record<string, never> | null;
+            collectedBy?: Record<string, never> | null;
+        };
+        RcaLogicNodeDto: {
+            id: string;
+            parentId?: Record<string, never> | null;
+            label: string;
+            kind?: Record<string, never> | null;
+            status?: Record<string, never> | null;
+            notes?: Record<string, never> | null;
+        };
+        RcaCaseV2CreateDto: {
+            title: string;
+            description?: Record<string, never> | null;
+            /**
+             * @description Draft when omitted
+             * @enum {string}
+             */
+            status?: "Draft" | "In Progress" | "Analysis" | "Published" | "Closed";
+            /**
+             * @description Medium when omitted
+             * @enum {string}
+             */
+            priority?: "Low" | "Medium" | "High" | "Critical";
+            /** @description Unit scope; null = tenant-wide case (tenant-wide grant only) */
+            unitId?: Record<string, never> | null;
+            assetId?: Record<string, never> | null;
+            teamLeadId?: Record<string, never> | null;
+            teamMemberIds?: string[];
+            targetCloseDate?: Record<string, never> | null;
+            actualCloseDate?: Record<string, never> | null;
+            rootCause?: Record<string, never> | null;
+            templateId?: Record<string, never> | null;
+            recommendations?: components["schemas"]["RcaRecommendationItemDto"][];
+            evidence?: components["schemas"]["RcaEvidenceItemDto"][];
+            logicTree?: components["schemas"]["RcaLogicNodeDto"][];
+        };
+        RcaCaseV2UpdateDto: {
+            title?: string;
+            description?: Record<string, never> | null;
+            /**
+             * @description Draft when omitted
+             * @enum {string}
+             */
+            status?: "Draft" | "In Progress" | "Analysis" | "Published" | "Closed";
+            /**
+             * @description Medium when omitted
+             * @enum {string}
+             */
+            priority?: "Low" | "Medium" | "High" | "Critical";
+            /** @description Unit scope; null = tenant-wide case (tenant-wide grant only) */
+            unitId?: Record<string, never> | null;
+            assetId?: Record<string, never> | null;
+            teamLeadId?: Record<string, never> | null;
+            teamMemberIds?: string[];
+            targetCloseDate?: Record<string, never> | null;
+            actualCloseDate?: Record<string, never> | null;
+            rootCause?: Record<string, never> | null;
+            templateId?: Record<string, never> | null;
+            recommendations?: components["schemas"]["RcaRecommendationItemDto"][];
+            evidence?: components["schemas"]["RcaEvidenceItemDto"][];
+            logicTree?: components["schemas"]["RcaLogicNodeDto"][];
+        };
+        RcaLinkV2CreateDto: {
+            /** @enum {string} */
+            linkType: "event" | "loss_line" | "work_order" | "occurrence";
+            /** @description Event, loss line or occurrence id (uuid), or the work order number */
+            targetId: string;
+            reason?: string;
+        };
+        EventRcaLinkV2Dto: {
+            /** @description Existing case of your scope */
+            rcaId?: string;
+            /** @description New case; unit and asset default to the event’s when not given */
+            create?: components["schemas"]["RcaCaseV2CreateDto"];
+            reason?: string;
+        };
+        RcaActionBaselineDto: {
+            /** @enum {string} */
+            metric: "recurrences" | "downtime_seconds";
+            /** @description Baseline window length in days */
+            windowDays: number;
+            /** @description Declared value (decimal string). Omitted: the server counts it over the windowDays before the verification window */
+            value?: string;
+        };
+        RcaActionV2CreateDto: {
+            title: string;
+            description?: Record<string, never> | null;
+            ownerId?: Record<string, never> | null;
+            dueDate?: Record<string, never> | null;
+            /**
+             * @description open when omitted
+             * @enum {string}
+             */
+            status?: "open" | "in_progress" | "done" | "cancelled";
+            /** @description Where the completion evidence is (document, work order, photo reference) */
+            completionEvidenceRef?: Record<string, never> | null;
+            verificationWindowStart?: Record<string, never> | null;
+            verificationWindowEnd?: Record<string, never> | null;
+            baseline?: components["schemas"]["RcaActionBaselineDto"] | null;
+            /** @description The owner's claimed avoided loss (decimal string); never added to approved loss */
+            claimedAvoidedLoss?: Record<string, never> | null;
+            /** @enum {string|null} */
+            claimedCurrency?: "IRR" | "USD" | null;
+        };
+        RcaActionV2UpdateDto: {
+            title?: string;
+            description?: Record<string, never> | null;
+            ownerId?: Record<string, never> | null;
+            dueDate?: Record<string, never> | null;
+            /**
+             * @description open when omitted
+             * @enum {string}
+             */
+            status?: "open" | "in_progress" | "done" | "cancelled";
+            /** @description Where the completion evidence is (document, work order, photo reference) */
+            completionEvidenceRef?: Record<string, never> | null;
+            verificationWindowStart?: Record<string, never> | null;
+            verificationWindowEnd?: Record<string, never> | null;
+            baseline?: components["schemas"]["RcaActionBaselineDto"] | null;
+            /** @description The owner's claimed avoided loss (decimal string); never added to approved loss */
+            claimedAvoidedLoss?: Record<string, never> | null;
+            /** @enum {string|null} */
+            claimedCurrency?: "IRR" | "USD" | null;
+        };
+        RcaRecommendationDismissV2Dto: {
+            reason: string;
         };
     };
     responses: never;
@@ -8951,6 +9315,378 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCasesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-createdAt" | "createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                status?: "Draft" | "In Progress" | "Analysis" | "Published" | "Closed";
+                unitId?: string;
+                /** @description Cases with a linked event of this asset (or the case asset) */
+                assetId?: string;
+                /** @description Cases with a linked event coded with this reason */
+                reasonCodeId?: string;
+                /** @description Case-insensitive title search */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCasesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaCaseV2CreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCasesV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCasesV2Controller_update_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaCaseV2UpdateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCasesV2Controller_outcome_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaLinksV2Controller_list_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaLinksV2Controller_link_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaLinkV2CreateDto"];
+            };
+        };
+        responses: {
+            /** @description Already linked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Linked */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EventRcaLinkV2Controller_link_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EventRcaLinkV2Dto"];
+            };
+        };
+        responses: {
+            /** @description Already linked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Linked */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EventRcaLinkV2Controller_evidence_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaActionsV2Controller_list_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaActionsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaActionV2CreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaActionsV2Controller_update_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaActionV2UpdateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaActionsV2Controller_verify_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaActionsV2Controller_listRecommendations_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Events (repeat the parameter) */
+                eventIds?: string[];
+                state?: "open" | "accepted" | "dismissed";
+                unitId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaActionsV2Controller_dismiss_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaRecommendationDismissV2Dto"];
+            };
+        };
         responses: {
             200: {
                 headers: {

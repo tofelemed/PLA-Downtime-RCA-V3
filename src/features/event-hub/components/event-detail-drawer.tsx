@@ -3,6 +3,7 @@ import type { ProductionEventView } from '@/api/v2/types/events';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EventRcaPanel } from '@/features/rca/event-rca-panel';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DurationText } from '@/features/ux-kit/duration-text';
@@ -44,6 +45,7 @@ export function EventDetailDrawer({ eventId, onOpenChange, onAction }: EventDeta
           {event && (
             <div className="mt-4 space-y-4">
               <EventSummary event={event} onAction={onAction} />
+              <EventRcaPanel event={event} timezone={env.timezone} />
               <DetailTabs event={event} history={history} />
             </div>
           )}

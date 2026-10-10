@@ -18,6 +18,7 @@ import { AccountingModule } from './accounting/accounting.module';
 import { ReconciliationModule } from './reconciliation/reconciliation.module';
 import { ExportsModule } from './exports/exports.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { RcaCaseModule } from './rca-case/rca-case.module';
 
 registerPgTypeParsers();
 
@@ -61,6 +62,8 @@ registerPgTypeParsers();
     ReconciliationModule,
     // export render jobs and expired-file purge (plan 2.9)
     ExportsModule,
+    // RCA trigger consumer, open-event sweep and action verification (plan 3.9)
+    RcaCaseModule,
   ],
   providers: [WorkerHealthServer],
 })

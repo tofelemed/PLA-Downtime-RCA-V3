@@ -9622,6 +9622,750 @@
         ]
       }
     },
+    "/api/v2/rcas": {
+      "get": {
+        "description": "Filters: status, unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), title (q).",
+        "operationId": "RcaCasesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "-createdAt",
+                "createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "Draft",
+                "In Progress",
+                "Analysis",
+                "Published",
+                "Closed"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetId",
+            "required": false,
+            "in": "query",
+            "description": "Cases with a linked event of this asset (or the case asset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reasonCodeId",
+            "required": false,
+            "in": "query",
+            "description": "Cases with a linked event coded with this reason",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive title search",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Search cases of your scope (newest first)",
+        "tags": [
+          "v2 · RCA"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit).",
+        "operationId": "RcaCasesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaCaseV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Open a case",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rcas/{id}": {
+      "get": {
+        "operationId": "RcaCasesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One case with its nested content (ETag = rowVersion); foreign ids are 404",
+        "tags": [
+          "v2 · RCA"
+        ]
+      },
+      "patch": {
+        "description": "Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). Setting status Closed feeds the knowledge base (unpublished entry) and marks linked events RCA completed.",
+        "operationId": "RcaCasesV2Controller_update_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaCaseV2UpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change a case (nested content replaced as sent)",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rcas/{id}/outcome": {
+      "get": {
+        "operationId": "RcaCasesV2Controller_outcome_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approved historical loss, claimed avoided loss and realized difference (kept apart)",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rcas/{id}/links": {
+      "get": {
+        "operationId": "RcaLinksV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Links of a case with their evidence packages (targets of your units)",
+        "tags": [
+          "v2 · RCA"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). 422 INVALID_REFERENCE for a target outside your scope.",
+        "operationId": "RcaLinksV2Controller_link_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaLinkV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Already linked"
+          },
+          "201": {
+            "description": "Linked"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Link an event, loss line, work order or occurrence to the case",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/production-events/{id}/rca-link": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). Body: exactly one of `rcaId` / `create`. The event's RCA state becomes linked and its open recommendations accepted; no coding or loss changes.",
+        "operationId": "EventRcaLinkV2Controller_link_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventRcaLinkV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Already linked"
+          },
+          "201": {
+            "description": "Linked"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Link the event to an existing case or create one with it",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/production-events/{id}/rca-evidence": {
+      "get": {
+        "operationId": "EventRcaLinkV2Controller_evidence_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Evidence package the event would be linked with now (nothing stored)",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rcas/{id}/actions": {
+      "get": {
+        "operationId": "RcaActionsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actions of a case with their verification status",
+        "tags": [
+          "v2 · RCA"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. A baseline without value is counted from history over its windowDays before the verification window (422 BASELINE_NEEDS_WINDOW without one); a claim needs its currency.",
+        "operationId": "RcaActionsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaActionV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add an action",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rca-actions/{id}": {
+      "patch": {
+        "description": "Requires `If-Match` (428/412).",
+        "operationId": "RcaActionsV2Controller_update_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaActionV2UpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change an action",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rca-actions/{id}/verify": {
+      "post": {
+        "description": "Requires `Idempotency-Key` and `If-Match`. 409 VERIFICATION_WINDOW_OPEN / VERIFICATION_NOT_PLANNED.",
+        "operationId": "RcaActionsV2Controller_verify_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify now (the worker also does it hourly once the window has ended)",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rca-recommendations": {
+      "get": {
+        "description": "Default state open; filter by events (repeat eventIds) or unit.",
+        "operationId": "RcaActionsV2Controller_listRecommendations_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventIds",
+            "required": false,
+            "in": "query",
+            "description": "Events (repeat the parameter)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "accepted",
+                "dismissed"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RCA recommendations recorded by the trigger service (badges), newest first",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rca-recommendations/{id}/dismiss": {
+      "post": {
+        "description": "Requires `Idempotency-Key`.",
+        "operationId": "RcaActionsV2Controller_dismiss_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaRecommendationDismissV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dismiss an open recommendation with a reason",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
     "/api/v2/units": {
       "get": {
         "description": "Tenant from the identity; a caller with unit-level grants sees only those units (`scope.unitIds`).",
@@ -13217,6 +13961,525 @@
         },
         "required": [
           "toVersion"
+        ]
+      },
+      "RcaRecommendationItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 4000
+          },
+          "priority": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 20
+          },
+          "ownerId": {
+            "type": "object",
+            "nullable": true
+          },
+          "dueDate": {
+            "type": "object",
+            "nullable": true
+          },
+          "status": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 30
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "RcaEvidenceItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 4000
+          },
+          "type": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 50
+          },
+          "source": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "collectedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "collectedBy": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "RcaLogicNodeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "parentId": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 64
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "kind": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 50
+          },
+          "status": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 50
+          },
+          "notes": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ]
+      },
+      "RcaCaseV2CreateDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 8000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Draft",
+              "In Progress",
+              "Analysis",
+              "Published",
+              "Closed"
+            ],
+            "description": "Draft when omitted"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "Low",
+              "Medium",
+              "High",
+              "Critical"
+            ],
+            "description": "Medium when omitted"
+          },
+          "unitId": {
+            "type": "object",
+            "nullable": true,
+            "description": "Unit scope; null = tenant-wide case (tenant-wide grant only)"
+          },
+          "assetId": {
+            "type": "object",
+            "nullable": true
+          },
+          "teamLeadId": {
+            "type": "object",
+            "nullable": true
+          },
+          "teamMemberIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "targetCloseDate": {
+            "type": "object",
+            "nullable": true
+          },
+          "actualCloseDate": {
+            "type": "object",
+            "nullable": true
+          },
+          "rootCause": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 8000
+          },
+          "templateId": {
+            "type": "object",
+            "nullable": true
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RcaRecommendationItemDto"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RcaEvidenceItemDto"
+            }
+          },
+          "logicTree": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RcaLogicNodeDto"
+            }
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "RcaCaseV2UpdateDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 8000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Draft",
+              "In Progress",
+              "Analysis",
+              "Published",
+              "Closed"
+            ],
+            "description": "Draft when omitted"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "Low",
+              "Medium",
+              "High",
+              "Critical"
+            ],
+            "description": "Medium when omitted"
+          },
+          "unitId": {
+            "type": "object",
+            "nullable": true,
+            "description": "Unit scope; null = tenant-wide case (tenant-wide grant only)"
+          },
+          "assetId": {
+            "type": "object",
+            "nullable": true
+          },
+          "teamLeadId": {
+            "type": "object",
+            "nullable": true
+          },
+          "teamMemberIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "targetCloseDate": {
+            "type": "object",
+            "nullable": true
+          },
+          "actualCloseDate": {
+            "type": "object",
+            "nullable": true
+          },
+          "rootCause": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 8000
+          },
+          "templateId": {
+            "type": "object",
+            "nullable": true
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RcaRecommendationItemDto"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RcaEvidenceItemDto"
+            }
+          },
+          "logicTree": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RcaLogicNodeDto"
+            }
+          }
+        }
+      },
+      "RcaLinkV2CreateDto": {
+        "type": "object",
+        "properties": {
+          "linkType": {
+            "type": "string",
+            "enum": [
+              "event",
+              "loss_line",
+              "work_order",
+              "occurrence"
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Event, loss line or occurrence id (uuid), or the work order number"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "linkType",
+          "targetId"
+        ]
+      },
+      "EventRcaLinkV2Dto": {
+        "type": "object",
+        "properties": {
+          "rcaId": {
+            "type": "string",
+            "description": "Existing case of your scope"
+          },
+          "create": {
+            "description": "New case; unit and asset default to the event’s when not given",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RcaCaseV2CreateDto"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      },
+      "RcaActionBaselineDto": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "type": "string",
+            "enum": [
+              "recurrences",
+              "downtime_seconds"
+            ]
+          },
+          "windowDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Baseline window length in days"
+          },
+          "value": {
+            "type": "string",
+            "description": "Declared value (decimal string). Omitted: the server counts it over the windowDays before the verification window"
+          }
+        },
+        "required": [
+          "metric",
+          "windowDays"
+        ]
+      },
+      "RcaActionV2CreateDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 4000
+          },
+          "ownerId": {
+            "type": "object",
+            "nullable": true
+          },
+          "dueDate": {
+            "type": "object",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "in_progress",
+              "done",
+              "cancelled"
+            ],
+            "description": "open when omitted"
+          },
+          "completionEvidenceRef": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "Where the completion evidence is (document, work order, photo reference)"
+          },
+          "verificationWindowStart": {
+            "type": "object",
+            "nullable": true
+          },
+          "verificationWindowEnd": {
+            "type": "object",
+            "nullable": true
+          },
+          "baseline": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RcaActionBaselineDto"
+              }
+            ]
+          },
+          "claimedAvoidedLoss": {
+            "type": "object",
+            "nullable": true,
+            "description": "The owner's claimed avoided loss (decimal string); never added to approved loss"
+          },
+          "claimedCurrency": {
+            "type": "string",
+            "enum": [
+              "IRR",
+              "USD"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "RcaActionV2UpdateDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 4000
+          },
+          "ownerId": {
+            "type": "object",
+            "nullable": true
+          },
+          "dueDate": {
+            "type": "object",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "in_progress",
+              "done",
+              "cancelled"
+            ],
+            "description": "open when omitted"
+          },
+          "completionEvidenceRef": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "Where the completion evidence is (document, work order, photo reference)"
+          },
+          "verificationWindowStart": {
+            "type": "object",
+            "nullable": true
+          },
+          "verificationWindowEnd": {
+            "type": "object",
+            "nullable": true
+          },
+          "baseline": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RcaActionBaselineDto"
+              }
+            ]
+          },
+          "claimedAvoidedLoss": {
+            "type": "object",
+            "nullable": true,
+            "description": "The owner's claimed avoided loss (decimal string); never added to approved loss"
+          },
+          "claimedCurrency": {
+            "type": "string",
+            "enum": [
+              "IRR",
+              "USD"
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "RcaRecommendationDismissV2Dto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "reason"
         ]
       }
     }

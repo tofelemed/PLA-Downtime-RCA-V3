@@ -1,3 +1,8 @@
+import { RcaCaseModule } from '../rca-case/rca-case.module';
+import { RcaActionsService } from '../rca-case/rca-actions.service';
+import { RcaCasesService } from '../rca-case/rca-cases.service';
+import { RcaLinksService } from '../rca-case/rca-links.service';
+import { RcaRecommendationsService } from '../rca-case/rca-recommendations.service';
 import { INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -343,6 +348,19 @@ const RULE_SERVICES = [
 })
 class RulesModuleStub {}
 
+/** Stands in for the plan 3.9 RCA case module. */
+const RCA_SERVICES = [
+  RcaCasesService,
+  RcaLinksService,
+  RcaRecommendationsService,
+  RcaActionsService,
+];
+@Module({
+  providers: RCA_SERVICES.map((provide) => ({ provide, useValue: {} })),
+  exports: RCA_SERVICES,
+})
+class RcaCaseModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -444,6 +462,8 @@ async function generate(): Promise<string> {
     .useModule(FeatureFlagsModuleStub)
     .overrideModule(RulesModule)
     .useModule(RulesModuleStub)
+    .overrideModule(RcaCaseModule)
+    .useModule(RcaCaseModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

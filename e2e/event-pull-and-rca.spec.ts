@@ -301,7 +301,9 @@ test.describe('Event Pulling and RCA Creation', () => {
 
     expect(event).toBeDefined();
     expect(event.cost).toBeGreaterThanOrEqual(100000);
-    expect(event.severity).toBe('Critical');
+    // Plan 3.9: no severity is derived from cost (that derivation never existed) and the RCA cost trigger
+    // stays off until the owner sets rca_policy.costThreshold (D08 / D13), so only the stored facts are checked.
+    expect(event.severity ?? null).toBeNull();
   });
 
   test('RCA RULES: should show RCA button for qualifying events in UI', async ({ page }) => {
@@ -522,9 +524,16 @@ test.describe('Event Pulling and RCA Creation', () => {
       await page.waitForTimeout(2000);
     }
 
-    const eventFound = await page.locator(`text=${eventData.description}`).first().isVisible({ timeout: 5000 }).catch(() => false);
-    expect(eventFound).toBeTruthy();
-    console.log('✅ Step 2: Event displayed in EventHub');
+    // Plan 3.9: the fixture event belongs to a fresh "E2E Test Tenant", while the UI shows the user's
+    // selected plant, so the Event Hub cannot list it; the event is checked through the API of its tenant
+    // (Event Hub display is covered by event-hub-v2-ux04.spec.ts).
+    const stored = await apiRequest(`/production-events/${event.id}`, {
+      method: 'GET',
+      token: fixture.tokens.accessToken,
+    });
+    expect(stored.id).toBe(event.id);
+    expect(stored.description).toBe(eventData.description);
+    console.log('✅ Step 2: Event listed for its tenant');
 
     // Step 3: Get user ID and create RCA for the event
     let userId = '';

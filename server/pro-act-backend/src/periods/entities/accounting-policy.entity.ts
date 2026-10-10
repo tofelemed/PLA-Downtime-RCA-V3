@@ -7,6 +7,7 @@ export const POLICY_KINDS = [
   'oee_policy',
   'reconciliation_tolerance',
   'valuation_basis',
+  'rca_policy',
 ] as const;
 export type PolicyKind = (typeof POLICY_KINDS)[number];
 

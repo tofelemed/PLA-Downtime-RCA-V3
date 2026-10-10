@@ -25,6 +25,7 @@ export const AUDIT_ENTITY_ROUTE_MAP: Record<string, string> = {
   'rca-templates': 'RCATemplate',
   'rca-evidence': 'RCAEvidence',
   'rca-trigger-config': 'RCATriggerConfig',
+  'rca-actions': 'RCAAction',
   tasks: 'Task',
   roles: 'Role',
   products: 'Product',
@@ -58,7 +59,11 @@ export function methodToAuditAction(method: string): string {
 }
 
 export function resolveRouteSegment(path: string): string {
-  const normalized = path.split('?')[0].replace(/^\/api\/?/, '');
+  // `/api/v2/rcas` audits as `rcas` (plan 3.9): the URI version is not the entity
+  const normalized = path
+    .split('?')[0]
+    .replace(/^\/api\/?/, '')
+    .replace(/^v\d+\//, '');
   return normalized.split('/').filter(Boolean)[0] || '';
 }
 

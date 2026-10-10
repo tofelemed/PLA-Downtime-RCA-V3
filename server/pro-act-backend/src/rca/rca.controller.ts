@@ -5,6 +5,8 @@ import { ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateRcaDto } from './dto/create-rca.dto';
 import { UpdateRcaDto } from './dto/update-rca.dto';
+import { Ctx } from '../common/context/ctx.decorator';
+import { RequestContext } from '../common/context/request-context';
 
 @ApiTags('RCAs')
 @ApiBearerAuth()
@@ -47,8 +49,9 @@ export class RCAController {
   @Post()
   @ApiBody({ type: CreateRcaDto })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  create(@Body() data: CreateRcaDto): Promise<RCA> {
-    return this.rcaService.create(data);
+  create(@Ctx() ctx: RequestContext, @Body() data: CreateRcaDto): Promise<RCA> {
+    // the tenant comes from identity (plan 3.9: the v1 screen no longer sends tenantId)
+    return this.rcaService.create({ ...data, tenantId: ctx.tenantId ?? undefined });
   }
 
   @Put(':id')

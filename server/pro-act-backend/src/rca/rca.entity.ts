@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany, Index, VersionColumn } from 'typeorm';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { User } from '../users/user.entity';
 import { RCATemplate } from '../rca-template/rca-template.entity';
@@ -11,7 +11,8 @@ export class RCA {
   @Column({ name: 'event_id', type: 'uuid', nullable: true })
   eventId?: string;
 
-  @ManyToOne(() => ProductionEvent)
+  /** legacy single link (v1); the case's links live in `rca_case_links` (plan 3.9) */
+  @ManyToOne(() => ProductionEvent, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'event_id' })
   event?: ProductionEvent;
 
@@ -110,8 +111,21 @@ export class RCA {
   @Column({ name: 'productivity_improvement', type: 'decimal', precision: 5, scale: 2, nullable: true })
   productivityImprovement?: number;
 
+  @Index('IDX_rcas_tenant')
   @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
   tenantId?: string;
+
+  /** unit scope of the case (plan 3.9); null = tenant-wide case */
+  @Index('IDX_rcas_unit')
+  @Column({ name: 'unit_id', type: 'uuid', nullable: true })
+  unitId?: string | null;
+
+  @Column({ name: 'asset_id', type: 'uuid', nullable: true })
+  assetId?: string | null;
+
+  /** v2 ETag / If-Match; default 1 keeps legacy raw inserts valid */
+  @VersionColumn({ name: 'row_version', default: 1 })
+  rowVersion: number;
 
   @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
   organizationId?: string;

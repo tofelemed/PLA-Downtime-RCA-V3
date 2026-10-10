@@ -152,7 +152,7 @@ export class ProductionEvent {
   @Column({ name: 'rca_id', type: 'uuid', nullable: true })
   rcaId: string;
 
-  @ManyToOne(() => RCA)
+  @ManyToOne(() => RCA, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'rca_id' })
   rca: RCA;
 

@@ -5,18 +5,29 @@ import { Repository } from 'typeorm';
 import { RCA } from './rca.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 
-function normalizeRcaPayload(data: Partial<RCA>): Partial<RCA> {
-  const payload = { ...data };
+/** v1 body: arrays of the JSON text columns are serialized (3.9: the DTO accepts text or arrays). */
+export type RcaWriteBody = Omit<Partial<RCA>, 'recommendations' | 'evidence' | 'logicTree'> & {
+  recommendations?: string | unknown[];
+  evidence?: string | unknown[];
+  logicTree?: string | unknown[];
+};
+
+const jsonText = (value: string | unknown[] | undefined) =>
+  Array.isArray(value) ? JSON.stringify(value) : value;
+
+function normalizeRcaPayload(data: RcaWriteBody): Partial<RCA> {
+  const payload: Partial<RCA> = {
+    ...data,
+    recommendations: jsonText(data.recommendations),
+    evidence: jsonText(data.evidence),
+    logicTree: jsonText(data.logicTree),
+  };
   if (Array.isArray(payload.teamMemberIds)) {
     payload.teamMemberIds = JSON.stringify(payload.teamMemberIds) as unknown as string[];
   }
-  if (Array.isArray(payload.recommendations)) {
-    payload.recommendations = JSON.stringify(payload.recommendations);
-  }
-  if (Array.isArray(payload.evidence)) {
-    payload.evidence = JSON.stringify(payload.evidence);
-  }
-  return payload;
+  return Object.fromEntries(
+    Object.entries(payload).filter(([, value]) => value !== undefined),
+  ) as Partial<RCA>;
 }
 
 @Injectable()
@@ -42,7 +53,7 @@ export class RCAService {
     });
   }
 
-  async create(data: Partial<RCA>): Promise<RCA> {
+  async create(data: RcaWriteBody): Promise<RCA> {
     const payload = normalizeRcaPayload({
       id: data.id ?? randomUUID(),
       ...data,
@@ -53,8 +64,12 @@ export class RCAService {
     return saved;
   }
 
-  async update(id: string, data: Partial<RCA>): Promise<RCA | null> {
-    await this.rcaRepository.update(id, normalizeRcaPayload(data));
+  async update(id: string, data: RcaWriteBody): Promise<RCA | null> {
+    // v1 writes move row_version too, so a v2 If-Match sees them (plan 3.9)
+    await this.rcaRepository.update(id, {
+      ...normalizeRcaPayload(data),
+      rowVersion: () => '"row_version" + 1',
+    });
     const updated = await this.findOne(id);
     if (updated) {
       this.realtimeGateway.broadcastEntityEvent('Updated', 'rca', updated);

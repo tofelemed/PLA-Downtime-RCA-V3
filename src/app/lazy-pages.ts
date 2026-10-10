@@ -26,6 +26,7 @@ export const PlanDashboardV2 = lazyNamed(() => import('@/features/plan-dashboard
 /** What `/plans/:planId` shows while the flag is off (the v1 Plan Dashboard opens from Production Plans). */
 export const PlanDashboardOff = lazyNamed(() => import('@/features/plan-dashboard/plan-dashboard-off'), 'PlanDashboardOff');
 export const RCAModule =lazyNamed(() => import('@/pages/RCAModule'), 'RCAModule');
+export const RcaV2 = lazyNamed(() => import('@/features/rca/rca-page'), 'RcaPage');
 export const RCAKnowledgeBase = lazyNamed(() => import('@/pages/RCAKnowledgeBase'), 'RCAKnowledgeBase');
 export const TestRCAAnalysisTools = lazy(() => import('@/pages/TestRCAAnalysisTools'));
 export const Connectivity = lazyNamed(() => import('@/pages/Connectivity'), 'Connectivity');

@@ -1,35 +1,49 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsArray, IsNumber, IsDateString, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, IsOptional, IsArray, IsNumber, IsDateString, ValidateBy } from 'class-validator';
+
+/** JSON text (v1 clients) or the array itself (the service serializes it; plan 3.9). */
+function IsJsonTextOrArray(): PropertyDecorator {
+  return ValidateBy({
+    name: 'isJsonTextOrArray',
+    validator: {
+      validate: (value: unknown) => typeof value === 'string' || Array.isArray(value),
+      defaultMessage: () => '$property must be JSON text or an array',
+    },
+  });
+}
 import { Type } from 'class-transformer';
 
 export class CreateRcaDto {
-  @ApiProperty()
+  @ApiProperty({ required: false, description: 'Optional since 3.9: a case may start without an event' })
+  @IsOptional()
   @IsUUID()
-  eventId: string;
+  eventId?: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   title: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  description: string;
+  description?: string;
 
   @ApiProperty({ enum: ['Draft', 'In Progress', 'Analysis', 'Published', 'Closed'] })
   @IsString()
   @IsNotEmpty()
   status: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsUUID()
-  teamLeadId: string;
+  teamLeadId?: string;
 
-  @ApiProperty({ type: [String] })
+  @ApiProperty({ type: [String], required: false })
+  @IsOptional()
   @IsArray()
-  @IsUUID('4', { each: true })
-  teamMemberIds: string[];
+  @IsUUID('all', { each: true })
+  teamMemberIds?: string[];
 
   @ApiProperty({ enum: ['Low', 'Medium', 'High', 'Critical'] })
   @IsString()
@@ -53,20 +67,20 @@ export class CreateRcaDto {
   @IsString()
   rootCause?: string;
 
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  recommendations: string;
-
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'JSON text or array' })
   @IsOptional()
-  @IsString()
-  logicTree?: string;
+  @IsJsonTextOrArray()
+  recommendations?: string | unknown[];
 
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  evidence: string;
+  @ApiProperty({ required: false, description: 'JSON text or array' })
+  @IsOptional()
+  @IsJsonTextOrArray()
+  logicTree?: string | unknown[];
+
+  @ApiProperty({ required: false, description: 'JSON text or array' })
+  @IsOptional()
+  @IsJsonTextOrArray()
+  evidence?: string | unknown[];
 
   @ApiProperty({ required: false })
   @IsOptional()

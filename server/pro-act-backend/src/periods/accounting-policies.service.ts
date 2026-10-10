@@ -23,9 +23,14 @@ import {
   RECONCILIATION_TOLERANCE_DEFAULT,
   ReconciliationTolerance,
 } from './engine-policy-bodies';
+import {
+  parseRcaPolicy,
+  RCA_POLICY_DEFAULT,
+  RcaPolicy,
+} from '../domain/rca/rca-policy';
 
 const SEED_NOTE =
-  'Seeded on first use from the D04 / D05 / D06 default (DECISIONS.md, 2026-10-07); change by a new version.';
+  'Seeded on first use from the D04 / D05 / D06 / D13 default (DECISIONS.md, 2026-10-07); change by a new version.';
 
 /** Kinds seeded approved on first use; `valuation_basis` is seeded unapproved by the valuation module (VAL01). */
 type EngineKind = Exclude<PolicyKind, 'valuation_basis'>;
@@ -35,6 +40,7 @@ const DEFAULT_BODIES: Readonly<Record<EngineKind, object>> = {
   source_authority: SOURCE_AUTHORITY_DEFAULT,
   oee_policy: OEE_POLICY_DEFAULT,
   reconciliation_tolerance: RECONCILIATION_TOLERANCE_DEFAULT,
+  rca_policy: RCA_POLICY_DEFAULT,
 };
 
 /** Policies of the accounting engine (plan 2.5): D04 OEE policy and D06 tolerance, with their versions. */
@@ -103,6 +109,20 @@ export class AccountingPoliciesService {
         kind: policy.policyKind,
         version: policy.version,
       })),
+    };
+  }
+
+  /** `rca_policy` in force for the unit at the instant (plan 3.9, D13; seeded on first use). */
+  async resolveRca(
+    manager: EntityManager,
+    scope: { tenantId: string; unitId: string },
+    at: Date,
+  ): Promise<{ policy: RcaPolicy; id: string; version: number }> {
+    const found = await this.inForce(manager, scope, 'rca_policy', at);
+    return {
+      policy: parseRcaPolicy(found.body),
+      id: found.id,
+      version: found.version,
     };
   }
 

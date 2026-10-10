@@ -7,6 +7,7 @@ import { markRcaRequired } from '../production-event/event-write-model';
 import { RCAService } from './rca.service';
 import { RCA } from './rca.entity';
 import { RCATriggerConfigService } from '../rca-trigger-config/rca-trigger-config.service';
+import { FeatureFlagsService } from '../feature-flags/feature-flags.service';
 import {
   evaluateRcaTriggerRules,
   mapEventSeverityToRcaPriority,
@@ -27,6 +28,7 @@ export class RcaAutoCreateService {
     private readonly triggerConfigService: RCATriggerConfigService,
     @InjectRepository(ProductionEvent)
     private readonly productionEventRepository: Repository<ProductionEvent>,
+    private readonly flags: FeatureFlagsService,
   ) {}
 
   async tryCreateForEvent(
@@ -38,6 +40,12 @@ export class RcaAutoCreateService {
 
     if (event.rcaId) {
       return { created: false, reason: 'Event already linked to an RCA' };
+    }
+
+    // plan 3.9: with v2.rca on, the policy-driven RCA trigger service (recommend-only by default, D13)
+    // replaces the v1 trigger configs, so the two never both act on one event
+    if (await this.flags.isEnabled(event.tenantId, 'v2.rca')) {
+      return { created: false, reason: 'v2.rca: triggers follow rca_policy' };
     }
 
     const existing = await this.rcaService.findByEvent(event.id);

@@ -33,4 +33,7 @@ export const STALE_TIME: Readonly<Record<V2Resource, number>> = {
   // codes and admin rules (plan 3.8): configuration, refreshed by the writes that change it
   'code-mapping-rules': 30_000,
   rules: 30_000,
+  // RCA (plan 3.9): cases and links refreshed by their writes; recommendations by RCARecommended notices
+  'rca-cases': 30_000,
+  'rca-recommendations': 30_000,
 };

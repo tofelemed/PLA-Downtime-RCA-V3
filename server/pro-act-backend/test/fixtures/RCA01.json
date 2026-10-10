@@ -1,0 +1,26 @@
+{
+  "id": "RCA01",
+  "title": "Versioned RCA trigger on confirmed thresholds, without duplicate cases",
+  "kind": "scenario",
+  "spec_ref": "RCA01, D13",
+  "owner_subphase": "3.9",
+  "given": "rca_policy v1 (D13 default: unplanned downtime >= 3600 s, 3 functional failures of one asset in 30 d, recommend only, cost trigger off); an unplanned stop of asset A starting at T0 and still open",
+  "inputs": {
+    "policy": { "durationThresholdSeconds": 3600, "costThreshold": null, "repeatCount": 3, "repeatWindowDays": 30, "autoCreate": "recommend" },
+    "elapsedBeforeThresholdSeconds": 3599,
+    "elapsedAtSweepSeconds": 3700,
+    "closedDurationSeconds": 5400,
+    "failuresOfAssetIn30Days": 3
+  },
+  "expected": {
+    "beforeThreshold": { "candidates": 0 },
+    "openAfterThreshold": { "trigger": "duration", "provisional": true, "firedOn": "threshold_crossed_open", "decision": "insert", "outcome": "recommended" },
+    "closedReEvaluation": { "provisional": false, "firedOn": "closed", "decision": "confirm", "outcome": "suppressed_duplicate", "sameIdempotencyKey": true },
+    "replay": { "decision": "skip", "outcome": "suppressed_duplicate" },
+    "repeatedFailure": { "trigger": "repeat", "outcome": "recommended" },
+    "policyCreate": { "outcome": "case_created" },
+    "plannedStop": { "candidates": 0 },
+    "retracted": { "candidates": 0 }
+  },
+  "status": "authored"
+}

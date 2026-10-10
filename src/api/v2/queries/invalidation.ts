@@ -13,7 +13,7 @@ export interface ChangeNotice {
 
 /** Resources whose cached results may depend on an entity type (event → events, periods, reports). */
 export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> = {
-  production_event: ['production-events', 'production-periods', 'period-accounting', 'reports'],
+  production_event: ['production-events', 'production-periods', 'period-accounting', 'reports', 'rca-recommendations'],
   production_period: ['production-periods', 'period-accounting', 'reports'],
   production_period_window: ['production-periods', 'period-accounting', 'reports'],
   production_plan: ['plans', 'production-periods', 'period-accounting', 'reports'],
@@ -33,6 +33,8 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   code: ['codes', 'code-mapping-rules'],
   code_mapping_rule: ['code-mapping-rules', 'codes'],
   rule: ['rules'],
+  rca_case: ['rca-cases', 'rca-recommendations', 'production-events'],
+  rca_recommendation: ['rca-recommendations'],
 };
 
 /** Resources to refresh for an entity type; an unknown type refreshes the whole tenant (safe default). */
