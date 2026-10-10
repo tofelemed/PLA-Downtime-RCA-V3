@@ -38,14 +38,43 @@ describe('assertSecretFollowsTarget', () => {
     });
   });
 
-  it('allows non-target edits, path changes on the same origin, and changes that re-enter the secret', () => {
-    allows({ endpointConfig: { ...stored.endpointConfig, pageSize: 500 } });
-    allows({
+  it('refuses non-web schemes, username, unknown keys and removed keys without the credential', () => {
+    const mqtt = {
+      endpointConfig: { brokerUrl: 'mqtt://broker.plant.local' },
+      secretRef: 'secrets:2',
+    };
+    expect(() =>
+      assertSecretFollowsTarget(mqtt, {
+        endpointConfig: { brokerUrl: 'mqtt://evil.example' },
+      }),
+    ).toThrow(UnprocessableEntityException);
+    const opc = {
+      endpointConfig: { endpoint: { url: 'opc.tcp://plc.plant.local:4840' } },
+      secretRef: 'secrets:3',
+    };
+    expect(() =>
+      assertSecretFollowsTarget(opc, {
+        endpointConfig: { endpoint: { url: 'opc.tcp://evil.example:4840' } },
+      }),
+    ).toThrow(UnprocessableEntityException);
+    refuses({
+      endpointConfig: { ...stored.endpointConfig, username: 'other' },
+    });
+    refuses({
+      endpointConfig: { ...stored.endpointConfig, rejectUnauthorized: false },
+    });
+    refuses({ endpointConfig: { pageSize: 100 } });
+    refuses({
       endpointConfig: {
         ...stored.endpointConfig,
         piWebApiUrl: 'https://pi.plant.local/piwebapi/v2',
       },
     });
+  });
+
+  it('allows paging/timing edits, renames, and changes that re-enter the secret', () => {
+    allows({ endpointConfig: { ...stored.endpointConfig, pageSize: 500 } });
+    allows({ endpointConfig: { ...stored.endpointConfig, timeoutMs: 60000 } });
     allows({ displayName: 'renamed' });
     allows({
       endpointConfig: { piWebApiUrl: 'https://other.plant.local/piwebapi' },

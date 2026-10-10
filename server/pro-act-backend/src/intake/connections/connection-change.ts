@@ -54,54 +54,52 @@ export function sourceFailure(error: unknown): never {
   });
 }
 
-/** Endpoint keys that decide where a stored credential is sent. */
-const TARGET_KEY_PATTERN = /url|host|broker|endpoint|server|port/i;
-const INSECURE_TLS_KEY = 'allowInsecureTls';
+/**
+ * Endpoint settings that cannot redirect a credential or weaken TLS (paging and timing only). Every
+ * other key - URL, host, port, scheme, username, TLS options, unknown keys - binds the stored secret.
+ */
+const CREDENTIAL_NEUTRAL_KEYS: ReadonlySet<string> = new Set([
+  'pageSize',
+  'maxCount',
+  'batchSize',
+  'timeoutMs',
+  'pollIntervalSeconds',
+  'overlapSeconds',
+]);
 
 /**
- * A stored credential is only valid for the target it was entered for: moving the endpoint to another
- * origin/host/port, or switching TLS verification off, without re-entering the credential would send
- * the stored secret to a new, possibly attacker-controlled destination. 422 SECRET_REQUIRED then.
+ * A stored credential is only valid for the endpoint it was entered for: any change to the endpoint
+ * configuration other than paging/timing keys (another host, port, scheme, username, TLS setting or
+ * an unknown key) must re-enter the credential in the same request, or 422 SECRET_REQUIRED - otherwise
+ * the stored secret could be sent to a new, possibly attacker-controlled destination.
  */
 export function assertSecretFollowsTarget(
   connection: Pick<IntegrationConnection, 'endpointConfig' | 'secretRef'>,
   change: ConnectionChange,
 ): void {
+  if (!connection.secretRef || change.secret !== undefined) return;
+  if (!change.endpointConfig) return;
   if (
-    !connection.secretRef ||
-    change.secret !== undefined ||
-    !change.endpointConfig
-  )
+    bindingKeysEqual(connection.endpointConfig ?? {}, change.endpointConfig)
+  ) {
     return;
-  const before = targetSignature(connection.endpointConfig);
-  const after = targetSignature(change.endpointConfig);
-  if (before === after) return;
+  }
   throw new UnprocessableEntityException({
     code: 'SECRET_REQUIRED',
     message:
-      'Re-enter the credential when changing the endpoint target or TLS verification',
+      'Re-enter the credential when changing the endpoint target, user or TLS settings',
     fieldErrors: [
-      { field: 'secret', message: 'required when the endpoint target changes' },
+      { field: 'secret', message: 'required when the endpoint changes' },
     ],
   });
 }
 
-function targetSignature(
-  config: Record<string, unknown> | null | undefined,
-): string {
-  const entries = Object.entries(config ?? {})
-    .filter(([key]) => TARGET_KEY_PATTERN.test(key))
-    .map(([key, value]) => [key, normalizeTarget(value)] as const)
-    .sort(([a], [b]) => a.localeCompare(b));
-  const insecure = config?.[INSECURE_TLS_KEY] === true;
-  return JSON.stringify({ entries, insecure });
-}
-
-function normalizeTarget(value: unknown): string {
-  if (typeof value !== 'string') return JSON.stringify(value ?? null);
-  try {
-    return new URL(value).origin.toLowerCase();
-  } catch {
-    return value.trim().toLowerCase();
-  }
+function bindingKeysEqual(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+): boolean {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  return [...keys]
+    .filter((key) => !CREDENTIAL_NEUTRAL_KEYS.has(key))
+    .every((key) => JSON.stringify(before[key]) === JSON.stringify(after[key]));
 }
