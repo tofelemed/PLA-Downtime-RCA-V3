@@ -24,6 +24,7 @@ import { Secret } from '../entities/secret.entity';
 import {
   assertNotLegacyMirror,
   ConnectionChange,
+  assertSecretFollowsTarget,
   pickChange,
   sourceFailure,
 } from './connection-change';
@@ -176,6 +177,7 @@ export class IntegrationConnectionService {
       if (change.endpointConfig) {
         this.assertValidConfig(connection.sourceType, change.endpointConfig);
       }
+      assertSecretFollowsTarget(connection, change);
       const configChanged =
         change.secret !== undefined ||
         (change.endpointConfig !== undefined &&

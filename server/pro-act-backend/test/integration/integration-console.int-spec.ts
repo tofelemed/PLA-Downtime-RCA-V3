@@ -150,6 +150,28 @@ describe('integration console API (plan 3.7)', () => {
         before.configVersion + 2,
       );
     });
+    it('requires the credential again when the endpoint target changes (422 SECRET_REQUIRED)', async () => {
+      const before = await current(piConnection);
+      const moved = await http()
+        .patch(`/api/v2/connections/${piConnection}`)
+        .set(bearer(admin))
+        .set('If-Match', `"${before.rowVersion}"`)
+        .send({
+          endpointConfig: { piWebApiUrl: 'https://attacker.example/piwebapi' },
+        })
+        .expect(422);
+      expect((moved.body as { code: string }).code).toBe('SECRET_REQUIRED');
+      const insecure = await http()
+        .patch(`/api/v2/connections/${piConnection}`)
+        .set(bearer(admin))
+        .set('If-Match', `"${before.rowVersion}"`)
+        .send({
+          endpointConfig: { piWebApiUrl: sim.baseUrl, allowInsecureTls: true },
+        })
+        .expect(422);
+      expect((insecure.body as { code: string }).code).toBe('SECRET_REQUIRED');
+      // both refusals leave the connection untouched (the sample test below still reaches the simulator)
+    });
     it('refuses to edit a mirror of a v1 PI connection (409 LEGACY_CONNECTION)', async () => {
       const mirror = await insertConnection(
         harness.dataSource,
