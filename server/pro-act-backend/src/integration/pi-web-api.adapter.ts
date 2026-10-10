@@ -5,7 +5,9 @@ import {
   ConnectionTest,
   ReadPage,
   ReadRequest,
+  SampleRequest,
   SourceAdapter,
+  SourceSample,
 } from '../intake/adapters/adapter.interface';
 import {
   ConnectionCapabilities,
@@ -17,6 +19,7 @@ import { PiSearchScope } from './pi/pi-frame-search';
 import { PiInventory } from './pi/pi-inventory';
 import { PiJobScope, parsePiJobScope } from './pi/pi-job-scope';
 import { PiOpenFrameRefresh } from './pi/pi-open-frame-refresh';
+import { samplePiFrames } from './pi/pi-sample';
 import { PiSignalRead } from './pi/pi-signal-read';
 import { isPiSignalMode } from './pi/pi-signal-scope';
 import { PiWindowRead } from './pi/pi-window-read';
@@ -114,6 +117,19 @@ export class PiWebApiAdapter implements SourceAdapter, OnModuleInit {
       });
     }
     return { assetServers };
+  }
+
+  /** Discovery sample of recent frames with attribute values (plan 3.7); nothing is stored. */
+  async sample(
+    connection: IntegrationConnection,
+    request: SampleRequest,
+  ): Promise<SourceSample> {
+    const client = await this.clients.forConnection(connection);
+    return samplePiFrames(
+      client,
+      request,
+      connection.capabilities.batch !== false,
+    );
   }
 
   /** Signal jobs (plan 1.7) are checked at creation; frame jobs keep failing at read time (1.6). */

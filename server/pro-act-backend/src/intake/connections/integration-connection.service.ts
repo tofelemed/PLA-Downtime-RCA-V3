@@ -9,13 +9,26 @@ import {
   RequestContext,
   requireTenantId,
 } from '../../common/context/request-context';
+import { assertRevision } from '../../common/concurrency/revision';
 import { CredentialEncryptionService } from '../../common/services/credential-encryption.service';
 import { AdapterRegistry } from '../adapters/adapter-registry';
-import { ConnectionTest } from '../adapters/adapter.interface';
+import {
+  ConnectionTest,
+  SampleRequest,
+  SourceSample,
+} from '../adapters/adapter.interface';
 import { SourceType } from '../envelope/canonical-envelope';
 import { canonicalJson } from '../envelope/envelope-validator';
 import { IntegrationConnection } from '../entities/integration-connection.entity';
 import { Secret } from '../entities/secret.entity';
+import {
+  assertNotLegacyMirror,
+  ConnectionChange,
+  pickChange,
+  sourceFailure,
+} from './connection-change';
+
+export type { ConnectionChange } from './connection-change';
 
 const SECRET_REF_PREFIX = 'secrets:';
 /** Endpoint configuration keys that look like credentials (they belong in `secret`). */
@@ -81,16 +94,7 @@ export class IntegrationConnectionService {
     input: NewConnection,
   ): Promise<IntegrationConnection> {
     const tenantId = requireTenantId(context);
-    assertNoSecrets(input.endpointConfig);
-    const problems = this.adapters
-      .find(input.sourceType)
-      ?.validateConfig(input.endpointConfig);
-    if (problems && problems.length > 0) {
-      throw new UnprocessableEntityException({
-        code: 'INVALID_ENDPOINT_CONFIG',
-        message: problems.join('; '),
-      });
-    }
+    this.assertValidConfig(input.sourceType, input.endpointConfig);
     return this.connections.manager.transaction(async (manager) => {
       const secretRef = input.secret
         ? await this.storeSecret(manager, tenantId, {
@@ -120,6 +124,7 @@ export class IntegrationConnectionService {
     return this.adapters.get(connection.sourceType).test(connection);
   }
 
+  /** Adapter capabilities and source metadata; a classified source failure is 502 with its code. */
   async discover(
     context: RequestContext,
     id: string,
@@ -128,8 +133,67 @@ export class IntegrationConnectionService {
     const adapter = this.adapters.get(connection.sourceType);
     return {
       capabilities: adapter.capabilities(),
-      metadata: await adapter.discover(connection),
+      metadata: await adapter.discover(connection).catch(sourceFailure),
     };
+  }
+
+  /** Bounded discovery read (plan 3.7); 422 SAMPLE_UNSUPPORTED when the adapter cannot sample. */
+  async sample(
+    context: RequestContext,
+    id: string,
+    request: SampleRequest,
+  ): Promise<SourceSample> {
+    const connection = await this.get(context, id);
+    const adapter = this.adapters.get(connection.sourceType);
+    if (!adapter.sample) {
+      throw new UnprocessableEntityException({
+        code: 'SAMPLE_UNSUPPORTED',
+        message: `The ${connection.sourceType} adapter cannot sample records`,
+      });
+    }
+    return adapter.sample(connection, request).catch(sourceFailure);
+  }
+
+  /**
+   * Changes a v2 connection under `If-Match` (plan 3.7): a new endpoint configuration is validated like
+   * on create, a new secret replaces the stored ciphertext (never returned), and either bumps
+   * `configVersion`. Mirrors of v1 PI connections are edited through v1 (409 LEGACY_CONNECTION).
+   */
+  async update(
+    context: RequestContext,
+    target: { id: string; expectedRevision: number },
+    change: ConnectionChange,
+  ): Promise<IntegrationConnection> {
+    const tenantId = requireTenantId(context);
+    return this.connections.manager.transaction(async (manager) => {
+      const connection = await manager.findOne(IntegrationConnection, {
+        where: { id: target.id, tenantId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!connection) return this.forTenant(tenantId, target.id);
+      assertRevision(connection.rowVersion, target.expectedRevision);
+      await assertNotLegacyMirror(manager, connection.id);
+      if (change.endpointConfig) {
+        this.assertValidConfig(connection.sourceType, change.endpointConfig);
+      }
+      const configChanged =
+        change.secret !== undefined ||
+        (change.endpointConfig !== undefined &&
+          canonicalJson(change.endpointConfig) !==
+            canonicalJson(connection.endpointConfig));
+      if (change.secret !== undefined) {
+        connection.secretRef = await this.replaceSecret(
+          manager,
+          connection,
+          change.secret,
+        );
+      }
+      Object.assign(connection, pickChange(change), {
+        configVersion: connection.configVersion + (configChanged ? 1 : 0),
+        updatedBy: context.userId,
+      });
+      return manager.save(connection);
+    });
   }
 
   /** Decrypted secret of a connection (adapters only; never returned by an API). */
@@ -201,6 +265,43 @@ export class IntegrationConnectionService {
     });
   }
 
+  private assertValidConfig(
+    sourceType: SourceType,
+    config: Record<string, unknown>,
+  ): void {
+    assertNoSecrets(config);
+    const problems = this.adapters.find(sourceType)?.validateConfig(config);
+    if (problems && problems.length > 0) {
+      throw new UnprocessableEntityException({
+        code: 'INVALID_ENDPOINT_CONFIG',
+        message: problems.join('; '),
+      });
+    }
+  }
+
+  private async replaceSecret(
+    manager: EntityManager,
+    connection: IntegrationConnection,
+    secret: string,
+  ): Promise<string> {
+    const ciphertext = this.encryption.encrypt(secret);
+    const currentId = connection.secretRef?.startsWith(SECRET_REF_PREFIX)
+      ? connection.secretRef.slice(SECRET_REF_PREFIX.length)
+      : null;
+    if (currentId) {
+      const updated = await manager.update(
+        Secret,
+        { id: currentId, tenantId: connection.tenantId },
+        { ciphertext },
+      );
+      if (updated.affected) return connection.secretRef as string;
+    }
+    return this.storeSecret(manager, connection.tenantId, {
+      kind: `${connection.sourceType}_secret`,
+      ciphertext,
+    });
+  }
+
   private async storeSecret(
     manager: EntityManager,
     tenantId: string,
@@ -228,7 +329,8 @@ function piEndpoint(pi: PiConnectionSource): Record<string, unknown> {
   const endpoint: Record<string, unknown> = { piWebApiUrl: pi.piWebApiUrl };
   if (pi.username) endpoint.username = pi.username;
   if (pi.afDatabasePath) endpoint.afDatabasePath = pi.afDatabasePath;
-  if (skipsTlsVerification(pi.connectionConfig)) endpoint.allowInsecureTls = true;
+  if (skipsTlsVerification(pi.connectionConfig))
+    endpoint.allowInsecureTls = true;
   return endpoint;
 }
 

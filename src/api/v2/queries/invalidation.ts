@@ -23,6 +23,13 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   crew: ['crews', 'shift-instances'],
   export_job: ['jobs'],
   feature_flag: ['feature-flags'],
+  integration_connection: ['connections'],
+  ingestion_job: ['ingestion-jobs', 'connections'],
+  ingestion_exception: ['ingestion-exceptions'],
+  replay_run: ['replay-runs', 'ingestion-exceptions', 'production-events'],
+  source_mapping: ['source-mappings', 'ingestion-exceptions'],
+  attribute_mapping: ['attribute-mappings'],
+  signal: ['signals'],
 };
 
 /** Resources to refresh for an entity type; an unknown type refreshes the whole tenant (safe default). */

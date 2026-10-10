@@ -18,7 +18,14 @@ export type V2Resource =
   | 'units'
   | 'shift-instances'
   | 'feature-flags'
-  | 'jobs';
+  | 'jobs'
+  | 'connections'
+  | 'ingestion-jobs'
+  | 'ingestion-exceptions'
+  | 'replay-runs'
+  | 'source-mappings'
+  | 'attribute-mappings'
+  | 'signals';
 
 export interface V2Window {
   from?: string;

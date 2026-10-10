@@ -66,7 +66,7 @@ const PROTECTED_ROUTES: Array<[path: string, element: ReactNode]> = [
   ["/rca", <Pages.RCAModule />],
   ["/rca-knowledge-base", <Pages.RCAKnowledgeBase />],
   ["/test-rca-tools", <Pages.TestRCAAnalysisTools />],
-  ["/connectivity", <Pages.Connectivity />],
+  ["/connectivity", <FlaggedRoute flag="v2.integrationConsole" v1={<Pages.Connectivity />} v2={<Pages.IntegrationConsole />} />],
   ["/enhanced-historian", <Pages.EnhancedHistorian />],
   ["/pla-analytics", <FlaggedRoute flag="v2.plaAnalytics" v1={<Pages.PLADashboard />} v2={<Pages.PlaAnalyticsV2 />} />],
   ["/reports", <FlaggedRoute flag="v2.plaAnalytics" v1={<Pages.Reports />} v2={<Pages.ReportsV2 />} />],

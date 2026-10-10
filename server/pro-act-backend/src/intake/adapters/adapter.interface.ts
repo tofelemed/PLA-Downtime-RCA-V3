@@ -40,6 +40,36 @@ export interface ConnectionTest {
   capabilities?: Record<string, unknown>;
 }
 
+/** A bounded discovery read (plan 3.7): recent source records of one scope, nothing is stored. */
+export interface SampleRequest {
+  scopeType: 'database' | 'element';
+  scopeId: string;
+  templateName: string | null;
+  from: Date;
+  to: Date;
+  limit: number;
+}
+
+/** One sampled record as the source delivered it, with its attribute values. */
+export interface SampleRecord {
+  sourceObjectId: string;
+  name: string | null;
+  templateName: string | null;
+  startTime: string;
+  /** null while the record is still open (PI sentinel end time) */
+  endTime: string | null;
+  element: { webId: string | null; path: string | null } | null;
+  attributes: Record<string, unknown>;
+}
+
+export interface SourceSample {
+  records: SampleRecord[];
+  /** records per template in this sample, most frequent first */
+  templates: Array<{ name: string; records: number }>;
+  /** true when the window held more records than `limit` */
+  truncated: boolean;
+}
+
 /**
  * Source adapter contract (spec ING07). Config validation, capability declaration, connection test,
  * metadata discovery, paged reads from a checkpoint and health are mandatory. Pause, drain and stop are
@@ -59,6 +89,11 @@ export interface SourceAdapter {
   ): Promise<void>;
   test(connection: IntegrationConnection): Promise<ConnectionTest>;
   discover(connection: IntegrationConnection): Promise<Record<string, unknown>>;
+  /** optional bounded read of recent records for discovery and mapping preview (nothing is stored) */
+  sample?(
+    connection: IntegrationConnection,
+    request: SampleRequest,
+  ): Promise<SourceSample>;
   read(request: ReadRequest): Promise<ReadPage>;
   replayRead?(
     request: ReadRequest & { from: Date; to: Date },

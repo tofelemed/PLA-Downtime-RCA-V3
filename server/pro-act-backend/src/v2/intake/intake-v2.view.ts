@@ -84,10 +84,31 @@ export function toExceptionView(row: IngestionException) {
 }
 export type IngestionExceptionV2View = ReturnType<typeof toExceptionView>;
 
-/** Exception detail with the retained raw delivery it points at (ING05 preview). */
+/** Keys whose values are never shown, at any depth of a raw payload (plan 3.7). */
+const SECRET_KEY =
+  /pass(word)?|secret|token|api[-_]?key|credential|authorization/i;
+
+/** A raw payload with credential-like values replaced by "[redacted]". */
+export function redactSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactSecrets);
+  if (typeof value !== 'object' || value === null) return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [
+      key,
+      SECRET_KEY.test(key) ? '[redacted]' : redactSecrets(entry),
+    ]),
+  );
+}
+
+/**
+ * Exception detail with the retained raw delivery it points at (ING05 preview). The raw payload is
+ * shown to integration administrators / manager approvers only (`payloadVisible`), with credential-like
+ * keys redacted; other members see the delivery's metadata.
+ */
 export function toExceptionDetailView(
   row: IngestionException,
   raw: RawObservation | null,
+  payloadVisible: boolean,
 ) {
   return {
     ...toExceptionView(row),
@@ -97,7 +118,8 @@ export function toExceptionDetailView(
           receivedAt: iso(raw.receivedAt),
           messageId: raw.messageId,
           outcome: raw.outcome,
-          payload: raw.payload,
+          payloadVisible,
+          payload: payloadVisible ? redactSecrets(raw.payload) : null,
           payloadRef: raw.payloadRef,
         }
       : null,

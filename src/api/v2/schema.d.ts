@@ -281,6 +281,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/attribute-mappings/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview the typed mapping of one sample record (nothing is stored)
+         * @description Runs the intake mapping on the attributes with the effective rules of the template (catalog defaults < legacy < versioned override) and optional draft `fieldRules` merged per field: event columns, source facts (durations in seconds), diagnostics and the timestamp duration. 422 INVALID_FIELD_RULES for draft rules the catalog rejects.
+         */
+        post: operations["AttributeMappingsV2Controller_preview_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/reason-codes": {
         parameters: {
             query?: never;
@@ -773,7 +793,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change a connection (name, endpoint configuration, secret, active)
+         * @description Requires `If-Match: "<rowVersion>"` (428 without, 412 when stale). A new secret replaces the stored one and is never returned; endpoint or secret changes bump configVersion. Credential-like keys in endpointConfig are 422 SECRET_IN_CONFIG; mirrors of v1 PI connections are 409 LEGACY_CONNECTION.
+         */
+        patch: operations["ConnectionsV2Controller_update_v2"];
         trace?: never;
     };
     "/api/v2/connections/{id}/test": {
@@ -805,6 +829,26 @@ export interface paths {
         };
         /** Adapter capabilities and source metadata (e.g. PI asset servers) */
         get: operations["ConnectionsV2Controller_discover_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/connections/{id}/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sample recent source records of one scope with their attribute values (nothing is stored)
+         * @description Discovery for mapping (UX06): PI event frames overlapping [from, to) of an AF database or element, at most `limit` (≤ 50) records and 31 days, with records per template. 422 SAMPLE_UNSUPPORTED for adapters that cannot sample, 422 INVALID_RANGE for a bad window; source failures are 502 with the adapter's code (e.g. PI_AUTH_FAILED).
+         */
+        get: operations["ConnectionsV2Controller_sample_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3068,6 +3112,25 @@ export interface components {
             unit?: "seconds" | "minutes" | "hours" | "timespan";
             required?: boolean;
         };
+        AttributeMappingPreviewV2Dto: {
+            /** @description Template of the sample record ('*NoTemplate*' for none) */
+            templateName: string;
+            /**
+             * Format: uuid
+             * @description Connection whose overrides apply (default: all)
+             */
+            connectionId?: string;
+            /** @description Attribute values as the source delivered them */
+            attributes: {
+                [key: string]: unknown;
+            };
+            /** @description Record start, ISO 8601 */
+            startTime: string;
+            /** @description Record end, ISO 8601 (absent = still open) */
+            endTime?: string;
+            /** @description Draft rules merged field by field over the effective ones (preview before saving a version) */
+            fieldRules?: components["schemas"]["FieldRuleDto"][];
+        };
         AttributeMappingV2CreateDto: {
             /** @description PI template name ('*NoTemplate*' for frames without one) */
             templateName: string;
@@ -3202,6 +3265,17 @@ export interface components {
             secret?: string;
             /** @default true */
             isActive: boolean;
+        };
+        UpdateConnectionV2Dto: {
+            displayName?: string;
+            /** @description The whole new endpoint configuration (replaces the stored one). Credential-like keys are 422 SECRET_IN_CONFIG; the adapter validates it (422 INVALID_ENDPOINT_CONFIG). */
+            endpointConfig?: {
+                [key: string]: unknown;
+            };
+            /** @description Replaces the stored credential (write-only; never returned). Omit to keep the current one. */
+            secret?: string;
+            /** @description false deactivates the connection (its jobs stay as they are) */
+            isActive?: boolean;
         };
         JobCadenceV2Dto: {
             /** @description Seconds between pages when caught up */
@@ -4481,6 +4555,27 @@ export interface operations {
             };
         };
     };
+    AttributeMappingsV2Controller_preview_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttributeMappingPreviewV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ReasonCodesV2Controller_list_v2: {
         parameters: {
             query?: {
@@ -5366,6 +5461,31 @@ export interface operations {
             };
         };
     };
+    ConnectionsV2Controller_update_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateConnectionV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ConnectionsV2Controller_test_v2: {
         parameters: {
             query?: never;
@@ -5388,6 +5508,37 @@ export interface operations {
     ConnectionsV2Controller_discover_v2: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ConnectionsV2Controller_sample_v2: {
+        parameters: {
+            query: {
+                /** @description PI: search an AF database or one element */
+                scopeType: "database" | "element";
+                /** @description PI: AF database or element WebId */
+                scopeId: string;
+                /** @description Only records of this template */
+                templateName?: string;
+                /** @description Window start, ISO 8601 (inclusive) */
+                from: string;
+                /** @description Window end, ISO 8601 (exclusive); at most 31 days after from */
+                to: string;
+                limit?: number;
+            };
             header?: never;
             path: {
                 id: string;

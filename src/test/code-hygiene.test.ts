@@ -61,6 +61,16 @@ describe('code hygiene ratchet (plan 3.1)', () => {
     expect(users.filter((rel) => !INDEXEDDB_ALLOWLIST.has(rel))).toEqual([]);
   });
 
+  it('new code never imports an IndexedDB user (plan 3.7: the console reads connections, jobs and quarantine from v2)', () => {
+    const legacy = [...INDEXEDDB_ALLOWLIST].map((rel) => rel.replace(/\.tsx?$/, '').split('/').pop() as string);
+    const importsOf = (text: string) => [...text.matchAll(/from\s+['"]([^'"]+)['"]/g)].map((match) => match[1]);
+    const offences = files
+      // dev/ registers the dev-only seeders on purpose (never in production builds)
+      .filter((file) => NEW_CODE.some((prefix) => prefix !== 'dev/' && file.rel.startsWith(prefix)))
+      .flatMap((file) => importsOf(file.text).filter((spec) => legacy.includes(spec.split('/').pop() as string)).map((spec) => `${file.rel} → ${spec}`));
+    expect(offences).toEqual([]);
+  });
+
   it('Math.random does not spread; new code has none, nor console.log', () => {
     const random = files.filter((file) => file.text.includes('Math.random'));
     expect(random.length).toBeLessThanOrEqual(MATH_RANDOM_FILE_LIMIT);

@@ -29,6 +29,8 @@ export const RCAModule =lazyNamed(() => import('@/pages/RCAModule'), 'RCAModule'
 export const RCAKnowledgeBase = lazyNamed(() => import('@/pages/RCAKnowledgeBase'), 'RCAKnowledgeBase');
 export const TestRCAAnalysisTools = lazy(() => import('@/pages/TestRCAAnalysisTools'));
 export const Connectivity = lazyNamed(() => import('@/pages/Connectivity'), 'Connectivity');
+/** Integration console (plan 3.7), served at `/connectivity` while the `v2.integrationConsole` flag is on. */
+export const IntegrationConsole = lazyNamed(() => import('@/features/integration-console/integration-console-page'), 'IntegrationConsolePage');
 export const EnhancedHistorian = lazyNamed(() => import('@/pages/EnhancedHistorian'), 'EnhancedHistorian');
 export const PLADashboard = lazy(() => import('@/pages/PLADashboard'));
 export const Reports = lazy(() => import('@/pages/Reports'));

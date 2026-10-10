@@ -18,6 +18,7 @@ import { parseSort } from '../common/sort-spec';
 import { ConnectionListQueryDto } from './connection-v2.dto';
 import { IngestionExceptionListQueryDto } from './ingestion-exception-v2.dto';
 import { IngestionJobListQueryDto } from './ingestion-job-v2.dto';
+import { REPLAY_ROLES } from './intake-roles';
 import {
   ConnectionV2View,
   IngestionExceptionDetailV2View,
@@ -157,7 +158,7 @@ export class IntakeQueriesV2Service {
         tenantId: row.tenantId,
       },
     });
-    return toExceptionDetailView(row, raw);
+    return toExceptionDetailView(row, raw, mayReadRawPayload(context));
   }
 
   async replayRun(
@@ -170,6 +171,14 @@ export class IntakeQueriesV2Service {
     if (!run) throw notFound('Replay run');
     return toReplayRunView(run);
   }
+}
+
+/** Raw source payloads are for the roles that may resolve the quarantine (plan 3.7). */
+function mayReadRawPayload(context: RequestContext): boolean {
+  return (
+    context.isSuperAdmin ||
+    REPLAY_ROLES.some((role) => context.roles.includes(role))
+  );
 }
 
 function notFound(what: string): NotFoundException {

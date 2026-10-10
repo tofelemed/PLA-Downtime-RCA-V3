@@ -986,6 +986,37 @@
         ]
       }
     },
+    "/api/v2/attribute-mappings/preview": {
+      "post": {
+        "description": "Runs the intake mapping on the attributes with the effective rules of the template (catalog defaults < legacy < versioned override) and optional draft `fieldRules` merged per field: event columns, source facts (durations in seconds), diagnostics and the timestamp duration. 422 INVALID_FIELD_RULES for draft rules the catalog rejects.",
+        "operationId": "AttributeMappingsV2Controller_preview_v2",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributeMappingPreviewV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Preview the typed mapping of one sample record (nothing is stored)",
+        "tags": [
+          "v2 · Attribute Mappings"
+        ]
+      }
+    },
     "/api/v2/reason-codes": {
       "get": {
         "description": "Tree filters `parentId` (direct children) and `rootsOnly`; `asOf` returns the codes valid at that instant, otherwise active codes unless `includeRetired`. Keyset pages on (code, id).",
@@ -2906,6 +2937,52 @@
         "tags": [
           "v2 · Connections"
         ]
+      },
+      "patch": {
+        "description": "Requires `If-Match: \"<rowVersion>\"` (428 without, 412 when stale). A new secret replaces the stored one and is never returned; endpoint or secret changes bump configVersion. Credential-like keys in endpointConfig are 422 SECRET_IN_CONFIG; mirrors of v1 PI connections are 409 LEGACY_CONNECTION.",
+        "operationId": "ConnectionsV2Controller_update_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateConnectionV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change a connection (name, endpoint configuration, secret, active)",
+        "tags": [
+          "v2 · Connections"
+        ]
       }
     },
     "/api/v2/connections/{id}/test": {
@@ -2962,6 +3039,96 @@
           }
         ],
         "summary": "Adapter capabilities and source metadata (e.g. PI asset servers)",
+        "tags": [
+          "v2 · Connections"
+        ]
+      }
+    },
+    "/api/v2/connections/{id}/sample": {
+      "get": {
+        "description": "Discovery for mapping (UX06): PI event frames overlapping [from, to) of an AF database or element, at most `limit` (≤ 50) records and 31 days, with records per template. 422 SAMPLE_UNSUPPORTED for adapters that cannot sample, 422 INVALID_RANGE for a bad window; source failures are 502 with the adapter's code (e.g. PI_AUTH_FAILED).",
+        "operationId": "ConnectionsV2Controller_sample_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scopeType",
+            "required": true,
+            "in": "query",
+            "description": "PI: search an AF database or one element",
+            "schema": {
+              "enum": [
+                "database",
+                "element"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "scopeId",
+            "required": true,
+            "in": "query",
+            "description": "PI: AF database or element WebId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "templateName",
+            "required": false,
+            "in": "query",
+            "description": "Only records of this template",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive); at most 31 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sample recent source records of one scope with their attribute values (nothing is stored)",
         "tags": [
           "v2 · Connections"
         ]
@@ -10054,6 +10221,45 @@
           "type"
         ]
       },
+      "AttributeMappingPreviewV2Dto": {
+        "type": "object",
+        "properties": {
+          "templateName": {
+            "type": "string",
+            "description": "Template of the sample record ('*NoTemplate*' for none)"
+          },
+          "connectionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Connection whose overrides apply (default: all)"
+          },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Attribute values as the source delivered them"
+          },
+          "startTime": {
+            "type": "string",
+            "description": "Record start, ISO 8601"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "Record end, ISO 8601 (absent = still open)"
+          },
+          "fieldRules": {
+            "description": "Draft rules merged field by field over the effective ones (preview before saving a version)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldRuleDto"
+            }
+          }
+        },
+        "required": [
+          "templateName",
+          "attributes",
+          "startTime"
+        ]
+      },
       "AttributeMappingV2CreateDto": {
         "type": "object",
         "properties": {
@@ -10323,6 +10529,29 @@
           "displayName",
           "endpointConfig"
         ]
+      },
+      "UpdateConnectionV2Dto": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "endpointConfig": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "The whole new endpoint configuration (replaces the stored one). Credential-like keys are 422 SECRET_IN_CONFIG; the adapter validates it (422 INVALID_ENDPOINT_CONFIG)."
+          },
+          "secret": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "Replaces the stored credential (write-only; never returned). Omit to keep the current one."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "false deactivates the connection (its jobs stay as they are)"
+          }
+        }
       },
       "JobCadenceV2Dto": {
         "type": "object",

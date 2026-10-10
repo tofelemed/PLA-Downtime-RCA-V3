@@ -23,6 +23,7 @@ import { SourceMapping } from '../source-mapping/source-mapping.entity';
 import { SourceMappingModule } from '../source-mapping/source-mapping.module';
 import { AttributeMappingsV2Controller } from './attribute-mappings/attribute-mappings-v2.controller';
 import { AttributeMappingsV2Service } from './attribute-mappings/attribute-mappings-v2.service';
+import { AttributeMappingPreviewService } from './attribute-mappings/attribute-mapping-preview.service';
 import { CodeMappingRulesV2Controller } from './code-libraries/code-mapping-rules-v2.controller';
 import { FailureCodeGroupsV2Controller } from './code-libraries/failure-code-groups-v2.controller';
 import { ImpactCodesV2Controller } from './code-libraries/impact-codes-v2.controller';
@@ -229,6 +230,7 @@ import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
     EventReferencesValidator,
     SourceMappingsV2Service,
     AttributeMappingsV2Service,
+    AttributeMappingPreviewService,
     IntakeQueriesV2Service,
     SignalsV2Service,
     CalendarsV2Service,

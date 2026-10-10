@@ -1,0 +1,36 @@
+import { CheckCircle2, CircleDashed, AlertCircle } from 'lucide-react';
+import { PlantTime } from '@/features/ux-kit/plant-time';
+import type { StageResult } from '../model/stages';
+
+const ICON = { done: CheckCircle2, attention: AlertCircle, pending: CircleDashed } as const;
+const COLOR = { done: 'text-green-600', attention: 'text-amber-600', pending: 'text-muted-foreground' } as const;
+
+/** UX06 checklist of one connection: every stage with its result and time. */
+export function StageTracker({ stages, timezone }: { stages: readonly StageResult[]; timezone: string }) {
+  return (
+    <ol className="space-y-2" aria-label="Integration stages" data-testid="stage-tracker">
+      {stages.map((stage, index) => {
+        const Icon = ICON[stage.status];
+        return (
+          <li key={stage.key} className="flex items-start gap-2 text-sm" data-testid="stage" data-stage={stage.key} data-status={stage.status}>
+            <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${COLOR[stage.status]}`} aria-hidden />
+            <div>
+              <p className="font-medium">
+                {index + 1}. {stage.label} <span className="sr-only">({stage.status})</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {stage.detail}
+                {stage.at && (
+                  <>
+                    {' '}
+                    · <PlantTime iso={stage.at} tz={timezone} withDate />
+                  </>
+                )}
+              </p>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}

@@ -22,4 +22,12 @@ export const STALE_TIME: Readonly<Record<V2Resource, number>> = {
   'period-accounting': 30_000,
   reports: Number.POSITIVE_INFINITY,
   jobs: 0,
+  // integration console (plan 3.7): configuration 30 s, live job state and runs always refetched
+  connections: 30_000,
+  'ingestion-jobs': 0,
+  'ingestion-exceptions': 30_000,
+  'replay-runs': 0,
+  'source-mappings': 30_000,
+  'attribute-mappings': 30_000,
+  signals: 30_000,
 };

@@ -7,6 +7,7 @@ import {
   IsIn,
   IsISO8601,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -97,4 +98,54 @@ export class AttributeMappingV2CreateDto {
   @IsOptional()
   @IsISO8601({ strict: true })
   effectiveFrom?: string;
+}
+
+/** Body of POST /attribute-mappings/preview: one sample record through the typed mapping (PI02). */
+export class AttributeMappingPreviewV2Dto {
+  @ApiProperty({
+    description: "Template of the sample record ('*NoTemplate*' for none)",
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  templateName: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Connection whose overrides apply (default: all)',
+  })
+  @IsOptional()
+  @IsUUID()
+  connectionId?: string;
+
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: true,
+    description: 'Attribute values as the source delivered them',
+  })
+  @IsObject()
+  attributes: Record<string, unknown>;
+
+  @ApiProperty({ description: 'Record start, ISO 8601' })
+  @IsISO8601({ strict: true })
+  startTime: string;
+
+  @ApiPropertyOptional({
+    description: 'Record end, ISO 8601 (absent = still open)',
+  })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  endTime?: string;
+
+  @ApiPropertyOptional({
+    type: [FieldRuleDto],
+    description:
+      'Draft rules merged field by field over the effective ones (preview before saving a version)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => FieldRuleDto)
+  fieldRules?: FieldRuleDto[];
 }

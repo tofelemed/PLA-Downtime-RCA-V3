@@ -6,8 +6,10 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
+  UnprocessableEntityException,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,15 +20,23 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Roles } from '../../auth/decorators/roles.decorator';
+import { IfMatch } from '../../common/concurrency/revision';
 import { Ctx } from '../../common/context/ctx.decorator';
 import { RequestContext } from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
-import { ConnectionTest } from '../../intake/adapters/adapter.interface';
+import {
+  ConnectionTest,
+  SourceSample,
+} from '../../intake/adapters/adapter.interface';
 import { IntegrationConnectionService } from '../../intake/connections/integration-connection.service';
 import { IngestionJobsService } from '../../intake/jobs/ingestion-jobs.service';
 import { ReplayService } from '../../intake/replay/replay.service';
 import { JobAccepted, ListResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
+import {
+  ConnectionSampleQueryV2Dto,
+  UpdateConnectionV2Dto,
+} from './connection-change-v2.dto';
 import {
   ConnectionListQueryDto,
   CreateConnectionV2Dto,
@@ -45,6 +55,7 @@ import {
 } from './intake-v2.view';
 
 const IDEMPOTENCY_HEADER = { name: 'Idempotency-Key', required: true };
+const SAMPLE_WINDOW_MS = 31 * 86_400_000;
 
 /** Source connections (plan 1.5, spec §15.2 `/connections`, ING07); secrets are never returned. */
 @ApiTags('v2 · Connections')
@@ -99,6 +110,28 @@ export class ConnectionsV2Controller {
     return toConnectionView(await this.connections.create(ctx, body));
   }
 
+  @Patch(':id')
+  @Roles(...INTEGRATION_WRITERS)
+  @ApiOperation({
+    summary:
+      'Change a connection (name, endpoint configuration, secret, active)',
+    description:
+      'Requires `If-Match: "<rowVersion>"` (428 without, 412 when stale). A new secret replaces the stored ' +
+      'one and is never returned; endpoint or secret changes bump configVersion. Credential-like keys in ' +
+      'endpointConfig are 422 SECRET_IN_CONFIG; mirrors of v1 PI connections are 409 LEGACY_CONNECTION.',
+  })
+  @ApiHeader({ name: 'If-Match', required: true })
+  async update(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @IfMatch() expectedRevision: number,
+    @Body() body: UpdateConnectionV2Dto,
+  ): Promise<ConnectionV2View> {
+    return toConnectionView(
+      await this.connections.update(ctx, { id, expectedRevision }, body),
+    );
+  }
+
   @Post(':id/test')
   @HttpCode(HttpStatus.OK)
   @Roles(...INTEGRATION_WRITERS)
@@ -125,6 +158,41 @@ export class ConnectionsV2Controller {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<Record<string, unknown>> {
     return this.connections.discover(ctx, id);
+  }
+
+  @Get(':id/sample')
+  @Roles(...INTEGRATION_WRITERS)
+  @ApiOperation({
+    summary:
+      'Sample recent source records of one scope with their attribute values (nothing is stored)',
+    description:
+      'Discovery for mapping (UX06): PI event frames overlapping [from, to) of an AF database or element, ' +
+      'at most `limit` (≤ 50) records and 31 days, with records per template. 422 SAMPLE_UNSUPPORTED for ' +
+      'adapters that cannot sample, 422 INVALID_RANGE for a bad window; source failures are 502 with the ' +
+      "adapter's code (e.g. PI_AUTH_FAILED).",
+  })
+  sample(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query() query: ConnectionSampleQueryV2Dto,
+  ): Promise<SourceSample> {
+    const from = new Date(query.from);
+    const to = new Date(query.to);
+    const span = to.getTime() - from.getTime();
+    if (!(span > 0) || span > SAMPLE_WINDOW_MS) {
+      throw new UnprocessableEntityException({
+        code: 'INVALID_RANGE',
+        message: 'from must be before to, and the window at most 31 days',
+      });
+    }
+    return this.connections.sample(ctx, id, {
+      scopeType: query.scopeType,
+      scopeId: query.scopeId,
+      templateName: query.templateName ?? null,
+      from,
+      to,
+      limit: query.limit ?? 20,
+    });
   }
 
   @Post(':id/jobs')
