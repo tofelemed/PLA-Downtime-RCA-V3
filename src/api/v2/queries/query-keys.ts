@@ -29,7 +29,8 @@ export type V2Resource =
   | 'code-mapping-rules'
   | 'rules'
   | 'rca-cases'
-  | 'rca-recommendations';
+  | 'rca-recommendations'
+  | 'valuation';
 
 export interface V2Window {
   from?: string;

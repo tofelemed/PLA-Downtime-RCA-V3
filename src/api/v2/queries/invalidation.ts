@@ -35,6 +35,8 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   rule: ['rules'],
   rca_case: ['rca-cases', 'rca-recommendations', 'production-events'],
   rca_recommendation: ['rca-recommendations'],
+  fx_rate: ['valuation'],
+  valuation_policy: ['valuation'],
 };
 
 /** Resources to refresh for an entity type; an unknown type refreshes the whole tenant (safe default). */

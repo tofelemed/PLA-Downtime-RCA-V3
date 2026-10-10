@@ -36,6 +36,10 @@ export const IntegrationConsole = lazyNamed(() => import('@/features/integration
 export const CodesAdmin = lazyNamed(() => import('@/features/codes-admin/codes-admin-page'), 'CodesAdminPage');
 /** What `/codes-admin` shows while the flag is off (the v1 code screens in Master Data stay). */
 export const CodesAdminOff = lazyNamed(() => import('@/features/codes-admin/codes-admin-off'), 'CodesAdminOff');
+/** Valuation policy and FX rates (plan 2.6 screens), served at `/finance` while `v2.codesAdmin` is on. */
+export const Finance = lazyNamed(() => import('@/features/finance/finance-page'), 'FinancePage');
+/** What `/finance` shows while the flag is off (there is no v1 finance screen). */
+export const FinanceOff = lazyNamed(() => import('@/features/finance/finance-off'), 'FinanceOff');
 export const EnhancedHistorian = lazyNamed(() => import('@/pages/EnhancedHistorian'), 'EnhancedHistorian');
 export const PLADashboard = lazy(() => import('@/pages/PLADashboard'));
 export const Reports = lazy(() => import('@/pages/Reports'));

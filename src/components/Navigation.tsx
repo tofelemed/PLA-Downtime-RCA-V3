@@ -17,7 +17,8 @@ import {
   CheckSquare,
   ChevronLeft,
   ChevronRight,
-  TrendingDown
+  TrendingDown,
+  Coins
 } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useFlag } from '@/api/v2/queries/feature-flags';
@@ -135,6 +136,15 @@ const navigationItems = [
     flag: 'v2.codesAdmin' as FeatureFlagKey,
   },
   {
+    name: 'Finance',
+    href: '/finance',
+    icon: Coins,
+    roles: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Analyst', 'Engineer'],
+    description: 'Valuation policy approval and FX rates (v2)',
+    // plan 2.6 finance screens: part of the v2 admin area, listed only while its flag is on
+    flag: 'v2.codesAdmin' as FeatureFlagKey,
+  },
+  {
     name: 'User Management',
     href: '/users',
     icon: Users,
@@ -217,6 +227,7 @@ export const Navigation: React.FC<NavigationProps> = ({ collapsed, setCollapsed 
   const flagsOn: Partial<Record<FeatureFlagKey, boolean>> = {
     'v2.downtimeAnalysis': useFlag('v2.downtimeAnalysis').enabled,
     'v2.plansProfilesCalendars': useFlag('v2.plansProfilesCalendars').enabled,
+    'v2.codesAdmin': useFlag('v2.codesAdmin').enabled,
   };
   const allowedItems = navigationItems.filter(item =>
     session && item.roles.includes(session.user.role) && (!('flag' in item) || flagsOn[item.flag] === true)
