@@ -41,6 +41,7 @@
     "db:delete-all-data": "ts-node scripts/delete-all-data.ts",
     "setup:test-env": "ts-node scripts/setup-test-environment.ts",
     "db:seed-demo-users": "ts-node scripts/seed-demo-users.ts",
+    "db:seed-demo-valuation": "ts-node scripts/demo-valuation/seed-demo-valuation.ts",
     "db:bootstrap-admin": "ts-node scripts/bootstrap-admin.ts"
   },
   "dependencies": {

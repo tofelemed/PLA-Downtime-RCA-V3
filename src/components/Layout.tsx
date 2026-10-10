@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigation } from './Navigation';
 import PlantSelector from './PlantSelector';
+import { DisplayCurrencyToggle } from '@/features/display-currency/display-currency-toggle';
 import { Button } from '@/components/ui/button';
 import { LogOut, User, Bell, Settings, Search } from 'lucide-react';
 import { brandingService, BrandingSettings } from '@/services/BrandingService';
@@ -127,6 +128,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             
             {/* Enhanced Right Section */}
             <div className="flex items-center space-x-4">
+              <DisplayCurrencyToggle className="bg-white/80 rounded-md" />
               {/* Search Bar */}
               <div className="relative hidden md:block">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />

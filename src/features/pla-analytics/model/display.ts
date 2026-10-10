@@ -2,6 +2,7 @@ import type { LossTreeGroupBy, LossTreeGroupView, LossTreeMetric, LossTreeTotalV
 import type { KpiAggregateView } from '@/api/v2/types/reports';
 import { formatRatio, reasonText } from '@/features/downtime-analysis/model/kpi-display';
 import { valuationReasonLabel } from '@/features/plan-dashboard/model/display';
+import { currencyDigits } from '@/features/display-currency/money-format';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
 
 /** Labels and display rules of PLA Analytics (plan 3.6); the browser formats server figures, never derives them. */
@@ -36,14 +37,11 @@ export const TREND_LABELS: Record<TrendGroup, string> = { shift: 'Shift', day: '
 export const OEE_COMPONENTS = ['availability', 'performance', 'quality', 'oee'] as const;
 export const RECONCILED_COMPONENTS = ['reconciled_availability', 'reconciled_performance', 'reconciled_quality', 'reconciled_oee'] as const;
 
-/** Fraction digits per currency (D08: IRR without minor unit, USD 2). */
-const CURRENCY_DIGITS: Record<string, number> = { IRR: 0, USD: 2 };
-
 /** A loss amount with its unit (uom or currency); null says why — never a 0 (VAL02, T45). */
 export function amountText(row: Pick<LossTreeGroupView | LossTreeTotalView, 'amount' | 'unit' | 'reasons' | 'status'>, metric: LossTreeMetric): string {
   const unit = row.unit ?? (metric === 'qty' ? 'unit unknown' : 'no currency');
   if (row.amount === null) return `Not valued (${notValuedReason(row.reasons)})`;
-  const digits = metric === 'qty' ? 2 : CURRENCY_DIGITS[row.unit ?? ''] ?? 2;
+  const digits = metric === 'qty' ? 2 : currencyDigits(row.unit);
   return `${formatDecimal(row.amount, digits)} ${unit}`;
 }
 

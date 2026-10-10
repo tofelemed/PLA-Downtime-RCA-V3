@@ -4,6 +4,7 @@ import { useLossTree } from '@/api/v2/queries/pla-analytics';
 import type { LossTreeGroupBy, LossTreeMetric, LossTreeView } from '@/api/v2/types/pla-analytics';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { ReportCard } from '@/features/downtime-analysis/components/report-card';
 import { LOSS_GROUPS, LOSS_METRICS, lossTreeQuery, type AnalyticsScope } from '../model/analytics-scope';
@@ -70,8 +71,10 @@ export function LossTreeTab({ scope, onChange }: LossTreeTabProps) {
 
 function LossTreeBody({ data }: { data: LossTreeView }) {
   const units = data.totals.map((t) => t.unit);
+  const { currency } = useDisplayCurrency();
   const [chosen, setChosen] = useState<string | null>(null);
-  const unit = chosen !== null && units.includes(chosen) ? chosen : (units[0] ?? null);
+  const fallback = units.includes(currency) ? currency : (units[0] ?? null);
+  const unit = chosen !== null && units.includes(chosen) ? chosen : fallback;
   const groups = data.groups.filter((g) => g.unit === unit);
   return (
     <div className="space-y-2" data-testid="loss-tree" data-group-by={data.groupBy} data-metric={data.metric}>

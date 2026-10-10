@@ -1,5 +1,6 @@
 import { ResponsiveContainer, Tooltip, Treemap } from 'recharts';
 import type { LossTreeGroupView } from '@/api/v2/types/pla-analytics';
+import { currencyDigits } from '@/features/display-currency/money-format';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
 
 interface Leaf {
@@ -23,7 +24,7 @@ export function LossTreemap({ groups, unit }: { groups: readonly LossTreeGroupVi
     <div className="h-64 w-full" aria-hidden>
       <ResponsiveContainer>
         <Treemap data={leaves} dataKey="size" nameKey="name" stroke="hsl(var(--background))" fill="hsl(var(--primary))" isAnimationActive={false}>
-          <Tooltip formatter={(_value: unknown, _name: string, item: { payload?: Leaf }) => `${formatDecimal(item.payload?.amount)} ${unit ?? ''}`} />
+          <Tooltip formatter={(_value: unknown, _name: string, item: { payload?: Leaf }) => `${formatDecimal(item.payload?.amount, currencyDigits(unit))} ${unit ?? ''}`} />
         </Treemap>
       </ResponsiveContainer>
     </div>

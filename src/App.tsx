@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { Layout } from "./components/Layout";
 import { LoginForm } from "./components/LoginForm";
 import { PlantSelectionProvider } from "./contexts/PlantSelectionContext";
+import { DisplayCurrencyProvider } from "@/features/display-currency/display-currency-provider";
 import { createAppQueryClient } from "./app/query-client";
 import * as Pages from "./app/lazy-pages";
 import { V2SessionBridge } from "./features/v2-foundation/v2-session-bridge";
@@ -107,11 +108,13 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <PlantSelectionProvider>
-          <V2SessionBridge />
-          <RealtimeBridge />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
+          <DisplayCurrencyProvider>
+            <V2SessionBridge />
+            <RealtimeBridge />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </DisplayCurrencyProvider>
         </PlantSelectionProvider>
       </AuthProvider>
     </TooltipProvider>

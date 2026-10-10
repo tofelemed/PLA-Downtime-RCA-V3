@@ -1,6 +1,6 @@
 import type { CurrencyValueView, GridWorkflowState, ResidualState } from '@/api/v2/types/period-overview';
 import type { CandidateState, ReconciliationView } from '@/api/v2/types/reconciliation';
-import { formatDecimal } from '@/features/ux-kit/format/decimal';
+import { formatCurrencyAmount } from '@/features/display-currency/money-format';
 
 /** Labels and display rules of the Plan Dashboard (plan 3.5); no figure is derived here. */
 export const WORKFLOW_LABELS: Record<GridWorkflowState, string> = {
@@ -45,16 +45,13 @@ export const KIND_LABELS: Record<string, string> = {
 /** Readiness is a display label only (WF01: Open / Reconciled ≠ workflow state). */
 export const READINESS_LABELS: Record<string, string> = { open: 'Open', reconciled: 'Reconciled' };
 
-/** Fraction digits per ISO 4217 code for display (IRR has no minor unit in practice, D08). */
-const CURRENCY_DIGITS: Record<string, number> = { IRR: 0, USD: 2 };
-
 /** `1,234.57 USD` from a decimal string, rounded for display only; null amounts say why (never 0). */
 export function formatMoney(value: CurrencyValueView): string {
   if (value.amount === null) {
     const reason = value.reasons.includes('fx_rate_missing') ? 'FX rate missing' : value.reasons.includes('policy_unapproved') ? 'policy not approved' : 'not valued';
     return `— ${value.currency} (${reason})`;
   }
-  return `${formatDecimal(value.amount, CURRENCY_DIGITS[value.currency] ?? 2)} ${value.currency}`;
+  return formatCurrencyAmount(value.amount, value.currency);
 }
 
 const VALUATION_REASON_LABELS: Record<string, string> = {

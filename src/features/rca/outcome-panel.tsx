@@ -1,4 +1,5 @@
 import { useRcaOutcome } from '@/api/v2/queries/rca-cases';
+import { currencyDigits } from '@/features/display-currency/money-format';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Quantity } from '@/features/ux-kit/quantity';
@@ -27,7 +28,7 @@ export function OutcomePanel({ rcaId }: { rcaId: string }) {
               <ul className="text-sm">
                 {data.claimedAvoided.map((claim) => (
                   <li key={claim.currency}>
-                    <Quantity value={claim.amount} uom={claim.currency} /> ({claim.actions} action(s))
+                    <Quantity value={claim.amount} uom={claim.currency} fractionDigits={currencyDigits(claim.currency)} /> ({claim.actions} action(s))
                   </li>
                 ))}
               </ul>

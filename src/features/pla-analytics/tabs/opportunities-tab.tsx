@@ -1,6 +1,8 @@
 import { useLossTree } from '@/api/v2/queries/pla-analytics';
 import type { LossTreeMetric, LossTreeView } from '@/api/v2/types/pla-analytics';
 import { Label } from '@/components/ui/label';
+import { entriesInCurrency } from '@/features/display-currency/money-format';
+import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { ReportCard } from '@/features/downtime-analysis/components/report-card';
 import { lossTreeQuery, VALUE_METRICS, type AnalyticsScope } from '../model/analytics-scope';
@@ -16,9 +18,9 @@ export interface OpportunitiesTabProps {
 }
 
 /**
- * Top opportunities and cost / margin impact (AN02): the largest valued losses by reason in each reporting
- * currency (IRR and USD, D08) for one valuation view, with the server's basis label; lines without a price
- * are shown as not valued with the reason, never as 0.
+ * Top opportunities and cost / margin impact (AN02): the largest valued losses by reason in the user's
+ * display currency (USD by default, IRR on request; the server reports both, D08) for one valuation view,
+ * with the server's basis label; lines without a price are shown as not valued with the reason, never as 0.
  */
 export function OpportunitiesTab({ scope, onChange }: OpportunitiesTabProps) {
   const env = useEventHubEnv();
@@ -53,9 +55,11 @@ export function OpportunitiesTab({ scope, onChange }: OpportunitiesTabProps) {
 }
 
 function Currencies({ data }: { data: LossTreeView }) {
+  const { currency } = useDisplayCurrency();
+  const totals = entriesInCurrency(data.totals, (t) => t.unit, currency);
   return (
     <div className="grid gap-4 lg:grid-cols-2" data-testid="opportunities" data-metric={data.metric}>
-      {data.totals.map((total) => (
+      {totals.map((total) => (
         <section key={total.unit ?? '-'} className="space-y-1" data-testid="opportunity-currency" data-currency={total.unit ?? ''} data-status={total.status}>
           <h4 className="text-sm font-medium">{total.unit ?? 'Not valued'}</h4>
           <LossTable groups={data.groups.filter((g) => g.unit === total.unit)} total={total} metric={data.metric} groupTitle="Reason" testId="opportunity-table" />

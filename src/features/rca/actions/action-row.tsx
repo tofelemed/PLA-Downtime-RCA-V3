@@ -2,6 +2,7 @@ import { useUpdateRcaAction, useVerifyRcaAction } from '@/api/v2/queries/rca-com
 import type { RcaActionView } from '@/api/v2/types/rca';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { currencyDigits } from '@/features/display-currency/money-format';
 import { CommandError } from '@/features/event-hub/components/command-error';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
@@ -43,7 +44,7 @@ export function ActionRow({ action, timezone }: { action: RcaActionView; timezon
           ? `baseline ${action.baseline.value} ${action.baseline.metric.replace('_', ' ')} / ${action.baseline.windowDays} d (${action.baseline.declared ? 'declared' : 'counted'})`
           : 'no baseline'}
         {action.claimedAvoidedLoss && (
-          <> · claimed <Quantity value={action.claimedAvoidedLoss.amount} uom={action.claimedAvoidedLoss.currency} /></>
+          <> · claimed <Quantity value={action.claimedAvoidedLoss.amount} uom={action.claimedAvoidedLoss.currency} fractionDigits={currencyDigits(action.claimedAvoidedLoss.currency)} /></>
         )}
       </p>
       {action.postAction && (
