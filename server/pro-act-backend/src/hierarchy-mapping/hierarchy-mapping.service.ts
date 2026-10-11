@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { SourceHierarchyMapping } from './entities/source-hierarchy-mapping.entity';
 import { LegacyMappingMirror } from '../source-mapping/legacy-mapping-mirror';
 import { SourceMappingService } from '../source-mapping/source-mapping.service';
+import { legacySourceSystem } from '../source-mapping/source-system';
 import { HierarchyIds, MappingRequest } from './dto/hierarchy-ids.dto';
 import { CreateSourceHierarchyMappingDto } from './dto/create-source-hierarchy-mapping.dto';
 import { UpdateSourceHierarchyMappingDto } from './dto/update-source-hierarchy-mapping.dto';
@@ -89,12 +90,15 @@ export class HierarchyMappingService {
   /**
    * v1 lookup, answered by the deterministic resolver of plan 1.3 (ING03): exact id → exact path →
    * pattern → AF binding; ambiguous or cross-tenant targets resolve to null. The old substring path
-   * containment and per-call full-table scans are gone.
+   * containment and per-call full-table scans are gone. The rules are those of the request's source
+   * type (the word the mirror stores as `source_system`) plus the `*` rules.
    */
   async findHierarchyMapping(request: MappingRequest): Promise<HierarchyIds | null> {
     const resolver = await this.sourceMappings.loadResolver(
       request.tenantId,
       request.connectionId ?? null,
+      new Date(),
+      legacySourceSystem(request.sourceType),
     );
     const resolved = resolver.resolve({
       sourceId: request.sourceIdentifier,

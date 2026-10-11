@@ -13,6 +13,7 @@ import { ProductionEventModule } from '../../src/production-event/production-eve
 import { SourceMappingService } from '../../src/source-mapping/source-mapping.service';
 import { V2Module } from '../../src/v2/v2.module';
 import { IntegrationHarness } from './harness';
+import { insertConnection } from './support/intake-fixtures';
 import { at, EventWorld, seedEventWorld } from './support/seed-event-world';
 import { bearer, createIntegrationApp, signToken } from './support/test-app';
 
@@ -78,12 +79,22 @@ describe('source → plant mapping (plan 1.3)', () => {
       .set(bearer(token))
       .set('Idempotency-Key', randomUUID())
       .send({ targetType: 'unit', ...body });
-  const preview = (samples: Array<Record<string, unknown>>, token = admin) =>
+  const preview = (
+    samples: Array<Record<string, unknown>>,
+    token = admin,
+    connectionId?: string,
+  ) =>
     http()
       .post('/api/v2/source-mappings/preview')
       .set(bearer(token))
-      .send({ samples })
+      .send(connectionId ? { connectionId, samples } : { samples })
       .expect(200);
+  const findMapping = (sourceType: string, sourceIdentifier: string) =>
+    http()
+      .post('/api/hierarchy-mappings/find-mapping')
+      .set(bearer(admin))
+      .send({ sourceType, sourceIdentifier, tenantId: world.tenantA })
+      .expect(201);
   const bind = (
     webId: string,
     boundType: string,
@@ -347,6 +358,52 @@ describe('source → plant mapping (plan 1.3)', () => {
           tenantId: world.tenantA,
         }),
       ).toMatchObject({ unitId: world.unitA1 });
+    });
+
+    it('resolves a mirrored MQTT mapping under its own source system (v1 lookup and v2 preview)', async () => {
+      const topic = 'plant/line1/extruder';
+      const legacy = app.get(HierarchyMappingService);
+      await legacy.create({
+        sourceType: 'MQTT',
+        sourceIdentifier: topic,
+        targetType: 'unit',
+        targetId: world.unitA2,
+        tenantId: world.tenantA,
+      });
+      await legacy.create({
+        sourceType: 'PI',
+        sourceIdentifier: 'EL-LEGACY-PI',
+        targetType: 'unit',
+        targetId: world.unitA1,
+        tenantId: world.tenantA,
+      });
+      const found = async (sourceType: string, sourceIdentifier: string) =>
+        json<{ unitId?: string }>(
+          await findMapping(sourceType, sourceIdentifier),
+        ).unitId;
+      expect(await found('MQTT', topic)).toBe(world.unitA2);
+      expect(await found('PI', 'EL-LEGACY-PI')).toBe(world.unitA1);
+      expect(await found('PI', topic)).toBeUndefined();
+
+      const mqttConnection = await insertConnection(
+        harness.dataSource,
+        world.tenantA,
+        'mqtt',
+      );
+      const viaMqtt = await preview(
+        [{ sourceId: topic }],
+        admin,
+        mqttConnection,
+      );
+      expect(json<PreviewBody>(viaMqtt).results[0]).toMatchObject({
+        status: 'mapped',
+        tier: 'exact_id',
+        unitId: world.unitA2,
+      });
+      const viaPi = await preview([{ sourceId: topic }]);
+      expect(json<PreviewBody>(viaPi).results[0]).toMatchObject({
+        status: 'unmapped',
+      });
     });
   });
 });

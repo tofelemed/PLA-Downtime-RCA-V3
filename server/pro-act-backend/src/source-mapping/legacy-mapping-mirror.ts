@@ -4,6 +4,7 @@ import { QueryFailedError, Repository } from 'typeorm';
 import { SourceHierarchyMapping } from '../hierarchy-mapping/entities/source-hierarchy-mapping.entity';
 import { MatchKind, normalizeMatchValue } from './mapping-rule';
 import { SourceMapping } from './source-mapping.entity';
+import { legacySourceSystem } from './source-system';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UNIQUE_VIOLATION = '23505';
@@ -30,7 +31,7 @@ export function mirroredRows(
     .map(([matchKind, value]) => ({
       tenantId: legacy.tenantId,
       connectionId: legacy.sourceConnectionId ?? null,
-      sourceSystem: legacy.sourceType,
+      sourceSystem: legacySourceSystem(legacy.sourceType),
       matchKind,
       matchValue: value,
       normalizedValue: normalizeMatchValue(matchKind, value),

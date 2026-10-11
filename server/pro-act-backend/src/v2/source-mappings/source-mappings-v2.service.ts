@@ -13,9 +13,14 @@ import {
   requireTenantId,
 } from '../../common/context/request-context';
 import { scopedQuery } from '../../common/query/scoped-query';
+import { IntegrationConnection } from '../../intake/entities/integration-connection.entity';
 import { normalizeMatchValue } from '../../source-mapping/mapping-rule';
 import { SourceMapping } from '../../source-mapping/source-mapping.entity';
 import { SourceMappingService } from '../../source-mapping/source-mapping.service';
+import {
+  connectionSourceSystem,
+  DEFAULT_SOURCE_SYSTEM,
+} from '../../source-mapping/source-system';
 import { Unit } from '../../unit/unit.entity';
 import { CursorCodec, invalidCursor } from '../common/cursor-codec';
 import { listResponse, ListResponse } from '../common/response';
@@ -41,6 +46,8 @@ export class SourceMappingsV2Service {
     private readonly mappings: Repository<SourceMapping>,
     @InjectRepository(Unit) private readonly units: Repository<Unit>,
     @InjectRepository(Asset) private readonly assets: Repository<Asset>,
+    @InjectRepository(IntegrationConnection)
+    private readonly connections: Repository<IntegrationConnection>,
     private readonly resolution: SourceMappingService,
   ) {}
 
@@ -134,6 +141,8 @@ export class SourceMappingsV2Service {
     const resolver = await this.resolution.loadResolver(
       requireTenantId(context),
       dto.connectionId ?? null,
+      new Date(),
+      await this.sourceSystemOf(context, dto.connectionId),
     );
     const results = dto.samples.map((sample) =>
       toPreviewResult(sample, resolver.resolve(sample)),
@@ -141,6 +150,24 @@ export class SourceMappingsV2Service {
     const summary = { mapped: 0, ambiguous: 0, invalid_target: 0, unmapped: 0 };
     for (const result of results) summary[result.status] += 1;
     return { results, summary };
+  }
+
+  /**
+   * Rules of the connection's connector (`MQTT` for an MQTT connection, ...); without a connection, or
+   * for a connection that is not the tenant's, the PI default.
+   */
+  private async sourceSystemOf(
+    context: RequestContext,
+    connectionId: string | undefined,
+  ): Promise<string> {
+    if (!connectionId) return DEFAULT_SOURCE_SYSTEM;
+    const connection = await scopedQuery(this.connections, 'c', { context })
+      .select(['c.id', 'c.sourceType'])
+      .andWhere('c.id = :connectionId', { connectionId })
+      .getOne();
+    return connection
+      ? connectionSourceSystem(connection.sourceType)
+      : DEFAULT_SOURCE_SYSTEM;
   }
 
   private async find(
