@@ -2,7 +2,9 @@ import { useProductionEvents } from '@/api/v2/queries/production-events';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { Button } from '@/components/ui/button';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
+import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { ScopeHeader } from '@/features/ux-kit/scope-header';
 import { CurrentStopsPanel } from './components/current-stops-panel';
 import { EventDetailDrawer } from './components/event-detail-drawer';
@@ -18,7 +20,8 @@ import { toEventQuery } from './model/event-filters';
 /**
  * Event Hub on v2 (plan 3.2), behind the `v2.eventHub` flag: server filters and keyset pages, current
  * stops, explicit durations, source vs effective, split / merge / bulk code / close, realtime refresh
- * (the scoped channel invalidates these queries). No browser-side rules, KPIs or demo data.
+ * (the scoped channel invalidates these queries). No browser-side rules, KPIs or demo data. Read-only
+ * roles (viewer) see no event command at all.
  */
 export function EventHubPage() {
   const tenantId = useV2TenantId();
@@ -36,6 +39,7 @@ function scopeLabel(unitIds: readonly string[], unitName: (id: string) => string
 }
 
 function EventHubScreen() {
+  const { canWriteEvents } = useCapabilities();
   const env = useEventHubEnv();
   const hub = useEventHubState();
   const { filters } = hub;
@@ -54,13 +58,13 @@ function EventHubScreen() {
           <h1 className="text-2xl font-bold">Event Hub</h1>
           <ScopeHeader scopeLabel={scopeLabel(filters.unitIds, env.unitName)} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback} asOf={asOf} />
         </div>
-        <Button onClick={() => hub.openDialog({ kind: 'form', eventId: null })}>New event</Button>
+        {canWriteEvents ? <Button onClick={() => hub.openDialog({ kind: 'form', eventId: null })} data-testid="new-event">New event</Button> : <ReadOnlyHint />}
       </header>
       <EventFiltersBar filters={filters} onChange={hub.changeFilters} onReset={hub.resetFilters} />
       <QuickStats filters={filters} />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-2">
-          <SelectionToolbar hub={hub} />
+          {canWriteEvents && <SelectionToolbar hub={hub} />}
           <EventList events={events} query={list} selectedIds={hub.selectedIds} onToggle={hub.toggle} onOpen={(event) => hub.openDetail(event.id)} />
         </div>
         <CurrentStopsPanel filters={filters} onOpen={(event) => hub.openDetail(event.id)} onClose={(event) => hub.openDialog({ kind: 'close', event })} />

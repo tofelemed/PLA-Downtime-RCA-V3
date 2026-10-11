@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
 import type { ConnectionView } from '@/api/v2/types/integrations';
 
-vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ session: { tenant: { id: 'tenant-a' } } }) }));
+vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
 const { MqttWizardBody } = await import('./mqtt-wizard-body');

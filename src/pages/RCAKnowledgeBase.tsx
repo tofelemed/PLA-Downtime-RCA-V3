@@ -741,12 +741,6 @@ export const RCAKnowledgeBase: React.FC = () => {
                         <strong>Close an RCA:</strong> Go to RCA Analysis module, open an investigation, and change its status to "Closed"
                       </div>
                     </li>
-                    <li className="flex items-start gap-2">
-                      <span className="font-bold text-blue-600">3.</span>
-                      <div>
-                        <strong>Debug Data:</strong> Open browser console (F12) and run: <code className="bg-gray-800 text-green-400 px-2 py-1 rounded">debugRCAData()</code>
-                      </div>
-                    </li>
                   </ul>
                 </div>
               </CardContent>

@@ -3,6 +3,9 @@ import type { RulesSchemaView, RuleView } from '@/api/v2/types/rules';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { approvalAccess } from '@/features/auth/approval-gate';
+import { useCapabilities } from '@/features/auth/use-capabilities';
+import { ApproveButton } from '@/features/ux-kit/approve-button';
 import { AdminRefusalAlert } from '../components/admin-refusal-alert';
 import { RuleEditor } from './rule-editor';
 import { RuleVersions } from './rule-versions';
@@ -17,12 +20,15 @@ export interface RuleDetailProps {
 
 /**
  * One rule: builder for the draft, simulation, version timeline with rollback. Activation is a second
- * person's act (the server answers 403 SEPARATION_OF_DUTIES to the draft author).
+ * person's act (the server answers 403 SEPARATION_OF_DUTIES to the draft author): the author sees it
+ * disabled with the reason; roles that can never approve do not see it.
  */
 export function RuleDetail({ rule, schema, timezone, currentUserId }: RuleDetailProps) {
+  const { canApproveRules } = useCapabilities();
   const activate = useActivateRule();
   const retire = useRetireRule();
   const ownDraft = Boolean(rule.draft && rule.draft.authorId === currentUserId);
+  const access = approvalAccess(canApproveRules, rule.draft?.authorId, currentUserId);
   return (
     <section className="space-y-3 rounded-md border p-3" data-testid="rule-detail" data-state={rule.state} data-active-version={rule.activeVersion ?? ''} data-has-draft={Boolean(rule.draft)}>
       <header className="flex flex-wrap items-center justify-between gap-2">
@@ -37,11 +43,11 @@ export function RuleDetail({ rule, schema, timezone, currentUserId }: RuleDetail
           {rule.activeVersion !== null && <Badge variant="outline">v{rule.activeVersion} in force</Badge>}
           {rule.draft && <Badge variant="secondary">draft pending{ownDraft ? ' (yours)' : ''}</Badge>}
           {rule.draft && rule.state !== 'retired' && (
-            <Button size="sm" onClick={() => activate.submit({ rule }).catch(() => undefined)} disabled={activate.isPending} data-testid="rule-activate" title={ownDraft ? 'Another approver must activate your draft' : undefined}>
+            <ApproveButton access={access} size="sm" onClick={() => activate.submit({ rule }).catch(() => undefined)} disabled={activate.isPending} data-testid="rule-activate">
               Activate draft
-            </Button>
+            </ApproveButton>
           )}
-          {rule.state !== 'retired' && (
+          {rule.state !== 'retired' && canApproveRules && (
             <Button size="sm" variant="destructive" onClick={() => retire.submit({ rule }).catch(() => undefined)} disabled={retire.isPending} data-testid="rule-retire">
               Retire
             </Button>

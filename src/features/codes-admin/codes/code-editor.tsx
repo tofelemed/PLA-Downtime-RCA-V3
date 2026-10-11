@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field } from '@/features/integration-console/components/field';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { AdminRefusalAlert } from '../components/admin-refusal-alert';
 import { changeBodyOf, CodeForm, formOf, LIBRARIES, OEE_COMPONENTS, SCHEDULE_CLASSES } from '../model/code-fields';
@@ -20,13 +21,14 @@ const options = (values: readonly string[]) => values.map((value) => ({ value, l
 
 /** Edits a code: every save is its next version (If-Match; 412 when someone else saved first). */
 export function CodeEditor({ library, code, codes }: CodeEditorProps) {
+  const { canWriteCodes } = useCapabilities();
   const spec = LIBRARIES[library];
   const [form, setForm] = useState<CodeForm>(() => formOf(code));
   const [parentId, setParentId] = useState('');
   const change = useChangeCode(library);
   const impacts = useCodeList('impact-codes', {});
   const set = (key: keyof CodeForm) => (value: string | null) => setForm((current) => ({ ...current, [key]: value ?? '' }));
-  const readOnly = !code.active;
+  const readOnly = !code.active || !canWriteCodes;
   const save = () => change.submit({ code, body: changeBodyOf(spec, form) }).catch(() => undefined);
   const move = () => change.submit({ code, body: { parentId: parentId === 'root' ? null : parentId } }).catch(() => undefined);
   return (
@@ -74,9 +76,11 @@ export function CodeEditor({ library, code, codes }: CodeEditorProps) {
           </Field>
         )}
       </div>
-      <Button onClick={save} disabled={readOnly || change.isPending || form.name.trim() === ''} data-testid="code-save">
-        Save as version {code.version + 1}
-      </Button>
+      {canWriteCodes && (
+        <Button onClick={save} disabled={readOnly || change.isPending || form.name.trim() === ''} data-testid="code-save">
+          Save as version {code.version + 1}
+        </Button>
+      )}
       {spec.hierarchical && !readOnly && (
         <div className="flex flex-wrap items-end gap-2" data-testid="code-move">
           <Field id="code-move-target" label="Move under">

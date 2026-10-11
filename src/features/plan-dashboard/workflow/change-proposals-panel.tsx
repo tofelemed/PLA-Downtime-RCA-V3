@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useChangeProposals } from '@/api/v2/queries/period-overview';
 import { useProposalDecision } from '@/api/v2/queries/period-workflow';
 import type { ChangeProposalView, ReconciliationView } from '@/api/v2/types/reconciliation';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { EditorProblem } from '../editor/editor-problem';
 import { periodRefOf } from '../hooks/use-draft-editor';
@@ -24,8 +25,12 @@ function Snapshot({ label, value }: { label: string; value: Record<string, unkno
   );
 }
 
-/** Late corrections of an approved period (WF04): before / after from the server; accept opens a revision, dismiss keeps the approval. */
+/**
+ * Late corrections of an approved period (WF04): before / after from the server; accept opens a revision,
+ * dismiss keeps the approval. Only manager approvers decide, so only they see the decision controls.
+ */
 export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelProps) {
+  const { canApprovePeriods } = useCapabilities();
   const proposals = useChangeProposals(view.periodId);
   const decide = useProposalDecision();
   const [reason, setReason] = useState('');
@@ -48,7 +53,7 @@ export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelPro
           <Snapshot label="Before (approved)" value={p.before} />
           <Snapshot label="After (preview with the approved decisions)" value={p.after} />
           {p.affectedReports.length > 0 && <p className="text-xs">Affected exports: {p.affectedReports.map((r) => r.exportId.slice(0, 8)).join(', ')}</p>}
-          {p.state === 'open' && (
+          {p.state === 'open' && canApprovePeriods && (
             <div className="flex flex-wrap gap-2">
               <Input className="h-8 max-w-xs" aria-label="Decision reason" placeholder="Reason" value={reason} onChange={(e) => setReason(e.target.value)} />
               <Button size="sm" disabled={!reason.trim() || decide.isPending} onClick={() => void act(p, 'accept')}>

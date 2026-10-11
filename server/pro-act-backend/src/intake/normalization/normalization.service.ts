@@ -4,7 +4,10 @@ import { DataSource } from 'typeorm';
 import { InProcessEventBus } from '../../common/outbox/in-process-event-bus';
 import { InboxOutcome, InboxService } from '../../common/outbox/inbox.service';
 import { PublishedMessage } from '../../common/outbox/outbox-transport';
-import { CanonicalEnvelope } from '../envelope/canonical-envelope';
+import {
+  CanonicalEnvelope,
+  EnvelopeKind,
+} from '../envelope/canonical-envelope';
 import { SourceObject } from '../entities/source-object.entity';
 import {
   ObjectKey,
@@ -23,6 +26,12 @@ import {
 } from './normalization-handler';
 
 const CONSUMER = 'normalization';
+/** Kinds whose every revision carries the complete value: only the newest revision is applied. */
+const SNAPSHOT_KINDS: ReadonlySet<EnvelopeKind> = new Set([
+  'measurement',
+  'state',
+  'output_event',
+]);
 
 /**
  * Consumer of `RawAccepted` (plan 1.5 step 6): loads the retained raw row, routes it by kind/source to
@@ -32,13 +41,13 @@ const CONSUMER = 'normalization';
  * makes each request take effect once, whether it arrives inline (PI pull, replay) or through the
  * outbox relay. A quarantined record still counts as accepted for cursor purposes.
  *
- * Every accepted revision is normalised, in order (design §4.2 stage 13): intake only requests
- * normalisation for provably newer versions, and the outbox relay publishes the `RawAccepted` rows of
- * one source object (`aggregate_id = connection:object`) in id order, so a burst `open → close →
- * update → delete` ends exactly like the same messages spaced out: one event with one revision per
- * message, retracted last. An older revision is never skipped as "superseded" by a newer one: the
- * newest row may be a retraction (it carries no state to materialise) and the revisions of an interval
- * event are a sequence applied by the handlers idempotently, not a snapshot.
+ * Revisions of an interval event (and its retraction) are normalised in order (design §4.2 stage 13):
+ * intake only requests normalisation for provably newer versions, and the outbox relay publishes the
+ * `RawAccepted` rows of one source object (`aggregate_id = connection:object`) in id order, so a burst
+ * `open → close → update → delete` ends exactly like the same messages spaced out: one event with one
+ * revision per message, retracted last. Snapshot kinds (measurement, state, output) are different:
+ * each revision carries the complete value, so an older one is skipped as `superseded` once a newer
+ * revision of the same object exists — otherwise a re-read sample would be stored twice.
  */
 @Injectable()
 export class NormalizationService implements OnModuleInit {
@@ -80,7 +89,18 @@ export class NormalizationService implements OnModuleInit {
     ticket: NormalizationTicket,
     hints?: unknown,
   ): Promise<NormalizationResult> {
-    const input = await this.loadInput(ticket, hints);
+    const { latestRawId, ...input } = await this.loadInput(ticket, hints);
+    if (
+      SNAPSHOT_KINDS.has(input.envelope.kind) &&
+      latestRawId !== (input.raw.originalRawId ?? input.raw.id)
+    ) {
+      // a newer complete value of this sample/state was accepted meanwhile; its own request applies it
+      return {
+        status: 'applied',
+        outcome: 'superseded',
+        canonicalEventId: null,
+      };
+    }
     const result = await this.run(input);
     await this.record(ticket, input, result);
     return result;
@@ -89,7 +109,7 @@ export class NormalizationService implements OnModuleInit {
   private async loadInput(
     ticket: NormalizationTicket,
     hints?: unknown,
-  ): Promise<NormalizationInput> {
+  ): Promise<NormalizationInput & { latestRawId: string | null }> {
     const manager = this.dataSource.manager;
     const raw = await findRaw(manager, {
       rawId: ticket.rawId,
@@ -100,13 +120,14 @@ export class NormalizationService implements OnModuleInit {
     }
     const object = await manager.findOne(SourceObject, {
       where: keyOf(ticket),
-      select: { id: true, canonicalEventId: true },
+      select: { id: true, canonicalEventId: true, latestRawId: true },
     });
     return {
       raw,
       envelope: raw.payload as unknown as CanonicalEnvelope,
       canonicalEventId: object?.canonicalEventId ?? null,
       hints,
+      latestRawId: object?.latestRawId ?? null,
     };
   }
 

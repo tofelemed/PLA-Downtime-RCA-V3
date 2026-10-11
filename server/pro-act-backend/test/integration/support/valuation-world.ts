@@ -127,14 +127,16 @@ export class ValuationWorld extends ExportWorld {
     );
   }
 
-  /** Creates and approves a valuation rate effective from 1 Mar 2027 00:00 UTC. */
+  /** Creates (admin) and approves (second manager) a valuation rate effective from 1 Mar 2027 00:00 UTC. */
   async valuationRate(body: Record<string, unknown>): Promise<string> {
     const created = await this.post('valuation-rates', {
       effectiveFrom: '2027-03-01T00:00:00Z',
       ...body,
     }).expect(201);
     const id = (created.body as { id: string }).id;
-    await this.post(`valuation-rates/${id}/approve`, {}).expect(200);
+    await this.post(`valuation-rates/${id}/approve`, {}, this.approver).expect(
+      200,
+    );
     return id;
   }
 }

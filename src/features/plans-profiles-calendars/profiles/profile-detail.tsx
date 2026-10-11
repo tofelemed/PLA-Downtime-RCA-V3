@@ -46,7 +46,7 @@ export function ProfileDetail({ profile, refs, onEdit }: ProfileDetailProps) {
           )}
         </p>
         <LegacyValues profile={profile} />
-        <VersionActions resource="profiles" id={profile.id} state={profile.state} timezone={tz} onEdit={onEdit} testId="profile-actions" />
+        <VersionActions resource="profiles" id={profile.id} state={profile.state} timezone={tz} onEdit={onEdit} testId="profile-actions" authorId={profile.createdBy} />
       </CardHeader>
       <CardContent className="space-y-6">
         <RateTable profile={profile} timezone={tz} />

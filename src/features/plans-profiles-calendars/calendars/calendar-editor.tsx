@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { CalendarVersionView } from '@/api/v2/types/calendars';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { FormField } from '../components/form-field';
 import { RefusalNotice } from '../components/refusal-notice';
 import { VersionStateBadge } from '../components/version-state-badge';
@@ -26,7 +27,10 @@ export interface CalendarEditorProps {
 export function CalendarEditor(props: CalendarEditorProps) {
   const { version, displayTimezone } = props;
   const editor = useCalendarEditor(version, props.seed, props.scope);
-  const { draft, errors, readOnly } = editor;
+  const { canWriteCalendars } = useCapabilities();
+  const { draft, errors } = editor;
+  /** published versions are immutable; users who are not calendar writers only view and preview */
+  const readOnly = editor.readOnly || !canWriteCalendars;
   const set = <K extends keyof CalendarDraft>(key: K, value: CalendarDraft[K]) => editor.setDraft({ ...draft, [key]: value });
   const save = async () => {
     const saved = await editor.save();
@@ -43,7 +47,7 @@ export function CalendarEditor(props: CalendarEditorProps) {
           {version ? `Calendar version ${version.version}` : 'New calendar version'}
           {version && <VersionStateBadge state={version.state} />}
         </CardTitle>
-        {readOnly && (
+        {editor.readOnly && (
           <p className="text-sm text-muted-foreground" data-testid="calendar-immutable">
             Published versions are immutable; changes are a new version.
           </p>
@@ -82,12 +86,12 @@ export function CalendarEditor(props: CalendarEditorProps) {
               Save draft
             </Button>
           )}
-          {version?.state === 'draft' && (
+          {version?.state === 'draft' && canWriteCalendars && (
             <Button onClick={editor.publishStored} disabled={editor.publishing || editor.dirty} data-testid="calendar-publish" title={editor.dirty ? 'Save the draft first' : undefined}>
               Publish
             </Button>
           )}
-          {readOnly && version && (
+          {editor.readOnly && canWriteCalendars && version && (
             <Button variant="outline" onClick={() => props.onNewFrom({ ...draftOf(version), effectiveFrom: '' })} data-testid="calendar-new-from">
               New version from this
             </Button>

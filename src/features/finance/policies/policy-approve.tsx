@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useApproveValuationPolicy } from '@/api/v2/queries/valuation';
 import type { ValuationPolicyView } from '@/api/v2/types/valuation';
+import { approvalAccess } from '@/features/auth/approval-gate';
+import { useCapabilities } from '@/features/auth/use-capabilities';
+import { useCurrentUserId } from '@/features/auth/use-current-user-id';
+import { ApproveButton } from '@/features/ux-kit/approve-button';
 import { RefusalNotice } from '@/features/plans-profiles-calendars/components/refusal-notice';
 import type { PolicyStatus } from '../model/policy-status';
 
@@ -14,19 +18,22 @@ export interface PolicyApproveProps {
 /**
  * The finance sign-off of one version (VAL01) after an explicit confirmation. The server checks role,
  * tenant-wide grant and separation of duties (403 SEPARATION_OF_DUTIES for the author), shown as is.
+ * Only manager approvers see it; the author sees it disabled with the separation-of-duties reason.
  */
 export function PolicyApprove({ policy, status, timezone }: PolicyApproveProps) {
   const approve = useApproveValuationPolicy();
   const [confirming, setConfirming] = useState(false);
+  const access = approvalAccess(useCapabilities().canManagePolicies, policy.createdBy, useCurrentUserId());
   if (status === 'approved') return <span className="text-xs text-muted-foreground">Approved — immutable</span>;
   if (status === 'placeholder') return <span className="text-xs text-muted-foreground">History — no currency, cannot be approved</span>;
+  if (access === 'hidden') return null;
   const submit = () => approve.submit({ id: policy.id }).then(() => setConfirming(false)).catch(() => undefined);
   return (
     <div className="space-y-2" data-testid="policy-approve">
       {!confirming ? (
-        <Button size="sm" onClick={() => setConfirming(true)} data-testid="policy-approve-start">
+        <ApproveButton access={access} size="sm" onClick={() => setConfirming(true)} data-testid="policy-approve-start">
           Approve…
-        </Button>
+        </ApproveButton>
       ) : (
         <div className="space-y-2 rounded-md border p-2 text-xs" data-testid="policy-approve-confirm">
           <p>

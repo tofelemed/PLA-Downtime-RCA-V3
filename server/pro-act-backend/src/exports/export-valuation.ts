@@ -1,5 +1,6 @@
 import { Decimal } from 'decimal.js';
 import { Dec } from '../domain/actuals/decimal';
+import { currencyMinorUnits } from '../domain/valuation/currency-minor-units';
 import { UNVALUED } from '../reconciliation/period-approval-event';
 import {
   ReviewedAmount,
@@ -9,8 +10,9 @@ import { CsvValue } from './csv';
 
 /**
  * Valuation columns of both reports (plan 2.6): the default view, the value in each of the (at most two)
- * reporting currencies of the approved snapshot's policy, its status and reason. Amounts are rounded to 2
- * decimals here only (presentation, VAL03); totals were computed from unrounded values.
+ * reporting currencies of the approved snapshot's policy, its status and reason. Amounts are rounded to the
+ * currency's minor units here only (presentation, VAL03: IRR 0, USD 2); totals were computed from unrounded
+ * values.
  */
 export const VALUATION_COLUMNS = [
   'valuation_view',
@@ -22,17 +24,22 @@ export const VALUATION_COLUMNS = [
   'valuation_reason',
 ];
 
-const PRESENTATION_DECIMALS = 2;
-
 export const VALUATION_HEADER =
-  'per row (valuation_view, value_n / currency_n, valuation_status); values rounded to 2 decimals for presentation, totals computed from unrounded values';
+  'per row (valuation_view, value_n / currency_n, valuation_status); values rounded to the currency minor units for presentation (IRR 0, USD 2), totals computed from unrounded values';
 
-/** Presentation rounding of a stored 8-dp amount (half-even, fixed 2 decimals); null stays empty. */
-export function presentMoney(amount: string | null): string | null {
+/**
+ * Presentation rounding of a stored 8-dp amount: half-even to the currency's minor units, fixed digits
+ * (`15000.125 IRR` → `15000`, `1234.5 USD` → `1234.50`); null stays empty.
+ */
+export function presentMoney(
+  amount: string | null,
+  currency: string | null | undefined,
+): string | null {
   if (amount === null) return null;
+  const digits = currencyMinorUnits(currency);
   return new Dec(amount)
-    .toDecimalPlaces(PRESENTATION_DECIMALS, Decimal.ROUND_HALF_EVEN)
-    .toFixed(PRESENTATION_DECIMALS);
+    .toDecimalPlaces(digits, Decimal.ROUND_HALF_EVEN)
+    .toFixed(digits);
 }
 
 /** Snapshots approved before plan 2.6 (or of runs without a valuation context) are unvalued. */
@@ -48,9 +55,9 @@ function currencyCells(
   const of = (currency: string | undefined) =>
     currency ? (amounts.find((a) => a.currency === currency) ?? null) : null;
   return [
-    presentMoney(of(first)?.amount ?? null),
+    presentMoney(of(first)?.amount ?? null, first),
     first ?? null,
-    presentMoney(of(second)?.amount ?? null),
+    presentMoney(of(second)?.amount ?? null, second),
     second ?? null,
   ];
 }

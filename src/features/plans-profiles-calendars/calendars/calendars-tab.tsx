@@ -3,8 +3,10 @@ import { Button } from '@/components/ui/button';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useCalendarVersions } from '@/api/v2/queries/calendars';
 import type { CalendarVersionView } from '@/api/v2/types/calendars';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import type { CalendarScope, PreviewCandidate } from '../hooks/use-calendar-editor';
@@ -29,6 +31,7 @@ interface Selection {
  * (drafts editable, published immutable), the server preview with DST warnings, and crews.
  */
 export function CalendarsTab() {
+  const { canWriteCalendars } = useCapabilities();
   const refs = usePlanningRefs();
   const [unitId, setUnitId] = useState('');
   const scope: CalendarScope = unitId ? { unitId } : refs.defaultSiteId ? { siteId: refs.defaultSiteId } : {};
@@ -47,9 +50,13 @@ export function CalendarsTab() {
           <FormField id="calendarScope" label="Calendar of" hint="Site calendar, or a unit override (highest published version in force wins)">
             <NativeSelect id="calendarScope" value={unitId} options={refs.unitOptions} placeholder="Site (default)" onChange={(v) => { setUnitId(v); setSelection(null); }} />
           </FormField>
-          <Button size="sm" onClick={() => startNew(newCalendarDraft(refs.timezone))} data-testid="calendar-new">
-            New calendar version
-          </Button>
+          {canWriteCalendars ? (
+            <Button size="sm" onClick={() => startNew(newCalendarDraft(refs.timezone))} data-testid="calendar-new">
+              New calendar version
+            </Button>
+          ) : (
+            <ReadOnlyHint />
+          )}
           <DataState state={dataStateOf(versions, { isEmpty: items.length === 0 })} error={versions.error} detail="No calendar versions for this scope yet.">
             <CalendarVersionList
               versions={items}

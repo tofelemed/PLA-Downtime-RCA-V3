@@ -3,6 +3,7 @@ import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DurationText } from '@/features/ux-kit/duration-text';
@@ -22,6 +23,7 @@ export interface CurrentStopsPanelProps {
 
 /** Running events of the chosen units (§16.2 current stops), independent of the list window. */
 export function CurrentStopsPanel({ filters, onOpen, onClose }: CurrentStopsPanelProps) {
+  const { canWriteEvents } = useCapabilities();
   const env = useEventHubEnv();
   const query = useProductionEvents(currentStopsQuery(filters), env.timezone, { refetchInterval: CURRENT_STOPS_REFRESH_MS });
   const stops = flattenPages(query.data?.pages);
@@ -51,9 +53,11 @@ export function CurrentStopsPanel({ filters, onOpen, onClose }: CurrentStopsPane
                   <Button size="sm" variant="outline" onClick={() => onOpen(stop)}>
                     Open
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => onClose(stop)}>
-                    Close stop
-                  </Button>
+                  {canWriteEvents && (
+                    <Button size="sm" variant="outline" onClick={() => onClose(stop)} data-testid="current-stop-close">
+                      Close stop
+                    </Button>
+                  )}
                 </div>
               </li>
             ))}

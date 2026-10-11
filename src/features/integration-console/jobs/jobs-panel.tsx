@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { JOB_POLL_MS } from '@/api/v2/queries/ingestion-jobs';
 import type { IngestionJobView } from '@/api/v2/types/integrations';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import type { SourceScope } from '../model/discovery';
@@ -36,10 +37,11 @@ function useNow(): number {
  * server; plus the bounded replay wizard.
  */
 export function JobsPanel({ connectionId, scope, timezone, jobs }: JobsPanelProps) {
+  const { canWriteIntegration } = useCapabilities();
   const now = useNow();
   return (
     <section aria-label="Jobs" className="space-y-4" data-testid="jobs-panel">
-      <JobCreateForm connectionId={connectionId} scope={scope} />
+      {canWriteIntegration && <JobCreateForm connectionId={connectionId} scope={scope} />}
       <DataState state={dataStateOf(jobs, { isEmpty: jobs.items.length === 0 })} error={jobs.error} detail={jobs.items.length === 0 ? 'No job yet for this connection.' : undefined}>
         <ul className="space-y-2">
           {jobs.items.map((job) => (
@@ -47,7 +49,7 @@ export function JobsPanel({ connectionId, scope, timezone, jobs }: JobsPanelProp
           ))}
         </ul>
       </DataState>
-      <ReplayWizard connectionId={connectionId} />
+      {canWriteIntegration && <ReplayWizard connectionId={connectionId} />}
     </section>
   );
 }

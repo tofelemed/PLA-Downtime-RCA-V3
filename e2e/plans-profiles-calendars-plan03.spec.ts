@@ -1,14 +1,16 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Browser, type Page } from '@playwright/test';
 import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
 import { call } from './test-utils/downtime-world';
 import { plantLocal, seedPlanningWorld, type PlanningWorld } from './test-utils/planning-world';
+import { secondApproverPage } from './test-utils/second-approver';
 
 /**
  * Plan 3.4 exit tests — PLAN03 preview and CAL preview on the v2 Plans, profiles & calendars screen
  * (flag `v2.plansProfilesCalendars` switched on for the demo tenant through the API; it stays on so the
  * owner can use the screens). Data: new "E2E PLAN / CAL …" units and an "E2E PLAN …" product seeded
- * through the API (planning-world.ts); the plan day is five days ahead.
+ * through the API (planning-world.ts); the plan day is five days ahead. The manager drafts in the UI; its
+ * own approve controls are disabled (D06 separation of duties) and the second approver approves.
  */
 const MANAGER = { email: 'manager@acme.com', password: 'demo123' };
 const FLAG = 'v2.plansProfilesCalendars';
@@ -43,6 +45,15 @@ async function openPlan(page: Page): Promise<void> {
   await page.selectOption('#planUnitFilter', { label: world.planUnitName });
   await page.getByTestId('plan-row').first().click();
   await expect(page.getByTestId('plan-detail')).toBeVisible();
+}
+
+/** The second approver on the profile of the plan unit. */
+async function approverOnProfile(browser: Browser): Promise<Page> {
+  const page = await secondApproverPage(browser);
+  await openTab(page, 'profiles');
+  await page.selectOption('#profileUnitFilter', { label: world.planUnitName });
+  await page.locator(`[data-testid="profile-row"][data-profile-id="${world.profileId}"]`).click();
+  return page;
 }
 
 async function editWindow(page: Page, from: string, to: string): Promise<void> {
@@ -101,7 +112,7 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await expect(page.getByTestId('calendar-new-from')).toBeVisible();
   });
 
-  test('rates: an overlapping sustained version is refused with the conflicting version; supersede closes it', async ({ page }) => {
+  test('rates: the author cannot approve; an overlapping sustained version is refused with the conflicting version; supersede closes it', async ({ page, browser }) => {
     await loginViaUI(page, MANAGER.email, MANAGER.password);
     await openTab(page, 'profiles');
     await expect(page.getByTestId('decision-banner')).toHaveAttribute('data-decision', 'D08');
@@ -114,8 +125,12 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     const from = new Date(Date.parse(`${world.planDay}T00:00:00Z`) + 30 * 86_400_000).toISOString();
     await page.fill('#rateEffectiveFrom', local(from));
     await page.getByTestId('rate-save').click();
-    const draft = page.locator('[data-testid="rate-row"][data-kind="sustained"][data-version="2"]');
-    await expect(draft).toHaveAttribute('data-state', 'draft');
+    const authored = page.locator('[data-testid="rate-row"][data-kind="sustained"][data-version="2"]');
+    await expect(authored).toHaveAttribute('data-state', 'draft');
+    await expect(authored.getByTestId('approve-version')).toBeDisabled();
+
+    const approver = await approverOnProfile(browser);
+    const draft = approver.locator('[data-testid="rate-row"][data-kind="sustained"][data-version="2"]');
     await draft.getByTestId('approve-version').click();
     const refusal = draft.getByTestId('refusal');
     await expect(refusal).toHaveAttribute('data-code', 'VERSION_OVERLAP');
@@ -123,9 +138,10 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await draft.getByTestId('supersede').click();
     await draft.getByTestId('approve-version').click();
     await expect(draft).toHaveAttribute('data-state', 'approved');
-    const first = page.locator('[data-testid="rate-row"][data-kind="sustained"][data-version="1"]');
+    const first = approver.locator('[data-testid="rate-row"][data-kind="sustained"][data-version="1"]');
     await expect(first).toHaveAttribute('data-state', 'approved');
     await expect(first).not.toContainText('open');
+    await approver.context().close();
   });
 
   test('roles: an engineer asking to retire an approved rate sees the server refusal (403 FORBIDDEN_ROLE)', async ({ page }) => {
@@ -140,7 +156,7 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await expect(row).toHaveAttribute('data-state', 'approved');
   });
 
-  test('PLAN03: preview 300/300/400 with Σ = header; an excluded shift redistributes; no eligible time is a 422; approval freezes', async ({ page }) => {
+  test('PLAN03: preview 300/300/400 with Σ = header; an excluded shift redistributes; no eligible time is a 422; approval freezes', async ({ page, browser }) => {
     test.setTimeout(180_000);
     const dayStart = `${world.planDay}T06:00:00.000Z`;
     const nextDay = new Date(Date.parse(dayStart) + 86_400_000).toISOString();
@@ -190,7 +206,15 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await page.getByTestId('plan-generate').click();
     await expect(page.getByTestId('generation-status')).toHaveAttribute('data-state', 'completed', { timeout: 60_000 });
     await expect(page.getByTestId('periods-generated')).toContainText('Periods generated', { timeout: 15_000 });
-    await page.getByTestId('approve-plan-submit').click();
+    // the author's approve control is disabled (D06); the second approver approves
+    await expect(page.getByTestId('approve-plan-submit')).toBeDisabled();
+    const approver = await secondApproverPage(browser);
+    await openPlan(approver);
+    await approver.getByTestId('approve-plan-submit').click();
+    await expect(approver.getByTestId('frozen-version')).toBeVisible({ timeout: 15_000 });
+    await approver.context().close();
+    await page.reload();
+    await expect(page.getByTestId('plan-detail')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('frozen-version')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('plan-detail').getByTestId('version-state').first()).toHaveAttribute('data-state', 'approved');
     await expect(page.getByTestId('plan-edit')).toHaveCount(0);

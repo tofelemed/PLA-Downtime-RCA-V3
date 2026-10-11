@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { secondApproverToken } from '../../test-utils/second-approver';
 import { api, created, itemsOf, ok, post, until } from './manager-api';
 import { PREFIX, shortId, utcDate } from './manager-users';
 
@@ -8,7 +9,8 @@ import { PREFIX, shortId, utcDate } from './manager-users';
  * Worlds of the manager persona, seeded through the API with `P-MGR-` names (the patterns of
  * e2e/test-utils/dashboard-world.ts and downtime-world.ts, never their "E2E" data): nothing existing is
  * changed and nothing is ever deleted. A world is cached for the day in test-results/ so the later
- * persona specs (analytics) read the same plan the earlier ones (periods) approved.
+ * persona specs (analytics) read the same plan the earlier ones (periods) approved. The persona drafts the
+ * profiles, rates and plans; the second approver approves them (D06: never the author).
  */
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -55,10 +57,11 @@ export async function publishedCalendar(token: string, unitId: string, effective
 
 async function approvedProfile(token: string, unitId: string, productId: string, from: string): Promise<string> {
   const profileId = await created(post(token, '/v2/profiles', { unitId, productId, quantityUom: 't', rateTimebase: 'h', effectiveFrom: from }), 'profile');
-  await ok(post(token, `/v2/profiles/${profileId}/approve`, {}), 'approve profile');
+  const approver = await secondApproverToken(token);
+  await ok(post(approver, `/v2/profiles/${profileId}/approve`, {}), 'approve profile');
   for (const [rateKind, rate] of [['planning', '90'], ['sustained', '100']]) {
     const rateId = await created(post(token, `/v2/profiles/${profileId}/rates`, { rateKind, rate, timebase: 'h', effectiveFrom: from }), `${rateKind} rate`);
-    await ok(post(token, `/v2/rates/${rateId}/approve`, {}), `approve ${rateKind}`);
+    await ok(post(approver, `/v2/rates/${rateId}/approve`, {}), `approve ${rateKind}`);
   }
   return profileId;
 }
@@ -100,7 +103,7 @@ async function approvedPlan(token: string, unit: PlanningUnit, suffix: string, d
     if (job.body.state === 'failed') throw new Error(`generation failed: ${JSON.stringify(job.body)}`);
     return job.body.state === 'completed' ? true : null;
   });
-  await ok(post(token, `/v2/production-plans/${planId}/approve`, { expectedVersion: 1 }), 'approve plan');
+  await ok(post(await secondApproverToken(token), `/v2/production-plans/${planId}/approve`, { expectedVersion: 1 }), 'approve plan');
   return { planId, planName };
 }
 

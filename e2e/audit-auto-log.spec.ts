@@ -37,7 +37,8 @@ test.describe('Audit auto-log interceptor', () => {
 
     const auditRes = await request.get(
       `${API}/audit-logs?entityType=Task&entityId=${created.id}&action=CREATE&limit=10`,
-      { headers },
+      // the trail is read in the acting tenant: select the task's plant
+      { headers: { ...headers, 'X-Tenant-Id': tenantId } },
     );
     expect(auditRes.ok()).toBeTruthy();
     const logs = await auditRes.json();
@@ -78,7 +79,7 @@ test.describe('Audit auto-log interceptor', () => {
 
     const auditRes = await request.get(
       `${API}/audit-logs?entityType=Task&entityId=${created.id}&action=CREATE`,
-      { headers: { Authorization: `Bearer ${access_token}` } },
+      { headers: { Authorization: `Bearer ${access_token}`, 'X-Tenant-Id': tenantId } },
     );
     const logs = await auditRes.json();
     expect(logs.length).toBe(0);

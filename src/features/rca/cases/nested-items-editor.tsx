@@ -12,6 +12,8 @@ interface ItemsEditorProps<T extends { id: string; title: string }> {
   create: (id: string, title: string, detail: string) => T;
   detailLabel: string;
   onChange: (items: T[]) => void;
+  /** shown, not edited (users who cannot write RCA cases) */
+  readOnly?: boolean;
 }
 
 function ItemsEditor<T extends { id: string; title: string }>(props: ItemsEditorProps<T>) {
@@ -31,24 +33,34 @@ function ItemsEditor<T extends { id: string; title: string }>(props: ItemsEditor
             <span>
               {item.title} <span className="text-muted-foreground">{props.detailOf(item)}</span>
             </span>
-            <Button size="sm" variant="ghost" aria-label={`Remove ${item.title}`} onClick={() => props.onChange(props.items.filter((i) => i.id !== item.id))}>
-              Remove
-            </Button>
+            {!props.readOnly && (
+              <Button size="sm" variant="ghost" aria-label={`Remove ${item.title}`} onClick={() => props.onChange(props.items.filter((i) => i.id !== item.id))}>
+                Remove
+              </Button>
+            )}
           </li>
         ))}
       </ul>
-      <div className="flex flex-wrap gap-2">
-        <Input className="max-w-xs" placeholder="Title" aria-label={`${props.heading} title`} value={title} maxLength={255} onChange={(e) => setTitle(e.target.value)} />
-        <Input className="max-w-xs" placeholder={props.detailLabel} aria-label={`${props.heading} ${props.detailLabel}`} value={detail} onChange={(e) => setDetail(e.target.value)} />
-        <Button size="sm" variant="outline" disabled={title.trim() === ''} onClick={add}>Add</Button>
-      </div>
+      {!props.readOnly && (
+        <div className="flex flex-wrap gap-2">
+          <Input className="max-w-xs" placeholder="Title" aria-label={`${props.heading} title`} value={title} maxLength={255} onChange={(e) => setTitle(e.target.value)} />
+          <Input className="max-w-xs" placeholder={props.detailLabel} aria-label={`${props.heading} ${props.detailLabel}`} value={detail} onChange={(e) => setDetail(e.target.value)} />
+          <Button size="sm" variant="outline" disabled={title.trim() === ''} onClick={add}>Add</Button>
+        </div>
+      )}
     </fieldset>
   );
 }
 
 const orNull = (value: string) => (value === '' ? null : value);
 
-export function RecommendationItemsEditor({ items, onChange }: { items: RcaRecommendationItem[]; onChange: (items: RcaRecommendationItem[]) => void }) {
+interface EditorProps<T> {
+  items: T[];
+  onChange: (items: T[]) => void;
+  readOnly?: boolean;
+}
+
+export function RecommendationItemsEditor({ items, onChange, readOnly }: EditorProps<RcaRecommendationItem>) {
   return (
     <ItemsEditor
       heading="Recommendations"
@@ -58,11 +70,12 @@ export function RecommendationItemsEditor({ items, onChange }: { items: RcaRecom
       detailOf={(item) => [item.status, item.description].filter(Boolean).join(' · ')}
       create={(id, title, detail) => ({ id, title, description: orNull(detail), priority: null, ownerId: null, dueDate: null, status: 'open' })}
       onChange={onChange}
+      readOnly={readOnly}
     />
   );
 }
 
-export function EvidenceItemsEditor({ items, onChange }: { items: RcaEvidenceItem[]; onChange: (items: RcaEvidenceItem[]) => void }) {
+export function EvidenceItemsEditor({ items, onChange, readOnly }: EditorProps<RcaEvidenceItem>) {
   return (
     <ItemsEditor
       heading="Evidence"
@@ -72,6 +85,7 @@ export function EvidenceItemsEditor({ items, onChange }: { items: RcaEvidenceIte
       detailOf={(item) => [item.type, item.source].filter(Boolean).join(' · ')}
       create={(id, title, detail) => ({ id, title, description: null, type: null, source: orNull(detail), collectedAt: null, collectedBy: null })}
       onChange={onChange}
+      readOnly={readOnly}
     />
   );
 }

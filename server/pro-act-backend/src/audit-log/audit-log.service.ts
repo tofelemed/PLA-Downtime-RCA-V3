@@ -4,6 +4,11 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { AuditLog } from './audit-log.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import {
+  RequestContext,
+  tenantRequired,
+} from '../common/context/request-context';
+import { tenantMismatch } from '../auth/guards/tenant-binding.guard';
 
 export interface AuditLogQuery {
   tenantId?: string;
@@ -25,8 +30,15 @@ export class AuditLogService {
     private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
-  findAll(): Promise<AuditLog[]> {
-    return this.auditLogRepository.find({ order: { createdAt: 'DESC' }, take: 500 });
+  /**
+   * The tenant whose audit trail the caller may read: the acting tenant (`X-Tenant-Id` or the token
+   * tenant), never one named in the query. A `tenantId` filter must name the acting tenant (403
+   * TENANT_MISMATCH otherwise); a SuperAdmin reads another tenant by selecting it with `X-Tenant-Id`.
+   */
+  readableTenant(context: RequestContext, requested?: string): string {
+    if (!context.tenantId) throw tenantRequired();
+    if (requested && requested !== context.tenantId) throw tenantMismatch();
+    return context.tenantId;
   }
 
   findWithFilters(filters: AuditLogQuery): Promise<AuditLog[]> {
@@ -67,6 +79,11 @@ export class AuditLogService {
 
   findOne(id: string): Promise<AuditLog | null> {
     return this.auditLogRepository.findOneBy({ id });
+  }
+
+  /** One entry of `tenantId`'s trail; an entry of another tenant reads as absent (null). */
+  findOneInTenant(id: string, tenantId: string): Promise<AuditLog | null> {
+    return this.auditLogRepository.findOneBy({ id, tenantId });
   }
 
   async create(data: Partial<AuditLog> & { userName?: string; ipAddress?: string; userAgent?: string }): Promise<AuditLog> {

@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useValuationRates } from '@/api/v2/queries/profiles';
 import type { ProfileView } from '@/api/v2/types/profiles';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { PlantTime } from '@/features/ux-kit/plant-time';
@@ -34,6 +35,7 @@ function LegacyCost({ profile }: { profile: ProfileView }) {
 
 /** Margin / standard-cost versions of the profile (VAL01): basis, value, currency, validity and approval. */
 export function ValuationRateTable({ profile, timezone }: ValuationRateTableProps) {
+  const { canWriteProfiles } = useCapabilities();
   const rates = useValuationRates(profile.id);
   const [adding, setAdding] = useState(false);
   const items = flattenPages(rates.data?.pages);
@@ -41,7 +43,7 @@ export function ValuationRateTable({ profile, timezone }: ValuationRateTableProp
     <section className="space-y-2" data-testid="valuation-rate-table">
       <div className="flex items-center justify-between">
         <h3 className="font-medium">Valuation rates</h3>
-        {!adding && (
+        {!adding && canWriteProfiles && (
           <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
             Add valuation rate
           </Button>
@@ -76,7 +78,7 @@ export function ValuationRateTable({ profile, timezone }: ValuationRateTableProp
                   <VersionStateBadge state={rate.state} />
                 </TableCell>
                 <TableCell className="min-w-[16rem]">
-                  <VersionActions resource="valuation-rates" id={rate.id} state={rate.state} timezone={timezone} />
+                  <VersionActions resource="valuation-rates" id={rate.id} state={rate.state} timezone={timezone} authorId={rate.createdBy} />
                 </TableCell>
               </TableRow>
             ))}

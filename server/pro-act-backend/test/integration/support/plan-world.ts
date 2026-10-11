@@ -66,7 +66,8 @@ export const DAY3_A_END = '2027-03-03T10:30:00Z';
  * World of the plan 2.3 integration specs: the T13 event world (tenants A/B, units A1–A3, B1), products
  * P1 and P2 (tenant A, unit t) and PB (tenant B), a D03 site calendar for tenant A (Asia/Tehran, 3 × 8 h,
  * a 1 h planned shutdown on 3 Mar 2027 06:00 local) materialized for 1–5 Mar 2027, approved profiles of
- * A1/A2 × P1/P2 with planning 90 t/h and sustained 100 t/h, and tokens for an A manager, an A analyst
+ * A1/A2 × P1/P2 with planning 90 t/h and sustained 100 t/h, and tokens for an A manager, a second A
+ * manager (`approver`: drafts are approved by someone other than their author, D06), an A analyst
  * (production engineer) and a B manager. Test data only.
  */
 export class PlanWorld {
@@ -77,6 +78,8 @@ export class PlanWorld {
   /** profile ids by `${unit}:${product}` */
   profiles = new Map<string, string>();
   admin = '';
+  /** a second manager approver of tenant A (approves what `admin` authored) */
+  approver = '';
   analyst = '';
   adminB = '';
 
@@ -95,6 +98,7 @@ export class PlanWorld {
     const token = (tenantId: string, role: string) =>
       signToken(this.app, { userId: randomUUID(), tenantId, role });
     this.admin = token(this.world.tenantA, 'TenantAdmin');
+    this.approver = token(this.world.tenantA, 'TenantAdmin');
     this.analyst = token(this.world.tenantA, 'Analyst');
     this.adminB = token(this.world.tenantB, 'TenantAdmin');
     await this.seedCalendar();
@@ -224,7 +228,7 @@ export class PlanWorld {
       ...overrides,
     }).expect(201);
     const id = (created.body as { id: string }).id;
-    await this.post(`profiles/${id}/approve`, {}).expect(200);
+    await this.post(`profiles/${id}/approve`, {}, this.approver).expect(200);
     for (const [rateKind, rate] of Object.entries(rates)) {
       const rateRow = await this.post(`profiles/${id}/rates`, {
         rateKind,
@@ -235,6 +239,7 @@ export class PlanWorld {
       await this.post(
         `rates/${(rateRow.body as { id: string }).id}/approve`,
         {},
+        this.approver,
       ).expect(200);
     }
     if (!overrides.operatingMode)

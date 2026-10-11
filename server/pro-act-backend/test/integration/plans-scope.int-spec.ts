@@ -5,7 +5,7 @@ import { bearer, signToken } from './support/test-app';
 
 /**
  * Unit scope on plan writes (WF05): a manager approver whose grant stops at unit A1 creates, generates
- * and approves plans of A1 only; plans of A2 answer 404 (v2 and v1), an A2 unit in a body is 422
+ * and approves plans of A1 only (not the drafts it authored: 403 SEPARATION_OF_DUTIES); plans of A2 answer 404 (v2 and v1), an A2 unit in a body is 422
  * INVALID_REFERENCE, scenarios (tenant-wide) are 403 TENANT_SCOPE_REQUIRED, and a generation job never
  * writes a plan whose unit left the requester's scope before it ran (UNIT_SCOPE).
  */
@@ -39,12 +39,32 @@ describe('plan writes and the unit scope (plan 2.3)', () => {
   });
   afterAll(() => env.stop());
 
-  it('creates, generates and approves plans of its own unit', async () => {
+  it('creates, generates and approves plans of its own unit (never its own draft)', async () => {
     const plan = await env.createPlan({}, unitUser);
     await env.generate(plan.id, 1, unitUser);
+    const own = await env
+      .post(
+        `production-plans/${plan.id}/approve`,
+        { expectedVersion: 1 },
+        unitUser,
+      )
+      .expect(403);
+    expect((own.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
     await env
       .post(
         `production-plans/${plan.id}/approve`,
+        { expectedVersion: 1 },
+        env.approver,
+      )
+      .expect(200);
+    const authored = await env.createPlan({
+      name: 'A1 P2 plan',
+      slices: [{ productId: env.products.p2 }],
+    });
+    await env.generate(authored.id, 1);
+    await env
+      .post(
+        `production-plans/${authored.id}/approve`,
         { expectedVersion: 1 },
         unitUser,
       )
@@ -54,7 +74,9 @@ describe('plan writes and the unit scope (plan 2.3)', () => {
       items: PlanBody[];
       scope: { unitIds?: string[] };
     };
-    expect(items.items.map((p) => p.id)).toEqual([plan.id]);
+    expect(items.items.map((p) => p.id).sort()).toEqual(
+      [plan.id, authored.id].sort(),
+    );
     expect(items.scope.unitIds).toEqual([env.world.unitA1]);
   });
 

@@ -28,6 +28,7 @@ export const PlanDashboardOff = lazyNamed(() => import('@/features/plan-dashboar
 export const RCAModule =lazyNamed(() => import('@/pages/RCAModule'), 'RCAModule');
 export const RcaV2 = lazyNamed(() => import('@/features/rca/rca-page'), 'RcaPage');
 export const RCAKnowledgeBase = lazyNamed(() => import('@/pages/RCAKnowledgeBase'), 'RCAKnowledgeBase');
+export const RcaKnowledgeV2 = lazyNamed(() => import('@/features/rca-knowledge/rca-knowledge-page'), 'RcaKnowledgePage');
 export const TestRCAAnalysisTools = lazy(() => import('@/pages/TestRCAAnalysisTools'));
 export const Connectivity = lazyNamed(() => import('@/pages/Connectivity'), 'Connectivity');
 /** Integration console (plan 3.7), served at `/connectivity` while the `v2.integrationConsole` flag is on. */

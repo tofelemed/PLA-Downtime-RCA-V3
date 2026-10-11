@@ -21,6 +21,8 @@ export interface VersionFields {
   state: VersionState;
   effectiveFrom: string;
   effectiveTo: string | null;
+  /** author of the draft (separation of duties); optional until every server view carries it */
+  createdBy?: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
   rowVersion: number;

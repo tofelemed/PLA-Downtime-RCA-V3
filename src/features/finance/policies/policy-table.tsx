@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ValuationPolicyView } from '@/api/v2/types/valuation';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { authorshipOf, bodyLabel, policyStatus, type Authorship, type PolicyStatus } from '../model/policy-status';
 import { PolicyApprove } from './policy-approve';
@@ -19,6 +20,7 @@ export interface PolicyTableProps {
 /** Versions newest first, as stored: basis, currencies, FX policy, start, author and approval. */
 export function PolicyTable({ policies, timezone, onCopy }: PolicyTableProps) {
   const { session } = useAuth();
+  const { canManagePolicies } = useCapabilities();
   const userId = session?.user?.id ?? null;
   return (
     <Table>
@@ -64,7 +66,7 @@ export function PolicyTable({ policies, timezone, onCopy }: PolicyTableProps) {
               <TableCell className="text-xs">{AUTHOR_TEXT[authorshipOf(policy, userId)]}</TableCell>
               <TableCell className="min-w-[14rem] space-y-2">
                 <PolicyApprove policy={policy} status={status} timezone={timezone} />
-                {status !== 'placeholder' && (
+                {status !== 'placeholder' && canManagePolicies && (
                   <Button size="sm" variant="ghost" onClick={() => onCopy(policy)} data-testid="policy-copy">
                     New version from this
                   </Button>

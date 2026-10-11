@@ -78,10 +78,12 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     flag: 'v2.codesAdmin',
   },
   { name: 'User Management', href: '/users', icon: Users, capability: 'canAdministerTenant', description: 'Manage users and access' },
-  { name: 'Admin Panel', href: '/admin', icon: UserCog, capability: 'isSuperAdmin', description: 'Admin tools and settings' },
+  // the page's gate: TenantAdmin gets the plant-level tabs, the application-wide ones stay SuperAdmin-only
+  { name: 'Admin Panel', href: '/admin', icon: UserCog, capability: 'canUseAdminPanel', description: 'Admin tools and settings' },
   { name: 'Permissions', href: '/permissions', icon: Lock, capability: 'canAdministerTenant', description: 'Set permissions and roles' },
   { name: 'Connectivity', href: '/connectivity', icon: Activity, capability: 'canUseIntegrationConsole', description: 'System connectivity status' },
-  { name: 'Enhanced Historian', href: '/enhanced-historian', icon: Database, capability: 'canViewAnalysis', description: 'Multi-attribute time series analysis' },
+  // same gate as the page (EnhancedHistorian.tsx: canUseIntegrationConsole)
+  { name: 'Enhanced Historian', href: '/enhanced-historian', icon: Database, capability: 'canUseIntegrationConsole', description: 'Multi-attribute time series analysis' },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, capability: 'canViewOperations', description: 'Assign and track action items' },
   { name: 'Audit Logs', href: '/audit', icon: Shield, capability: 'canViewAuditLogs', description: 'View audit logs' },
   { name: 'Settings', href: '/settings', icon: Settings, capability: 'canAdministerTenant', description: 'System settings' },

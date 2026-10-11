@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useConnections } from '@/api/v2/queries/integration-connections';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { sourceTypeLabel } from '../model/source-types';
 
 export interface ConnectionsListProps {
@@ -19,15 +21,20 @@ export interface ConnectionsListProps {
 
 /** `GET /connections` (secrets redacted): source type, state, config version, credential stored. */
 export function ConnectionsList({ selectedId, includeInactive, onIncludeInactive, onSelect, onCreate }: ConnectionsListProps) {
+  const { canWriteIntegration } = useCapabilities();
   const connections = useConnections(includeInactive);
   const state = dataStateOf(connections, { isEmpty: connections.items.length === 0 });
   return (
     <section aria-label="Connections" className="space-y-3" data-testid="connections-list">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Connections</h2>
-        <Button size="sm" onClick={onCreate} data-testid="new-connection">
-          <Plus className="mr-1 h-4 w-4" /> New
-        </Button>
+        {canWriteIntegration ? (
+          <Button size="sm" onClick={onCreate} data-testid="new-connection">
+            <Plus className="mr-1 h-4 w-4" /> New
+          </Button>
+        ) : (
+          <ReadOnlyHint />
+        )}
       </div>
       <div className="flex items-center gap-2">
         <Checkbox id="include-inactive" checked={includeInactive} onCheckedChange={(checked) => onIncludeInactive(checked === true)} />

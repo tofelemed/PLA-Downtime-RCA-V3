@@ -84,16 +84,9 @@ export interface SignalSpec {
  */
 export class ActualsWorld extends PlanWorld {
   readonly connections = { pi: randomUUID(), mqtt: randomUUID() };
-  /** a second manager approver (independent approval of adjustments) */
-  approver = '';
 
   async start(): Promise<void> {
     await super.start();
-    this.approver = signToken(this.app, {
-      userId: randomUUID(),
-      tenantId: this.world.tenantA,
-      role: 'TenantAdmin',
-    });
     await this.profile(this.world.unitA3, this.products.p1);
     for (const [id, type] of [
       [this.connections.pi, 'pi_web_api'],
@@ -114,9 +107,11 @@ export class ActualsWorld extends PlanWorld {
   ): Promise<PlanBody> {
     const plan = await this.createPlan({ unitId, ...overrides });
     await this.generate(plan.id, 1);
-    await this.post(`production-plans/${plan.id}/approve`, {
-      expectedVersion: 1,
-    }).expect(200);
+    await this.post(
+      `production-plans/${plan.id}/approve`,
+      { expectedVersion: 1 },
+      this.approver,
+    ).expect(200);
     return plan;
   }
 

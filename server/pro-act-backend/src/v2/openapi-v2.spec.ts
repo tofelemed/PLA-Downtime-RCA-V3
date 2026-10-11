@@ -1,4 +1,8 @@
 import { RcaCaseModule } from '../rca-case/rca-case.module';
+import { RcaKnowledgeSimilarService } from '../rca-knowledge-base/knowledge-similar.service';
+import { RcaKnowledgeV2CommandsService } from '../rca-knowledge-base/knowledge-v2-commands.service';
+import { RcaKnowledgeV2Service } from '../rca-knowledge-base/knowledge-v2.service';
+import { RcaKnowledgeModule } from '../rca-knowledge-base/rca-knowledge.module';
 import { RcaActionsService } from '../rca-case/rca-actions.service';
 import { RcaCasesService } from '../rca-case/rca-cases.service';
 import { RcaLinksService } from '../rca-case/rca-links.service';
@@ -361,6 +365,18 @@ const RCA_SERVICES = [
 })
 class RcaCaseModuleStub {}
 
+/** Stands in for the v2 RCA knowledge base module (owner decision 2026-10-12). */
+const KNOWLEDGE_SERVICES = [
+  RcaKnowledgeV2Service,
+  RcaKnowledgeV2CommandsService,
+  RcaKnowledgeSimilarService,
+];
+@Module({
+  providers: KNOWLEDGE_SERVICES.map((provide) => ({ provide, useValue: {} })),
+  exports: KNOWLEDGE_SERVICES,
+})
+class RcaKnowledgeModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
@@ -464,6 +480,8 @@ async function generate(): Promise<string> {
     .useModule(RulesModuleStub)
     .overrideModule(RcaCaseModule)
     .useModule(RcaCaseModuleStub)
+    .overrideModule(RcaKnowledgeModule)
+    .useModule(RcaKnowledgeModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

@@ -11,12 +11,15 @@ export interface CodeTreeProps {
   onSelect: (id: string) => void;
   /** drag-reparent (null = make root); the server validates cycles and levels */
   onMove: (id: string, parentId: string | null) => void;
+  /** false for users who cannot write codes: no drag handles, no drop zone */
+  movable?: boolean;
 }
 
 const DRAG_TYPE = 'application/x-proact-code';
 
 /** The library as a tree (flat list for non-hierarchical libraries); drag a code onto another to move it. */
-export function CodeTree({ codes, selectedId, hierarchical, onSelect, onMove }: CodeTreeProps) {
+export function CodeTree({ codes, selectedId, hierarchical: tree, onSelect, onMove, movable = true }: CodeTreeProps) {
+  const hierarchical = tree && movable;
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [dragged, setDragged] = useState<string | null>(null);
   // the row whose handle was pressed: a drag that starts anywhere else is cancelled (never move the wrong code)

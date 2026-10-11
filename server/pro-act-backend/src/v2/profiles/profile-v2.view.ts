@@ -18,6 +18,8 @@ interface VersionFields {
   state: string;
   effectiveFrom: string;
   effectiveTo: string | null;
+  /** the draft's author: never its approver (403 SEPARATION_OF_DUTIES) */
+  createdBy: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
   rowVersion: number;
@@ -100,6 +102,7 @@ function versionFields(row: {
   state: string;
   effectiveFrom: Date;
   effectiveTo: Date | null;
+  createdBy: string | null;
   approvedBy: string | null;
   approvedAt: Date | null;
   rowVersion: number;
@@ -111,6 +114,7 @@ function versionFields(row: {
     state: row.state,
     effectiveFrom: row.effectiveFrom.toISOString(),
     effectiveTo: iso(row.effectiveTo),
+    createdBy: row.createdBy,
     approvedBy: row.approvedBy,
     approvedAt: iso(row.approvedAt),
     rowVersion: row.rowVersion,

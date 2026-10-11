@@ -5198,7 +5198,7 @@
     },
     "/api/v2/profiles/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same unit, product and mode, unless `supersede` closes the predecessor at its effectiveFrom; 422 PROFILE_INCOMPLETE without quantityUom and rateTimebase.",
+        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same unit, product and mode, unless `supersede` closes the predecessor at its effectiveFrom; 422 PROFILE_INCOMPLETE without quantityUom and rateTimebase.",
         "operationId": "ProfilesV2Controller_approve_v2",
         "parameters": [
           {
@@ -5463,7 +5463,7 @@
     },
     "/api/v2/rates/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
         "operationId": "RatesV2Controller_approve_v2",
         "parameters": [
           {
@@ -5727,7 +5727,7 @@
     },
     "/api/v2/valuation-rates/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
         "operationId": "ValuationRatesV2Controller_approve_v2",
         "parameters": [
           {
@@ -6414,7 +6414,7 @@
     },
     "/api/v2/production-plans/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 409 PLAN_OVERLAP (details.conflicts) when an approved version of another plan in the same scenario plans the unit and product in an overlapping interval; 409 PERIODS_NOT_GENERATED; 409 INVALID_TRANSITION for an approved or superseded version.",
+        "description": "Requires `Idempotency-Key`. The author of the version (its creator) cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 PLAN_OVERLAP (details.conflicts) when an approved version of another plan in the same scenario plans the unit and product in an overlapping interval; 409 PERIODS_NOT_GENERATED; 409 INVALID_TRANSITION for an approved or superseded version.",
         "operationId": "ProductionPlansV2Controller_approve_v2",
         "parameters": [
           {
@@ -8712,7 +8712,7 @@
     },
     "/api/v2/fx-rates/{id}/approve": {
       "post": {
-        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
         "operationId": "FxRatesV2Controller_approve_v2",
         "parameters": [
           {
@@ -10372,6 +10372,333 @@
         "summary": "Dismiss an open recommendation with a reason",
         "tags": [
           "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rca-knowledge": {
+      "get": {
+        "description": "Filters: q (title, root cause, problem, description), unit, asset (entry or a linked event), reason code of a linked event, published, created from/to (half-open). qualityScore (0–100) is computed on the server: root cause 30, problem statement 15, a recommendation 10, a tracked action 10, share of non-cancelled actions done × 10, unit or asset 10, linked case 5, helpful share of votes × 10 (0 without votes); `quality` lists the parts.",
+        "operationId": "RcaKnowledgeV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "-createdAt",
+                "createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive text search in title, root cause, problem statement and description",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reasonCodeId",
+            "required": false,
+            "in": "query",
+            "description": "Entries whose source case has a linked event coded with this reason (failure) code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "published",
+            "required": false,
+            "in": "query",
+            "description": "true = published only, false = unpublished only",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Search knowledge entries of your scope (newest first)",
+        "tags": [
+          "v2 · RCA knowledge"
+        ]
+      }
+    },
+    "/api/v2/rca-knowledge/similar": {
+      "get": {
+        "description": "Entries whose case is already linked to the event are left out. Foreign or out-of-scope events are 404.",
+        "operationId": "RcaKnowledgeV2Controller_similar_v2",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 20,
+              "default": 5,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Similar past RCAs of an event (asset 3 + reason 2 + unit 1, then published, then newest)",
+        "tags": [
+          "v2 · RCA knowledge"
+        ]
+      }
+    },
+    "/api/v2/rca-knowledge/{id}": {
+      "get": {
+        "operationId": "RcaKnowledgeV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One entry (ETag = rowVersion); foreign ids are 404",
+        "tags": [
+          "v2 · RCA knowledge"
+        ]
+      }
+    },
+    "/api/v2/rca-knowledge/{id}/votes": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Any member who may write; read-only roles are refused.",
+        "operationId": "RcaKnowledgeV2Controller_vote_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaKnowledgeVoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Vote helpful or not helpful (one vote per user; a repeat replaces it)",
+        "tags": [
+          "v2 · RCA knowledge"
+        ]
+      }
+    },
+    "/api/v2/rca-knowledge/{id}/publish": {
+      "post": {
+        "description": "Reliability engineer or manager approver (unit-limited grants: entries of their units). Requires `Idempotency-Key` and `If-Match` (428/412); asking for the current state changes nothing.",
+        "operationId": "RcaKnowledgeV2Controller_publish_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publish an entry",
+        "tags": [
+          "v2 · RCA knowledge"
+        ]
+      }
+    },
+    "/api/v2/rca-knowledge/{id}/unpublish": {
+      "post": {
+        "description": "Reliability engineer or manager approver (unit-limited grants: entries of their units). Requires `Idempotency-Key` and `If-Match` (428/412); asking for the current state changes nothing.",
+        "operationId": "RcaKnowledgeV2Controller_unpublish_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Withdraw a published entry",
+        "tags": [
+          "v2 · RCA knowledge"
         ]
       }
     },
@@ -14494,6 +14821,18 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "RcaKnowledgeVoteDto": {
+        "type": "object",
+        "properties": {
+          "helpful": {
+            "type": "boolean",
+            "description": "true = helpful, false = not helpful"
+          }
+        },
+        "required": [
+          "helpful"
         ]
       }
     }

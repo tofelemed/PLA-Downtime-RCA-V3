@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRcaLinks } from '@/api/v2/queries/rca-cases';
 import type { RcaLinkView } from '@/api/v2/types/rca';
 import { Button } from '@/components/ui/button';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { PlantTime } from '@/features/ux-kit/plant-time';
@@ -11,6 +12,7 @@ import { AddLinkForm } from './add-link-form';
 
 /** RCA02 references of the case with the evidence package each link stored when it was made. */
 export function LinksTab({ rcaId, timezone }: { rcaId: string; timezone: string }) {
+  const { canWriteRca } = useCapabilities();
   const links = useRcaLinks(rcaId);
   const items = links.data ?? [];
   return (
@@ -22,7 +24,7 @@ export function LinksTab({ rcaId, timezone }: { rcaId: string; timezone: string 
           ))}
         </ul>
       </DataState>
-      <AddLinkForm rcaId={rcaId} />
+      {canWriteRca && <AddLinkForm rcaId={rcaId} />}
       <p className="text-xs text-muted-foreground">Push to CMMS is not available in R1 (D12): work orders are referenced, not created.</p>
     </div>
   );

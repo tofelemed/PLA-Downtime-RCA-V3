@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field } from '@/features/integration-console/components/field';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useDebouncedValue } from '@/features/ux-kit/use-debounced-value';
 import { AdminRefusalAlert } from '../components/admin-refusal-alert';
 import { useReferenceOptions } from '../hooks/use-reference-options';
@@ -33,6 +34,7 @@ function initialDraft(rule: RuleView | null): RuleDraft {
  * field errors a save gets, placed on their rows), save as a draft. The browser never evaluates a rule.
  */
 export function RuleEditor({ schema, rule, onSaved }: RuleEditorProps) {
+  const { canAuthorRules } = useCapabilities();
   const state = useRuleDraft(() => initialDraft(rule));
   const { draft } = state;
   const references = useReferenceOptions();
@@ -46,7 +48,7 @@ export function RuleEditor({ schema, rule, onSaved }: RuleEditorProps) {
     () => errorsByRow(draft, checked.data?.fieldErrors ?? (saveError instanceof V2ApiError ? saveError.fieldErrors : [])),
     [draft, checked.data, saveError],
   );
-  const readOnly = draft.nested || rule?.state === 'retired';
+  const readOnly = draft.nested || rule?.state === 'retired' || !canAuthorRules;
   const save = async () => {
     const common = { name: draft.name.trim(), description: draft.description.trim() || null, priority: Number(draft.priority) || 0, definition };
     const saved = rule
@@ -76,9 +78,11 @@ export function RuleEditor({ schema, rule, onSaved }: RuleEditorProps) {
       <ActionsSection state={state} schema={schema} references={references} errors={errors} disabled={readOnly} />
       <ValidationSummary check={checked.data} checking={checked.isFetching} general={errors.general} limits={schema.limits} />
       {saveError ? <AdminRefusalAlert error={saveError} /> : null}
-      <Button onClick={save} disabled={readOnly || create.isPending || change.isPending || draft.name.trim() === ''} data-testid="rule-save">
-        {rule ? 'Save draft' : 'Create draft'}
-      </Button>
+      {canAuthorRules && (
+        <Button onClick={save} disabled={readOnly || create.isPending || change.isPending || draft.name.trim() === ''} data-testid="rule-save">
+          {rule ? 'Save draft' : 'Create draft'}
+        </Button>
+      )}
     </div>
   );
 }

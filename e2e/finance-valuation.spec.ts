@@ -3,13 +3,14 @@ import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
 import { call } from './test-utils/downtime-world';
 import { E2E_FX_SOURCE, ensureFinanceTenant, FINANCE_TENANT, FINANCE_AUTHOR, policiesOf, retireE2eFxRates, type PolicySummary } from './test-utils/finance-world';
+import { secondApproverPage, secondApproverToken } from './test-utils/second-approver';
 
 /**
  * Finance screens (plan 2.6 UI, prerequisite of 3.10) at `/finance` behind `v2.codesAdmin`:
- * - FX rates as manager@acme.com in Demo Plant: a USD → IRR draft for a dedicated past window is created
- *   and approved (the API has no separation of duties for FX rates, so no second approver is needed); a
- *   second draft for the same window is refused at approval with 409 VERSION_OVERLAP listing the first;
- *   both are retired again through the screen.
+ * - FX rates in Demo Plant: manager@acme.com creates a USD → IRR draft for a dedicated past window; its own
+ *   approve control is disabled (D06 separation of duties, 2026-10-12) and the second approver approves
+ *   it; a second draft for the same window is refused at approval with 409 VERSION_OVERLAP listing the
+ *   first; both are retired again through the screen.
  * - Valuation policy in the dedicated "E2E Test Tenant finance": the author creates a draft and its own
  *   approval is refused with 403 SEPARATION_OF_DUTIES. Demo Plant's policy versions are never touched
  *   (checked before / after).
@@ -49,13 +50,14 @@ test.describe('Finance — FX rates and valuation policy approval (plan 3.10 pre
     expect(flags.body.items.find((flag) => flag.key === 'v2.codesAdmin')?.enabled, 'v2.codesAdmin must be on for Demo Plant').toBe(true);
     await retireE2eFxRates(manager);
     demoPolicies = await policiesOf(manager);
+    await secondApproverToken(manager);
   });
 
   test.afterAll(async () => {
     if (manager) await retireE2eFxRates(manager);
   });
 
-  test('FX: draft → approve in a dedicated window; an overlapping draft is refused with 409; both retired', async ({ page }) => {
+  test('FX: draft → approve (not by its author) in a dedicated window; an overlapping draft is refused with 409; both retired', async ({ page, browser }) => {
     const [first, second] = [`${E2E_FX_SOURCE} ${suffix} A`, `${E2E_FX_SOURCE} ${suffix} B`];
     await loginViaUI(page, MANAGER.email, MANAGER.password);
     await expect(page.locator('a[href="/finance"]').first()).toBeVisible();
@@ -65,16 +67,25 @@ test.describe('Finance — FX rates and valuation policy approval (plan 3.10 pre
 
     await addFxDraft(page, first, '585000.25');
     await expect(fxRow(page, first).getByTestId('fx-rate')).toHaveText('1 USD = 585000.25 IRR');
-    await fxRow(page, first).getByTestId('fx-approve').click();
-    await expect(fxRow(page, first).getByTestId('version-state')).toHaveAttribute('data-state', 'approved', { timeout: 20_000 });
-
+    await expect(fxRow(page, first).getByTestId('fx-approve')).toBeDisabled();
     await addFxDraft(page, second, '590000');
-    await fxRow(page, second).getByTestId('fx-approve').click();
-    const refusal = fxRow(page, second).getByTestId('refusal');
+
+    const approver = await secondApproverPage(browser);
+    await openFinance(approver);
+    await approver.getByTestId('tab-fx-rates').click();
+    await approver.locator('#fxPairFilter').selectOption('USD-IRR');
+    await fxRow(approver, first).getByTestId('fx-approve').click();
+    await expect(fxRow(approver, first).getByTestId('version-state')).toHaveAttribute('data-state', 'approved', { timeout: 20_000 });
+    await fxRow(approver, second).getByTestId('fx-approve').click();
+    const refusal = fxRow(approver, second).getByTestId('refusal');
     await expect(refusal).toHaveAttribute('data-code', 'VERSION_OVERLAP', { timeout: 20_000 });
     await expect(refusal.getByTestId('refusal-conflict')).toHaveCount(1);
-    await expect(fxRow(page, second).getByTestId('version-state')).toHaveAttribute('data-state', 'draft');
+    await expect(fxRow(approver, second).getByTestId('version-state')).toHaveAttribute('data-state', 'draft');
+    await approver.context().close();
 
+    await page.reload();
+    await page.getByTestId('tab-fx-rates').click();
+    await page.locator('#fxPairFilter').selectOption('USD-IRR');
     for (const source of [second, first]) {
       await fxRow(page, source).getByTestId('fx-retire').click();
       await expect(fxRow(page, source).getByTestId('version-state')).toHaveAttribute('data-state', 'retired', { timeout: 20_000 });

@@ -36,6 +36,8 @@ export const STALE_TIME: Readonly<Record<V2Resource, number>> = {
   // RCA (plan 3.9): cases and links refreshed by their writes; recommendations by RCARecommended notices
   'rca-cases': 30_000,
   'rca-recommendations': 30_000,
+  // RCA knowledge base (owner decision 2026-10-12): refreshed by votes, publishing and case closes
+  'rca-knowledge': 30_000,
   // finance (FX rates, valuation policy versions): refreshed by their writes
   valuation: 30_000,
 };

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useGeneratePeriods, usePreviewPeriods } from '@/api/v2/queries/plans';
 import { DISTRIBUTIONS, type Distribution, type PlanVersionView } from '@/api/v2/types/plans';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { NativeSelect } from '../components/native-select';
 import { RefusalNotice } from '../components/refusal-notice';
 import { ApprovePlanVersion } from './approve-plan-version';
@@ -21,6 +22,7 @@ export interface OpenVersionActionsProps {
  * banner), generate (202 job) and approve. Every number in the preview is the server's.
  */
 export function OpenVersionActions({ version, timezone, productName, onEdit, onGenerated }: OpenVersionActionsProps) {
+  const { canWritePlans } = useCapabilities();
   const preview = usePreviewPeriods();
   const generate = useGeneratePeriods();
   const [distribution, setDistribution] = useState<Distribution | ''>('');
@@ -32,20 +34,22 @@ export function OpenVersionActions({ version, timezone, productName, onEdit, onG
   };
   return (
     <div className="space-y-3" data-testid="open-version-actions">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" onClick={onEdit} data-testid="plan-edit">
-          Edit draft
-        </Button>
-        <div className="w-64">
-          <NativeSelect id="previewDistribution" value={distribution} options={DISTRIBUTIONS.map((d) => ({ value: d, label: d }))} placeholder={`Distribution: ${version.distribution}`} onChange={(v) => setDistribution(v as Distribution | '')} />
+      {canWritePlans && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={onEdit} data-testid="plan-edit">
+            Edit draft
+          </Button>
+          <div className="w-64">
+            <NativeSelect id="previewDistribution" value={distribution} options={DISTRIBUTIONS.map((d) => ({ value: d, label: d }))} placeholder={`Distribution: ${version.distribution}`} onChange={(v) => setDistribution(v as Distribution | '')} />
+          </div>
+          <Button size="sm" onClick={runPreview} disabled={preview.isPending} data-testid="plan-preview">
+            Preview periods
+          </Button>
+          <Button size="sm" variant="secondary" onClick={runGenerate} disabled={generate.isPending} data-testid="plan-generate">
+            Generate periods
+          </Button>
         </div>
-        <Button size="sm" onClick={runPreview} disabled={preview.isPending} data-testid="plan-preview">
-          Preview periods
-        </Button>
-        <Button size="sm" variant="secondary" onClick={runGenerate} disabled={generate.isPending} data-testid="plan-generate">
-          Generate periods
-        </Button>
-      </div>
+      )}
       <p className="text-xs text-muted-foreground" data-testid="periods-generated">
         {version.periodsGeneratedAt ? `Periods generated ${version.periodsGeneratedAt}` : 'Periods not generated yet — approval needs generated periods.'}
         {version.generationError ? ` · last generation refused: ${version.generationError.code}` : ''}

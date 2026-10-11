@@ -28,7 +28,10 @@ interface RateRow {
 }
 
 export interface RateSeedOptions {
+  /** creates the drafts (their author) */
   client: DemoApiClient;
+  /** approves them: a second manager, never the author (403 SEPARATION_OF_DUTIES) */
+  approver: DemoApiClient;
   tenantId: string;
   seed: string;
   currency: string;
@@ -90,9 +93,10 @@ function plan(
 }
 
 /**
- * Creates and approves one USD valuation rate version per approved profile (contribution margin and
- * standard cost per profile quantity unit) and per active impact code (cost per hour), effective from
- * `effectiveFrom`, open-ended. A key that already has an approved version is left as it is.
+ * Creates (author) and approves (a second manager) one USD valuation rate version per approved profile
+ * (contribution margin and standard cost per profile quantity unit) and per active impact code (cost per
+ * hour), effective from `effectiveFrom`, open-ended. A key that already has an approved version is left
+ * as it is.
  */
 export async function seedValuationRates(
   options: RateSeedOptions,
@@ -187,7 +191,7 @@ async function approveRate(
   options: RateSeedOptions,
   id: string,
 ): Promise<void> {
-  await options.client.write(
+  await options.approver.write(
     'POST',
     `/api/v2/valuation-rates/${id}/approve`,
     { supersede: false },

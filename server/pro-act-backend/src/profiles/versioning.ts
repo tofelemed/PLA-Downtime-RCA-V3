@@ -7,6 +7,7 @@ import {
 import { VersionRef, VersionState } from '../domain/profiles/profile.types';
 import { planApproval } from '../domain/profiles/version-window';
 import {
+  assertNotAuthor,
   invalidTransition,
   isExclusionViolation,
   notFound,
@@ -22,6 +23,8 @@ export interface Versioned extends ObjectLiteral {
   effectiveTo: Date | null;
   approvedBy: string | null;
   approvedAt: Date | null;
+  /** the draft's author: never its approver (403 SEPARATION_OF_DUTIES) */
+  createdBy: string | null;
   updatedBy: string | null;
 }
 
@@ -93,7 +96,8 @@ export async function nextVersion<T extends Versioned>(
 }
 
 /**
- * Approves a draft (plan 2.2): refused with 409 `VERSION_OVERLAP` (naming the conflicting versions)
+ * Approves a draft (plan 2.2): refused with 403 `SEPARATION_OF_DUTIES` when the actor created the draft,
+ * and with 409 `VERSION_OVERLAP` (naming the conflicting versions)
  * when it would overlap an approved version of its family, unless `supersede` lets it close its one
  * predecessor exactly at its `from` (half-open, so no instant is covered twice or lost). The exclusion
  * constraint backs this up against concurrent approvals.
@@ -109,6 +113,7 @@ export async function approveVersion<T extends Versioned>(
   const row = await lockRow(manager, target, command.id, what);
   if (row.state !== 'draft')
     throw invalidTransition(what, row.state, 'approved');
+  assertNotAuthor(row, command.actorId, what);
   const approved = await whereKey(
     manager
       .createQueryBuilder(target, 'v')

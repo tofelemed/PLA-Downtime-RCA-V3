@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePlanVersion } from '@/api/v2/queries/plans';
 import type { PlanVersionView, PlanView } from '@/api/v2/types/plans';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { PlantTime } from '@/features/ux-kit/plant-time';
@@ -37,6 +38,7 @@ function Slices({ version, refs }: { version: PlanVersionView; refs: PlanningRef
 
 /** The plan's current version (with slices), what can be done with it, and its history. */
 export function PlanDetail({ plan, refs, onEdit, onNewVersion }: PlanDetailProps) {
+  const { canWritePlans } = useCapabilities();
   const current = usePlanVersion(plan.id, plan.currentVersion);
   const version = current.data;
   const [jobId, setJobId] = useState<string | null>(null);
@@ -64,9 +66,11 @@ export function PlanDetail({ plan, refs, onEdit, onNewVersion }: PlanDetailProps
               ) : (
                 <div className="flex flex-wrap items-center gap-2" data-testid="frozen-version">
                   <p className="text-sm text-muted-foreground">Version {version.version} is {version.approvalState}: its periods are frozen. Changes need a new version.</p>
-                  <Button size="sm" onClick={() => onNewVersion(version)} data-testid="plan-new-version">
-                    Create new version
-                  </Button>
+                  {canWritePlans && (
+                    <Button size="sm" onClick={() => onNewVersion(version)} data-testid="plan-new-version">
+                      Create new version
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

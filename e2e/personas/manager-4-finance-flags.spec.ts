@@ -166,6 +166,6 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
 
     await loginViaUI(page, ADMINS.anna.email, ADMINS.anna.password);
     for (const href of ['/downtime', '/planning', '/codes-admin', '/finance']) await expect(page.locator(`nav a[href="${href}"]`)).toBeVisible();
-    await expect(page.locator('nav a[href="/admin"]')).toHaveCount(0); // Admin Panel is SuperAdmin-only
+    await expect(page.locator('nav a[href="/admin"]')).toBeVisible(); // Admin Panel: plant-level tabs for a TenantAdmin
   });
 });

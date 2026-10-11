@@ -365,7 +365,11 @@ describe('actuals adjustments, recalculation triggers and external reports (plan
       .expect(201);
     await env.generate(planA1, 2);
     await env
-      .post(`production-plans/${planA1}/approve`, { expectedVersion: 2 })
+      .post(
+        `production-plans/${planA1}/approve`,
+        { expectedVersion: 2 },
+        env.approver,
+      )
       .expect(200);
     await settle();
     const after = await env.detail(periodA1);

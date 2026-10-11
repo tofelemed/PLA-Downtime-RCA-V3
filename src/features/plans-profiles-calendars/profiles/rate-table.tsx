@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useProfileRates } from '@/api/v2/queries/profiles';
 import { RATE_KINDS, type ProfileView, type RateView } from '@/api/v2/types/profiles';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { PlantTime } from '@/features/ux-kit/plant-time';
@@ -29,6 +30,7 @@ function byKind(rates: readonly RateView[]): RateView[] {
  * supersede, retire.
  */
 export function RateTable({ profile, timezone }: RateTableProps) {
+  const { canWriteProfiles } = useCapabilities();
   const rates = useProfileRates(profile.id);
   const [adding, setAdding] = useState(false);
   const items = byKind(flattenPages(rates.data?.pages));
@@ -36,7 +38,7 @@ export function RateTable({ profile, timezone }: RateTableProps) {
     <section className="space-y-2" data-testid="rate-table">
       <div className="flex items-center justify-between">
         <h3 className="font-medium">Rates</h3>
-        {!adding && (
+        {!adding && canWriteProfiles && (
           <Button size="sm" variant="outline" onClick={() => setAdding(true)} data-testid="rate-add">
             Add rate version
           </Button>
@@ -74,7 +76,7 @@ export function RateTable({ profile, timezone }: RateTableProps) {
                   <VersionStateBadge state={rate.state} />
                 </TableCell>
                 <TableCell className="min-w-[16rem]">
-                  <VersionActions resource="rates" id={rate.id} state={rate.state} timezone={timezone} testId="rate-actions" />
+                  <VersionActions resource="rates" id={rate.id} state={rate.state} timezone={timezone} testId="rate-actions" authorId={rate.createdBy} />
                 </TableCell>
               </TableRow>
             ))}

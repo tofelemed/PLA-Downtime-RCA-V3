@@ -1,6 +1,7 @@
 import type { ConnectionView } from '@/api/v2/types/integrations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { Field } from '../components/field';
 import { NativeSelect } from '../components/native-select';
@@ -17,6 +18,7 @@ import { ValueMapEditor } from './value-map-editor';
  * profile and restarts the subscription at the new config version.
  */
 export function ProfileEditor({ connection }: { connection: ConnectionView }) {
+  const { canWriteIntegration } = useCapabilities();
   const editor = useProfileDraft(connection);
   const { draft, errors } = editor;
   const blocked = Object.keys(errors).length > 0;
@@ -58,9 +60,11 @@ export function ProfileEditor({ connection }: { connection: ConnectionView }) {
       <ValueMapEditor kind="reason" rows={draft.reasonMap} error={errors.reasonMap} keepUnmapped={draft.reasonUnmapped === 'keep'} onChange={(rows) => editor.setRows('reasonMap', rows)} />
       <ConsoleRefusal error={editor.failed} />
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" onClick={() => void editor.save()} disabled={editor.patch === null || blocked || editor.isPending} data-testid="profile-save">
-          Save profile (merge patch)
-        </Button>
+        {canWriteIntegration && (
+          <Button size="sm" onClick={() => void editor.save()} disabled={editor.patch === null || blocked || editor.isPending} data-testid="profile-save">
+            Save profile (merge patch)
+          </Button>
+        )}
         <Button size="sm" variant="outline" onClick={editor.reset} disabled={editor.patch === null} data-testid="profile-reset">
           Discard changes
         </Button>

@@ -8,7 +8,9 @@
  *   npm run db:seed-demo-valuation -- --demo-plant      # the demo manager account's own tenant
  *
  * Env: PROACT_API_URL (default http://localhost:$PORT from .env), DEMO_SEED_EMAIL / DEMO_SEED_PASSWORD
- * (default the demo manager of `db:seed-demo-users`; it needs manager_approver rights on the tenant).
+ * (the author of the drafts; default the demo manager of `db:seed-demo-users`) and DEMO_APPROVER_EMAIL /
+ * DEMO_APPROVER_PASSWORD (a second account with manager_approver rights on the tenant that approves them —
+ * the author never approves its own draft, 403 SEPARATION_OF_DUTIES; default the demo admin).
  * Idempotent: keys that already have an approved version are kept, and every value is reproducible from
  * the seed. Recalculate the periods afterwards (POST /api/v2/production-periods/recalculate).
  */
@@ -34,6 +36,8 @@ const CURRENCY = 'USD';
 const EFFECTIVE_FROM = '2026-10-01T00:00:00Z';
 const DEMO_EMAIL = 'manager@acme.com';
 const DEMO_PASSWORD = 'demo123';
+const DEMO_APPROVER_EMAIL = 'admin@acme.com';
+const DEMO_APPROVER_PASSWORD = 'demo123';
 
 function apiUrl(): string {
   const explicit = process.env.PROACT_API_URL;
@@ -70,11 +74,18 @@ async function main(): Promise<void> {
   const tenantId = requested ?? ownTenant;
   if (!tenantId) throw new Error('the seed account has no tenant');
   client.useTenant(tenantId);
+  const approver = new DemoApiClient(apiUrl());
+  await approver.login({
+    email: process.env.DEMO_APPROVER_EMAIL ?? DEMO_APPROVER_EMAIL,
+    password: process.env.DEMO_APPROVER_PASSWORD ?? DEMO_APPROVER_PASSWORD,
+  });
+  approver.useTenant(tenantId);
   logger.log(
     `${dryRun ? '[dry run] ' : ''}tenant ${tenantId}, seed "${seed}", ${CURRENCY} from ${EFFECTIVE_FROM}`,
   );
   const rates = await seedValuationRates({
     client,
+    approver,
     tenantId,
     seed,
     currency: CURRENCY,

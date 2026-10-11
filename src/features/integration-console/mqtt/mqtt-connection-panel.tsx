@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ConnectionView } from '@/api/v2/types/integrations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import type { ConsoleSession } from '../hooks/use-console-session';
@@ -24,6 +25,7 @@ export interface MqttConnectionPanelProps {
  * editor (merge-patched, with live value-map classification) and this connection's quarantine.
  */
 export function MqttConnectionPanel({ connection, session, timezone }: MqttConnectionPanelProps) {
+  const { canWriteIntegration } = useCapabilities();
   const [tab, setTab] = useState('subscription');
   const subscription = useMqttSubscription(connection.id);
   return (
@@ -39,7 +41,7 @@ export function MqttConnectionPanel({ connection, session, timezone }: MqttConne
           <SubscriptionCounters health={subscription.health} />
           <SubscriptionActions job={subscription.job} timezone={timezone} />
         </DataState>
-        <MqttTestPanel connection={connection} last={session.testOf(connection.id)} timezone={timezone} onTested={(result) => session.recordTest(connection.id, result)} />
+        {canWriteIntegration && <MqttTestPanel connection={connection} last={session.testOf(connection.id)} timezone={timezone} onTested={(result) => session.recordTest(connection.id, result)} />}
       </TabsContent>
       <TabsContent value="profile">
         <ProfileEditor connection={connection} />

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { IngestionJobView, JobAction } from '@/api/v2/types/integrations';
 import { Button } from '@/components/ui/button';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { JobCommandDialog } from '../jobs/job-command-dialog';
 import { JobTransitions } from '../jobs/job-transitions';
 import { allowedActions } from '../model/job-states';
@@ -11,13 +12,14 @@ import { MQTT_ACTION_TEXT } from './model/mqtt-job-text';
  * (audited with a reason; the server judges the transition), plus its audit trail.
  */
 export function SubscriptionActions({ job, timezone }: { job: IngestionJobView | null; timezone: string }) {
+  const { canWriteIntegration } = useCapabilities();
   const [action, setAction] = useState<JobAction | null>(null);
   const [trail, setTrail] = useState(false);
   if (!job) return null;
   return (
     <div className="space-y-2" data-testid="mqtt-actions">
       <div className="flex flex-wrap gap-2">
-        {allowedActions(job.state).map((next) => (
+        {(canWriteIntegration ? allowedActions(job.state) : []).map((next) => (
           <Button key={next} size="sm" variant={MQTT_ACTION_TEXT[next].destructive ? 'destructive' : 'outline'} onClick={() => setAction(next)} data-testid={`job-${next}`}>
             {MQTT_ACTION_TEXT[next].label}
           </Button>

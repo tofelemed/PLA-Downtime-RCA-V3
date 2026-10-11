@@ -1531,7 +1531,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a draft profile version
-         * @description Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same unit, product and mode, unless `supersede` closes the predecessor at its effectiveFrom; 422 PROFILE_INCOMPLETE without quantityUom and rateTimebase.
+         * @description Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same unit, product and mode, unless `supersede` closes the predecessor at its effectiveFrom; 422 PROFILE_INCOMPLETE without quantityUom and rateTimebase.
          */
         post: operations["ProfilesV2Controller_approve_v2"];
         delete?: never;
@@ -1606,7 +1606,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a draft rate version
-         * @description Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).
+         * @description Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).
          */
         post: operations["RatesV2Controller_approve_v2"];
         delete?: never;
@@ -1681,7 +1681,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a draft valuation rate version
-         * @description Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).
+         * @description Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).
          */
         post: operations["ValuationRatesV2Controller_approve_v2"];
         delete?: never;
@@ -1878,7 +1878,7 @@ export interface paths {
         put?: never;
         /**
          * Approve the open version (PLAN04); the previous approved version is superseded
-         * @description Requires `Idempotency-Key`. 409 PLAN_OVERLAP (details.conflicts) when an approved version of another plan in the same scenario plans the unit and product in an overlapping interval; 409 PERIODS_NOT_GENERATED; 409 INVALID_TRANSITION for an approved or superseded version.
+         * @description Requires `Idempotency-Key`. The author of the version (its creator) cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 PLAN_OVERLAP (details.conflicts) when an approved version of another plan in the same scenario plans the unit and product in an overlapping interval; 409 PERIODS_NOT_GENERATED; 409 INVALID_TRANSITION for an approved or superseded version.
          */
         post: operations["ProductionPlansV2Controller_approve_v2"];
         delete?: never;
@@ -2677,7 +2677,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a draft FX rate version
-         * @description FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).
+         * @description FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).
          */
         post: operations["FxRatesV2Controller_approve_v2"];
         delete?: never;
@@ -3215,6 +3215,123 @@ export interface paths {
          * @description Requires `Idempotency-Key`.
          */
         post: operations["RcaActionsV2Controller_dismiss_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-knowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search knowledge entries of your scope (newest first)
+         * @description Filters: q (title, root cause, problem, description), unit, asset (entry or a linked event), reason code of a linked event, published, created from/to (half-open). qualityScore (0–100) is computed on the server: root cause 30, problem statement 15, a recommendation 10, a tracked action 10, share of non-cancelled actions done × 10, unit or asset 10, linked case 5, helpful share of votes × 10 (0 without votes); `quality` lists the parts.
+         */
+        get: operations["RcaKnowledgeV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-knowledge/similar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Similar past RCAs of an event (asset 3 + reason 2 + unit 1, then published, then newest)
+         * @description Entries whose case is already linked to the event are left out. Foreign or out-of-scope events are 404.
+         */
+        get: operations["RcaKnowledgeV2Controller_similar_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-knowledge/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One entry (ETag = rowVersion); foreign ids are 404 */
+        get: operations["RcaKnowledgeV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-knowledge/{id}/votes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Vote helpful or not helpful (one vote per user; a repeat replaces it)
+         * @description Requires `Idempotency-Key`. Any member who may write; read-only roles are refused.
+         */
+        post: operations["RcaKnowledgeV2Controller_vote_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-knowledge/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish an entry
+         * @description Reliability engineer or manager approver (unit-limited grants: entries of their units). Requires `Idempotency-Key` and `If-Match` (428/412); asking for the current state changes nothing.
+         */
+        post: operations["RcaKnowledgeV2Controller_publish_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-knowledge/{id}/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw a published entry
+         * @description Reliability engineer or manager approver (unit-limited grants: entries of their units). Requires `Idempotency-Key` and `If-Match` (428/412); asking for the current state changes nothing.
+         */
+        post: operations["RcaKnowledgeV2Controller_unpublish_v2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4820,6 +4937,10 @@ export interface components {
         };
         RcaRecommendationDismissV2Dto: {
             reason: string;
+        };
+        RcaKnowledgeVoteDto: {
+            /** @description true = helpful, false = not helpful */
+            helpful: boolean;
         };
     };
     responses: never;
@@ -9691,6 +9812,149 @@ export interface operations {
                 "application/json": components["schemas"]["RcaRecommendationDismissV2Dto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaKnowledgeV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-createdAt" | "createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Case-insensitive text search in title, root cause, problem statement and description */
+                q?: string;
+                unitId?: string;
+                assetId?: string;
+                /** @description Entries whose source case has a linked event coded with this reason (failure) code */
+                reasonCodeId?: string;
+                /** @description true = published only, false = unpublished only */
+                published?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaKnowledgeV2Controller_similar_v2: {
+        parameters: {
+            query: {
+                eventId: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaKnowledgeV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaKnowledgeV2Controller_vote_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaKnowledgeVoteDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaKnowledgeV2Controller_publish_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaKnowledgeV2Controller_unpublish_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

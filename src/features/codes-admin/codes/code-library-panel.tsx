@@ -4,8 +4,10 @@ import type { CodeLibraryPath } from '@/api/v2/types/codes-admin';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { AdminRefusalAlert } from '../components/admin-refusal-alert';
 import { LIBRARIES } from '../model/code-fields';
 import { CodeCreateDialog } from './code-create-dialog';
@@ -17,6 +19,7 @@ import { CodeTree } from './code-tree';
  * the subtree and refuses cycles), node editor with versions, retire with impact.
  */
 export function CodeLibraryPanel({ library }: { library: CodeLibraryPath }) {
+  const { canWriteCodes } = useCapabilities();
   const spec = LIBRARIES[library];
   const [includeRetired, setIncludeRetired] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -39,13 +42,17 @@ export function CodeLibraryPanel({ library }: { library: CodeLibraryPath }) {
               Show retired
             </Label>
           </div>
-          <Button size="sm" onClick={() => setCreating(true)} data-testid="code-new">
-            New code
-          </Button>
+          {canWriteCodes ? (
+            <Button size="sm" onClick={() => setCreating(true)} data-testid="code-new">
+              New code
+            </Button>
+          ) : (
+            <ReadOnlyHint />
+          )}
         </div>
         {move.error ? <AdminRefusalAlert error={move.error} /> : null}
         <DataState state={state} error={list.error} onRetry={() => list.refetch()}>
-          <CodeTree codes={list.items} selectedId={selectedId} hierarchical={spec.hierarchical} onSelect={setSelectedId} onMove={onMove} />
+          <CodeTree codes={list.items} selectedId={selectedId} hierarchical={spec.hierarchical} onSelect={setSelectedId} onMove={onMove} movable={canWriteCodes} />
         </DataState>
       </section>
       {selected ? (

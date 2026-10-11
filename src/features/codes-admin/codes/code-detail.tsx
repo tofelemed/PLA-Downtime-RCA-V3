@@ -3,6 +3,7 @@ import type { CodeDetailView, CodeLibraryPath } from '@/api/v2/types/codes-admin
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { CodeEditor } from './code-editor';
@@ -19,6 +20,7 @@ export interface CodeDetailProps {
 
 /** Node editor, version history, default mapping preview (reasons) and retire with impact. */
 export function CodeDetail({ library, code, codes }: CodeDetailProps) {
+  const { canWriteCodes } = useCapabilities();
   const [retiring, setRetiring] = useState(false);
   const { timezone } = usePlantTimezone();
   return (
@@ -41,7 +43,7 @@ export function CodeDetail({ library, code, codes }: CodeDetailProps) {
         <div className="flex items-center gap-2">
           {code.active ? <Badge variant="outline">active</Badge> : <Badge variant="secondary">retired</Badge>}
           {library === 'impact-codes' && <ValuationLink impactCodeId={code.id} costPerHour={code.costPerHour ?? null} />}
-          {code.active && (
+          {code.active && canWriteCodes && (
             <Button size="sm" variant="destructive" onClick={() => setRetiring(true)} data-testid="code-retire">
               Retire…
             </Button>

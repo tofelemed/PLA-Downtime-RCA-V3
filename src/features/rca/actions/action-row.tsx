@@ -3,6 +3,7 @@ import type { RcaActionView } from '@/api/v2/types/rca';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { currencyDigits } from '@/features/display-currency/money-format';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { CommandError } from '@/features/event-hub/components/command-error';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
@@ -12,6 +13,7 @@ const STATUSES = ['open', 'in_progress', 'done', 'cancelled'] as const;
 
 /** One action: status, due, verification state and — once verified — the realized difference. */
 export function ActionRow({ action, timezone }: { action: RcaActionView; timezone: string }) {
+  const { canWriteRca } = useCapabilities();
   const update = useUpdateRcaAction();
   const verify = useVerifyRcaAction();
   const setStatus = (status: (typeof STATUSES)[number]) => void update.submit({ action, body: { status } }).catch(() => null);
@@ -24,6 +26,7 @@ export function ActionRow({ action, timezone }: { action: RcaActionView; timezon
             className="rounded border px-2 py-1 text-sm"
             aria-label={`Status of ${action.title}`}
             value={action.status}
+            disabled={!canWriteRca}
             onChange={(e) => setStatus(STATUSES.find((s) => s === e.target.value) ?? 'open')}
           >
             {STATUSES.map((status) => (
@@ -31,7 +34,7 @@ export function ActionRow({ action, timezone }: { action: RcaActionView; timezon
             ))}
           </select>
           <Badge variant="outline" data-testid="verification-status">{verificationLabel(action.verificationStatus)}</Badge>
-          {action.verificationStatus === 'due' && (
+          {action.verificationStatus === 'due' && canWriteRca && (
             <Button size="sm" disabled={verify.isPending} onClick={() => void verify.submit(action).catch(() => null)} data-testid="verify-action">
               Verify now
             </Button>

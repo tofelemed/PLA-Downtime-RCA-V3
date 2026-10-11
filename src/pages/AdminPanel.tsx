@@ -54,8 +54,9 @@ export const AdminPanel: React.FC = () => {
     tenantId: '',
   });
 
-  // Only show to SuperAdmin or TenantAdmin (effective roles in the selected plant)
-  const { canUseAdminPanel } = useCapabilities();
+  // SuperAdmin or TenantAdmin (effective roles in the selected plant). Application-wide sections
+  // (organizations, deleting plants, branding) are SuperAdmin-only on the server, so only SuperAdmin sees them.
+  const { canUseAdminPanel, isSuperAdmin } = useCapabilities();
   const canEditRules = canUseAdminPanel;
 
   useEffect(() => {
@@ -345,60 +346,62 @@ export const AdminPanel: React.FC = () => {
       </div>
 
       <Tabs defaultValue="hierarchy" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
           <TabsTrigger value="hierarchy">Hierarchy Management</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="attributes">Custom Attributes</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard Config</TabsTrigger>
-          <TabsTrigger value="branding">Branding</TabsTrigger>
+          {isSuperAdmin && <TabsTrigger value="branding">Branding</TabsTrigger>}
           {canEditRules && <TabsTrigger value="automation">Status Automation</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="hierarchy" className="space-y-6">
-          {/* Organizations */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  Organizations
-                </CardTitle>
-                <CardDescription>Manage top-level organizations</CardDescription>
-              </div>
-              <Button onClick={() => openDialog('org')}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Organization
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {organizations.map((org) => (
-                  <div key={org.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{org.name}</p>
-                      <p className="text-sm text-gray-500">{org.code}</p>
+          {/* Organizations: application-wide, SuperAdmin-only on the server */}
+          {isSuperAdmin && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    Organizations
+                  </CardTitle>
+                  <CardDescription>Manage top-level organizations</CardDescription>
+                </div>
+                <Button onClick={() => openDialog('org')}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Organization
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {organizations.map((org) => (
+                    <div key={org.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{org.name}</p>
+                        <p className="text-sm text-gray-500">{org.code}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDialog('tenant', org.id)}
+                        >
+                          Add Tenant
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete('organizations', org.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDialog('tenant', org.id)}
-                      >
-                        Add Tenant
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete('organizations', org.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Tenants */}
           <Card>
@@ -429,13 +432,15 @@ export const AdminPanel: React.FC = () => {
                         >
                           Add Unit
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete('tenants', tenant.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {isSuperAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete('tenants', tenant.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );
@@ -545,9 +550,11 @@ export const AdminPanel: React.FC = () => {
           <DashboardConfiguration />
         </TabsContent>
 
-        <TabsContent value="branding" className="space-y-6">
-          <BrandingSettings />
-        </TabsContent>
+        {isSuperAdmin && (
+          <TabsContent value="branding" className="space-y-6">
+            <BrandingSettings />
+          </TabsContent>
+        )}
 
         {canEditRules && (
           <TabsContent value="automation">

@@ -4,7 +4,8 @@ import { apiLogin, call, command, DEMO_PLANT, loadState, newSuffix, PREFIX, REL_
 /**
  * RELIABILITY ENGINEER persona — journey 5, the RCA knowledge base (`/rca-knowledge-base`) as Leila:
  * the entry the server wrote when a case was closed (plan 3.9 step 4) is found by search, opens with the
- * case's root cause, and the only write the screen offers (a helpful vote) is kept. The entry comes from
+ * case's root cause, and a helpful vote is kept once per user (v2 screen behind `v2.rca`, owner decision
+ * 2026-10-12; publish is offered to RCA writers). The entry comes from
  * `reliability-rca-case.spec.ts` (state file); when that file did not run, Leila opens and closes a case
  * of her own through the v2 API so the journey still has its closed case.
  */
@@ -64,33 +65,33 @@ test.describe('Reliability engineer — RCA knowledge base (journey 5)', () => {
     expect(mine[0].author, 'attributed to the person who closed the case').toBeTruthy();
   });
 
-  test('J5b (leila): search finds the entry, it opens with the root cause, a helpful vote is kept', async ({ page }) => {
+  test('J5b (leila): the v2 screen finds the entry on the server, opens it with the root cause, keeps one helpful vote', async ({ page }) => {
     await uiLogin(page, REL_USERS.leila);
     await page.goto('/rca-knowledge-base');
     await expect(page.getByRole('heading', { name: 'RCA Knowledge Base' })).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByRole('tab', { name: 'Investigations' })).toBeVisible();
-    await page.getByPlaceholder('Search by title, description, or root cause...').fill(caseTitle);
-    const card = page.locator('[class*="cursor-pointer"]').filter({ hasText: caseTitle }).first();
-    await expect(card).toBeVisible();
-    await card.click();
-    const dialog = page.getByRole('dialog');
-    await expect(dialog.getByRole('heading', { name: caseTitle })).toBeVisible();
-    await expect(dialog).toContainText(rootCause);
+    await expect(page.getByTestId('rca-knowledge-v2')).toBeVisible();
+    await page.getByLabel('Search knowledge entries').fill(caseTitle);
+    const row = page.getByTestId('knowledge-list').getByRole('button', { name: new RegExp(caseTitle) });
+    await expect(row).toBeVisible();
+    await row.click();
+    const detail = page.getByTestId('knowledge-detail');
+    await expect(detail.getByRole('heading', { name: caseTitle })).toBeVisible();
+    await expect(detail).toContainText(rootCause);
+    await expect(detail.getByTestId('quality-breakdown')).toBeVisible();
     await page.screenshot({ path: test.info().outputPath('j5-knowledge-entry.png'), fullPage: true });
 
-    const before = (await call<KnowledgeEntry[]>(leila.token, 'GET', `/rca-knowledge-base?tenantId=${DEMO_PLANT}`)).body.find((entry) => entry.rcaId === caseId);
-    const vote = dialog.locator('button.border-green-500').first();
-    await expect(vote).toBeVisible();
-    await vote.click();
-    await expect(page.getByText('Voted helpful').first()).toBeVisible();
-    await expect
-      .poll(async () => (await call<KnowledgeEntry[]>(leila.token, 'GET', `/rca-knowledge-base?tenantId=${DEMO_PLANT}`)).body.find((entry) => entry.rcaId === caseId)?.helpfulVotes)
-      .toBe((before?.helpfulVotes ?? 0) + 1);
-
-    await page.reload();
-    await expect(page.getByRole('heading', { name: 'RCA Knowledge Base' })).toBeVisible({ timeout: 60_000 });
-    await page.getByPlaceholder('Search by title, description, or root cause...').fill(caseTitle);
-    await expect(page.locator('[class*="cursor-pointer"]').filter({ hasText: caseTitle }).first()).toBeVisible();
+    const entryOf = async () =>
+      (await call<{ items: Array<KnowledgeEntry & { myVote: string | null; helpfulCount: number }> }>(
+        leila.token,
+        'GET',
+        `/v2/rca-knowledge?q=${encodeURIComponent(caseTitle)}`,
+      )).body.items.find((entry) => entry.rcaId === caseId);
+    await detail.getByRole('button', { name: /^Helpful/ }).click();
+    await expect.poll(async () => (await entryOf())?.myVote).toBe('helpful');
+    const once = (await entryOf())?.helpfulCount ?? 0;
+    await detail.getByRole('button', { name: /^Helpful/ }).click();
+    await expect.poll(async () => (await entryOf())?.helpfulCount, { message: 'one vote per user' }).toBe(once);
+    await expect(detail.getByTestId('knowledge-publish'), 'a reliability engineer may publish').toBeVisible();
   });
 
   test('J5c (leila): the knowledge base offers no manual entry form; entries are born from closed cases only', async ({ page }) => {
@@ -98,6 +99,6 @@ test.describe('Reliability engineer — RCA knowledge base (journey 5)', () => {
     await page.goto('/rca-knowledge-base');
     await expect(page.getByRole('heading', { name: 'RCA Knowledge Base' })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole('button', { name: /new entry|add entry|create entry|new template/i })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Export CSV' })).toBeVisible();
+    await expect(page.getByTestId('knowledge-filters')).toBeVisible();
   });
 });

@@ -4,6 +4,7 @@ import type { CodeMappingRuleKind } from '@/api/v2/types/codes-admin';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/features/integration-console/components/field';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { PlantTime } from '@/features/ux-kit/plant-time';
@@ -22,6 +23,7 @@ const KINDS: ReadonlyArray<{ value: Exclude<CodeMappingRuleKind, 'impact_to_valu
  * (kind, reason) rule; older versions stay unchanged, so past events keep their basis (T18).
  */
 export function MappingRulesPanel() {
+  const { canWriteCodes } = useCapabilities();
   const { timezone } = usePlantTimezone();
   const reasons = useCodeList('reason-codes', {});
   const impacts = useCodeList('impact-codes', {});
@@ -48,17 +50,19 @@ export function MappingRulesPanel() {
       </Field>
       {reasonId && (
         <>
-          <div className="flex flex-wrap items-end gap-2">
-            <Field id="mr-kind" label="Mapping">
-              <NativeSelect id="mr-kind" testId="mr-kind" value={kind} onChange={(value) => { setKind(value as typeof kind); setTarget(''); }} options={KINDS} />
-            </Field>
-            <Field id="mr-target" label="Default">
-              <NativeSelect id="mr-target" testId="mr-target" value={target} onChange={setTarget} placeholder="Choose…" options={targets} />
-            </Field>
-            <Button onClick={save} disabled={!target || create.isPending} data-testid="mr-save">
-              Save as next version
-            </Button>
-          </div>
+          {canWriteCodes && (
+            <div className="flex flex-wrap items-end gap-2">
+              <Field id="mr-kind" label="Mapping">
+                <NativeSelect id="mr-kind" testId="mr-kind" value={kind} onChange={(value) => { setKind(value as typeof kind); setTarget(''); }} options={KINDS} />
+              </Field>
+              <Field id="mr-target" label="Default">
+                <NativeSelect id="mr-target" testId="mr-target" value={target} onChange={setTarget} placeholder="Choose…" options={targets} />
+              </Field>
+              <Button onClick={save} disabled={!target || create.isPending} data-testid="mr-save">
+                Save as next version
+              </Button>
+            </div>
+          )}
           {create.error ? <AdminRefusalAlert error={create.error} /> : null}
           <DataState state={dataStateOf(rules, { isEmpty: sorted.length === 0 })} error={rules.error} detail="No mapping rules yet: the code's own defaults apply.">
             <table className="w-full text-left text-sm">

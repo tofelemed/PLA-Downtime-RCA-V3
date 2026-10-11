@@ -2,12 +2,14 @@ import { useUpdateConnection } from '@/api/v2/queries/integration-connections';
 import type { ConnectionView } from '@/api/v2/types/integrations';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { endpointSummary } from '../model/endpoint-summary';
 import { isSourceSupported, sourceTypeLabel } from '../model/source-types';
 
 /** Name, type, endpoint (never a credential), config version and the edit / (de)activate commands. */
 export function ConnectionHeader({ connection, onEdit }: { connection: ConnectionView; onEdit: () => void }) {
+  const { canWriteIntegration } = useCapabilities();
   const update = useUpdateConnection();
   const toggle = () => void update.submit({ connection, body: { isActive: !connection.isActive } }).catch(() => null);
   return (
@@ -22,7 +24,7 @@ export function ConnectionHeader({ connection, onEdit }: { connection: Connectio
       <p className="break-all text-xs text-muted-foreground" data-testid="connection-endpoint">
         {endpointSummary(connection)}
       </p>
-      {isSourceSupported(connection.sourceType) && (
+      {isSourceSupported(connection.sourceType) && canWriteIntegration && (
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={onEdit} data-testid="connection-edit">
             Edit

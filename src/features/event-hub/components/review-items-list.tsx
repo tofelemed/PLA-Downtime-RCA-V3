@@ -2,6 +2,7 @@ import { useResolveReviewItem, type EventRef } from '@/api/v2/queries/event-comm
 import type { EventReviewItemView } from '@/api/v2/types/events';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { humanize } from '../model/event-states';
 import { useEventHubEnv } from '../use-event-hub-env';
@@ -14,6 +15,7 @@ export interface ReviewItemsListProps {
 
 /** §5.3 decisions owed on the event: keep the user's override or accept the source value. */
 export function ReviewItemsList({ event, items }: ReviewItemsListProps) {
+  const { canWriteEvents } = useCapabilities();
   const env = useEventHubEnv();
   const resolve = useResolveReviewItem();
   if (items.length === 0) return <p className="text-sm text-muted-foreground">No review items.</p>;
@@ -32,7 +34,7 @@ export function ReviewItemsList({ event, items }: ReviewItemsListProps) {
           <div className="text-xs text-muted-foreground">
             Raised <PlantTime iso={item.createdAt} tz={env.timezone} withDate />
           </div>
-          {item.state === 'open' && (
+          {item.state === 'open' && canWriteEvents && (
             <div className="mt-2 flex gap-2">
               <Button size="sm" variant="outline" disabled={resolve.isPending} onClick={() => void resolve.submit({ item, event, decision: 'keep_override' }).catch(() => undefined)}>
                 Keep my value

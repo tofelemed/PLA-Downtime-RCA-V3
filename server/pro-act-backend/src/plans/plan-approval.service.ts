@@ -8,6 +8,7 @@ import { PlanProductSlice } from './entities/plan-product-slice.entity';
 import { PlanScenario } from './entities/plan-scenario.entity';
 import { PlanVersion } from './entities/plan-version.entity';
 import {
+  assertNotAuthor,
   conflict,
   invalidTransition,
   isExclusionViolation,
@@ -34,7 +35,8 @@ const LEGACY_LABEL: Record<ApprovalState, string> = {
 /**
  * `PlanVersionService.approve` of plan 2.3 (PLAN04): approves the plan's open version once its periods
  * are generated, unless an approved version of another plan in the same scenario plans the same unit and
- * product in an overlapping interval (409 `PLAN_OVERLAP`, backed by the exclusion constraint). The plan's
+ * product in an overlapping interval (409 `PLAN_OVERLAP`, backed by the exclusion constraint), and never by
+ * the version's author (`createdBy`, 403 `SEPARATION_OF_DUTIES`, also through the v1 bridge). The plan's
  * previous approved version becomes `superseded` (its periods stay frozen) and an outbox message carries
  * the restatement hint for 2.4/2.8. Header approval columns are written from the identity, never from
  * client strings.
@@ -101,6 +103,7 @@ export class PlanApprovalService {
       `plan_approval:${target.scenarioId}:${target.unitId}`,
     ]);
     const version = assertApprovable(await lock(manager, target.id));
+    assertNotAuthor(version, context.userId, 'plan version');
     const slices = await manager.findBy(PlanProductSlice, {
       planVersionId: version.id,
     });

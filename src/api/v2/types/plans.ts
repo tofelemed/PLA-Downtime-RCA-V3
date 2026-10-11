@@ -51,6 +51,8 @@ export interface PlanVersionView {
   targetSource: string;
   distribution: Distribution;
   approvalState: ApprovalState;
+  /** author of the draft (separation of duties); optional until every server view carries it */
+  createdBy?: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
   supersedesVersionId: string | null;

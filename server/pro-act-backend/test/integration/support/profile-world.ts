@@ -47,8 +47,8 @@ export function ratesOf(response: { body: unknown }): Record<string, RateBody> {
 /**
  * Shared world of the plan 2.2 integration specs: the T13 event world (tenants A and B, units A1–A3,
  * B1) plus products P1, P2 (A) and PB (B) and impact codes IA (A) and IB (B), the v2 app, and tokens for
- * an A manager (TenantAdmin → manager_approver), an A analyst (no write role) and a B manager. Test data
- * only.
+ * an A manager (TenantAdmin → manager_approver), a second A manager (`approver`: drafts are approved by
+ * someone other than their author, D06), an A analyst (no write role) and a B manager. Test data only.
  */
 export class ProfileWorld {
   readonly harness = new IntegrationHarness();
@@ -57,6 +57,8 @@ export class ProfileWorld {
   products = { p1: randomUUID(), p2: randomUUID(), pB: randomUUID() };
   impactCodes = { iA: randomUUID(), iB: randomUUID() };
   admin = '';
+  /** a second manager approver of tenant A (approves what `admin` authored) */
+  approver = '';
   analyst = '';
   adminB = '';
 
@@ -70,6 +72,7 @@ export class ProfileWorld {
     const token = (tenantId: string, role: string) =>
       signToken(this.app, { userId: randomUUID(), tenantId, role });
     this.admin = token(this.world.tenantA, 'TenantAdmin');
+    this.approver = token(this.world.tenantA, 'TenantAdmin');
     this.analyst = token(this.world.tenantA, 'Analyst');
     this.adminB = token(this.world.tenantB, 'TenantAdmin');
   }
@@ -123,9 +126,11 @@ export class ProfileWorld {
     }).expect(201);
     const body = created.body as ProfileBody;
     if (!approve) return body;
-    const approved = await this.post(`profiles/${body.id}/approve`, {}).expect(
-      200,
-    );
+    const approved = await this.post(
+      `profiles/${body.id}/approve`,
+      {},
+      this.approver,
+    ).expect(200);
     return approved.body as ProfileBody;
   }
 
@@ -145,6 +150,7 @@ export class ProfileWorld {
     const approved = await this.post(
       `rates/${rate.id}/approve`,
       approve,
+      this.approver,
     ).expect(200);
     return approved.body as RateBody;
   }

@@ -30,6 +30,7 @@ export type V2Resource =
   | 'rules'
   | 'rca-cases'
   | 'rca-recommendations'
+  | 'rca-knowledge'
   | 'valuation';
 
 export interface V2Window {

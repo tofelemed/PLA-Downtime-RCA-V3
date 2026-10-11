@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EventRcaPanel } from '@/features/rca/event-rca-panel';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DurationText } from '@/features/ux-kit/duration-text';
@@ -85,6 +86,7 @@ function DetailTabs({ event, history }: { event: ProductionEventView; history: R
 }
 
 function EventSummary({ event, onAction }: { event: ProductionEventView; onAction: EventDetailDrawerProps['onAction'] }) {
+  const { canWriteEvents } = useCapabilities();
   const env = useEventHubEnv();
   return (
     <>
@@ -101,7 +103,7 @@ function EventSummary({ event, onAction }: { event: ProductionEventView; onActio
         <dt className="text-muted-foreground">Description</dt>
         <dd>{event.description ?? '—'}</dd>
       </dl>
-      {isOperable(event) && (
+      {isOperable(event) && canWriteEvents && (
         <div className="flex flex-wrap gap-2">
           <Button size="sm" onClick={() => onAction('edit', event)}>Edit / code</Button>
           <Button size="sm" variant="outline" onClick={() => onAction('split', event)}>Split</Button>

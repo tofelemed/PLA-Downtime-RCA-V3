@@ -43,7 +43,7 @@ export function FxRateTable({ rates, timezone }: FxRateTableProps) {
               <VersionStateBadge state={rate.state} />
             </TableCell>
             <TableCell className="min-w-[16rem]">
-              <FxVersionActions id={rate.id} state={rate.state} timezone={timezone} />
+              <FxVersionActions id={rate.id} state={rate.state} timezone={timezone} authorId={rate.createdBy} />
             </TableCell>
           </TableRow>
         ))}

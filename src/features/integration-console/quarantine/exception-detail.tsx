@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useIngestionException } from '@/api/v2/queries/ingestion-exceptions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { PlantTime } from '@/features/ux-kit/plant-time';
@@ -20,6 +21,7 @@ export interface ExceptionDetailProps {
  * bind the source, dry-run replay, replay, irrecoverable.
  */
 export function ExceptionDetail({ id, timezone }: ExceptionDetailProps) {
+  const { canWriteIntegration } = useCapabilities();
   const query = useIngestionException(id);
   const [bindTarget, setBindTarget] = useState<BindTarget | null>(null);
   const [bound, setBound] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export function ExceptionDetail({ id, timezone }: ExceptionDetailProps) {
               The raw payload is shown to integration administrators and manager approvers only.
             </p>
           )}
-          {exception.errorCode === 'unknown_unit' && exception.state === 'open' && (
+          {exception.errorCode === 'unknown_unit' && exception.state === 'open' && canWriteIntegration && (
             <Button size="sm" variant="outline" disabled={!bindTargetOf(exception)} onClick={() => setBindTarget(bindTargetOf(exception))} data-testid="exception-bind">
               Bind source to a unit
             </Button>
@@ -62,7 +64,7 @@ export function ExceptionDetail({ id, timezone }: ExceptionDetailProps) {
               {bound}
             </p>
           )}
-          <ExceptionActions key={exception.id} exception={exception} />
+          {canWriteIntegration && <ExceptionActions key={exception.id} exception={exception} />}
           <BindSourceDialog connectionId={exception.connectionId} target={bindTarget} onClose={() => setBindTarget(null)} onBound={(mapping) => setBound(`Bound ${mapping.matchValue}; dry-run and replay to apply it.`)} />
         </section>
       )}

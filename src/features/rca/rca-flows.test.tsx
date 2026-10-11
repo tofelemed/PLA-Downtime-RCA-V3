@@ -4,8 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
 import type { RcaCaseView, RcaOutcomeView } from '@/api/v2/types/rca';
+import { actAs } from '@/test/acting-user';
 
-vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ session: { tenant: { id: 'tenant-a' }, user: { id: 'u1' } } }) }));
+vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
 const { LinkRcaDialog } = await import('./link-dialog/link-rca-dialog');
@@ -96,5 +97,22 @@ describe('RCA flows (plan 3.9)', () => {
     expect(patch?.headers.get('If-Match')).toBe('"4"');
     expect(patch?.body).toMatchObject({ title: 'Pump trips (P-101)', recommendations: [{ id: 'rec-1', title: 'Realign' }] });
     expect(patch?.body).not.toHaveProperty('tenantId');
+  });
+
+  describe('controls follow RCA_WRITERS (owner decision 2026-10-12)', () => {
+    afterEach(() => actAs('SuperAdmin'));
+
+    it('canWriteRca: a reliability engineer saves the case; a production engineer sees it read-only without save', () => {
+      reply = () => json(200, {});
+      actAs('reliability_engineer');
+      const writer = wrap(<CaseEditor rca={CASE} />);
+      expect(screen.getByTestId('save-case')).toBeTruthy();
+      writer.unmount();
+      actAs('Engineer');
+      wrap(<CaseEditor rca={CASE} />);
+      expect(screen.queryByTestId('save-case')).toBeNull();
+      expect(screen.getByLabelText('Title')).toBeDisabled();
+      expect(screen.queryByText('Add node')).toBeNull();
+    });
   });
 });

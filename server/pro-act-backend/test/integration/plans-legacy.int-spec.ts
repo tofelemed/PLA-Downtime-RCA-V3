@@ -15,23 +15,29 @@ interface VersionRow {
  * Plan 2.3 legacy bridge (C4): the v1 plan screens keep working on the version model. A v1 create makes
  * draft version 1 with generated periods (plannedQuantity → quantity basis by scheduled capacity, no
  * 100/h default); a v1 edit of plannedQuantity regenerates the draft; the v1 "Approved" label goes
- * through the approval service (manager approver; header columns from the identity, not the client);
+ * through the approval service (manager approver other than the draft's author; header columns from the
+ * identity, not the client);
  * an edit after approval opens version 2 and leaves the approved version untouched; approved plans are
  * not deleted.
  */
 describe('v1 production plans on the version model (plan 2.3 legacy bridge)', () => {
   const env = new PlanWorld();
   const adminId = randomUUID();
+  const approverId = randomUUID();
   let admin = '';
+  let approver = '';
   let planId = '';
 
   beforeAll(async () => {
     await env.start();
-    admin = signToken(env.app, {
-      userId: adminId,
-      tenantId: env.world.tenantA,
-      role: 'TenantAdmin',
-    });
+    const sign = (userId: string) =>
+      signToken(env.app, {
+        userId,
+        tenantId: env.world.tenantA,
+        role: 'TenantAdmin',
+      });
+    admin = sign(adminId);
+    approver = sign(approverId);
   });
   afterAll(() => env.stop());
 
@@ -100,22 +106,29 @@ describe('v1 production plans on the version model (plan 2.3 legacy bridge)', ()
     ]);
   });
 
-  it('the v1 "Approved" label approves through the service (manager approver only)', async () => {
+  it('the v1 "Approved" label approves through the service (manager approver, not the author)', async () => {
     const denied = await v1()
       .put(`/api/production-plans/${planId}`)
       .set(bearer(env.analyst))
       .send({ approvalStatus: 'Approved' })
       .expect(403);
     expect((denied.body as ApiError).code).toBe('FORBIDDEN_ROLE');
-    await v1()
+    const own = await v1()
       .put(`/api/production-plans/${planId}`)
       .set(bearer(admin))
+      .send({ approvalStatus: 'Approved' })
+      .expect(403);
+    expect((own.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
+    expect((await versions())[0]).toMatchObject({ approval_state: 'draft' });
+    await v1()
+      .put(`/api/production-plans/${planId}`)
+      .set(bearer(approver))
       .send({ approvalStatus: 'Approved', approvedBy: 'forged' })
       .expect(200);
     expect((await versions())[0]).toMatchObject({ approval_state: 'approved' });
     expect(await header()).toMatchObject({
       approval_status: 'Approved',
-      approved_by: adminId,
+      approved_by: approverId,
     });
   });
 

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useCreateCrew, useCreateCrewRotation, useCrewRotations, useCrews } from '@/api/v2/queries/calendars';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { RefusalNotice } from '../components/refusal-notice';
@@ -19,6 +20,7 @@ export interface CrewRotationEditorProps {
  * instances — they never change bounds or scheduled time (the server re-assigns future instances).
  */
 export function CrewRotationEditor({ siteId, timezone }: CrewRotationEditorProps) {
+  const { canWriteCalendars } = useCapabilities();
   const crews = flattenPages(useCrews(siteId).data?.pages);
   const [crewId, setCrewId] = useState('');
   const [name, setName] = useState('');
@@ -47,12 +49,16 @@ export function CrewRotationEditor({ siteId, timezone }: CrewRotationEditorProps
           <FormField id="crewSelect" label="Crew">
             <NativeSelect id="crewSelect" value={crewId} options={crews.map((c) => ({ value: c.id, label: c.name }))} placeholder="Choose a crew" onChange={setCrewId} />
           </FormField>
-          <FormField id="crewName" label="New crew">
-            <Input id="crewName" value={name} onChange={(e) => setName(e.target.value)} />
-          </FormField>
-          <Button size="sm" variant="outline" onClick={addCrew} disabled={!name.trim() || createCrew.isPending}>
-            Add crew
-          </Button>
+          {canWriteCalendars && (
+            <>
+              <FormField id="crewName" label="New crew">
+                <Input id="crewName" value={name} onChange={(e) => setName(e.target.value)} />
+              </FormField>
+              <Button size="sm" variant="outline" onClick={addCrew} disabled={!name.trim() || createCrew.isPending} data-testid="crew-add">
+                Add crew
+              </Button>
+            </>
+          )}
         </div>
         <RefusalNotice error={createCrew.error} timezone={timezone} />
         {crewId && (
@@ -65,22 +71,24 @@ export function CrewRotationEditor({ siteId, timezone }: CrewRotationEditorProps
                 </li>
               ))}
             </ul>
-            <div className="grid gap-2 sm:grid-cols-4">
-              <FormField id="rotationCycle" label="Cycle (shift names, “-” = off)" hint="e.g. A,A,B,B,C,C,-,-">
-                <Input id="rotationCycle" value={cycle} onChange={(e) => setCycle(e.target.value)} />
-              </FormField>
-              <FormField id="rotationAnchor" label="Anchor date (cycle day 1)">
-                <Input id="rotationAnchor" type="date" value={anchorDate} onChange={(e) => setAnchorDate(e.target.value)} />
-              </FormField>
-              <FormField id="rotationFrom" label="Effective from">
-                <Input id="rotationFrom" type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
-              </FormField>
-              <div className="flex items-end">
-                <Button size="sm" onClick={addRotation} disabled={!cycle || !anchorDate || !effectiveFrom || createRotation.isPending}>
-                  Add rotation
-                </Button>
+            {canWriteCalendars && (
+              <div className="grid gap-2 sm:grid-cols-4" data-testid="rotation-form">
+                <FormField id="rotationCycle" label="Cycle (shift names, “-” = off)" hint="e.g. A,A,B,B,C,C,-,-">
+                  <Input id="rotationCycle" value={cycle} onChange={(e) => setCycle(e.target.value)} />
+                </FormField>
+                <FormField id="rotationAnchor" label="Anchor date (cycle day 1)">
+                  <Input id="rotationAnchor" type="date" value={anchorDate} onChange={(e) => setAnchorDate(e.target.value)} />
+                </FormField>
+                <FormField id="rotationFrom" label="Effective from">
+                  <Input id="rotationFrom" type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
+                </FormField>
+                <div className="flex items-end">
+                  <Button size="sm" onClick={addRotation} disabled={!cycle || !anchorDate || !effectiveFrom || createRotation.isPending}>
+                    Add rotation
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
             <RefusalNotice error={createRotation.error} timezone={timezone} />
           </>
         )}

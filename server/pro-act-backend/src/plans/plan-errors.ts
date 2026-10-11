@@ -3,6 +3,7 @@ import { PlanGenerationError } from '../domain/plans/plan.types';
 import { invalid } from '../profiles/profile-errors';
 
 export {
+  assertNotAuthor,
   invalid,
   invalidReference,
   invalidTransition,

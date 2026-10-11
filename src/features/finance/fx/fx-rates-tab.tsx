@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useFxRates } from '@/api/v2/queries/valuation';
 import type { VersionState } from '@/api/v2/types/profiles';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { FormField } from '@/features/plans-profiles-calendars/components/form-field';
 import { LoadMore } from '@/features/plans-profiles-calendars/components/load-more';
 import { NativeSelect } from '@/features/plans-profiles-calendars/components/native-select';
@@ -27,6 +29,7 @@ const STATES = [
  * currency (`fx_rate_missing`) — nothing is estimated here or on the server.
  */
 export function FxRatesTab({ timezone }: { timezone: string }) {
+  const { canWriteProfiles } = useCapabilities();
   const [pair, setPair] = useState('');
   const [state, setState] = useState('');
   const [adding, setAdding] = useState(false);
@@ -41,7 +44,8 @@ export function FxRatesTab({ timezone }: { timezone: string }) {
         <FormField id="fxStateFilter" label="State">
           <NativeSelect id="fxStateFilter" value={state} options={STATES} placeholder="All states" onChange={setState} />
         </FormField>
-        {!adding && (
+        <ReadOnlyHint />
+        {!adding && canWriteProfiles && (
           <Button size="sm" onClick={() => setAdding(true)} data-testid="fx-new">
             Add FX rate draft
           </Button>

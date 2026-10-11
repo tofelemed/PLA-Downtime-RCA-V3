@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn, VersionColumn } from 'typeorm';
 import { RCA } from '../rca/rca.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -6,6 +6,11 @@ import { ApiProperty } from '@nestjs/swagger';
 @Index(['tenantId'])
 @Index(['organizationId'])
 @Index(['createdAt'])
+// v2 knowledge base (owner decision 2026-10-12): keyset list per tenant, unit / asset filters, one entry per case
+@Index('IDX_rca_knowledge_base_tenant_created', ['tenantId', 'createdAt', 'id'])
+@Index('IDX_rca_knowledge_base_tenant_unit', ['tenantId', 'unitId'])
+@Index('IDX_rca_knowledge_base_tenant_asset', ['tenantId', 'assetId'])
+@Index('IDX_rca_knowledge_base_tenant_rca', ['tenantId', 'rcaId'])
 export class RCAKnowledgeBase {
   @ApiProperty({ description: 'Primary key UUID' })
   @PrimaryGeneratedColumn('uuid')
@@ -143,6 +148,18 @@ export class RCAKnowledgeBase {
   @ApiProperty({ description: 'Is published' })
   @Column({ name: 'is_published', type: 'boolean', default: false })
   isPublished: boolean;
+
+  @ApiProperty({ description: 'Optimistic concurrency version (If-Match on publish / unpublish)' })
+  @VersionColumn({ name: 'row_version', default: 1 })
+  rowVersion: number;
+
+  @ApiProperty({ description: 'When the entry was last published', required: false })
+  @Column({ name: 'published_at', type: 'timestamptz', nullable: true })
+  publishedAt?: Date | null;
+
+  @ApiProperty({ description: 'Who last published the entry', required: false })
+  @Column({ name: 'published_by', type: 'varchar', length: 36, nullable: true })
+  publishedBy?: string | null;
 
   @ApiProperty({ description: 'Times referenced' })
   @Column({ name: 'times_referenced', type: 'int', default: 0 })

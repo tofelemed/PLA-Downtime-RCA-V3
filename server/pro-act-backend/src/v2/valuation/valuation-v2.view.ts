@@ -16,6 +16,8 @@ export interface FxRateV2View {
   state: string;
   effectiveFrom: string;
   effectiveTo: string | null;
+  /** the draft's author: never its approver (403 SEPARATION_OF_DUTIES) */
+  createdBy: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
   rowVersion: number;
@@ -52,6 +54,7 @@ export function toFxRateView(rate: FxRate): FxRateV2View {
     state: rate.state,
     effectiveFrom: rate.effectiveFrom.toISOString(),
     effectiveTo: iso(rate.effectiveTo),
+    createdBy: rate.createdBy,
     approvedBy: rate.approvedBy,
     approvedAt: iso(rate.approvedAt),
     rowVersion: rate.rowVersion,

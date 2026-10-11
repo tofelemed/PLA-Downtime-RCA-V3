@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { call, command } from '../../test-utils/downtime-world';
 import { reconciliation, type DashboardWorld } from '../../test-utils/dashboard-world';
+import { secondApproverToken } from '../../test-utils/second-approver';
 import { PREFIX } from './engineer-users';
 
 /**
@@ -12,7 +13,8 @@ import { PREFIX } from './engineer-users';
  * - `kind: 'PD'`: like the plan 3.5 dashboard world — 3 × 8 h shifts, planning 90 t/h, sustained 100 t/h,
  *   an approved 3000 t quantity plan over one operational day three days ago, 850 t output and a 1 h stop
  *   in shifts A and B (gap 150, availability candidate 90), recalculated.
- * The master data and approvals are the setup manager's; the plan, periods and events are written by an
+ * The master data and approvals are the setup manager's (its own profile and rate drafts are approved by
+ * the second approver: D06 separation of duties); the plan, periods and events are written by an
  * engineer, as the API lets production engineers do (PLAN_WRITERS / PERIOD_WRITERS).
  */
 const DAY = 86_400_000;
@@ -76,11 +78,12 @@ async function masterData(setup: string, tenantId: string, suffix: string, kind:
   const productId = await created(call(setup, 'POST', '/products', { name: productName, code: productCode, tenantId }), 'product');
   const from = `${utcDate(-10)}T00:00:00Z`;
   const profileId = await created(command(setup, '/v2/profiles', { unitId, productId, quantityUom: 't', rateTimebase: 'h', effectiveFrom: from }), 'profile');
-  await created(command(setup, `/v2/profiles/${profileId}/approve`, {}), 'approve profile');
+  const approver = await secondApproverToken(setup);
+  await created(command(approver, `/v2/profiles/${profileId}/approve`, {}), 'approve profile');
   const rates: Rates = kind === 'PD' ? { planning: '90', sustained: '100' } : { planning: '50', sustained: '60' };
   for (const [rateKind, rate] of Object.entries(rates)) {
     const rateId = await created(command(setup, `/v2/profiles/${profileId}/rates`, { rateKind, rate, timebase: 'h', effectiveFrom: from }), `${rateKind} rate`);
-    await created(command(setup, `/v2/rates/${rateId}/approve`, {}), `approve ${rateKind}`);
+    await created(command(approver, `/v2/rates/${rateId}/approve`, {}), `approve ${rateKind}`);
   }
   const reason = (code: string, name: string) =>
     created(command(setup, '/v2/reason-codes', { code: `${PREFIX}-${code}-${suffix}`, name: `${PREFIX} ${name} ${suffix}`, effectiveFrom: `${utcDate(-10)}T00:00:00.000Z` }), `reason ${code}`);

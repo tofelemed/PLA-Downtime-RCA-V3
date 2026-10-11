@@ -4,8 +4,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useValuationPolicies } from '@/api/v2/queries/valuation';
 import type { ValuationPolicyView } from '@/api/v2/types/valuation';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { LoadMore } from '@/features/plans-profiles-calendars/components/load-more';
 import { anyApproved, policyStatus } from '../model/policy-status';
 import { PolicyForm } from './policy-form';
@@ -40,13 +42,15 @@ function ApprovalBanner({ approved }: { approved: boolean }) {
  * history and cannot be approved.
  */
 export function PoliciesTab({ timezone }: { timezone: string }) {
+  const { canManagePolicies } = useCapabilities();
   const policies = useValuationPolicies();
   const [draftFrom, setDraftFrom] = useState<{ source: ValuationPolicyView | null } | null>(null);
   const newest = policies.items.find((policy) => policyStatus(policy) !== 'placeholder') ?? null;
   return (
     <div className="space-y-3" data-testid="policies-tab">
       {!policies.isLoading && !policies.isError && <ApprovalBanner approved={anyApproved(policies.items)} />}
-      {!draftFrom && (
+      <ReadOnlyHint />
+      {!draftFrom && canManagePolicies && (
         <Button size="sm" onClick={() => setDraftFrom({ source: newest })} data-testid="policy-new">
           New policy version
         </Button>

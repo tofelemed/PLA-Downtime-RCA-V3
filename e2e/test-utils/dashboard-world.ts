@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { call, command } from './downtime-world';
+import { secondApproverToken } from './second-approver';
 
 /**
  * Seeds the plan 3.5 e2e through the API (new "E2E PD …" unit / product / reason code / plan; nothing
@@ -8,6 +9,7 @@ import { call, command } from './downtime-world';
  * day three days ago (1000 t per 8 h shift), the production periods of that day with an output of 850 t
  * each (gap 150) and a 1 h stop in shifts A and B (an availability candidate of 90 t at the planning
  * rate), recalculated. Period A then holds the T15 situation once `seedT15Lines` saved accept 90 + 50.
+ * The manager drafts the profile, rates and plan; the second approver approves them (D06).
  */
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -41,7 +43,7 @@ async function until<T>(what: string, probe: () => Promise<T | null>, attempts =
   throw new Error(`timed out waiting for ${what}`);
 }
 
-async function unitWithProfile(token: string, tenantId: string, suffix: string) {
+async function unitWithProfile(token: string, approver: string, tenantId: string, suffix: string) {
   const unitName = `E2E PD ${suffix}`;
   const unitId = await created(call(token, 'POST', '/units', { name: unitName, code: `E2E-PD-${suffix}`, tenantId }), 'unit');
   const calendar = await created(
@@ -62,15 +64,17 @@ async function unitWithProfile(token: string, tenantId: string, suffix: string) 
   const productId = await created(call(token, 'POST', '/products', { name: `E2E PD product ${suffix}`, code: `E2E-PDP-${suffix}`, tenantId }), 'product');
   const from = `${utcDate(-10)}T00:00:00Z`;
   const profileId = await created(command(token, '/v2/profiles', { unitId, productId, quantityUom: 't', rateTimebase: 'h', effectiveFrom: from }), 'profile');
-  await created(command(token, `/v2/profiles/${profileId}/approve`, {}), 'approve profile');
+  await created(command(approver, `/v2/profiles/${profileId}/approve`, {}), 'approve profile');
   for (const [rateKind, rate] of [['planning', '90'], ['sustained', '100']]) {
     const rateId = await created(command(token, `/v2/profiles/${profileId}/rates`, { rateKind, rate, timebase: 'h', effectiveFrom: from }), `${rateKind} rate`);
-    await created(command(token, `/v2/rates/${rateId}/approve`, {}), `approve ${rateKind}`);
+    await created(command(approver, `/v2/rates/${rateId}/approve`, {}), `approve ${rateKind}`);
   }
   return { unitId, unitName, productId };
 }
 
-async function approvedPlan(token: string, unitId: string, productId: string, suffix: string, dayStart: number) {
+async function approvedPlan(tokens: { author: string; approver: string }, unit: { unitId: string; productId: string }, suffix: string, dayStart: number) {
+  const token = tokens.author;
+  const { unitId, productId } = unit;
   const body = { name: `E2E PD plan ${suffix}`, unitId, validFrom: new Date(dayStart).toISOString(), validTo: new Date(dayStart + DAY).toISOString(), basis: 'quantity', headerTarget: '3000', slices: [{ productId }] };
   const planId = await created(command(token, '/v2/production-plans', body), 'plan');
   const jobId = await created(command(token, `/v2/production-plans/${planId}/generate-periods`, { version: 1 }), 'generate');
@@ -79,7 +83,7 @@ async function approvedPlan(token: string, unitId: string, productId: string, su
     if (job.body.state === 'failed') throw new Error(`generation failed: ${JSON.stringify(job.body)}`);
     return job.body.state === 'completed' ? true : null;
   });
-  await created(command(token, `/v2/production-plans/${planId}/approve`, { expectedVersion: 1 }), 'approve plan');
+  await created(command(tokens.approver, `/v2/production-plans/${planId}/approve`, { expectedVersion: 1 }), 'approve plan');
   return planId;
 }
 
@@ -89,9 +93,10 @@ async function event(token: string, unitId: string, start: number, end: number, 
 
 export async function seedDashboardWorld(token: string, tenantId: string): Promise<DashboardWorld> {
   const suffix = randomUUID().slice(0, 8);
-  const { unitId, unitName, productId } = await unitWithProfile(token, tenantId, suffix);
+  const approver = await secondApproverToken(token);
+  const { unitId, unitName, productId } = await unitWithProfile(token, approver, tenantId, suffix);
   const dayStart = Date.parse(`${utcDate(-3)}T06:00:00.000Z`);
-  const planId = await approvedPlan(token, unitId, productId, suffix, dayStart);
+  const planId = await approvedPlan({ author: token, approver }, { unitId, productId }, suffix, dayStart);
   const window = { from: new Date(dayStart).toISOString(), to: new Date(dayStart + DAY).toISOString() };
   const materialized = await command<{ created: number }>(token, '/v2/production-periods/materialize', { unitIds: [unitId], ...window });
   if (materialized.status !== 200) throw new Error(`materialize: ${JSON.stringify(materialized.body)}`);

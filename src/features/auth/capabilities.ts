@@ -1,3 +1,5 @@
+import * as ServerRoles from './server-role-sets';
+
 /**
  * What the UI lets the user reach, decided from the effective roles in the acting plant
  * (`effective-roles.ts`). Menus and page gates read these instead of the legacy `user.role`; the
@@ -21,28 +23,75 @@ export interface Capabilities {
   canViewAuditLogs: boolean;
   /** approve plans, profiles, rules and RCAs */
   canApprove: boolean;
+  /** v2 write capabilities, one per server `@Roles` set (`server-role-sets.ts`) */
+  canWritePlans: boolean;
+  canApprovePlans: boolean;
+  /** profiles, rates, valuation rates and FX rates */
+  canWriteProfiles: boolean;
+  canApproveProfiles: boolean;
+  canWriteCalendars: boolean;
+  /** period accounting: draft lines, submit, cancel, recompute */
+  canWritePeriods: boolean;
+  /** approve / reject adjustments and revisions, revise approved periods, decide change proposals */
+  canApprovePeriods: boolean;
+  canWriteCodes: boolean;
+  canAuthorRules: boolean;
+  canApproveRules: boolean;
+  canWriteRca: boolean;
+  /** intake connections, jobs, signals, replay, quarantine and mappings */
+  canWriteIntegration: boolean;
+  /** valuation policies (author and approve) */
+  canManagePolicies: boolean;
+  /** v2 production events: any member whose role is not read-only (WriteAccessGuard) */
+  canWriteEvents: boolean;
 }
 
 const GLOBAL_ROLES = ['SuperAdmin', 'OrgAdmin'];
 const OPERATIONS_ONLY_ROLES: ReadonlySet<string> = new Set(['Operator', 'operator']);
-const READ_ONLY_ROLES: ReadonlySet<string> = new Set(['viewer']);
+const READ_ONLY_ROLES: ReadonlySet<string> = new Set(ServerRoles.READ_ONLY_ROLES);
 
 const holdsAny = (roles: readonly string[], wanted: readonly string[]): boolean =>
   roles.some((role) => wanted.includes(role));
 
+type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+
+/** The v2 write capabilities; a read-only plant gets none (the server's WriteAccessGuard runs first). */
+function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteCapabilities {
+  const may = (set: readonly string[]) => !readOnly && ServerRoles.satisfiesAnyRole(held, set);
+  return {
+    canWritePlans: may(ServerRoles.PLAN_WRITERS),
+    canApprovePlans: may(ServerRoles.PLAN_APPROVERS),
+    canWriteProfiles: may(ServerRoles.PROFILE_WRITERS),
+    canApproveProfiles: may(ServerRoles.PROFILE_APPROVERS),
+    canWriteCalendars: may(ServerRoles.CALENDAR_WRITERS),
+    canWritePeriods: may(ServerRoles.PERIOD_WRITERS),
+    canApprovePeriods: may(ServerRoles.ADJUSTMENT_APPROVERS) && may(ServerRoles.REVISION_APPROVERS),
+    canWriteCodes: may(ServerRoles.CODE_WRITERS),
+    canAuthorRules: may(ServerRoles.RULE_AUTHORS),
+    canApproveRules: may(ServerRoles.RULE_APPROVERS),
+    canWriteRca: may(ServerRoles.RCA_WRITERS),
+    canWriteIntegration: may(ServerRoles.INTEGRATION_WRITERS),
+    canManagePolicies: may(ServerRoles.POLICY_ROLES),
+    canWriteEvents: !readOnly,
+  };
+}
+
 export function capabilitiesOf(roles: readonly string[]): Capabilities {
   const held = [...roles];
+  const readOnly = !held.some((role) => !READ_ONLY_ROLES.has(role));
   return {
+    ...writeCapabilitiesOf(held, readOnly),
     roles: held,
     isSuperAdmin: held.includes('SuperAdmin'),
-    isReadOnly: !held.some((role) => !READ_ONLY_ROLES.has(role)),
+    isReadOnly: readOnly,
     canViewOperations: held.length > 0,
     canViewAnalysis: held.some((role) => !OPERATIONS_ONLY_ROLES.has(role)),
     canManageMasterData: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'master_data_admin']),
     canUseIntegrationConsole: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'integration_admin']),
     canAdministerTenant: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
     canUseAdminPanel: holdsAny(held, ['SuperAdmin', 'TenantAdmin']),
-    canViewAuditLogs: holdsAny(held, GLOBAL_ROLES),
+    // the server's GET /audit-logs roles (read in the acting plant only)
+    canViewAuditLogs: ServerRoles.satisfiesAnyRole(held, ServerRoles.AUDIT_READERS),
     canApprove: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'Manager', 'manager_approver']),
   };
 }

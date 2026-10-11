@@ -28,9 +28,9 @@ export const OPERATOR_MENU = ['/dashboard', '/pla-analytics', '/events', '/downt
 export const OPERATOR_HIDDEN = ['/reports', '/planning', '/production-plans', '/rca', '/codes-admin', '/finance', '/users', '/master-data'];
 export const VIEWER_MENU = [
   '/dashboard', '/reports', '/pla-analytics', '/production-plans', '/planning', '/events', '/downtime', '/rca',
-  '/rca-knowledge-base', '/codes-admin', '/finance', '/enhanced-historian', '/tasks',
+  '/rca-knowledge-base', '/codes-admin', '/finance', '/tasks',
 ];
-export const VIEWER_HIDDEN = ['/master-data', '/users', '/permissions', '/admin', '/connectivity', '/audit', '/settings'];
+export const VIEWER_HIDDEN = ['/master-data', '/users', '/permissions', '/admin', '/connectivity', '/enhanced-historian', '/audit', '/settings'];
 
 export interface ViewerSession {
   email: string;

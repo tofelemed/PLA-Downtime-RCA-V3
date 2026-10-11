@@ -125,14 +125,18 @@ describe('production profiles and rates (plan 2.2, v2 API)', () => {
       false,
     );
     expect(v2).toMatchObject({ version: 2, state: 'draft' });
-    const refused = await env.post(`profiles/${v2.id}/approve`, {}).expect(409);
+    const own = await env.post(`profiles/${v2.id}/approve`, {}).expect(403);
+    expect((own.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
+    const refused = await env
+      .post(`profiles/${v2.id}/approve`, {}, env.approver)
+      .expect(409);
     const error = refused.body as ApiError;
     expect(error.code).toBe('VERSION_OVERLAP');
     expect(error.details?.conflicts).toEqual([
       expect.objectContaining({ id: v1.id, version: 1 }),
     ]);
     await env
-      .post(`profiles/${v2.id}/approve`, { supersede: true })
+      .post(`profiles/${v2.id}/approve`, { supersede: true }, env.approver)
       .expect(200);
     const closed = (await env.get(`profiles/${v1.id}`).expect(200))
       .body as ProfileBody;
@@ -206,13 +210,19 @@ describe('production profiles and rates (plan 2.2, v2 API)', () => {
       state: 'draft',
       ratePerSecond: '0.03333333',
     });
-    const refused = await env.post(`rates/${v2.id}/approve`, {}).expect(409);
+    const own = await env.post(`rates/${v2.id}/approve`, {}).expect(403);
+    expect((own.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
+    const refused = await env
+      .post(`rates/${v2.id}/approve`, {}, env.approver)
+      .expect(409);
     const error = refused.body as ApiError;
     expect(error.code).toBe('VERSION_OVERLAP');
     expect(error.details?.conflicts).toEqual([
       expect.objectContaining({ id: rateV1.id, version: 1 }),
     ]);
-    await env.post(`rates/${v2.id}/approve`, { supersede: true }).expect(200);
+    await env
+      .post(`rates/${v2.id}/approve`, { supersede: true }, env.approver)
+      .expect(200);
     const closed = (await env.get(`rates/${rateV1.id}`).expect(200))
       .body as RateBody;
     expect(closed).toMatchObject({

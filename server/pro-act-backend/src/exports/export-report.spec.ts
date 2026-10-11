@@ -171,7 +171,7 @@ describe('export report rows (plan 2.9, AN03)', () => {
     expect(row).toHaveLength(REPORT_COLUMNS.period_summary.length);
   });
 
-  it('valued snapshot: both currencies rounded half-even to 2 decimals, status and reason per row (plan 2.6)', () => {
+  it('valued snapshot: each currency rounded half-even to its minor units (IRR 0), status and reason per row (plan 2.6)', () => {
     const valued = source();
     valued.reviewed.valuation = valuation();
     const [summary] = reportRows('period_summary', valued);
@@ -187,7 +187,7 @@ describe('export report rows (plan 2.9, AN03)', () => {
       s('valuation_reason'),
     ]).toEqual([
       'contribution_margin',
-      '15000.12',
+      '15000',
       'IRR',
       null,
       'USD',
@@ -198,11 +198,11 @@ describe('export report rows (plan 2.9, AN03)', () => {
     const l = (row: number, name: string) =>
       rows[row][REPORT_COLUMNS.loss_lines.indexOf(name)];
     expect([l(1, 'value_1'), l(1, 'valuation_status')]).toEqual([
-      '15000.12',
+      '15000',
       'valued',
     ]);
     expect([l(0, 'value_1'), l(0, 'valuation_reason')]).toEqual([
-      '0.00',
+      '0',
       'fx_rate_missing',
     ]);
   });

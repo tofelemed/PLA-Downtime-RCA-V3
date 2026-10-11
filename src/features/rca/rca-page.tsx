@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { Button } from '@/components/ui/button';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
+import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { CaseDetail } from './cases/case-detail';
 import { CaseList } from './cases/case-list';
@@ -20,6 +22,7 @@ export function RcaPage() {
 }
 
 function RcaScreen() {
+  const { canWriteRca } = useCapabilities();
   const { timezone, source } = usePlantTimezone();
   const [params, setParams] = useSearchParams();
   const [creating, setCreating] = useState(false);
@@ -35,7 +38,11 @@ function RcaScreen() {
             {source === 'utc-fallback' ? ' (no plant timezone configured)' : ''}.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)} data-testid="new-case">New case</Button>
+        {canWriteRca ? (
+          <Button onClick={() => setCreating(true)} data-testid="new-case">New case</Button>
+        ) : (
+          <ReadOnlyHint />
+        )}
       </header>
       <div className="grid gap-4 lg:grid-cols-[22rem_1fr]">
         <CaseList selectedId={selected} onSelect={select} />

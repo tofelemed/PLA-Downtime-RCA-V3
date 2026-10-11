@@ -5,8 +5,9 @@ import { effectiveRoles, type RoleSubject } from './effective-roles';
 import { NAVIGATION_ITEMS, visibleNavigationItems } from './navigation-items';
 
 /**
- * The menu as Navigation.tsx listed it before capabilities (one legacy-role list per item). Every
- * legacy demo user must keep exactly this menu in its home plant.
+ * The menu of each legacy demo user in its home plant (one legacy-role list per item): the menu
+ * Navigation.tsx listed before capabilities, except where an item now follows its page gate or the
+ * server's read roles (Admin Panel, Enhanced Historian, Audit Logs; APPLICATION_LOGIC_GUIDE §23).
  */
 const ALL = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager', 'Analyst', 'Engineer', 'Operator'];
 const NOT_OPERATOR = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager', 'Analyst', 'Engineer'];
@@ -25,12 +26,12 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   'Codes & Rules': NOT_OPERATOR,
   Finance: NOT_OPERATOR,
   'User Management': ADMINS,
-  'Admin Panel': ['SuperAdmin'],
+  'Admin Panel': ['SuperAdmin', 'TenantAdmin'],
   Permissions: ADMINS,
   Connectivity: ADMINS,
-  'Enhanced Historian': NOT_OPERATOR,
+  'Enhanced Historian': ADMINS,
   Tasks: ALL,
-  'Audit Logs': ['SuperAdmin', 'OrgAdmin'],
+  'Audit Logs': ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager'],
   Settings: ADMINS,
   'Data Seeding': ADMINS,
 };
@@ -77,9 +78,34 @@ describe('navigation items by capability', () => {
     expect(menuFor(charlotte)).toEqual([...menuFor(legacyUser('Analyst')), 'Master Data'].sort(byMenuOrder));
   });
 
-  it('an integration_admin (legacy Engineer) gains Connectivity and nothing else', () => {
+  it('an integration_admin (legacy Engineer) gains Connectivity and Enhanced Historian and nothing else', () => {
     const elena: RoleSubject = { ...legacyUser('Engineer'), scopes: [{ tenantId: HOME, role: 'production_engineer' }, { tenantId: HOME, role: 'integration_admin' }] };
-    expect(menuFor(elena)).toEqual([...menuFor(legacyUser('Engineer')), 'Connectivity'].sort(byMenuOrder));
+    expect(menuFor(elena)).toEqual([...menuFor(legacyUser('Engineer')), 'Connectivity', 'Enhanced Historian'].sort(byMenuOrder));
+  });
+
+  it.each([
+    ['Enhanced Historian', 'canUseIntegrationConsole'],
+    ['Admin Panel', 'canUseAdminPanel'],
+    ['Audit Logs', 'canViewAuditLogs'],
+  ] as const)('%s is listed exactly when its page gate (%s) admits the user', (name, gate) => {
+    const roleSets = [
+      ...ALL.map((role) => effectiveRoles(legacyUser(role), { tenantId: HOME })),
+      ['Engineer', 'production_engineer', 'integration_admin'],
+      ['Analyst', 'production_engineer', 'master_data_admin'],
+      ['Engineer', 'production_engineer', 'reliability_engineer'],
+      ['viewer'],
+    ];
+    for (const roles of roleSets) {
+      const capabilities = capabilitiesOf(roles);
+      const listed = visibleNavigationItems(capabilities, FLAGS_ON).some((item) => item.name === name);
+      expect(listed, roles.join('+')).toBe(capabilities[gate]);
+    }
+  });
+
+  it('a reliability engineer sees neither the audit trail nor the historian (server: FORBIDDEN_ROLE)', () => {
+    const amara: RoleSubject = { ...legacyUser('Engineer'), scopes: [{ tenantId: HOME, role: 'reliability_engineer' }] };
+    expect(menuFor(amara)).not.toContain('Audit Logs');
+    expect(menuFor(amara)).not.toContain('Enhanced Historian');
   });
 
   it('a viewer in another plant sees the read screens only', () => {

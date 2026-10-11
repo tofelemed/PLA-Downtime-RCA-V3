@@ -4,14 +4,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
 import type { ValuationPolicyView } from '@/api/v2/types/valuation';
+import { actAs } from '@/test/acting-user';
 
-vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ session: { tenant: { id: 'tenant-a' }, user: { id: 'author-1' } } }) }));
+vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
 const { FxRateForm } = await import('./fx/fx-rate-form');
 const { FxVersionActions } = await import('./fx/fx-version-actions');
 const { PolicyApprove } = await import('./policies/policy-approve');
 const { PolicyTable } = await import('./policies/policy-table');
+const { PoliciesTab } = await import('./policies/policies-tab');
 
 interface Call {
   method: string;
@@ -37,6 +39,7 @@ describe('finance — FX rates and valuation policy commands', () => {
   const wrap = (node: ReactNode) => render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
 
   beforeEach(() => {
+    actAs('SuperAdmin', 'author-1');
     calls = [];
     client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
     vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
@@ -46,7 +49,10 @@ describe('finance — FX rates and valuation policy commands', () => {
     }));
     configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
   });
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin', 'author-1');
+  });
 
   it('an FX draft is sent as decimal text; a 422 field error lands on the rate input', async () => {
     reply = () => json(422, refusal('VALIDATION_FAILED', { fieldErrors: [{ field: 'rate', message: 'rate must be a decimal string with at most 10 decimals' }] }));
@@ -81,8 +87,9 @@ describe('finance — FX rates and valuation policy commands', () => {
     expect(calls[0].body).toEqual({ supersede: false });
   });
 
-  it("the author's own approval is refused with SEPARATION_OF_DUTIES, shown as such", async () => {
+  it('a SEPARATION_OF_DUTIES refusal from the server is still shown as such (fallback)', async () => {
     reply = () => json(403, refusal('SEPARATION_OF_DUTIES', { message: 'a valuation policy version is approved by someone other than its author' }));
+    actAs('Manager', 'approver-2');
     wrap(<PolicyApprove policy={POLICY} status="unapproved" timezone={TZ} />);
     fireEvent.click(screen.getByTestId('policy-approve-start'));
     fireEvent.click(screen.getByTestId('policy-approve-submit'));
@@ -100,5 +107,37 @@ describe('finance — FX rates and valuation policy commands', () => {
     expect(v1.getAttribute('data-status')).toBe('placeholder');
     expect(v1.querySelector('[data-testid="policy-approve-start"]')).toBeNull();
     expect(v2.textContent).toMatch(/Approved — immutable/);
+  });
+
+  describe('controls follow PROFILE_* (FX) and POLICY_ROLES (owner decision 2026-10-12)', () => {
+    it('the author who can approve sees the policy approval disabled with the separation-of-duties tooltip', () => {
+      reply = () => json(200, {});
+      actAs('Manager', 'author-1');
+      wrap(<PolicyApprove policy={POLICY} status="unapproved" timezone={TZ} />);
+      expect((screen.getByTestId('policy-approve-start') as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getByTestId('sod-disabled').getAttribute('title')).toMatch(/separation of duties/);
+    });
+
+    it('canManagePolicies: an engineer sees neither approval nor "New policy version"; a viewer gets the Read-only hint', () => {
+      reply = () => json(200, { items: [POLICY], nextCursor: null });
+      actAs('Engineer');
+      wrap(<PolicyApprove policy={POLICY} status="unapproved" timezone={TZ} />);
+      expect(screen.queryByTestId('policy-approve-start')).toBeNull();
+      actAs('viewer');
+      wrap(<PoliciesTab timezone={TZ} />);
+      expect(screen.queryByTestId('policy-new')).toBeNull();
+      expect(screen.getByTestId('read-only-hint')).toBeTruthy();
+    });
+
+    it('canApproveProfiles (FX): a master-data admin sees no approve / retire; a manager does', () => {
+      reply = () => json(200, {});
+      actAs('master_data_admin');
+      wrap(<FxVersionActions id="f2" state="draft" timezone={TZ} />);
+      expect(screen.queryByTestId('fx-actions')).toBeNull();
+      actAs('Manager');
+      wrap(<FxVersionActions id="f2" state="draft" timezone={TZ} />);
+      expect(screen.getByTestId('fx-approve')).toBeTruthy();
+      expect(screen.getByTestId('fx-retire')).toBeTruthy();
+    });
   });
 });

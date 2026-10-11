@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { call, command } from './downtime-world';
+import { secondApproverToken } from './second-approver';
 
 /**
  * Seeds the plan 3.4 e2e through the API (new "E2E PLAN …" / "E2E CAL …" units and an "E2E PLAN …"
  * product; nothing existing is changed):
  * - plan unit: a published UTC unit calendar with three shifts of 6 h, 6 h and 8 h (A 06–12, B 12–18,
  *   C 18–02) from yesterday, an approved profile (t per h) with approved planning 50 t/h and sustained
- *   60 t/h rates from ten days ago → planning capacities 300 / 300 / 400 t on any day;
+ *   60 t/h rates from ten days ago → planning capacities 300 / 300 / 400 t on any day (drafted by the
+ *   manager, approved by the second approver: D06 separation of duties);
  * - calendar unit: nothing but the unit (the DST calendar is created in the UI).
  * The plan day is five days ahead (inside the 90-day materialized horizon, never today).
  */
@@ -32,9 +34,14 @@ async function created(pending: Promise<{ status: number; body: unknown }>, what
   return (result.body as { id: string }).id;
 }
 
-async function approvedRate(token: string, profileId: string, rateKind: string, rate: string, from: string) {
-  const id = await created(command(token, `/v2/profiles/${profileId}/rates`, { rateKind, rate, timebase: 'h', effectiveFrom: from }), `${rateKind} rate`);
-  await created(command(token, `/v2/rates/${id}/approve`, {}), `approve ${rateKind}`);
+interface Tokens {
+  author: string;
+  approver: string;
+}
+
+async function approvedRate(tokens: Tokens, profileId: string, rate: { kind: string; value: string }, from: string) {
+  const id = await created(command(tokens.author, `/v2/profiles/${profileId}/rates`, { rateKind: rate.kind, rate: rate.value, timebase: 'h', effectiveFrom: from }), `${rate.kind} rate`);
+  await created(command(tokens.approver, `/v2/rates/${id}/approve`, {}), `approve ${rate.kind}`);
 }
 
 async function planCalendar(token: string, unitId: string) {
@@ -66,9 +73,10 @@ export async function seedPlanningWorld(token: string, tenantId: string): Promis
   await planCalendar(token, planUnitId);
   const from = `${utcDate(-10)}T00:00:00Z`;
   const profileId = await created(command(token, '/v2/profiles', { unitId: planUnitId, productId, quantityUom: 't', rateTimebase: 'h', effectiveFrom: from }), 'profile');
-  await created(command(token, `/v2/profiles/${profileId}/approve`, {}), 'approve profile');
-  await approvedRate(token, profileId, 'planning', '50', from);
-  await approvedRate(token, profileId, 'sustained', '60', from);
+  const tokens = { author: token, approver: await secondApproverToken(token) };
+  await created(command(tokens.approver, `/v2/profiles/${profileId}/approve`, {}), 'approve profile');
+  await approvedRate(tokens, profileId, { kind: 'planning', value: '50' }, from);
+  await approvedRate(tokens, profileId, { kind: 'sustained', value: '60' }, from);
   return {
     suffix,
     planUnitId,

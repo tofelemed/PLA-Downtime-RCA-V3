@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { IngestionJobView, JobAction } from '@/api/v2/types/integrations';
 import { Button } from '@/components/ui/button';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { ToneBadge } from '../components/tone-badge';
 import { jobPurpose, scopeSummary } from '../model/job-presets';
@@ -18,6 +19,7 @@ const ago = (seconds: number | null) => (seconds === null ? 'never' : <><Duratio
 
 /** One job: state, health badges, scope, lease and cursor ages, last page outcomes, commands, audit trail. */
 export function JobRow({ job, timezone, now }: JobRowProps) {
+  const { canWriteIntegration } = useCapabilities();
   const [action, setAction] = useState<JobAction | null>(null);
   const [trail, setTrail] = useState(false);
   const state = JOB_STATE_DISPLAY[job.state];
@@ -67,7 +69,7 @@ export function JobRow({ job, timezone, now }: JobRowProps) {
       </dl>
       {job.lastError && <p className="text-xs text-destructive">{job.lastError}</p>}
       <div className="flex flex-wrap gap-2">
-        {allowedActions(job.state).map((next) => (
+        {(canWriteIntegration ? allowedActions(job.state) : []).map((next) => (
           <Button key={next} size="sm" variant={ACTION_TEXT[next].destructive ? 'destructive' : 'outline'} onClick={() => setAction(next)} data-testid={`job-${next}`}>
             {ACTION_TEXT[next].label}
           </Button>

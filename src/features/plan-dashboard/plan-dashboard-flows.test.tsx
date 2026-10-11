@@ -4,8 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
+import { actAs } from '@/test/acting-user';
 
-vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ session: { tenant: { id: 'tenant-a' }, user: { id: 'user-me' } } }) }));
+vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
 const { LossLineEditor } = await import('./editor/loss-line-editor');
@@ -51,8 +52,12 @@ describe('plan dashboard editor and workflow (plan 3.5)', () => {
       return reply(call);
     }));
     configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
+    actAs('Manager', 'user-me');
   });
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin');
+  });
 
   const acceptAndSave = () => {
     fireEvent.change(screen.getByTestId('candidate-decision'), { target: { value: 'accept' } });
@@ -118,5 +123,32 @@ describe('plan dashboard editor and workflow (plan 3.5)', () => {
     const post = calls.find((c) => c.method === 'POST');
     expect(post?.body).toEqual({ revision: 1, runId: 'run-1', contentHash: 'a'.repeat(64) });
     expect(post?.headers.get('Idempotency-Key')).toBeTruthy();
+  });
+
+  describe('controls follow the period role sets (owner decision 2026-10-12)', () => {
+    const inReview: ReconciliationView = { ...VIEW, revision: { ...VIEW.revision, lifecycle: 'in_review', submittedBy: 'someone-else', submittedHash: 'b'.repeat(64) } };
+    const bar = (view: ReconciliationView) => wrap(<WorkflowBar view={view} shown="current" onShowCurrent={() => undefined} />);
+
+    it('canApprovePeriods: an engineer sees no approve / reject; a manager does', () => {
+      reply = () => json(200, { items: [] });
+      actAs('Engineer');
+      bar(inReview);
+      expect(screen.queryByTestId('wf-approve')).toBeNull();
+      expect(screen.queryByTestId('wf-reason')).toBeNull();
+      actAs('Manager', 'user-me');
+      bar(inReview);
+      expect((screen.getByTestId('wf-approve') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('canWritePeriods: an engineer submits a draft; a viewer sees the Read-only hint and no action', () => {
+      reply = () => json(200, { items: [] });
+      actAs('production_engineer');
+      bar(VIEW);
+      expect(screen.getByTestId('wf-submit')).toBeTruthy();
+      actAs('viewer');
+      bar(VIEW);
+      expect(screen.getAllByTestId('wf-submit')).toHaveLength(1);
+      expect(screen.getByTestId('read-only-hint')).toBeTruthy();
+    });
   });
 });

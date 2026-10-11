@@ -21,6 +21,7 @@ import {
   waitForRecommendation,
   type RelSession,
 } from './support/reliability-world';
+import { MANAGERS } from './support/manager-users';
 
 /**
  * RELIABILITY ENGINEER persona — the RCA case journeys of plan 3.9 (RCA01–03) on the v2 Event Hub and
@@ -29,7 +30,8 @@ import {
  *    from it with the evidence preview; the repeated link is idempotent (one case).
  * 2. Viktor fills the nested content (recommendations, evidence, logic tree, root cause), reloads, links a
  *    second event from the case.
- * 7. Amara sees Viktor's case, adds her own action; the audit trail names both users.
+ * 7. Amara sees Viktor's case, adds her own action; the audit trail names both users (read by a manager
+ *    approver: GET /audit-logs is for admins and approvers only).
  * 3. Viktor adds an action with a baseline, verifies it, closes the case → the event shows "RCA completed".
  * 4. Sebastian reads the outcome in USD and IRR: the figures are the server's (GET), nothing is converted.
  * Data left behind: unit "P-REL-<suffix>", its two stops, case "P-REL-case-<suffix>" with actions.
@@ -200,7 +202,9 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     const actions = await call<Array<{ title: string; ownerId: string | null; status: string }>>(amara.token, 'GET', `/v2/rcas/${world.caseId}/actions`);
     const hers = actions.body.find((action) => action.title === `${PREFIX}action-amara-${suffix}`);
     expect(hers).toMatchObject({ ownerId: amara.userId, status: 'in_progress' });
-    const byUser = await call<Array<{ entityType: string; action: string }>>(amara.token, 'GET', `/audit-logs?userId=${amara.userId}&limit=20`);
+    // the trail is read by a manager approver of the plant (a reliability engineer gets 403 FORBIDDEN_ROLE)
+    const jonas = await apiLogin(MANAGERS.jonas.email);
+    const byUser = await call<Array<{ entityType: string; action: string }>>(jonas.token, 'GET', `/audit-logs?userId=${amara.userId}&limit=20`);
     expect(byUser.body.some((row) => row.action === 'CREATE' && row.entityType === 'RCA')).toBe(true);
   });
 
@@ -303,7 +307,9 @@ test.describe('Reliability engineer — audit trail of the shared case', () => {
     resume();
     if (!viktor) viktor = await apiLogin(REL_USERS.viktor);
     const amara = await apiLogin(REL_USERS.amara);
-    const audit = await call<Array<{ userId: string; action: string; entityId: string }>>(amara.token, 'GET', `/audit-logs?entityType=RCA&entityId=${world.caseId}&limit=100`);
+    // read by a manager approver of the plant: GET /audit-logs refuses a reliability engineer (FORBIDDEN_ROLE)
+    const jonas = await apiLogin(MANAGERS.jonas.email);
+    const audit = await call<Array<{ userId: string; action: string; entityId: string }>>(jonas.token, 'GET', `/audit-logs?entityType=RCA&entityId=${world.caseId}&limit=100`);
     expect(audit.status).toBe(200);
     const users = new Set(audit.body.map((row) => row.userId));
     expect(users.has(viktor.userId), 'viktor edited and closed the case').toBe(true);

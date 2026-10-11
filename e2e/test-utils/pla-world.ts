@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { call, command } from './downtime-world';
 import { reconciliation, saveLines, seedDashboardWorld, type DashboardWorld } from './dashboard-world';
+import { secondApproverToken } from './second-approver';
 
 /**
  * Seeds the plan 3.6 e2e through the API (new "E2E …" units / products only; nothing existing changes):
@@ -59,7 +60,7 @@ async function excludedDayUnit(token: string, tenantId: string, dayStart: number
   await ok(command(token, `/v2/calendar-versions/${calendar}/publish`, {}), 'publish');
   const { id: productId } = await ok(call<{ id: string }>(token, 'POST', '/products', { name: `E2E PLA product ${suffix}`, code: `E2E-PLAP-${suffix}`, tenantId }), 'product');
   const { id: profileId } = await ok(command<{ id: string }>(token, '/v2/profiles', { unitId, productId, quantityUom: 't', rateTimebase: 'h', effectiveFrom: `${effectiveFrom}T00:00:00Z` }), 'profile');
-  await ok(command(token, `/v2/profiles/${profileId}/approve`, {}), 'approve profile');
+  await ok(command(await secondApproverToken(token), `/v2/profiles/${profileId}/approve`, {}), 'approve profile');
   const window = { unitIds: [unitId], from: new Date(dayStart).toISOString(), to: new Date(dayStart + DAY).toISOString() };
   await ok(command(token, '/v2/production-periods/materialize', window), 'materialize');
   for (const shift of [0, 8, 16]) {

@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
+import { secondApproverToken } from './second-approver';
 
 /**
  * Seeds a computed downtime window through the API for the plan 3.3 e2e (Demo Plant has no calendar or
  * approved profile): a fresh unit with its own published UTC calendar (3 × 8 h shifts), a product and
- * an approved profile, the periods of one operational day two days ago, two assets, a reason tree and
- * four stops, then a recalculation; waits until the downtime report shows the calculated runs.
+ * an approved profile (approved by the second approver, D06), the periods of one operational day two
+ * days ago, two assets, a reason tree and four stops, then a recalculation; waits until the downtime
+ * report shows the calculated runs.
  * Everything is new test data named "E2E DT …"; nothing existing is changed.
  */
 const API = process.env.VITE_API_BASE_URL || 'http://localhost:4004/api';
@@ -69,7 +71,8 @@ async function unitWithCalendar(token: string, tenantId: string, suffix: string)
     command<{ id: string }>(token, '/v2/profiles', { unitId, productId: product, quantityUom: 't', rateTimebase: 'h', effectiveFrom: `${localDate(-5)}T00:00:00Z` }),
     'profile',
   );
-  await created(command<{ id: string }>(token, `/v2/profiles/${profile}/approve`, {}), 'approve profile');
+  const approver = await secondApproverToken(token);
+  await created(command<{ id: string }>(approver, `/v2/profiles/${profile}/approve`, {}), 'approve profile');
   return { unitId, unitName };
 }
 

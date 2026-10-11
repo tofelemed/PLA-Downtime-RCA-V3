@@ -2,6 +2,7 @@ import { useRollbackRule, useRuleVersions } from '@/api/v2/queries/rules';
 import type { RulesSchemaView, RuleView } from '@/api/v2/types/rules';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { PlantTime } from '@/features/ux-kit/plant-time';
@@ -19,6 +20,7 @@ const TONE = { added: 'text-green-700 dark:text-green-400', removed: 'text-destr
 
 /** Approved versions newest first, each diffed against the one before; rollback adds a new version. */
 export function RuleVersions({ rule, schema, timezone }: RuleVersionsProps) {
+  const { canApproveRules } = useCapabilities();
   const versions = useRuleVersions(rule.id);
   const rollback = useRollbackRule();
   const rows = versions.data ?? [];
@@ -38,7 +40,8 @@ export function RuleVersions({ rule, schema, timezone }: RuleVersionsProps) {
                 {entry.current ? (
                   <Badge variant="outline">in force</Badge>
                 ) : (
-                  rule.state !== 'retired' && (
+                  rule.state !== 'retired' &&
+                  canApproveRules && (
                     <Button
                       size="sm"
                       variant="outline"

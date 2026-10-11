@@ -54,6 +54,8 @@ export interface PlanVersionV2View {
   targetSource: string;
   distribution: string;
   approvalState: string;
+  /** the version's author (its creator): never its approver (403 SEPARATION_OF_DUTIES) */
+  createdBy: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
   supersedesVersionId: string | null;
@@ -170,6 +172,7 @@ export function toVersionView(
     targetSource: version.targetSource,
     distribution: version.distribution,
     approvalState: version.approvalState,
+    createdBy: version.createdBy,
     approvedBy: version.approvedBy,
     approvedAt: iso(version.approvedAt),
     supersedesVersionId: version.supersedesVersionId,

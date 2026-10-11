@@ -103,11 +103,16 @@ describe('production plans v2: versions, generation, approval (plan 2.3)', () =>
         env.analyst,
       )
       .expect(403);
+    const own = await env
+      .post(`production-plans/${plan.id}/approve`, { expectedVersion: 1 })
+      .expect(403);
+    expect((own.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
     const response = await env
-      .post(`production-plans/${plan.id}/approve`, {
-        expectedVersion: 1,
-        reason: 'November baseline',
-      })
+      .post(
+        `production-plans/${plan.id}/approve`,
+        { expectedVersion: 1, reason: 'November baseline' },
+        env.approver,
+      )
       .expect(200);
     expect(response.body).toMatchObject({
       approvalState: 'approved',
@@ -128,7 +133,11 @@ describe('production plans v2: versions, generation, approval (plan 2.3)', () =>
     const second = await env.createPlan({ name: 'overlapping' });
     await env.generate(second.id, 1);
     const response = await env
-      .post(`production-plans/${second.id}/approve`, { expectedVersion: 1 })
+      .post(
+        `production-plans/${second.id}/approve`,
+        { expectedVersion: 1 },
+        env.approver,
+      )
       .expect(409);
     expect((response.body as ApiError).code).toBe('PLAN_OVERLAP');
     expect((response.body as ApiError).details?.conflicts?.[0]).toMatchObject({
@@ -147,7 +156,11 @@ describe('production plans v2: versions, generation, approval (plan 2.3)', () =>
     });
     await env.generate(other.id, 1);
     await env
-      .post(`production-plans/${other.id}/approve`, { expectedVersion: 1 })
+      .post(
+        `production-plans/${other.id}/approve`,
+        { expectedVersion: 1 },
+        env.approver,
+      )
       .expect(200);
     await env
       .post('plan-scenarios', { name: 'Forecast', isAccountingBaseline: true })
@@ -183,7 +196,11 @@ describe('production plans v2: versions, generation, approval (plan 2.3)', () =>
     await env.post(`production-plans/${plan.id}/versions`, {}).expect(409);
     await env.generate(plan.id, 2);
     const approved = await env
-      .post(`production-plans/${plan.id}/approve`, { expectedVersion: 2 })
+      .post(
+        `production-plans/${plan.id}/approve`,
+        { expectedVersion: 2 },
+        env.approver,
+      )
       .expect(200);
     const v2 = approved.body as VersionBody;
     expect(v2.approvalState).toBe('approved');
@@ -253,9 +270,11 @@ describe('production plans v2: versions, generation, approval (plan 2.3)', () =>
       })
       .expect(201);
     await env
-      .post(`rates/${(rate.body as { id: string }).id}/approve`, {
-        supersede: true,
-      })
+      .post(
+        `rates/${(rate.body as { id: string }).id}/approve`,
+        { supersede: true },
+        env.approver,
+      )
       .expect(200);
     const after = (await env.periods(plan.id, 2)).map((p) => [
       p.target,

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { usePlans } from '@/api/v2/queries/plans';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { FormField } from '../components/form-field';
 import { LoadMore } from '../components/load-more';
 import { NativeSelect } from '../components/native-select';
@@ -18,6 +20,7 @@ import { PlanFormDialog } from './plan-form-dialog';
  * targets, generation, server-gated approval, new versions after approval and the version history.
  */
 export function PlansTab() {
+  const { canWritePlans } = useCapabilities();
   const refs = usePlanningRefs();
   const [unitId, setUnitId] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -28,9 +31,13 @@ export function PlansTab() {
   return (
     <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]" data-testid="plans-tab">
       <section className="space-y-3">
-        <Button size="sm" onClick={() => setForm({ kind: 'create' })} data-testid="plan-new">
-          New plan
-        </Button>
+        {canWritePlans ? (
+          <Button size="sm" onClick={() => setForm({ kind: 'create' })} data-testid="plan-new">
+            New plan
+          </Button>
+        ) : (
+          <ReadOnlyHint />
+        )}
         <FormField id="planUnitFilter" label="Unit">
           <NativeSelect id="planUnitFilter" value={unitId} options={refs.unitOptions} placeholder="All units" onChange={setUnitId} />
         </FormField>

@@ -39,7 +39,8 @@ export async function upsertKnowledgeEntry(
   if (existing[0]) {
     await manager.query(
       `UPDATE "rca_knowledge_base" SET "title" = $3, "description" = $4, "root_cause" = $5, "recommendations" = $6,
-              "unit_id" = $7, "asset_id" = $8, "author" = $9, "closed_date" = $10, "related_rcas" = $11, "updated_at" = now()
+              "unit_id" = $7, "asset_id" = $8, "author" = $9, "closed_date" = $10, "related_rcas" = $11, "updated_at" = now(),
+              "row_version" = "row_version" + 1
         WHERE "id" = $12 AND "tenant_id" = $1 AND "rca_id" = $2`,
       [...values, existing[0].id],
     );

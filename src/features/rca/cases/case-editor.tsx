@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { CommandError } from '@/features/event-hub/components/command-error';
 import { buildRcaCaseBody, formFromCase, type RcaCaseForm } from '../model/rca-form';
 import { LogicTreeEditor } from './logic-tree-editor';
@@ -13,9 +14,11 @@ import { PrioritySelect, StatusSelect } from './status-fields';
 
 /**
  * The case form (plan 3.9 step 1): every field and the nested recommendations / evidence / logic tree
- * save in one PATCH with If-Match. Closing feeds the knowledge base and completes linked events.
+ * save in one PATCH with If-Match. Closing feeds the knowledge base and completes linked events. Users who
+ * are not RCA writers see the same form read-only, without save.
  */
 export function CaseEditor({ rca }: { rca: RcaCaseView }) {
+  const readOnly = !useCapabilities().canWriteRca;
   const update = useUpdateRcaCase();
   const [base, setBase] = useState(rca);
   const [form, setForm] = useState<RcaCaseForm>(() => formFromCase(rca));
@@ -34,7 +37,7 @@ export function CaseEditor({ rca }: { rca: RcaCaseView }) {
   };
   return (
     <div className="space-y-4" data-testid="case-editor">
-      <div className="grid gap-3 md:grid-cols-2">
+      <fieldset disabled={readOnly} className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1 md:col-span-2">
           <Label htmlFor="edit-title">Title</Label>
           <Input id="edit-title" value={form.title} maxLength={255} onChange={(e) => set({ title: e.target.value })} />
@@ -58,17 +61,19 @@ export function CaseEditor({ rca }: { rca: RcaCaseView }) {
           <Label htmlFor="edit-root-cause">Root cause (a person's finding; automation never sets it)</Label>
           <Textarea id="edit-root-cause" value={form.rootCause} onChange={(e) => set({ rootCause: e.target.value })} />
         </div>
-      </div>
-      <RecommendationItemsEditor items={form.recommendations} onChange={(recommendations) => set({ recommendations })} />
-      <EvidenceItemsEditor items={form.evidence} onChange={(evidence) => set({ evidence })} />
-      <LogicTreeEditor nodes={form.logicTree} onChange={(logicTree) => set({ logicTree })} />
+      </fieldset>
+      <RecommendationItemsEditor items={form.recommendations} onChange={(recommendations) => set({ recommendations })} readOnly={readOnly} />
+      <EvidenceItemsEditor items={form.evidence} onChange={(evidence) => set({ evidence })} readOnly={readOnly} />
+      <LogicTreeEditor nodes={form.logicTree} onChange={(logicTree) => set({ logicTree })} readOnly={readOnly} />
       <CommandError error={update.error} />
-      <div className="flex items-center gap-2">
-        <Button disabled={form.title.trim() === '' || update.isPending} onClick={() => void save()} data-testid="save-case">
-          Save case
-        </Button>
-        {saved && <span role="status" className="text-sm text-muted-foreground">Saved.</span>}
-      </div>
+      {!readOnly && (
+        <div className="flex items-center gap-2">
+          <Button disabled={form.title.trim() === '' || update.isPending} onClick={() => void save()} data-testid="save-case">
+            Save case
+          </Button>
+          {saved && <span role="status" className="text-sm text-muted-foreground">Saved.</span>}
+        </div>
+      )}
     </div>
   );
 }

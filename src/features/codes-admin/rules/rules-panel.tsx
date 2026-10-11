@@ -3,8 +3,10 @@ import { useRule, useRules, useRulesSchema } from '@/api/v2/queries/rules';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { RuleDetail } from './rule-detail';
 import { RuleEditor } from './rule-editor';
 
@@ -14,6 +16,7 @@ import { RuleEditor } from './rule-editor';
  */
 export function RulesPanel({ timezone }: { timezone: string }) {
   const { session } = useAuth();
+  const { canAuthorRules } = useCapabilities();
   const schema = useRulesSchema();
   const rules = useRules();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -24,9 +27,13 @@ export function RulesPanel({ timezone }: { timezone: string }) {
       {schema.data && (
         <div className="grid gap-4 lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)]" data-testid="rules-panel">
           <section className="space-y-2" aria-label="Rules">
-            <Button size="sm" onClick={() => setCreating(true)} data-testid="rule-new">
-              New rule
-            </Button>
+            {canAuthorRules ? (
+              <Button size="sm" onClick={() => setCreating(true)} data-testid="rule-new">
+                New rule
+              </Button>
+            ) : (
+              <ReadOnlyHint />
+            )}
             <DataState state={dataStateOf(rules, { isEmpty: rules.items.length === 0 })} error={rules.error} detail="No rules yet.">
               <ul className="space-y-1">
                 {rules.items.map((rule) => (

@@ -6,8 +6,8 @@ import {
 } from './support/profile-world';
 
 /**
- * Plan 2.2 valuation rates (VAL01, D08): margin versions kept on profiles (approval without overlap,
- * supersede), cost per hour on impact codes, owner/basis/unit rules and tenant isolation (foreign body
+ * Plan 2.2 valuation rates (VAL01, D08): margin versions kept on profiles (approval by someone other
+ * than the author, without overlap, supersede), cost per hour on impact codes, owner/basis/unit rules and tenant isolation (foreign body
  * ids 422 INVALID_REFERENCE, foreign path ids 404).
  */
 describe('valuation rates (plan 2.2, v2 API)', () => {
@@ -39,7 +39,14 @@ describe('valuation rates (plan 2.2, v2 API)', () => {
       version: number;
     };
     expect(v1).toMatchObject({ perUom: 't', version: 1 });
-    await env.post(`valuation-rates/${v1.id}/approve`, {}).expect(200);
+    expect(
+      await codeOf(
+        env.post(`valuation-rates/${v1.id}/approve`, {}).expect(403),
+      ),
+    ).toBe('SEPARATION_OF_DUTIES');
+    await env
+      .post(`valuation-rates/${v1.id}/approve`, {}, env.approver)
+      .expect(200);
     const v2 = (
       await margin({
         value: '45',
@@ -48,11 +55,17 @@ describe('valuation rates (plan 2.2, v2 API)', () => {
     ).body as { id: string };
     expect(
       await codeOf(
-        env.post(`valuation-rates/${v2.id}/approve`, {}).expect(409),
+        env
+          .post(`valuation-rates/${v2.id}/approve`, {}, env.approver)
+          .expect(409),
       ),
     ).toBe('VERSION_OVERLAP');
     await env
-      .post(`valuation-rates/${v2.id}/approve`, { supersede: true })
+      .post(
+        `valuation-rates/${v2.id}/approve`,
+        { supersede: true },
+        env.approver,
+      )
       .expect(200);
     const listed = await env
       .get(`valuation-rates?profileId=${profileA1.id}&state=approved`)

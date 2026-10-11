@@ -3,6 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useReconciliation } from '@/api/v2/queries/period-overview';
 import { usePeriodAccounting } from '@/api/v2/queries/production-periods';
 import type { LedgerKind, RevisionSelector } from '@/api/v2/types/period-overview';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { LossLineEditor } from '../editor/loss-line-editor';
@@ -30,6 +31,7 @@ export interface PeriodDetailProps {
  * default), actuals provenance, the loss-line editor (drafts only), workflow, waterfall, value and history.
  */
 export function PeriodDetail({ periodId, unitName, planLabel, timezone }: PeriodDetailProps) {
+  const { canWritePeriods } = useCapabilities();
   const [view, setView] = useState<RevisionSelector>('current');
   const [ledger, setLedger] = useState<LedgerKind>('plan');
   const reconciliation = useReconciliation(periodId, view);
@@ -46,7 +48,7 @@ export function PeriodDetail({ periodId, unitName, planLabel, timezone }: Period
     );
   }
   const data = reconciliation.data;
-  const editable = view === 'current' && data.revision.lifecycle === 'draft';
+  const editable = canWritePeriods && view === 'current' && data.revision.lifecycle === 'draft';
   return (
     <section data-testid="period-detail" data-lifecycle={data.revision.lifecycle} className="space-y-4 rounded-md border p-3">
       <PeriodHeader view={data} accounting={accounting.data ?? null} unitName={unitName} planLabel={planLabel} timezone={timezone} />

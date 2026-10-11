@@ -3,8 +3,10 @@ import { Button } from '@/components/ui/button';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useProfiles } from '@/api/v2/queries/profiles';
 import type { ProfileView } from '@/api/v2/types/profiles';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { FormField } from '../components/form-field';
 import { LoadMore } from '../components/load-more';
 import { NativeSelect } from '../components/native-select';
@@ -19,6 +21,7 @@ import { RateImportDialog } from './rate-import-dialog';
  * rates and valuation rates, drafts, approvals and imports — everything validated and decided by the API.
  */
 export function ProfilesTab() {
+  const { canWriteProfiles, canApproveProfiles } = useCapabilities();
   const refs = usePlanningRefs();
   const [unitId, setUnitId] = useState('');
   const [productId, setProductId] = useState('');
@@ -32,12 +35,17 @@ export function ProfilesTab() {
     <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]" data-testid="profiles-tab">
       <section className="space-y-3">
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => setEditor({})} data-testid="profile-new">
-            New profile
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => setImporting(true)}>
-            Import rates
-          </Button>
+          {canWriteProfiles && (
+            <Button size="sm" onClick={() => setEditor({})} data-testid="profile-new">
+              New profile
+            </Button>
+          )}
+          {canApproveProfiles && (
+            <Button size="sm" variant="outline" onClick={() => setImporting(true)} data-testid="rate-import">
+              Import rates
+            </Button>
+          )}
+          <ReadOnlyHint />
         </div>
         <FormField id="profileUnitFilter" label="Unit">
           <NativeSelect id="profileUnitFilter" value={unitId} options={refs.unitOptions} placeholder="All units" onChange={setUnitId} />

@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { SkipAudit } from './skip-audit.decorator';
+import { AUDIT_READERS } from './audit-roles';
 import { Ctx } from '../common/context/ctx.decorator';
 import { RequestContext } from '../common/context/request-context';
 
@@ -20,8 +21,22 @@ export class AuditLogController {
   constructor(private readonly auditLogService: AuditLogService) {}
 
   @Get()
+  @Roles(...AUDIT_READERS)
+  @ApiOperation({
+    summary:
+      'Audit logs of the acting tenant (X-Tenant-Id or the token tenant); admins and approvers only',
+  })
   @ApiResponse({ status: 200, description: 'List audit logs with optional filters', type: [AuditLog] })
-  @ApiQuery({ name: 'tenantId', required: false })
+  @ApiResponse({
+    status: 403,
+    description:
+      'FORBIDDEN_ROLE, or TENANT_MISMATCH when tenantId names another tenant',
+  })
+  @ApiQuery({
+    name: 'tenantId',
+    required: false,
+    description: 'must be the acting tenant when given',
+  })
   @ApiQuery({ name: 'userId', required: false })
   @ApiQuery({ name: 'entityType', required: false })
   @ApiQuery({ name: 'entityId', required: false })
@@ -31,6 +46,7 @@ export class AuditLogController {
   @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({ name: 'offset', required: false })
   findAll(
+    @Ctx() ctx: RequestContext,
     @Query('tenantId') tenantId?: string,
     @Query('userId') userId?: string,
     @Query('entityType') entityType?: string,
@@ -41,12 +57,8 @@ export class AuditLogController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ): Promise<AuditLog[]> {
-    const hasFilters = tenantId || userId || entityType || entityId || action || startDate || endDate;
-    if (!hasFilters) {
-      return this.auditLogService.findAll();
-    }
     return this.auditLogService.findWithFilters({
-      tenantId,
+      tenantId: this.auditLogService.readableTenant(ctx, tenantId),
       userId,
       entityType,
       entityId,
@@ -59,9 +71,20 @@ export class AuditLogController {
   }
 
   @Get(':id')
-  @ApiResponse({ status: 200, description: 'Get audit log by ID', type: AuditLog })
-  findOne(@Param('id') id: string): Promise<AuditLog | null> {
-    return this.auditLogService.findOne(id);
+  @Roles(...AUDIT_READERS)
+  @ApiResponse({
+    status: 200,
+    description: 'Get audit log by ID (null outside the acting tenant)',
+    type: AuditLog,
+  })
+  findOne(
+    @Ctx() ctx: RequestContext,
+    @Param('id') id: string,
+  ): Promise<AuditLog | null> {
+    return this.auditLogService.findOneInTenant(
+      id,
+      this.auditLogService.readableTenant(ctx),
+    );
   }
 
   @ReadOnlyAllowed()

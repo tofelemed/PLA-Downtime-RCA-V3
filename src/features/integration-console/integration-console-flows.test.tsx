@@ -4,14 +4,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
 import type { ConnectionView, IngestionExceptionDetailView, IngestionJobView } from '@/api/v2/types/integrations';
+import { actAs } from '@/test/acting-user';
 
-vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ session: { tenant: { id: 'tenant-a' } } }) }));
+vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
 const { ConnectionWizard } = await import('./connections/connection-wizard');
 const { DiagnosticsPanel } = await import('./connections/diagnostics-panel');
 const { ExceptionActions } = await import('./quarantine/exception-actions');
 const { JobRow } = await import('./jobs/job-row');
+const { ConnectionHeader } = await import('./connections/connection-header');
 
 interface Call {
   method: string;
@@ -45,7 +47,10 @@ describe('integration console flows (plan 3.7)', () => {
     }));
     configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
   });
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin');
+  });
 
   it('Kafka is not selectable, MQTT is; a PI connection sends the password once and never keeps it', async () => {
     reply = () => json(201, CONNECTION);
@@ -115,5 +120,20 @@ describe('integration console flows (plan 3.7)', () => {
     fireEvent.click(screen.getByTestId('exception-replay'));
     await waitFor(() => expect(screen.getByTestId('replay-run').getAttribute('data-dry-run')).toBe('false'));
     expect(calls.find((call) => call.url.pathname.endsWith('/resolve'))?.body).toEqual({ action: 'replay', reason: 'unit bound' });
+  });
+
+  describe('commands follow INTEGRATION_WRITERS (owner decision 2026-10-12)', () => {
+    it('canWriteIntegration: an integration admin edits the connection; a production engineer only reads it', () => {
+      reply = () => json(200, {});
+      actAs('integration_admin');
+      const admin = wrap(<ConnectionHeader connection={CONNECTION} onEdit={() => undefined} />);
+      expect(screen.getByTestId('connection-edit')).toBeTruthy();
+      admin.unmount();
+      actAs('production_engineer');
+      wrap(<ConnectionHeader connection={CONNECTION} onEdit={() => undefined} />);
+      expect(screen.queryByTestId('connection-edit')).toBeNull();
+      expect(screen.queryByTestId('connection-toggle')).toBeNull();
+      expect(screen.getByTestId('connection-endpoint')).toBeTruthy();
+    });
   });
 });

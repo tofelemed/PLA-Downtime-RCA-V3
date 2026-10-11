@@ -211,7 +211,9 @@ describe('valuation (plan 2.6)', () => {
     fxId = (created.body as { id: string }).id;
     await env.post(`fx-rates/${fxId}/approve`, {}, unitUser).expect(403);
     await env.get(`fx-rates/${fxId}`, env.adminB).expect(404);
-    await env.post(`fx-rates/${fxId}/approve`, {}).expect(200);
+    const own = await env.post(`fx-rates/${fxId}/approve`, {}).expect(403);
+    expect((own.body as { code: string }).code).toBe('SEPARATION_OF_DUTIES');
+    await env.post(`fx-rates/${fxId}/approve`, {}, env.approver).expect(200);
     await env.get('fx-rates', unitUser).expect(200);
     const body = await recompute();
     const line = stopLine(body);
@@ -306,7 +308,7 @@ describe('valuation (plan 2.6)', () => {
     );
     expect(row).toMatchObject({
       valuation_view: 'contribution_margin',
-      value_1: '150000000.00',
+      value_1: '150000000',
       currency_1: 'IRR',
       value_2: '300.00',
       currency_2: 'USD',
@@ -330,7 +332,11 @@ describe('valuation (plan 2.6)', () => {
       .expect(201);
     await env.post(`fx-rates/${fxId}/retire`, {}).expect(200);
     await env
-      .post(`fx-rates/${(next.body as { id: string }).id}/approve`, {})
+      .post(
+        `fx-rates/${(next.body as { id: string }).id}/approve`,
+        {},
+        env.approver,
+      )
       .expect(200);
     await env
       .post(`production-periods/${env.periodA1}/recompute`, {})

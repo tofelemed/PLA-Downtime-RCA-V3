@@ -2,6 +2,7 @@ import { Suspense, useState } from 'react';
 import { useIngestionJobs } from '@/api/v2/queries/ingestion-jobs';
 import type { ConnectionView } from '@/api/v2/types/integrations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { DiscoveryPanel } from '../discovery/discovery-panel';
 import type { ConsoleSession } from '../hooks/use-console-session';
@@ -25,7 +26,8 @@ export interface ConnectionDetailProps {
 /**
  * One connection end to end (UX06): stages, staged diagnostics, discovery and mapping, jobs with replay,
  * signals. The scope chosen under Discovery is the scope new jobs read. MQTT connections get the
- * subscription panel (plan 1.8 step 5) instead of the PI stages.
+ * subscription panel (plan 1.8 step 5) instead of the PI stages. Diagnostics and discovery are
+ * integration-writer commands (the server refuses them to other roles), so only writers see those tabs.
  */
 export function ConnectionDetail({ connection, session, timezone, onEdit }: ConnectionDetailProps) {
   if (connection.sourceType === 'mqtt') {
@@ -42,6 +44,7 @@ export function ConnectionDetail({ connection, session, timezone, onEdit }: Conn
 }
 
 function PiConnectionDetail({ connection, session, timezone, onEdit }: ConnectionDetailProps) {
+  const { canWriteIntegration } = useCapabilities();
   const [tab, setTab] = useState('stages');
   const [scope, setScope] = useState<SourceScope>(EMPTY_SCOPE);
   const jobs = useIngestionJobs(connection.id);
@@ -56,8 +59,8 @@ function PiConnectionDetail({ connection, session, timezone, onEdit }: Connectio
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="flex-wrap">
             <TabsTrigger value="stages">Stages</TabsTrigger>
-            <TabsTrigger value="diagnostics" data-testid="tab-diagnostics">Diagnostics</TabsTrigger>
-            <TabsTrigger value="discovery" data-testid="tab-discovery">Discovery and mapping</TabsTrigger>
+            {canWriteIntegration && <TabsTrigger value="diagnostics" data-testid="tab-diagnostics">Diagnostics</TabsTrigger>}
+            {canWriteIntegration && <TabsTrigger value="discovery" data-testid="tab-discovery">Discovery and mapping</TabsTrigger>}
             <TabsTrigger value="jobs" data-testid="tab-jobs">Jobs and replay</TabsTrigger>
             <TabsTrigger value="signals">Signals</TabsTrigger>
           </TabsList>

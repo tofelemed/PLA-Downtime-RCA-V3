@@ -1,10 +1,28 @@
 import {
   ConflictException,
+  ForbiddenException,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { VersionRef } from '../domain/profiles/profile.types';
 import { RateMathError } from '../domain/profiles/rate-math';
+
+/**
+ * 403 `SEPARATION_OF_DUTIES` (D06, owner decision 2026-10-12): the author of a draft version — the user
+ * who created it (`createdBy`), whoever edited it afterwards — never approves it, whatever their roles
+ * (SuperAdmin included). Rows without an author (system or legacy rows) are not restricted.
+ */
+export function assertNotAuthor(
+  row: { createdBy: string | null },
+  approverId: string | null,
+  what: string,
+): void {
+  if (!row.createdBy || row.createdBy !== approverId) return;
+  throw new ForbiddenException({
+    code: 'SEPARATION_OF_DUTIES',
+    message: `${what} drafts are approved by someone other than their author`,
+  });
+}
 
 /** 422 with a specific code (semantic validation, CONVENTIONS §7). */
 export function invalid(

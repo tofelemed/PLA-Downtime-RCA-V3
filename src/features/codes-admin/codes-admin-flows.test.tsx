@@ -4,13 +4,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
 import type { CodeDetailView } from '@/api/v2/types/codes-admin';
-import type { RulesSchemaView } from '@/api/v2/types/rules';
+import type { RulesSchemaView, RuleView } from '@/api/v2/types/rules';
+import { actAs } from '@/test/acting-user';
 
-vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ session: { tenant: { id: 'tenant-a' }, user: { id: 'u1' } } }) }));
+vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
 const { RuleEditor } = await import('./rules/rule-editor');
 const { RetireDialog } = await import('./codes/retire-dialog');
+const { CodeDetail } = await import('./codes/code-detail');
+const { RuleDetail } = await import('./rules/rule-detail');
 
 interface Call {
   method: string;
@@ -57,7 +60,10 @@ describe('codes & rules flows (plan 3.8)', () => {
     }));
     configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
   });
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin');
+  });
 
   it('the builder sends JSON only and shows the server field errors on the row they name', async () => {
     reply = (call) => {
@@ -100,5 +106,55 @@ describe('codes & rules flows (plan 3.8)', () => {
     expect(refusal).toHaveAttribute('data-status', '409');
     expect(screen.getByTestId('refusal-references').textContent).toContain('1 active child code(s), 4 event(s), 2 mapping rule(s)');
     expect(calls.find((call) => call.method === 'POST')?.url.pathname).toBe('/api/v2/reason-codes/r1/retire');
+  });
+
+  describe('controls follow CODE_WRITERS, RULE_AUTHORS and RULE_APPROVERS (owner decision 2026-10-12)', () => {
+    const RULE: RuleView = {
+      id: 'rule-1', kind: 'coding_default', name: 'Long stops', description: null, priority: 0, state: 'draft', activeVersion: null, activeDefinition: null,
+      draft: { definition: { when: { all: [] }, then: [] }, authorId: 'author-1', updatedAt: null }, appliedBy: 'v2 create', rowVersion: 1, createdAt: '', createdBy: 'author-1', retiredAt: null,
+    };
+    const ruleDetail = (userId: string) => wrap(<RuleDetail rule={RULE} schema={SCHEMA} timezone="UTC" currentUserId={userId} />);
+
+    it('canWriteCodes: a master-data admin retires and saves codes; an engineer sees neither', () => {
+      reply = () => json(200, list([]));
+      actAs('master_data_admin');
+      const admin = wrap(<CodeDetail library="reason-codes" code={CODE} codes={[CODE]} />);
+      expect(screen.getByTestId('code-retire')).toBeTruthy();
+      expect(screen.getByTestId('code-save')).toBeTruthy();
+      admin.unmount();
+      actAs('Engineer');
+      wrap(<CodeDetail library="reason-codes" code={CODE} codes={[CODE]} />);
+      expect(screen.queryByTestId('code-retire')).toBeNull();
+      expect(screen.queryByTestId('code-save')).toBeNull();
+    });
+
+    it('canApproveRules: a master-data admin authors but never sees Activate / Retire; a manager does', () => {
+      reply = () => json(200, list([]));
+      actAs('master_data_admin', 'u2');
+      const author = ruleDetail('u2');
+      expect(screen.queryByTestId('rule-activate')).toBeNull();
+      expect(screen.queryByTestId('rule-retire')).toBeNull();
+      expect(screen.getByTestId('rule-save')).toBeTruthy();
+      author.unmount();
+      actAs('Manager', 'u2');
+      ruleDetail('u2');
+      expect((screen.getByTestId('rule-activate') as HTMLButtonElement).disabled).toBe(false);
+      expect(screen.getByTestId('rule-retire')).toBeTruthy();
+    });
+
+    it('the draft author who can approve gets Activate disabled with the separation-of-duties tooltip', () => {
+      reply = () => json(200, list([]));
+      actAs('Manager', 'author-1');
+      ruleDetail('author-1');
+      expect((screen.getByTestId('rule-activate') as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getByTestId('sod-disabled').getAttribute('title')).toMatch(/separation of duties/);
+    });
+
+    it('canAuthorRules: an operator sees no save button on the builder', () => {
+      reply = () => json(200, list([]));
+      actAs('Operator');
+      wrap(<RuleEditor schema={SCHEMA} rule={RULE} onSaved={() => undefined} />);
+      expect(screen.queryByTestId('rule-save')).toBeNull();
+    });
   });
 });

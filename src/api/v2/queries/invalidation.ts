@@ -33,8 +33,9 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   code: ['codes', 'code-mapping-rules'],
   code_mapping_rule: ['code-mapping-rules', 'codes'],
   rule: ['rules'],
-  rca_case: ['rca-cases', 'rca-recommendations', 'production-events'],
+  rca_case: ['rca-cases', 'rca-recommendations', 'production-events', 'rca-knowledge'],
   rca_recommendation: ['rca-recommendations'],
+  rca_knowledge: ['rca-knowledge'],
   fx_rate: ['valuation'],
   valuation_policy: ['valuation'],
 };

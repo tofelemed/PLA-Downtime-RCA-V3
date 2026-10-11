@@ -88,7 +88,11 @@ describe('v2 reads for the plans / profiles UI (plan 3.4)', () => {
     const plan = await env.createPlan({ name: 'history' });
     await env.generate(plan.id, 1);
     await env
-      .post(`production-plans/${plan.id}/approve`, { expectedVersion: 1 })
+      .post(
+        `production-plans/${plan.id}/approve`,
+        { expectedVersion: 1 },
+        env.approver,
+      )
       .expect(200);
     await env
       .post(`production-plans/${plan.id}/versions`, {

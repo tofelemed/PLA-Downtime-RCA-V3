@@ -3,6 +3,7 @@ import { useSignalBackfill, useSignalBackfillRun, useSignalPreview } from '@/api
 import type { SignalView } from '@/api/v2/types/integration-mappings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { Field } from '../components/field';
 import { ToneBadge } from '../components/tone-badge';
@@ -13,6 +14,7 @@ const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 /** Quantity preview (≤ 31 days, server engine) and bounded backfill (≤ 90 days, 202 + run) of a signal. */
 export function SignalActions({ signal }: { signal: SignalView }) {
+  const { canWriteIntegration } = useCapabilities();
   const [from, setFrom] = useState(() => isoDay(Date.now() - DAY));
   const [to, setTo] = useState(() => isoDay(Date.now()));
   const [runId, setRunId] = useState<string | null>(null);
@@ -37,9 +39,11 @@ export function SignalActions({ signal }: { signal: SignalView }) {
         <Button size="sm" variant="outline" onClick={() => void preview.submit(window).catch(() => null)} disabled={preview.isPending}>
           Preview quantity
         </Button>
-        <Button size="sm" onClick={() => void startBackfill()} disabled={backfill.isPending}>
-          Backfill from source
-        </Button>
+        {canWriteIntegration && (
+          <Button size="sm" onClick={() => void startBackfill()} disabled={backfill.isPending} data-testid="signal-backfill">
+            Backfill from source
+          </Button>
+        )}
       </div>
       <ConsoleRefusal error={preview.error ?? backfill.error} />
       {preview.data && (

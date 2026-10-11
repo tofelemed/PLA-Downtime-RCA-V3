@@ -6,6 +6,7 @@ import type { RuleView } from '@/api/v2/types/rules';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/features/integration-console/components/field';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { AdminRefusalAlert } from '../components/admin-refusal-alert';
 import { SimulationResult } from './simulation-result';
 
@@ -20,6 +21,7 @@ const PRESETS = [
  * window and records the run; the panel shows its before/after counts and sample diffs as returned.
  */
 export function SimulationPanel({ rule, timezone }: { rule: RuleView; timezone: string }) {
+  const { canAuthorRules } = useCapabilities();
   const units = useUnits();
   const simulate = useSimulateRule();
   const [hours, setHours] = useState('168');
@@ -46,6 +48,13 @@ export function SimulationPanel({ rule, timezone }: { rule: RuleView; timezone: 
       })
       .catch(() => undefined);
   };
+  if (!canAuthorRules) {
+    return (
+      <p className="text-sm text-muted-foreground" data-testid="simulation-panel">
+        Simulations are run by rule authors (master-data admins and manager approvers).
+      </p>
+    );
+  }
   return (
     <div className="space-y-3" data-testid="simulation-panel">
       <div className="flex flex-wrap items-end gap-2">
