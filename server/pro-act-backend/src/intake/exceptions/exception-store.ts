@@ -46,17 +46,23 @@ export async function recordException(
   return rows[0].id;
 }
 
-/** Resolves every open exception of a source object (the object normalised after all). */
+/**
+ * Resolves every open exception of a source object (the object normalised after all), except the one
+ * with `keepCode` when given: a record applied with a linked quarantine (e.g. an event created uncoded,
+ * `unknown_code`) keeps that row open and counting.
+ */
 export async function resolveOpenExceptions(
   manager: EntityManager,
   key: ObjectKey,
   resolution: { rawId: string; replayRunId: string | null; outcome: string },
+  keepCode: IngestionErrorCode | null = null,
 ): Promise<number> {
   const [rows]: [unknown[], number] = await manager.query(
     `UPDATE "ingestion_exceptions"
         SET "state" = 'resolved', "resolution" = $4::jsonb, "replay_run_id" = coalesce($5, "replay_run_id"),
             "updated_at" = now(), "row_version" = "row_version" + 1
       WHERE "tenant_id" = $1 AND "connection_id" = $2 AND "source_object_id" = $3 AND "state" = 'open'
+        AND ($6::text IS NULL OR "error_code"::text <> $6::text)
       RETURNING "id"`,
     [
       key.tenantId,
@@ -64,6 +70,7 @@ export async function resolveOpenExceptions(
       key.sourceObjectId,
       JSON.stringify({ ...resolution, resolvedAt: new Date().toISOString() }),
       resolution.replayRunId,
+      keepCode,
     ],
   );
   return rows.length;

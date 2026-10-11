@@ -27,9 +27,13 @@ export interface PageCommit {
   lastObservationAt: Date | null;
 }
 
+/** Jobs the pull runner never claims: subscriptions are hosted by `MqttSubscriberHost` (plan 1.8). */
+export const SUBSCRIBE_MODE = 'subscribe';
+
 /**
  * Claims the most overdue runnable job whose lease is free or expired (ING02: one lease per job, i.e.
- * per connection + scope). `SKIP LOCKED` keeps concurrent runners from waiting on each other.
+ * per connection + scope). `SKIP LOCKED` keeps concurrent runners from waiting on each other. A
+ * subscription has `next_run_at` null and is excluded by its scope as well (defence in depth).
  */
 export async function claimDueJob(
   manager: EntityManager,
@@ -44,6 +48,7 @@ export async function claimDueJob(
     `WITH "candidate" AS (
          SELECT "id", "lease_owner" FROM "ingestion_jobs"
           WHERE "state" IN ('running', 'draining') AND "next_run_at" <= now()
+            AND coalesce("scope"->>'mode', '') <> '${SUBSCRIBE_MODE}'
             AND ("lease_expiry" IS NULL OR "lease_expiry" < now())
           ORDER BY "next_run_at" LIMIT 1 FOR UPDATE SKIP LOCKED)
        UPDATE "ingestion_jobs" "j" SET "lease_owner" = $1, "lease_expiry" = now() + make_interval(secs => $2),

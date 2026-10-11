@@ -10,6 +10,7 @@ import {
   requireTenantId,
 } from '../../common/context/request-context';
 import { assertRevision } from '../../common/concurrency/revision';
+import { enqueueOutbox } from '../../common/outbox/outbox-writer';
 import { CredentialEncryptionService } from '../../common/services/credential-encryption.service';
 import { FieldError } from '../../common/errors/api-error-body';
 import { adapterErrorOf } from '../adapters/adapter-error';
@@ -119,7 +120,7 @@ export class IntegrationConnectionService {
             ciphertext: this.encryption.encrypt(input.secret),
           })
         : null;
-      return manager.save(
+      const saved = await manager.save(
         manager.create(IntegrationConnection, {
           tenantId,
           sourceType: input.sourceType,
@@ -133,6 +134,8 @@ export class IntegrationConnectionService {
           updatedBy: context.userId,
         }),
       );
+      await announceConnectionChange(manager, saved, 'created');
+      return saved;
     });
   }
 
@@ -219,7 +222,9 @@ export class IntegrationConnectionService {
         configVersion: connection.configVersion + (configChanged ? 1 : 0),
         updatedBy: context.userId,
       });
-      return manager.save(connection);
+      const saved = await manager.save(connection);
+      await announceConnectionChange(manager, saved, 'updated');
+      return saved;
     });
   }
 
@@ -391,6 +396,33 @@ export class IntegrationConnectionService {
 
 function secretKind(sourceType: SourceType): string {
   return SECRET_KINDS[sourceType] ?? `${sourceType}_secret`;
+}
+
+/**
+ * `ConnectionChanged` on the outbox, in the same transaction (design §6): the worker-side subscriber
+ * host reconciles at once instead of on its next sweep. The payload never carries the configuration.
+ */
+function announceConnectionChange(
+  manager: EntityManager,
+  connection: IntegrationConnection,
+  change: 'created' | 'updated',
+): Promise<string[]> {
+  return enqueueOutbox(manager, [
+    {
+      tenantId: connection.tenantId,
+      aggregateType: 'integration_connection',
+      aggregateId: connection.id,
+      type: 'ConnectionChanged',
+      payload: {
+        connectionId: connection.id,
+        sourceType: connection.sourceType,
+        configVersion: connection.configVersion,
+        isActive: connection.isActive,
+        change,
+      },
+      scope: connection.id,
+    },
+  ]);
 }
 
 function fieldErrorOf(problem: string): FieldError {

@@ -14,6 +14,16 @@ export const INGESTION_ERROR_CODES = [
   'no_handler',
   'processing_failed',
   'unknown_signal',
+  // MQTT decode rejections (plan 1.8 design §4.2; `DECODE_FAILURE_CODES` → these)
+  'topic_shape',
+  'not_json',
+  'too_large',
+  'unsupported_version',
+  'identity_mismatch',
+  'future_timestamp',
+  'stale_timestamp',
+  'topic_not_allowed',
+  'unmapped_value',
 ] as const;
 export type IngestionErrorCode = (typeof INGESTION_ERROR_CODES)[number];
 

@@ -102,13 +102,23 @@ export class SourceMappingService {
     @InjectRepository(Asset) private readonly assets: Repository<Asset>,
   ) {}
 
+  /**
+   * `sourceSystem` selects the rules of one source (`source_mappings.source_system`, e.g. `MQTT`) plus
+   * the `*` rules; PI by default. AF bindings are always included (they only match PI element ids).
+   */
   async loadResolver(
     tenantId: string,
     connectionId: string | null,
     at: Date = new Date(),
+    sourceSystem = 'PI',
   ): Promise<TenantMappingResolver> {
     const rules = [
-      ...(await this.sourceMappingRules(tenantId, connectionId, at)),
+      ...(await this.sourceMappingRules(
+        tenantId,
+        connectionId,
+        at,
+        sourceSystem,
+      )),
       ...(await this.bindingRules(tenantId)),
     ];
     const targets = await this.targetDirectory(tenantId, rules);
@@ -119,12 +129,15 @@ export class SourceMappingService {
     tenantId: string,
     connectionId: string | null,
     at: Date,
+    sourceSystem: string,
   ): Promise<MappingRule[]> {
     const rows = await this.mappings
       .createQueryBuilder('sm')
       .where('sm.tenantId = :tenantId', { tenantId })
       .andWhere('sm.isActive = true')
-      .andWhere("sm.sourceSystem IN ('PI', '*')")
+      .andWhere('sm.sourceSystem IN (:...systems)', {
+        systems: [sourceSystem, '*'],
+      })
       .andWhere('(sm.effectiveFrom IS NULL OR sm.effectiveFrom <= :at)', { at })
       .andWhere('(sm.effectiveTo IS NULL OR sm.effectiveTo > :at)', { at })
       .andWhere(

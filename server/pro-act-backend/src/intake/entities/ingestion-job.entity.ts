@@ -23,7 +23,9 @@ export interface JobCadence {
  * A leased intake job (spec ING02, API04, §14.2 `ingestion_jobs`): one scope of one connection. `state`
  * is the requested lifecycle; `lease_owner`/`lease_expiry` say which worker holds it right now. The
  * cursor is committed only after every record of a page is durably accepted or quarantined (FND01).
- * At most one non-stopped job per connection and scope.
+ * At most one non-stopped job per connection and scope. A subscription (plan 1.8, `scope.mode =
+ * 'subscribe'`) reuses the row for its lease, audit and health but is hosted by `MqttSubscriberHost`,
+ * never by the pull runner (`next_run_at` null).
  */
 @Entity('ingestion_jobs')
 @Index(
@@ -96,10 +98,19 @@ export class IngestionJob extends TenantScopedEntity {
   @Column({ name: 'recovery', type: 'jsonb', nullable: true })
   recovery: Record<string, unknown> | null;
 
-  @Column({ name: 'next_run_at', type: 'timestamptz', default: () => 'now()' })
-  nextRunAt: Date;
+  /** null for a subscription (`scope.mode = 'subscribe'`): never due, never claimed by the pull runner */
+  @Column({
+    name: 'next_run_at',
+    type: 'timestamptz',
+    nullable: true,
+    default: () => 'now()',
+  })
+  nextRunAt: Date | null;
 
-  /** counters of the last page: accepted, duplicates, quarantined ... */
+  /**
+   * pull jobs: counters of the last page (accepted, duplicates, quarantined ...); subscriptions: the
+   * live `SubscriptionHealth` object (connected, counters, parkedReason ...)
+   */
   @Column({ name: 'health', type: 'jsonb', default: () => "'{}'" })
-  health: Record<string, number>;
+  health: Record<string, unknown>;
 }

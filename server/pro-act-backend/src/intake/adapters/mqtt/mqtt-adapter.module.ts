@@ -1,11 +1,36 @@
 import { Module } from '@nestjs/common';
+import { AttributeMappingModule } from '../../../attribute-mapping/attribute-mapping.module';
+import { OutboxModule } from '../../../common/outbox/outbox.module';
+import { IntegrationModule } from '../../../integration/integration.module';
+import { SourceMappingModule } from '../../../source-mapping/source-mapping.module';
 import { IntakeModule } from '../../intake.module';
+import { MqttIntervalEventHandler } from './handlers/mqtt-interval-event.handler';
+import { MqttStateHandler } from './handlers/mqtt-state.handler';
+import { MqttSubscriberHost } from './host/mqtt-subscriber-host';
+import { MqttSubscriberHostJob } from './host/mqtt-subscriber-host.job';
 import { MqttAdapter } from './mqtt.adapter';
 
-/** Registers the MQTT adapter with the intake core (plan 1.8); the subscriber host joins in step 3. */
+/**
+ * MQTT intake (plan 1.8): the adapter (config, test, discover), the worker-side subscriber host with
+ * its clock (active where schedulers run), and the normalisers of MQTT interval events (through the PI
+ * frame path) and states (availability → source health; run state parked until 1.10). Measurements
+ * are handled by `MeasurementHandler` (signals module), retractions by `RetractionHandler` (intake).
+ */
 @Module({
-  imports: [IntakeModule],
-  providers: [MqttAdapter],
-  exports: [MqttAdapter],
+  imports: [
+    IntakeModule,
+    OutboxModule,
+    IntegrationModule,
+    SourceMappingModule,
+    AttributeMappingModule,
+  ],
+  providers: [
+    MqttAdapter,
+    MqttSubscriberHost,
+    MqttSubscriberHostJob,
+    MqttIntervalEventHandler,
+    MqttStateHandler,
+  ],
+  exports: [MqttAdapter, MqttSubscriberHost],
 })
 export class MqttAdapterModule {}

@@ -13,6 +13,7 @@ import {
   ConnectionCapabilities,
   IntegrationConnection,
 } from '../../entities/integration-connection.entity';
+import { SUBSCRIBE_MODE } from '../../jobs/job-lease';
 import { assertNoDuplicateFeed } from './duplicate-feed';
 import {
   buildMqttClientOptions,
@@ -28,8 +29,8 @@ import { probeBroker, ProbeResult } from './mqtt-probe';
 /**
  * MQTT source adapter (plan 1.8 WP3 step 1, MQ01–MQ05). Configuration validation, the duplicate-feed
  * guard, a CONNACK-only connection test with a throwaway client id, discovery of the configured topic
- * filters and health. Subscriptions are long-lived and hosted by the worker (step 3), so `read()` is
- * refused: an MQTT connection is never a pull job.
+ * filters and health. Subscriptions are long-lived and hosted by the worker (`MqttSubscriberHost`,
+ * step 3), so `read()` is refused: an MQTT connection is never a pull job.
  */
 @Injectable()
 export class MqttAdapter implements SourceAdapter, OnModuleInit {
@@ -128,12 +129,32 @@ export class MqttAdapter implements SourceAdapter, OnModuleInit {
       : { status: 'down', detail: test.message };
   }
 
-  /** No live clients are held by the adapter in step 1 (the subscriber host owns them). */
+  /** An MQTT job is a subscription hosted by the worker: its scope is `{ mode: 'subscribe' }`. */
+  validateScope(
+    _connection: IntegrationConnection,
+    scope: Readonly<Record<string, unknown>>,
+  ): Promise<void> {
+    if (scope.mode === SUBSCRIBE_MODE) return Promise.resolve();
+    return Promise.reject(
+      new AdapterError(
+        `MQTT jobs are subscriptions: scope.mode must be "${SUBSCRIBE_MODE}" (the worker creates one per active connection)`,
+        'INVALID_JOB_SCOPE',
+        false,
+        'config_invalid',
+      ),
+    );
+  }
+
+  /** The live clients belong to `MqttSubscriberHost`, which closes them on shutdown. */
   close(): Promise<void> {
     return Promise.resolve();
   }
 
-  private async prepare(
+  /**
+   * The configuration, revealed secret and mqtt.js options of a connection, from the one options
+   * factory (design §4.2 stage 1): a tested configuration is the one the subscriber host runs.
+   */
+  async prepare(
     connection: IntegrationConnection,
     purpose: 'test' | 'subscribe',
   ): Promise<Prepared> {
@@ -163,7 +184,7 @@ export class MqttAdapter implements SourceAdapter, OnModuleInit {
   }
 }
 
-interface Prepared {
+export interface Prepared {
   config: MqttConnectionConfig;
   target: MqttClientTarget;
 }

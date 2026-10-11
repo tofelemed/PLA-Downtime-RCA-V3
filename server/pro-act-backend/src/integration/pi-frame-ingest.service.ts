@@ -41,14 +41,21 @@ export interface PiEventFrame {
   RefElementWebIds?: string[] | null;
   /** ancestors of the primary element (closest first), added by the adapter (plan 1.6) */
   AncestorElementWebIds?: string[] | null;
+  /** the source's own version marker of this frame (MQTT `revision`); PI frames use the end time */
+  SourceRevision?: string | null;
 }
 
-/** Everything loaded once per pull: the tenant, its mapping profile and its mapping resolver. */
+/**
+ * Everything loaded once per pull: the tenant, its mapping profile and its mapping resolver.
+ * `sourceSystem` names the connector the frames come from (`production_events.source`,
+ * `unmapped_events.source_system`); PI unless the caller says otherwise (MQTT reuses this path, plan 1.8).
+ */
 export interface FrameContext {
   tenantId: string;
   organizationId?: string;
   profile: MappingProfile;
   resolver: TenantMappingResolver;
+  sourceSystem?: 'PI' | 'MQTT';
 }
 
 export type FrameOutcome = 'created' | 'updated' | 'unchanged' | 'unmapped';
@@ -126,7 +133,10 @@ export class PiFrameIngestService {
       ...mapped.facts,
       mappingDiagnostics: mapped.diagnostics,
     };
-    const stored = await this.store(context, dto, facts, mapped.end);
+    const stored = await this.store(context, dto, facts, {
+      end: mapped.end,
+      sourceRevision: frame.SourceRevision ?? null,
+    });
     return { ...stored, diagnostics: mapped.diagnostics };
   }
 
@@ -154,7 +164,10 @@ export class PiFrameIngestService {
       ...frameColumns(context, frame, eventType),
       ...typed.columns,
       ...codes.ids,
-      description: typed.columns.description ?? frame.Name ?? 'Event from PI',
+      description:
+        typed.columns.description ??
+        frame.Name ??
+        `Event from ${sourceSystemOf(context)}`,
     };
     return {
       templateName,
@@ -172,7 +185,7 @@ export class PiFrameIngestService {
     context: FrameContext,
     dto: Record<string, unknown>,
     facts: EventFacts,
-    end: Date | null,
+    version: { end: Date | null; sourceRevision: string | null },
   ): Promise<{ outcome: FrameOutcome; eventId: string }> {
     const existing = await this.events.findOne({
       where: { eventId: String(dto.eventId), tenantId: context.tenantId },
@@ -182,7 +195,10 @@ export class PiFrameIngestService {
       const outcome = await this.revisions.applySourceRevision(
         existing.id,
         { ...sourceColumnsOf(dto), ...facts },
-        { actorKind: 'connector', sourceRevision: end?.toISOString() },
+        {
+          actorKind: 'connector',
+          sourceRevision: version.sourceRevision ?? version.end?.toISOString(),
+        },
       );
       return {
         outcome: outcome === 'revised' ? 'updated' : 'unchanged',
@@ -248,7 +264,7 @@ export class PiFrameIngestService {
   }
 }
 
-/** Columns every PI event carries, from the frame itself. */
+/** Columns every source event carries, from the frame itself. */
 function frameColumns(
   context: FrameContext,
   frame: PiEventFrame,
@@ -259,10 +275,14 @@ function frameColumns(
     organizationId: context.organizationId,
     eventId: frame.WebId,
     eventType,
-    source: 'PI',
+    source: sourceSystemOf(context),
     startTime: new Date(frame.StartTime).toISOString(),
     endTime: piEndTimeIso(frame.EndTime) ?? undefined,
   };
+}
+
+export function sourceSystemOf(context: FrameContext): 'PI' | 'MQTT' {
+  return context.sourceSystem ?? 'PI';
 }
 
 /** The PI element first, then further referenced elements, then the primary's ancestors. */

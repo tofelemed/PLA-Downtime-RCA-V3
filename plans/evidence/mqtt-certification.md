@@ -86,6 +86,34 @@ credentials are accepted; the unreachable-broker (`ECONNREFUSED`) and egress-den
 instead. The password-protected listener arrives with WP3 step 4 (Compose TLS + password file), which will
 add the `BadUserNameOrPassword` case to the same spec.
 
-## R1–R16 (WP4)
+## Live path on the Compose broker (WP3 step 3) — 11 Oct 2026
 
-Not started; needs WP3 steps 2–4 and lab broker access.
+`MqttSubscriberHost` + persist-before-ack + handlers, exercised end to end against `proact-mqtt-1` (mosquitto
+2.1.2, host port 1884, MQTT 5, QoS 1, `clean: false`, `sessionExpiryInterval: 300` in the tests) and
+`proact_test` by three integration specs (`npx jest --selectProjects integration --runInBand
+test/integration/mqtt-subscriber-*.int-spec.ts`; run output in `plans/evidence/phase0-verification.md`,
+"Plan 1.8 step 3"):
+
+| Spec | What it proves |
+|---|---|
+| `mqtt-subscriber-e2e.int-spec.ts` | one running subscribe job per active connection (`next_run_at` null, lease `host:pid:xxxx`, derived client id, filters + availability topic subscribed; audit `create`, `start` by the host); open event → `production_events` row (unit from the `MQTT` source mapping, reason resolved, `source = MQTT`); `end_ts` revision → same event closed; `delete` → `physical_state = retracted`; raw outcomes `accepted, revision, revision`; unplaceable element → `unknown_template`; unresolved reason → event created uncoded + linked `unknown_code` (`detail.canonicalEventId`); measurement with a registered signal → `measurement_samples`, unknown signal → `unknown_signal`; retained ONLINE / OFFLINE → job health `sourceAvailable` true / false, two `SourceHealthChanged` outbox rows, **no** production event; `GET /v2/ingestion-jobs/:id` shows the health object; `pause` / `resume` through `POST /v2/ingestion-jobs/:id/:action` |
+| `mqtt-subscriber-redelivery.int-spec.ts` | (b) `IntakeService.accept` made to fail once → health `persistFailed`, message **not** acknowledged, client disconnects deliberately and reconnects with backoff, broker redelivers with `dup = 1`, accepted exactly once (one raw row, `sourceControls.mqtt.duplicate = true`), one event; (c) the open event re-published retained → `raw_identities.duplicate_count = 1`, no raw row; a later-sent intermediate revision → `stale`; one event, end time kept; counters `duplicate = 1`, `stale = 1`; (d) `not json` ×2, a 70 KB payload, a `ts` one hour ahead → `not_json` (occurrences 2), `too_large`, `future_timestamp`, raw rows `invalid`, all acknowledged; the next event flows, client still connected |
+| `mqtt-subscriber-lifecycle.int-spec.ts` | (g) `JobRunnerService.claim` returns null for the subscribe job even with `next_run_at` in the past; (e) a later overlapping connection of the tenant (inserted past the API guard) is parked (`parkedReason = duplicate_feed`, names the winner, no client) and retired when deactivated; (f) pause → disconnected, lease released, a message published meanwhile is **not** delivered; resume → `sessionPresent = true`, the queued message arrives; stop → session dropped: a message published while stopped never arrives after `start` (`sessionPresent = false`), a new one does; audit `create, start, pause, resume, stop, start`; drain → `stopped` with `drained`, nothing delivered afterwards, runner still refuses it; a `PATCH` of the topics bumps `config_version` to 2 and the client restarts with the new filters |
+
+**R1–R11 coverage by these automated tests (WP4 pass criteria still to be run on the lab broker with the
+simulator and the real gateway; this is the Compose-broker evidence):**
+
+| # | Check | Automated now | Still open |
+|---|---|---|---|
+| R1 | Durable before ack | ✅ accept failure → no PUBACK, redelivered, one raw row, one effect (`redelivery` b); `IntakeService.accept` commits before the callback (`message-persister.ts`) | the 1 000-message burst with a killed worker (needs the step-4 simulator) |
+| R2 | Redelivery `dup=1` | ✅ `dup = 1` redelivery counted once (`redelivery` b); pause / resume queue drain (`lifecycle` f) | 100-message batch count |
+| R3 | Retained state / event on subscribe | ✅ retained event re-send → `duplicate`, no second event; retained availability on connect (`e2e`, `redelivery` c) | retained **state** on reconnect against the 1.10 engine |
+| R4 | Event revisions | ✅ open → end → delete; stale intermediate revision ignored (`e2e`, `redelivery` c) | attribute-change revision assertion on the event columns |
+| R5 | Postgres down 10 min | ◐ the mechanism (not acked, deliberate disconnect, backoff, redelivery, `persistFailed` in health) with an injected failure (`redelivery` b) | a real outage of the `postgres` container with the queue growing and draining in order |
+| R6 | Broker restart | ◐ unintentional close → reconnect with backoff (`mqtt-subscription.ts` `onClose`), config restart (`lifecycle`) | restarting `proact-mqtt-1` mid-run; silence alert (3.12) |
+| R7 | Gateway Last Will | ✅ OFFLINE → `sourceAvailable = false`, `SourceHealthChanged`, no stop (`e2e`) | the broker publishing the will itself after a gateway crash (step-4 simulator with a will) |
+| R8 | Duplicate feed | ✅ 422 at create / PATCH (step 1); runtime loser parked, oldest wins (`lifecycle` e) | — |
+| R9 | Schema violations | ✅ `not_json`, `too_large`, `future_timestamp` quarantined and acked, session not blocked (`redelivery` d); the other codes by the step-2 decoder specs | — |
+| R10 | Clock skew | ✅ future `ts` rejected (`redelivery` d); stale window by the step-2 `time-rules` spec | an 8-day-old message through the live path |
+| R11 | Unmapped machine / code | ✅ parked `unknown_template` / `unknown_code` / `unknown_signal` with counters (`e2e`); the resolver is loaded per record, so a mapping added later flows on the next message without a restart | the "mapping added → flows" assertion through the live path |
+| R12–R16 | load, outage window, security, erase-after-insert, MQTT 3.1.1 live | — (3.1.1 is covered by the spike only) | WP4 |

@@ -98,6 +98,8 @@ import { SignalsModule } from '../signals/signals.module';
     PIWebApiService,
     MasterDataCodeResolverService,
     PiLegacyJobLink,
+    // the frame → production event path is shared with the MQTT interval-event handler (plan 1.8)
+    PiFrameIngestService,
   ],
 })
 export class IntegrationModule {}

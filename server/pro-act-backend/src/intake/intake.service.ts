@@ -19,6 +19,7 @@ import {
 } from './intake.types';
 import { RawPartitionsService } from './partitions/raw-partitions.service';
 import { invalidRawRow, rawRowOf } from './raw-row';
+import { RejectedDelivery, retainRejectedDelivery } from './rejected-delivery';
 import {
   countDuplicateDelivery,
   DeliveryIdentity,
@@ -78,6 +79,25 @@ export class IntakeService {
             violations: validation.violations,
             receivedAt,
           }),
+    );
+    this.counters.set(
+      result.status,
+      (this.counters.get(result.status) ?? 0) + 1,
+    );
+    return result;
+  }
+
+  /**
+   * Retains an undecodable delivery (plan 1.8: poison / out-of-contract MQTT message) with its typed
+   * quarantine code in one transaction (`retainRejectedDelivery`); the adapter acknowledges after it.
+   */
+  async quarantineDelivery(
+    binding: IntakeBinding,
+    rejected: RejectedDelivery,
+  ): Promise<AcceptResult> {
+    await this.partitions.ensureFor(rejected.receivedAt);
+    const result = await this.dataSource.transaction((manager) =>
+      retainRejectedDelivery(manager, binding, rejected),
     );
     this.counters.set(
       result.status,

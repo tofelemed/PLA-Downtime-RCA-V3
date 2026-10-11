@@ -55,6 +55,8 @@ export class PiUnmappedRecorder {
     frame: PiEventFrame,
     details: QuarantineDetails,
   ): Promise<void> {
+    // type-only import of the ingest service (it injects this recorder): the default is repeated here
+    const source = context.sourceSystem ?? 'PI';
     await this.unmapped.upsertBySource({
       tenantId: context.tenantId,
       organizationId: context.organizationId,
@@ -63,12 +65,12 @@ export class PiUnmappedRecorder {
       startTime: frame.StartTime,
       // the open sentinel (PI03) is not an end time; the raw frame keeps it in event_data
       endTime: piEndTimeIso(frame.EndTime) ?? undefined,
-      sourceSystem: 'PI',
+      sourceSystem: source,
       sourceId: frame.WebId,
-      eventData: JSON.stringify(quarantinePayload(frame, details)),
+      eventData: JSON.stringify(quarantinePayload(frame, details, source)),
     });
     this.logger.log(
-      `Quarantined PI frame ${frame.WebId} for tenant ${context.tenantId}: ${details.placement.status}`,
+      `Quarantined ${source} frame ${frame.WebId} for tenant ${context.tenantId}: ${details.placement.status}`,
     );
   }
 }
@@ -77,6 +79,7 @@ export class PiUnmappedRecorder {
 function quarantinePayload(
   frame: PiEventFrame,
   details: QuarantineDetails,
+  source: string,
 ): Record<string, unknown> {
   const { placement, mapped } = details;
   const primary = frame.PrimaryReferencedElement;
@@ -95,7 +98,7 @@ function quarantinePayload(
       endTime: frame.EndTime,
       primaryAfId: primary?.WebId,
       primaryAfPath: primary?.Path,
-      source: 'PI',
+      source,
       attributes: details.attributes,
       mappedFields: mapped.dto,
     },

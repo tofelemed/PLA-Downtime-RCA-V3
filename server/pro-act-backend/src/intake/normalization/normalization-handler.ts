@@ -12,6 +12,12 @@ export interface NormalizationInput {
   hints?: unknown;
 }
 
+/** A quarantine row kept open next to an applied record (the event exists but something is parked). */
+export interface LinkedQuarantine {
+  errorCode: IngestionErrorCode;
+  detail: Record<string, unknown>;
+}
+
 export type NormalizationResult =
   | {
       status: 'applied';
@@ -19,6 +25,8 @@ export type NormalizationResult =
       outcome: string;
       canonicalEventId: string | null;
       detail?: Record<string, unknown>;
+      /** e.g. an event created uncoded because its reason token is unmapped (`unknown_code`) */
+      quarantine?: LinkedQuarantine;
     }
   | {
       status: 'quarantined';

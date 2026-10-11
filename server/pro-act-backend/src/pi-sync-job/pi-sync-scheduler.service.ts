@@ -66,7 +66,9 @@ export class PISyncSchedulerService {
 
     for (const job of dueJobs) {
       if (this.shutdown.isShuttingDown) {
-        this.logger.log('Shutdown in progress: remaining due PI sync jobs run after the next start');
+        this.logger.log(
+          'Shutdown in progress: remaining due PI sync jobs run after the next start',
+        );
         return;
       }
       if (!job.tenantId) continue;
@@ -118,7 +120,7 @@ export class PISyncSchedulerService {
 
       await this.piSyncJobRepository.update(job.id, {
         lastRunTime: linked.lastSuccessAt ?? undefined,
-        nextRunTime: runNow ? startedAt : linked.nextRunAt,
+        nextRunTime: runNow ? startedAt : (linked.nextRunAt ?? undefined),
         status: linked.state === 'failed' ? 'error' : 'success',
         errorMessage: linked.lastError ?? (() => 'NULL'),
       });
@@ -154,7 +156,10 @@ export class PISyncSchedulerService {
     if (job.nextRunTime && job.nextRunTime.getTime() <= now) return true;
 
     const extras = this.parseJobConfig(job.jobConfig);
-    const intervalMinutes = extras.intervalMinutes || this.parseIntervalFromSchedule(job.schedule) || 15;
+    const intervalMinutes =
+      extras.intervalMinutes ||
+      this.parseIntervalFromSchedule(job.schedule) ||
+      15;
     if (!job.lastRunTime) return true;
 
     const nextDue = job.lastRunTime.getTime() + intervalMinutes * 60 * 1000;
@@ -165,9 +170,7 @@ export class PISyncSchedulerService {
     if (!jobConfig) return {};
     try {
       const parsed: unknown = JSON.parse(jobConfig);
-      return typeof parsed === 'object' && parsed !== null
-        ? (parsed as SyncJobConfigExtras)
-        : {};
+      return typeof parsed === 'object' && parsed !== null ? parsed : {};
     } catch {
       return {};
     }
@@ -194,7 +197,9 @@ export class PISyncSchedulerService {
       config.afRootElement?.webId;
 
     if (!scopeId) {
-      throw new Error('No PI sync scope configured (database or element WebId)');
+      throw new Error(
+        'No PI sync scope configured (database or element WebId)',
+      );
     }
 
     return { scopeType, scopeId };
@@ -231,9 +236,7 @@ function connectionSettings(json?: string | null): ConnectionScopeSettings {
   if (!json) return {};
   try {
     const parsed: unknown = JSON.parse(json);
-    return typeof parsed === 'object' && parsed !== null
-      ? (parsed as ConnectionScopeSettings)
-      : {};
+    return typeof parsed === 'object' && parsed !== null ? parsed : {};
   } catch {
     return {};
   }

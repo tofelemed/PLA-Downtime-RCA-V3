@@ -3724,7 +3724,16 @@
                 "order_conflict",
                 "no_handler",
                 "processing_failed",
-                "unknown_signal"
+                "unknown_signal",
+                "topic_shape",
+                "not_json",
+                "too_large",
+                "unsupported_version",
+                "identity_mismatch",
+                "future_timestamp",
+                "stale_timestamp",
+                "topic_not_allowed",
+                "unmapped_value"
               ],
               "type": "string"
             }

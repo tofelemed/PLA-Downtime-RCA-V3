@@ -28,7 +28,8 @@ export interface LinkedJobStatus {
   ingestionJobId: string;
   state: IngestionJob['state'];
   lastSuccessAt: Date | null;
-  nextRunAt: Date;
+  /** null only for subscriptions (never for the linked PI window job) */
+  nextRunAt: Date | null;
   lastError: string | null;
 }
 

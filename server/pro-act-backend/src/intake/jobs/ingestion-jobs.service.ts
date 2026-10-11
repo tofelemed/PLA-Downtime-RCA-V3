@@ -11,13 +11,14 @@ import {
   RequestContext,
   requireTenantId,
 } from '../../common/context/request-context';
+import { enqueueOutbox } from '../../common/outbox/outbox-writer';
 import { adapterErrorOf } from '../adapters/adapter-error';
 import { AdapterRegistry } from '../adapters/adapter-registry';
 import { IntegrationConnectionService } from '../connections/integration-connection.service';
 import { IntegrationConnection } from '../entities/integration-connection.entity';
 import { canonicalJson } from '../envelope/envelope-validator';
 import { IngestionJob, JobCadence } from '../entities/ingestion-job.entity';
-import { recordTransition } from './job-lease';
+import { recordTransition, SUBSCRIBE_MODE } from './job-lease';
 import { JobAction, nextJobState } from './job-transitions';
 
 const UNIQUE_VIOLATION = '23505';
@@ -52,6 +53,8 @@ export class IngestionJobsService {
     await this.validateScope(connection, input.scope);
     const created = await this.unique(() =>
       this.jobs.manager.transaction(async (manager) => {
+        if (isSubscribeScope(input.scope))
+          await assertNoActiveSubscription(manager, connection.id);
         const job = await manager.save(
           manager.create(IngestionJob, {
             tenantId: connection.tenantId,
@@ -106,6 +109,7 @@ export class IngestionJobsService {
           actorId: context.userId,
           reason,
         });
+        await announceJobChange(manager, saved, action);
         return saved;
       }),
     );
@@ -207,19 +211,66 @@ function transitionFields(
   return { state: target };
 }
 
+/** Whether a scope names a subscription hosted by the worker (plan 1.8), not a pull job. */
+export function isSubscribeScope(scope: Record<string, unknown>): boolean {
+  return scope.mode === SUBSCRIBE_MODE;
+}
+
+/** One subscription per connection whatever its topics: a second active one is 409 `JOB_SCOPE_EXISTS`. */
+async function assertNoActiveSubscription(
+  manager: EntityManager,
+  connectionId: string,
+): Promise<void> {
+  const rows: Array<{ id: string }> = await manager.query(
+    `SELECT "id" FROM "ingestion_jobs" WHERE "connection_id" = $1 AND "scope"->>'mode' = $2 AND "state" <> 'stopped' LIMIT 1`,
+    [connectionId, SUBSCRIBE_MODE],
+  );
+  if (rows.length === 0) return;
+  throw new ConflictException({
+    code: 'JOB_SCOPE_EXISTS',
+    message: 'A subscription job of this connection is already active',
+  });
+}
+
 /**
  * Makes the job due by the database clock, the clock `claimDueJob` compares with: a time taken from the
- * application host could lie ahead of the database and leave the job not yet due.
+ * application host could lie ahead of the database and leave the job not yet due. A subscription is
+ * never due (`next_run_at` null): the subscriber host picks the state change up on its next reconcile.
  */
 async function runNow(
   manager: EntityManager,
   job: IngestionJob,
 ): Promise<void> {
-  const [rows]: [Array<{ next_run_at: Date }>, number] = await manager.query(
-    `UPDATE "ingestion_jobs" SET "next_run_at" = now() WHERE "id" = $1 RETURNING "next_run_at"`,
-    [job.id],
-  );
+  const [rows]: [Array<{ next_run_at: Date | null }>, number] =
+    await manager.query(
+      `UPDATE "ingestion_jobs" SET "next_run_at" = CASE WHEN $2 THEN NULL ELSE now() END
+        WHERE "id" = $1 RETURNING "next_run_at"`,
+      [job.id, isSubscribeScope(job.scope)],
+    );
   job.nextRunAt = rows[0]?.next_run_at ?? job.nextRunAt;
+}
+
+/** Lets the worker-side hosts react at once (plan 1.8 `MqttSubscriberHost`) instead of on the next sweep. */
+function announceJobChange(
+  manager: EntityManager,
+  job: IngestionJob,
+  action: JobAction,
+): Promise<string[]> {
+  return enqueueOutbox(manager, [
+    {
+      tenantId: job.tenantId,
+      aggregateType: 'ingestion_job',
+      aggregateId: job.id,
+      type: 'IngestionJobChanged',
+      payload: {
+        jobId: job.id,
+        connectionId: job.connectionId,
+        action,
+        state: job.state,
+      },
+      scope: job.connectionId,
+    },
+  ]);
 }
 
 function notFound(): NotFoundException {

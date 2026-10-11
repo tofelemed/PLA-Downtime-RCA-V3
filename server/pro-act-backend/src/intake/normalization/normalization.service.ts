@@ -16,6 +16,7 @@ import { NormalizationTicket, RawAcceptedPayload } from '../intake.types';
 import { findRaw } from '../raw-store';
 import { markNormalized } from '../source-object-store';
 import {
+  LinkedQuarantine,
   NormalizationHandlerRegistry,
   NormalizationInput,
   NormalizationResult,
@@ -26,9 +27,10 @@ const CONSUMER = 'normalization';
 /**
  * Consumer of `RawAccepted` (plan 1.5 step 6): loads the retained raw row, routes it by kind/source to
  * a registered handler, then records the result on the source object — applied (canonical event linked,
- * open exceptions resolved) or quarantined (`ingestion_exceptions` with the handler's error code). The
- * inbox key makes each request take effect once, whether it arrives inline (PI pull, replay) or through
- * the outbox relay. A quarantined record still counts as accepted for cursor purposes.
+ * open exceptions resolved) or quarantined (`ingestion_exceptions` with the handler's error code), or
+ * applied with one linked quarantine row kept open (an event created uncoded, plan 1.8). The inbox key
+ * makes each request take effect once, whether it arrives inline (PI pull, replay) or through the
+ * outbox relay. A quarantined record still counts as accepted for cursor purposes.
  */
 @Injectable()
 export class NormalizationService implements OnModuleInit {
@@ -145,28 +147,49 @@ export class NormalizationService implements OnModuleInit {
   ): Promise<void> {
     const key = keyOf(ticket);
     const rawId = input.raw.originalRawId ?? input.raw.id;
+    const quarantine = quarantineOf(result);
     await this.dataSource.transaction(async (manager) => {
       if (result.status === 'applied') {
         await markNormalized(manager, key, {
           rawId,
           canonicalEventId: result.canonicalEventId,
         });
-        await resolveOpenExceptions(manager, key, {
-          rawId: input.raw.id,
-          replayRunId: ticket.replayRunId,
-          outcome: result.outcome,
-        });
-        return;
+        await resolveOpenExceptions(
+          manager,
+          key,
+          {
+            rawId: input.raw.id,
+            replayRunId: ticket.replayRunId,
+            outcome: result.outcome,
+          },
+          quarantine?.errorCode ?? null,
+        );
       }
+      if (!quarantine) return;
       await recordException(manager, {
         ...key,
         rawId: input.raw.id,
         rawReceivedAt: input.raw.receivedAt,
-        errorCode: result.errorCode,
-        detail: { ...result.detail, replayRunId: ticket.replayRunId },
+        errorCode: quarantine.errorCode,
+        detail: { ...quarantine.detail, replayRunId: ticket.replayRunId },
       });
     });
   }
+}
+
+/** The row to park: the handler's quarantine, or the one linked to an applied record (with its event). */
+function quarantineOf(result: NormalizationResult): LinkedQuarantine | null {
+  if (result.status === 'quarantined') {
+    return { errorCode: result.errorCode, detail: result.detail };
+  }
+  if (!result.quarantine) return null;
+  return {
+    errorCode: result.quarantine.errorCode,
+    detail: {
+      ...result.quarantine.detail,
+      canonicalEventId: result.canonicalEventId,
+    },
+  };
 }
 
 function keyOf(ticket: NormalizationTicket): ObjectKey {
