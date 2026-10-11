@@ -16,6 +16,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AnyRole, Roles } from '../auth/decorators/roles.decorator';
+import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import {
   assertCallerMayGrant,
   assertCallerMayManage,
@@ -58,6 +59,7 @@ export class UsersController {
   }
 
   @Get()
+  @TenantBound({ fill: false })
   @ApiResponse({ status: 200, description: 'List all users' })
   async findAll(
     @Query('tenantId') tenantId?: string,

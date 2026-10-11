@@ -3,6 +3,7 @@ import { RCAService } from './rca.service';
 import { RCA } from './rca.entity';
 import { ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { CreateRcaDto } from './dto/create-rca.dto';
 import { UpdateRcaDto } from './dto/update-rca.dto';
 import { Ctx } from '../common/context/ctx.decorator';
@@ -11,6 +12,7 @@ import { RequestContext } from '../common/context/request-context';
 @ApiTags('RCAs')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@TenantBound({ fill: false })
 @Controller('rcas')
 export class RCAController {
   constructor(private readonly rcaService: RCAService) {}

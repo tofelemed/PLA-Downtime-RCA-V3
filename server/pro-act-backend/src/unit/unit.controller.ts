@@ -14,12 +14,14 @@ import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CreateUnitDto } from './dto/create-unit.dto';
 import { UpdateUnitDto } from './dto/update-unit.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 
 /** Master data (§13.2): any member reads; writes need master_data_admin or manager_approver (admins via satisfiesRole). */
 @ApiTags('Units')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@TenantBound()
 @Controller('units')
 export class UnitController {
   constructor(private readonly unitService: UnitService) {}

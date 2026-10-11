@@ -60,6 +60,8 @@ export class ApiError extends Error {
 }
 
 type TokenProvider = () => string | null | undefined;
+/** The acting tenant (`plantSelection?.tenant?.id || session?.tenant?.id`), sent as `X-Tenant-Id`. */
+type TenantProvider = () => string | null | undefined;
 /** Renews the access token; resolves false when the session can no longer be refreshed. */
 type RefreshHandler = () => Promise<boolean>;
 
@@ -67,6 +69,7 @@ import { API_BASE_URL } from './apiBaseUrl';
 
 export class HttpClient {
   private tokenProvider?: TokenProvider;
+  private tenantProvider?: TenantProvider;
   private refreshHandler?: RefreshHandler;
   private readonly baseUrl: string;
 
@@ -76,6 +79,14 @@ export class HttpClient {
 
   setTokenProvider(provider: TokenProvider) {
     this.tokenProvider = provider;
+  }
+
+  /**
+   * Installs the acting-tenant source (`V2SessionBridge`, the same one the v2 client reads): every
+   * authenticated request then carries `X-Tenant-Id`, so v1 screens act on the selected plant too.
+   */
+  setTenantProvider(provider: TenantProvider | undefined) {
+    this.tenantProvider = provider;
   }
 
   /** Access tokens live 15 minutes (plan 3.11): a 401 is retried once after a refresh. */
@@ -188,6 +199,10 @@ export class HttpClient {
       requestHeaders.set('Authorization', `Bearer ${token}`);
     } else if (!skipAuth) {
       console.warn(`[HttpClient] No token available for authenticated request to ${path}`);
+    }
+    const tenantId = skipAuth ? null : this.tenantProvider?.();
+    if (tenantId && !requestHeaders.has('X-Tenant-Id')) {
+      requestHeaders.set('X-Tenant-Id', tenantId);
     }
 
     const response = await fetch(url, {

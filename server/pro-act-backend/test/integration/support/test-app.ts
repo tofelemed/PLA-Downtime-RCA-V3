@@ -19,6 +19,7 @@ import { AccessModule } from '../../../src/auth/access/access.module';
 import { AuthModule } from '../../../src/auth/auth.module';
 import { RolesGuard } from '../../../src/auth/guards/roles.guard';
 import { ScopeGuard } from '../../../src/auth/guards/scope.guard';
+import { TenantBindingGuard } from '../../../src/auth/guards/tenant-binding.guard';
 import { WriteAccessGuard } from '../../../src/auth/guards/write-access.guard';
 import { JwtAuthGuard } from '../../../src/auth/jwt-auth.guard';
 import { CommonModule } from '../../../src/common/common.module';
@@ -95,13 +96,15 @@ export async function createIntegrationApp(
       AuthModule,
       ...options.modules,
     ],
-    // Same global chain as AppModule: rate limit, authentication, @Roles, @ScopeParam, idempotency
+    // Same global chain as AppModule: rate limit, authentication, @Roles, @ScopeParam, read-only roles,
+    // @TenantBound, idempotency
     providers: [
       { provide: APP_GUARD, useClass: UserIpThrottlerGuard },
       { provide: APP_GUARD, useClass: JwtAuthGuard },
       { provide: APP_GUARD, useClass: RolesGuard },
       { provide: APP_GUARD, useClass: ScopeGuard },
       { provide: APP_GUARD, useClass: WriteAccessGuard },
+      { provide: APP_GUARD, useClass: TenantBindingGuard },
       { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     ],
   }).compile();

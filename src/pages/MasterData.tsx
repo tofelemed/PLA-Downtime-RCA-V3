@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { usePlantSelection } from '../contexts/PlantSelectionContext';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { masterDataService, ImpactCode, OEECode, Product, Unit, Asset } from '../services/MasterDataService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +26,7 @@ import CustomAttributeDisplay from '../components/CustomAttributeDisplay';
 
 export const MasterData: React.FC = () => {
   const { session } = useAuth();
+  const { selection: selectedPlant } = usePlantSelection();
   const { canManageMasterData } = useCapabilities();
   const { toast } = useToast();
   const [impactCodes, setImpactCodes] = useState<ImpactCode[]>([]);
@@ -144,12 +146,14 @@ export const MasterData: React.FC = () => {
   const loadData = async () => {
     if (!session) return;
 
+    // the acting plant, the one every request names in X-Tenant-Id
+    const tenantId = selectedPlant?.tenant?.id || session.tenant?.id;
     try {
       const [impactData, oeeData, productData, unitData, assetData] = await Promise.all([
-        masterDataService.getImpactCodes({ tenantId: session.tenant?.id }),
-        masterDataService.getOEECodes({ tenantId: session.tenant?.id }),
+        masterDataService.getImpactCodes({ tenantId }),
+        masterDataService.getOEECodes({ tenantId }),
         masterDataService.getProducts({ organizationId: session.organization?.id }),
-        masterDataService.getUnits({ tenantId: session.tenant?.id }),
+        masterDataService.getUnits({ tenantId }),
         masterDataService.getAssets({}),
       ]);
 

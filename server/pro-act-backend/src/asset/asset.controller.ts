@@ -14,12 +14,14 @@ import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 
 /** Master data (§13.2): any member reads; writes need master_data_admin or manager_approver (admins via satisfiesRole). */
 @ApiTags('Assets')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@TenantBound()
 @Controller('assets')
 export class AssetController {
   constructor(private readonly assetService: AssetService) {}

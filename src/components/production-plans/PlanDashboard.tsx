@@ -1071,12 +1071,12 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose, onP
 
   useEffect(() => {
     async function fetchEvents() {
-      if (!plan.id || !session?.tenant?.id) return;
-      const events = await masterDataService.getProductionEvents({ tenantId: session.tenant.id });
+      if (!plan.id || !tenantId) return;
+      const events = await masterDataService.getProductionEvents({ tenantId });
       setProductionEvents(events.filter(e => e.planId === plan.id));
     }
     fetchEvents();
-  }, [plan.id, session]);
+  }, [plan.id, tenantId]);
 
   // Auto-calculate actualQuantity from ProductionOutput events
   const autoActualQuantity = productionEvents
@@ -1135,11 +1135,11 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose, onP
 
   // Load available events when event selector opens
   useEffect(() => {
-    if (showEventSelector && session?.tenant?.id) {
+    if (showEventSelector && tenantId) {
       const loadAvailableEvents = async () => {
         try {
           const events = await masterDataService.getProductionEvents({ 
-            tenantId: session.tenant.id,
+            tenantId,
             unitId: plan.unitId 
           });
           setAvailableEvents(events);
@@ -1150,7 +1150,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose, onP
       };
       loadAvailableEvents();
     }
-  }, [showEventSelector, session?.tenant?.id, plan.unitId]);
+  }, [showEventSelector, tenantId, plan.unitId]);
 
   useEffect(() => {
     if (showUnmappedModal) {
@@ -1170,8 +1170,8 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose, onP
     setAssigningEventId(unmapped.event.id || unmapped.event.eventId);
     setSelectedPlanId(null);
     // Fetch plans for the event's unit
-    if (unmapped.event.unitId && session?.tenant?.id) {
-      const plans = await masterDataService.getProductionPlans({ unitId: unmapped.event.unitId, tenantId: session.tenant.id });
+    if (unmapped.event.unitId && tenantId) {
+      const plans = await masterDataService.getProductionPlans({ unitId: unmapped.event.unitId, tenantId });
       setAvailablePlans(plans);
     } else {
       setAvailablePlans([]);

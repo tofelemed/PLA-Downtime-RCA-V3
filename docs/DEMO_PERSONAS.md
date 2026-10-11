@@ -43,7 +43,11 @@ roles** of the `user_scopes` rows in the acting plant. Acting on another plant t
 done with the `X-Tenant-Id` header and requires a `user_scopes` row in that plant (SuperAdmin excepted).
 A caller whose roles in the acting plant are only `viewer` cannot send any POST / PUT / PATCH / DELETE
 (`403 READ_ONLY_ROLE`); a missing role is `403 FORBIDDEN_ROLE`; a plant the caller is not a member of
-is `403 TENANT_NOT_ALLOWED`.
+is `403 TENANT_NOT_ALLOWED`. On the v1 routes bound to the acting plant (`@TenantBound()`: tasks, units,
+assets, products, production-events, production-plans, rcas, `GET /users`) a `tenantId` in the body or
+query must be the acting plant (a read may name any plant the caller holds a scope in; SuperAdmin and
+OrgAdmin may name a plant they could select); anything else is `403 TENANT_MISMATCH`, and a POST body
+naming no plant gets the acting one.
 
 ## Personas
 
@@ -84,7 +88,8 @@ capabilities (`src/features/auth/capabilities.ts`, `useCapabilities()`):
   every plant), so the `viewer` personas (home Demo Plant 2) can switch to Demo Plant in the UI. There
   they hold `viewer` only: the header shows a "Read-only" badge and every write is refused by the server
   (`403 READ_ONLY_ROLE`, rendered as "Your role in this plant is read-only" by the v2 screens). v1
-  requests do not send `X-Tenant-Id`, so v1 screens keep showing the home plant's data.
+  requests send the same `X-Tenant-Id` as v2 requests (the `httpClient` reads the acting plant from
+  `V2SessionBridge`), so v1 screens act on the selected plant too.
 - A session stored before the server sent `scopes` fetches them from `GET /api/auth/profile` on restore;
   a server that does not send them yet leaves the user with the legacy role in the home plant.
 - The legacy `Manager` role was missing from every menu list; it gets the TenantAdmin menu minus the

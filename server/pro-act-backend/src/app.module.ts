@@ -81,6 +81,7 @@ import { registerPgTypeParsers } from './database/pg-type-parsers';
 import { AccessModule } from './auth/access/access.module';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { ScopeGuard } from './auth/guards/scope.guard';
+import { TenantBindingGuard } from './auth/guards/tenant-binding.guard';
 import { WriteAccessGuard } from './auth/guards/write-access.guard';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RequestContextMiddleware } from './common/context/request-context.middleware';
@@ -182,13 +183,14 @@ registerPgTypeParsers();
     MigrationCutoverModule,
   ],
   // Global guard chain, in order: rate limit → authentication (@Public / @PublicIf skip it)
-  // → @Roles → @ScopeParam. Every route is protected unless it opts out explicitly.
+  // → @Roles → @ScopeParam → read-only roles → @TenantBound. Every route is protected unless it opts out explicitly.
   providers: [
     { provide: APP_GUARD, useClass: UserIpThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: ScopeGuard },
     { provide: APP_GUARD, useClass: WriteAccessGuard },
+    { provide: APP_GUARD, useClass: TenantBindingGuard },
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     // Plan 3.11: per-connection tenant binding for row-level security (on unless DB_RLS_TENANT_BINDING=false)
     TenantSessionBinding,

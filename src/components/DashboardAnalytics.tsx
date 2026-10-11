@@ -100,19 +100,21 @@ const DashboardAnalytics: React.FC = () => {
 
   // Load real analytics data
   const loadAnalyticsData = async () => {
-    if (!session?.tenant?.id) return;
+    // the acting plant, the one every request names in X-Tenant-Id
+    const tenantId = plantSelection?.tenant?.id || session?.tenant?.id;
+    if (!tenantId) return;
     
     try {
       setLoading(true);
       
       // Load all data in parallel
       const [productionPlans, events, rcas, units, assets, productionLosses] = await Promise.all([
-        masterDataService.getProductionPlans({ tenantId: session.tenant.id }),
-        masterDataService.getProductionEvents({ tenantId: session.tenant.id }),
-        masterDataService.getRCAs({ tenantId: session.tenant.id }),
-        masterDataService.getUnits({ tenantId: session.tenant.id }),
-        masterDataService.getAssets({ tenantId: session.tenant.id }),
-        masterDataService.getProductionLosses({ tenantId: session.tenant.id })
+        masterDataService.getProductionPlans({ tenantId }),
+        masterDataService.getProductionEvents({ tenantId }),
+        masterDataService.getRCAs({ tenantId }),
+        masterDataService.getUnits({ tenantId }),
+        masterDataService.getAssets({ tenantId }),
+        masterDataService.getProductionLosses({ tenantId })
       ]);
       
       setAnalyticsData({

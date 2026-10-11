@@ -24,6 +24,7 @@ import {
   ApiOperation,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { CreateProductionEventDto } from './dto/create-production-event.dto';
 import { UpdateProductionEventDto } from './dto/update-production-event.dto';
 import { ProductionEventQueryDto } from './dto/production-event-query.dto';
@@ -38,6 +39,7 @@ import type { Request } from 'express';
 @ApiTags('Production Events')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@TenantBound()
 @Controller('production-events')
 export class ProductionEventController {
   constructor(private readonly eventService: ProductionEventService) {}

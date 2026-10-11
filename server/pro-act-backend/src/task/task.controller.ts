@@ -3,12 +3,14 @@ import { TaskService } from './task.service';
 import { Task } from './task.entity';
 import { ApiTags, ApiBearerAuth, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
 @ApiTags('Tasks')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@TenantBound()
 @Controller('tasks')
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}

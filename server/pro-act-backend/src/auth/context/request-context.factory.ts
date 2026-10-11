@@ -135,7 +135,11 @@ export class RequestContextFactory {
     );
   }
 
-  private async maySelectTenant(
+  /**
+   * Whether the caller may act on `tenantId`: SuperAdmin on any tenant that exists, everyone else on
+   * a tenant present in their scopes. Shared with `TenantBindingGuard` (a tenant named in a v1 body).
+   */
+  async maySelectTenant(
     context: RequestContext,
     tenantId: string,
   ): Promise<boolean> {

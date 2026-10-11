@@ -7,6 +7,7 @@ import { User } from '../../users/user.entity';
 import { RequestContextFactory } from '../context/request-context.factory';
 import { RolesGuard } from '../guards/roles.guard';
 import { ScopeGuard } from '../guards/scope.guard';
+import { TenantBindingGuard } from '../guards/tenant-binding.guard';
 import { WriteAccessGuard } from '../guards/write-access.guard';
 import { AccessDenialAuditService } from '../scopes/access-denial-audit.service';
 import { ScopeMembershipService } from '../scopes/scope-membership.service';
@@ -31,6 +32,7 @@ import { UserScopesService } from '../scopes/user-scopes.service';
     RolesGuard,
     ScopeGuard,
     WriteAccessGuard,
+    TenantBindingGuard,
   ],
   exports: [
     UserScopesService,
@@ -40,6 +42,7 @@ import { UserScopesService } from '../scopes/user-scopes.service';
     RolesGuard,
     ScopeGuard,
     WriteAccessGuard,
+    TenantBindingGuard,
   ],
 })
 export class AccessModule {}

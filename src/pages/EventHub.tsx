@@ -693,7 +693,7 @@ export const EventHub: React.FC = () => {
         quantity: eventForm.quantity ? parseFloat(eventForm.quantity) : undefined,
         cost: eventForm.cost ? parseFloat(eventForm.cost) : undefined,
         status: 'Open',
-        tenantId: session.tenant?.id || '',
+        tenantId: plantSelection?.tenant?.id || session.tenant?.id || '',
         eventType: eventForm.eventType,
         planId: eventForm.eventType === 'ProductionOutput' ? eventForm.planId : undefined,
         parameter: eventForm.parameter,
