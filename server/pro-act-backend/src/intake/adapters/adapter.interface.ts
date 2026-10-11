@@ -70,6 +70,12 @@ export interface SourceSample {
   truncated: boolean;
 }
 
+/** Another active connection of the same tenant and source type (duplicate-feed checks). */
+export type ConnectionPeer = Pick<
+  IntegrationConnection,
+  'id' | 'displayName' | 'endpointConfig'
+>;
+
 /**
  * Source adapter contract (spec ING07). Config validation, capability declaration, connection test,
  * metadata discovery, paged reads from a checkpoint and health are mandatory. Pause, drain and stop are
@@ -82,6 +88,15 @@ export interface SourceAdapter {
   capabilities(): ConnectionCapabilities;
   /** problems with an endpoint configuration (empty = valid); secrets are never part of it */
   validateConfig(config: Readonly<Record<string, unknown>>): string[];
+  /**
+   * checks a configuration against the tenant's other active connections of this source type (e.g. a
+   * duplicated MQTT feed); throws a non-retryable `AdapterError` whose code becomes the 422 code
+   */
+  validateAmongPeers?(
+    config: Readonly<Record<string, unknown>>,
+    peers: readonly ConnectionPeer[],
+    connectionId: string | null,
+  ): void;
   /** checks a job scope before the job is created (throws an `AdapterError`; non-retryable → 422) */
   validateScope?(
     connection: IntegrationConnection,

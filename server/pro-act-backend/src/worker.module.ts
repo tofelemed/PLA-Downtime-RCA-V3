@@ -7,6 +7,7 @@ import { SchedulerModule } from './common/scheduling/scheduler.module';
 import { runtimeDataSourceOptions } from './database/data-source';
 import { EventOperationsModule } from './event-operations/event-operations.module';
 import { IntakeModule } from './intake/intake.module';
+import { MqttAdapterModule } from './intake/adapters/mqtt/mqtt-adapter.module';
 import { IntegrationModule } from './integration/integration.module';
 import { registerPgTypeParsers } from './database/pg-type-parsers';
 import { WorkerHealthServer } from './health/worker-health.server';
@@ -48,6 +49,8 @@ registerPgTypeParsers();
     // PI adapter and normaliser come with IntegrationModule
     IntakeModule,
     IntegrationModule,
+    // MQTT adapter (plan 1.8); the subscriber host joins with WP3 step 3
+    MqttAdapterModule,
     // shift instances kept generated 90 days ahead (plan 2.1)
     CalendarModule,
     // budget / forecast / MPC rate imports (plan 2.2)

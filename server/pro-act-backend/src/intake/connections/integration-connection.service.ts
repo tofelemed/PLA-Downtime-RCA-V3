@@ -11,6 +11,8 @@ import {
 } from '../../common/context/request-context';
 import { assertRevision } from '../../common/concurrency/revision';
 import { CredentialEncryptionService } from '../../common/services/credential-encryption.service';
+import { FieldError } from '../../common/errors/api-error-body';
+import { adapterErrorOf } from '../adapters/adapter-error';
 import { AdapterRegistry } from '../adapters/adapter-registry';
 import {
   ConnectionTest,
@@ -34,6 +36,12 @@ export type { ConnectionChange } from './connection-change';
 const SECRET_REF_PREFIX = 'secrets:';
 /** Endpoint configuration keys that look like credentials (they belong in `secret`). */
 const SECRET_KEY_PATTERN = /pass(word)?|secret|token|api[-_]?key|credential/i;
+/** `secrets.kind` of a v2 connection secret; `<sourceType>_secret` unless the source names it. */
+const SECRET_KINDS: Partial<Record<SourceType, string>> = {
+  mqtt: 'mqtt_password',
+};
+/** `<field>: <message>` problems reported by adapters become field errors. */
+const FIELD_PROBLEM = /^([A-Za-z0-9_.[\]-]+): (.+)$/;
 
 export interface NewConnection {
   sourceType: SourceType;
@@ -97,9 +105,17 @@ export class IntegrationConnectionService {
     const tenantId = requireTenantId(context);
     this.assertValidConfig(input.sourceType, input.endpointConfig);
     return this.connections.manager.transaction(async (manager) => {
+      if (input.isActive !== false) {
+        await this.assertNoPeerConflict(manager, {
+          id: null,
+          tenantId,
+          sourceType: input.sourceType,
+          endpointConfig: input.endpointConfig,
+        });
+      }
       const secretRef = input.secret
         ? await this.storeSecret(manager, tenantId, {
-            kind: `${input.sourceType}_secret`,
+            kind: secretKind(input.sourceType),
             ciphertext: this.encryption.encrypt(input.secret),
           })
         : null;
@@ -178,6 +194,15 @@ export class IntegrationConnectionService {
         this.assertValidConfig(connection.sourceType, change.endpointConfig);
       }
       assertSecretFollowsTarget(connection, change);
+      const staysActive = change.isActive ?? connection.isActive;
+      if (staysActive && (change.endpointConfig || change.isActive)) {
+        await this.assertNoPeerConflict(manager, {
+          id: connection.id,
+          tenantId,
+          sourceType: connection.sourceType,
+          endpointConfig: change.endpointConfig ?? connection.endpointConfig,
+        });
+      }
       const configChanged =
         change.secret !== undefined ||
         (change.endpointConfig !== undefined &&
@@ -202,10 +227,18 @@ export class IntegrationConnectionService {
   async revealSecret(
     connection: IntegrationConnection,
   ): Promise<string | null> {
-    if (!connection.secretRef?.startsWith(SECRET_REF_PREFIX)) return null;
+    return this.revealSecretRef(connection.tenantId, connection.secretRef);
+  }
+
+  /** Decrypted `secrets:<id>` reference of the tenant (e.g. an MQTT CA under `tls.caRef`). */
+  async revealSecretRef(
+    tenantId: string,
+    ref: string | null | undefined,
+  ): Promise<string | null> {
+    if (!ref?.startsWith(SECRET_REF_PREFIX)) return null;
     const secret = await this.connections.manager.findOneBy(Secret, {
-      id: connection.secretRef.slice(SECRET_REF_PREFIX.length),
-      tenantId: connection.tenantId,
+      id: ref.slice(SECRET_REF_PREFIX.length),
+      tenantId,
     });
     return secret ? this.encryption.decrypt(secret.ciphertext) : null;
   }
@@ -277,6 +310,46 @@ export class IntegrationConnectionService {
       throw new UnprocessableEntityException({
         code: 'INVALID_ENDPOINT_CONFIG',
         message: problems.join('; '),
+        fieldErrors: problems.map(fieldErrorOf),
+      });
+    }
+  }
+
+  /**
+   * The adapter's check against the tenant's other active connections of the source type (plan 1.8
+   * duplicate-feed guard); a non-retryable adapter error is 422 with the adapter's code.
+   */
+  private async assertNoPeerConflict(
+    manager: EntityManager,
+    candidate: {
+      id: string | null;
+      tenantId: string;
+      sourceType: SourceType;
+      endpointConfig: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    const adapter = this.adapters.find(candidate.sourceType);
+    if (!adapter?.validateAmongPeers) return;
+    const peers = await manager.find(IntegrationConnection, {
+      select: ['id', 'displayName', 'endpointConfig'],
+      where: {
+        tenantId: candidate.tenantId,
+        sourceType: candidate.sourceType,
+        isActive: true,
+      },
+    });
+    try {
+      adapter.validateAmongPeers(
+        candidate.endpointConfig,
+        peers.filter((peer) => peer.id !== candidate.id),
+        candidate.id,
+      );
+    } catch (error) {
+      const classified = adapterErrorOf(error);
+      if (!classified || classified.retryable) throw error;
+      throw new UnprocessableEntityException({
+        code: classified.code,
+        message: classified.message,
       });
     }
   }
@@ -299,7 +372,7 @@ export class IntegrationConnectionService {
       if (updated.affected) return connection.secretRef as string;
     }
     return this.storeSecret(manager, connection.tenantId, {
-      kind: `${connection.sourceType}_secret`,
+      kind: secretKind(connection.sourceType),
       ciphertext,
     });
   }
@@ -314,6 +387,17 @@ export class IntegrationConnectionService {
     );
     return `${SECRET_REF_PREFIX}${saved.id}`;
   }
+}
+
+function secretKind(sourceType: SourceType): string {
+  return SECRET_KINDS[sourceType] ?? `${sourceType}_secret`;
+}
+
+function fieldErrorOf(problem: string): FieldError {
+  const match = FIELD_PROBLEM.exec(problem);
+  return match
+    ? { field: `endpointConfig.${match[1]}`, message: match[2] }
+    : { field: 'endpointConfig', message: problem };
 }
 
 function assertNoSecrets(config: Record<string, unknown>): void {

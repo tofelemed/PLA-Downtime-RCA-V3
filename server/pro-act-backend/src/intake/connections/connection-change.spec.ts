@@ -82,6 +82,100 @@ describe('assertSecretFollowsTarget', () => {
     });
   });
 
+  describe('mqtt connections (plan 1.8 §3)', () => {
+    const mqttStored = {
+      sourceType: 'mqtt' as const,
+      secretRef: 'secrets:9',
+      endpointConfig: {
+        mqtt: {
+          brokerUrl: 'mqtts://broker.plant.local:8883',
+          protocolVersion: 5,
+          username: 'proact-ingest',
+          tls: { mode: 'system' },
+          topics: ['proact/v1/+/+/+/+/events'],
+          qos: 1,
+          keepaliveSeconds: 60,
+          sessionExpirySeconds: 86400,
+          connectTimeoutSeconds: 30,
+          reconnect: { minSeconds: 1, maxSeconds: 60 },
+          maxMessageBytes: 65536,
+        },
+        payloadProfile: {
+          kind: 'interval_event_json',
+          topicTemplate: 'a/{unit}',
+        },
+      },
+    };
+    const withMqtt = (mqtt: Record<string, unknown>) => ({
+      endpointConfig: {
+        ...mqttStored.endpointConfig,
+        mqtt: { ...mqttStored.endpointConfig.mqtt, ...mqtt },
+      },
+    });
+    const mqttRefuses = (
+      change: Parameters<typeof assertSecretFollowsTarget>[1],
+    ) =>
+      expect(() => assertSecretFollowsTarget(mqttStored, change)).toThrow(
+        UnprocessableEntityException,
+      );
+    const mqttAllows = (
+      change: Parameters<typeof assertSecretFollowsTarget>[1],
+    ) =>
+      expect(() => assertSecretFollowsTarget(mqttStored, change)).not.toThrow();
+
+    it('allows topic, qos, timing, reconnect, size, availability and profile edits', () => {
+      mqttAllows(withMqtt({ topics: ['proact/v1/#'] }));
+      mqttAllows(withMqtt({ qos: 2 }));
+      mqttAllows(withMqtt({ keepaliveSeconds: 30 }));
+      mqttAllows(withMqtt({ sessionExpirySeconds: 3600 }));
+      mqttAllows(withMqtt({ connectTimeoutSeconds: 10 }));
+      mqttAllows(withMqtt({ reconnect: { minSeconds: 2, maxSeconds: 30 } }));
+      mqttAllows(withMqtt({ maxMessageBytes: 1024 }));
+      mqttAllows(
+        withMqtt({ availabilityTopic: 'proact/v1/+/gateway/availability' }),
+      );
+      mqttAllows({
+        endpointConfig: {
+          ...mqttStored.endpointConfig,
+          payloadProfile: {
+            kind: 'measurement_json',
+            topicTemplate: 'b/{unit}',
+          },
+        },
+      });
+    });
+
+    it('refuses broker, username, TLS, protocol version, client id and unknown keys without the credential', () => {
+      mqttRefuses(withMqtt({ brokerUrl: 'mqtts://evil.example:8883' }));
+      mqttRefuses(withMqtt({ brokerUrl: 'mqtts://broker.plant.local:8884' }));
+      mqttRefuses(withMqtt({ username: 'other' }));
+      mqttRefuses(withMqtt({ tls: { mode: 'insecure' } }));
+      mqttRefuses(withMqtt({ protocolVersion: 4 }));
+      mqttRefuses(withMqtt({ clientId: 'stolen-id' }));
+      mqttRefuses(withMqtt({ proxy: 'socks://x' }));
+      mqttRefuses({ endpointConfig: { payloadProfile: {} } });
+      mqttAllows({
+        ...withMqtt({ brokerUrl: 'mqtts://other:8883' }),
+        secret: 'new',
+      });
+    });
+
+    it('keeps the flat rule for other source types', () => {
+      expect(() =>
+        assertSecretFollowsTarget(
+          { ...stored, sourceType: 'pi_web_api' },
+          { endpointConfig: { ...stored.endpointConfig, pageSize: 10 } },
+        ),
+      ).not.toThrow();
+      expect(() =>
+        assertSecretFollowsTarget(
+          { ...stored, sourceType: 'rest_import' },
+          { endpointConfig: { ...stored.endpointConfig, topics: ['x'] } },
+        ),
+      ).toThrow(UnprocessableEntityException);
+    });
+  });
+
   it('does not apply when no credential is stored', () => {
     expect(() =>
       assertSecretFollowsTarget(
