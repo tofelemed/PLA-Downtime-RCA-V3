@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { readFileSync } from 'fs';
 import * as mqtt from 'mqtt';
 import { IPublishPacket, MqttClient } from 'mqtt';
 
@@ -10,10 +11,15 @@ import { IPublishPacket, MqttClient } from 'mqtt';
  * without DISCONNECT, and reconnects with the same client id and `clean: false`. The broker must redeliver
  * every message whose callback never ran and none whose callback did. Run for MQTT 5 and 3.1.1.
  *
- * Needs the `mqtt` Compose service (host port 1884 by default): `MQTT_TEST_URL` overrides the URL.
- * No database is used.
+ * Needs the `mqtt` Compose service (host port 1884 by default): `MQTT_TEST_URL` overrides the URL. For an
+ * authenticated or TLS listener (step 4: `mqtts://localhost:8885`) set `MQTT_TEST_USERNAME` /
+ * `MQTT_TEST_PASSWORD` (a user allowed to publish on `spike/#`, e.g. the dev `proact-sim`) and
+ * `MQTT_TEST_CA` (PEM path, e.g. docker/mosquitto/certs/dev-ca.crt). No database is used.
  */
 const BROKER_URL = process.env.MQTT_TEST_URL ?? 'mqtt://localhost:1884';
+const CA_PEM = process.env.MQTT_TEST_CA
+  ? readFileSync(process.env.MQTT_TEST_CA, 'utf8')
+  : null;
 const MESSAGES = 25;
 const ACKED_BEFORE_HOLD = 2;
 const SESSION_EXPIRY_SECONDS = 300;
@@ -70,6 +76,11 @@ function connectOptions(
       sessionExpiryInterval: clean ? 0 : SESSION_EXPIRY_SECONDS,
     };
   }
+  if (process.env.MQTT_TEST_USERNAME) {
+    options.username = process.env.MQTT_TEST_USERNAME;
+    options.password = process.env.MQTT_TEST_PASSWORD;
+  }
+  if (CA_PEM) options.ca = [CA_PEM];
   return options;
 }
 

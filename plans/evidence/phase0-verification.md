@@ -807,3 +807,113 @@ MQTT subscriber host, persist-before-ack and the MQTT normalisers (WP3 step 3 of
 - Touched for the typecheck only: `pi-legacy-job-link.ts` (`nextRunAt: Date | null`), `pi-sync-scheduler.service.ts` (`?? undefined`, plus prettier / lint autofixes on that file).
 
 **Open items:** `Reason Code` / `Impact Code` / `OEE Code` attribute names of the contract vs the catalog's `ReasonCode` / `ImpactCode` / `OEECode` (alias rules per template, WP2); WP4 R1 burst with a killed worker, R5 real Postgres outage, R6 broker restart drill, R12–R16 need the step-4 simulator and the lab broker; `counters.parked` is a per-heartbeat count query (fine at current volumes, revisit with D09-V); the API process still hosts an inert `MqttSubscriberHostJob` provider (by design, like the other schedulers); the 3.7 console MQTT panel (WP3 step 5) is not built, so the health object is only visible through `GET /v2/ingestion-jobs/:id`.
+
+# Plan 1.8 step 4 verification (11 Oct 2026)
+
+Compose broker hardening, publisher simulator, `test()` coverage on the authenticated listeners and the owner demo path (WP3 step 4 of `plans/phase-1/1.8-mqtt-integration-plan.md`; step 4 of `1.8-mqtt-adapter.md`). **No migration, no new dependency, no frontend change, no API contract change** (the `mqtt` endpoint config and the responses are unchanged; the OpenAPI snapshot is untouched).
+
+**Where things live.** `docker/mosquitto/`: `mosquitto.conf` (anonymous 1883/9001 unchanged; password listener 1885; TLS listener 8883; `per_listener_settings true`), `passwd` (dev-only hashed users `proact-test` / `proact-test-dev` read-only, `proact-sim` / `proact-sim-dev` read-write), `acl`, `gen-dev-certs.sh` + committed `certs/dev-ca.crt|key`, `dev-server.crt|key` (public dev material, 10 years). `docker-compose.yml` mounts them and publishes `MQTT_AUTH_PORT` 1885 and `MQTT_TLS_PORT` 8885; `.env.example` and `docs/DOCKER.md` ("Broker users and TLS (dev only)") document them. Backend: `scripts/mqtt/publish-sim.ts` (`npm run mqtt:sim`), `sim-messages.ts`, `sim-scenario-support.ts`, `sim-event-scenarios.ts`, `sim-scenarios.ts`; `test/integration/mqtt-adapter-auth.int-spec.ts`; `test/integration/mqtt-persist-before-ack-spike.int-spec.ts` reads `MQTT_TEST_CA` / `MQTT_TEST_USERNAME` / `MQTT_TEST_PASSWORD`. Docs: `docs/MQTT_LAB_TESTING.md` (owner demo path). Evidence: `plans/evidence/mqtt-certification.md` "Authenticated listeners, TLS spike re-run and the simulator".
+
+| Step | Result | Notes |
+|---|---|---|
+| `docker compose config -q` | ✅ exit 0 | after every compose / env change |
+| `docker compose up -d mqtt` (only the broker recreated) + `docker compose restart mqtt` after the conf edit | ✅ healthy; `0.0.0.0:1885->1885`, `1884->1883`, `8885->8883`, `8884->9001` | log: `Restored 1 clients`, `Restored 1 subscriptions` — the `mqtt-data` session volume survived; one deprecation line for `per_listener_settings` |
+| Broker checks from the host (mqtt.js): anonymous 1884 publish; wrong password 1885 (MQTT 5 and 3.1.1); no credentials; read-only user publish; sim user publish; TLS with CA; TLS without CA; TLS with a servername outside the SAN | ✅ all as expected (verbatim in `mqtt-certification.md`) | wrong password = CONNACK 0x87 `NotAuthorized` on mosquitto 2.1 (3.1.1 code 5); read-only publish = PUBACK 0x87; without CA `SELF_SIGNED_CERT_IN_CHAIN` |
+| Backend `npx tsc --noEmit -p tsconfig.json` | ✅ exit 0 | after the last edit |
+| Backend ESLint on the 7 new / touched `.ts` files | ✅ **0 errors, 1 warning** | the usual supertest `App` argument warning in the new spec |
+| `npx jest --selectProjects integration --runInBand test/integration/mqtt-adapter-auth.int-spec.ts` | ✅ **`Tests: 8 passed, 8 total` · `Time: 12.754 s`** | log `adapter-auth.log` in the session scratchpad |
+| `... mqtt-adapter.int-spec.ts` (existing spec, anonymous 1884 after the broker change) | ✅ `PASS integration test/integration/mqtt-adapter.int-spec.ts (8.416 s)` — 15 tests (in the first combined run `Tests: 1 failed, 22 passed, 23 total`; the one failure was the new servername case before it was moved to an IP URL, re-run green above) | log `adapter-auth-and-adapter.log` |
+| Spike on the TLS listener (`MQTT_TEST_URL=mqtts://localhost:8885`, `MQTT_TEST_CA`, `MQTT_TEST_USERNAME=proact-sim`) | ✅ **`Tests: 4 passed, 4 total` · `Time: 15.495 s`** | log `spike-tls.log`; output verbatim in `mqtt-certification.md` |
+| Regression: `mqtt-subscriber-e2e`, `mqtt-subscriber-redelivery`, `mqtt-subscriber-lifecycle` against the recreated broker | ✅ **`Test Suites: 3 passed, 3 total` · `Tests: 14 passed, 14 total` · `Time: 36.298 s`** | log `subscriber-regression.log` |
+| Simulator, every scenario against 1884 with a logging subscriber on `proact/#` | ✅ 230 deliveries, counts match the publishes; the Last Will OFFLINE (no `seq`) arrived 2 s after `--crash` | logs `sim-runs-1884.log`, `sim-delivered-*.log`; first lines below |
+| Simulator against 8885 with CA as `proact-sim`; 8885 without CA; 1885 wrong password; 1885 as read-only `proact-test`; MQTT 3.1.1 on 1884; no scenario (usage) | ✅ connect + publish OK / `self-signed certificate in certificate chain` / `Connection refused: Not authorized` / `Publish error: Not authorized` / OK / usage printed | log `sim-runs-auth.log`; first lines below |
+| Line endings | ✅ `docker-compose.yml`, `.env.example`, `docs/DOCKER.md` still CRLF; everything else LF | checked with `file` |
+| Servers / Docker | Compose stack left running; only `mqtt` recreated / restarted; no API / Vite started; `.env` untouched | `proact-postgres` (5432) used by the integration specs as before |
+
+**Simulator runs against `mqtt://localhost:1884` (first lines of each scenario, Nest log prefix stripped):**
+
+```
+### npm run mqtt:sim -- open-close --seed demo --hold 2
+LOG [MqttSim] connected to mqtt://localhost:1884 as sim-1t12lhn3 (MQTT 5, user anonymous, sessionPresent=false)
+LOG [MqttSim] scenario open-close: boot_id=gw-sim-01-boot-95fe01cc7f4d events=proact/v1/HDPE/Polymer/Line1/Extruder1/events seed=demo
+LOG [MqttSim] proact/v1/HDPE/Polymer/Line1/Extruder1/events seq=0 bytes=499 event_id=EF-sim-f074bfe8f993 revision=2026-10-11T12:45:04.993Z -> accepted
+LOG [MqttSim] proact/v1/HDPE/Polymer/Line1/Extruder1/events seq=1 bytes=521 event_id=EF-sim-f074bfe8f993 revision=2026-10-11T12:45:07.000Z -> closed
+### npm run mqtt:sim -- burst --seed demo --count 200 --rate 100
+LOG [MqttSim] connected to mqtt://localhost:1884 as sim-p2mpmrrc (MQTT 5, user anonymous, sessionPresent=false)
+LOG [MqttSim] scenario burst: boot_id=gw-sim-01-boot-95fe01cc7f4d events=proact/v1/HDPE/Polymer/Line1/Extruder1/events seed=demo
+LOG [MqttSim] burst 100/200 seq=99 boot_id=gw-sim-01-boot-95fe01cc7f4d
+LOG [MqttSim] burst 200/200 seq=199 boot_id=gw-sim-01-boot-95fe01cc7f4d
+### npm run mqtt:sim -- measurements --count 3 --every 1
+LOG [MqttSim] connected to mqtt://localhost:1884 as sim-a6ipxkvo (MQTT 5, user anonymous, sessionPresent=false)
+LOG [MqttSim] scenario measurements: boot_id=gw-sim-01-2026-10-11T12:45:18.495Z events=proact/v1/HDPE/Polymer/Line1/Extruder1/events
+LOG [MqttSim] proact/v1/HDPE/Polymer/Line1/Extruder1/measurements/Throughput seq=0 bytes=252 signal=F1DPwebid-throughput value=1500 t
+LOG [MqttSim] proact/v1/HDPE/Polymer/Line1/Extruder1/measurements/RunState seq=1 bytes=260 signal=F1DPwebid-runstate RUN
+### npm run mqtt:sim -- state --sequence RUN,STOP,RUN --every 1
+LOG [MqttSim] connected to mqtt://localhost:1884 as sim-zuz1b4yd (MQTT 5, user anonymous, sessionPresent=false)
+LOG [MqttSim] scenario state: boot_id=gw-sim-01-2026-10-11T12:45:24.037Z events=proact/v1/HDPE/Polymer/Line1/Extruder1/events
+LOG [MqttSim] RETAINED proact/v1/HDPE/Polymer/Line1/Extruder1/state seq=0 bytes=189 state=RUN previous=- (parked no_handler until 1.10)
+LOG [MqttSim] RETAINED proact/v1/HDPE/Polymer/Line1/Extruder1/state seq=1 bytes=226 state=STOP previous=RUN (parked no_handler until 1.10)
+### npm run mqtt:sim -- availability --hold 2
+LOG [MqttSim] connected to mqtt://localhost:1884 as sim-aro67mvc (MQTT 5, user anonymous, sessionPresent=false)
+LOG [MqttSim] scenario availability: boot_id=gw-sim-01-2026-10-11T12:45:29.266Z events=proact/v1/HDPE/Polymer/Line1/Extruder1/events
+LOG [MqttSim] RETAINED proact/v1/HDPE/gateway/availability seq=0 bytes=169 sourceAvailable=true
+LOG [MqttSim] holding 2 s (the Last Will OFFLINE is registered on this topic)
+### npm run mqtt:sim -- availability --hold 2 --crash
+LOG [MqttSim] connected to mqtt://localhost:1884 as sim-48mvzw67 (MQTT 5, user anonymous, sessionPresent=false)
+LOG [MqttSim] scenario availability: boot_id=gw-sim-01-2026-10-11T12:45:34.483Z events=proact/v1/HDPE/Polymer/Line1/Extruder1/events
+LOG [MqttSim] RETAINED proact/v1/HDPE/gateway/availability seq=0 bytes=169 sourceAvailable=true
+LOG [MqttSim] holding 2 s (the Last Will OFFLINE is registered on this topic)
+### npm run mqtt:sim -- duplicates --seed demo
+LOG [MqttSim] connected to mqtt://localhost:1884 as sim-h58g7d77 (MQTT 5, user anonymous, sessionPresent=false)
+LOG [MqttSim] scenario duplicates: boot_id=gw-sim-01-boot-95fe01cc7f4d events=proact/v1/HDPE/Polymer/Line1/Extruder1/events seed=demo
+LOG [MqttSim] proact/v1/HDPE/Polymer/Line1/Extruder1/events seq=0 bytes=496 event_id=EF-sim-f074bfe8f993 revision=2026-10-11T12:41:40.228Z -> accepted (open)
+LOG [MqttSim] proact/v1/HDPE/Polymer/Line1/Extruder1/events seq=1 bytes=518 event_id=EF-sim-f074bfe8f993 revision=2026-10-11T12:44:00.737Z -> revision (closed)
+### npm run mqtt:sim -- poison
+LOG [MqttSim] connected to mqtt://localhost:1884 as sim-hkypfmpb (MQTT 5, user anonymous, sessionPresent=false)
+LOG [MqttSim] scenario poison: boot_id=gw-sim-01-2026-10-11T12:45:45.320Z events=proact/v1/HDPE/Polymer/Line1/Extruder1/events
+LOG [MqttSim] proact/v1/HDPE/Polymer/Line1/Extruder1/events seq=- bytes=8 -> not_json
+LOG [MqttSim] proact/v1/HDPE/Polymer/Line1/Extruder1/events seq=0 bytes=72164 -> too_large (> 65536 bytes)
+### npm run mqtt:sim -- clear
+LOG [MqttSim] connected to mqtt://localhost:1884 as sim-jrj1el6l (MQTT 5, user anonymous, sessionPresent=false)
+LOG [MqttSim] scenario clear: boot_id=gw-sim-01-2026-10-11T12:45:48.693Z events=proact/v1/HDPE/Polymer/Line1/Extruder1/events
+LOG [MqttSim] cleared the retained message on proact/v1/HDPE/Polymer/Line1/Extruder1/state
+LOG [MqttSim] cleared the retained message on proact/v1/HDPE/gateway/availability
+```
+
+**Authenticated / TLS / 3.1.1 runs:**
+
+```
+### TLS 8885 with CA as proact-sim (MQTT_SIM_PASSWORD set in env, not shown)
+LOG [MqttSim] connected to mqtts://localhost:8885 as sim-eqz10sta (MQTT 5, user proact-sim, sessionPresent=false)
+LOG [MqttSim] scenario open-close: boot_id=gw-sim-01-boot-1f0f6ff0b68f events=proact/v1/HDPE/Polymer/Line1/Extruder1/events seed=tls
+LOG [MqttSim] proact/v1/HDPE/Polymer/Line1/Extruder1/events seq=0 bytes=499 event_id=EF-sim-c09dffdfd95d revision=2026-10-11T12:46:27.274Z -> accepted
+### TLS 8885 without CA
+WARN [MqttSim] mqtts:// without --ca: the system trust store must know the broker certificate
+ERROR [MqttSim] self-signed certificate in certificate chain
+### 1885 wrong password
+ERROR [MqttSim] Connection refused: Not authorized
+### 1885 read-only user tries to publish
+LOG [MqttSim] connected to mqtt://localhost:1885 as sim-gyw7xyr2 (MQTT 5, user proact-test, sessionPresent=false)
+LOG [MqttSim] scenario open-close: boot_id=gw-sim-01-2026-10-11T12:46:40.780Z events=proact/v1/HDPE/Polymer/Line1/Extruder1/events
+ERROR [MqttSim] Publish error: Not authorized
+### MQTT 3.1.1 on 1884
+LOG [MqttSim] connected to mqtt://localhost:1884 as sim-qack515o (MQTT 3.1.1, user anonymous, sessionPresent=false)
+LOG [MqttSim] scenario state: boot_id=gw-sim-01-2026-10-11T12:46:44.186Z events=proact/v1/HDPE/Polymer/Line1/Extruder1/events
+LOG [MqttSim] RETAINED proact/v1/HDPE/Polymer/Line1/Extruder1/state seq=0 bytes=189 state=RUN previous=- (parked no_handler until 1.10)
+### no scenario (usage)
+LOG [MqttSim] usage: npm run mqtt:sim -- <scenario> [options]
+scenarios:
+  open-close     [--hold 5] one event: open, closed after --hold s, attribute update, delete
+```
+
+**Deviations / decisions taken here (flag if wrong):**
+- A **second dev user `proact-sim` (read-write)** was added next to the asked-for read-only `proact-test`: the simulator and the spike publisher must be able to publish on the authenticated listeners, and a read-only user cannot. Both passwords and the certificate private keys are committed on purpose (dev only, said so in every file and in `docs/DOCKER.md`).
+- The password listener needed a host port of its own: **`MQTT_AUTH_PORT` (default 1885)** in `docker-compose.yml` / `.env.example` next to the asked-for `MQTT_TLS_PORT` (8885). Host port 1885 was free (the host's mosquitto owns 1883/8883).
+- Certificates are generated by `gen-dev-certs.sh` with the host's `openssl` (the mosquitto 2.1 image has no openssl; the script header gives a `docker run alpine` alternative) and **committed**, so `docker compose up` works without a generation step.
+- `mosquitto.conf` uses `per_listener_settings true` (deprecated in 2.1, removed in 3.0) with `listener_allow_anonymous`: it is the only way to keep 1883 anonymous (credentials ignored, as the existing specs rely on) while 1885/8883 check the password file. Mosquitto also warns that the bind-mounted password file is world-readable on Windows; 3.0 will refuse it.
+- The wrong-password assertion accepts `BadUserNameOrPassword` **or** `NotAuthorized`: mosquitto 2.1 sends 0x87.
+- `tls.servername` is only honoured by mqtt.js for IP broker hosts (a DNS host overrides the SNI); the spec uses `mqtts://127.0.0.1:8885` for that case and the caveat is recorded for the step-5 console text.
+- Simulator defaults send the catalog attribute names (`ReasonCode`, `Quantity`, `Description`) so events flow end to end today; `--contract-attribute-names` sends the contract's spaced names (WP2 alias rules still open). With `--seed`, the scenario name is part of the seed so two scenarios run with one seed do not share event ids. An extra `clear` scenario removes the retained messages the runs leave on the broker.
+- `scripts/mqtt/` reuses `parseCliArgs` from `src/migration-cutover/cli/cli-args.ts` like the other scripts; the Nest `Logger` is the output channel (no `console.log`).
+
+**Open items:** lab broker run of the spike and of the simulator (owner answer #1); the R1 1 000-message burst against the worker with a kill, R5 Postgres outage and R12 load (the sequential `publishAsync` caps one simulator at about 60 msg/s; pipelining or several processes are needed for the OT rate); the 3.7 console MQTT panel (step 5) should state the `tls.servername` IP-only caveat; `per_listener_settings` must be replaced before a mosquitto 3.0 upgrade (two broker containers or plugin-based auth); the integration spec defaults embed the dev password (override with `MQTT_TEST_PASSWORD` for any other broker).

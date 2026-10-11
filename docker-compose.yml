@@ -9,6 +9,7 @@
 # Backend:  http://localhost:${BACKEND_PORT:-4004}/api/health, Swagger at /api
 # Kafka:    localhost:${KAFKA_PORT:-9092} from the host, kafka:29092 from other containers
 # MQTT:     mqtt://localhost:${MQTT_PORT:-1884} from the host, mqtt://mqtt:1883 from other containers
+#           password listener mqtt://localhost:${MQTT_AUTH_PORT:-1885}, TLS mqtts://localhost:${MQTT_TLS_PORT:-8885} (docker/mosquitto/)
 #
 # Overrides (combine with -f docker-compose.yml -f <override>):
 #   docker-compose.external-db.yml    reuse the shared instrumental-postgres container
@@ -183,17 +184,26 @@ services:
       - "${KAFKA_UI_PORT:-8085}:8080"
 
   mqtt:
-    # Dev broker, anonymous access (docker/mosquitto/mosquitto.conf). The host's mosquitto keeps 1883/8883.
+    # Dev broker (docker/mosquitto/mosquitto.conf): anonymous on 1883/9001; password + ACL on 1885 and on the
+    # TLS listener 8883 with a committed dev-only self-signed certificate (docker/mosquitto/gen-dev-certs.sh).
+    # The host's mosquitto keeps 1883/8883, hence the shifted host ports.
     # 2.1.x is only published as -alpine on Docker Hub (plain 2.1.2 exists only as a local tag on some hosts).
     image: eclipse-mosquitto:2.1.2-alpine
     restart: unless-stopped
     volumes:
       - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./docker/mosquitto/passwd:/mosquitto/config/passwd:ro
+      - ./docker/mosquitto/acl:/mosquitto/config/acl:ro
+      - ./docker/mosquitto/certs:/mosquitto/config/certs:ro
       - mqtt-data:/mosquitto/data
     ports:
       - "${MQTT_PORT:-1884}:1883"
       # MQTT over WebSockets (browser clients)
       - "${MQTT_WS_PORT:-8884}:9001"
+      # Password-protected plain listener (dev users proact-test / proact-sim, see docker/mosquitto/passwd)
+      - "${MQTT_AUTH_PORT:-1885}:1885"
+      # TLS listener; clients trust docker/mosquitto/certs/dev-ca.crt
+      - "${MQTT_TLS_PORT:-8885}:8883"
     healthcheck:
       test: ["CMD-SHELL", "mosquitto_sub -h 127.0.0.1 -p 1883 -t '$$SYS/broker/uptime' -C 1 -W 5 -i healthcheck >/dev/null || exit 1"]
       interval: 10s

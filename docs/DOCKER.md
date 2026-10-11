@@ -7,7 +7,7 @@ Everything needed to run the platform in containers lives at the repo root:
 | `Dockerfile` | Frontend image: Vite build served by nginx, which also reverse-proxies the backend |
 | `docker/nginx/default.conf.template` | nginx config (SPA fallback + proxy for `/api`, `/uploads`, `/socket.io`, `/piwebapi`) |
 | `server/pro-act-backend/Dockerfile` | Backend image: NestJS compiled to `dist/`, production dependencies only; `PROCESS_ROLE=api\|worker\|all` selects the entrypoint |
-| `docker/mosquitto/mosquitto.conf` | Dev MQTT broker config (anonymous access, persistence, MQTT + WebSockets listeners) |
+| `docker/mosquitto/mosquitto.conf` | Dev MQTT broker config: anonymous MQTT + WebSockets listeners, a password-protected listener and a TLS listener (plan 1.8 step 4); `passwd` / `acl` hold the dev-only users, `certs/` the dev CA + server certificate from `gen-dev-certs.sh` |
 | `docker-compose.yml` | `frontend` + `backend` (API) + `worker` + bundled `postgres`, `kafka`, `mqtt`; `kafka-ui` behind the `tools` profile |
 | `docker-compose.external-db.yml` | Override that points backend and worker at the shared `instrumental-postgres` container instead |
 | `docker-compose.shared-infra.yml` | Override that reuses the host's `instrumental-kafka-*` cluster and `mosquitto` broker instead of the bundled ones |
@@ -31,11 +31,11 @@ Then open http://localhost:8070 and log in with `test@example.com` / `Test123!@#
 | worker | (no host port) | Schedulers/connectors (`PROCESS_ROLE=worker`); probes on `:4005/health/live` and `/health/ready` inside the container |
 | postgres | `localhost:5433` | database `proact`; 5433 because the shared container already uses 5432 |
 | kafka | `localhost:9092` | single-node KRaft broker (cp-kafka 7.5.0); other containers use `kafka:29092` |
-| mqtt | `mqtt://localhost:1884`, WebSockets `ws://localhost:8884` | eclipse-mosquitto 2.1.2, anonymous; other containers use `mqtt://mqtt:1883` |
+| mqtt | `mqtt://localhost:1884`, WebSockets `ws://localhost:8884`; with password `mqtt://localhost:1885`; TLS `mqtts://localhost:8885` | eclipse-mosquitto 2.1.2; 1884/8884 anonymous, 1885/8885 need a dev user (see [Broker users and TLS](#broker-users-and-tls-dev-only)); other containers use `mqtt://mqtt:1883` (`mqtts://mqtt:8883`) |
 | kafka-ui | http://localhost:8085 | optional: `docker compose --profile tools up -d kafka-ui` |
 
 The host ports come from the `*_PORT` keys in `.env` (`FRONTEND_PORT`, `BACKEND_PORT`, `POSTGRES_PORT`, `KAFKA_PORT`,
-`KAFKA_UI_PORT`, `MQTT_PORT`, `MQTT_WS_PORT`). The frontend/backend defaults match the local dev servers, so stop
+`KAFKA_UI_PORT`, `MQTT_PORT`, `MQTT_WS_PORT`, `MQTT_AUTH_PORT`, `MQTT_TLS_PORT`). The frontend/backend defaults match the local dev servers, so stop
 `npm run dev` / `npm run start:dev` first or pick other ports. The Kafka and MQTT defaults avoid the host's own
 containers: `mosquitto` owns 1883/8883 (hence 1884/8884), `instrumental-kafka-ui` owns 8080 (hence 8085), and
 `instrumental-kafka-1` owns 9092 only while that cluster is running (change `KAFKA_PORT` or use the shared-infra
@@ -81,7 +81,8 @@ All settings are read by `docker compose` from `.env` (or the shell environment)
 | `POSTGRES_PORT` | `5433` | compose | Host port for the bundled Postgres |
 | `KAFKA_PORT` | `9092` | compose, kafka | Host port of the bundled broker (also its advertised `localhost:` listener) |
 | `KAFKA_UI_PORT` | `8085` | compose | Host port of `kafka-ui` (`tools` profile) |
-| `MQTT_PORT` / `MQTT_WS_PORT` | `1884` / `8884` | compose | Host ports of the bundled broker (MQTT / MQTT over WebSockets) |
+| `MQTT_PORT` / `MQTT_WS_PORT` | `1884` / `8884` | compose | Host ports of the bundled broker (MQTT / MQTT over WebSockets), anonymous |
+| `MQTT_AUTH_PORT` / `MQTT_TLS_PORT` | `1885` / `8885` | compose | Host ports of the password-protected listener and the TLS listener (container 1885 / 8883) |
 | `POSTGRES_USER` | `postgres` | postgres, backend, worker | Database user |
 | `POSTGRES_PASSWORD` | required | postgres, backend, worker | Database password |
 | `POSTGRES_DB` | `proact` | postgres, backend, worker | Database name |
@@ -172,6 +173,36 @@ re-map (`KAFKA_PORT`).
 * Kafka from the host: `kafka-topics --bootstrap-server localhost:9092 --list` (or `docker compose exec kafka kafka-topics --bootstrap-server kafka:29092 --list`).
   MQTT from the host: `mosquitto_sub -h localhost -p 1884 -t 'proact/#'`.
 
+## Broker users and TLS (dev only)
+
+The bundled broker keeps the anonymous listeners for everyday development and adds, for the MQTT adapter tests
+(plan 1.8 step 4), two authenticated listeners that behave like a plant broker (OT contract §1: password, TLS,
+read-only ACL). Everything under `docker/mosquitto/` is committed and **public**: use these users and certificates
+only against this Compose stack.
+
+| Item | Value |
+|------|-------|
+| Password listener | `mqtt://localhost:1885` (container `mqtt:1885`), no anonymous access |
+| TLS listener | `mqtts://localhost:8885` (container `mqtt:8883`), TLS 1.2+, no client certificate required; same users and ACL |
+| CA to trust | `docker/mosquitto/certs/dev-ca.crt`; the server certificate's SAN lists `localhost`, `mqtt`, `proact-mqtt-1`, `host.docker.internal`, `127.0.0.1`, `::1` |
+| `proact-test` / `proact-test-dev` | read-only on `proact/#` and `test/#` (what a Pro-Act subscriber gets on the plant broker) |
+| `proact-sim` / `proact-sim-dev` | read-write on `proact/#`, `test/#`, `spike/#` (the simulated gateway, `npm run mqtt:sim`, and the persist-before-ack spike) |
+
+```bash
+# from the host (mosquitto clients) or inside the container with -h mqtt -p 1885 / --cafile /mosquitto/config/certs/dev-ca.crt -p 8883
+mosquitto_sub -h localhost -p 1885 -u proact-test -P proact-test-dev -t 'proact/#' -v
+mosquitto_pub -h localhost -p 8885 --cafile docker/mosquitto/certs/dev-ca.crt -u proact-sim -P proact-sim-dev -t test/x -m hi
+```
+
+* Regenerate the certificates (10-year validity, or to change the SAN): `sh docker/mosquitto/gen-dev-certs.sh`, then
+  `docker compose restart mqtt`. Needs `openssl` on the host (Git Bash has one); the script header shows the
+  container alternative.
+* Change or add a user: hash it inside the container (`docker compose exec -T mqtt sh -c 'printf "user:pass\n" > /tmp/pw && mosquitto_passwd -U /tmp/pw && cat /tmp/pw'`),
+  paste the line into `docker/mosquitto/passwd`, add its `user` block to `docker/mosquitto/acl`, `docker compose restart mqtt`.
+* `mosquitto.conf` uses `per_listener_settings true` (deprecated in 2.1, removed in 3.0) because it is the only way
+  to keep 1883 anonymous while 1885/8883 check the password file; mosquitto logs the deprecation at start.
+  The bind-mounted password file is world-readable on Windows hosts; mosquitto 2.1 warns and 3.0 will refuse it.
+
 ## Troubleshooting
 
 | Symptom | Check |
@@ -210,7 +241,8 @@ to narrow a run.
 * Put TLS termination (a reverse proxy or load balancer) in front of the `frontend` container and drop the
   `BACKEND_PORT` mapping if the API should not be reachable directly.
 * The bundled `kafka` and `mqtt` services are development conveniences: single broker, no authentication, anonymous
-  MQTT. Point `KAFKA_BROKERS` / `MQTT_URL` at managed brokers in production and run the worker as its own
+  MQTT (the authenticated listeners use committed, public dev credentials and a self-signed certificate).
+  Point `KAFKA_BROKERS` / `MQTT_URL` at managed brokers in production and run the worker as its own
   deployment (scale the API independently; keep exactly one migration runner).
 * Schema changes are versioned migrations (`npm run migration:generate|run|revert|show` in the backend, see
   `server/pro-act-backend/src/database/MIGRATIONS.md`). Entity auto-synchronisation is disabled everywhere.

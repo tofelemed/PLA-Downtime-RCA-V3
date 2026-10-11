@@ -1,0 +1,16 @@
+# DEV ONLY ACL of the bundled Compose broker, applied to the authenticated listeners (1885 plain, 8883 TLS)
+# in mosquitto.conf. The anonymous listeners (1883, 9001) have no ACL and keep full access.
+#
+# No rules before the first `user` line: anonymous clients have no access on these listeners
+# (allow_anonymous is false there anyway).
+
+# What a Pro-Act subscriber gets on the lab/plant broker (OT contract section 1): read-only on its topic filters.
+user proact-test
+topic read proact/#
+topic read test/#
+
+# The simulated gateway (scripts/mqtt/publish-sim.ts) and the persist-before-ack spike publish here.
+user proact-sim
+topic readwrite proact/#
+topic readwrite test/#
+topic readwrite spike/#

@@ -81,10 +81,8 @@ parser, duplicate-feed guard, options factory (TLS modes, derived client id, egr
 leakage), `assertSecretFollowsTarget` MQTT keys, and `POST /v2/connections` (mqtt) / `discover` / `test`
 against the Compose broker (`test/integration/mqtt-adapter.int-spec.ts`).
 
-Wrong-password `test()` is **not** covered yet: the dev mosquitto is anonymous (no `password_file`), so any
-credentials are accepted; the unreachable-broker (`ECONNREFUSED`) and egress-denied paths are covered
-instead. The password-protected listener arrives with WP3 step 4 (Compose TLS + password file), which will
-add the `BadUserNameOrPassword` case to the same spec.
+Wrong-password `test()` was not coverable in step 1 (anonymous dev mosquitto); step 4 added the password and
+TLS listeners and `test/integration/mqtt-adapter-auth.int-spec.ts` (see "Authenticated listeners" below).
 
 ## Live path on the Compose broker (WP3 step 3) — 11 Oct 2026
 
@@ -117,3 +115,89 @@ simulator and the real gateway; this is the Compose-broker evidence):**
 | R10 | Clock skew | ✅ future `ts` rejected (`redelivery` d); stale window by the step-2 `time-rules` spec | an 8-day-old message through the live path |
 | R11 | Unmapped machine / code | ✅ parked `unknown_template` / `unknown_code` / `unknown_signal` with counters (`e2e`); the resolver is loaded per record, so a mapping added later flows on the next message without a restart | the "mapping added → flows" assertion through the live path |
 | R12–R16 | load, outage window, security, erase-after-insert, MQTT 3.1.1 live | — (3.1.1 is covered by the spike only) | WP4 |
+
+## Authenticated listeners, TLS spike re-run and the simulator (WP3 step 4) — 11 Oct 2026
+
+**Broker.** The bundled Compose `mqtt` service (`docker/mosquitto/mosquitto.conf`, mosquitto 2.1.2) keeps the
+anonymous listeners 1883 (host 1884) and 9001 (host 8884) unchanged and adds, with `per_listener_settings true`
+(deprecated in 2.1 but the only way to keep 1883 anonymous), a password listener 1885 (host `MQTT_AUTH_PORT`
+1885) and a TLS listener 8883 (host `MQTT_TLS_PORT` 8885, `tls_version tlsv1.2`, dev CA + server certificate from
+`docker/mosquitto/gen-dev-certs.sh`, SAN localhost / mqtt / proact-mqtt-1 / host.docker.internal / 127.0.0.1 /
+::1, 10 years). Both authenticated listeners share `docker/mosquitto/passwd` (dev-only users `proact-test`
+read-only on `proact/#`, `test/#`; `proact-sim` read-write on `proact/#`, `test/#`, `spike/#`) and
+`docker/mosquitto/acl`. `docker compose config -q` passes; `docker compose up -d mqtt` recreated only the broker
+container; the `mqtt-data` volume survived (`Restored 1 clients`, `Restored 1 subscriptions` in the log).
+
+**Host checks with mqtt.js 5.14.0 (scratchpad `broker-check.js`, verbatim):**
+
+```
+anon-1884-publish: CONNECTED, publish OK
+wrong-password-1885: ERROR code=135 message=Connection refused: Not authorized
+wrong-password-1885-v311: ERROR code=5 message=Connection refused: Not authorized
+no-credentials-1885: ERROR code=135 message=Connection refused: Not authorized
+readonly-user-1885-publish: CONNECTED, publish refused: Publish error: Not authorized (reasonCode 135)
+sim-user-1885-publish: CONNECTED, publish OK
+tls-8885-with-ca: CONNECTED, publish OK
+tls-8885-without-ca: ERROR code=SELF_SIGNED_CERT_IN_CHAIN message=self-signed certificate in certificate chain
+tls-8885-with-ca-wrong-name: ERROR code=ERR_TLS_CERT_ALTNAME_INVALID message=Hostname/IP does not match certificate's altnames: Host: nothere.local. is not in the cert's altnames: DNS:localhost, DNS:mqtt, DNS:proact-mqtt-1, DNS:host.docker.internal, IP Address:127.0.0.1, IP Address:0:0:0:0:0:0:0:1
+```
+
+Finding: mosquitto 2.1 answers a wrong password with CONNACK **0x87 NotAuthorized** (3.1.1: return code 5), not
+0x86 BadUserNameOrPassword; the adapter message is therefore `Broker refused connection: NotAuthorized`
+(non-retryable, same operator action). Broker log for the refusals: `disconnected: not authorised.`; the ACL
+denial of a QoS 1 publish is a PUBACK with reason 0x87 on MQTT 5 (mqtt.js rejects `publishAsync`), silently
+dropped on 3.1.1 as the protocol requires.
+
+**`test()` coverage (`test/integration/mqtt-adapter-auth.int-spec.ts`, `npx jest --selectProjects integration
+--runInBand`, verbatim):**
+
+```
+PASS integration test/integration/mqtt-adapter-auth.int-spec.ts (12.47 s)
+      √ connects with the right password (704 ms)
+      √ reports a wrong password as FAILED with the broker reason, non-retryable (MQTT protocol 5) (312 ms)
+      √ reports a wrong password as FAILED with the broker reason, non-retryable (MQTT protocol 4) (295 ms)
+      √ the read-only subscriber user may subscribe but not publish (ACL) (266 ms)
+      √ connects with the CA (tls.mode caPem) (343 ms)
+      √ fails without the CA (tls.mode system) and points at the SAN / servername / CA settings (309 ms)
+      √ fails with the CA when tls.servername is not in the SAN (IP broker URL: for a DNS host mqtt.js verifies the host itself) (42 ms)
+      √ connects without verification in tls.mode insecure (dev only) (349 ms)
+Tests:       8 passed, 8 total
+```
+
+Caveat found by the servername case: mqtt.js (`build/lib/connect/tls.js`) sets `servername = host` whenever the
+broker host is not an IP literal, so the connection setting `tls.servername` only takes effect for IP broker URLs
+(the reference's "certificate does not list the host" case is an IP address, so this is the intended use); for a
+DNS host the certificate is verified against that host name. The console / validation should say so (step 5).
+
+**Persist-before-ack spike on the TLS listener** (`MQTT_TEST_URL=mqtts://localhost:8885
+MQTT_TEST_CA=../../docker/mosquitto/certs/dev-ca.crt MQTT_TEST_USERNAME=proact-sim MQTT_TEST_PASSWORD=...`;
+the spec now reads these four variables), verbatim:
+
+```
+[SPIKE MQ04 v5] acked=2 held=1 published=25 redelivered=23 dup=20 (broker in-flight window) not-dup=3 (queued, never sent before the crash); held packetId=3 redelivered packetId=3
+[SPIKE MQ04 v5] keepalive 2s, callback held 4s: events=held,error:Keepalive timeout,close
+[SPIKE MQ04 v4] acked=2 held=1 published=25 redelivered=23 dup=20 (broker in-flight window) not-dup=3 (queued, never sent before the crash); held packetId=3 redelivered packetId=3
+[SPIKE MQ04 v4] keepalive 2s, callback held 4s: events=held,error:Keepalive timeout,close
+PASS integration test/integration/mqtt-persist-before-ack-spike.int-spec.ts (15.248 s)
+Tests:       4 passed, 4 total
+```
+
+Same result as on the plain listener (MQ04 holds over TLS 1.3 with password authentication; the broker log shows
+`negotiated TLSv1.3 cipher TLS_AES_256_GCM_SHA384`). The lab broker run (owner answer #1) is still pending.
+
+**Publisher simulator** `scripts/mqtt/publish-sim.ts` (`npm run mqtt:sim -- <scenario>`; modules
+`sim-messages.ts`, `sim-scenario-support.ts`, `sim-event-scenarios.ts`, `sim-scenarios.ts`): contract v1
+messages on `{ns}/{site}/{area}/{line}/{unit}/...`, QoS 1, client id `sim-<random>`, password only from
+`MQTT_SIM_PASSWORD`, `--ca` / `--insecure` for mqtts, `--protocol 4|5`, `--seed` for reproducible boot and
+event ids. Every scenario ran against 1884 with a logging subscriber on `proact/#` (scratchpad
+`sim-runs-1884.log`, `sim-delivered-*.log`): 230 deliveries = 4 (open-close) + 200 (burst) + 6 (measurements)
++ 3 (state) + 2 + 2 (availability, the second pair being the retained ONLINE and the **broker-published Last Will
+OFFLINE without `seq`** after `--crash`) + 5 (duplicates) + 5 (poison) + 3 (clear). First lines of each run and
+the authenticated runs (`sim-runs-auth.log`) are in `plans/evidence/phase0-verification.md`, "Plan 1.8 step 4".
+`burst --count 200 --rate 100` achieved 63 msg/s because each publish awaits its PUBACK; the R12 rate target
+needs a pipelined publisher or several simulator processes (open item).
+
+**R-table update:** R7 "broker publishing the will itself" is now exercised by `availability --crash`; R9/R10
+have a reusable `poison` scenario; R14 "read-only ACL verified by attempting a publish" and "TLS 1.2+ enforced"
+are proven on the Compose broker (`tls_version tlsv1.2`, TLS 1.3 negotiated); R1 burst / R12 load still need the
+run against the subscriber host with a killed worker (WP4).
