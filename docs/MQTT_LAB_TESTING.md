@@ -10,6 +10,47 @@ reads through the API. The API path stays valid and is what this document shows.
 What you need: the Compose stack (`docker compose up -d`, see `docs/DOCKER.md`), `curl`, and the backend
 dependencies installed (`cd server/pro-act-backend && npm ci --legacy-peer-deps`) for `npm run mqtt:sim`.
 
+## 0. One-command demo
+
+Sections 2–4 by hand are the way to learn the model. To just see the simulator's events and samples land in
+one tenant, the demo seeder does the same configuration through the v2 API, idempotently
+(`server/pro-act-backend/scripts/demo-mqtt/`, demo data only, never product defaults):
+
+```bash
+cd server/pro-act-backend
+npm run db:seed-demo-mqtt -- --demo-plant --dry-run     # shows what it would create; nothing is written
+npm run db:seed-demo-mqtt -- --demo-plant               # Demo Plant (the demo manager's own tenant)
+npm run db:seed-demo-mqtt -- --tenant <uuid>            # any tenant the seed account may write to
+npm run mqtt:sim -- open-close --seed demo --hold 3     # one event: open → closed → attributes changed → retracted
+npm run mqtt:sim -- measurements --every 1 --count 3    # three counter samples and three run-state samples
+```
+
+What it seeds for the simulator's defaults (`HDPE / Polymer / Line1 / Extruder1`, template `Production Loss`,
+signals `F1DPwebid-throughput` / `F1DPwebid-runstate`), each reported as `created` or `kept` (a re-run reports
+everything as `kept`):
+
+| Piece | What | Flags |
+|---|---|---|
+| Unit | `--unit <uuid\|code>`, else a unit coded `Extruder1`, else the demo unit `DEMO-EXTRUDER1` "Extruder 1 (MQTT demo)" is created | `--unit` |
+| Codes | reason codes `MECH-01` Mechanical and `ELEC-01` Electrical (defaults: unplanned / availability / impact IC001), impact `IC001`, OEE `OEE002`; existing codes are reused by code, missing ones created | |
+| Attribute mapping | one `Production Loss` override whose rules map both the catalog names (`ReasonCode`, `ImpactCode`, `OEECode`, `Description`, `Quantity`, `Severity`) and the contract names (`Reason Code`, `Impact Code`, `OEE Code`) via `aliases`, so `--contract-attribute-names` events code the same way | |
+| Placement | `source_mappings` with `sourceSystem = MQTT`: exact path `\\PIAF\HDPE\Polymer\Line1\Extruder1` → the unit, plus topic patterns `proact/v1/HDPE/Polymer/Line1/*/events` (used when an event carries no `element_path`) and `.../*/measurements/*` | |
+| Connections | **two** anonymous connections to `mqtt://localhost:1884` (a connection has one payload profile): "Demo: MQTT events (simulator)" (`interval_event_json`, `proact/v1/+/+/+/+/events`, availability topic `proact/v1/HDPE/gateway/availability`) and "Demo: MQTT measurements (simulator)" (`measurement_json`, `proact/v1/+/+/+/+/measurements/+`). The subscriber host of the API/worker process starts their subscribe jobs on its next sweep | `--connection <uuid>`, `--measurements-connection <uuid>` reuse existing ones; `--broker-url` / env `DEMO_MQTT_BROKER_URL` (use `mqtt://mqtt:1883` when the Compose worker hosts the subscriptions) |
+| Signals | `F1DPwebid-throughput` (counter, `t`, resets on drop) and `F1DPwebid-runstate` (state), bound to the measurements connection and the unit | |
+
+The simulator sends its codes as **codes** (`MECH-01`, `IC001`, `OEE002`, as the contract example does), because a
+code is unique in a library while names may repeat (two reason codes named "Mechanical" would be
+`CODE_AMBIGUOUS` and leave the event uncoded).
+
+Then read the results as in section 6: `GET /api/v2/ingestion-jobs?connectionId=…` shows both jobs `running`,
+`health.connected = true` and the counters (`received 4 / accepted 4` for `open-close`, `6 / 6` for
+`measurements`); `GET /api/v2/production-events?unitIds=<unit>` shows the event with `source = "MQTT"`, an end
+time, `reasonCodeId` = MECH-01 and `states.physical = "retracted"` once the delete arrived (its revisions:
+`GET /api/v2/production-events/<id>/revisions`); `POST /api/v2/signals/<id>/preview` with a window around the
+run lists the stored samples; `GET /api/v2/ingestion-exceptions?connectionId=…` is empty for both connections.
+Env: `PROACT_API_URL` (default `http://localhost:$PORT`), `DEMO_SEED_EMAIL` / `DEMO_SEED_PASSWORD` (default
+the demo manager, who has the integration-writer and master-data rights the seeder needs).
+
 ## 1. Which process does what
 
 | Piece | Where | Notes |

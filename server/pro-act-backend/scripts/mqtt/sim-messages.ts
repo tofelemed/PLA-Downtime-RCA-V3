@@ -91,22 +91,37 @@ function envelope(ids: SimIdentity, ts: string): Record<string, unknown> {
 
 export type AttributeNames = 'catalog' | 'contract';
 
+/** The PI EF template every simulated event frame names. */
+export const SIM_TEMPLATE_NAME = 'Production Loss';
+
+/**
+ * Code values the simulator delivers, as codes (the contract example sends `"Reason Code": "MECH-01"`):
+ * Pro-Act resolves a code or a name, but a code is unique in a library while names may repeat.
+ * `scripts/demo-mqtt` makes sure a tenant's libraries know them; impact and OEE are the demo
+ * libraries' own entries (Equipment Failure, Unplanned Downtime).
+ */
+export const SIM_CODE_VALUES = {
+  reasons: ['MECH-01', 'ELEC-01'],
+  impact: 'IC001',
+  oee: 'OEE002',
+} as const;
+
 /**
  * Event attributes of a "Production Loss" frame. `catalog` uses the attribute names Pro-Act's default
  * attribute mapping knows (`ReasonCode`, `Quantity`, `Description`); `contract` uses the spaced names
- * of the contract examples (`Reason Code`, ...), which need an alias rule (WP2 open item).
+ * of the contract examples (`Reason Code`, ...), which need the alias rules `db:seed-demo-mqtt` adds.
  */
 export function lossAttributes(
   names: AttributeNames,
   quantity: number,
-  reason = 'Mechanical',
+  reason: string = SIM_CODE_VALUES.reasons[0],
 ): Record<string, unknown> {
   if (names === 'contract') {
     return {
       Reason: 'Belt trip',
       'Reason Code': reason,
-      'Impact Code': 'Unplanned',
-      'OEE Code': 'Availability',
+      'Impact Code': SIM_CODE_VALUES.impact,
+      'OEE Code': SIM_CODE_VALUES.oee,
       Description: 'Conveyor belt tripped on overload',
       Quantity: quantity,
       Severity: 'High',
@@ -139,7 +154,7 @@ export function eventUpsert(
     event_id: input.eventId,
     revision: input.revision,
     operation: 'upsert',
-    template: 'Production Loss',
+    template: SIM_TEMPLATE_NAME,
     element_path: input.elementPath,
     start_ts: input.start,
     end_ts: input.end,

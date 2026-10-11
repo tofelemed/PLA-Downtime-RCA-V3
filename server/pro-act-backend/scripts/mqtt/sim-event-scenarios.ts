@@ -8,6 +8,7 @@ import {
   eventUpsert,
   lossAttributes,
   nowIso,
+  SIM_CODE_VALUES,
 } from './sim-messages';
 import {
   eventNote,
@@ -51,7 +52,11 @@ export const openClose: Scenario = {
       ...base,
       revision: nowIso(),
       end,
-      attributes: lossAttributes(ctx.attributeNames, 14, 'Electrical'),
+      attributes: lossAttributes(
+        ctx.attributeNames,
+        14,
+        SIM_CODE_VALUES.reasons[1],
+      ),
     });
     const changed = eventNote(updated, 'attributes changed');
     await publish(ctx, ctx.topics.events, updated, changed);
