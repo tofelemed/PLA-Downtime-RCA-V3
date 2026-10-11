@@ -1,13 +1,40 @@
 import { httpClient } from './httpClient';
 
+/**
+ * One `user_scopes` grant of the signed-in user (grouped by tenant and role by the server): the role
+ * held in a tenant, tenant-wide unless `unitIds` / `siteIds` limit it.
+ */
+export interface SessionScope {
+  tenantId: string;
+  organizationId?: string;
+  role: string;
+  unitIds?: string[];
+  siteIds?: string[];
+}
+
 export interface AuthenticatedUser {
   id: string;
   name: string;
   email: string;
+  /** legacy role (`users.role`); it only applies in the home tenant (SuperAdmin everywhere, OrgAdmin in its organization) */
   role: string;
   isActive: boolean;
   tenantId?: string;
   organizationId?: string;
+  /** tenant the legacy role applies in; absent in sessions stored before the server sent it */
+  homeTenantId?: string | null;
+  /** the scope grants; absent in sessions stored before the server sent them (see `features/auth/effective-roles`) */
+  scopes?: SessionScope[];
+}
+
+export interface ProfileResponse {
+  userId: string;
+  email: string;
+  role: string;
+  tenantId?: string;
+  organizationId?: string;
+  homeTenantId?: string | null;
+  scopes?: SessionScope[];
 }
 
 export interface LoginRequest {
@@ -57,13 +84,7 @@ export const authApi = {
   },
 
   getProfile() {
-    return httpClient.request<{
-      userId: string;
-      email: string;
-      role: string;
-      tenantId?: string;
-      organizationId?: string;
-    }>('auth/profile', {
+    return httpClient.request<ProfileResponse>('auth/profile', {
       method: 'GET',
     });
   },

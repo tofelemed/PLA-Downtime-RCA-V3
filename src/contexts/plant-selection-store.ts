@@ -1,11 +1,11 @@
 import type { AuthenticatedUser } from '../services/api/authApi';
 import type { Tenant } from '../services/MasterDataService';
 import { createLogger } from '../lib/logger';
+import { homeTenantOf, isGlobalAdmin, maySelectTenant } from '../features/auth/effective-roles';
 import type { PlantSelection } from './PlantSelectionContext';
 
 const log = createLogger('plant-selection');
 const KEY_PREFIX = 'proact.plantSelection.';
-const GLOBAL_ROLES: ReadonlySet<string> = new Set(['SuperAdmin', 'OrgAdmin']);
 
 /**
  * The plant selection is a per-user view preference, so it lives in this browser under the user's id.
@@ -32,16 +32,29 @@ export function savePlantSelection(user: AuthenticatedUser, selection: PlantSele
   }
 }
 
-/** A tenant-bound user may only act on their own tenant; global admins may pick any plant. */
+/**
+ * A user may act on their home tenant and on every tenant they hold a scope in (what the server's
+ * `maySelectTenant` accepts); global admins may pick any plant.
+ */
 export function isSelectionAllowed(selection: PlantSelection, user: AuthenticatedUser): boolean {
   const tenantId = selection.tenant?.id;
-  if (!tenantId || GLOBAL_ROLES.has(user.role)) return true;
-  return tenantId === user.tenantId;
+  if (!tenantId) return true;
+  return maySelectTenant(user, tenantId);
 }
 
-/** Default plant: the user's own tenant; global admins without one get the first plant listed. */
+/**
+ * Default plant: the user's home tenant; otherwise the first listed plant they hold a scope in;
+ * global admins without one get the first plant listed.
+ */
 export function defaultTenantFor(user: AuthenticatedUser, tenants: readonly Tenant[]): Tenant | null {
-  const own = tenants.find((tenant) => tenant.id === user.tenantId);
+  const home = homeTenantOf(user);
+  const own = tenants.find((tenant) => tenant.id === home);
   if (own) return own;
-  return GLOBAL_ROLES.has(user.role) ? tenants[0] ?? null : null;
+  if (isGlobalAdmin(user)) return tenants[0] ?? null;
+  return tenants.find((tenant) => maySelectTenant(user, tenant.id)) ?? null;
+}
+
+/** The plants the selector offers: every plant for global admins, otherwise the user's scoped plants. */
+export function selectableTenants(user: AuthenticatedUser, tenants: readonly Tenant[]): Tenant[] {
+  return tenants.filter((tenant) => maySelectTenant(user, tenant.id));
 }

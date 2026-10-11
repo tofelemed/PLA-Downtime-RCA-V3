@@ -93,6 +93,7 @@ describe('connections: write-only secret and staged diagnostics', () => {
   it('refusals: 403 is a role refusal, 412 stale, 502 a source failure with the adapter code', () => {
     const envelope = (code: string) => ({ code, message: code, correlationId: 'c', retryable: false });
     expect(refusalOf(new V2ApiError(403, envelope('FORBIDDEN_ROLE')))?.kind).toBe('role');
+    expect(refusalOf(new V2ApiError(403, envelope('READ_ONLY_ROLE')))).toMatchObject({ kind: 'role', title: 'Your role in this plant is read-only' });
     expect(refusalOf(new V2ApiError(412, envelope('STALE_REVISION')))?.kind).toBe('stale');
     expect(refusalOf(new V2ApiError(502, envelope('PI_AUTH_FAILED')))).toMatchObject({ kind: 'source', code: 'PI_AUTH_FAILED' });
     expect(refusalOf(new V2ApiError(422, envelope('ADAPTER_UNAVAILABLE')))?.kind).toBe('unavailable');

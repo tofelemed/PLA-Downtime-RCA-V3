@@ -1,4 +1,4 @@
-import { defaultTenantFor } from '@/contexts/plant-selection-store';
+import { defaultTenantFor, selectableTenants } from '@/contexts/plant-selection-store';
 import React, { useState, useEffect } from 'react';
 import {
   Popover,
@@ -12,6 +12,7 @@ import { Organization, Tenant, Unit, Asset } from '../services/MasterDataService
 import { masterDataService } from '../services/MasterDataService';
 import { usePlantSelection } from '../contexts/PlantSelectionContext';
 import { useAuth } from '../contexts/AuthContext';
+import type { AuthenticatedUser } from '../services/api/authApi';
 
 // Helper for unique node keys
 const getNodeKey = (type: string, id: string) => `${type}:${id}`;
@@ -32,7 +33,7 @@ const PlantSelector: React.FC = () => {
   // Wait for authentication before loading data
   useEffect(() => {
     if (!authLoading && session) {
-      loadData();
+      loadData(session.user);
     } else if (!authLoading && !session) {
       // Not authenticated, don't load data
       setLoading(false);
@@ -51,7 +52,7 @@ const PlantSelector: React.FC = () => {
     }
   }, [organizations, tenants, currentSelection, onSelectionChange, initialized, selectionLoading, session]);
 
-  const loadData = async () => {
+  const loadData = async (user: AuthenticatedUser) => {
     try {
       setLoading(true);
       const [orgsData, tenantsData, unitsData, assetsData] = await Promise.all([
@@ -60,8 +61,10 @@ const PlantSelector: React.FC = () => {
         masterDataService.getUnits(),
         masterDataService.getAssets(),
       ]);
-      setOrganizations(orgsData);
-      setTenants(tenantsData);
+      // only the plants the user may act on (home plant and scoped plants; global admins see every plant)
+      const allowedTenants = selectableTenants(user, tenantsData);
+      setOrganizations(orgsData.filter(org => allowedTenants.some(t => t.organizationId === org.id)));
+      setTenants(allowedTenants);
       setUnits(unitsData);
       setAssets(assetsData);
     } catch (error) {

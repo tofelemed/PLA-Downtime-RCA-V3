@@ -26,6 +26,9 @@ const TITLES: Record<RefusalKind, string> = {
   other: 'Refused',
 };
 
+/** 403 READ_ONLY_ROLE (WriteAccessGuard): every role held in this plant is read-only, e.g. `viewer`. */
+const READ_ONLY_TITLE = 'Your role in this plant is read-only';
+
 function kindOf(error: V2ApiError): RefusalKind {
   if (error instanceof StaleRevisionError || error.status === 412) return 'stale';
   if (error.status === 403) return 'role';
@@ -44,7 +47,7 @@ export function refusalOf(error: unknown): Refusal | null {
   const kind = kindOf(error);
   return {
     kind,
-    title: TITLES[kind],
+    title: error.code === 'READ_ONLY_ROLE' ? READ_ONLY_TITLE : TITLES[kind],
     code: error.code,
     message: error.message,
     fieldErrors: error.fieldErrors.map((entry) => `${entry.field}: ${entry.message}`),

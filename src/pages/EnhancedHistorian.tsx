@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import EnhancedHistorianPage from '@/components/historian/EnhancedHistorianPage'
 
 export const EnhancedHistorian: React.FC = () => {
   const { session } = useAuth();
+  const { canUseIntegrationConsole } = useCapabilities();
   const { toast } = useToast();
   
   const [piConfig, setPiConfig] = useState({
@@ -254,7 +256,7 @@ export const EnhancedHistorian: React.FC = () => {
     }
   };
 
-  if (!session || !['SuperAdmin', 'OrgAdmin', 'TenantAdmin'].includes(session.user.role)) {
+  if (!session || !canUseIntegrationConsole) {
     return (
       <div className="text-center py-12">
         <Server className="w-16 h-16 text-gray-400 mx-auto mb-4" />

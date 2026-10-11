@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { masterDataApi, Organization, Tenant, Unit, Asset } from '../services/api/masterDataApi';
 import { userApi, UserRecord, UserRole } from '../services/api/userApi';
 import { customAttributeService } from '../services/CustomAttributeService';
@@ -53,8 +54,9 @@ export const AdminPanel: React.FC = () => {
     tenantId: '',
   });
 
-  // Only show to SuperAdmin or TenantAdmin
-  const canEditRules = session?.user?.role === 'SuperAdmin' || session?.user?.role === 'TenantAdmin';
+  // Only show to SuperAdmin or TenantAdmin (effective roles in the selected plant)
+  const { canUseAdminPanel } = useCapabilities();
+  const canEditRules = canUseAdminPanel;
 
   useEffect(() => {
     loadAllData();
@@ -325,7 +327,7 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
-  if (!session || (session.user.role !== 'SuperAdmin' && session.user.role !== 'TenantAdmin')) {
+  if (!session || !canUseAdminPanel) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">You don't have permission to access the admin panel.</p>

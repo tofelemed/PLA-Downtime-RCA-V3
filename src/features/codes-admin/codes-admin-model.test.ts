@@ -141,6 +141,7 @@ describe('admin refusals', () => {
     expect(refusal(403, 'TENANT_SCOPE_REQUIRED')?.kind).toBe('tenant-scope');
     expect(refusal(403, 'SEPARATION_OF_DUTIES')?.kind).toBe('duties');
     expect(refusal(403, 'FORBIDDEN_ROLE')?.kind).toBe('role');
+    expect(refusal(403, 'READ_ONLY_ROLE')).toMatchObject({ kind: 'role', title: 'Your role in this plant is read-only' });
     expect(refusal(412, 'STALE_REVISION')?.kind).toBe('stale');
     expect(refusal(422, 'CODE_CYCLE')?.kind).toBe('validation');
     expect(refusal(409, 'CODE_HAS_CHILDREN', { references: { activeChildren: 2, events: 5, mappingRules: 1 } })).toMatchObject({

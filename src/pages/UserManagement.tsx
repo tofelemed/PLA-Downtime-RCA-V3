@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { userApi, UserRecord, UserRole, CreateUserPayload } from '../services/api/userApi';
 import { auditApi } from '../services/api/auditApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +26,7 @@ const roleColors: Record<UserRole, string> = {
 
 export const UserManagement: React.FC = () => {
   const { session } = useAuth();
+  const { canAdministerTenant } = useCapabilities();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -228,7 +230,7 @@ export const UserManagement: React.FC = () => {
     return false;
   };
 
-  if (!session || !['SuperAdmin', 'OrgAdmin', 'TenantAdmin'].includes(session.user.role)) {
+  if (!session || !canAdministerTenant) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">You don't have permission to access user management.</p>

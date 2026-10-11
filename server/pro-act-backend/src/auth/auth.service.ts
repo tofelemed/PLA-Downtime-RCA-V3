@@ -15,10 +15,22 @@ import {
   getRequestContext,
   RequestContext,
 } from '../common/context/request-context';
+import { AuthenticatedUser } from './interfaces/jwt-payload.interface';
 import { canGrantRole, mapLegacyRole } from './roles/role-model';
 import { UserScopesService } from './scopes/user-scopes.service';
+import {
+  SessionScope,
+  tenantIdsOf,
+  toSessionScopes,
+} from './session/session-scopes';
 import { AuthTokenService, IssuedTokens } from './tokens/auth-token.service';
 import { isAccessToken } from './tokens/token-config';
+
+/** The grants the browser needs to derive its effective roles per acting plant (WF05). */
+interface SessionGrants {
+  homeTenantId: string | null;
+  scopes: SessionScope[];
+}
 
 @Injectable()
 export class AuthService {
@@ -60,7 +72,28 @@ export class AuthService {
     if (refreshToken) await this.tokens.revoke(refreshToken);
   }
 
-  private sessionResponse(user: User, tokens: IssuedTokens) {
+  /**
+   * `GET /auth/profile`: the identity of the token plus the grants the browser derives its roles
+   * from. `tenantId` is the acting tenant of this request; `homeTenantId` the user's own.
+   */
+  async profile(current: AuthenticatedUser) {
+    const user = await this.usersService.findOne(current.userId);
+    const grants = await this.sessionGrants(
+      current.userId,
+      user?.tenantId ?? current.tenantId ?? null,
+    );
+    return {
+      userId: current.userId,
+      email: current.email,
+      role: current.role,
+      tenantId: current.tenantId,
+      organizationId: current.organizationId,
+      ...grants,
+    };
+  }
+
+  private async sessionResponse(user: User, tokens: IssuedTokens) {
+    const grants = await this.sessionGrants(user.id, user.tenantId ?? null);
     return {
       access_token: tokens.accessToken,
       refresh_token: tokens.refreshToken,
@@ -74,8 +107,21 @@ export class AuthService {
         isActive: user.isActive,
         tenantId: user.tenantId,
         organizationId: user.organizationId,
+        ...grants,
       },
     };
+  }
+
+  /** Same source as `RequestContextFactory`: the `user_scopes` rows of the user, never secrets. */
+  private async sessionGrants(
+    userId: string,
+    homeTenantId: string | null,
+  ): Promise<SessionGrants> {
+    const grants = await this.userScopes.grantsForUser(userId);
+    const organizations = await this.tenantService.organizationsOf(
+      tenantIdsOf(grants),
+    );
+    return { homeTenantId, scopes: toSessionScopes(grants, organizations) };
   }
 
   async validateToken(token: string) {

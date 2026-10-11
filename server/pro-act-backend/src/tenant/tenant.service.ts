@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Tenant } from './tenant.entity';
 import { RealtimeGateway } from '../realtime.gateway';
@@ -19,6 +19,16 @@ export class TenantService {
 
   findOne(id: string): Promise<Tenant | null> {
     return this.tenantRepository.findOneBy({ id });
+  }
+
+  /** Organization of each listed tenant (id and organization_id only; unknown ids are left out). */
+  async organizationsOf(ids: readonly string[]): Promise<Map<string, string>> {
+    if (!ids.length) return new Map();
+    const rows = await this.tenantRepository.find({
+      where: { id: In([...ids]) },
+      select: { id: true, organizationId: true },
+    });
+    return new Map(rows.map((row) => [row.id, row.organizationId]));
   }
 
   findByCodeAndOrganization(code: string, organizationId: string): Promise<Tenant | null> {

@@ -35,7 +35,7 @@ describe('refusals (plan 3.4: 403 / 409 / 412 / 422 shown as the server said)', 
   it('role, scope and duty refusals are told apart; 412 is stale; 422 carries field errors', () => {
     const of = (status: number, code: string) => refusalOf(toV2Error(status, { code, message: code, correlationId: null, retryable: false }, null, null));
     expect(of(403, 'FORBIDDEN_ROLE')?.kind).toBe('role');
-    expect(of(403, 'READ_ONLY_ROLE')?.kind).toBe('role');
+    expect(of(403, 'READ_ONLY_ROLE')).toMatchObject({ kind: 'role', title: 'Your role in this plant is read-only' });
     expect(of(403, 'TENANT_SCOPE_REQUIRED')?.kind).toBe('scope');
     expect(of(403, 'SITE_SCOPE_REQUIRED')?.kind).toBe('scope');
     expect(of(403, 'SEPARATION_OF_DUTIES')?.kind).toBe('duties');

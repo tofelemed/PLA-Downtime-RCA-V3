@@ -42,6 +42,23 @@ type StoredAuthState = {
   tenant?: Tenant | null;
 };
 
+/**
+ * A session stored before the server sent `scopes` / `homeTenantId` (or by an older server) gets them
+ * from the profile, so menus and plant selection use the effective roles; a server that does not
+ * send them yet leaves the user unchanged (legacy role in the home tenant).
+ */
+const withSessionGrants = async (user: AuthenticatedUser): Promise<AuthenticatedUser> => {
+  if (user.scopes) return user;
+  try {
+    const profile = await authApi.getProfile();
+    if (!profile.scopes) return user;
+    return { ...user, scopes: profile.scopes, homeTenantId: profile.homeTenantId ?? user.tenantId ?? null };
+  } catch (error) {
+    console.warn('Unable to load the session scopes', error);
+    return user;
+  }
+};
+
 const mapTokens = (response: LoginResponse): AuthTokens => ({
   accessToken: response.access_token,
   refreshToken: response.refresh_token,
@@ -184,6 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     },
   ): Promise<AuthSession> => {
     applyTokens(activeTokens);
+    user = await withSessionGrants(user);
 
     let organization: Organization | null = options?.organizationFallback ?? null;
     if (user.organizationId) {

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { masterDataService, Organization, Tenant } from '../services/MasterDataService';
 import { userApi, UserRecord, UserRole } from '../services/api/userApi';
 import { auditApi } from '../services/api/auditApi';
@@ -99,6 +100,7 @@ const DEFAULT_ROLE_PERMISSIONS: Partial<Record<UserRole, ModulePermissions>> = {
 
 export const PermissionsManagement: React.FC = () => {
   const { session } = useAuth();
+  const { canAdministerTenant } = useCapabilities();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -235,7 +237,7 @@ export const PermissionsManagement: React.FC = () => {
     return false;
   };
 
-  if (!session || !['SuperAdmin', 'OrgAdmin', 'TenantAdmin'].includes(session.user.role)) {
+  if (!session || !canAdministerTenant) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">You don't have permission to manage user permissions.</p>

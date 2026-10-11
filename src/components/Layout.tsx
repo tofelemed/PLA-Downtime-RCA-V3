@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Navigation } from './Navigation';
 import PlantSelector from './PlantSelector';
 import { DisplayCurrencyToggle } from '@/features/display-currency/display-currency-toggle';
@@ -13,6 +14,7 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { session, logout, isLoading: authLoading } = useAuth();
+  const { isReadOnly } = useCapabilities();
   const [plantSelection, setPlantSelection] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [branding, setBranding] = useState<BrandingSettings | null>(null);
@@ -165,7 +167,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </div>
                 <div className="hidden md:block">
                   <div className="text-sm font-semibold text-gray-800">{session.user.name}</div>
-                  <div className="text-xs text-gray-500">{session.user.role}</div>
+                  <div className="text-xs text-gray-500">
+                    {session.user.role}
+                    {isReadOnly && (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800" title="Every role you hold in the selected plant is read-only; changes are refused by the server">
+                        Read-only
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <Button 
                   variant="ghost" 

@@ -6,7 +6,9 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
+import { LoginResponseDto, ProfileResponseDto } from './dto/session-response.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { AuthenticatedUser } from './interfaces/jwt-payload.interface';
 import { Roles } from './decorators/roles.decorator';
 import { Public, PublicIf } from '../common/decorators/public.decorator';
 
@@ -20,7 +22,7 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({ summary: 'User login' })
   @ApiBody({ type: LoginDto })
-  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 200, description: 'Login successful; `user.scopes` and `user.homeTenantId` carry the grants the browser derives its roles from', type: LoginResponseDto })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() body: LoginDto) {
     const user = await this.authService.validateUser(body.email, body.password);
@@ -62,7 +64,7 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Refresh access token' })
   @ApiBody({ type: RefreshTokenDto })
-  @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
+  @ApiResponse({ status: 200, description: 'Token refreshed successfully', type: LoginResponseDto })
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
   async refresh(@Body() body: RefreshTokenDto) {
     return this.authService.refreshToken(body.refreshToken);
@@ -72,16 +74,10 @@ export class AuthController {
   @Get('profile')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'Return user profile' })
+  @ApiResponse({ status: 200, description: 'Return user profile with the user_scopes grants (`scopes`) and `homeTenantId`', type: ProfileResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async profile(@CurrentUser() user: any) {
-    return {
-      userId: user.userId,
-      email: user.email,
-      role: user.role,
-      tenantId: user.tenantId,
-      organizationId: user.organizationId
-    };
+  async profile(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.profile(user);
   }
 
   @Public()

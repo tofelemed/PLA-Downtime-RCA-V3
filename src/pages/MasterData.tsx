@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { masterDataService, ImpactCode, OEECode, Product, Unit, Asset } from '../services/MasterDataService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ import CustomAttributeDisplay from '../components/CustomAttributeDisplay';
 
 export const MasterData: React.FC = () => {
   const { session } = useAuth();
+  const { canManageMasterData } = useCapabilities();
   const { toast } = useToast();
   const [impactCodes, setImpactCodes] = useState<ImpactCode[]>([]);
   const [oeeCodes, setOEECodes] = useState<OEECode[]>([]);
@@ -581,7 +583,7 @@ export const MasterData: React.FC = () => {
     }
   };
 
-  if (!session || !['SuperAdmin', 'OrgAdmin', 'TenantAdmin'].includes(session.user.role)) {
+  if (!session || !canManageMasterData) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">You don't have permission to access master data management.</p>

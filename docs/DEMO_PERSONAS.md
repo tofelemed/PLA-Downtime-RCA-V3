@@ -68,22 +68,27 @@ well (the legacy role then applies there because the plant is in their organisat
 
 ## What the browser can and cannot show
 
-The login response (`POST /api/auth/login`) and `GET /api/auth/profile` expose only the legacy role
-(`user.role`); the scope roles of `user_scopes` are not sent to the frontend, and no endpoint reports the
-roles a request context resolves. Consequences for the personas (unchanged on purpose, no new contract
-was invented):
+The login response (`POST /api/auth/login`, also refresh) and `GET /api/auth/profile` carry, next to
+the legacy role, `scopes` (the `user_scopes` grants grouped by tenant and role:
+`{ tenantId, organizationId?, role, unitIds?, siteIds? }`) and `homeTenantId`. The browser derives
+the effective roles of the selected plant from them the same way `RequestContextFactory` does
+(`src/features/auth/effective-roles.ts`, tests mirror the backend cases) and turns them into
+capabilities (`src/features/auth/capabilities.ts`, `useCapabilities()`):
 
-- `Navigation.tsx` and the page-level gates (`MasterData`, `UserManagement`, `Permissions`,
-  `Connectivity`/Integration console, `EnhancedHistorian`, `AdminPanel`) decide on the legacy role only.
-  A `master_data_admin` (legacy Analyst) therefore does not see the Master Data screen, and an
-  `integration_admin` (legacy Engineer/Analyst) does not see Connectivity / Integration console in the
-  menu, although their API rights allow those writes. Codes & Rules, Finance, Planning (profiles,
-  calendars) and RCA are visible to Analyst/Engineer and cover most of their work.
-- The plant selector only lets `SuperAdmin` / `OrgAdmin` pick another plant, so the `viewer` personas
-  (home Demo Plant 2) can only exercise their read-only rights in Demo Plant through the API
-  (`X-Tenant-Id`), not through the UI.
-- The legacy `Manager` role was missing from every menu list; it now gets the TenantAdmin menu minus
-  the admin-only screens.
+- `Navigation.tsx` and the page gates (`MasterData`, `UserManagement`, `Permissions`,
+  `Connectivity`/Integration console, `EnhancedHistorian`, `AdminPanel`) read capabilities of the
+  selected plant. A `master_data_admin` (legacy Analyst) sees Master Data, an `integration_admin`
+  (legacy Engineer/Analyst) sees Connectivity / Integration console; legacy-role users keep exactly the
+  menus they had (`src/features/auth/navigation-items.test.ts`).
+- The plant selector lists the home plant and every plant the user holds a scope in (global admins:
+  every plant), so the `viewer` personas (home Demo Plant 2) can switch to Demo Plant in the UI. There
+  they hold `viewer` only: the header shows a "Read-only" badge and every write is refused by the server
+  (`403 READ_ONLY_ROLE`, rendered as "Your role in this plant is read-only" by the v2 screens). v1
+  requests do not send `X-Tenant-Id`, so v1 screens keep showing the home plant's data.
+- A session stored before the server sent `scopes` fetches them from `GET /api/auth/profile` on restore;
+  a server that does not send them yet leaves the user with the legacy role in the home plant.
+- The legacy `Manager` role was missing from every menu list; it gets the TenantAdmin menu minus the
+  admin-only screens.
 
 ## Verification table
 
