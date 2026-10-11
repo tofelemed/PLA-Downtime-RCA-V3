@@ -1,0 +1,77 @@
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - generic [ref=e25]:
+    - banner [ref=e26]:
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic [ref=e30]:
+            - generic [ref=e31]: UA
+            - generic [ref=e33]:
+              - heading "Unified APM" [level=1] [ref=e34]
+              - paragraph [ref=e35]: Asset Performance Management
+          - button [ref=e37] [cursor=pointer]
+        - generic [ref=e39]:
+          - group "Display currency" [ref=e40]:
+            - radio "Show money in USD" [checked] [ref=e41] [cursor=pointer]: $ USD
+            - radio "Show money in IRR" [ref=e42] [cursor=pointer]: IRR
+          - textbox "Search..." [ref=e47]
+          - button [ref=e48] [cursor=pointer]
+          - button [ref=e50] [cursor=pointer]
+          - generic [ref=e51]:
+            - generic [ref=e56]:
+              - generic [ref=e57]: Acme Plant Manager
+              - generic [ref=e58]: TenantAdmin
+            - button [ref=e59] [cursor=pointer]
+    - generic [ref=e60]:
+      - complementary [ref=e61]:
+        - navigation [ref=e62]:
+          - button "Expand sidebar" [ref=e64] [cursor=pointer]
+          - list [ref=e68]:
+            - listitem [ref=e69]:
+              - link [ref=e70] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [ref=e73]:
+              - link [ref=e74] [cursor=pointer]:
+                - /url: /reports
+            - listitem [ref=e77]:
+              - link [ref=e78] [cursor=pointer]:
+                - /url: /pla-analytics
+            - listitem [ref=e81]:
+              - link [ref=e82] [cursor=pointer]:
+                - /url: /production-plans
+            - listitem [ref=e85]:
+              - link [ref=e86] [cursor=pointer]:
+                - /url: /events
+            - listitem [ref=e89]:
+              - link [ref=e90] [cursor=pointer]:
+                - /url: /rca
+            - listitem [ref=e94]:
+              - link [ref=e95] [cursor=pointer]:
+                - /url: /rca-knowledge-base
+            - listitem [ref=e100]:
+              - link [ref=e101] [cursor=pointer]:
+                - /url: /master-data
+            - listitem [ref=e105]:
+              - link [ref=e106] [cursor=pointer]:
+                - /url: /users
+            - listitem [ref=e112]:
+              - link [ref=e113] [cursor=pointer]:
+                - /url: /permissions
+            - listitem [ref=e117]:
+              - link [ref=e118] [cursor=pointer]:
+                - /url: /connectivity
+            - listitem [ref=e121]:
+              - link [ref=e122] [cursor=pointer]:
+                - /url: /enhanced-historian
+            - listitem [ref=e127]:
+              - link [ref=e128] [cursor=pointer]:
+                - /url: /tasks
+            - listitem [ref=e132]:
+              - link [ref=e133] [cursor=pointer]:
+                - /url: /settings
+            - listitem [ref=e137]:
+              - link [ref=e138] [cursor=pointer]:
+                - /url: /data-seeding
+      - main [ref=e147]:
+        - status "Loading" [ref=e148]

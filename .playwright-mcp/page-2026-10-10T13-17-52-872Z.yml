@@ -1,0 +1,27 @@
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: PA
+      - heading "Welcome to Pro-Act" [level=3] [ref=e8]
+      - paragraph [ref=e9]: Sign in to your account to continue
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - text: Email
+          - textbox "Email" [ref=e13]:
+            - /placeholder: Enter your email
+        - generic [ref=e14]:
+          - text: Password
+          - textbox "Password" [ref=e15]:
+            - /placeholder: Enter your password
+        - button "Sign In" [ref=e16] [cursor=pointer]
+      - generic [ref=e17]:
+        - paragraph [ref=e18]: "Demo Accounts:"
+        - generic [ref=e19]:
+          - generic [ref=e20]: admin@acme.com / demo123 (SuperAdmin)
+          - generic [ref=e21]: test@example.com / Test123!@# (SuperAdmin)
+          - generic [ref=e22]: manager@acme.com / demo123 (TenantAdmin)
+          - generic [ref=e23]: engineer@acme.com / demo123 (Engineer)
+          - generic [ref=e24]: operator@acme.com / demo123 (Operator)

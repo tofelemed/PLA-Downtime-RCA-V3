@@ -1,0 +1,226 @@
+- generic [ref=f1e2]:
+  - region "Notifications (F8)":
+    - list
+  - generic [ref=f1e5]:
+    - banner [ref=f1e6]:
+      - generic [ref=f1e8]:
+        - generic [ref=f1e9]:
+          - generic [ref=f1e10]:
+            - generic [ref=f1e11]: UA
+            - generic [ref=f1e13]:
+              - heading "Unified APM" [level=1] [ref=f1e14]
+              - paragraph [ref=f1e15]: Asset Performance Management
+          - button "Demo Org Demo Plant" [ref=f1e17] [cursor=pointer]:
+            - generic [ref=f1e19]:
+              - generic [ref=f1e20]: Demo Org
+              - generic [ref=f1e22]: Demo Plant
+        - generic [ref=f1e24]:
+          - group "Display currency" [ref=f1e25]:
+            - radio "Show money in USD" [ref=f1e26] [cursor=pointer]: $ USD
+            - radio "Show money in IRR" [checked] [active] [ref=f1e27] [cursor=pointer]: IRR
+          - textbox "Search..." [ref=f1e32]
+          - button [ref=f1e33] [cursor=pointer]
+          - button [ref=f1e35] [cursor=pointer]
+          - generic [ref=f1e36]:
+            - generic [ref=f1e41]:
+              - generic [ref=f1e42]: Acme Plant Manager
+              - generic [ref=f1e43]: TenantAdmin
+            - button [ref=f1e44] [cursor=pointer]
+    - generic [ref=f1e45]:
+      - complementary [ref=f1e46]:
+        - navigation [ref=f1e47]:
+          - button "Expand sidebar" [ref=f1e49] [cursor=pointer]
+          - list [ref=f1e53]:
+            - listitem [ref=f1e54]:
+              - link [ref=f1e55] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [ref=f1e58]:
+              - link [ref=f1e59] [cursor=pointer]:
+                - /url: /reports
+            - listitem [ref=f1e62]:
+              - link [ref=f1e63] [cursor=pointer]:
+                - /url: /pla-analytics
+            - listitem [ref=f1e66]:
+              - link [ref=f1e67] [cursor=pointer]:
+                - /url: /production-plans
+            - listitem [ref=f1e70]:
+              - link [ref=f1e71] [cursor=pointer]:
+                - /url: /planning
+            - listitem [ref=f1e74]:
+              - link [ref=f1e75] [cursor=pointer]:
+                - /url: /events
+            - listitem [ref=f1e78]:
+              - link [ref=f1e79] [cursor=pointer]:
+                - /url: /downtime
+            - listitem [ref=f1e83]:
+              - link [ref=f1e84] [cursor=pointer]:
+                - /url: /rca
+            - listitem [ref=f1e88]:
+              - link [ref=f1e89] [cursor=pointer]:
+                - /url: /rca-knowledge-base
+            - listitem [ref=f1e94]:
+              - link [ref=f1e95] [cursor=pointer]:
+                - /url: /master-data
+            - listitem [ref=f1e99]:
+              - link [ref=f1e100] [cursor=pointer]:
+                - /url: /codes-admin
+            - listitem [ref=f1e104]:
+              - link [ref=f1e105] [cursor=pointer]:
+                - /url: /finance
+            - listitem [ref=f1e111]:
+              - link [ref=f1e112] [cursor=pointer]:
+                - /url: /users
+            - listitem [ref=f1e118]:
+              - link [ref=f1e119] [cursor=pointer]:
+                - /url: /permissions
+            - listitem [ref=f1e123]:
+              - link [ref=f1e124] [cursor=pointer]:
+                - /url: /connectivity
+            - listitem [ref=f1e127]:
+              - link [ref=f1e128] [cursor=pointer]:
+                - /url: /enhanced-historian
+            - listitem [ref=f1e133]:
+              - link [ref=f1e134] [cursor=pointer]:
+                - /url: /tasks
+            - listitem [ref=f1e138]:
+              - link [ref=f1e139] [cursor=pointer]:
+                - /url: /settings
+            - listitem [ref=f1e143]:
+              - link [ref=f1e144] [cursor=pointer]:
+                - /url: /data-seeding
+      - main [ref=f1e153]:
+        - generic [ref=f1e154]:
+          - generic [ref=f1e155]:
+            - heading "Reports" [level=1] [ref=f1e156]
+            - generic [ref=f1e157]:
+              - generic [ref=f1e158]: All units in your scope · Custom window
+              - 'generic "Plant timezone unknown: showing UTC" [ref=f1e159]': UTC (+00:00)
+              - generic [ref=f1e160]: Provisional
+              - generic [ref=f1e161]: As of 2026-10-10 13:18 (+00:00 UTC) · just now
+            - generic [ref=f1e162]:
+              - generic [ref=f1e163]: Approved revision, else the latest draft
+              - generic [ref=f1e164]:
+                - text: Generated
+                - time [ref=f1e165]: 2026-10-10 13:18 (+00:00 UTC)
+              - generic [ref=f1e166]: 628 calculation runs
+              - generic [ref=f1e167]: 589 provisional · 0 not calculated
+          - group "Report filters" [ref=f1e168]:
+            - 'button "Units: All" [ref=f1e169] [cursor=pointer]'
+            - generic [ref=f1e170]:
+              - text: Period dates from
+              - textbox "Period dates from" [ref=f1e171]: 2026-10-06
+            - generic [ref=f1e172]:
+              - text: to (inclusive)
+              - textbox "to (inclusive)" [ref=f1e173]: 2026-10-10
+            - generic [ref=f1e174]:
+              - text: Revisions
+              - combobox "Revisions" [ref=f1e175]:
+                - option "Approved, else latest draft (provisional)" [selected]
+                - option "Approved only"
+          - generic [ref=f1e176]:
+            - tablist [ref=f1e177]:
+              - tab "OEE by day" [ref=f1e178] [cursor=pointer]
+              - tab "Downtime" [ref=f1e179] [cursor=pointer]
+              - tab "Reconciliation" [ref=f1e180] [cursor=pointer]
+              - tab "Loss value" [selected] [ref=f1e181] [cursor=pointer]
+              - tab "Exports" [ref=f1e182] [cursor=pointer]
+            - tabpanel "Loss value" [ref=f1e183]:
+              - generic [ref=f1e184]:
+                - heading "Loss value · Commercial opportunity (contribution margin) · plan ledger" [level=3] [ref=f1e191]
+                - generic [ref=f1e187]:
+                  - paragraph [ref=f1e192]: "Basis: calculation-run valuation of the shown run (approved revision, else the open draft); reconciliation edits are valued in the approval snapshot."
+                  - table "Loss value by unit" [ref=f1e194]:
+                    - rowgroup [ref=f1e195]:
+                      - row [ref=f1e196]:
+                        - columnheader "Unit" [ref=f1e197]
+                        - columnheader "IRR" [ref=f1e198]
+                    - rowgroup [ref=f1e199]:
+                      - row [ref=f1e200]:
+                        - cell "E2E PD 3f1c922e" [ref=f1e201]
+                        - cell "75,685,302,000 IRR" [ref=f1e202]
+                      - row [ref=f1e203]:
+                        - cell "E2E PD 3c31067a" [ref=f1e204]
+                        - cell "32,843,286,000 IRR" [ref=f1e205]
+                      - row [ref=f1e206]:
+                        - cell "E2E PD 33507871" [ref=f1e207]
+                        - cell "79,641,216,000 IRR" [ref=f1e208]
+                      - row [ref=f1e209]:
+                        - cell "E2E PD 202e55e8" [ref=f1e210]
+                        - cell "85,081,203,000 IRR" [ref=f1e211]
+                      - row [ref=f1e212]:
+                        - cell "E2E PD e6e3ddcb" [ref=f1e213]
+                        - cell "39,752,820,000 IRR" [ref=f1e214]
+                      - row [ref=f1e215]:
+                        - cell "E2E PD 6716bf84" [ref=f1e216]
+                        - cell "88,247,871,000 IRR" [ref=f1e217]
+                      - row [ref=f1e218]:
+                        - cell "E2E PD 3d2c9d7b" [ref=f1e219]
+                        - cell "88,492,392,000 IRR" [ref=f1e220]
+                      - row [ref=f1e221]:
+                        - cell "E2E PD eb51c3ec" [ref=f1e222]
+                        - cell "34,482,303,000 IRR" [ref=f1e223]
+                      - row [ref=f1e224]:
+                        - cell "E2E PD a0b82221" [ref=f1e225]
+                        - cell "29,962,296,000 IRR" [ref=f1e226]
+                      - row [ref=f1e227]:
+                        - cell "E2E PD 8cbd7565" [ref=f1e228]
+                        - cell "71,884,332,000 IRR" [ref=f1e229]
+                      - row [ref=f1e230]:
+                        - cell "E2E PD 9348941a" [ref=f1e231]
+                        - cell "99,135,108,000 IRR" [ref=f1e232]
+                      - row [ref=f1e233]:
+                        - cell "E2E PD dc0f8a2d" [ref=f1e234]
+                        - cell "76,629,492,000 IRR" [ref=f1e235]
+                      - row [ref=f1e236]:
+                        - cell "E2E PD b7209df7" [ref=f1e237]
+                        - cell "53,816,409,000 IRR" [ref=f1e238]
+                      - row [ref=f1e239]:
+                        - cell "E2E PD 6659037c" [ref=f1e240]
+                        - cell "45,691,533,000 IRR" [ref=f1e241]
+                      - row [ref=f1e242]:
+                        - cell "E2E PD c62b0853" [ref=f1e243]
+                        - cell "46,253,205,000 IRR" [ref=f1e244]
+                      - row [ref=f1e245]:
+                        - cell "E2E PD ce18c4c3" [ref=f1e246]
+                        - cell "99,285,210,000 IRR" [ref=f1e247]
+                      - row [ref=f1e248]:
+                        - cell "E2E PD 279c4015" [ref=f1e249]
+                        - cell "68,763,663,000 IRR" [ref=f1e250]
+                      - row [ref=f1e251]:
+                        - cell "E2E PD b9072a04" [ref=f1e252]
+                        - cell "84,381,534,000 IRR" [ref=f1e253]
+                      - row [ref=f1e254]:
+                        - cell "E2E PD 10d2685a" [ref=f1e255]
+                        - cell "33,262,119,000 IRR" [ref=f1e256]
+                      - row [ref=f1e257]:
+                        - cell "E2E PD 436cee3f" [ref=f1e258]
+                        - cell "173,488,860,000 IRR" [ref=f1e259]
+                      - row [ref=f1e260]:
+                        - cell "E2E PD 1fbc7d87" [ref=f1e261]
+                        - cell "64,943,325,000 IRR" [ref=f1e262]
+                      - row [ref=f1e263]:
+                        - cell "E2E PD 089a3a8f" [ref=f1e264]
+                        - cell "70,058,898,000 IRR" [ref=f1e265]
+                      - row [ref=f1e266]:
+                        - cell "E2E PD ea733736" [ref=f1e267]
+                        - cell "50,114,700,000 IRR" [ref=f1e268]
+                      - row [ref=f1e269]:
+                        - cell "E2E PD 39733a09" [ref=f1e270]
+                        - cell "57,249,387,000 IRR" [ref=f1e271]
+                      - row [ref=f1e272]:
+                        - cell "E2E PD 2485f0ac" [ref=f1e273]
+                        - cell "35,951,850,000 IRR" [ref=f1e274]
+                      - row [ref=f1e275]:
+                        - cell "E2E PD daa8e7b2" [ref=f1e276]
+                        - cell "73,591,137,000 IRR" [ref=f1e277]
+                      - row [ref=f1e278]:
+                        - cell "E2E PD 645fdbd2" [ref=f1e279]
+                        - cell "98,232,075,000 IRR" [ref=f1e280]
+                      - row [ref=f1e281]:
+                        - cell "Total" [ref=f1e282]
+                        - cell "1,856,921,526,000 IRR" [ref=f1e283]
+                  - generic [ref=f1e284]:
+                    - generic [ref=f1e285]: Provisional
+                    - generic [ref=f1e286]: 628 calculation runs
+                    - generic [ref=f1e287]: Coverage 100 %
+                    - generic [ref=f1e288]: Policy valuation_basis@2
