@@ -133,7 +133,7 @@ test.describe('Viewer — read-only-allowed routes, scope boundary, user lists',
     for (const organizationId of ['00000000-0000-4000-8000-00000000aaaa', null]) {
       await page.evaluate(([storageKey, value]) => window.localStorage.setItem(storageKey, value), [key, JSON.stringify(foreign(organizationId))]);
       await page.reload();
-      await expect(page.locator('header')).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole('banner')).toBeVisible({ timeout: 30_000 }); // the dashboard adds a second <header>
       await expect(plantTrigger(page)).toContainText('Demo Plant 2', { timeout: 30_000 });
       await expect(page.getByTestId('plant-access-refused')).toHaveCount(0);
       await expect(page.locator('body')).not.toContainText('Partner Plant');

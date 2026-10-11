@@ -63,7 +63,7 @@ export async function uiLogin(page: Page, email: string): Promise<void> {
     await loginViaUI(page, email, PASSWORD);
   } catch (error) {
     if (!page.url().includes('/dashboard')) throw error;
-    await expect(page.locator('header')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('banner')).toBeVisible({ timeout: 30_000 });
   }
 }
 

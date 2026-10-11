@@ -6,9 +6,10 @@ import { MDA, PREFIX, listMdaUnits, sessionOf, shortId, type Session } from './s
  * Master data admin persona — journey 7, hierarchy mappings. The only hierarchy-mapping screen lives
  * under Connectivity (integration admins), so the persona has no screen for it; the v1 API is checked
  * instead: a `P-MDA-map-…` mapping of a persona unit is created (the controller declares no @Roles) and
- * previewed through `POST /hierarchy-mappings/find-mapping`. A PI mapping resolves; the MQTT one is
- * mirrored into /v2/source-mappings but never found (DEFECT, kept as a failing assertion). Not serial:
- * a retry of this test must not re-run the other journeys. Nothing is deleted.
+ * previewed through `POST /hierarchy-mappings/find-mapping`. A PI mapping resolves, and so does the MQTT one
+ * (mirrored into /v2/source-mappings and looked up by the request's source system; formerly a defect of the
+ * PI-only default, fixed in 3a61aa3). Not serial: a retry of this test must not re-run the other journeys.
+ * Nothing is deleted.
  */
 let felix: Session;
 const suffix = shortId();
@@ -18,7 +19,7 @@ test.describe('Master data admin — hierarchy mappings through the v1 API', () 
     felix = await sessionOf(MDA.felix);
   });
 
-  test('MDA-07b Felix: a P-MDA mapping is created and previewed; the MQTT preview never resolves (DEFECT)', async () => {
+  test('MDA-07b Felix: a P-MDA mapping is created and previewed; PI and MQTT previews both resolve', async () => {
     const units = await listMdaUnits(felix.token, 'U');
     expect(units.length, 'a P-MDA-U- unit of masterdata-1 exists').toBeGreaterThan(0);
     const mapping = (sourceType: string, kind: string) =>
@@ -37,10 +38,7 @@ test.describe('Master data admin — hierarchy mappings through the v1 API', () 
     expect(itemsOf(mirrored.body).find((row) => row.matchValue === `${PREFIX}map-mqtt/${suffix}`)).toMatchObject({ sourceSystem: 'MQTT', isActive: true });
     const mqttPreview = await preview('MQTT', 'mqtt');
     expect(mqttPreview.status).toBeLessThan(300);
-    // DEFECT: HierarchyMappingService.findHierarchyMapping calls loadResolver(tenantId, connectionId) without the request's
-    // sourceType, and loadResolver defaults sourceSystem to 'PI' (sm.sourceSystem IN ('PI', '*')); the mirrored MQTT mapping
-    // (active in /v2/source-mappings) is therefore never found: POST /hierarchy-mappings/find-mapping answers an empty body
-    // for every non-PI source type. The v2 preview (POST /v2/source-mappings/preview) has the same default.
+    // formerly failing: find-mapping defaulted the source system to PI and never found the mirrored MQTT mapping
     expect(mqttPreview.body?.unitId).toBe(units[0].id);
   });
 });

@@ -141,21 +141,24 @@ test.describe('Viewer — every write in Demo Plant is refused (READ_ONLY_ROLE)'
     const posted = page.waitForResponse((r) => /\/api\/tasks$/.test(r.url()) && r.request().method() === 'POST');
     await dialog.getByRole('button', { name: 'Create Task' }).click();
     const response = await posted;
-    await page.screenshot({ path: test.info().outputPath('viewer-r2-task.png') });
-    // the guard itself works: the same payload sent with the acting plant named is refused
+    // the v1 client names the acting plant (X-Tenant-Id from the plant selection), so the server sees the
+    // viewer-only scope and refuses before anything is stored (WriteAccessGuard, 403 READ_ONLY_ROLE)
+    expect(response.request().headers()['x-tenant-id'], 'the v1 task client names the acting plant').toBe(DEMO.id);
     const body = response.request().postDataJSON() as Record<string, unknown>;
     expect(body.tenantId).toBe(DEMO.id);
-    expect(response.request().headers()['x-tenant-id'], 'the v1 task client does not name the acting plant').toBeUndefined();
+    expect(response.status(), 'POST /api/tasks from the read-only plant must be refused').toBe(403);
+    expect(((await response.json()) as ApiErrorBody).code).toBe('READ_ONLY_ROLE');
+    await expect(page.getByText('Save failed')).toBeVisible();
+    await expect(dialog).toBeVisible(); // the dialog stays open with the draft; no crash
+    await page.screenshot({ path: test.info().outputPath('viewer-r2-task.png') });
+    // the same payload sent directly with the acting plant named is refused the same way
     const direct = await call<ApiErrorBody & { id?: string }>(pedro.token, 'POST', '/tasks', { ...body, title: `${title}-api` }, { ...DEMO_HEADER, 'X-Client-Audited': 'true' });
     expect(direct.status).toBe(403);
     expect(direct.body.code).toBe('READ_ONLY_ROLE');
     expect(direct.body).not.toHaveProperty('id');
-    // DEFECT: the v1 Tasks page posts without X-Tenant-Id, so the server resolves the home plant (Operator)
-    // and stores a task whose body names Demo Plant: a viewer writes into the plant it may only read.
-    expect(response.status(), 'POST /api/tasks from the read-only plant must be refused').toBe(403);
     const tasks = await call<Array<{ title: string; tenantId: string }>>(pedro.token, 'GET', `/tasks?tenantId=${DEMO.id}`);
     expect(tasks.status).toBe(200);
-    expect(tasks.body.filter((task) => task.title === title)).toEqual([]);
+    expect(tasks.body.filter((task) => task.title.startsWith(title))).toEqual([]);
   });
 
   test('R3 Nadia: a plan draft is refused with the read-only title and is not stored', async ({ page }) => {
