@@ -1,8 +1,21 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HistorianHistoryDB } from './StorageService';
 
-// Mock IndexedDB for testing
+interface FakeOpenRequest {
+  onerror: (() => void) | null;
+  onsuccess: (() => void) | null;
+  onupgradeneeded: (() => void) | null;
+}
+
+// Like a real IDBOpenDBRequest, the failure is reported asynchronously, after init() attaches its handlers
+function failingOpenRequest(): FakeOpenRequest {
+  const request: FakeOpenRequest = { onerror: null, onsuccess: null, onupgradeneeded: null };
+  queueMicrotask(() => request.onerror?.());
+  return request;
+}
+
 const mockIndexedDB = {
-  open: jest.fn(),
+  open: vi.fn(failingOpenRequest),
 };
 
 Object.defineProperty(window, 'indexedDB', {
@@ -16,19 +29,10 @@ describe('HistorianHistoryDB', () => {
 
   beforeEach(() => {
     db = new HistorianHistoryDB();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Fallback Storage', () => {
-    beforeEach(() => {
-      // Mock IndexedDB to fail
-      mockIndexedDB.open.mockImplementation(() => ({
-        onerror: jest.fn(),
-        onsuccess: jest.fn(),
-        onupgradeneeded: jest.fn(),
-      }));
-    });
-
     it('should use fallback storage when IndexedDB is not available', async () => {
       await db.init();
       expect(db.getStorageType()).toBe('fallback');
@@ -127,20 +131,22 @@ describe('HistorianHistoryDB', () => {
 
     it('should limit history to 20 entries in fallback storage', async () => {
       await db.init();
-      
-      const testHistory = Array.from({ length: 25 }, (_, i) => ({
-        id: i.toString(),
-        timestamp: '2024-01-01T00:00:00Z',
-        attributes: [],
-        queryParams: {},
-        resultCount: 10,
-        tenantId: testTenantId,
-      }));
 
-      await db.saveQueryHistory(testTenantId, testHistory);
+      // The cap is applied when entries are added; saveQueryHistory stores the given list as-is
+      for (let i = 0; i < 25; i++) {
+        await db.addQueryHistoryEntry(testTenantId, {
+          id: i.toString(),
+          timestamp: new Date(Date.UTC(2024, 0, 1, 0, i)).toISOString(),
+          attributes: [],
+          queryParams: {},
+          resultCount: 10,
+        });
+      }
       const history = await db.loadQueryHistory(testTenantId);
-      
+
       expect(history).toHaveLength(20);
+      expect(history[0].id).toBe('24');
+      expect(history[19].id).toBe('5');
     });
 
     it('should export history data correctly', async () => {

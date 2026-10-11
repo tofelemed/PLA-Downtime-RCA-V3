@@ -2,6 +2,10 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 
+// src/test/integration/* talks to a running backend (:4004 with seeded users) and belongs to the e2e layer,
+// so the unit run leaves it out; run it on demand with PROACT_API_INTEGRATION=1 npx vitest run src/test/integration
+const runApiIntegration = process.env.PROACT_API_INTEGRATION === '1';
+
 export default defineConfig({
   plugins: [react()],
   test: {
@@ -16,6 +20,7 @@ export default defineConfig({
       'server/**/*',
       '**/*.d.ts',
       '**/*.config.*',
+      ...(runApiIntegration ? [] : ['src/test/integration/**']),
     ],
     coverage: {
       provider: 'v8',

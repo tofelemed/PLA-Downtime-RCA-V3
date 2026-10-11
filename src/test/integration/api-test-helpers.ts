@@ -29,11 +29,12 @@ export async function getTestAuthTokens(
     });
 
     if (response.ok) {
-      const data = await response.json();
-      return {
-        accessToken: data.accessToken || data.tokens?.accessToken,
-        refreshToken: data.refreshToken || data.tokens?.refreshToken,
-      };
+      // POST /auth/login answers { access_token, refresh_token, expires_in, token_type, user }
+      const data: { access_token?: string; refresh_token?: string } = await response.json();
+      if (!data.access_token || !data.refresh_token) {
+        throw new Error('Login response carries no access_token / refresh_token');
+      }
+      return { accessToken: data.access_token, refreshToken: data.refresh_token };
     }
 
     // Try to register if login fails

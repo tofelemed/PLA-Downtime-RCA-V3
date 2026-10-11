@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import MultiAttributeSelector from './MultiAttributeSelector';
+import type { PIClient } from '@/services/pi/PIClient';
 
 // Mock PIClient
 const mockPIClient = {
@@ -15,7 +16,8 @@ const mockPIClient = {
 
 // Mock props
 const defaultProps = {
-  piClient: mockPIClient,
+  tenantId: 'tenant-1',
+  piClient: mockPIClient as unknown as PIClient,
   onAttributesSelected: vi.fn(),
   selectedAttributes: [],
   maxAttributes: 10,
@@ -64,11 +66,21 @@ describe('MultiAttributeSelector', () => {
   });
 
   it('shows loading state while fetching data', async () => {
-    mockPIClient.getAssetServers.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+    let resolveServers: (value: { Items: unknown[] }) => void = () => undefined;
+    mockPIClient.getAssetServers.mockImplementation(
+      () => new Promise(resolve => { resolveServers = resolve; }),
+    );
 
     render(<MultiAttributeSelector {...defaultProps} />);
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    // Server loading starts after the saved selection state is read, so it appears asynchronously
+    expect(await screen.findByText('Loading servers...')).toBeInTheDocument();
+
+    resolveServers({ Items: [{ WebId: 'server1', Name: 'Test Server' }] });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading servers...')).not.toBeInTheDocument();
+    });
   });
 
   it('allows testing connection manually', async () => {
@@ -138,7 +150,7 @@ describe('MultiAttributeSelector', () => {
       // Missing required methods
     };
 
-    render(<MultiAttributeSelector {...defaultProps} piClient={invalidPIClient as any} />);
+    render(<MultiAttributeSelector {...defaultProps} piClient={invalidPIClient as unknown as PIClient} />);
 
     // Should show error when trying to load asset servers
     await waitFor(() => {

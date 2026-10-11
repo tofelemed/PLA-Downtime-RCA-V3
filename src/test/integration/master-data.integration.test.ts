@@ -15,7 +15,7 @@ describe('Master Data Integration Tests', () => {
   beforeAll(async () => {
     await waitForBackend();
     tokens = await getTestAuthTokens();
-  });
+  }, 60_000); // waitForBackend polls for up to 30 s
 
   afterAll(async () => {
     // Cleanup
@@ -138,7 +138,7 @@ describe('Master Data Integration Tests', () => {
 
     const updatedName = `Updated Org ${Date.now()}`;
     const updated = await authenticatedRequest<any>(`/organizations/${createdOrgId}`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: { name: updatedName },
       token: tokens.accessToken,
     });
