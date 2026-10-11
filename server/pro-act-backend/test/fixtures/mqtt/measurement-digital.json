@@ -1,0 +1,60 @@
+{
+  "id": "measurement-digital",
+  "title": "Contract 3.2: digital-state sample { name, value }",
+  "profile": {
+    "kind": "measurement_json",
+    "topicTemplate": "proact/v1/{site}/{area}/{line}/{unit}/measurements/{attribute}",
+    "identityStrategy": "seq_boot"
+  },
+  "topics": [
+    "proact/v1/+/+/+/+/measurements/#"
+  ],
+  "packet": {
+    "topic": "proact/v1/HDPE/Polymer/Line1/Extruder1/measurements/RunState",
+    "retained": false,
+    "qos": 1,
+    "dup": false,
+    "packetId": 51
+  },
+  "receivedAt": "2026-10-11T06:10:00.000Z",
+  "payload": {
+    "schema_version": "1.0",
+    "signal": "F1DPwebid-runstate",
+    "value": {
+      "name": "RUN",
+      "value": 1
+    },
+    "ts": "2026-10-11T06:07:15.000Z",
+    "quality": {
+      "good": true,
+      "questionable": true
+    },
+    "seq": 1843,
+    "boot_id": "gw-01-2026-10-11T05:00:00Z",
+    "source": "pi-mqtt-gw-01"
+  },
+  "expect": {
+    "ok": true,
+    "envelope": {
+      "kind": "measurement",
+      "messageId": "Extruder1:gw-01-2026-10-11T05:00:00Z:1843",
+      "values": {
+        "sample": {
+          "signalRef": "F1DPwebid-runstate",
+          "value": null,
+          "unit": null,
+          "digital": {
+            "name": "RUN",
+            "value": 1
+          }
+        }
+      },
+      "quality": {
+        "status": "uncertain",
+        "sourceFlags": [
+          "questionable"
+        ]
+      }
+    }
+  }
+}

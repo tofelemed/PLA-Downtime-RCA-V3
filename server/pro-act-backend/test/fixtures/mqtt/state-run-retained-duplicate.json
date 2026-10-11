@@ -1,0 +1,63 @@
+{
+  "id": "state-run-retained-duplicate",
+  "title": "Contract 4: the retained RUN state delivered again on reconnect: same message id, stored state not a transition",
+  "profile": {
+    "kind": "state_json",
+    "topicTemplate": "proact/v1/{site}/{area}/{line}/{unit}/state",
+    "identityStrategy": "seq_boot",
+    "valueMaps": {
+      "state": {
+        "RUN": "running",
+        "STOP": "stopped",
+        "IDLE": "idle"
+      }
+    }
+  },
+  "topics": [
+    "proact/v1/+/+/+/+/state"
+  ],
+  "packet": {
+    "topic": "proact/v1/HDPE/Polymer/Line1/Extruder1/state",
+    "retained": true,
+    "qos": 1,
+    "dup": true,
+    "packetId": 9
+  },
+  "receivedAt": "2026-10-11T06:12:00.000Z",
+  "payload": {
+    "schema_version": "1.0",
+    "state": {
+      "name": "RUN",
+      "value": 1
+    },
+    "previous": {
+      "name": "STOP",
+      "value": 0
+    },
+    "ts": "2026-10-11T06:07:14.187Z",
+    "quality": {
+      "good": true
+    },
+    "seq": 1843,
+    "boot_id": "gw-01-2026-10-11T05:00:00Z",
+    "source": "pi-mqtt-gw-01"
+  },
+  "expect": {
+    "ok": true,
+    "envelope": {
+      "messageId": "Extruder1:gw-01-2026-10-11T05:00:00Z:1843",
+      "observedAt": "2026-10-11T06:07:14.187Z",
+      "sourceControls": {
+        "mqtt": {
+          "retained": true,
+          "duplicate": true
+        }
+      }
+    }
+  },
+  "sameMessageIdAs": "state-run",
+  "ordering": {
+    "after": "state-stop",
+    "decision": "stale"
+  }
+}

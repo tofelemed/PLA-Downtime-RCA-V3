@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/mqtt/measurement.v1.schema.json",
+  "title": "Pro-Act MQTT measurement v1",
+  "description": "One sample of a counter, rate or level on …/measurements/{attribute} (OT contract §3.2). value is a number, a boolean or a digital state { name, value }; uom is the PI UOM abbreviation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "signal",
+    "value",
+    "ts",
+    "seq",
+    "boot_id"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})$",
+      "description": "RFC 3339 with explicit offset or Z; source time, never publish time."
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic per publisher session; restarts at 0 with every boot_id."
+    },
+    "boot_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Changes on every publisher (re)start; boot_id + seq is the delivery identity."
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "quality": {
+      "description": "PI value flags (good / questionable / substituted / annotated) or a string token of another convention; omit only when the source has no quality concept. Missing is never treated as good.",
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "good": {
+              "type": "boolean"
+            },
+            "questionable": {
+              "type": "boolean"
+            },
+            "substituted": {
+              "type": "boolean"
+            },
+            "annotated": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      ]
+    },
+    "signal": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "description": "Stable id of the PI point / AF attribute (WebId or full AF attribute path)."
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "value": {
+              "type": "integer"
+            }
+          }
+        }
+      ]
+    },
+    "uom": {
+      "type": "string",
+      "maxLength": 32
+    }
+  }
+}

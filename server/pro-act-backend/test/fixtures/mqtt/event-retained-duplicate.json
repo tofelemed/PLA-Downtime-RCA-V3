@@ -1,0 +1,64 @@
+{
+  "id": "event-retained-duplicate",
+  "title": "Contract 4: the open event re-delivered retained with dup=1: same message id, no new event",
+  "profile": {
+    "kind": "interval_event_json",
+    "topicTemplate": "proact/v1/{site}/{area}/{line}/{unit}/events",
+    "identityStrategy": "event_id"
+  },
+  "topics": [
+    "proact/v1/+/+/+/+/events"
+  ],
+  "packet": {
+    "topic": "proact/v1/HDPE/Polymer/Line1/Extruder1/events",
+    "retained": true,
+    "qos": 1,
+    "dup": true,
+    "packetId": 41
+  },
+  "receivedAt": "2026-10-11T06:11:00.000Z",
+  "payload": {
+    "schema_version": "1.0",
+    "event_id": "EF-7f2c4a1e",
+    "revision": "2026-10-11T05:40:05.000Z",
+    "operation": "upsert",
+    "template": "Production Loss",
+    "element_path": "\\\\PIAF\\HDPE\\Polymer\\Line1\\Extruder1",
+    "start_ts": "2026-10-11T05:40:00.000Z",
+    "end_ts": null,
+    "attributes": {
+      "Reason": "Belt trip",
+      "Reason Code": "MECH-01",
+      "Impact Code": "Unplanned",
+      "OEE Code": "Availability",
+      "Description": "Conveyor belt tripped on overload",
+      "Quantity": 12.5,
+      "Severity": "High"
+    },
+    "attribute_units": {
+      "Quantity": "t"
+    },
+    "ts": "2026-10-11T05:40:05.100Z",
+    "seq": 1801,
+    "boot_id": "gw-01-2026-10-11T05:00:00Z",
+    "source": "pi-mqtt-gw-01"
+  },
+  "expect": {
+    "ok": true,
+    "envelope": {
+      "messageId": "EF-7f2c4a1e:2026-10-11T05:40:05.000Z",
+      "observedAt": "2026-10-11T05:40:05.100Z",
+      "sourceControls": {
+        "mqtt": {
+          "retained": true,
+          "duplicate": true
+        }
+      }
+    }
+  },
+  "sameMessageIdAs": "event-open",
+  "ordering": {
+    "after": "event-open",
+    "decision": "duplicate_content"
+  }
+}

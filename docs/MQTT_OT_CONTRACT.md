@@ -133,7 +133,7 @@ Published **retained** (see §4). The state vocabulary (`RUN`, `STOP`, `IDLE`, �
 
 ### 3.4 Quality
 
-Send PI's own flags (`good`, `questionable`, `substituted`, optionally `annotated`). Pro-Act maps them: `good=true & questionable=false` → good; `questionable=true` → uncertain; `good=false` → bad; missing → unknown (never treated as good). If a different system is bridged, tell us which quality convention it uses (OPC UA StatusCode, OPC DA, Sparkplug) and we configure the decoder.
+Send PI's own flags (`good`, `questionable`, `substituted`, optionally `annotated`). Pro-Act maps them the same way as its direct PI connection: `good=true` and neither `questionable` nor `substituted` → good; `questionable=true` or `substituted=true` → uncertain; `good=false` → bad; missing → unknown (never treated as good). If a different system is bridged, tell us which quality convention it uses (OPC UA StatusCode, OPC DA, Sparkplug) and we configure the decoder.
 
 ### 3.5 Availability — `…/gateway/availability`
 

@@ -1,0 +1,49 @@
+{
+  "id": "availability-offline-lwt",
+  "title": "Contract 3.5: Last Will OFFLINE (no seq) on the availabilityTopic of an events connection",
+  "profile": {
+    "kind": "interval_event_json",
+    "topicTemplate": "proact/v1/{site}/{area}/{line}/{unit}/events",
+    "identityStrategy": "event_id"
+  },
+  "topics": [
+    "proact/v1/+/+/+/+/events"
+  ],
+  "packet": {
+    "topic": "proact/v1/HDPE/gateway/availability",
+    "retained": true,
+    "qos": 1,
+    "dup": false,
+    "packetId": 71
+  },
+  "receivedAt": "2026-10-11T06:10:00.000Z",
+  "payload": {
+    "schema_version": "1.0",
+    "state": "OFFLINE",
+    "ts": "2026-10-11T06:09:59.000Z",
+    "boot_id": "gw-01-2026-10-11T05:00:00Z",
+    "source": "pi-mqtt-gw-01"
+  },
+  "expect": {
+    "ok": true,
+    "envelope": {
+      "kind": "state",
+      "sourceObjectId": "proact/v1/HDPE/gateway/availability",
+      "sourceRevision": "1791699000000",
+      "values": {
+        "state": {
+          "value": "OFFLINE",
+          "sequence": null
+        }
+      },
+      "sourceControls": {
+        "mqtt": {
+          "availability": true,
+          "piConnected": null,
+          "sequence": null
+        }
+      }
+    }
+  },
+  "messageIdPattern": "^sha256:[0-9a-f]{64}:2026-10-11T06:09:59\\.000Z$"
+}

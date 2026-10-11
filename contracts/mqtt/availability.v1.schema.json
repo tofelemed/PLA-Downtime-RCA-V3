@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/mqtt/availability.v1.schema.json",
+  "title": "Pro-Act MQTT gateway availability v1",
+  "description": "Publisher liveness on …/gateway/availability (OT contract §3.5): retained ONLINE on connect, OFFLINE as the Last Will and on clean shutdown. seq is optional because a Last Will is registered before any sequence exists.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "state",
+    "ts",
+    "boot_id"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})$",
+      "description": "RFC 3339 with explicit offset or Z; source time, never publish time."
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic per publisher session; restarts at 0 with every boot_id."
+    },
+    "boot_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Changes on every publisher (re)start; boot_id + seq is the delivery identity."
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "quality": {
+      "description": "PI value flags (good / questionable / substituted / annotated) or a string token of another convention; omit only when the source has no quality concept. Missing is never treated as good.",
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "good": {
+              "type": "boolean"
+            },
+            "questionable": {
+              "type": "boolean"
+            },
+            "substituted": {
+              "type": "boolean"
+            },
+            "annotated": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      ]
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "ONLINE",
+        "OFFLINE"
+      ]
+    },
+    "pi_connected": {
+      "type": "boolean",
+      "description": "Whether the gateway itself can reach PI; false marks the source degraded."
+    }
+  }
+}

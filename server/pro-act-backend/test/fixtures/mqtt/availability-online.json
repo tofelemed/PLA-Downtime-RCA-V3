@@ -1,0 +1,56 @@
+{
+  "id": "availability-online",
+  "title": "Contract 3.5: retained ONLINE on connect (availability profile)",
+  "profile": {
+    "kind": "availability",
+    "topicTemplate": "proact/v1/{site}/gateway/availability",
+    "identityStrategy": "seq_boot"
+  },
+  "topics": [
+    "proact/v1/+/gateway/availability"
+  ],
+  "packet": {
+    "topic": "proact/v1/HDPE/gateway/availability",
+    "retained": true,
+    "qos": 1,
+    "dup": false,
+    "packetId": 70
+  },
+  "receivedAt": "2026-10-11T06:10:00.000Z",
+  "payload": {
+    "schema_version": "1.0",
+    "state": "ONLINE",
+    "ts": "2026-10-11T06:00:00.000Z",
+    "seq": 0,
+    "boot_id": "gw-01-2026-10-11T05:00:00Z",
+    "source": "pi-mqtt-gw-01",
+    "pi_connected": true
+  },
+  "expect": {
+    "ok": true,
+    "envelope": {
+      "kind": "state",
+      "operation": "observe",
+      "messageId": "proact/v1/HDPE/gateway/availability:gw-01-2026-10-11T05:00:00Z:0",
+      "sourceObjectId": "proact/v1/HDPE/gateway/availability",
+      "values": {
+        "state": {
+          "stateRef": "proact/v1/HDPE/gateway/availability",
+          "value": "ONLINE",
+          "sequence": 0
+        }
+      },
+      "quality": {
+        "status": "good",
+        "degraded": false
+      },
+      "sourceControls": {
+        "mqtt": {
+          "availability": true,
+          "piConnected": true,
+          "retained": true
+        }
+      }
+    }
+  }
+}

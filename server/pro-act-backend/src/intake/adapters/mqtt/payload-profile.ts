@@ -27,6 +27,10 @@ export const IDENTITY_STRATEGIES = [
   'event_id',
   'payload_hash',
 ] as const;
+/** What a timestamp older than `maxPastSeconds` does: reject (events) or flag `quality.degraded` (samples). */
+export const STALE_HANDLING = ['reject', 'flag'] as const;
+/** What an unmapped reason token does: reject (`UNMAPPED_VALUE`) or keep the raw token (event created uncoded). */
+export const REASON_UNMAPPED = ['reject', 'keep'] as const;
 
 /** Topic levels that identify the equipment; one of them must be captured by equipment profiles. */
 export const EQUIPMENT_CAPTURES: readonly string[] = ['machine', 'unit'];
@@ -43,12 +47,19 @@ export interface PayloadProfile {
     unit?: (typeof TIME_UNITS)[number];
     maxFutureSkewSeconds?: number;
     maxPastSeconds?: number;
+    onStale?: (typeof STALE_HANDLING)[number];
   };
   quality?: { protocol?: (typeof QUALITY_PROTOCOLS)[number] };
   identityStrategy?: (typeof IDENTITY_STRATEGIES)[number];
   valueMaps?: {
     state?: Record<string, string>;
     reason?: Record<string, string>;
+  };
+  reasonUnmapped?: (typeof REASON_UNMAPPED)[number];
+  /** Expected claims checked against the topic captures / payload fields; never used as tenancy (MQ01). */
+  tenancy?: {
+    expectedSite?: string;
+    expectedTenantClaim?: string;
   };
 }
 
@@ -63,6 +74,8 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set([
   'quality',
   'identityStrategy',
   'valueMaps',
+  'reasonUnmapped',
+  'tenancy',
 ]);
 
 type Problems = string[];
@@ -169,6 +182,30 @@ function validateTime(value: unknown, problems: Problems): void {
       problems.push(`payloadProfile.time.${key}: must be an integer >= 0`);
     }
   }
+  if (
+    value.onStale !== undefined &&
+    !(STALE_HANDLING as readonly unknown[]).includes(value.onStale)
+  ) {
+    problems.push(
+      `payloadProfile.time.onStale: must be one of ${STALE_HANDLING.join(', ')}`,
+    );
+  }
+}
+
+function validateTenancy(value: unknown, problems: Problems): void {
+  if (!isRecord(value)) {
+    problems.push('payloadProfile.tenancy: must be an object');
+    return;
+  }
+  for (const key of Object.keys(value)) {
+    if (key !== 'expectedSite' && key !== 'expectedTenantClaim') {
+      problems.push(`payloadProfile.tenancy.${key}: unknown setting`);
+    } else if (typeof value[key] !== 'string' || value[key] === '') {
+      problems.push(
+        `payloadProfile.tenancy.${key}: must be a non-empty string`,
+      );
+    }
+  }
 }
 
 function validateValueMaps(value: unknown, problems: Problems): void {
@@ -251,5 +288,14 @@ export function validatePayloadProfile(
   }
   if (profile.valueMaps !== undefined)
     validateValueMaps(profile.valueMaps, problems);
+  if (
+    profile.reasonUnmapped !== undefined &&
+    !(REASON_UNMAPPED as readonly unknown[]).includes(profile.reasonUnmapped)
+  ) {
+    problems.push(
+      `payloadProfile.reasonUnmapped: must be one of ${REASON_UNMAPPED.join(', ')}`,
+    );
+  }
+  if (profile.tenancy !== undefined) validateTenancy(profile.tenancy, problems);
   return problems;
 }

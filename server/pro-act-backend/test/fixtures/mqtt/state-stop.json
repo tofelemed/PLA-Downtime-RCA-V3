@@ -1,0 +1,63 @@
+{
+  "id": "state-stop",
+  "title": "Contract 3.3: run state STOP (previous RUN)",
+  "profile": {
+    "kind": "state_json",
+    "topicTemplate": "proact/v1/{site}/{area}/{line}/{unit}/state",
+    "identityStrategy": "seq_boot",
+    "valueMaps": {
+      "state": {
+        "RUN": "running",
+        "STOP": "stopped",
+        "IDLE": "idle"
+      }
+    }
+  },
+  "topics": [
+    "proact/v1/+/+/+/+/state"
+  ],
+  "packet": {
+    "topic": "proact/v1/HDPE/Polymer/Line1/Extruder1/state",
+    "retained": true,
+    "qos": 1,
+    "dup": false,
+    "packetId": 61
+  },
+  "receivedAt": "2026-10-11T06:10:00.000Z",
+  "payload": {
+    "schema_version": "1.0",
+    "state": {
+      "name": "STOP",
+      "value": 0
+    },
+    "previous": {
+      "name": "RUN",
+      "value": 1
+    },
+    "ts": "2026-10-11T06:08:00.000Z",
+    "quality": {
+      "good": true
+    },
+    "seq": 1900,
+    "boot_id": "gw-01-2026-10-11T05:00:00Z",
+    "source": "pi-mqtt-gw-01"
+  },
+  "expect": {
+    "ok": true,
+    "envelope": {
+      "kind": "state",
+      "messageId": "Extruder1:gw-01-2026-10-11T05:00:00Z:1900",
+      "values": {
+        "state": {
+          "value": "stopped",
+          "previousValue": "running",
+          "sequence": 1900
+        }
+      }
+    }
+  },
+  "ordering": {
+    "after": "state-run",
+    "decision": "revision"
+  }
+}
