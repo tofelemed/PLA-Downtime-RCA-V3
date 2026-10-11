@@ -13,6 +13,8 @@ export interface Claim {
   /** quantity from rate × time (`sustained_rate`/`planning_rate`) or from the event (`measured`) */
   fromRate: boolean;
   share: Dec;
+  /** a share of a claim pooled over a product run (`claim-pooling.ts`) */
+  pooled?: boolean;
 }
 
 function addTo(

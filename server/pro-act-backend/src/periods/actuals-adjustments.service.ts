@@ -6,13 +6,14 @@ import {
   requireTenantId,
 } from '../common/context/request-context';
 import { scopedQuery } from '../common/query/scoped-query';
-import { toDec } from '../domain/actuals/decimal';
+import { toDec, ZERO } from '../domain/actuals/decimal';
 import {
   invalid,
   invalidReference,
   invalidTransition,
   notFound,
 } from '../profiles/profile-errors';
+import { assertAdjustmentPossible } from './adjustment-guard';
 import { ActualsAdjustment } from './entities/actuals-adjustment.entity';
 import { PeriodProductSlice } from './entities/period-product-slice.entity';
 import { ProductionPeriod } from './entities/production-period.entity';
@@ -34,7 +35,9 @@ export interface AdjustmentProposal {
  * Governed manual actuals (plan 2.4 step 3, ACT06): a proposal names an active slice of the caller's
  * scope, a component, a signed quantity in the slice unit, a basis, a reason, evidence and optionally the
  * measurement window inside the slice; approval or rejection is by someone other than the author (403
- * SEPARATION_OF_DUTIES, also a CHECK in the table). An approval requests a recalculation of the period,
+ * SEPARATION_OF_DUTIES, also a CHECK in the table). A proposal or approval that would make the slice's
+ * actuals impossible (negative gross, good or rejects, good above gross) is refused with 422
+ * (`assertAdjustmentPossible`). An approval requests a recalculation of the period,
  * which writes a new actuals run where the adjustment is a separate component; raw data never changes.
  */
 @Injectable()
@@ -58,6 +61,11 @@ export class ActualsAdjustmentsService {
     const period = await this.adjustments.manager.findOneByOrFail(
       ProductionPeriod,
       { id: slice.periodId },
+    );
+    await assertAdjustmentPossible(
+      this.adjustments.manager,
+      { period, sliceId: slice.id },
+      { kind: body.kind, quantity },
     );
     return this.adjustments.save(
       this.adjustments.create({
@@ -126,6 +134,9 @@ export class ActualsAdjustmentsService {
       });
     }
     return this.adjustments.manager.transaction(async (manager) => {
+      if (decision.state === 'approved') {
+        await assertApprovable(manager, adjustment);
+      }
       const result = await manager.update(
         ActualsAdjustment,
         { id, state: 'proposed' },
@@ -171,6 +182,21 @@ export class ActualsAdjustmentsService {
     }
     return slice;
   }
+}
+
+/** Approval re-checks the projection: other adjustments may have been approved since the proposal. */
+async function assertApprovable(
+  manager: EntityManager,
+  adjustment: ActualsAdjustment,
+): Promise<void> {
+  const period = await manager.findOneByOrFail(ProductionPeriod, {
+    id: adjustment.periodId,
+  });
+  await assertAdjustmentPossible(
+    manager,
+    { period, sliceId: adjustment.sliceId },
+    { kind: adjustment.kind, quantity: toDec(adjustment.quantity) ?? ZERO },
+  );
 }
 
 /** An approved adjustment recalculates its period, within the approver's unit scope. */

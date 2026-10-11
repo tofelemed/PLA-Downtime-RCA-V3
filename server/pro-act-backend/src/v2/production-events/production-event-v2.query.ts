@@ -1,4 +1,5 @@
 import { SelectQueryBuilder } from 'typeorm';
+import { applyIsOpenFilter } from '../../common/query/open-event-filter';
 import { applyOverlapWindow } from '../../common/query/overlap-window';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { CursorCodec, invalidCursor } from '../common/cursor-codec';
@@ -57,11 +58,7 @@ export function applyProductionEventV2Filters(
     query.from,
     query.to,
   );
-  if (query.isOpen === true) {
-    qb.andWhere(`${alias}.endTime IS NULL`);
-  } else if (query.isOpen === false) {
-    qb.andWhere(`${alias}.endTime IS NOT NULL`);
-  }
+  applyIsOpenFilter(qb, query.isOpen, alias);
   return qb;
 }
 

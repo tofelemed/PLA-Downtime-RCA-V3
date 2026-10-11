@@ -434,6 +434,8 @@ stateDiagram-v2
 
 A v2 **recommendation** ("RCA recommended: …") does **not** change the RCA state. Only linking does.
 
+**"Open" (running) means no end time and not superseded or retracted** (`domain/events/open-event.ts`). A split parent keeps the interval it had, possibly without an end, but it is never a running stop: `isOpen=true` leaves it out and its view says `isOpen: false`.
+
 ### 7.4 Revisions and source ownership (plan 1.2)
 
 Every change writes an immutable **event revision** (kinds: source, user, system, retraction). It holds both the *source facts* and the *effective facts*.
@@ -603,6 +605,7 @@ An **adjustment** corrects actuals without touching raw data. Example: "weighbri
 - It is proposed with slice, kind (gross / good / reject / rework), signed non-zero quantity, basis (measured / estimated), reason and evidence.
 - **It is approved or rejected by someone other than its author** (403 `SEPARATION_OF_DUTIES`, also enforced by a database check).
 - Approval triggers a recalculation. The adjustment appears in "Actuals provenance" as a separate component.
+- An adjustment that would make the actuals impossible is refused when proposed and again when approved (422): `ADJUSTMENT_GOOD_EXCEEDS_GROSS` (negative quality loss), `ADJUSTMENT_NEGATIVE_GOOD`, `ADJUSTMENT_NEGATIVE_GROSS`, `ADJUSTMENT_NEGATIVE_REJECT`. The check uses the latest actuals plus the approved adjustments not yet in them. A weighbridge recount of output belongs on `gross`, not `good`.
 - Roles:
   - propose: `production_engineer` or `manager_approver`;
   - decide: `manager_approver`.
@@ -645,6 +648,7 @@ Inside a segment the state is constant.
 - A `fractional` slowdown is a **derate**, which counts as performance.
 - **Attribution:** each stop occurrence has one cause, its earliest active event. If several occurrences overlap a segment, they **share it equally** (`shares.ts`). Shares are truncated to 8 decimals and the remainder goes to the last share, so Σ = 1 exactly.
 - **Declared quantities** on events are prorated by the fraction of the event inside the window (`claims.ts: quantityInside`).
+- **Product runs** (`claim-pooling.ts`, engine 2.5.1): when a period is cut into several slices of the same product only by plan periods (two month plans meeting inside a shift), the slices' actuals are apportioned by time while causes are located in time. Performance and quality causes are therefore pooled over the run and allocated to its slices in proportion to each slice's component total (lines flagged `product_run_share`). Slice totals do not change; a claim beyond the whole run still fails.
 
 ### 10.3 Capacity ledger (`capacity-ledger.ts`)
 

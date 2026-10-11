@@ -17,7 +17,7 @@ describe('MQTT subscriber: durable-before-ack, redelivery and poison messages (p
   const w = new MqttSubscriberWorld();
   const elementPath = `\\\\PIAF\\HDPE\\Polymer\\Line1\\Extruder1`;
   let events: string;
-  const topic = () => `proact/v1/${w.site}/Polymer/Line1/Extruder1/events`;
+  const topic = () => `${w.prefix}/Polymer/Line1/Extruder1/events`;
   const identities = (objectId: string) =>
     w.rows<{ message_id: string; duplicate_count: number }>(
       `SELECT ri.message_id, ri.duplicate_count FROM raw_identities ri

@@ -76,7 +76,8 @@ export class ProductionEventQueryDto {
 
   @ApiPropertyOptional({
     type: Boolean,
-    description: 'true: no end time yet; false: ended',
+    description:
+      'true: no end time yet and not superseded or retracted; false: ended, superseded or retracted',
   })
   @IsOptional()
   @Transform(toBooleanParam)

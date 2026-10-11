@@ -1,4 +1,5 @@
 import { SelectQueryBuilder } from 'typeorm';
+import { applyIsOpenFilter } from '../common/query/open-event-filter';
 import { applyOverlapWindow } from '../common/query/overlap-window';
 import { ProductionEventQueryDto } from './dto/production-event-query.dto';
 import { ProductionEvent } from './production-event.entity';
@@ -42,10 +43,6 @@ export function applyProductionEventFilters(
     query.startDate,
     query.endDate,
   );
-  if (query.isOpen === true) {
-    qb.andWhere(`${alias}.endTime IS NULL`);
-  } else if (query.isOpen === false) {
-    qb.andWhere(`${alias}.endTime IS NOT NULL`);
-  }
+  applyIsOpenFilter(qb, query.isOpen, alias);
   return qb;
 }

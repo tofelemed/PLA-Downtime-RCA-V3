@@ -119,7 +119,8 @@ export class ProductionEventListQueryDto extends ListQueryDto {
 
   @ApiPropertyOptional({
     type: Boolean,
-    description: 'true: still running (no end time); false: ended',
+    description:
+      'true: still running (no end time, not superseded or retracted); false: ended, superseded or retracted',
   })
   @IsOptional()
   @Transform(toBooleanParam)

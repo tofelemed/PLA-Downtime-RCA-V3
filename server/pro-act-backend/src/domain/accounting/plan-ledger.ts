@@ -6,6 +6,7 @@ import {
   Segment,
   SliceInput,
 } from './accounting.types';
+import { ClaimPool } from './claim-pooling';
 import { qualityClaims, sumOf } from './claims';
 import {
   allocate,
@@ -126,6 +127,7 @@ export function planLedger(
   input: PeriodAccountingInput,
   slice: SliceInput,
   segments: readonly Segment[],
+  pool?: ClaimPool,
 ): SliceLedgerResult {
   const target = toDec(slice.target);
   if (target === null) {
@@ -142,7 +144,7 @@ export function planLedger(
     basis: 'planning',
   };
   const scheduled = segments.filter((s) => !s.excluded);
-  const ctx = contextOf(input, slice, scheduled, line);
+  const ctx = contextOf(input, slice, scheduled, line, pool);
   const timePhased = scheduled.every((s) => s.planning !== null);
   const found = timePhased
     ? candidates(ctx)

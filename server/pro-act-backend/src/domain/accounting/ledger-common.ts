@@ -11,6 +11,7 @@ import {
   ValidationIssue,
 } from './accounting.types';
 import { autoKey } from './auto-key';
+import { ClaimPool } from './claim-pooling';
 import { Claim, measuredDerateClaims, rateClaims, sumOf } from './claims';
 import { ComponentResult, componentLines } from './component-lines';
 import { LineContext, RateBasis, rateOf, segmentCapacity } from './time-lines';
@@ -22,6 +23,8 @@ export interface SliceContext {
   segments: readonly Segment[];
   line: LineContext;
   epsilon: Dec;
+  /** product-run claim pooling of the run (absent: own claims) */
+  pool?: ClaimPool;
 }
 
 export interface AllocationSpec {
@@ -37,6 +40,7 @@ export function contextOf(
   slice: SliceInput,
   segments: readonly Segment[],
   line: LineContext,
+  pool?: ClaimPool,
 ): SliceContext {
   return {
     input,
@@ -44,6 +48,7 @@ export function contextOf(
     segments,
     line,
     epsilon: new Dec(input.policy.epsilon),
+    pool,
   };
 }
 
@@ -62,13 +67,30 @@ export function ledgerClaims(ctx: SliceContext): {
   );
 }
 
+/** The claims a component allocates: its own, or its part of the product run's pooled claims. */
+function claimsOf(ctx: SliceContext, spec: AllocationSpec): Claim[] {
+  if (!ctx.pool || spec.kind === 'availability') return spec.claims;
+  const key = {
+    ledger: ctx.line.ledger,
+    kind: spec.kind,
+    sliceId: ctx.slice.sliceId,
+  };
+  ctx.pool.record?.(key, spec.total, spec.claims);
+  return ctx.pool.claimsFor?.(key) ?? spec.claims;
+}
+
 /** Component total allocated to its claims within the slice window (see `componentLines`). */
 export function allocate(
   ctx: SliceContext,
   spec: AllocationSpec,
 ): ComponentResult {
   return componentLines(
-    { ...spec, window: ctx.slice.window, epsilon: ctx.epsilon },
+    {
+      ...spec,
+      claims: claimsOf(ctx, spec),
+      window: ctx.slice.window,
+      epsilon: ctx.epsilon,
+    },
     ctx.line,
   );
 }

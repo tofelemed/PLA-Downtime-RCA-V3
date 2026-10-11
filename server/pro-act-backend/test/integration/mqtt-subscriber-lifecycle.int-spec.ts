@@ -16,7 +16,7 @@ describe('MQTT subscriber: duplicate feeds, job transitions, runner guard (plan 
   const w = new MqttSubscriberWorld();
   const elementPath = `\\\\PIAF\\HDPE\\Polymer\\Line1\\Extruder1`;
   let events: string;
-  const topic = () => `proact/v1/${w.site}/Polymer/Line1/Extruder1/events`;
+  const topic = () => `${w.prefix}/Polymer/Line1/Extruder1/events`;
   const publishEvent = async (seq: number): Promise<string> => {
     const eventId = `EF-${randomUUID().slice(0, 8)}`;
     await w.publish(
@@ -170,10 +170,7 @@ describe('MQTT subscriber: duplicate feeds, job transitions, runner guard (plan 
       .send({
         endpointConfig: w.eventsConfig({
           mqtt: {
-            topics: [
-              `proact/v1/${w.site}/+/+/+/events`,
-              `proact/v1/${w.site}/+/+/+/alarms`,
-            ],
+            topics: [`${w.prefix}/+/+/+/events`, `${w.prefix}/+/+/+/alarms`],
           },
         }),
       })
@@ -186,7 +183,7 @@ describe('MQTT subscriber: duplicate feeds, job transitions, runner guard (plan 
       'the restart at version 2',
     );
     expect(w.health(events)?.subscribedTopics).toContain(
-      `proact/v1/${w.site}/+/+/+/alarms`,
+      `${w.prefix}/+/+/+/alarms`,
     );
     expect((await w.job(events)).state).toBe('running');
   });

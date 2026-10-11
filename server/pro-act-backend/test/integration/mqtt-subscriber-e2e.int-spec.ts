@@ -18,8 +18,7 @@ describe('MQTT subscriber host end to end (plan 1.8 step 3)', () => {
   let events: string;
   let measurements: string;
   let signalId: string;
-  const eventsTopic = () =>
-    `proact/v1/${w.site}/Polymer/Line1/Extruder1/events`;
+  const eventsTopic = () => `${w.prefix}/Polymer/Line1/Extruder1/events`;
   const eventOf = (eventId: string) =>
     w.rows<{
       id: string;
@@ -62,8 +61,8 @@ describe('MQTT subscriber host end to end (plan 1.8 step 3)', () => {
       effectiveClientId: `proact-${events}`,
       configVersion: 1,
       subscribedTopics: [
-        `proact/v1/${w.site}/+/+/+/events`,
-        `proact/v1/${w.site}/gateway/availability`,
+        `${w.prefix}/+/+/+/events`,
+        `${w.prefix}/gateway/availability`,
       ],
       parkedReason: null,
       counters: { received: 0, accepted: 0 },
@@ -208,7 +207,7 @@ describe('MQTT subscriber host end to end (plan 1.8 step 3)', () => {
   });
 
   it('stores a measurement for a registered signal and quarantines unknown_signal otherwise', async () => {
-    const topic = `proact/v1/${w.site}/Polymer/Line1/Extruder1/measurements/Throughput`;
+    const topic = `${w.prefix}/Polymer/Line1/Extruder1/measurements/Throughput`;
     const sample = (signal: string, seq: number) => ({
       schema_version: '1.0',
       signal,
@@ -241,7 +240,7 @@ describe('MQTT subscriber host end to end (plan 1.8 step 3)', () => {
   });
 
   it('availability ONLINE / OFFLINE updates the source health and publishes SourceHealthChanged, never a stop', async () => {
-    const topic = `proact/v1/${w.site}/gateway/availability`;
+    const topic = `${w.prefix}/gateway/availability`;
     const before = await countRows(w.harness.dataSource, 'production_events');
     await w.publish(
       topic,

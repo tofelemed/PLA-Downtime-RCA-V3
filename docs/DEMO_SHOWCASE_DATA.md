@@ -88,7 +88,10 @@ switching to another organisation's plant shows different data.
   only the not-yet-approved periods carry values; a fresh run creates the policy first.
 - **Yesterday on Extruder Line 1** is a bad day (OEE 58 %: a 3.5 h screen pack change on top of a grade changeover and a PM stop); the month average is
   73 %.
-- The Event Hub "open" filter (`isOpen=true`) also returns 19 superseded test events (merged/split by
-  persona tests, end time null); the close command refuses them (`INVALID_STATE`), so they cannot be
-  cleaned through the API. The live MQTT simulator can add open stops on Extruder Line 1 at any time;
-  `--only cleanup` closes simulator stops older than 15 minutes.
+- Fixed 2026-10-12 (needs an API restart): `isOpen=true` no longer returns the 19 superseded test events
+  (split by persona tests, end time null).
+- "Conveyor belt tripped on overload" stops on Extruder Line 1 are test traffic, not a simulator left
+  running: the persona specs INT-03/04/05 publish `EF-sim-*` events through their own `P-INT-mqtt-*`
+  connections (placed on Extruder Line 1 by the demo placement rule), and until 2026-10-12 the backend
+  MQTT int-specs published `EF-xxxxxxxx` events on `proact/v1/<run>/…`, which the demo events connection
+  (`proact/v1/+/+/+/+/events`) also received. `--only cleanup` closes MQTT stops older than 15 minutes.

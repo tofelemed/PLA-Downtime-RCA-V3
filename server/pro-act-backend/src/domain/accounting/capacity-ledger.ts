@@ -7,6 +7,7 @@ import {
   SliceInput,
   ValidationIssue,
 } from './accounting.types';
+import { ClaimPool } from './claim-pooling';
 import { qualityClaims } from './claims';
 import {
   allocate,
@@ -196,6 +197,7 @@ export function capacityLedger(
   input: PeriodAccountingInput,
   slice: SliceInput,
   segments: readonly Segment[],
+  pool?: ClaimPool,
 ): SliceLedgerResult {
   const capacity = slice.sustainedRates
     ? capacityOver(segments, 'sustained')
@@ -207,7 +209,7 @@ export function capacityLedger(
     uom: slice.uom,
     basis: 'sustained',
   };
-  const ctx = contextOf(input, slice, segments, line);
+  const ctx = contextOf(input, slice, segments, line, pool);
   const claims = ledgerClaims(ctx);
   const time = [
     ...timeLines(segments, line),

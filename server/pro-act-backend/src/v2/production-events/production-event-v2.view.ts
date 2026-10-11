@@ -9,6 +9,7 @@ import {
   SourceKind,
 } from '../../domain/events/event-classification';
 import { ClassificationBasis } from '../../code-library/classification-basis';
+import { isOpenEvent } from '../../domain/events/open-event';
 import { durationSeconds } from '../../domain/time/interval-algebra';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { EventFacts } from '../../production-event/revisions/event-facts';
@@ -53,6 +54,7 @@ export interface ProductionEventV2View {
   description: string | null;
   startTime: string;
   endTime: string | null;
+  /** still running: no end and not superseded or retracted (a split parent without an end is false) */
   isOpen: boolean;
   /** closed events: `end - start`; null while open */
   durationSeconds: number | null;
@@ -106,7 +108,7 @@ export function toProductionEventV2View(
     description: event.description ?? null,
     startTime: interval.start.toISOString(),
     endTime: interval.end?.toISOString() ?? null,
-    isOpen: interval.end === null,
+    isOpen: isOpenEvent(interval.end, event.physicalState),
     durationSeconds: interval.end ? durationSeconds(interval) : null,
     elapsedSeconds: durationSeconds(interval, asOf) ?? 0,
     asOf: asOf.toISOString(),

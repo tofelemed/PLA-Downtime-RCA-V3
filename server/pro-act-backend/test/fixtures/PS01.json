@@ -1,0 +1,35 @@
+{
+  "id": "PS01",
+  "title": "A shift planned by two plan versions: causes checked against the product run, not one plan slice",
+  "kind": "numerical",
+  "spec_ref": "ACC01, ACC03, D05 (proportional split of a spanning output event)",
+  "owner_subphase": "2.5",
+  "tolerance": "0.000001",
+  "inputs": {
+    "shift": "22:00-06:00 (8 h), one product",
+    "slices": {
+      "S1": { "window": "22:00-00:00", "planVersion": "September", "target": "260", "gross": "160", "good": "158" },
+      "S2": { "window": "00:00-06:00", "planVersion": "October", "target": "560", "gross": "480", "good": "474" }
+    },
+    "outputEvent": "22:00-06:00 gross 640, rejects 8, apportioned by time 25 % / 75 %",
+    "sustainedRatePerHour": "100",
+    "planningRatePerHour": "90",
+    "stop": "23:00-00:00 (availability, wholly in S1)",
+    "microStop": "22:30:00-22:30:30 (performance, in S1)",
+    "qualityEvent": "01:15-01:28 quantity 8 (wholly in S2)"
+  },
+  "expected": {
+    "issues": "0",
+    "S1": {
+      "capacity": { "capacity": "200", "availability": "100", "performance": "0", "gain": "60", "quality": "2", "good": "158", "residual": "0", "qualityEventShare": "2" },
+      "plan": { "availability": "90", "performance": "0", "quality": "2", "residual": "10" }
+    },
+    "S2": {
+      "capacity": { "capacity": "600", "availability": "0", "performance": "120", "gain": "0", "quality": "6", "good": "474", "residual": "0", "qualityEventShare": "6", "microStopClaim": "0.83333333" },
+      "plan": { "availability": "0", "performance": "60", "quality": "6", "residual": "20", "microStopClaim": "0.75" }
+    },
+    "overClaimedRun": { "qualityEventQuantity": "9", "issue": "IMPOSSIBLE_CLAIM" }
+  },
+  "notes": "Before engine 2.5.1 each plan slice was checked alone: the quality event (8) exceeded S2's gross - good (6) and the micro-stop claimed performance in S1, whose performance is 0 (the stop lowered S1's effective capacity below its time-apportioned gross), so the run failed with IMPOSSIBLE_CLAIM.",
+  "status": "authored"
+}

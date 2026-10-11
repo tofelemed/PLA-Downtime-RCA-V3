@@ -2,6 +2,7 @@ import { Dec, ZERO } from '../actuals/decimal';
 import { BoundedInterval } from '../time/interval-algebra';
 import { LossBasis, LossKind, LossLineDraft } from './accounting.types';
 import { autoKey } from './auto-key';
+import { PRODUCT_RUN_SHARE } from './claim-pooling';
 import { Claim, sumOf } from './claims';
 import { LineContext } from './time-lines';
 
@@ -49,7 +50,10 @@ function claimLine(
     cause: event,
     scheduleClass: event.scheduleClass,
     oeeComponent: input.kind,
-    flags: claim.rateVersionIds.length > 1 ? ['several_rate_versions'] : [],
+    flags: [
+      ...(claim.rateVersionIds.length > 1 ? ['several_rate_versions'] : []),
+      ...(claim.pooled ? [PRODUCT_RUN_SHARE] : []),
+    ],
     evidence: [
       {
         eventId: event.eventId,

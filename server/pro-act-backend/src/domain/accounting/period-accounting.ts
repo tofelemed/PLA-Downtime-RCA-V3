@@ -1,20 +1,22 @@
 import { Dec } from '../actuals/decimal';
 import { PeriodAccounting, PeriodAccountingInput } from './accounting.types';
 import { capacityLedger } from './capacity-ledger';
+import {
+  ClaimPool,
+  ClaimRecorder,
+  pooledClaims,
+  productRuns,
+} from './claim-pooling';
 import { checkConservation, checkShares } from './conservation';
 import { planLedger } from './plan-ledger';
 import { segmentSlice } from './segmentation';
 
 /** Bumped whenever a rule of the accounting engine changes (recorded on every calculation run). */
-export const ACCOUNTING_ENGINE_VERSION = '2.5.0';
+export const ACCOUNTING_ENGINE_VERSION = '2.5.1';
 
-/**
- * The loss-accounting engine of plan 2.5 (pure, decimal): per slice, atomic segments, the capacity
- * ledger and the plan ledger, then the conservation checks. Identical inputs give identical lines,
- * quantities and automatic keys; a non-empty `issues` list means the run must fail validation.
- */
-export function computePeriodAccounting(
+function computeSlices(
   input: PeriodAccountingInput,
+  pool?: ClaimPool,
 ): PeriodAccounting {
   const result: PeriodAccounting = {
     lines: [],
@@ -27,14 +29,40 @@ export function computePeriodAccounting(
     result.segmentCount += segments.length;
     result.issues.push(...checkShares(slice.sliceId, segments));
     for (const ledger of [
-      capacityLedger(input, slice, segments),
-      planLedger(input, slice, segments),
+      capacityLedger(input, slice, segments, pool),
+      planLedger(input, slice, segments, pool),
     ]) {
       result.lines.push(...ledger.lines);
       result.totals.push(ledger.totals);
       result.issues.push(...ledger.issues);
     }
   }
+  return result;
+}
+
+/**
+ * The loss-accounting engine of plan 2.5 (pure, decimal): per slice, atomic segments, the capacity
+ * ledger and the plan ledger, then the conservation checks. Identical inputs give identical lines,
+ * quantities and automatic keys; a non-empty `issues` list means the run must fail validation.
+ *
+ * Sequential slices of one product cut only by plan periods (a product run, `productRuns`) share their
+ * performance and quality causes: a first pass records each slice's component totals and claims, the
+ * second allocates the run's pooled claims to its slices in proportion to their totals. A plan
+ * boundary is an accounting cut, not a production event: the slices' actuals come from evidence
+ * apportioned by time (D05), so a cause located in one plan slice is checked against the run's total,
+ * never against an arbitrary part of it (`IMPOSSIBLE_CLAIM` only when the run cannot hold it).
+ */
+export function computePeriodAccounting(
+  input: PeriodAccountingInput,
+): PeriodAccounting {
+  const runs = productRuns(input.slices);
+  let pool: ClaimPool | undefined;
+  if (runs.length > 0) {
+    const recorder = new ClaimRecorder();
+    computeSlices(input, recorder);
+    pool = pooledClaims(runs, recorder, new Dec(input.policy.epsilon));
+  }
+  const result = computeSlices(input, pool);
   result.issues.push(
     ...checkConservation(
       result.lines,

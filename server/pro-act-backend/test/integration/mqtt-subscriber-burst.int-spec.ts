@@ -17,7 +17,7 @@ describe('MQTT subscriber: a burst-delivered lifecycle materialises every revisi
   const w = new MqttSubscriberWorld();
   const elementPath = `\\\\PIAF\\HDPE\\Polymer\\Line1\\Extruder1`;
   let events: string;
-  const topic = () => `proact/v1/${w.site}/Polymer/Line1/Extruder1/events`;
+  const topic = () => `${w.prefix}/Polymer/Line1/Extruder1/events`;
   const eventRows = (eventId: string) =>
     w.rows<{ id: string; end_time: Date | null; physical_state: string }>(
       `SELECT id, end_time, physical_state FROM production_events WHERE event_id = $1`,

@@ -422,7 +422,7 @@
             "name": "isOpen",
             "required": false,
             "in": "query",
-            "description": "true: still running (no end time); false: ended",
+            "description": "true: still running (no end time, not superseded or retracted); false: ended, superseded or retracted",
             "schema": {
               "type": "boolean"
             }

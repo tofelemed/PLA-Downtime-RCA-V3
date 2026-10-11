@@ -18,6 +18,13 @@ import { bearer, createIntegrationApp, signToken } from './test-app';
 /** The Compose `mqtt` service (anonymous dev broker); `MQTT_TEST_URL` overrides it. */
 export const BROKER_URL = process.env.MQTT_TEST_URL ?? 'mqtt://localhost:1884';
 
+/**
+ * Topic root of the test feeds. The Compose broker is shared with a running dev API whose demo
+ * connections subscribe `proact/v1/+/+/+/+/events` and place the Extruder1 element on a demo unit:
+ * test topics under `proact/v1/<site>/...` matched that filter and leaked test stops into the demo tenant.
+ */
+export const TOPIC_ROOT = 'test/proact-int';
+
 export interface SubscribeJobRow {
   id: string;
   state: string;
@@ -60,6 +67,8 @@ export function sleep(ms: number): Promise<void> {
 export class MqttSubscriberWorld {
   readonly harness = new IntegrationHarness();
   readonly site = `S${randomUUID().slice(0, 8)}`;
+  /** `test/proact-int/<site>`: outside `proact/v1/...`, so a live API's demo connection never sees it */
+  readonly prefix = `${TOPIC_ROOT}/${this.site}`;
   app!: INestApplication;
   world!: EventWorld;
   host!: MqttSubscriberHost;
@@ -125,9 +134,13 @@ export class MqttSubscriberWorld {
         tls: undefined,
         username: 'lab',
         sessionExpirySeconds: 300,
-        topics: [`proact/v1/${this.site}/+/+/+/events`],
-        availabilityTopic: `proact/v1/${this.site}/gateway/availability`,
+        topics: [`${this.prefix}/+/+/+/events`],
+        availabilityTopic: `${this.prefix}/gateway/availability`,
         ...overrides.mqtt,
+      },
+      payloadProfile: {
+        topicTemplate: `${TOPIC_ROOT}/{site}/{area}/{line}/{unit}/events`,
+        ...overrides.payloadProfile,
       },
     });
   }
@@ -135,13 +148,12 @@ export class MqttSubscriberWorld {
   measurementsConfig(): Record<string, unknown> {
     return this.eventsConfig({
       mqtt: {
-        topics: [`proact/v1/${this.site}/+/+/+/measurements/#`],
+        topics: [`${this.prefix}/+/+/+/measurements/#`],
         availabilityTopic: undefined,
       },
       payloadProfile: {
         kind: 'measurement_json',
-        topicTemplate:
-          'proact/v1/{site}/{area}/{line}/{unit}/measurements/{attribute}',
+        topicTemplate: `${TOPIC_ROOT}/{site}/{area}/{line}/{unit}/measurements/{attribute}`,
         identityStrategy: 'seq_boot',
       },
     });
