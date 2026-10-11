@@ -50,7 +50,9 @@ interface Running {
  * connection, the persist-before-ack pipeline and the live health; follows the job state (pause =
  * disconnect with the session kept, resume = reconnect, drain = unsubscribe then stop, stop = session
  * dropped), restarts on `config_version`, parks duplicate-feed losers, retries retryable connect failures
- * with exponential backoff and jitter, and fails the job on non-retryable ones (auth, TLS, egress).
+ * with exponential backoff and jitter, and fails the job on non-retryable ones (auth, TLS, egress). A
+ * failed job records the configuration version it failed at; the host restarts it once the connection
+ * moves past that version (`failed-job-recovery.ts`).
  */
 export class MqttSubscription {
   readonly health = new HealthTracker();
@@ -195,6 +197,7 @@ export class MqttSubscription {
   private async start(view: SubscriptionView): Promise<void> {
     let prepared: Awaited<ReturnType<MqttAdapter['prepare']>>;
     this.starting = true;
+    this.health.preparing(view.connection.configVersion);
     try {
       prepared = await this.deps.adapter.prepare(view.connection, 'subscribe');
     } catch (error) {
@@ -337,6 +340,7 @@ export class MqttSubscription {
       error,
       health: this.health.snapshot(),
       from: this.view?.job.state ?? 'running',
+      configVersion: this.view?.connection.configVersion ?? null,
     });
     this.lease = null;
   }

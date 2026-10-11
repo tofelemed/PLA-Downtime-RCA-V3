@@ -29,7 +29,7 @@ export class IngestionJobTransition {
   @JoinColumn({ name: 'job_id' })
   job?: IngestionJob;
 
-  /** `start`, `pause`, `resume`, `drain`, `stop`, `lease_taken`, `lease_reclaimed`, `failed`, `drained` */
+  /** `start`, `pause`, `resume`, `drain`, `stop`, `lease_taken`, `lease_reclaimed`, `failed`, `drained`, `config_changed` */
   @Column({ name: 'action', type: 'varchar', length: 32 })
   action: string;
 

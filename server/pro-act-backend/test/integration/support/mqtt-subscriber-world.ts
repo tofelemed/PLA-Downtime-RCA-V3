@@ -150,13 +150,40 @@ export class MqttSubscriberWorld {
   async createConnection(
     displayName: string,
     endpointConfig: Record<string, unknown>,
+    secret?: string,
   ): Promise<string> {
     const response = await this.post('connections', {
       sourceType: 'mqtt',
       displayName,
       endpointConfig,
+      ...(secret === undefined ? {} : { secret }),
     }).expect(201);
     return (response.body as { id: string }).id;
+  }
+
+  /** `PATCH /v2/connections/{id}` under the current `If-Match` (a secret or configuration change bumps the version). */
+  async patchConnection(
+    connectionId: string,
+    body: Record<string, unknown>,
+  ): Promise<{ configVersion: number }> {
+    const current = await this.get(`connections/${connectionId}`).expect(200);
+    const { rowVersion } = current.body as { rowVersion: number };
+    const response = await this.http()
+      .patch(`/api/v2/connections/${connectionId}`)
+      .set(bearer(this.admin))
+      .set('If-Match', `"${rowVersion}"`)
+      .send(body)
+      .expect(200);
+    return response.body as { configVersion: number };
+  }
+
+  /** The audited actions of a job, oldest first. */
+  async jobActions(jobId: string): Promise<string[]> {
+    const rows = await this.rows<{ action: string }>(
+      `SELECT action FROM ingestion_job_transitions WHERE job_id = $1 ORDER BY created_at, id`,
+      [jobId],
+    );
+    return rows.map((row) => row.action);
   }
 
   /** Reconciles and waits for the connection's client to be connected and subscribed. */

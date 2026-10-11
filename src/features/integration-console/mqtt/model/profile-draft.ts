@@ -114,7 +114,19 @@ export function profileDraftErrors(draft: ProfileDraft): DraftErrors {
   return errors;
 }
 
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+const definedKeys = (value: Record<string, unknown>): string[] => Object.keys(value).filter((key) => value[key] !== undefined);
+
+/** Structural equality that ignores object key order (the server stores JSON in its own order) and absent-vs-undefined keys. */
+function same(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, index) => same(item, b[index]));
+  }
+  if (!isRecord(a) || !isRecord(b)) return false;
+  const keys = definedKeys(a);
+  return keys.length === definedKeys(b).length && keys.every((key) => same(a[key], b[key]));
+}
 
 /** `{ key: value }` of the entries of `next` that differ from `stored`, with `null` for removed keys. */
 function objectPatch(stored: Record<string, unknown>, next: Record<string, unknown>): Record<string, unknown> | undefined {
@@ -122,6 +134,12 @@ function objectPatch(stored: Record<string, unknown>, next: Record<string, unkno
   for (const key of Object.keys(stored)) if (!(key in next)) patch[key] = null;
   for (const [key, value] of Object.entries(next)) if (!same(stored[key], value)) patch[key] = value;
   return Object.keys(patch).length > 0 ? patch : undefined;
+}
+
+/** Merge patch of one object block: key by key, `null` when the block was cleared, undefined when it is unchanged. */
+function blockPatch(stored: Record<string, unknown>, next: Record<string, unknown>): Record<string, unknown> | null | undefined {
+  if (Object.keys(next).length === 0) return Object.keys(stored).length > 0 ? null : undefined;
+  return objectPatch(stored, next);
 }
 
 function timeBlock(draft: ProfileDraft): Record<string, unknown> {
@@ -135,7 +153,8 @@ function timeBlock(draft: ProfileDraft): Record<string, unknown> {
 
 /**
  * The merge patch (RFC 7396) that turns the stored profile into the draft; null when nothing changed.
- * Objects are patched key by key (`null` removes), scalars replaced, cleared blocks removed.
+ * Objects are patched key by key (`null` removes), scalars replaced, cleared blocks removed. Equality
+ * ignores key order, so an untouched profile never yields a patch, and no key is ever `undefined`.
  */
 export function profilePatchOf(connection: Pick<ConnectionView, 'endpointConfig'>, draft: ProfileDraft): Record<string, unknown> | null {
   const stored = record(connection.endpointConfig.payloadProfile);
@@ -148,11 +167,10 @@ export function profilePatchOf(connection: Pick<ConnectionView, 'endpointConfig'
   scalar('schemaVersion', draft.schemaVersion);
   scalar('identityStrategy', draft.identityStrategy);
   scalar('reasonUnmapped', draft.reasonUnmapped);
-  const nextFields = mapOfRows(draft.fields);
-  const fields = objectPatch(record(stored.fields), nextFields);
-  if (fields) patch.fields = Object.keys(nextFields).length > 0 ? fields : null;
-  const time = timeBlock(draft);
-  if (!same(record(stored.time), time)) patch.time = Object.keys(time).length > 0 ? objectPatch(record(stored.time), time) : null;
+  const fields = blockPatch(record(stored.fields), mapOfRows(draft.fields));
+  if (fields !== undefined) patch.fields = fields;
+  const time = blockPatch(record(stored.time), timeBlock(draft));
+  if (time !== undefined) patch.time = time;
   const quality = draft.qualityProtocol ? { protocol: draft.qualityProtocol } : undefined;
   if (!same(stored.quality, quality)) patch.quality = quality ?? null;
   const maps = record(stored.valueMaps);

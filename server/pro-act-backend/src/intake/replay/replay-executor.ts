@@ -109,7 +109,7 @@ export class ReplayExecutor {
       const outcome = await this.normalization.normalize(accepted.ticket);
       if (outcome.status === 'duplicate') return 'unchanged';
       if (outcome.result.status === 'quarantined') return 'quarantined';
-      return ['unchanged', 'superseded'].includes(outcome.result.outcome)
+      return outcome.result.outcome === 'unchanged'
         ? 'unchanged'
         : 'normalized';
     } catch (error) {

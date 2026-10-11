@@ -21,11 +21,13 @@ import { SUBSCRIBE_MODE } from '../../../jobs/job-lease';
 import { assertNoDuplicateFeed, FeedPeer } from '../duplicate-feed';
 import { parseMqttConfig } from '../mqtt-config';
 import { MqttAdapter } from '../mqtt.adapter';
+import { recoversAfterConfigChange } from './failed-job-recovery';
 import { MqttSubscription } from './mqtt-subscription';
 import { SubscriptionHealth } from './subscription-health';
 import {
   createSubscribeJob,
   findSubscribeJob,
+  restartFailedJob,
   SubscribeJobRow,
   updateSubscribeScope,
 } from './subscription-lease';
@@ -37,8 +39,10 @@ const FAST_PATH_EVENTS = ['ConnectionChanged', 'IngestionJobChanged'];
  * Worker-side host of the MQTT subscriptions (design §6, plan 1.8 WP3 step 3). Every sweep (10 s, and
  * on `ConnectionChanged` / `IngestionJobChanged`) it makes sure each active MQTT connection has ONE
  * `ingestion_jobs` row with `scope.mode = 'subscribe'` (never due, never claimed by the pull runner),
- * decides duplicate-feed losers (oldest connection wins, the others park), and hands each connection to
- * its `MqttSubscription` which follows the job state. Active only where schedulers run (worker / all).
+ * decides duplicate-feed losers (oldest connection wins, the others park), restarts a job that failed at
+ * an older configuration version (the connection was corrected; audited `config_changed`), and hands
+ * each connection to its `MqttSubscription` which follows the job state. Active only where schedulers
+ * run (worker / all).
  */
 @Injectable()
 export class MqttSubscriberHost
@@ -195,9 +199,19 @@ export class MqttSubscriberHost
       scopeHash(existing.scope) !== scopeHash(scope)
     ) {
       await updateSubscribeScope(manager, existing.id, scope);
-      return { ...existing, scope };
+      existing.scope = scope;
     }
-    return existing;
+    if (!recoversAfterConfigChange(existing, connection.configVersion)) {
+      return existing;
+    }
+    this.logger.log(
+      `Connection ${connection.id} changed (version ${connection.configVersion}): restarting its failed subscription`,
+    );
+    const restarted = await restartFailedJob(manager, existing, {
+      configVersion: connection.configVersion,
+      runner: runnerIdentity(),
+    });
+    return restarted ?? existing;
   }
 }
 

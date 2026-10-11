@@ -208,6 +208,30 @@ describe('profile draft → merge patch', () => {
     expect(profileDraftErrors({ ...edited, fields: [{ token: 'eventTime', value: 'a b' }] }).fields).toMatch(/dotted JSON path/);
   });
 
+  it('an untouched profile stored with another key order is clean: no patch, no undefined keys (INT-05d)', () => {
+    const serverOrder = connection({
+      endpointConfig: {
+        ...connection().endpointConfig,
+        payloadProfile: {
+          time: { maxPastSeconds: 604800, unit: 'iso', maxFutureSkewSeconds: 300 },
+          valueMaps: { state: { STOP: 'stopped', RUN: 'running' } },
+          quality: { protocol: 'PI' },
+          fields: { bootId: 'boot_id', sequence: 'seq', eventTime: 'ts' },
+          identityStrategy: 'event_id',
+          topicTemplate: 'proact/v1/{site}/{area}/{line}/{unit}/events',
+          schemaVersion: '1.0',
+          kind: 'interval_event_json',
+        },
+      },
+    });
+    const draft = profileDraftOf(serverOrder);
+    expect(profilePatchOf(serverOrder, draft)).toBeNull();
+    expect(profilePatchOf(serverOrder, { ...draft, stateMap: [...draft.stateMap].reverse() })).toBeNull();
+    const changed = profilePatchOf(serverOrder, { ...draft, maxFutureSkewSeconds: '600' });
+    expect(changed).toEqual({ time: { maxFutureSkewSeconds: 600 } });
+    expect(Object.values(changed ?? {})).not.toContain(undefined);
+  });
+
   it('removing every state mapping removes the map; clearing the time block removes it', () => {
     const stored = connection({ endpointConfig: { ...connection().endpointConfig, payloadProfile: { kind: 'state_json', topicTemplate: 'p/{unit}/state', valueMaps: { state: { RUN: 'running' } }, time: { unit: 'iso' } } } });
     const draft = profileDraftOf(stored);

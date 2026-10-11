@@ -102,6 +102,11 @@ export class HealthTracker {
     }
   }
 
+  /** The configuration version a start attempt runs at (recorded before the client is prepared, so a failure names it). */
+  preparing(configVersion: number): void {
+    this.health.configVersion = configVersion;
+  }
+
   connecting(clientId: string, configVersion: number): void {
     this.health.effectiveClientId = clientId;
     this.health.configVersion = configVersion;

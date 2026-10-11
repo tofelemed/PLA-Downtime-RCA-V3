@@ -201,3 +201,39 @@ needs a pipelined publisher or several simulator processes (open item).
 have a reusable `poison` scenario; R14 "read-only ACL verified by attempting a publish" and "TLS 1.2+ enforced"
 are proven on the Compose broker (`tls_version tlsv1.2`, TLS 1.3 negotiated); R1 burst / R12 load still need the
 run against the subscriber host with a killed worker (WP4).
+
+## Persona defects INT-04c / INT-03d (burst lifecycle, failed-job recovery) — 11 Oct 2026
+
+Fixes for two defects the integration-admin persona journeys (`e2e/personas/integration-07-defect-burst-lifecycle.spec.ts`)
+kept as failing assertions:
+
+- **INT-04c** — a lifecycle (open → close → attribute update → delete) queued while the subscription was paused and
+  drained in one burst on resume produced no production event: `NormalizationService.process` answered `superseded`
+  for every raw row a newer version had overtaken, and the retraction normalised last found no canonical event.
+  `NormalizationService` now normalises **every accepted revision in order** (the outbox relay publishes the
+  `RawAccepted` rows of one source object in id order; intake only requests normalisation for provably newer
+  versions), so the burst ends like the spaced delivery: one event, one revision per message, retracted last.
+  No `superseded` outcome exists any more, so the `accepted` health counter claims nothing that is not materialised.
+- **INT-03d** — a subscribe job that failed on a non-retryable CONNACK / TLS error stayed `failed` after the
+  connection was corrected. `failSubscription` now records the `config_version` it failed at (`health.configVersion`,
+  transition detail), and `MqttSubscriberHost.ensureJob` restarts a failed job whose version is older than the
+  connection's (`failed → running`, audited `config_changed`, `failed-job-recovery.ts`); a job failed at the current
+  version stays failed until an operator `start`s it.
+
+`npx jest --selectProjects integration --runInBand` (Compose broker 1884 / password listener 1885), verbatim:
+
+```
+PASS integration test/integration/mqtt-subscriber-burst.int-spec.ts (44.534 s)
+PASS integration test/integration/mqtt-subscriber-lifecycle.int-spec.ts (14.615 s)
+PASS integration test/integration/mqtt-subscriber-recovery.int-spec.ts (12.251 s)
+PASS integration test/integration/mqtt-subscriber-e2e.int-spec.ts (13.308 s)
+PASS integration test/integration/mqtt-subscriber-redelivery.int-spec.ts (13.378 s)
+PASS integration test/integration/intake-core.int-spec.ts (9.09 s)
+Test Suites: 6 passed, 6 total
+Tests:       30 passed, 30 total
+```
+
+| Spec | What it proves |
+|---|---|
+| `mqtt-subscriber-burst.int-spec.ts` | pause → four messages (open, close, update, delete) for one `event_id` → resume: raw outcomes `accepted, revision ×3`, **one** `production_events` row `retracted` with `end_time` kept and revisions `source, source, source, retraction`, `source_objects.canonical_event_id` set, no open exception; open + close only → one `closed` event with two `source` revisions |
+| `mqtt-subscriber-recovery.int-spec.ts` | wrong password on 1885 → job `failed` at `health.configVersion = 1`, `last_error` names `NotAuthorized`, two more sweeps leave it failed; `PATCH` the secret (config v2) → the next sweep restarts it: `running`, connected at version 2, audit `create, start, failed, config_changed` with `{ failedConfigVersion: 1, configVersion: 2 }`; a wrong secret again (v3) → `failed` at v3 and it stays failed across sweeps |

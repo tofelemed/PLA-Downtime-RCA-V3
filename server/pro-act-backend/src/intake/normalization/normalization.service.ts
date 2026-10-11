@@ -31,6 +31,14 @@ const CONSUMER = 'normalization';
  * applied with one linked quarantine row kept open (an event created uncoded, plan 1.8). The inbox key
  * makes each request take effect once, whether it arrives inline (PI pull, replay) or through the
  * outbox relay. A quarantined record still counts as accepted for cursor purposes.
+ *
+ * Every accepted revision is normalised, in order (design §4.2 stage 13): intake only requests
+ * normalisation for provably newer versions, and the outbox relay publishes the `RawAccepted` rows of
+ * one source object (`aggregate_id = connection:object`) in id order, so a burst `open → close →
+ * update → delete` ends exactly like the same messages spaced out: one event with one revision per
+ * message, retracted last. An older revision is never skipped as "superseded" by a newer one: the
+ * newest row may be a retraction (it carries no state to materialise) and the revisions of an interval
+ * event are a sequence applied by the handlers idempotently, not a snapshot.
  */
 @Injectable()
 export class NormalizationService implements OnModuleInit {
@@ -73,14 +81,6 @@ export class NormalizationService implements OnModuleInit {
     hints?: unknown,
   ): Promise<NormalizationResult> {
     const input = await this.loadInput(ticket, hints);
-    if (input.latestRawId !== (input.raw.originalRawId ?? input.raw.id)) {
-      // a newer version was accepted meanwhile; its own request carries the current state
-      return {
-        status: 'applied',
-        outcome: 'superseded',
-        canonicalEventId: null,
-      };
-    }
     const result = await this.run(input);
     await this.record(ticket, input, result);
     return result;
@@ -89,7 +89,7 @@ export class NormalizationService implements OnModuleInit {
   private async loadInput(
     ticket: NormalizationTicket,
     hints?: unknown,
-  ): Promise<NormalizationInput & { latestRawId: string | null }> {
+  ): Promise<NormalizationInput> {
     const manager = this.dataSource.manager;
     const raw = await findRaw(manager, {
       rawId: ticket.rawId,
@@ -100,11 +100,10 @@ export class NormalizationService implements OnModuleInit {
     }
     const object = await manager.findOne(SourceObject, {
       where: keyOf(ticket),
-      select: { id: true, canonicalEventId: true, latestRawId: true },
+      select: { id: true, canonicalEventId: true },
     });
     return {
       raw,
-      latestRawId: object?.latestRawId ?? null,
       envelope: raw.payload as unknown as CanonicalEnvelope,
       canonicalEventId: object?.canonicalEventId ?? null,
       hints,
