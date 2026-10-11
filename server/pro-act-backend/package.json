@@ -44,6 +44,7 @@
     "db:seed-demo-valuation": "ts-node scripts/demo-valuation/seed-demo-valuation.ts",
     "db:seed-demo-personas": "ts-node scripts/demo-personas/seed-demo-personas.ts",
     "db:seed-demo-mqtt": "ts-node scripts/demo-mqtt/seed-demo-mqtt.ts",
+    "db:seed-demo-showcase": "ts-node scripts/demo-showcase/seed-demo-showcase.ts",
     "db:bootstrap-admin": "ts-node scripts/bootstrap-admin.ts",
     "mqtt:sim": "ts-node scripts/mqtt/publish-sim.ts"
   },
