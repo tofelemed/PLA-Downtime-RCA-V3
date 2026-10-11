@@ -5,7 +5,7 @@ import { PLANTS, USERS, apiLogin, call, expectToast, note, openDialog, signIn, s
  * Admin persona — journey 4: User management (/users) and permissions (/permissions).
  * Helena lists users, opens a Demo Plant 2 user and changes the display name (then restores it so other
  * personas keep their names); OrgAdmins see only their organisation; an Operator is refused; the
- * permission "grant" flow is exercised and its persistence checked.
+ * permissions matrix is read-only and says so (no Save, disabled switches, link to User Management).
  */
 interface UserRecord {
   id: string;
@@ -118,25 +118,36 @@ test.describe('ADM-04 users and permissions', () => {
     expect(rejected.status).toBe(400);
   });
 
-  test('ADM-04d permissions: grant a module to a user and check it persists', async ({ page }) => {
+  test('ADM-04d permissions: the matrix is honest — read-only switches, no Save, a link to User Management', async ({ page }) => {
     await signIn(page, USERS.helena);
     await page.goto('/permissions');
     await expect(page.getByRole('heading', { name: 'Permissions Management' })).toBeVisible({ timeout: 60_000 });
     const item = page.locator('div.p-3.border.rounded-lg', { hasText: TARGET_EMAIL });
     await item.click();
     await expect(page.getByText('Managing permissions for')).toBeVisible();
+    // nothing can be saved: no Save button, every module switch is disabled (the role default is shown)
+    await expect(page.getByRole('button', { name: 'Save Permissions' })).toHaveCount(0);
     const auditSwitch = page.locator('#audit');
+    await expect(auditSwitch).toBeVisible();
+    await expect(auditSwitch).toBeDisabled();
     await expect(auditSwitch).not.toBeChecked();
-    await auditSwitch.click();
-    await expect(auditSwitch).toBeChecked();
-    await page.getByRole('button', { name: 'Save Permissions' }).click();
-    await expectToast(page, 'User permissions updated successfully');
-    await page.screenshot({ path: test.info().outputPath('adm-04d-granted.png'), fullPage: true });
-    note(test.info(), 'observation', 'Save Permissions only writes an UPDATE_PERMISSIONS audit entry; no permission is stored or enforced.');
-    await page.reload();
-    await item.click();
-    // DEFECT: the grant is not persisted — after a reload the switch is back to the role default although the
-    // UI reported "User permissions updated successfully" (the page only writes an audit log entry).
-    await expect(page.locator('#audit')).toBeChecked();
+    const switches = page.getByRole('switch');
+    expect(await switches.count()).toBeGreaterThan(1);
+    for (const module of await switches.all()) await expect(module).toBeDisabled();
+    await auditSwitch.click({ force: true });
+    await expect(auditSwitch).not.toBeChecked();
+    await expect(page.getByText('User permissions updated successfully')).toHaveCount(0);
+    // the note says why, and sends the administrator where roles are really managed
+    const readOnlyNote = page.getByTestId('permissions-read-only-note');
+    await expect(readOnlyNote).toBeVisible();
+    await expect(readOnlyNote).toContainText('Per-user permission overrides are not stored yet');
+    await expect(readOnlyNote).toContainText('Roles are managed in User Management');
+    const link = readOnlyNote.getByRole('link', { name: 'Open User Management' });
+    await expect(link).toHaveAttribute('href', '/users');
+    await page.screenshot({ path: test.info().outputPath('adm-04d-read-only-matrix.png'), fullPage: true });
+    await link.click();
+    await expect(page).toHaveURL(/\/users$/);
+    await expect(page.getByRole('heading', { name: 'User Management' })).toBeVisible({ timeout: 60_000 });
+    note(test.info(), 'observation', 'The permissions matrix is read-only by design; per-user overrides are not a stored concept.');
   });
 });

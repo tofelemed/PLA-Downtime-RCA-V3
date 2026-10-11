@@ -87,13 +87,20 @@ export function loadState(): RelState | null {
   }
 }
 
+/** Demo Plant `master_data_admin` (docs/DEMO_PERSONAS.md) who creates the SETUP unit; never a journey actor. */
+export const MASTER_DATA_SETUP_USER = 'charlotte.evans@demo.acme.com';
+
 /**
- * A unit of this persona's own (`P-REL-<suffix>`), created through the v1 units API which only asks for
- * a signed-in, non-viewer member. The unit keeps the other personas' stops out of this world's filters.
+ * A unit of this persona's own (`P-REL-<suffix>`) in the reliability user's plant, created through the v1
+ * units API by a master-data-capable user: `POST /units` is for `master_data_admin` / `manager_approver`
+ * (a reliability engineer is answered 403 by design). The unit keeps the other personas' stops out of
+ * this world's filters.
  */
 export async function ensureUnit(session: RelSession, suffix: string): Promise<{ unitId: string; unitName: string }> {
   const unitName = `${PREFIX}${suffix}`;
-  const unit = await call<{ id: string }>(session.token, 'POST', '/units', { name: unitName, code: unitName, tenantId: session.tenantId });
+  const setup = await apiLogin(MASTER_DATA_SETUP_USER);
+  if (setup.tenantId !== session.tenantId) throw new Error(`${MASTER_DATA_SETUP_USER} is not a member of ${session.tenantId}`);
+  const unit = await call<{ id: string }>(setup.token, 'POST', '/units', { name: unitName, code: unitName, tenantId: session.tenantId });
   if (unit.status !== 201 && unit.status !== 200) throw new Error(`unit: ${unit.status} ${JSON.stringify(unit.body)}`);
   return { unitId: unit.body.id, unitName };
 }

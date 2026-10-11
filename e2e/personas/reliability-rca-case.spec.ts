@@ -307,9 +307,8 @@ test.describe('Reliability engineer — audit trail of the shared case', () => {
     expect(audit.status).toBe(200);
     const users = new Set(audit.body.map((row) => row.userId));
     expect(users.has(viktor.userId), 'viktor edited and closed the case').toBe(true);
-    // DEFECT: POST /api/v2/rcas/{caseId}/actions is audited as `CREATE RCA` with the *action's* id as entityId
-    // (the interceptor takes the created record's id and the first route segment), so the case's own audit
-    // trail (entityType=RCA, entityId=caseId) never shows who added an action; the row is only found by user.
+    // POST /v2/rcas/{caseId}/actions is attributed to the parent case (entityType RCA, entityId = case id;
+    // the action's id goes to the details), so the case's own trail shows who added an action
     expect(users.has(amara.userId), 'amara added an action to the case').toBe(true);
   });
 });

@@ -13,6 +13,7 @@ import {
   signIn,
   suffix,
   type ApiSession,
+  type Plant,
 } from './support/admin-helpers';
 
 /**
@@ -21,7 +22,8 @@ import {
  * event there and keeps it, and sees the v1 RCA module and v1 Connectivity. Then Helena switches
  * `v2.eventHub` ON for Partner Plant (there is no screen for flags, so through the API) and the v2
  * hub appears for both users. The flag is left on (owner requirement: never switch a flag off), so a
- * second run of ADM-07 finds the v2 hub and creates the v1 event through the v1 API instead.
+ * second run of ADM-07 finds the v2 hub and creates the v1 event through the v1 API instead; the v1
+ * create dialog (ADM-07b) is then exercised on an "E2E Test Tenant …" plant whose flag is still off.
  */
 interface V1Event {
   id: string;
@@ -53,6 +55,24 @@ async function createV1EventViaApi(lucas: ApiSession): Promise<void> {
     crew: 'P-ADM crew',
   });
   expect(created.status).toBe(201);
+}
+
+/**
+ * The first "E2E Test Tenant …" plant (by name) whose `v2.eventHub` is off, with its organisation name for
+ * the plant selector; null when every such plant already has the v2 hub.
+ */
+async function flagOffE2ePlant(helena: ApiSession): Promise<Plant | null> {
+  const tenants = await call<Array<{ id: string; name: string; organizationId: string }>>(helena.token, 'GET', '/tenants');
+  const organizations = await call<Array<{ id: string; name: string }>>(helena.token, 'GET', '/organizations');
+  expect(tenants.status).toBe(200);
+  expect(organizations.status).toBe(200);
+  const candidates = tenants.body.filter((tenant) => tenant.name.startsWith('E2E Test Tenant')).sort((a, b) => a.name.localeCompare(b.name));
+  for (const tenant of candidates) {
+    if (await flagOn(helena.token, tenant.id, 'v2.eventHub')) continue;
+    const org = organizations.body.find((organization) => organization.id === tenant.organizationId)?.name;
+    if (org) return { id: tenant.id, name: tenant.name, org };
+  }
+  return null;
 }
 
 /** Opens the v1 create dialog and picks "Production Output"; returns the dialog. */
@@ -95,16 +115,20 @@ test.describe('ADM-07 legacy screens on Partner Plant (flags off)', () => {
   });
 
   test('ADM-07b v1 create dialog: validation, and the "Production Output" form must not crash the page', async ({ page }) => {
-    const lucas = await apiLogin(USERS.lucas);
-    test.skip(
-      await flagOn(lucas.token, PLANTS.partner.id, 'v2.eventHub'),
-      'v2.eventHub already on for Partner Plant (left on by ADM-08); the v1 form is no longer reachable',
-    );
+    test.setTimeout(180_000);
+    // Partner Plant keeps v2.eventHub on (ADM-08; a flag is never switched off), so the v1 dialog is exercised
+    // on a plant whose flag is still off: one of the "E2E Test Tenant …" plants, which a SuperAdmin may select.
+    const helena = await apiLogin(USERS.helena);
+    const legacyPlant = await flagOffE2ePlant(helena);
+    test.skip(!legacyPlant, 'no "E2E Test Tenant" plant with v2.eventHub off exists; the unit test select-placeholders.test.ts covers the dialog');
+    note(test.info(), 'observation', `v1 dialog exercised on ${legacyPlant!.name} (${legacyPlant!.id}), v2.eventHub off.`);
     const pageErrors: string[] = [];
     page.on('pageerror', (error) => pageErrors.push(String(error)));
-    await signIn(page, USERS.lucas);
+    await signIn(page, USERS.helena);
+    await selectPlant(page, legacyPlant!);
     await page.goto('/events');
     await expect(page.getByRole('heading', { name: 'Event Hub' })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('event-hub-v2')).toHaveCount(0);
     // validation with the default type (Production Loss): nothing filled → field errors on screen, no request
     await page.getByRole('button', { name: 'Create Event' }).click();
     const dialog = openDialog(page);
@@ -112,13 +136,22 @@ test.describe('ADM-07 legacy screens on Partner Plant (flags off)', () => {
     await expect(dialog.getByText('Unit is required.')).toBeVisible();
     await expect(dialog.getByText('Description is required.')).toBeVisible();
     await dialog.getByRole('button', { name: 'Cancel' }).click();
-    // DEFECT: choosing "Production Output" on a plant without production plans throws
-    // "A <Select.Item /> must have a value prop that is not an empty string" (the "No plans available"
-    // item of the Production Plan select) and unmounts the whole page — the v1 event cannot be created on
-    // screen for Partner Plant.
+    // "Production Output" on a plant without production plans: the plan select shows a disabled
+    // "No plans available" note instead of an empty-valued <Select.Item>; the page stays mounted
     const form = await openProductionOutputForm(page);
     await expect(form.locator('#description')).toBeVisible();
+    await expect(form.getByText('No active production plan found for this unit')).toBeVisible();
+    await form.getByRole('combobox').filter({ hasText: 'Select plan (optional)' }).click();
+    await expect(page.getByText('No plans available')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(form.locator('#description')).toBeVisible();
+    await expect(page.getByText(/Unexpected Application Error|Something went wrong/i)).toHaveCount(0);
     expect(pageErrors.filter((message) => message.includes('Select.Item'))).toEqual([]);
+    await page.screenshot({ path: test.info().outputPath('adm-07b-production-output-form.png'), fullPage: true });
+    await form.getByRole('button', { name: 'Cancel' }).click();
+    await expect(form).toBeHidden();
+    // the page behind the dialog is still mounted (the modal hides it from the accessibility tree while open)
+    await expect(page.getByRole('heading', { name: 'Event Hub' })).toBeVisible();
   });
 
   test('ADM-07c /rca shows the v1 module and /connectivity the v1 Connectivity', async ({ page }) => {

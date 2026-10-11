@@ -13,7 +13,7 @@ import { ADMINS, MANAGERS, PASSWORD, PREFIX, sessionOf, shortId, utcDate, type S
  *    sees the subscription health, pauses and resumes the subscription (left running), views the
  *    quarantine of the connection. A Manager has no Connectivity entry in the menu.
  * Data: user `P-MGR-operator …` (`p-mgr-operator-….@demo.acme.com`) — kept; two audited job commands.
- * The SuperAdmin-grant check (J8c) runs last: it is a known failing assertion (DEFECT) and must not block J9.
+ * The SuperAdmin-grant check (J8c) runs last so that a failure there never blocks J9.
  */
 const MQTT_DEMO = 'Demo: MQTT events (simulator)';
 let anna: Session;
@@ -127,17 +127,18 @@ test.describe('Manager persona — users and the MQTT demo connection', () => {
   });
 
   test('J8c granting SuperAdmin is refused by the server (both write routes)', async () => {
-    // one fixed e-mail per day and route: a rerun answers 409 (e-mail in use) instead of minting more privileged accounts
-    const attempt = (route: string) => ({ name: `${PREFIX}superadmin attempt ${route}`, email: `p-mgr-superadmin-${route}-${utcDate(0)}@demo.acme.com`, password: PASSWORD, role: 'SuperAdmin' });
+    // one fixed e-mail per day and route: should a regression mint an account, a rerun answers 409 (e-mail in use)
+    // instead of minting more privileged accounts. The `p-rv-` local part is new: the round-1 attempts
+    // (`p-mgr-superadmin-*`) were minted before the fix and still exist, so their e-mails would answer 409.
+    const attempt = (route: string) => ({ name: `P-RV-superadmin attempt ${route}`, email: `p-rv-superadmin-${route}-${utcDate(0)}@demo.acme.com`, password: PASSWORD, role: 'SuperAdmin' });
     const viaRegister = attempt('register');
     const register = await api<{ code?: string }>(anna.token, 'POST', '/auth/register', { ...viaRegister, tenantId: anna.tenantId, organizationId: anna.organizationId });
-    // DEFECT: with AUTH_ALLOW_PUBLIC_REGISTRATION=true the route is public, the bearer token is ignored and the rank check
-    // (ROLE_GRANT_NOT_ALLOWED) is skipped: a TenantAdmin (or an anonymous caller) creates a SuperAdmin — answered 201
+    // a bearer token makes registration an authenticated grant: at most the caller's own rank (ROLE_GRANT_NOT_ALLOWED)
     expect.soft([register.status, register.body.code], `POST /auth/register answered ${register.status} ${JSON.stringify(register.body)}`).toEqual([403, 'ROLE_GRANT_NOT_ALLOWED']);
     const viaUsers = attempt('users');
     const users = await api<{ code?: string; role?: string }>(anna.token, 'POST', '/users', { ...viaUsers, isActive: true, tenantId: anna.tenantId, organizationId: anna.organizationId });
-    // DEFECT candidate: the screen's own route (POST /users) has no rank check at all (users.controller.ts / users.service.ts)
-    expect.soft(users.status, `POST /users answered ${users.status} ${JSON.stringify(users.body)}`).toBe(403);
+    // the screen's own route applies the same grant policy
+    expect.soft([users.status, users.body.code], `POST /users answered ${users.status} ${JSON.stringify(users.body)}`).toEqual([403, 'ROLE_GRANT_NOT_ALLOWED']);
     const list = await api<Array<{ email: string; role: string }>>(anna.token, 'GET', `/users?tenantId=${anna.tenantId}`);
     const minted = itemsOf(list.body).filter((user) => [viaRegister.email, viaUsers.email].includes(user.email));
     expect(minted.map((user) => `${user.email}: ${user.role}`), 'no SuperAdmin may have been created by a TenantAdmin').toEqual([]);

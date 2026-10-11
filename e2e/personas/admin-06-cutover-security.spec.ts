@@ -1,12 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
-import { PLANTS, USERS, apiLogin, call, note, signIn, type ApiErrorBody } from './support/admin-helpers';
+import { PLANTS, USERS, apiLogin, call, note, signIn, type ApiErrorBody, type SessionUser } from './support/admin-helpers';
 
 /**
  * Admin persona — journeys 9 and 10 (report-only checks).
  * 9: migration / cutover tooling is read-only and no legacy write freeze is active on any plant.
- * 10: security spot-checks as the Operator demo user: v1 GET/POST /api/users and /api/tenants must be
- *     refused. Probes never create anything: the POST bodies are invalid and would be 400 before a write.
+ * 10: security spot-checks as the Operator demo user: v1 GET/POST /api/users and POST /api/tenants are
+ *     refused (403); GET /api/tenants lists only the operator's member plants. Probes never create
+ *     anything: the POST bodies are invalid and would be 400 even past the role guard.
  */
 interface Probe {
   route: string;
@@ -54,9 +55,11 @@ test.describe('ADM-09 cutover tooling and write freeze', () => {
 });
 
 test.describe('ADM-10 security spot-checks as an Operator', () => {
-  test('ADM-10a v1 /users and /tenants refuse an Operator (GET and invalid POST)', async () => {
+  test('ADM-10a v1 /users refuses an Operator; /tenants lists only the member plants; writes are 403', async () => {
     const liam = await apiLogin(USERS.liam);
     expect(liam.user.role).toBe('Operator');
+    const scopes = (liam.user as SessionUser & { scopes?: Array<{ tenantId: string }> }).scopes ?? [];
+    const memberTenantIds = new Set([liam.user.tenantId, ...scopes.map((scope) => scope.tenantId)].filter(Boolean));
     const probes = [
       await probe(liam.token, 'GET', '/users'),
       await probe(liam.token, 'GET', '/tenants'),
@@ -64,13 +67,20 @@ test.describe('ADM-10 security spot-checks as an Operator', () => {
       await probe(liam.token, 'POST', '/tenants', {}),
     ];
     for (const result of probes) note(test.info(), 'security-probe', `${result.route} → ${result.status} ${result.code ?? ''}`);
-    // DEFECT (suspected by the inventory, confirmed here if the assertions fail): neither controller carries
-    // @Roles, so an Operator can list every user and tenant (200) and an invalid POST reaches the DTO
-    // validation (400) instead of being refused by the role guard (403) — a valid body would write.
-    for (const result of probes) {
-      expect.soft([401, 403], result.route).toContain(result.status);
-    }
-    // whatever the guards did, the invalid bodies created nothing
+    // the user list is for administrators and approvers; the writes are refused by the role guard before validation
+    expect(probes[0].status, probes[0].route).toBe(403);
+    expect(probes[0].code, probes[0].route).toBe('FORBIDDEN_ROLE');
+    expect(probes[2].status, probes[2].route).toBe(403);
+    expect(probes[3].status, probes[3].route).toBe(403);
+    // the tenant list answers, but only with the plants the operator is a member of
+    expect(probes[1].status, probes[1].route).toBe(200);
+    const tenants = await call<Array<{ id: string; name: string }>>(liam.token, 'GET', '/tenants');
+    const names = tenants.body.map((tenant) => tenant.name);
+    expect(names).toContain(PLANTS.demo.name);
+    expect(names).not.toContain(PLANTS.demo2.name);
+    expect(names).not.toContain(PLANTS.partner.name);
+    expect(tenants.body.every((tenant) => memberTenantIds.has(tenant.id)), `visible: ${names.join(', ')}`).toBe(true);
+    // the invalid bodies created nothing
     const helena = await apiLogin(USERS.helena);
     const users = await call<Array<{ name: string | null; email: string | null }>>(helena.token, 'GET', '/users');
     expect(users.body.every((user) => user.email)).toBe(true);

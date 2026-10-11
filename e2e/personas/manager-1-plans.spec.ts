@@ -14,7 +14,7 @@ import { seedPlanningUnit, type PlanningUnit } from './support/manager-world';
  *    rotation; Erik drafts a profile and a planning rate, Laura approves both; an overlapping planning
  *    version is refused with 409 VERSION_OVERLAP and approved with "supersede", which closes version 1.
  * Data: units `P-MGR-PLAN …` / `P-MGR-CAL …`, product `P-MGR-product …`, plan `P-MGR-PLAN …` — kept.
- * J2c (rotation with days off) runs last: a known failing assertion (DEFECT) that must not block J2b.
+ * J2c (rotation with days off) runs last so that a failure there never blocks J2b.
  */
 const DAY = 86_400_000;
 
@@ -214,9 +214,7 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     await page.fill('#rotationAnchor', utcDate(30));
     await page.fill('#rotationFrom', utcDate(30));
     await page.getByRole('button', { name: 'Add rotation' }).click();
-    // DEFECT: POST /v2/crew-rotations documents `cycle: Array<string | null>` ("null = off") but its validators
-    // (@IsString / @MaxLength each; @ValidateIf has no per-element effect) reject null → 400 VALIDATION_FAILED
-    // "each value in cycle must be a string"; the screen maps "-" to null, so a rotation with days off is never saved
+    // POST /v2/crew-rotations accepts `cycle: Array<string | null>` (null = day off, what the screen sends for "-")
     await expect(page.getByTestId('rotation-list').locator('li')).toHaveCount(2, { timeout: 60_000 });
   });
 });

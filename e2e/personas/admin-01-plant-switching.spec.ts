@@ -21,9 +21,9 @@ import {
  * Admin persona — journeys 1 and 2: plant switching and tenant isolation.
  * SuperAdmin (Helena, Marcus, Priya, Tomasz) switches between Demo Plant, Demo Plant 2 and Partner
  * Plant; every plant shows only its own units and events; the selection survives a re-login and is
- * kept per user. OrgAdmin (Isabel, Demo Org) can switch to Demo Plant 2 but is refused on Partner
- * Plant; the Partner OrgAdmin (Lucas) is expected to see only Partner Plant and gets the scoped
- * not-found for Demo Plant data.
+ * kept per user. OrgAdmin (Isabel, Demo Org) can switch to Demo Plant 2, is never offered Partner Plant,
+ * and a stale stored Partner selection ends in the access notice with a way home; the Partner OrgAdmin
+ * (Lucas) sees only Partner Org / Partner Plant and gets the scoped not-found for Demo Plant data.
  */
 const ORDER: Plant[] = [PLANTS.demo, PLANTS.demo2, PLANTS.partner];
 /** a unit of another plant that must never be listed for the plant under test */
@@ -138,36 +138,49 @@ test.describe('ADM-02 OrgAdmin plant isolation', () => {
     expect(units.body.some((unit) => unit.tenantId === PLANTS.partner.id)).toBe(false);
     expect(units.body.some((unit) => unit.tenantId === PLANTS.demo2.id)).toBe(true);
 
+    // (a) the selector offers only the plants of the OrgAdmin's own organisation: no Partner Org / Plant at all
     const tree = await openPlantTree(page);
-    const partnerOffered = (await tree.getByText('Partner Org', { exact: true }).count()) > 0;
-    note(
-      test.info(),
-      'observation',
-      partnerOffered
-        ? 'Partner Org / Partner Plant is offered to a Demo Org OrgAdmin in the plant selector (GET /tenants and GET /organizations are not organisation-scoped).'
-        : 'Partner Plant is not offered to a Demo Org OrgAdmin.',
-    );
-    if (!partnerOffered) {
-      await page.keyboard.press('Escape');
-      return;
-    }
-    await tree.getByText('Partner Org', { exact: true }).locator('xpath=..').locator('svg').first().click();
-    await tree.getByText('Partner Plant', { exact: true }).click();
-    await expect(tree).toBeHidden();
-    await expect(plantTrigger(page)).toContainText('Partner Plant');
+    await expect(tree.getByText('Demo Org', { exact: true })).toBeVisible();
+    await expect(tree.getByText('Partner Org', { exact: true })).toHaveCount(0);
+    await expect(tree.getByText('Partner Plant', { exact: true })).toHaveCount(0);
+    await page.screenshot({ path: test.info().outputPath('adm-02a-isabel-selector.png') });
+    await page.keyboard.press('Escape');
+
+    // (b) a selection of Partner Plant stored before the organisation check existed (no organizationId on the
+    // stored tenant, so the browser leaves it to the server): the server's 403 TENANT_NOT_ALLOWED becomes the
+    // access notice with a way back to the home plant — never an endless "Loading" or an empty menu
+    const storedKey = `proact.plantSelection.${isabel.user.id}`;
+    const foreign = JSON.stringify({ tenant: { id: PLANTS.partner.id, name: PLANTS.partner.name } });
+    await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [storedKey, foreign]);
     await page.goto('/events');
-    await page.waitForTimeout(10_000);
-    await page.screenshot({ path: test.info().outputPath('adm-02a-partner-selected.png'), fullPage: true });
+    const accessNotice = page.getByTestId('plant-access-refused');
+    await expect(accessNotice).toBeVisible({ timeout: 60_000 });
+    await expect(accessNotice).toContainText('You do not have access to this plant');
+    await expect(accessNotice).toContainText(PLANTS.partner.name);
     await expect(page.getByText(/Unexpected Application Error|Something went wrong/i)).toHaveCount(0);
     await expect(page.locator('[data-testid="event-row"]')).toHaveCount(0);
-    // DEFECT: a Demo Org OrgAdmin who selects Partner Plant (offered by the selector) gets no refusal: the
-    // feature-flag and v2 calls answer 403 TENANT_NOT_ALLOWED, the page stays on "Loading" indefinitely
-    // and the navigation menu renders empty — expected the "No access" state or the v1 screen.
-    const refusedOrLegacy = page.getByRole('heading', { name: 'Event Hub' }).or(page.locator('[data-state="no-permission"]'));
-    await expect(refusedOrLegacy.first()).toBeVisible({ timeout: 30_000 });
+    await page.screenshot({ path: test.info().outputPath('adm-02a-partner-refused.png'), fullPage: true });
+    await accessNotice.getByRole('button', { name: /Switch to my plant/ }).click();
+    await expect(accessNotice).toBeHidden();
+    await expect(plantTrigger(page)).toContainText(PLANTS.demo.name);
+    await expect(page.getByTestId('event-hub-v2')).toBeVisible({ timeout: 60_000 });
+    // the recovery is what the browser keeps: a reload starts on the home plant
+    await page.reload();
+    await expect(page.getByTestId('event-hub-v2')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('plant-access-refused')).toHaveCount(0);
+    await expect(plantTrigger(page)).toContainText(PLANTS.demo.name);
   });
 
-  test('ADM-02b Partner OrgAdmin sees only Partner Plant in the plant selector', async ({ page }) => {
+  test('ADM-02b Partner OrgAdmin sees only Partner Org and Partner Plant', async ({ page }) => {
+    // the v1 lists behind the selector are organisation-scoped for an OrgAdmin
+    const lucas = await apiLogin(USERS.lucas);
+    const tenants = await call<Array<{ id: string; name: string }>>(lucas.token, 'GET', '/tenants');
+    expect(tenants.status).toBe(200);
+    expect(tenants.body.map((tenant) => tenant.name)).toEqual([PLANTS.partner.name]);
+    const organizations = await call<Array<{ id: string; name: string }>>(lucas.token, 'GET', '/organizations');
+    expect(organizations.status).toBe(200);
+    expect(organizations.body.map((organization) => organization.name)).toEqual([PLANTS.partner.org]);
+
     await signIn(page, USERS.lucas);
     await expect(plantTrigger(page)).toContainText('Partner Plant');
     const tree = await openPlantTree(page);
@@ -175,10 +188,9 @@ test.describe('ADM-02 OrgAdmin plant isolation', () => {
     await tree.getByText('Partner Org', { exact: true }).locator('xpath=..').locator('svg').first().click();
     await expect(tree.getByText('Partner Plant', { exact: true })).toBeVisible();
     await page.screenshot({ path: test.info().outputPath('adm-02b-lucas-selector.png') });
-    // DEFECT: GET /organizations and GET /tenants return every organisation and plant of the system, so a
-    // Partner Org OrgAdmin sees Demo Org and its plants (names and ids) in the selector and may select them.
     await expect(tree.getByText('Demo Org', { exact: true })).toHaveCount(0);
     await expect(tree.getByText('Demo Plant', { exact: true })).toHaveCount(0);
+    await expect(tree.getByText('Demo Plant 2', { exact: true })).toHaveCount(0);
   });
 
   test('ADM-02c Partner OrgAdmin deep link to Demo Plant data is the scoped not-found', async ({ page }) => {
