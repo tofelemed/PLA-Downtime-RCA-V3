@@ -3427,7 +3427,7 @@ export interface paths {
         };
         /**
          * Ledger waterfall of every period of a window and units: opening, signed steps with start / end, closing actual
-         * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, ≤ 1500 periods: 422 TOO_MANY_PERIODS); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Same bars and closure check as GET /reports/waterfall (plan 3.5); different units of measure 422 UOM_MIXED.
+         * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, no period cap: read in keyset pages, aggregates only); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Same bars and closure check as GET /reports/waterfall (plan 3.5); different units of measure 422 UOM_MIXED.
          */
         get: operations["PlaReportsV2Controller_scopeWaterfall_v2"];
         put?: never;
@@ -3447,7 +3447,7 @@ export interface paths {
         };
         /**
          * Loss lines per reason, impact, OEE component, kind or unit: quantity per unit of measure or one valuation view per currency, largest first with cumulative share
-         * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, ≤ 1500 periods: 422 TOO_MANY_PERIODS); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Calculation-run loss lines (decisions of an open draft are in the waterfall); unvalued lines never count as 0.
+         * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, no period cap: read in keyset pages, aggregates only); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Calculation-run loss lines (decisions of an open draft are in the waterfall); unvalued lines never count as 0.
          */
         get: operations["PlaReportsV2Controller_lossTree_v2"];
         put?: never;
@@ -3467,7 +3467,7 @@ export interface paths {
         };
         /**
          * Unaccounted, over-accounted and overproduction quantity per site-local shift, day, week or month (plan ledger, after decisions)
-         * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, ≤ 1500 periods: 422 TOO_MANY_PERIODS); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only.
+         * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, no period cap: read in keyset pages, aggregates only); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only.
          */
         get: operations["PlaReportsV2Controller_reconciliationTrend_v2"];
         put?: never;
@@ -3487,7 +3487,7 @@ export interface paths {
         };
         /**
          * Workflow and residual state of every period, age of the periods not approved, and the overdue periods
-         * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, ≤ 1500 periods: 422 TOO_MANY_PERIODS); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Workflow uses each period's current revision (open, else published) like the Plan Dashboard grid; approvedOnly does not apply.
+         * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, no period cap: read in keyset pages, aggregates only); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Workflow uses each period's current revision (open, else published) like the Plan Dashboard grid; approvedOnly does not apply. Workflow, age and overdue counts are one SQL aggregation; overdue lists the 50 oldest (overdueCount is the full count).
          */
         get: operations["PlaReportsV2Controller_reconciliationStatus_v2"];
         put?: never;
@@ -3507,7 +3507,7 @@ export interface paths {
         };
         /**
          * Actuals quality coverage: quality state and coverage band per product slice, lowest coverage, measured vs estimated output
-         * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, ≤ 1500 periods: 422 TOO_MANY_PERIODS); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only.
+         * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, no period cap: read in keyset pages, aggregates only); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only.
          */
         get: operations["PlaReportsV2Controller_actualsQuality_v2"];
         put?: never;
@@ -5086,7 +5086,7 @@ export interface operations {
                 physicalStates?: ("open" | "closed" | "superseded" | "retracted")[];
                 codingStates?: ("uncoded" | "coded" | "reviewed")[];
                 rcaStates?: ("none" | "required" | "linked" | "completed")[];
-                /** @description true: still running (no end time); false: ended */
+                /** @description true: still running (no end time, not superseded or retracted); false: ended, superseded or retracted */
                 isOpen?: boolean;
             };
             header?: {

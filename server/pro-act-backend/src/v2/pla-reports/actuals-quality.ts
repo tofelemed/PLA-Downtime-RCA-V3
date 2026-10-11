@@ -1,4 +1,5 @@
 import { Dec, formatDec, toDec, ZERO } from '../../domain/actuals/decimal';
+import { ActualsResult } from '../../periods/entities/actuals-result.entity';
 import { PeriodState } from '../period-overview/period-states';
 
 /** Coverage bands of a slice's actuals (share of the period window backed by measured data). */
@@ -39,35 +40,74 @@ function bandOf(ratio: Dec | null): string {
   return band?.key ?? 'low';
 }
 
+/** Running counts of an actuals quality report; fed page by page (`addQualityStates`), read by `qualityView`. */
+export interface QualityAccumulator {
+  periods: number;
+  periodsWithoutActuals: number;
+  slices: number;
+  states: Map<string, number>;
+  bands: Map<string, number>;
+  lowest: Dec | null;
+  quantities: Map<string, { measured: Dec; estimated: Dec }>;
+  runIds: Set<string>;
+}
+
+export const qualityAccumulator = (): QualityAccumulator => ({
+  periods: 0,
+  periodsWithoutActuals: 0,
+  slices: 0,
+  states: new Map(),
+  bands: new Map(),
+  lowest: null,
+  quantities: new Map(),
+  runIds: new Set(),
+});
+
+const bump = (counts: Map<string, number>, key: string) =>
+  counts.set(key, (counts.get(key) ?? 0) + 1);
+
+function addResult(acc: QualityAccumulator, result: ActualsResult): void {
+  const ratio = toDec(result.coverageRatio);
+  acc.slices += 1;
+  bump(acc.states, result.qualityState);
+  bump(acc.bands, bandOf(ratio));
+  if (ratio !== null && (acc.lowest === null || ratio.lt(acc.lowest)))
+    acc.lowest = ratio;
+  const key = result.uom ?? '';
+  const sum = acc.quantities.get(key) ?? { measured: ZERO, estimated: ZERO };
+  sum.measured = sum.measured.plus(toDec(result.measuredQty) ?? ZERO);
+  sum.estimated = sum.estimated.plus(toDec(result.estimatedQty) ?? ZERO);
+  acc.quantities.set(key, sum);
+}
+
+export function addQualityStates(
+  acc: QualityAccumulator,
+  states: readonly PeriodState[],
+): void {
+  for (const state of states) {
+    acc.periods += 1;
+    if (state.run) acc.runIds.add(state.run.id);
+    if (state.actuals.length === 0) acc.periodsWithoutActuals += 1;
+    for (const result of state.actuals) addResult(acc, result);
+  }
+}
+
 /**
  * Actuals quality coverage of a scope (plan 3.6, AN02): the stored actuals results behind the shown runs —
  * quality state and coverage band per product slice, the lowest coverage, measured vs estimated output per
  * unit of measure. Counts and sums only; nothing is estimated here.
  */
-export function actualsQuality(
-  states: readonly PeriodState[],
-): ActualsQualityView {
-  const results = states.flatMap((s) => s.actuals);
-  const ratios = results.map((r) => toDec(r.coverageRatio));
-  const known = ratios.filter((r): r is Dec => r !== null);
-  const quantities = new Map<string, { measured: Dec; estimated: Dec }>();
-  for (const result of results) {
-    const key = result.uom ?? '';
-    const sum = quantities.get(key) ?? { measured: ZERO, estimated: ZERO };
-    sum.measured = sum.measured.plus(toDec(result.measuredQty) ?? ZERO);
-    sum.estimated = sum.estimated.plus(toDec(result.estimatedQty) ?? ZERO);
-    quantities.set(key, sum);
-  }
-  const extraStates = [...new Set(results.map((r) => r.qualityState))].filter(
+export function qualityView(acc: QualityAccumulator): ActualsQualityView {
+  const extraStates = [...acc.states.keys()].filter(
     (s) => !QUALITY_STATES.includes(s),
   );
   return {
-    periods: states.length,
-    slices: results.length,
-    periodsWithoutActuals: states.filter((s) => s.actuals.length === 0).length,
+    periods: acc.periods,
+    slices: acc.slices,
+    periodsWithoutActuals: acc.periodsWithoutActuals,
     qualityStates: [...QUALITY_STATES, ...extraStates.sort()].map((state) => ({
       state,
-      slices: results.filter((r) => r.qualityState === state).length,
+      slices: acc.states.get(state) ?? 0,
     })),
     coverage: [
       ...COVERAGE_BANDS,
@@ -75,18 +115,16 @@ export function actualsQuality(
     ].map((b) => ({
       key: b.key,
       label: b.label,
-      slices: ratios.filter((r) => bandOf(r) === b.key).length,
+      slices: acc.bands.get(b.key) ?? 0,
     })),
-    lowestCoverage: known.length ? formatDec(Dec.min(...known)) : null,
-    quantities: [...quantities.entries()]
+    lowestCoverage: acc.lowest ? formatDec(acc.lowest) : null,
+    quantities: [...acc.quantities.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([uom, sum]) => ({
         uom: uom === '' ? null : uom,
         measured: formatDec(sum.measured),
         estimated: formatDec(sum.estimated),
       })),
-    calculationRunIds: [
-      ...new Set(states.flatMap((s) => (s.run ? [s.run.id] : []))),
-    ].sort(),
+    calculationRunIds: [...acc.runIds].sort(),
   };
 }

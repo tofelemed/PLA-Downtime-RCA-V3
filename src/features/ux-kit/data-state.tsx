@@ -30,6 +30,12 @@ function correlationOf(error: unknown): string | null {
   return error instanceof V2ApiError ? error.correlationId : null;
 }
 
+/** A server refusal (4xx with an API03 code, e.g. 422 UOM_MIXED): its code and message, not "The request failed." */
+function refusalOf(error: unknown): { code: string; message: string } | null {
+  if (!(error instanceof V2ApiError) || error.status >= 500 || error.code.startsWith('HTTP_')) return null;
+  return { code: error.code, message: error.message };
+}
+
 /**
  * Standard UX03 states (plan 3.1): loading skeleton, empty, no-permission, source-offline, incomplete,
  * calculation-pending and error with the correlation id support needs. Screens never invent data to
@@ -48,12 +54,13 @@ export function DataState({ state, error, onRetry, detail, children }: DataState
   const message = MESSAGES[state];
   const Icon = message.icon;
   const correlationId = state === 'error' ? correlationOf(error) : null;
+  const refusal = state === 'error' ? refusalOf(error) : null;
   const banner = (
-    <Alert variant={state === 'error' ? 'destructive' : 'default'} data-state={state}>
+    <Alert variant={state === 'error' ? 'destructive' : 'default'} data-state={state} data-code={refusal?.code}>
       <Icon className="h-4 w-4" />
-      <AlertTitle>{message.title}</AlertTitle>
+      <AlertTitle>{refusal ? `Refused (${refusal.code})` : message.title}</AlertTitle>
       <AlertDescription>
-        <p>{detail ?? message.text}</p>
+        <p>{refusal?.message ?? detail ?? message.text}</p>
         {correlationId && <p className="mt-1 text-xs">Reference: {correlationId}</p>}
         {onRetry && state === 'error' && (
           <Button variant="outline" size="sm" className="mt-2" onClick={onRetry}>

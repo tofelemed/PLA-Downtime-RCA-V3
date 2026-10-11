@@ -7,9 +7,10 @@ import { configureV2Session } from '@/api/v2/config';
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ session: { tenant: { id: 'tenant-a' } } }) }));
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
-const { useLossTree, useReconciliationTrend, useScopeWaterfall } = await import('@/api/v2/queries/pla-analytics');
-const { lossTreeQuery, parseScope, trendQuery, waterfallQuery } = await import('./model/analytics-scope');
+const { useLossTree, useReconciliationStatus, useReconciliationTrend, useScopeWaterfall } = await import('@/api/v2/queries/pla-analytics');
+const { lossTreeQuery, parseScope, statusQuery, trendQuery, waterfallQuery } = await import('./model/analytics-scope');
 const { OeeTile } = await import('./components/oee-tile');
+const { ReportCard } = await import('@/features/downtime-analysis/components/report-card');
 
 const SCOPE = parseScope(new URLSearchParams('from=2026-10-01T00:00:00.000Z&to=2026-10-08T00:00:00.000Z&window=W&units=u1&trend=shift'), 0);
 
@@ -58,6 +59,26 @@ describe('PLA analytics data flows (plan 3.6)', () => {
     expect(trend?.searchParams.get('groupBy')).toBe('shift');
     expect(tree?.searchParams.get('groupBy')).toBe('impact');
     expect(tree?.searchParams.get('metric')).toBe('margin');
+  });
+
+  it('a refused report tile shows the server code and message, not "The request failed."', async () => {
+    const refusal = { code: 'UOM_MIXED', message: 'the periods are measured in different units', correlationId: 'corr-422', retryable: false };
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(refusal), { status: 422, headers: { 'Content-Type': 'application/json' } })));
+    function Tile() {
+      const query = useReconciliationStatus(statusQuery(SCOPE), 'UTC');
+      return (
+        <ReportCard title="Reconciliation" testId="tile" query={query} response={query.data}>
+          <p>figures</p>
+        </ReportCard>
+      );
+    }
+    render(<Tile />, { wrapper });
+    const alert = await screen.findByText('Refused (UOM_MIXED)');
+    expect(alert.closest('[data-state="error"]')?.getAttribute('data-code')).toBe('UOM_MIXED');
+    expect(screen.getByText('the periods are measured in different units')).toBeTruthy();
+    expect(screen.getByText('Reference: corr-422')).toBeTruthy();
+    expect(screen.queryByText('The request failed.')).toBeNull();
+    expect(screen.queryByText('figures')).toBeNull();
   });
 
   it('T41: an OEE tile without a server value says why, never 87 % / 100 %', () => {

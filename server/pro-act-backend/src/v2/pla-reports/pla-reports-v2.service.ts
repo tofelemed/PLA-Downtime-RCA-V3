@@ -5,19 +5,23 @@ import { RequestContext } from '../../common/context/request-context';
 import { AccountingPoliciesService } from '../../periods/accounting-policies.service';
 import { ProductionPeriod } from '../../periods/entities/production-period.entity';
 import { AnalyticsResponse } from '../common/response';
+import { PeriodState } from '../period-overview/period-states';
 import {
-  PeriodState,
-  RevisionSelector,
-} from '../period-overview/period-states';
-import {
+  addWaterfallStates,
+  finishWaterfall,
+  waterfallAccumulator,
   WaterfallV2View,
-  waterfallOf,
 } from '../period-overview/waterfall.view';
 import { reportEnvelope } from '../reports/kpi-reports-v2.view';
 import { ReportScope, resolveReportScope } from '../reports/report-scope';
 import { periodStats, policyVersions } from '../reports/report-sql';
 import { ReportWindowQueryDto } from '../reports/kpi-reports-v2.dto';
-import { actualsQuality, ActualsQualityView } from './actuals-quality';
+import {
+  addQualityStates,
+  ActualsQualityView,
+  qualityAccumulator,
+  qualityView,
+} from './actuals-quality';
 import { lossTreeCells, LossTreeView } from './loss-tree-report';
 import { lossTreeView } from './loss-tree-view';
 import {
@@ -27,14 +31,22 @@ import {
   ScopeWaterfallQueryDto,
 } from './pla-reports.dto';
 import {
-  reconciliationStatus,
   ReconciliationStatusView,
+  StatusSummaryRow,
+  statusView,
 } from './reconciliation-status';
 import {
-  reconciliationTrend,
+  overduePeriods,
+  residualCounts,
+  statusSummary,
+} from './reconciliation-status-report';
+import {
+  addTrendStates,
   ReconciliationTrendView,
+  trendAccumulator,
+  trendView,
 } from './reconciliation-trend';
-import { scopeStates, shownSelector } from './scope-periods';
+import { foldScopeStates, shownSelector } from './scope-periods';
 
 /**
  * PLA analytics read models of plan 3.6 (AN02, AN03, API03): side-effect free reads over one report scope —
@@ -55,12 +67,13 @@ export class PlaReportsV2Service {
     context: RequestContext,
     query: ScopeWaterfallQueryDto,
   ): Promise<AnalyticsResponse<WaterfallV2View>> {
-    const { scope, states } = await this.load(context, query, null);
-    const data = waterfallOf(
-      states,
-      query.ledger ?? 'plan',
-      shownSelector(scope),
+    const scope = await this.scope(context, query);
+    const ledger = query.ledger ?? 'plan';
+    const acc = waterfallAccumulator();
+    await this.fold(context, scope, (states) =>
+      addWaterfallStates(acc, states, ledger),
     );
+    const data = finishWaterfall(acc, ledger, shownSelector(scope));
     return this.envelope(scope, data, data.isProvisional);
   }
 
@@ -99,66 +112,76 @@ export class PlaReportsV2Service {
     context: RequestContext,
     query: ReconciliationTrendQueryDto,
   ): Promise<AnalyticsResponse<ReconciliationTrendView>> {
-    const { scope, states } = await this.load(context, query, null);
-    const data = reconciliationTrend(states, query.groupBy ?? 'day');
-    return this.envelope(scope, data, provisional(states));
+    const scope = await this.scope(context, query);
+    const groupBy = query.groupBy ?? 'day';
+    const acc = trendAccumulator();
+    const provisional = await this.fold(context, scope, (states) =>
+      addTrendStates(acc, states, groupBy),
+    );
+    return this.envelope(scope, trendView(acc, groupBy), provisional);
   }
 
+  /** Counts by workflow state, age and overdue in SQL; residual counts paged; the 50 oldest overdue listed. */
   async reconciliationStatus(
     context: RequestContext,
     query: ReconciliationStatusQueryDto,
   ): Promise<AnalyticsResponse<ReconciliationStatusView>> {
-    const { scope, states } = await this.load(context, query, 'current');
-    const versionIds = states.flatMap((s) =>
-      s.period.selectedPlanVersionId ? [s.period.selectedPlanVersionId] : [],
-    );
-    const [unitNames, plans] = await Promise.all([
-      this.idMap(
-        `SELECT "id"::text AS "id", "name" AS "value" FROM "units" WHERE "tenant_id" = $1 AND "id" = ANY($2::uuid[])`,
-        scope,
-        scope.unitIds,
-      ),
-      this.idMap(
-        `SELECT "id"::text AS "id", "plan_id"::text AS "value" FROM "plan_versions" WHERE "tenant_id" = $1 AND "id" = ANY($2::uuid[])`,
-        scope,
-        versionIds,
-      ),
-    ]);
-    const data = reconciliationStatus(states, {
+    const scope = await this.scope(context, query);
+    const input = {
+      context,
+      scope,
       asOf: query.asOf ? new Date(query.asOf) : new Date(),
       overdueAfterHours: query.overdueAfterHours ?? 48,
-      unitNames,
-      plans,
-    });
-    return this.envelope(scope, data, provisional(states));
+    };
+    const summary = await statusSummary(this.periods.manager, input);
+    const [residual, overdue] = await Promise.all([
+      summary.some((row) => row.runIds.length > 0)
+        ? residualCounts(this.periods, input, this.policies)
+        : new Map([['not_computable' as const, total(summary)]]),
+      overduePeriods(this.periods, input, this.policies),
+    ]);
+    const data = statusView({ ...input, summary, residual, overdue });
+    const open = summary.some(
+      (row) => row.workflow !== 'none' && row.workflow !== 'approved',
+    );
+    return this.envelope(scope, data, open);
   }
 
   async actualsQuality(
     context: RequestContext,
     query: ReportWindowQueryDto,
   ): Promise<AnalyticsResponse<ActualsQualityView>> {
-    const { scope, states } = await this.load(context, query, null);
-    return this.envelope(scope, actualsQuality(states), provisional(states));
+    const scope = await this.scope(context, query);
+    const acc = qualityAccumulator();
+    const provisional = await this.fold(context, scope, (states) =>
+      addQualityStates(acc, states),
+    );
+    return this.envelope(scope, qualityView(acc), provisional);
   }
 
-  /** Scope and period states; `selector` null = the shown revision of the scope (approvedOnly aware). */
-  private async load(
+  private scope(
     context: RequestContext,
     query: ReportWindowQueryDto,
-    selector: RevisionSelector | null,
-  ): Promise<{ scope: ReportScope; states: PeriodState[] }> {
-    const scope = await resolveReportScope(
-      this.periods.manager,
-      context,
-      query,
+  ): Promise<ReportScope> {
+    return resolveReportScope(this.periods.manager, context, query);
+  }
+
+  /** Pages of the scope's periods with the shown revision (approvedOnly aware); true when provisional. */
+  private fold(
+    context: RequestContext,
+    scope: ReportScope,
+    visit: (states: readonly PeriodState[]) => void,
+  ): Promise<boolean> {
+    return foldScopeStates(
+      this.periods,
+      {
+        context,
+        scope,
+        selector: shownSelector(scope),
+        policies: this.policies,
+      },
+      visit,
     );
-    const states = await scopeStates(this.periods, {
-      context,
-      scope,
-      selector: selector ?? shownSelector(scope),
-      policies: this.policies,
-    });
-    return { scope, states };
   }
 
   private async envelope<T>(
@@ -177,21 +200,7 @@ export class PlaReportsV2Service {
       notes: [...new Set(notes)].sort(),
     });
   }
-
-  private async idMap(
-    sql: string,
-    scope: ReportScope,
-    ids: string[],
-  ): Promise<Map<string, string>> {
-    if (ids.length === 0) return new Map();
-    const rows = await this.periods.manager.query<
-      Array<{ id: string; value: string }>
-    >(sql, [scope.tenantId, [...new Set(ids)]]);
-    return new Map(rows.map((r) => [r.id, r.value]));
-  }
 }
 
-const provisional = (states: readonly PeriodState[]) =>
-  states.some(
-    (s) => s.revision !== null && s.revision.lifecycle !== 'approved',
-  );
+const total = (rows: readonly StatusSummaryRow[]) =>
+  rows.reduce((n, row) => n + row.periods, 0);

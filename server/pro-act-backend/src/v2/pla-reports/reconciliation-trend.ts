@@ -119,25 +119,43 @@ function addPeriod(
 const figure = (bucket: Bucket, value: Dec) =>
   bucket.included === 0 ? null : formatDec(value);
 
+/** Running buckets of a reconciliation trend; fed page by page (`addTrendStates`), read by `trendView`. */
+export interface TrendAccumulator {
+  buckets: Map<string, Bucket>;
+  runIds: Set<string>;
+}
+
+export const trendAccumulator = (): TrendAccumulator => ({
+  buckets: new Map(),
+  runIds: new Set(),
+});
+
+export function addTrendStates(
+  acc: TrendAccumulator,
+  states: readonly PeriodState[],
+  groupBy: TrendGroup,
+): void {
+  for (const state of states) {
+    if (state.run) acc.runIds.add(state.run.id);
+    const key = bucketOf(state, groupBy);
+    if (!state.run || !state.reconciliation) {
+      bucketFor(acc.buckets, key, null).excluded += 1;
+      continue;
+    }
+    addPeriod(acc.buckets, state, key);
+  }
+}
+
 /**
  * Unaccounted, over-accounted and overproduction quantities per site-local bucket (plan 3.6, AN02): the
  * plan-ledger residual steps of the scope waterfall (same slices, same decisions, same arithmetic), so the
  * buckets of a window add up to the waterfall's bars. Units of measure are kept apart, never summed.
  */
-export function reconciliationTrend(
-  states: readonly PeriodState[],
+export function trendView(
+  acc: TrendAccumulator,
   groupBy: TrendGroup,
 ): ReconciliationTrendView {
-  const buckets = new Map<string, Bucket>();
-  for (const state of states) {
-    const key = bucketOf(state, groupBy);
-    if (!state.run || !state.reconciliation) {
-      bucketFor(buckets, key, null).excluded += 1;
-      continue;
-    }
-    addPeriod(buckets, state, key);
-  }
-  const ordered = [...buckets.values()].sort(
+  const ordered = [...acc.buckets.values()].sort(
     (a, b) =>
       a.key.localeCompare(b.key) || (a.uom ?? '').localeCompare(b.uom ?? ''),
   );
@@ -153,8 +171,6 @@ export function reconciliationTrend(
       periods: b.periods.size,
       excludedSlices: b.excluded,
     })),
-    calculationRunIds: [
-      ...new Set(states.flatMap((s) => (s.run ? [s.run.id] : []))),
-    ].sort(),
+    calculationRunIds: [...acc.runIds].sort(),
   };
 }

@@ -1,12 +1,13 @@
 import { PeriodState } from '../period-overview/period-states';
 import {
   GridWorkflowState,
-  PeriodSummaryV2View,
+  planFigures,
   ResidualState,
   toPeriodSummaryView,
 } from '../period-overview/period-summary.view';
 
-const HOUR_S = 3600;
+/** Most overdue periods listed by the status report (the full count is `overdueCount`). */
+export const OVERDUE_LIST_LIMIT = 50;
 
 /** Age of a not yet approved period since its end, in site-independent buckets. */
 export const AGE_BUCKETS = [
@@ -45,7 +46,7 @@ export interface ReconciliationStatusView {
   /** age of the periods that are not approved */
   ages: Array<{ key: string; label: string; periods: number }>;
   overdueCount: number;
-  /** oldest overdue periods first, at most 50 */
+  /** oldest overdue periods first, at most `OVERDUE_LIST_LIMIT` (50); `overdueCount` is the full count */
   overdue: OverduePeriodView[];
   calculationRunIds: string[];
 }
@@ -67,36 +68,38 @@ const RESIDUAL: readonly ResidualState[] = [
   'not_computable',
 ];
 
-const countBy = <K extends string>(keys: readonly K[], values: readonly K[]) =>
-  keys.map((key) => ({
-    state: key,
-    periods: values.filter((v) => v === key).length,
-  }));
-
-function ageKey(ageSeconds: number): string {
-  if (ageSeconds < 0) return 'not_ended';
-  const hours = ageSeconds / HOUR_S;
-  const bucket = AGE_BUCKETS.find(
-    (b) => b.maxHours !== null && hours < b.maxHours,
-  );
-  return bucket?.key ?? 'gt_7d';
+/** One SQL group of the status summary: periods of a workflow state, age bucket and overdue flag. */
+export interface StatusSummaryRow {
+  workflow: GridWorkflowState;
+  ageKey: string;
+  overdue: boolean;
+  periods: number;
+  runIds: string[];
 }
 
-interface StatusRow {
-  view: PeriodSummaryV2View;
-  ageSeconds: number;
-  planId: string | null;
+/** Plan-ledger residual state of a period's revision, the Plan Dashboard grid's rule (ACC09/ACC10). */
+export function residualStateOf(state: PeriodState): ResidualState {
+  if (!state.reconciliation || !state.rule) return 'not_computable';
+  const plan = planFigures(state.reconciliation.slices, state.rule.epsilon);
+  return plan?.residualState ?? 'not_computable';
 }
 
-function overdueView(
-  { view, ageSeconds, planId }: StatusRow,
-  unitNames: Map<string, string>,
+/** An overdue period with its deep link target (`plans`: plan version id → plan id). */
+export function overdueView(
+  state: PeriodState,
+  input: {
+    asOf: Date;
+    unitNames: Map<string, string>;
+    plans: Map<string, string>;
+  },
 ): OverduePeriodView {
+  const view = toPeriodSummaryView(state, []);
+  const version = state.period.selectedPlanVersionId;
   return {
     periodId: view.periodId,
     unitId: view.unitId,
-    unitName: unitNames.get(view.unitId) ?? null,
-    planId,
+    unitName: input.unitNames.get(view.unitId) ?? null,
+    planId: version ? (input.plans.get(version) ?? null) : null,
     localDate: view.localDate,
     shiftName: view.shiftName,
     utcStart: view.utcStart,
@@ -104,61 +107,51 @@ function overdueView(
     workflowState: view.workflowState,
     revision: view.revision?.revision ?? null,
     residualState: view.plan?.residualState ?? null,
-    ageSeconds,
+    ageSeconds: Math.floor(
+      (input.asOf.getTime() - state.period.utcEnd.getTime()) / 1000,
+    ),
   };
 }
 
+const sumWhere = (
+  rows: readonly StatusSummaryRow[],
+  match: (row: StatusSummaryRow) => boolean,
+) => rows.filter(match).reduce((n, row) => n + row.periods, 0);
+
 /**
- * Reconciliation status of a scope (plan 3.6, AN02): workflow state and residual state of each period's
+ * Reconciliation status of a scope (plan 3.6, AN02) from its SQL summary: workflow state of each period's
  * current revision (the Plan Dashboard grid's rule), the age of every period not approved since its end,
- * and the overdue periods (not approved `overdueAfterHours` after their end) with a deep link target.
+ * the overdue count (not approved `overdueAfterHours` after their end) and the oldest overdue periods; the
+ * residual state counts come from the plan 2.8 arithmetic (`residualStateOf`).
  */
-export function reconciliationStatus(
-  states: readonly PeriodState[],
-  input: {
-    asOf: Date;
-    overdueAfterHours: number;
-    unitNames: Map<string, string>;
-    /** plan version id → plan id */
-    plans: Map<string, string>;
-  },
-): ReconciliationStatusView {
-  const rows = states.map((state): StatusRow => {
-    const view = toPeriodSummaryView(state, []);
-    const ageSeconds = Math.floor(
-      (input.asOf.getTime() - state.period.utcEnd.getTime()) / 1000,
-    );
-    const version = state.period.selectedPlanVersionId;
-    const planId = version ? (input.plans.get(version) ?? null) : null;
-    return { view, ageSeconds, planId };
-  });
-  const open = rows.filter((r) => r.view.workflowState !== 'approved');
-  const overdue = open
-    .filter((r) => r.ageSeconds >= input.overdueAfterHours * HOUR_S)
-    .sort((a, b) => b.ageSeconds - a.ageSeconds);
+export function statusView(input: {
+  asOf: Date;
+  overdueAfterHours: number;
+  summary: readonly StatusSummaryRow[];
+  residual: ReadonlyMap<ResidualState, number>;
+  overdue: OverduePeriodView[];
+}): ReconciliationStatusView {
+  const rows = input.summary;
+  const open = rows.filter((r) => r.workflow !== 'approved');
   return {
     asOf: input.asOf.toISOString(),
     overdueAfterHours: input.overdueAfterHours,
-    periods: rows.length,
-    workflow: countBy(
-      WORKFLOW,
-      rows.map((r) => r.view.workflowState),
-    ),
-    residual: countBy(
-      RESIDUAL,
-      rows.map((r) => r.view.plan?.residualState ?? 'not_computable'),
-    ),
+    periods: sumWhere(rows, () => true),
+    workflow: WORKFLOW.map((state) => ({
+      state,
+      periods: sumWhere(rows, (r) => r.workflow === state),
+    })),
+    residual: RESIDUAL.map((state) => ({
+      state,
+      periods: input.residual.get(state) ?? 0,
+    })),
     ages: AGE_BUCKETS.map((b) => ({
       key: b.key,
       label: b.label,
-      periods: open.filter((r) => ageKey(r.ageSeconds) === b.key).length,
+      periods: sumWhere(open, (r) => r.ageKey === b.key),
     })),
-    overdueCount: overdue.length,
-    overdue: overdue
-      .slice(0, 50)
-      .map((row) => overdueView(row, input.unitNames)),
-    calculationRunIds: [
-      ...new Set(states.flatMap((s) => (s.run ? [s.run.id] : []))),
-    ].sort(),
+    overdueCount: sumWhere(rows, (r) => r.overdue),
+    overdue: input.overdue,
+    calculationRunIds: [...new Set(rows.flatMap((r) => r.runIds))].sort(),
   };
 }

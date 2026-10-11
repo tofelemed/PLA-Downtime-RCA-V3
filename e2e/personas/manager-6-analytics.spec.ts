@@ -175,11 +175,6 @@ test.describe('Manager persona — Downtime Analysis and PLA analytics', () => {
     await page.goto('/dashboard');
     await expect(page.getByTestId('analytics-dashboard')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('dashboard-oee-operational')).toContainText('Operational OEE (ISO 22400)');
-    // REGRESSION: Demo Plant now holds more than 1500 production periods in the dashboard's default "Last 7
-    // days, all units" scope (2026-10-12: 1615, of which 1531 on kept P-*/E2E* test units), so GET
-    // /v2/reports/reconciliation-status answers 422 TOO_MANY_PERIODS and the Reconciliation tile shows "Could
-    // not load — The request failed." (the code is not surfaced) instead of the workflow / overdue counts.
-    // The default dashboard of a plant must load whatever its period count.
     await expect(page.getByTestId('dashboard-overdue')).toHaveAttribute('data-count', /^\d+$/);
     expect(writes).toEqual([]);
   });

@@ -99,6 +99,15 @@ describe('UX states and scope header (plan 3.1, UX03)', () => {
     expect(screen.getByText('table')).toBeInTheDocument();
   });
 
+  it('an error state of a 4xx refusal shows its code and message; a 5xx stays generic', () => {
+    render(<DataState state="error" error={apiError(422, 'TOO_MANY_PERIODS')} />);
+    expect(screen.getByText('Refused (TOO_MANY_PERIODS)')).toBeInTheDocument();
+    expect(screen.queryByText('The request failed.')).toBeNull();
+    render(<DataState state="error" error={apiError(500, 'INTERNAL_ERROR')} />);
+    expect(screen.getByText('Could not load')).toBeInTheDocument();
+    expect(screen.getByText('The request failed.')).toBeInTheDocument();
+  });
+
   it('ScopeHeader shows scope, zone with offset, unit, baseline, provisional and freshness', () => {
     const now = Date.parse('2026-10-09T03:00:00Z');
     render(<ScopeHeader scopeLabel="HDPE · unit100" timezone="Asia/Tehran" uom="t" baseline="Plan v2" isProvisional asOf="2026-10-09T02:55:00Z" now={now} />);

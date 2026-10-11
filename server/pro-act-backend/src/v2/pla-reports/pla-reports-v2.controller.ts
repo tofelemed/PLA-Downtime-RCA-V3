@@ -15,12 +15,15 @@ import {
   ScopeWaterfallQueryDto,
 } from './pla-reports.dto';
 import { PlaReportsV2Service } from './pla-reports-v2.service';
-import { ReconciliationStatusView } from './reconciliation-status';
+import {
+  OVERDUE_LIST_LIMIT,
+  ReconciliationStatusView,
+} from './reconciliation-status';
 import { ReconciliationTrendView } from './reconciliation-trend';
 
 const SCOPE_NOTE =
   'Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods ' +
-  'starting in [from, to) (≤ 400 days, ≤ 1500 periods: 422 TOO_MANY_PERIODS); unitIds must be units of the ' +
+  'starting in [from, to) (≤ 400 days, no period cap: read in keyset pages, aggregates only); unitIds must be units of the ' +
   'tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the ' +
   'approved revision, else the open draft (provisional); approvedOnly = approved revisions only.';
 
@@ -75,7 +78,7 @@ export class PlaReportsV2Controller {
   @ApiOperation({
     summary:
       'Workflow and residual state of every period, age of the periods not approved, and the overdue periods',
-    description: `${SCOPE_NOTE} Workflow uses each period's current revision (open, else published) like the Plan Dashboard grid; approvedOnly does not apply.`,
+    description: `${SCOPE_NOTE} Workflow uses each period's current revision (open, else published) like the Plan Dashboard grid; approvedOnly does not apply. Workflow, age and overdue counts are one SQL aggregation; overdue lists the ${OVERDUE_LIST_LIMIT} oldest (overdueCount is the full count).`,
   })
   reconciliationStatus(
     @Ctx() ctx: RequestContext,

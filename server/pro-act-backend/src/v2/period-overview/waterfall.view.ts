@@ -60,16 +60,32 @@ export interface WaterfallV2View {
   excluded: Array<{ periodId: string; sliceId: string | null; reason: string }>;
 }
 
-interface Accumulator {
+/** Running sums of a waterfall; fed page by page (`addWaterfallStates`), read by `finishWaterfall`. */
+export interface WaterfallAccumulator {
   opening: Dec;
   closing: Dec;
   steps: StepTotals;
   uoms: Set<string | null>;
   excluded: WaterfallV2View['excluded'];
   included: number;
+  periodIds: string[];
+  runIds: string[];
+  provisional: boolean;
 }
 
-function planInto(acc: Accumulator, state: PeriodState): void {
+export const waterfallAccumulator = (): WaterfallAccumulator => ({
+  opening: ZERO,
+  closing: ZERO,
+  steps: new Map(),
+  uoms: new Set(),
+  excluded: [],
+  included: 0,
+  periodIds: [],
+  runIds: [],
+  provisional: false,
+});
+
+function planInto(acc: WaterfallAccumulator, state: PeriodState): void {
   for (const slice of state.reconciliation?.slices ?? []) {
     if (
       slice.target === null ||
@@ -101,7 +117,7 @@ function planInto(acc: Accumulator, state: PeriodState): void {
   }
 }
 
-function capacityInto(acc: Accumulator, state: PeriodState): void {
+function capacityInto(acc: WaterfallAccumulator, state: PeriodState): void {
   for (const totals of state.totals.filter((t) => t.ledger === 'capacity')) {
     const capacity = toDec(totals.capacityQty);
     const good = toDec(totals.goodQty);
@@ -133,21 +149,15 @@ function capacityInto(acc: Accumulator, state: PeriodState): void {
   }
 }
 
-/** Sums the periods' ledger into one waterfall; units of measure are never mixed (422 UOM_MIXED). */
-export function waterfallOf(
+/** Adds a page of periods to the waterfall's sums (plan or capacity ledger). */
+export function addWaterfallStates(
+  acc: WaterfallAccumulator,
   states: readonly PeriodState[],
   ledger: WaterfallLedger,
-  view: RevisionSelector,
-): WaterfallV2View {
-  const acc: Accumulator = {
-    opening: ZERO,
-    closing: ZERO,
-    steps: new Map(),
-    uoms: new Set(),
-    excluded: [],
-    included: 0,
-  };
+): void {
   for (const state of states) {
+    acc.periodIds.push(state.period.id);
+    if (state.revision?.lifecycle !== 'approved') acc.provisional = true;
     if (!state.run) {
       acc.excluded.push({
         periodId: state.period.id,
@@ -156,9 +166,29 @@ export function waterfallOf(
       });
       continue;
     }
+    acc.runIds.push(state.run.id);
     if (ledger === 'plan') planInto(acc, state);
     else capacityInto(acc, state);
   }
+}
+
+/** Sums the periods' ledger into one waterfall; units of measure are never mixed (422 UOM_MIXED). */
+export function waterfallOf(
+  states: readonly PeriodState[],
+  ledger: WaterfallLedger,
+  view: RevisionSelector,
+): WaterfallV2View {
+  const acc = waterfallAccumulator();
+  addWaterfallStates(acc, states, ledger);
+  return finishWaterfall(acc, ledger, view);
+}
+
+/** The waterfall of the accumulated periods; units of measure are never mixed (422 UOM_MIXED). */
+export function finishWaterfall(
+  acc: WaterfallAccumulator,
+  ledger: WaterfallLedger,
+  view: RevisionSelector,
+): WaterfallV2View {
   if (acc.uoms.size > 1) {
     throw new UnprocessableEntityException({
       code: 'UOM_MIXED',
@@ -170,9 +200,9 @@ export function waterfallOf(
     ledger,
     view,
     uom: acc.uoms.size === 1 ? [...acc.uoms][0] : null,
-    periodIds: states.map((s) => s.period.id),
-    calculationRunIds: states.flatMap((s) => (s.run ? [s.run.id] : [])),
-    isProvisional: states.some((s) => s.revision?.lifecycle !== 'approved'),
+    periodIds: acc.periodIds,
+    calculationRunIds: acc.runIds,
+    isProvisional: acc.provisional,
     excluded: acc.excluded,
   };
   if (acc.included === 0)
