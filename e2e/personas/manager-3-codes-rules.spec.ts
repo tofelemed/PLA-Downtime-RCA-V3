@@ -4,6 +4,7 @@ import { downtime, findCode, findRule, type CodesWorld } from '../test-utils/cod
 import { api, itemsOf, post } from './support/manager-api';
 import { asUser, MANAGERS, PREFIX, sessionOf, type Session } from './support/manager-users';
 import { unitOf } from './support/manager-world';
+import { expectRefused, expectSodDisabled } from './support/hidden-controls';
 
 /**
  * Manager approver persona — journey 5 on `/codes-admin` (plan 3.8, T18 / T22):
@@ -187,10 +188,12 @@ test.describe('Manager persona — codes and declarative rules (/codes-admin)', 
     });
     expect(JSON.stringify(view.body)).not.toMatch(/function|=>/);
 
-    // the author cannot activate (403 SEPARATION_OF_DUTIES); the draft simulates on the stored events
-    await page.getByTestId('rule-activate').click();
-    await expect(refusal(page)).toHaveAttribute('data-code', 'SEPARATION_OF_DUTIES');
-    await expect(refusal(page)).toHaveAttribute('data-status', '403');
+    // the author cannot activate: the control is disabled with the separation-of-duties reason, and the
+    // server refuses the author (403 SEPARATION_OF_DUTIES); the draft simulates on the stored events
+    await expectSodDisabled(page.getByTestId('rule-activate'));
+    const own = await post<{ code: string }>(erik.token, `/v2/rules/${stored?.id}/activate`, {}, { 'If-Match': `"${stored?.rowVersion}"` });
+    expectRefused(own, 'SEPARATION_OF_DUTIES');
+    expect((await findRule(erik.token, name))?.state).toBe('draft');
     await page.getByTestId('tab-simulation').click();
     await page.getByTestId('sim-unit').selectOption({ label: world.unitName });
     await page.getByTestId('sim-run').click();

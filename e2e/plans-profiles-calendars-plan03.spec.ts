@@ -1,4 +1,6 @@
 import { test, expect, type Browser, type Page } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { expectHidden, expectRefused } from './personas/support/hidden-controls';
 import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
 import { call } from './test-utils/downtime-world';
@@ -144,15 +146,18 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await approver.context().close();
   });
 
-  test('roles: an engineer asking to retire an approved rate sees the server refusal (403 FORBIDDEN_ROLE)', async ({ page }) => {
+  test('roles: an engineer is not offered Retire on an approved rate; the server refuses it (403 FORBIDDEN_ROLE)', async ({ page }) => {
     await loginViaUI(page, 'engineer@acme.com', 'demo123');
     await openTab(page, 'profiles');
     await page.selectOption('#profileUnitFilter', { label: world.planUnitName });
     await page.locator(`[data-testid="profile-row"][data-profile-id="${world.profileId}"]`).click();
     const row = page.locator('[data-testid="rate-row"][data-kind="planning"][data-version="1"]');
-    await row.getByRole('button', { name: 'Retire' }).click();
-    await expect(row.getByTestId('refusal')).toHaveAttribute('data-kind', 'role');
-    await expect(row.getByTestId('refusal')).toHaveAttribute('data-code', 'FORBIDDEN_ROLE');
+    await expect(row).toHaveAttribute('data-state', 'approved');
+    await expectHidden(row.getByRole('button', { name: 'Retire' }));
+    const engineer = (await authenticate('engineer@acme.com', 'demo123')).accessToken;
+    const rates = await call<{ items: Array<{ id: string; rateKind: string; version: number }> }>(engineer, 'GET', `/v2/profiles/${world.profileId}/rates`);
+    const planning = rates.body.items.find((rate) => rate.rateKind === 'planning' && rate.version === 1);
+    expectRefused(await call(engineer, 'POST', `/v2/rates/${planning?.id}/retire`, {}, { 'Idempotency-Key': randomUUID() }), 'FORBIDDEN_ROLE');
     await expect(row).toHaveAttribute('data-state', 'approved');
   });
 
@@ -213,8 +218,10 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await approver.getByTestId('approve-plan-submit').click();
     await expect(approver.getByTestId('frozen-version')).toBeVisible({ timeout: 15_000 });
     await approver.context().close();
+    // the selected plan is page state, not part of the URL: after a reload the author re-opens it
     await page.reload();
-    await expect(page.getByTestId('plan-detail')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('planning-page')).toBeVisible({ timeout: 60_000 });
+    await openPlan(page);
     await expect(page.getByTestId('frozen-version')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('plan-detail').getByTestId('version-state').first()).toHaveAttribute('data-state', 'approved');
     await expect(page.getByTestId('plan-edit')).toHaveCount(0);

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
-import { apiLogin, call, exceptionsOf, INT_USERS, loadState, NOAH, openConsole, runSim, selectConnection, subscribeJob, uiLogin, type IntSession, type IntState } from './support/integration-world';
+import { expectHidden, expectRefused } from './support/hidden-controls';
+import { apiLogin, call, command, exceptionsOf, INT_USERS, loadState, NOAH, openConsole, runSim, selectConnection, subscribeJob, uiLogin, type IntSession, type IntState } from './support/integration-world';
 
 /**
  * INTEGRATION ADMIN persona — journey 6, the quarantine. Omar plays the `poison` scenario in the
@@ -7,8 +8,8 @@ import { apiLogin, call, exceptionsOf, INT_USERS, loadState, NOAH, openConsole, 
  * are each quarantined (not_json / too_large / future_timestamp / schema_invalid) while the session
  * stays connected and the fifth, healthy message is accepted. The Quarantine tab of the connection is
  * filtered to it and shows the four rows; one is closed as irrecoverable with an audited reason (a state
- * change, never a delete). Noah (plain Engineer) sees the rows but not the raw payload, and his attempt
- * to resolve is refused with 403.
+ * change, never a delete). Noah (plain Engineer) sees the rows but not the raw payload, and
+ * is offered no resolve control (the server still refuses a resolve with 403).
  */
 const POISON_CODES = ['not_json', 'too_large', 'future_timestamp', 'schema_invalid'] as const;
 let state: IntState;
@@ -79,7 +80,7 @@ test.describe('Integration admin — quarantine', () => {
     expect(JSON.stringify(closed.body)).not.toContain('"password"');
   });
 
-  test('INT-06b (noah): a non-writer sees the quarantine of the connection without the raw payload, and cannot resolve (403)', async ({ page }) => {
+  test('INT-06b (noah): a non-writer sees the quarantine of the connection without the raw payload, and is offered no resolve control (server: 403)', async ({ page }) => {
     await openConnectionQuarantine(page, NOAH);
     await expect(async () => {
       await page.getByTestId('quarantine-refresh').click();
@@ -89,14 +90,14 @@ test.describe('Integration admin — quarantine', () => {
     await expect(page.getByTestId('exception-detail')).toHaveAttribute('data-code', 'too_large');
     await expect(page.getByTestId('raw-payload-hidden')).toBeVisible();
     await expect(page.getByTestId('raw-payload')).toHaveCount(0);
-    await page.fill('#resolve-reason', 'P-INT: engineer attempt');
-    await page.getByTestId('exception-irrecoverable').click();
-    const refusal = page.getByTestId('refusal');
-    await expect(refusal).toHaveAttribute('data-kind', 'role');
-    await expect(refusal).toHaveAttribute('data-code', 'FORBIDDEN_ROLE');
+    // the resolve controls are not offered to a non-writer; the server still refuses a resolve
+    await expectHidden(page.locator('#resolve-reason'));
+    await expectHidden(page.getByTestId('exception-irrecoverable'));
     await page.screenshot({ path: test.info().outputPath('int-06b-noah-hidden-payload.png'), fullPage: true });
     const noah = await apiLogin(NOAH);
-    const detail = await call<{ state: string; raw: { payloadVisible: boolean } | null }>(noah.token, 'GET', `/v2/ingestion-exceptions/${await row(page, 'too_large').getAttribute('data-exception-id')}`);
+    const exceptionId = await row(page, 'too_large').getAttribute('data-exception-id');
+    expectRefused(await command(noah.token, `/v2/ingestion-exceptions/${exceptionId}/resolve`, { action: 'irrecoverable', reason: 'P-INT: engineer attempt' }), 'FORBIDDEN_ROLE');
+    const detail = await call<{ state: string; raw: { payloadVisible: boolean } | null }>(noah.token, 'GET', `/v2/ingestion-exceptions/${exceptionId}`);
     expect(detail.status).toBe(200);
     expect(detail.body.state).toBe('open');
     expect(detail.body.raw?.payloadVisible ?? false).toBe(false);

@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
 import { policiesOf, type PolicySummary } from '../test-utils/finance-world';
-import { api, itemsOf } from './support/manager-api';
+import { api, itemsOf, post } from './support/manager-api';
+import { expectRefused, expectSodDisabled } from './support/hidden-controls';
 import { ADMINS, PREFIX, sessionOf, shortId, type Session } from './support/manager-users';
 
 /**
@@ -10,7 +11,8 @@ import { ADMINS, PREFIX, sessionOf, shortId, type Session } from './support/mana
  *    starting far in the future (a zero rate is a validation error first); Oliver approves it — when an open-ended
  *    approved version overlaps, the 409 VERSION_OVERLAP is shown and "supersede" closes that version at
  *    the draft's start (nothing is retired, the rate in force today is unchanged). Mei drafts a valuation policy version effective in
- *    2099; her own approval is refused (403 SEPARATION_OF_DUTIES); Oliver approves it. Demo Plant's
+ *    2099; her own Approve is disabled with the SoD reason and the server refuses it (403
+ *    SEPARATION_OF_DUTIES); Oliver approves it. Demo Plant's
  *    approved policy versions stay as they were.
  * 7. Feature flags: no screen exists for them (the frontend only reads flags), so Anna switches a flag
  *    that is already on through the API (a no-op, never off) and the audit log shows the entry; the
@@ -24,10 +26,10 @@ let policiesBefore: PolicySummary[] = [];
 const suffix = shortId();
 const fxSource = `${PREFIX}FX ${suffix}`;
 const policyNotes = `${PREFIX}policy ${suffix}`;
-// every run approves its own open-ended far-future version (a later start every minute): "supersede" closes the
-// open-ended predecessor at this start, and only an open-ended candidate may supersede an open-ended version
-const fxYear = 2100 + Math.floor((Date.now() - Date.UTC(2026, 9, 11)) / 60_000) % 7000;
-const fxWindow = { from: `${fxYear}-01-01T00:00` };
+// every run approves its own open-ended far-future version, one year after the latest live or drafted USD → IRR
+// version of any run (persona specs share Demo Plant): "supersede" then closes exactly the one open-ended
+// predecessor at this start (only an open-ended candidate may supersede an open-ended version)
+let fxWindow = { from: '' };
 
 test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
@@ -60,6 +62,8 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
   test.beforeAll(async () => {
     [mei, oliver, anna] = await Promise.all([sessionOf(ADMINS.mei), sessionOf(ADMINS.oliver), sessionOf(ADMINS.anna)]);
     policiesBefore = await policiesOf(mei.token);
+    const years = (await fxVersions(mei.token)).filter((v) => v.state !== 'retired').map((v) => Number(v.effectiveFrom.slice(0, 4)));
+    fxWindow = { from: `${Math.max(2100, ...years) + 1}-01-01T00:00` };
   });
 
   test('J6a Mei drafts a future USD → IRR FX version (zero rate refused first)', async ({ page }) => {
@@ -111,7 +115,7 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
     await expect(fxState(page, fxSource)).toHaveAttribute('data-state', 'approved');
   });
 
-  test("J6c valuation policy: Mei's own approval is refused (SEPARATION_OF_DUTIES); Oliver approves; older versions unchanged", async ({ browser }) => {
+  test("J6c valuation policy: Mei's own approval is disabled with the SoD reason and refused by the server (SEPARATION_OF_DUTIES); Oliver approves; older versions unchanged", async ({ browser }) => {
     const author = await browser.newPage();
     await loginViaUI(author, ADMINS.mei.email, ADMINS.mei.password);
     await openFinance(author, 'policies');
@@ -122,10 +126,10 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
     await author.getByTestId('policy-save').click();
     const row = author.getByTestId('policy-row').filter({ hasText: policyNotes });
     await expect(row).toHaveAttribute('data-status', 'unapproved', { timeout: 20_000 });
-    await row.getByTestId('policy-approve-start').click();
-    await row.getByTestId('policy-approve-submit').click();
-    await expect(row.getByTestId('refusal')).toHaveAttribute('data-code', 'SEPARATION_OF_DUTIES', { timeout: 20_000 });
-    await expect(row.getByTestId('refusal')).toHaveAttribute('data-kind', 'duties');
+    // the author sees Approve disabled with the separation-of-duties reason; the server refuses her (403)
+    await expectSodDisabled(row.getByTestId('policy-approve-start'));
+    const drafted = (await policiesOf(mei.token)).find((p) => p.notes === policyNotes);
+    expectRefused(await post(mei.token, `/v2/valuation-policies/${drafted?.id}/approve`, {}), 'SEPARATION_OF_DUTIES');
     expect((await policiesOf(mei.token)).find((p) => p.notes === policyNotes)?.approved).toBe(false);
     await author.close();
 

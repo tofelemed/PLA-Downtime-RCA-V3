@@ -1,14 +1,16 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
-import { call } from '../test-utils/downtime-world';
+import { call, command } from '../test-utils/downtime-world';
 import { plantLocal } from '../test-utils/planning-world';
 import { AISHA, HANNAH, NOAH, SETUP_MANAGER, apiSession } from './support/engineer-users';
 import { seedEngineerWorld, type EngineerWorld } from './support/engineer-world';
+import { expectHidden, expectRefused } from './support/hidden-controls';
 
 /**
  * Production engineer persona — journey 1 (PLAN03 draft plan on /planning) and the planning refusals
  * (journey 5): a production engineer creates and previews a v2 production plan and saves it as a draft,
- * sees the server refuse an approval (403 FORBIDDEN_ROLE), and cannot retire an approved rate.
+ * is not offered the approve control (the server still refuses it: 403 FORBIDDEN_ROLE), and is not
+ * offered Retire on an approved rate (server: 403 FORBIDDEN_ROLE).
  * Data: unit "P-ENG PLAN …", product "P-ENG product …", approved profile and rates (setup manager);
  * plan "P-ENG PLAN …" created by the engineer in the UI. Nothing is deleted.
  */
@@ -56,7 +58,7 @@ test.describe('Engineer — plans, profiles & calendars (journey 1 and planning 
     world = await seedEngineerWorld(setup.token, aisha.token, aisha.tenantId, 'PLAN');
   });
 
-  test('J1 Noah: validation errors, draft plan saved with a 300/300/400 preview, approval refused with 403, plan persists after reload', async ({ page }) => {
+  test('J1 Noah: validation errors, draft plan saved with a 300/300/400 preview, no approve control and the server refuses approval with 403, plan persists after reload', async ({ page }) => {
     const planName = `P-ENG PLAN ${world.suffix}`;
     const dayStart = `${world.planDay}T06:00:00.000Z`;
     const nextDay = new Date(Date.parse(dayStart) + DAY).toISOString();
@@ -89,16 +91,15 @@ test.describe('Engineer — plans, profiles & calendars (journey 1 and planning 
     await expect(page.getByTestId('sum-badge')).toHaveAttribute('data-match', 'true');
     await page.screenshot({ path: test.info().outputPath('engineer-plan-preview.png'), fullPage: true });
 
-    // an engineer may prepare but not approve: the server's refusal is shown as given
-    await page.getByTestId('approve-plan-submit').click();
-    const refusal = page.getByTestId('approve-plan').getByTestId('refusal');
-    await expect(refusal).toHaveAttribute('data-kind', 'role');
-    await expect(refusal).toHaveAttribute('data-code', 'FORBIDDEN_ROLE');
-    await expect(page.getByTestId('plan-detail').getByTestId('version-state').first()).toHaveAttribute('data-state', 'draft');
-
+    // an engineer may prepare but not approve: the approve control is not offered, and the server still refuses
+    await expectHidden(page.getByTestId('approve-plan-submit'));
+    await expectHidden(page.getByTestId('approve-plan'));
     const noah = await apiSession(NOAH);
     const stored = await findPlan(noah.token, planName);
     expect(stored).not.toBeNull();
+    const approve = await command(noah.token, `/v2/production-plans/${stored?.id}/approve`, { expectedVersion: 1 });
+    expectRefused(approve, 'FORBIDDEN_ROLE');
+    await expect(page.getByTestId('plan-detail').getByTestId('version-state').first()).toHaveAttribute('data-state', 'draft');
     expect(stored?.version).toMatchObject({ unitId: world.unitId, approvalState: 'draft', headerTarget: '1000' });
 
     await page.reload();
@@ -111,18 +112,21 @@ test.describe('Engineer — plans, profiles & calendars (journey 1 and planning 
     await expect(page.getByTestId('plan-edit')).toBeVisible(); // a draft stays editable by the engineer
   });
 
-  test('refusal Hannah: retiring an approved planning rate is refused with 403 FORBIDDEN_ROLE and the rate stays approved', async ({ page }) => {
+  test('refusal Hannah: Retire is not offered on an approved planning rate, the server refuses it with 403 FORBIDDEN_ROLE, the rate stays approved', async ({ page }) => {
     await loginViaUI(page, HANNAH.email, HANNAH.password);
     await openTab(page, 'profiles');
     await page.selectOption('#profileUnitFilter', { label: world.unitName });
     await page.locator(`[data-testid="profile-row"][data-profile-id="${world.profileId}"]`).click();
     const row = page.locator('[data-testid="rate-row"][data-kind="planning"][data-version="1"]');
     await expect(row).toHaveAttribute('data-state', 'approved');
-    await row.getByRole('button', { name: 'Retire' }).click();
-    await expect(row.getByTestId('refusal')).toHaveAttribute('data-kind', 'role');
-    await expect(row.getByTestId('refusal')).toHaveAttribute('data-code', 'FORBIDDEN_ROLE');
+    // Retire is a manager-approver control: not offered to an engineer, and the server still refuses it
+    await expectHidden(row.getByRole('button', { name: 'Retire' }));
+    const hannah = await apiSession(HANNAH);
+    const rates = await call<{ items: Array<{ id: string; rateKind: string; state: string }> }>(hannah.token, 'GET', `/v2/profiles/${world.profileId}/rates`);
+    const planning = rates.body.items.find((rate) => rate.rateKind === 'planning');
+    expectRefused(await command(hannah.token, `/v2/rates/${planning?.id}/retire`, {}), 'FORBIDDEN_ROLE');
     await expect(row).toHaveAttribute('data-state', 'approved');
-    const rates = await call<{ items: Array<{ rateKind: string; state: string }> }>((await apiSession(HANNAH)).token, 'GET', `/v2/profiles/${world.profileId}/rates`);
-    expect(rates.body.items.find((rate) => rate.rateKind === 'planning')?.state).toBe('approved');
+    const after = await call<{ items: Array<{ rateKind: string; state: string }> }>(hannah.token, 'GET', `/v2/profiles/${world.profileId}/rates`);
+    expect(after.body.items.find((rate) => rate.rateKind === 'planning')?.state).toBe('approved');
   });
 });

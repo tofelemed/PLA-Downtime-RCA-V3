@@ -4,16 +4,17 @@ import { loginViaUI } from '../test-utils/auth-helpers';
 import { findCode } from '../test-utils/codes-world';
 import { policiesOf } from '../test-utils/finance-world';
 import { api, itemsOf, post } from './support/manager-api';
-import { JONAS, MDA, PREFIX, expectRoleRefusal, listMdaUnits, seedPlanWorld, sessionOf, shortId, utcDate, type Session } from './support/masterdata-world';
+import { expectHidden, expectRefused } from './support/hidden-controls';
+import { JONAS, MDA, PREFIX, listMdaUnits, seedPlanWorld, sessionOf, shortId, utcDate, type Session } from './support/masterdata-world';
 
 /**
  * Master data admin persona — journeys 5, 6 and 7:
  * 6. Finance (`/finance`): Zara (PROFILE_WRITERS covers FX drafts) drafts a far-future USD → IRR version
- *    (zero rate refused first); her approval is refused (403 FORBIDDEN_ROLE); Jonas approves as setup
+ *    (zero rate refused first); no Approve is offered (server: 403 FORBIDDEN_ROLE); Jonas approves as setup
  *    (supersede when the open-ended live version overlaps); nothing is retired.
- * 5. Refusals shown on screen, never persisted: plan approval (Charlotte), RCA case (Hiro), valuation
- *    policy draft (Felix, POLICY_ROLES = manager only), the Connectivity screen; period approval, feature
- *    flags and integration writes through the API (403).
+ * 5. Writes not offered on screen (capability-hidden) and refused by the server (403), never persisted:
+ *    plan approval (Charlotte), RCA case (Hiro), valuation policy draft (Felix, POLICY_ROLES = manager
+ *    only), a connection on Connectivity; period approval, feature flags through the API (403).
  * 7. Persistence: Felix (another master_data_admin) sees the unit, codes, rule and crew of the earlier
  *    specs after a re-login (hierarchy mappings: masterdata-5). Nothing is deleted or retired.
  */
@@ -60,7 +61,7 @@ test.describe('Master data admin — finance drafts, refusals and persistence', 
     [charlotte, zara, felix, jonas] = await Promise.all([sessionOf(MDA.charlotte), sessionOf(MDA.zara), sessionOf(MDA.felix), sessionOf(JONAS)]);
   });
 
-  test('MDA-06 Zara drafts a far-future USD → IRR FX version (zero rate refused); her approval is refused; Jonas approves; nothing retired', async ({ page }) => {
+  test('MDA-06 Zara drafts a far-future USD → IRR FX version (zero rate refused); no Approve offered and the server refuses hers; Jonas approves; nothing retired', async ({ page }) => {
     const before = await fxVersions(zara.token);
     const fxYear = nextFxYear(before);
     await loginViaUI(page, MDA.zara.email, MDA.zara.password);
@@ -80,10 +81,13 @@ test.describe('Master data admin — finance drafts, refusals and persistence', 
     await expect(fxState(page, fxSource)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
     await expect(fxRow(page, fxSource).getByTestId('fx-rate')).toHaveText('1 USD = 2750000 IRR');
 
-    await fxRow(page, fxSource).getByTestId('fx-approve').click();
-    await expectRoleRefusal(fxRow(page, fxSource).getByTestId('refusal'));
+    // a profile writer is not an approver: no Approve / Retire on the FX row, and the server refuses the approval
+    await expectHidden(fxRow(page, fxSource).getByTestId('fx-approve'));
+    await expectHidden(fxRow(page, fxSource).getByTestId('fx-retire'));
+    await page.screenshot({ path: test.info().outputPath('mda-06-fx-approve-hidden.png'), fullPage: true });
+    const drafted = (await fxVersions(zara.token)).find((v) => v.source === fxSource);
+    expectRefused(await post(zara.token, `/v2/fx-rates/${drafted?.id}/approve`, {}), 'FORBIDDEN_ROLE');
     await expect(fxState(page, fxSource)).toHaveAttribute('data-state', 'draft');
-    await page.screenshot({ path: test.info().outputPath('mda-06-fx-approve-refused.png'), fullPage: true });
 
     const draft = (await fxVersions(zara.token)).find((v) => v.source === fxSource);
     expect(draft?.state).toBe('draft');
@@ -103,7 +107,7 @@ test.describe('Master data admin — finance drafts, refusals and persistence', 
     for (const version of before) expect(after.find((v) => v.id === version.id)?.state).toBe(version.state); // nothing retired
   });
 
-  test('MDA-05a Charlotte: approving a draft plan is refused on /planning (403 shown); period approval and feature flags 403 through the API', async ({ page }) => {
+  test('MDA-05a Charlotte: no approve control on a draft plan on /planning (server 403); period approval and feature flags 403 through the API', async ({ page }) => {
     const world = await seedPlanWorld(felix, jonas, 'PLN');
     const planName = `${PREFIX}plan ${world.suffix}`;
     const dayStart = Date.parse(`${utcDate(5)}T06:00:00.000Z`);
@@ -126,10 +130,10 @@ test.describe('Master data admin — finance drafts, refusals and persistence', 
     await page.getByTestId('plan-row').filter({ hasText: planName }).first().click();
     await expect(page.getByTestId('plan-detail')).toBeVisible();
     await expect(page.getByTestId('plan-detail').getByTestId('version-state').first()).toHaveAttribute('data-state', 'draft');
-    await page.getByTestId('approve-plan-submit').click();
-    await expectRoleRefusal(page.getByTestId('approve-plan').getByTestId('refusal'));
+    await expectHidden(page.getByTestId('approve-plan-submit'));
+    expectRefused(await post(charlotte.token, `/v2/production-plans/${plan.body.id}/approve`, { expectedVersion: 1 }), 'FORBIDDEN_ROLE');
     await expect(page.getByTestId('plan-detail').getByTestId('version-state').first()).toHaveAttribute('data-state', 'draft');
-    await page.screenshot({ path: test.info().outputPath('mda-05a-plan-approve-refused.png'), fullPage: true });
+    await page.screenshot({ path: test.info().outputPath('mda-05a-plan-approve-hidden.png'), fullPage: true });
     const stored = await api<{ approvalState: string }>(charlotte.token, 'GET', `/v2/production-plans/${plan.body.id}/versions/1`);
     expect([stored.status, stored.body.approvalState]).toEqual([200, 'draft']);
 
@@ -141,57 +145,41 @@ test.describe('Master data admin — finance drafts, refusals and persistence', 
     expect([flag.status, flag.body.code]).toEqual([403, 'FORBIDDEN_ROLE']);
   });
 
-  test('MDA-05b Hiro: opening an RCA case is refused in the dialog; Connectivity is not reachable; integration writes are 403', async ({ page }) => {
+  test('MDA-05b Hiro: New case is not offered (server 403); Connectivity is not reachable; integration writes are 403', async ({ page }) => {
     const title = `${PREFIX}RCA refused ${suffix}`;
     await loginViaUI(page, MDA.hiro.email, MDA.hiro.password);
     await expect(page.locator('nav a[href="/connectivity"]')).toHaveCount(0);
     await page.goto('/rca');
     await expect(page.getByTestId('rca-v2')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('new-case').click();
-    const dialog = page.getByTestId('create-case-dialog');
-    await dialog.locator('#case-title').fill(title);
-    await dialog.getByRole('button', { name: 'Create case' }).click();
-    await expect(dialog.getByTestId('command-error')).toContainText('Refused (FORBIDDEN_ROLE)');
-    await expect(dialog).toBeVisible();
-    await page.screenshot({ path: test.info().outputPath('mda-05b-rca-refused.png') });
+    await expectHidden(page.getByTestId('new-case'));
+    await page.screenshot({ path: test.info().outputPath('mda-05b-rca-no-create.png') });
     const hiro = await sessionOf(MDA.hiro);
+    expectRefused(await post(hiro.token, '/v2/rcas', { title }), 'FORBIDDEN_ROLE');
     const cases = await api<{ items: Array<{ title: string }> }>(hiro.token, 'GET', `/v2/rcas?q=${encodeURIComponent(title)}`);
     expect(cases.status).toBe(200);
     expect(itemsOf(cases.body).filter((item) => item.title === title)).toEqual([]);
 
-    // not in the menu, but the v2 integration console (flag on) opens read-only by URL; a write is refused on screen
+    // not in the menu, but the v2 integration console (flag on) opens read-only by URL; no write is offered
     const name = `${PREFIX}refused connection ${suffix}`;
     await page.goto('/connectivity');
     await expect(page.getByTestId('integration-console')).toBeVisible({ timeout: 60_000 });
     test.info().annotations.push({ type: 'observation', description: 'Connectivity is hidden from the master_data_admin menu, yet /connectivity renders the v2 integration console read-only (UX06 non-writer pattern).' });
-    await page.getByTestId('new-connection').click();
-    await page.getByTestId('source-type-pi_web_api').click();
-    await page.fill('#pi-name', name);
-    await page.fill('#pi-url', 'https://pi.example.invalid/piwebapi');
-    await page.fill('#pi-user', 'p-mda-reader');
-    await page.fill('#pi-secret', 'not-a-real-secret');
-    await page.getByTestId('connection-save').click();
-    const refusal = page.getByTestId('connection-wizard').getByTestId('refusal');
-    await expect(refusal).toHaveAttribute('data-kind', 'role');
-    await expect(refusal).toContainText('integration administrator');
-    await page.screenshot({ path: test.info().outputPath('mda-05b-connection-refused.png') });
+    await expectHidden(page.getByTestId('new-connection'));
+    await page.screenshot({ path: test.info().outputPath('mda-05b-connection-hidden.png') });
     const connections = await api<{ items: Array<{ displayName: string }> }>(hiro.token, 'GET', '/v2/connections?limit=200');
     expect(itemsOf(connections.body).map((item) => item.displayName)).not.toContain(name);
     const connection = await post<{ code: string }>(hiro.token, '/v2/connections', { sourceType: 'mqtt', displayName: name });
     expect([connection.status, connection.body.code]).toEqual([403, 'FORBIDDEN_ROLE']);
   });
 
-  test('MDA-05c Felix: a valuation policy draft is refused on /finance (POLICY_ROLES = manager only); nothing stored', async ({ page }) => {
+  test('MDA-05c Felix: New policy version is not offered on /finance (POLICY_ROLES = manager only), the server refuses it; nothing stored', async ({ page }) => {
     const before = await policiesOf(felix.token);
     await loginViaUI(page, MDA.felix.email, MDA.felix.password);
     await openFinance(page, 'policies');
     await expect(page.getByTestId('policy-banner')).toBeVisible({ timeout: 20_000 });
-    await page.getByTestId('policy-new').click();
-    await page.fill('#policyEffectiveFrom', '2099-06-01T00:00');
-    await page.fill('#policyNotes', policyNotes);
-    await page.getByTestId('policy-save').click();
-    await expectRoleRefusal(page.getByTestId('policy-form').getByTestId('refusal'));
-    await page.screenshot({ path: test.info().outputPath('mda-05c-policy-refused.png'), fullPage: true });
+    await expectHidden(page.getByTestId('policy-new'));
+    await page.screenshot({ path: test.info().outputPath('mda-05c-policy-hidden.png'), fullPage: true });
+    expectRefused(await post(felix.token, '/v2/valuation-policies', { effectiveFrom: '2099-06-01T00:00:00Z', notes: policyNotes }), 'FORBIDDEN_ROLE');
     const after = await policiesOf(felix.token);
     expect(after.find((p) => p.notes === policyNotes)).toBeUndefined();
     expect(after).toEqual(before);

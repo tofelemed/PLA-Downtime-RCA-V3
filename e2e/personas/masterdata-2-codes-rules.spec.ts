@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
 import { findCode, findRule } from '../test-utils/codes-world';
 import { api, itemsOf, post } from './support/manager-api';
+import { expectHidden, expectRefused } from './support/hidden-controls';
 import { JONAS, MDA, PREFIX, asUser, mdaUnit, sessionOf, shortId, type Session } from './support/masterdata-world';
 
 /**
@@ -10,9 +11,9 @@ import { JONAS, MDA, PREFIX, asUser, mdaUnit, sessionOf, shortId, type Session }
  *   refused as 422 CODE_CYCLE and the retirement impact + 409 CODE_HAS_CHILDREN (nothing retired),
  *   creates an impact code and an OEE code, default mappings reason → OEE (two versions, history kept)
  *   and reason → impact; a rename is version 2 and visible in the versions tab.
- * - Zara (RULE_AUTHORS) drafts a coding_default rule (live 422), cannot activate it (403 FORBIDDEN_ROLE,
- *   as any master_data_admin: Hiro's API call is refused too), simulates; Jonas (manager) activates as
- *   setup; Zara's rollback is refused (403). Data: unit `P-MDA-CR …`, codes, rule `P-MDA-rule …` — kept.
+ * - Zara (RULE_AUTHORS) drafts a coding_default rule (live 422), is not offered Activate (the server answers
+ *   403 FORBIDDEN_ROLE to her and to Hiro), simulates; Jonas (manager) activates as setup; Zara is not
+ *   offered Rollback (server: 403). Data: unit `P-MDA-CR …`, codes, rule `P-MDA-rule …` — kept.
  */
 let hiro: Session;
 let zara: Session;
@@ -214,12 +215,13 @@ test.describe('Master data admin — codes, default mappings and declarative rul
     const stored = await findRule(zara.token, ruleName);
     expect(stored?.state).toBe('draft');
 
-    // the author cannot activate: the persona is not a RULE_APPROVER (403 FORBIDDEN_ROLE, before separation of duties)
-    await page.getByTestId('rule-activate').click();
-    await expect(refusal(page)).toHaveAttribute('data-status', '403');
-    await expect(refusal(page)).toHaveAttribute('data-code', 'FORBIDDEN_ROLE');
-    await page.screenshot({ path: test.info().outputPath('mda-03-activate-refused.png') });
-    // nor any other master data admin
+    // the author cannot activate: the persona is not a RULE_APPROVER, so Activate / Retire are not offered;
+    // the server refuses her (403 FORBIDDEN_ROLE, before separation of duties) and any other master data admin
+    await expectHidden(page.getByTestId('rule-activate'));
+    await expectHidden(page.getByTestId('rule-retire'));
+    await page.screenshot({ path: test.info().outputPath('mda-03-activate-hidden.png') });
+    const byZara = await post<{ code: string }>(zara.token, `/v2/rules/${stored?.id}/activate`, {}, { 'If-Match': `"${stored?.rowVersion}"` });
+    expectRefused(byZara, 'FORBIDDEN_ROLE');
     const byHiro = await post<{ code: string }>(hiro.token, `/v2/rules/${stored?.id}/activate`, {}, { 'If-Match': `"${stored?.rowVersion}"` });
     expect([byHiro.status, byHiro.body.code]).toEqual([403, 'FORBIDDEN_ROLE']);
     expect((await findRule(zara.token, ruleName))?.state).toBe('draft');
@@ -249,9 +251,10 @@ test.describe('Master data admin — codes, default mappings and declarative rul
     await openRule(page, ruleName);
     await page.getByTestId('tab-rule-versions').click();
     await expect(page.locator('[data-testid="rule-version"][data-version="2"]')).toHaveAttribute('data-current', 'true');
-    await page.locator('[data-testid="rule-version"][data-version="1"]').getByTestId('rule-rollback').click();
-    await expect(refusal(page)).toHaveAttribute('data-status', '403');
-    await expect(refusal(page)).toHaveAttribute('data-code', 'FORBIDDEN_ROLE');
+    await expectHidden(page.locator('[data-testid="rule-version"][data-version="1"]').getByTestId('rule-rollback'));
+    const current = await findRule(zara.token, ruleName);
+    const rollback = await post<{ code: string }>(zara.token, `/v2/rules/${stored?.id}/rollback`, { toVersion: 1 }, { 'If-Match': `"${current?.rowVersion}"` });
+    expectRefused(rollback, 'FORBIDDEN_ROLE');
     const versions = await api<{ items?: unknown[] } | unknown[]>(zara.token, 'GET', `/v2/rules/${stored?.id}/versions`);
     expect(itemsOf(versions.body)).toHaveLength(2);
     const active = await api<{ state: string; activeVersion: number }>(zara.token, 'GET', `/v2/rules/${stored?.id}`);

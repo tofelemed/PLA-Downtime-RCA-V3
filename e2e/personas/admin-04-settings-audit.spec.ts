@@ -98,7 +98,8 @@ test.describe('ADM-06 audit log', () => {
     // a fresh v1 write by Helena on the Demo Plant 2 unit, so the row is inside the page's 30-day window
     const touched = await call<UnitRecord>(helena.token, 'PUT', `/units/${unit?.id}`, { description: `audit journey ${new Date().toISOString()}` });
     expect(touched.status).toBe(200);
-    const rows = await call<AuditRow[]>(helena.token, 'GET', `/audit-logs?entityType=Unit&entityId=${unit?.id}&limit=20`);
+    // audit reads are scoped to the acting plant (X-Tenant-Id, else the token's): the row lives in Demo Plant 2
+    const rows = await call<AuditRow[]>(helena.token, 'GET', `/audit-logs?entityType=Unit&entityId=${unit?.id}&limit=20`, undefined, { 'X-Tenant-Id': PLANTS.demo2.id });
     expect(rows.status).toBe(200);
     expect(rows.body.some((row) => row.action === 'UPDATE' && row.userId === helena.user.id)).toBe(true);
 

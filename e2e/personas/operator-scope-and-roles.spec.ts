@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { call, command } from '../test-utils/downtime-world';
+import { expectHidden, expectRefused } from './support/hidden-controls';
 import {
   OPERATORS, LINE_1_CODE, LINE_2_CODE, chooseUnit, loginOperator, openHub, session, tag, unitByCode,
   type EventBody, type ListBody, type UnitView,
@@ -10,7 +11,8 @@ import {
  * J4 the unit-limited operators (ingrid, amir) see only DEMO-LINE-1 units and events; another unit's
  *    event answers the scoped 404 (never data), on the API and through the list / pickers;
  * J5 an operator (carlos) cannot plan, administer codes or finance: the menu hides the screens, the
- *    pages refuse the write with the server's 403 FORBIDDEN_ROLE, the API refuses a plan create.
+ *    pages opened by URL offer no write control (capability-hidden), and the server refuses each write
+ *    (code, policy, plan) with 403 FORBIDDEN_ROLE.
  */
 interface World {
   liam: string;
@@ -102,7 +104,7 @@ test.describe('Operator — scope and role limits', () => {
     expect(await unitOptionsOf(page, 'filter-units')).toEqual([world.line1.name]);
   });
 
-  test('J5 operator (carlos) cannot plan, administer codes or finance: hidden menu, 403 FORBIDDEN_ROLE on every write', async ({ page }) => {
+  test('J5 operator (carlos) cannot plan, administer codes or finance: hidden menu, no write controls, 403 FORBIDDEN_ROLE on every write', async ({ page }) => {
     test.setTimeout(180_000);
     await loginOperator(page, OPERATORS.carlos);
     // the sidebar menu (not the dashboard's quick links, which live in their own <nav>)
@@ -115,35 +117,26 @@ test.describe('Operator — scope and role limits', () => {
       await expect(menu.locator(`a[href="${href}"]`), `menu must offer ${href}`).toHaveCount(1);
     }
 
-    // Codes & rules by URL: the page renders, the create is refused by the server with the role
+    // Codes & rules by URL: the page renders read-only, New code is not offered (the server refuses it below)
     await page.goto('/codes-admin');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('code-new').click();
-    const dialog = page.getByTestId('code-create-dialog');
-    await dialog.locator('#new-code').fill(tag('J5').replace(/[^A-Za-z0-9._:-]/g, '-'));
-    await dialog.locator('#new-name').fill('P-OPS operator must not create codes');
-    await dialog.getByTestId('code-create-submit').click();
-    const refusal = dialog.getByTestId('admin-refusal');
-    await expect(refusal).toBeVisible();
-    await expect(refusal).toHaveAttribute('data-code', 'FORBIDDEN_ROLE');
-    await expect(refusal).toHaveAttribute('data-status', '403');
+    await page.getByTestId('tab-reason-codes').click();
+    await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 });
+    await expectHidden(page.getByTestId('code-new'));
     await page.screenshot({ path: test.info().outputPath('operator-roles-j5-codes.png') });
-    await page.keyboard.press('Escape');
 
-    // Finance by URL: a new valuation policy is refused the same way
+    // Finance by URL: New policy version is not offered; the server refuses a policy draft
     await page.goto('/finance');
     await expect(page.getByTestId('finance')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('policy-new').click();
-    await page.locator('#policyEffectiveFrom').fill('2026-12-01T00:00');
-    await page.getByTestId('policy-save').click();
-    const policyRefusal = page.getByTestId('refusal');
-    await expect(policyRefusal).toBeVisible();
-    await expect(policyRefusal).toHaveAttribute('data-code', 'FORBIDDEN_ROLE');
+    await expect(page.getByTestId('policies-tab')).toBeVisible({ timeout: 30_000 });
+    await expectHidden(page.getByTestId('policy-new'));
+    expectRefused(await command(world.carlos, '/v2/valuation-policies', { effectiveFrom: '2026-12-01T00:00:00.000Z', notes: tag('J5-policy') }), 'FORBIDDEN_ROLE');
 
-    // Planning by URL: the page renders without crashing; the plan create is refused on the API
+    // Planning by URL: the page renders without crashing, New plan is not offered; the plan create is refused on the API
     await page.goto('/planning');
     await expect(page.getByTestId('planning-page')).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByTestId('plan-new')).toBeVisible();
+    await expect(page.getByTestId('plans-tab')).toBeVisible({ timeout: 60_000 });
+    await expectHidden(page.getByTestId('plan-new'));
     const plan = await command<Record<string, unknown>>(world.carlos, '/v2/production-plans', {
       name: tag('J5-plan'), unitId: world.line1.id, validFrom: '2026-11-01T00:00:00.000Z', validTo: '2026-11-02T00:00:00.000Z',
     });

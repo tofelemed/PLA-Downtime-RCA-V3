@@ -1,23 +1,24 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { expectHidden, expectRefused } from './support/hidden-controls';
 import {
   DEMO, DEMO_HEADER, MINUTE, VIEWERS, apiLogin, call, command, currentStop, loginAsViewerInDemoPlant, note, openHub,
-  plantLocal, plantTimezoneOf, tag, unitsOf, type ApiErrorBody, type ListBody, type UnitView, type ViewerSession,
+  tag, unitsOf, type ApiErrorBody, type ListBody, type UnitView, type ViewerSession,
 } from './support/viewer-world';
 
 /**
- * VIEWER persona — journey 3: every write from Demo Plant is refused by the server with 403 READ_ONLY_ROLE
- * (WriteAccessGuard), shown on screen as the read-only refusal, and nothing is created.
+ * VIEWER persona — journey 3: v2 screens show a "Read-only" hint and offer no write control to a viewer;
+ * every write from Demo Plant is still refused by the server with 403 READ_ONLY_ROLE (WriteAccessGuard)
+ * or FORBIDDEN_ROLE (role-gated routes), and nothing is created. The v1 task dialog still offers its
+ * button and shows the refusal on screen.
  * Pedro: Event Hub v2 (new event, close a running stop, code an event) and a task.
  * Nadia: a plan draft, a reason code, a valuation policy, an RCA case, and the raw API.
  */
-const READ_ONLY_TITLE = 'Your role in this plant is read-only';
 /**
  * Role-gated routes (plans, codes, policies, RCAs, flags) are refused by the RolesGuard, which runs before the
  * WriteAccessGuard (last in the chain): a viewer gets 403 FORBIDDEN_ROLE there and READ_ONLY_ROLE only on
  * member-level routes (production events, tasks). Both are refusals of kind "role"; the code seen is recorded.
  */
 const REFUSAL_CODES = ['READ_ONLY_ROLE', 'FORBIDDEN_ROLE'];
-const titleFor = (code: string | null) => (code === 'READ_ONLY_ROLE' ? READ_ONLY_TITLE : 'Your role does not allow this');
 
 interface EventBody {
   id: string;
@@ -50,12 +51,10 @@ async function runningStop(token: string): Promise<{ stop: EventBody; unit: Unit
   return null;
 }
 
-async function expectFormRefusal(page: Page): Promise<void> {
-  const error = page.getByTestId('event-form').getByTestId('form-error');
-  await expect(error).toBeVisible();
-  await expect(error).toContainText('READ_ONLY_ROLE');
-  await expect(error).toContainText(/read-only/i);
-  await expect(page.getByTestId('event-form')).toBeVisible();
+/** A viewer's write on a role-gated route: 403 with READ_ONLY_ROLE or FORBIDDEN_ROLE (see REFUSAL_CODES). */
+function expectViewerRefusal(result: { status: number; body: ApiErrorBody }): void {
+  expect(result.status, JSON.stringify(result.body)).toBe(403);
+  expect(REFUSAL_CODES).toContain(result.body.code);
 }
 
 test.describe('Viewer — every write in Demo Plant is refused (READ_ONLY_ROLE)', () => {
@@ -65,63 +64,50 @@ test.describe('Viewer — every write in Demo Plant is refused (READ_ONLY_ROLE)'
     demoUnits = await unitsOf(pedro.token, DEMO.id);
   });
 
-  test('R1 Pedro: Event Hub — new event, close a running stop and code an event are refused on screen; nothing changes', async ({ page }) => {
+  test('R1 Pedro: Event Hub — Read-only hint, no New event / Close stop / Edit controls; the server refuses each write; nothing changes', async ({ page }) => {
     const label = tag('R1');
     const running = await runningStop(pedro.token);
     const unit = running?.unit ?? demoUnits[0];
     await loginAsViewerInDemoPlant(page, VIEWERS.pedro);
     await openHub(page, unit.name);
 
-    // new event
-    await page.getByRole('button', { name: 'New event' }).click();
-    const form = page.getByTestId('event-form');
-    await expect(form.locator('#unitId')).toHaveValue(unit.id);
-    const timezone = await plantTimezoneOf(form);
-    await form.locator('#startLocal').fill(plantLocal(new Date(Date.now() - 30 * MINUTE), timezone));
-    await form.locator('#endLocal').fill(plantLocal(new Date(Date.now() - 20 * MINUTE), timezone));
-    await form.locator('#description').fill(label);
-    const create = page.waitForResponse((r) => r.url().endsWith('/v2/production-events') && r.request().method() === 'POST');
-    await form.getByRole('button', { name: 'Save' }).click();
-    const refused = await create;
-    expect(refused.status()).toBe(403);
-    expect(((await refused.json()) as ApiErrorBody).code).toBe('READ_ONLY_ROLE');
-    await expectFormRefusal(page);
-    await page.screenshot({ path: test.info().outputPath('viewer-r1-new-event.png') });
-    await page.keyboard.press('Escape');
-    const keep = form.getByRole('button', { name: 'Keep draft and close' });
-    if (await keep.isVisible().catch(() => false)) await keep.click();
-    await expect(form).toBeHidden();
+    // new event: the toolbar shows the Read-only hint instead of the button; the server refuses the create
+    await expect(page.getByTestId('read-only-hint').first()).toBeVisible();
+    await expect(page.getByTestId('read-only-hint').first()).toHaveText(/Read-only/);
+    await expectHidden(page.getByTestId('new-event'));
+    await expectHidden(page.getByRole('button', { name: 'New event' }));
+    await page.screenshot({ path: test.info().outputPath('viewer-r1-read-only-hub.png') });
+    const create = await command<ApiErrorBody & { id?: string }>(pedro.token, '/v2/production-events', {
+      unitId: unit.id, startTime: new Date(Date.now() - 30 * MINUTE).toISOString(), durationSeconds: 600, physicalType: 'downtime', description: label,
+    }, DEMO_HEADER);
+    expectRefused(create, 'READ_ONLY_ROLE');
+    expect(create.body).not.toHaveProperty('id');
 
     if (!running) {
-      note(test.info(), 'observation', 'No running stop in Demo Plant at test time: the close / code refusals were not exercised in the browser.');
+      note(test.info(), 'observation', 'No running stop in Demo Plant at test time: the close / code controls were not checked in the browser.');
       return;
     }
     const { stop } = running;
-    // close the running stop
+    // the running stop is listed with Open only (no Close stop); its detail offers no Edit / Split / Close
     const card = currentStop(page, stop.id);
     await expect(card).toBeVisible();
-    await card.getByRole('button', { name: 'Close stop' }).click();
-    const close = page.getByTestId('close-dialog');
-    await close.locator('#close-reason').fill(`${label} viewer must not close`);
-    await close.getByRole('button', { name: 'Close stop' }).click();
-    const closeError = close.getByTestId('command-error');
-    await expect(closeError).toBeVisible();
-    await expect(closeError).toContainText('READ_ONLY_ROLE');
-    await page.screenshot({ path: test.info().outputPath('viewer-r1-close-stop.png') });
-    await page.keyboard.press('Escape');
-    await expect(close).toBeHidden();
+    await expect(card.getByRole('button', { name: 'Open' })).toBeVisible();
+    await expectHidden(card.getByRole('button', { name: 'Close stop' }));
+    await card.getByRole('button', { name: 'Open' }).click();
+    const detail = page.getByTestId('event-detail');
+    await expect(detail).toBeVisible();
+    await expectHidden(detail.getByRole('button', { name: 'Edit / code' }));
+    await expectHidden(detail.getByRole('button', { name: 'Close stop' }));
+    await page.screenshot({ path: test.info().outputPath('viewer-r1-detail-read-only.png') });
 
-    // code the stop
+    // the server still refuses closing and coding the stop
+    const close = await command<ApiErrorBody>(pedro.token, `/v2/production-events/${stop.id}/close`, { reason: `${label} viewer must not close` }, DEMO_HEADER);
+    expectRefused(close, 'READ_ONLY_ROLE');
     const codes = await call<ListBody<ReasonCode>>(pedro.token, 'GET', '/v2/reason-codes?limit=200', undefined, DEMO_HEADER);
     const reason = codes.body.items.find((code) => code.active);
     expect(reason, 'Demo Plant has an active reason code').toBeTruthy();
-    await card.getByRole('button', { name: 'Open' }).click();
-    await page.getByTestId('event-detail').getByRole('button', { name: 'Edit / code' }).click();
-    const edit = page.getByTestId('event-form');
-    await edit.locator('#reasonCodeId').selectOption((reason as ReasonCode).id);
-    await edit.getByRole('button', { name: 'Save' }).click();
-    await expectFormRefusal(page);
-    await page.screenshot({ path: test.info().outputPath('viewer-r1-code-event.png') });
+    const coded = await call<ApiErrorBody>(pedro.token, 'PATCH', `/v2/production-events/${stop.id}`, { reasonCodeId: (reason as ReasonCode).id }, { ...DEMO_HEADER, 'If-Match': '"1"' });
+    expectRefused(coded, 'READ_ONLY_ROLE');
 
     const after = await call<EventBody>(pedro.token, 'GET', `/v2/production-events/${stop.id}`, undefined, DEMO_HEADER);
     expect(after.status).toBe(200);
@@ -161,90 +147,64 @@ test.describe('Viewer — every write in Demo Plant is refused (READ_ONLY_ROLE)'
     expect(tasks.body.filter((task) => task.title.startsWith(title))).toEqual([]);
   });
 
-  test('R3 Nadia: a plan draft is refused with the read-only title and is not stored', async ({ page }) => {
+  test('R3 Nadia: Planning shows the Read-only hint and no New plan; the server refuses a plan draft; nothing stored', async ({ page }) => {
     const name = tag('R3-plan');
     await loginAsViewerInDemoPlant(page, VIEWERS.nadia);
     await page.goto('/planning?tab=plans');
     await expect(page.getByTestId('planning-page')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('plans-tab')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('plan-new').click();
-    await page.fill('#planName', name);
-    await page.locator('#planUnit').selectOption({ index: 1 });
-    const unitId = await page.locator('#planUnit').inputValue();
-    await page.fill('#planFrom', '2026-12-01T06:00');
-    await page.fill('#planTo', '2026-12-02T06:00');
-    await page.fill('#headerTarget', '1000');
-    await page.locator('#slice-0-product').selectOption({ index: 1 });
-    await page.getByTestId('plan-save').click();
-    const refusal = page.getByTestId('refusal');
-    await expect(refusal).toBeVisible();
-    await expect(refusal).toHaveAttribute('data-kind', 'role');
-    const planCode = await refusal.getAttribute('data-code');
-    expect(REFUSAL_CODES).toContain(planCode);
-    await expect(refusal).toContainText(titleFor(planCode));
-    note(test.info(), 'observation', `plan draft refused with ${planCode}`);
+    await expect(page.getByTestId('plans-tab').getByTestId('read-only-hint')).toBeVisible();
+    await expectHidden(page.getByTestId('plan-new'));
     await page.screenshot({ path: test.info().outputPath('viewer-r3-plan.png') });
+    const unitId = demoUnits[0].id;
+    const plan = await command<ApiErrorBody>(nadia.token, '/v2/production-plans', {
+      name, unitId, validFrom: '2026-12-01T06:00:00.000Z', validTo: '2026-12-02T06:00:00.000Z', basis: 'quantity', headerTarget: '1000', slices: [],
+    }, DEMO_HEADER);
+    expectViewerRefusal(plan);
+    note(test.info(), 'observation', `plan draft refused with ${plan.body.code}`);
     const plans = await call<ListBody<{ name: string }>>(nadia.token, 'GET', `/v2/production-plans?limit=200&unitId=${unitId}`, undefined, DEMO_HEADER);
     expect(plans.status).toBe(200);
-    expect(plans.body.items.map((plan) => plan.name)).not.toContain(name);
+    expect(plans.body.items.map((entry) => entry.name)).not.toContain(name);
   });
 
-  test('R4 Nadia: a reason code and a valuation policy are refused with the read-only title', async ({ page }) => {
+  test('R4 Nadia: Codes and Finance show the Read-only hint, no New code / New policy version; the server refuses both', async ({ page }) => {
     const code = tag('R4').replace(/[^A-Za-z0-9._:-]/g, '-');
     await loginAsViewerInDemoPlant(page, VIEWERS.nadia);
     await page.goto('/codes-admin');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
     await page.getByTestId('tab-reason-codes').click();
     await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 }); // reads are allowed
-    await page.getByTestId('code-new').click();
-    const dialog = page.getByTestId('code-create-dialog');
-    await dialog.locator('#new-code').fill(code);
-    await dialog.locator('#new-name').fill('P-VIEW viewer must not create codes');
-    await dialog.getByTestId('new-parent').selectOption('');
-    await dialog.getByTestId('code-create-submit').click();
-    const refusal = dialog.getByTestId('admin-refusal');
-    await expect(refusal).toBeVisible();
-    await expect(refusal).toHaveAttribute('data-status', '403');
-    await expect(refusal).toHaveAttribute('data-kind', 'role');
-    const codeCode = await refusal.getAttribute('data-code');
-    expect(REFUSAL_CODES).toContain(codeCode);
-    await expect(refusal).toContainText(codeCode === 'READ_ONLY_ROLE' ? READ_ONLY_TITLE : 'Your role does not allow this');
-    note(test.info(), 'observation', `reason code refused with ${codeCode}`);
+    await expect(page.getByTestId('read-only-hint').first()).toBeVisible();
+    await expectHidden(page.getByTestId('code-new'));
     await page.screenshot({ path: test.info().outputPath('viewer-r4-code.png') });
-    await page.keyboard.press('Escape');
+    const created = await command<ApiErrorBody>(nadia.token, '/v2/reason-codes', { code, name: 'P-VIEW viewer must not create codes' }, DEMO_HEADER);
+    expectViewerRefusal(created);
+    note(test.info(), 'observation', `reason code refused with ${created.body.code}`);
     const codes = await call<ListBody<ReasonCode>>(nadia.token, 'GET', '/v2/reason-codes?limit=500', undefined, DEMO_HEADER);
     expect(codes.body.items.map((item) => item.code)).not.toContain(code);
 
     await page.goto('/finance');
     await expect(page.getByTestId('finance')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('policy-new').click();
-    await page.locator('#policyEffectiveFrom').fill('2026-12-01T00:00');
-    await page.getByTestId('policy-save').click();
-    const policyRefusal = page.getByTestId('refusal');
-    await expect(policyRefusal).toBeVisible();
-    await expect(policyRefusal).toHaveAttribute('data-kind', 'role');
-    const policyCode = await policyRefusal.getAttribute('data-code');
-    expect(REFUSAL_CODES).toContain(policyCode);
-    await expect(policyRefusal).toContainText(titleFor(policyCode));
-    note(test.info(), 'observation', `valuation policy refused with ${policyCode}`);
+    await expect(page.getByTestId('policies-tab')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('policies-tab').getByTestId('read-only-hint')).toBeVisible();
+    await expectHidden(page.getByTestId('policy-new'));
     await page.screenshot({ path: test.info().outputPath('viewer-r4-policy.png') });
+    const policy = await command<ApiErrorBody>(nadia.token, '/v2/valuation-policies', { effectiveFrom: '2026-12-01T00:00:00.000Z', notes: tag('R4-policy') }, DEMO_HEADER);
+    expectViewerRefusal(policy);
+    note(test.info(), 'observation', `valuation policy refused with ${policy.body.code}`);
   });
 
-  test('R5 Nadia: an RCA case is refused in the dialog; no case exists afterwards', async ({ page }) => {
+  test('R5 Nadia: RCA shows the Read-only hint and no New case; the server refuses a case; no case exists afterwards', async ({ page }) => {
     const title = tag('R5-case');
     await loginAsViewerInDemoPlant(page, VIEWERS.nadia);
     await page.goto('/rca');
     await expect(page.getByTestId('rca-v2')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('new-case').click();
-    const dialog = page.getByTestId('create-case-dialog');
-    await dialog.locator('#case-title').fill(title);
-    await dialog.getByRole('button', { name: 'Create case' }).click();
-    const refusal = dialog.getByTestId('command-error');
-    await expect(refusal).toBeVisible();
-    await expect(refusal).toContainText(/Refused \((READ_ONLY_ROLE|FORBIDDEN_ROLE)\)/);
-    note(test.info(), 'observation', `RCA case refused: ${(await refusal.textContent())?.split('Reference')[0]}`);
-    await expect(dialog).toBeVisible();
+    await expect(page.getByTestId('rca-v2').getByTestId('read-only-hint')).toBeVisible();
+    await expectHidden(page.getByTestId('new-case'));
     await page.screenshot({ path: test.info().outputPath('viewer-r5-rca.png') });
+    const refused = await command<ApiErrorBody>(nadia.token, '/v2/rcas', { title }, DEMO_HEADER);
+    expectViewerRefusal(refused);
+    note(test.info(), 'observation', `RCA case refused with ${refused.body.code}`);
     const cases = await call<ListBody<{ title: string }>>(nadia.token, 'GET', `/v2/rcas?q=${encodeURIComponent(title)}`, undefined, DEMO_HEADER);
     expect(cases.status).toBe(200);
     expect(cases.body.items.filter((item) => item.title === title)).toEqual([]);

@@ -2,14 +2,15 @@ import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
 import { plantLocal } from '../test-utils/planning-world';
 import { api, itemsOf, ok, post } from './support/manager-api';
-import { JONAS, MDA, PREFIX, expectRoleRefusal, mdaProduct, mdaUnit, sessionOf, shortId, utcDate, type Session } from './support/masterdata-world';
+import { expectHidden, expectRefused } from './support/hidden-controls';
+import { JONAS, MDA, PREFIX, mdaProduct, mdaUnit, sessionOf, shortId, utcDate, type Session } from './support/masterdata-world';
 
 /**
  * Master data admin persona — journey 4 on `/planning` (profiles and calendars):
  * Felix (CALENDAR_WRITERS, PROFILE_WRITERS) drafts and publishes a unit calendar (the server allows a
  * master_data_admin to publish: calendar-roles.ts), adds a crew with a rotation that includes days off
  * (`-`), drafts a profile (missing product → validation error) with planning and sustained rates; his
- * approvals are refused (403 FORBIDDEN_ROLE); Jonas (manager) approves through the API as setup, and
+ * approve controls are not offered and the server refuses them (403 FORBIDDEN_ROLE); Jonas (manager) approves through the API as setup, and
  * Felix sees the approved versions after a reload. Data: unit `P-MDA-CAL …`, product, calendar, crew
  * `P-MDA-crew …`, profile and rates — kept.
  */
@@ -130,18 +131,21 @@ test.describe('Master data admin — calendars, crews, profiles and rates (/plan
     expect(itemsOf(profiles.body)[0].state).toBe('draft');
 
     await openProfile(page);
-    await page.getByTestId('profile-actions').getByTestId('approve-version').click();
-    await expectRoleRefusal(page.getByTestId('profile-actions').getByTestId('refusal'));
+    // a profile writer is not a PROFILE_APPROVER: Approve is not offered, and the server refuses it (403)
+    await expectHidden(page.getByTestId('profile-actions').getByTestId('approve-version'));
+    expectRefused(await post(felix.token, `/v2/profiles/${profileId}/approve`, {}), 'FORBIDDEN_ROLE');
     await addRateDraft(page, 'planning', '90');
     await expect(rateRow(page, 'planning', 1)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
     await addRateDraft(page, 'sustained', '100');
     await expect(rateRow(page, 'sustained', 1)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
-    await rateRow(page, 'planning', 1).getByTestId('approve-version').click();
-    await expectRoleRefusal(rateRow(page, 'planning', 1).getByTestId('refusal'));
+    await expectHidden(rateRow(page, 'planning', 1).getByTestId('approve-version'));
     await expect(rateRow(page, 'planning', 1)).toHaveAttribute('data-state', 'draft');
-    await page.screenshot({ path: test.info().outputPath('mda-04b-approve-refused.png'), fullPage: true });
-    const rates = await api<{ items: Array<{ rateKind: string; state: string }> }>(felix.token, 'GET', `/v2/profiles/${profileId}/rates?limit=20`);
-    expect(itemsOf(rates.body).map((rate) => [rate.rateKind, rate.state]).sort()).toEqual([['planning', 'draft'], ['sustained', 'draft']]);
+    await page.screenshot({ path: test.info().outputPath('mda-04b-approve-hidden.png'), fullPage: true });
+    const rates = await api<{ items: Array<{ id: string; rateKind: string; state: string }> }>(felix.token, 'GET', `/v2/profiles/${profileId}/rates?limit=20`);
+    const planning = itemsOf(rates.body).find((rate) => rate.rateKind === 'planning');
+    expectRefused(await post(felix.token, `/v2/rates/${planning?.id}/approve`, {}), 'FORBIDDEN_ROLE');
+    const after = await api<{ items: Array<{ rateKind: string; state: string }> }>(felix.token, 'GET', `/v2/profiles/${profileId}/rates?limit=20`);
+    expect(itemsOf(after.body).map((rate) => [rate.rateKind, rate.state]).sort()).toEqual([['planning', 'draft'], ['sustained', 'draft']]);
   });
 
   test('MDA-04c Jonas approves (API setup); Felix sees the approved profile and rates after a reload', async ({ page }) => {

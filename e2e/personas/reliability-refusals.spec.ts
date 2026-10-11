@@ -1,12 +1,13 @@
 import { test, expect } from '@playwright/test';
+import { expectHidden, expectRefused } from './support/hidden-controls';
 import { apiLogin, call, command, day, DEMO_PLANT, newSuffix, openCase, PREFIX, REL_USERS, uiLogin, type RelSession } from './support/reliability-world';
 
 /**
  * RELIABILITY ENGINEER persona — journey 6 (refusals) plus the validation and persistence checks the
  * brief asks for. A reliability engineer (legacy Engineer + `reliability_engineer`) may open RCA cases
  * but is neither `manager_approver` nor `master_data_admin`: approving plans / periods, switching
- * feature flags and authoring codes are refused with 403 FORBIDDEN_ROLE, shown as such on screen where a
- * screen exists (Codes & Rules). Users: Sebastian (refusals), Leila (validation + persistence).
+ * feature flags and authoring codes are refused with 403 FORBIDDEN_ROLE; where a screen exists (Codes &
+ * Rules) the write control is not offered at all. Users: Sebastian (refusals), Leila (validation + persistence).
  */
 const suffix = newSuffix();
 let sebastian: RelSession;
@@ -19,20 +20,15 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     expect(sebastian.tenantId).toBe(DEMO_PLANT);
   });
 
-  test('R1 (sebastian): Codes & Rules shows the codes but a new reason code is refused with 403 on screen', async ({ page }) => {
+  test('R1 (sebastian): Codes & Rules shows the codes without New code, and the server refuses a create with 403', async ({ page }) => {
     await uiLogin(page, REL_USERS.sebastian);
     await page.goto('/codes-admin');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
     await page.getByTestId('tab-reason-codes').click();
-    await page.getByTestId('code-new').click();
-    await page.fill('#new-code', `${PREFIX}CODE-${suffix}`);
-    await page.fill('#new-name', `${PREFIX}reliability engineer attempt`);
-    await page.getByTestId('new-parent').selectOption('');
-    await page.getByTestId('code-create-submit').click();
-    const refusal = page.getByTestId('admin-refusal');
-    await expect(refusal).toHaveAttribute('data-status', '403');
-    await expect(refusal).toHaveAttribute('data-kind', 'role');
-    await page.screenshot({ path: test.info().outputPath('r1-codes-refusal.png'), fullPage: true });
+    await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 }); // reads are allowed
+    await expectHidden(page.getByTestId('code-new'));
+    await page.screenshot({ path: test.info().outputPath('r1-codes-read-only.png'), fullPage: true });
+    expectRefused(await command(sebastian.token, '/v2/reason-codes', { code: `${PREFIX}CODE-${suffix}`, name: `${PREFIX}reliability engineer attempt` }), 'FORBIDDEN_ROLE');
     const codes = await call<{ items: Array<{ code: string }> }>(sebastian.token, 'GET', '/v2/reason-codes?limit=500');
     expect(codes.status).toBe(200);
     expect(codes.body.items.map((item) => item.code)).not.toContain(`${PREFIX}CODE-${suffix}`);

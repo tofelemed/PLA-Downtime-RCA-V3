@@ -1,4 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { expectRefused, expectSodDisabled } from './personas/support/hidden-controls';
 import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
 import { call } from './test-utils/downtime-world';
@@ -116,11 +118,10 @@ test.describe('Finance — FX rates and valuation policy approval (plan 3.10 pre
     await expect(row).toHaveAttribute('data-status', 'unapproved', { timeout: 20_000 });
     await expect(row).toContainText('You');
 
-    await row.getByTestId('policy-approve-start').click();
-    await row.getByTestId('policy-approve-submit').click();
-    const refusal = row.getByTestId('refusal');
-    await expect(refusal).toHaveAttribute('data-code', 'SEPARATION_OF_DUTIES', { timeout: 20_000 });
-    await expect(refusal).toHaveAttribute('data-kind', 'duties');
+    // the author sees Approve disabled with the separation-of-duties reason; the server refuses her own approval
+    await expectSodDisabled(row.getByTestId('policy-approve-start'));
+    const drafted = (await policiesOf(author)).find((policy) => policy.notes === notes);
+    expectRefused(await call(author, 'POST', `/v2/valuation-policies/${drafted?.id}/approve`, {}, { 'Idempotency-Key': randomUUID() }), 'SEPARATION_OF_DUTIES');
     const created = (await policiesOf(author)).find((policy) => policy.notes === notes);
     expect(created?.approved).toBe(false);
   });

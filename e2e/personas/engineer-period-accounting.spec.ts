@@ -4,6 +4,7 @@ import { call, command } from '../test-utils/downtime-world';
 import { reconciliation, saveLines } from '../test-utils/dashboard-world';
 import { AISHA, MATEO, NOAH, SETUP_MANAGER, apiSession, type Session } from './support/engineer-users';
 import { seedEngineerWorld, type EngineerWorld } from './support/engineer-world';
+import { expectHidden, expectRefused } from './support/hidden-controls';
 
 /**
  * Production engineer persona — UX05 period accounting (journey 2), actuals adjustments (journey 3) and
@@ -88,9 +89,13 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     await page.reload();
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review', { timeout: 60_000 });
     await expect(page.getByTestId('wf-submit')).toHaveCount(0);
-    // the submitter is gated client-side (D06); another engineer's attempt is refused by the server (J7)
-    await expect(page.getByTestId('wf-approve')).toBeDisabled();
-    await expect(page.getByTestId('approve-gate')).toHaveAttribute('data-code', 'SEPARATION_OF_DUTIES');
+    // an engineer is not an approver: no Approve control or approve gate is shown, even to the submitter;
+    // the server refuses the engineer's approval by role (403 FORBIDDEN_ROLE, before separation of duties)
+    await expectHidden(page.getByTestId('wf-approve'));
+    await expectHidden(page.getByTestId('approve-gate'));
+    const noahApi = await apiSession(NOAH);
+    const review = await call<{ revision: { revision: number; submittedHash: string | null } }>(noahApi.token, 'GET', `/v2/production-periods/${world.periods.a}/reconciliation`);
+    expectRefused(await command(noahApi.token, `/v2/production-periods/${world.periods.a}/approve`, { revision: review.body.revision.revision, submittedHash: review.body.revision.submittedHash ?? '' }), 'FORBIDDEN_ROLE');
     await expect(page.getByTestId('revision-history').locator('[data-action="submit"]')).toBeVisible();
     const view = await call<{ revision: { lifecycle: string }; lines: unknown[] }>((await apiSession(NOAH)).token, 'GET', `/v2/production-periods/${world.periods.a}/reconciliation`);
     expect(view.body.revision.lifecycle).toBe('in_review');
@@ -138,13 +143,15 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     // UX observation: the history names other users by the first 8 characters of their id, not by name
     const noah = await apiSession(NOAH);
     await expect(page.getByTestId('revision-history').locator('[data-action="submit"]')).toContainText(`user ${noah.userId.slice(0, 8)}`);
-    // UX observation: the Approve control is offered to an engineer who is not the submitter; only the
-    // server refuses (403 FORBIDDEN_ROLE), which the workflow bar then shows as given
-    await expect(page.getByTestId('wf-approve')).toBeEnabled();
-    await page.getByTestId('wf-approve').click();
-    const problem = page.getByTestId('workflow-problem');
-    await expect(problem).toHaveAttribute('data-code', 'FORBIDDEN_ROLE');
-    await expect(problem).toHaveAttribute('data-kind', 'role');
+    // an engineer is not an approver: no Approve / Reject / gate is offered, and the server still refuses
+    await expect(page.getByTestId('workflow-bar')).toBeVisible();
+    await expectHidden(page.getByTestId('wf-approve'));
+    await expectHidden(page.getByTestId('wf-reject'));
+    await expectHidden(page.getByTestId('approve-gate'));
+    const mateo = await apiSession(MATEO);
+    const current = await call<{ revision: { revision: number; submittedHash: string | null } }>(mateo.token, 'GET', `/v2/production-periods/${world.periods.a}/reconciliation`);
+    const approve = await command(mateo.token, `/v2/production-periods/${world.periods.a}/approve`, { revision: current.body.revision.revision, submittedHash: current.body.revision.submittedHash ?? '' });
+    expectRefused(approve, 'FORBIDDEN_ROLE');
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
     await page.screenshot({ path: test.info().outputPath('engineer-approve-refused.png') });
     await openPeriod(page, world.periods.b);
