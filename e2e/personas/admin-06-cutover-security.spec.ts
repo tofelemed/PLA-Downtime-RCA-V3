@@ -1,0 +1,97 @@
+import { test, expect } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { PLANTS, USERS, apiLogin, call, note, signIn, type ApiErrorBody } from './support/admin-helpers';
+
+/**
+ * Admin persona — journeys 9 and 10 (report-only checks).
+ * 9: migration / cutover tooling is read-only and no legacy write freeze is active on any plant.
+ * 10: security spot-checks as the Operator demo user: v1 GET/POST /api/users and /api/tenants must be
+ *     refused. Probes never create anything: the POST bodies are invalid and would be 400 before a write.
+ */
+interface Probe {
+  route: string;
+  status: number;
+  code: string | undefined;
+}
+
+async function probe(token: string, method: string, path: string, body?: unknown): Promise<Probe> {
+  const result = await call<ApiErrorBody | unknown[]>(token, method, path, body);
+  const code = Array.isArray(result.body) ? `array(${result.body.length})` : (result.body as ApiErrorBody | undefined)?.code;
+  return { route: `${method} ${path}`, status: result.status, code };
+}
+
+test.describe('ADM-09 cutover tooling and write freeze', () => {
+  test('ADM-09a no migration report endpoint is exposed; no legacy write freeze is active', async ({ page }) => {
+    const helena = await apiLogin(USERS.helena);
+    for (const path of ['/migration/compare', '/migration-reports', '/v2/migration/reports', '/legacy-write-freezes']) {
+      const result = await call<ApiErrorBody>(helena.token, 'GET', path);
+      expect([404, 405]).toContain(result.status);
+    }
+    note(test.info(), 'observation', 'Plan 3.10 delivers the MIG04 comparison and the freeze as CLI scripts (scripts/cutover/*.ts); no HTTP endpoint and no UI shows a freeze or a report.');
+
+    // a v1 write on every plant is accepted (a frozen plant answers 423 LEGACY_WRITES_FROZEN)
+    const lucas = await apiLogin(USERS.lucas);
+    const writes = [
+      { who: helena.token, plant: PLANTS.demo, headers: {} },
+      { who: helena.token, plant: PLANTS.demo2, headers: { 'X-Tenant-Id': PLANTS.demo2.id } },
+      { who: lucas.token, plant: PLANTS.partner, headers: {} },
+    ];
+    for (const write of writes) {
+      const result = await call<ApiErrorBody>(
+        write.who,
+        'POST',
+        '/audit-logs',
+        { action: 'P-ADM-FREEZE-CHECK', entityType: 'P-ADM-Probe', entityId: randomUUID(), details: `write-freeze check on ${write.plant.name}` },
+        write.headers,
+      );
+      expect(result.status, write.plant.name).not.toBe(423);
+      expect(result.body.code, write.plant.name).not.toBe('LEGACY_WRITES_FROZEN');
+      expect(result.status, write.plant.name).toBe(201);
+    }
+    await signIn(page, USERS.helena);
+    await expect(page.getByText(/frozen|write freeze/i)).toHaveCount(0);
+  });
+});
+
+test.describe('ADM-10 security spot-checks as an Operator', () => {
+  test('ADM-10a v1 /users and /tenants refuse an Operator (GET and invalid POST)', async () => {
+    const liam = await apiLogin(USERS.liam);
+    expect(liam.user.role).toBe('Operator');
+    const probes = [
+      await probe(liam.token, 'GET', '/users'),
+      await probe(liam.token, 'GET', '/tenants'),
+      await probe(liam.token, 'POST', '/users', {}),
+      await probe(liam.token, 'POST', '/tenants', {}),
+    ];
+    for (const result of probes) note(test.info(), 'security-probe', `${result.route} → ${result.status} ${result.code ?? ''}`);
+    // DEFECT (suspected by the inventory, confirmed here if the assertions fail): neither controller carries
+    // @Roles, so an Operator can list every user and tenant (200) and an invalid POST reaches the DTO
+    // validation (400) instead of being refused by the role guard (403) — a valid body would write.
+    for (const result of probes) {
+      expect.soft([401, 403], result.route).toContain(result.status);
+    }
+    // whatever the guards did, the invalid bodies created nothing
+    const helena = await apiLogin(USERS.helena);
+    const users = await call<Array<{ name: string | null; email: string | null }>>(helena.token, 'GET', '/users');
+    expect(users.body.every((user) => user.email)).toBe(true);
+  });
+
+  test('ADM-10b an Operator is refused on the admin screens and cannot read the audit list', async ({ page }) => {
+    test.setTimeout(120_000); // first visit compiles the lazy admin chunks on the dev server
+    const liam = await apiLogin(USERS.liam);
+    const adminApi = [
+      await probe(liam.token, 'PUT', `/v2/feature-flags/v2.eventHub`, { enabled: true }),
+      await probe(liam.token, 'POST', '/app-settings/branding/value', { value: { appSubtitle: 'P-ADM must not apply' } }),
+    ];
+    for (const result of adminApi) note(test.info(), 'security-probe', `${result.route} → ${result.status} ${result.code ?? ''}`);
+    expect(adminApi[0].status).toBe(403);
+    expect(adminApi[0].code).toBe('FORBIDDEN_ROLE');
+    expect(adminApi[1].status).toBe(403);
+    expect(adminApi[1].code).toBe('SETTING_NOT_WRITABLE');
+    await signIn(page, USERS.liam);
+    await page.goto('/admin');
+    await expect(page.getByText("You don't have permission to access the admin panel.")).toBeVisible({ timeout: 60_000 });
+    await page.goto('/master-data');
+    await expect(page.getByText("You don't have permission to access master data management.")).toBeVisible({ timeout: 60_000 });
+  });
+});
