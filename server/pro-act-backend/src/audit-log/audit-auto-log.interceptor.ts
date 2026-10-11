@@ -12,7 +12,7 @@ import { SKIP_AUDIT_KEY } from './skip-audit.decorator';
 import { AUDIT_READ_KEY } from './audit-read.decorator';
 import {
   methodToAuditAction,
-  resolveEntityType,
+  resolveAuditTarget,
   shouldSkipAudit,
 } from './audit-auto-log.config';
 
@@ -79,9 +79,14 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap((responseBody) => {
-        void this.record(request, method, path, responseBody, user).catch((err) => {
-          this.logger.warn(`Auto-audit failed for ${method} ${path}: ${err?.message || err}`);
-        });
+        void this.record(request, method, path, responseBody, user).catch(
+          (err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            this.logger.warn(
+              `Auto-audit failed for ${method} ${path}: ${message}`,
+            );
+          },
+        );
       }),
     );
   }
@@ -128,18 +133,21 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
     user: JwtUser,
   ): Promise<void> {
     const action = methodToAuditAction(method);
-    const entityType = resolveEntityType(path);
-    const body = (responseBody && typeof responseBody === 'object' ? responseBody : {}) as Record<
-      string,
-      unknown
-    >;
+    const body = (
+      responseBody && typeof responseBody === 'object' ? responseBody : {}
+    ) as Record<string, unknown>;
     const reqBody = request.body || {};
 
-    const entityId =
-      (typeof body.id === 'string' && body.id) ||
-      request.params?.id ||
-      (typeof reqBody.id === 'string' && reqBody.id) ||
-      'unknown';
+    // Sub-resource writes are attributed to the parent record (see resolveAuditTarget)
+    const { entityType, entityId, subresource } = resolveAuditTarget({
+      path,
+      params: request.params,
+      responseId: typeof body.id === 'string' ? body.id : undefined,
+      requestId: typeof reqBody.id === 'string' ? reqBody.id : undefined,
+    });
+    const subresourceNote = subresource
+      ? ` [${subresource.kind}${subresource.id ? ` ${subresource.id}` : ''}]`
+      : '';
 
     const tenantId =
       (typeof body.tenantId === 'string' && body.tenantId) ||
@@ -166,7 +174,7 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
       action,
       entityType,
       entityId,
-      details: `${action} ${entityType} "${label}" via API ${method} ${path}`,
+      details: `${action} ${entityType} "${label}" via API ${method} ${path}${subresourceNote}`,
       organizationId,
       tenantId,
       timestamp: new Date(),

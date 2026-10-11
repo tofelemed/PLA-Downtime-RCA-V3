@@ -363,6 +363,23 @@ describe('calendar versions and shift instances (plan 2.1, v2 API)', () => {
     expect(
       (await env.get('crew-rotations', env.adminB).expect(200)).body.items,
     ).toEqual([]);
+    // a cycle with days off (null slots) is a valid pattern (DTO per-element rule)
+    const blue = (await env.post('crews', { name: 'Blue' }).expect(201))
+      .body as { id: string };
+    const withDaysOff = ['A', 'A', 'B', 'B', null];
+    await env
+      .post('crew-rotations', {
+        ...rotation,
+        crewId: blue.id,
+        pattern: { anchorDate: await env.todayA(), cycle: withDaysOff },
+      })
+      .expect(201);
+    expect(
+      await env.rows<{ cycle: unknown }>(
+        `SELECT pattern->'cycle' AS cycle FROM crew_rotations WHERE crew_id = $1`,
+        [blue.id],
+      ),
+    ).toEqual([{ cycle: withDaysOff }]);
   });
 
   it('a writer limited to one unit can only write calendar versions of that unit', async () => {

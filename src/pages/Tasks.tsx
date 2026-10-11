@@ -9,7 +9,7 @@ import {
   TASK_PRIORITIES,
   TASK_ENTITY_TYPES,
 } from '../services/api/taskApi';
-import { userApi, UserRecord } from '../services/api/userApi';
+import { userApi, AssignableUser } from '../services/api/userApi';
 import { auditService } from '../services/AuditService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,7 +74,7 @@ export default function Tasks() {
   const { toast } = useToast();
 
   const [tasks, setTasks] = useState<TaskDto[]>([]);
-  const [users, setUsers] = useState<UserRecord[]>([]);
+  const [users, setUsers] = useState<AssignableUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TaskDto | null>(null);
@@ -109,7 +109,7 @@ export default function Tasks() {
 
       const [taskList, userList] = await Promise.all([
         taskApi.list(query),
-        userApi.getUsers({ tenantId }),
+        userApi.getAssignableUsers(),
       ]);
       setTasks(taskList);
       setUsers(userList);

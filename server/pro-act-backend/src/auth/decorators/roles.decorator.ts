@@ -8,3 +8,6 @@ export const ROLES_KEY = 'roles';
 
 /** Legacy roles (`SuperAdmin`, `Engineer`, ...) and scope roles (`manager_approver`, ...) are both accepted. */
 export const Roles = (...roles: RoleName[]) => SetMetadata(ROLES_KEY, roles);
+
+/** Lifts a controller-level `@Roles()` for one handler: any authenticated member may call it. */
+export const AnyRole = () => SetMetadata(ROLES_KEY, []);

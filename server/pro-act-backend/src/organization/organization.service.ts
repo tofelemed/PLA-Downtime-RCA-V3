@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Organization } from './organization.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { RequestContext } from '../common/context/request-context';
+import { memberTenantIds } from '../auth/roles/grant-policy';
 
 @Injectable()
 export class OrganizationService {
@@ -17,8 +19,23 @@ export class OrganizationService {
     return this.organizationRepository.find();
   }
 
+  /** Organizations the caller may see: SuperAdmin all, others their own and those of their member tenants. */
+  findVisible(caller: RequestContext): Promise<Organization[]> {
+    if (caller.isSuperAdmin) return this.findAll();
+    return this.visibleQuery(caller).getMany();
+  }
+
   findOne(id: string): Promise<Organization | null> {
     return this.organizationRepository.findOneBy({ id });
+  }
+
+  /** `findOne` restricted to what `findVisible` lists (a foreign organization is simply not found). */
+  findOneVisible(
+    caller: RequestContext,
+    id: string,
+  ): Promise<Organization | null> {
+    if (caller.isSuperAdmin) return this.findOne(id);
+    return this.visibleQuery(caller).andWhere('org.id = :id', { id }).getOne();
   }
 
   findByCode(code: string): Promise<Organization | null> {
@@ -38,11 +55,18 @@ export class OrganizationService {
     return saved;
   }
 
-  async update(id: string, data: Partial<Organization>): Promise<Organization | null> {
+  async update(
+    id: string,
+    data: Partial<Organization>,
+  ): Promise<Organization | null> {
     await this.organizationRepository.update(id, data);
     const updated = await this.findOne(id);
     if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'organization', updated);
+      this.realtimeGateway.broadcastEntityEvent(
+        'Updated',
+        'organization',
+        updated,
+      );
     }
     return updated;
   }
@@ -54,4 +78,26 @@ export class OrganizationService {
       this.realtimeGateway.broadcastEntityEvent('Deleted', 'organization', org);
     }
   }
-} 
+
+  /** The caller's own organization plus the organizations of the tenants it is a member of. */
+  private visibleQuery(
+    caller: RequestContext,
+  ): SelectQueryBuilder<Organization> {
+    const tenantIds = memberTenantIds(caller);
+    const clauses: string[] = [];
+    const params: Record<string, unknown> = {};
+    if (caller.organizationId) {
+      clauses.push('org.id = :own');
+      params.own = caller.organizationId;
+    }
+    if (tenantIds.length) {
+      clauses.push(
+        'org.id IN (SELECT organization_id FROM tenants WHERE id IN (:...tenantIds))',
+      );
+      params.tenantIds = tenantIds;
+    }
+    return this.organizationRepository
+      .createQueryBuilder('org')
+      .where(clauses.length ? `(${clauses.join(' OR ')})` : '1 = 0', params);
+  }
+}

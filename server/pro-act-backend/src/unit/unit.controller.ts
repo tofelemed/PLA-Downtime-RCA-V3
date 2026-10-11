@@ -1,11 +1,22 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
 import { UnitService } from './unit.service';
 import { Unit } from './unit.entity';
 import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CreateUnitDto } from './dto/create-unit.dto';
 import { UpdateUnitDto } from './dto/update-unit.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
+/** Master data (§13.2): any member reads; writes need master_data_admin or manager_approver (admins via satisfiesRole). */
 @ApiTags('Units')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -26,6 +37,7 @@ export class UnitController {
   }
 
   @Post()
+  @Roles('master_data_admin', 'manager_approver')
   @ApiBody({ type: CreateUnitDto })
   @ApiResponse({ status: 201, description: 'Create unit', type: Unit })
   create(@Body() data: CreateUnitDto): Promise<Unit> {
@@ -33,15 +45,20 @@ export class UnitController {
   }
 
   @Put(':id')
+  @Roles('master_data_admin', 'manager_approver')
   @ApiBody({ type: UpdateUnitDto })
   @ApiResponse({ status: 200, description: 'Update unit', type: Unit })
-  update(@Param('id') id: string, @Body() data: UpdateUnitDto): Promise<Unit | null> {
+  update(
+    @Param('id') id: string,
+    @Body() data: UpdateUnitDto,
+  ): Promise<Unit | null> {
     return this.unitService.update(id, data);
   }
 
   @Delete(':id')
+  @Roles('master_data_admin', 'manager_approver')
   @ApiResponse({ status: 200, description: 'Delete unit' })
   remove(@Param('id') id: string): Promise<void> {
     return this.unitService.remove(id);
   }
-} 
+}

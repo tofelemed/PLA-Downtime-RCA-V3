@@ -1,11 +1,22 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
 import { AssetService } from './asset.service';
 import { Asset } from './asset.entity';
 import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
+/** Master data (§13.2): any member reads; writes need master_data_admin or manager_approver (admins via satisfiesRole). */
 @ApiTags('Assets')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -26,6 +37,7 @@ export class AssetController {
   }
 
   @Post()
+  @Roles('master_data_admin', 'manager_approver')
   @ApiBody({ type: CreateAssetDto })
   @ApiResponse({ status: 201, description: 'Create asset', type: Asset })
   create(@Body() data: CreateAssetDto): Promise<Asset> {
@@ -33,15 +45,20 @@ export class AssetController {
   }
 
   @Put(':id')
+  @Roles('master_data_admin', 'manager_approver')
   @ApiBody({ type: UpdateAssetDto })
   @ApiResponse({ status: 200, description: 'Update asset', type: Asset })
-  update(@Param('id') id: string, @Body() data: UpdateAssetDto): Promise<Asset | null> {
+  update(
+    @Param('id') id: string,
+    @Body() data: UpdateAssetDto,
+  ): Promise<Asset | null> {
     return this.assetService.update(id, data);
   }
 
   @Delete(':id')
+  @Roles('master_data_admin', 'manager_approver')
   @ApiResponse({ status: 200, description: 'Delete asset' })
   remove(@Param('id') id: string): Promise<void> {
     return this.assetService.remove(id);
   }
-} 
+}

@@ -15,6 +15,7 @@ import {
 } from 'class-validator';
 import { ListQueryDto } from '../common/list-query.dto';
 import { LOCAL_DATE } from './calendar-version-v2.dto';
+import { IsShiftNameOrNullEach } from './shift-name-or-null.validator';
 
 export class CrewCreateDto {
   @ApiPropertyOptional({
@@ -58,9 +59,7 @@ export class RotationPatternDto {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(366)
-  @ValidateIf((_o, v) => v !== null, { each: true })
-  @IsString({ each: true })
-  @MaxLength(64, { each: true })
+  @IsShiftNameOrNullEach()
   cycle: Array<string | null>;
 }
 

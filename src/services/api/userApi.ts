@@ -36,12 +36,19 @@ export interface CreateUserPayload {
   department?: string;
 }
 
+/** `GET /users/assignable`: id and name of the acting tenant's active users, readable by any member. */
+export type AssignableUser = Pick<UserRecord, 'id' | 'name'>;
+
 export const userApi = {
   getUsers(params?: { tenantId?: string; organizationId?: string; isActive?: boolean }) {
     return httpClient.request<UserRecord[]>('users', {
       method: 'GET',
       query: params,
     });
+  },
+
+  getAssignableUsers() {
+    return httpClient.request<AssignableUser[]>('users/assignable', { method: 'GET' });
   },
 
   createUser(payload: CreateUserPayload) {

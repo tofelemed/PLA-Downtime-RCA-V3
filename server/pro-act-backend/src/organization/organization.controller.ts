@@ -1,11 +1,30 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  NotFoundException,
+} from '@nestjs/common';
 import { OrganizationService } from './organization.service';
 import { Organization } from './organization.entity';
 import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { assertOrganizationWritable } from '../auth/roles/org-access';
+import { Ctx } from '../common/context/ctx.decorator';
+import { RequestContext } from '../common/context/request-context';
 
+/**
+ * Reads list what the caller may see (SuperAdmin all, everyone else their own organization and the
+ * organizations of their member tenants); creating one is a SuperAdmin operation, changing or
+ * deleting one is for SuperAdmin or that organization's OrgAdmin.
+ */
 @ApiTags('Organizations')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -14,34 +33,73 @@ export class OrganizationController {
   constructor(private readonly organizationService: OrganizationService) {}
 
   @Get()
-  @ApiResponse({ status: 200, description: 'List all organizations', type: [Organization] })
-  findAll(): Promise<Organization[]> {
-    return this.organizationService.findAll();
+  @ApiResponse({
+    status: 200,
+    description: 'Organizations visible to the caller',
+    type: [Organization],
+  })
+  findAll(@Ctx() ctx: RequestContext): Promise<Organization[]> {
+    return this.organizationService.findVisible(ctx);
   }
 
   @Get(':id')
-  @ApiResponse({ status: 200, description: 'Get organization by ID', type: Organization })
-  findOne(@Param('id') id: string): Promise<Organization | null> {
-    return this.organizationService.findOne(id);
+  @ApiResponse({
+    status: 200,
+    description: 'Get organization by ID',
+    type: Organization,
+  })
+  findOne(
+    @Ctx() ctx: RequestContext,
+    @Param('id') id: string,
+  ): Promise<Organization | null> {
+    return this.organizationService.findOneVisible(ctx, id);
   }
 
   @Post()
+  @Roles('SuperAdmin')
   @ApiBody({ type: CreateOrganizationDto })
-  @ApiResponse({ status: 201, description: 'Create organization', type: Organization })
+  @ApiResponse({
+    status: 201,
+    description: 'Create organization',
+    type: Organization,
+  })
   create(@Body() data: CreateOrganizationDto): Promise<Organization> {
     return this.organizationService.create(data);
   }
 
   @Put(':id')
+  @Roles('SuperAdmin', 'OrgAdmin')
   @ApiBody({ type: UpdateOrganizationDto })
-  @ApiResponse({ status: 200, description: 'Update organization', type: Organization })
-  update(@Param('id') id: string, @Body() data: UpdateOrganizationDto): Promise<Organization | null> {
+  @ApiResponse({
+    status: 200,
+    description: 'Update organization',
+    type: Organization,
+  })
+  async update(
+    @Ctx() ctx: RequestContext,
+    @Param('id') id: string,
+    @Body() data: UpdateOrganizationDto,
+  ): Promise<Organization | null> {
+    await this.writable(ctx, id);
     return this.organizationService.update(id, data);
   }
 
   @Delete(':id')
+  @Roles('SuperAdmin', 'OrgAdmin')
   @ApiResponse({ status: 200, description: 'Delete organization' })
-  remove(@Param('id') id: string): Promise<void> {
+  async remove(
+    @Ctx() ctx: RequestContext,
+    @Param('id') id: string,
+  ): Promise<void> {
+    await this.writable(ctx, id);
     return this.organizationService.remove(id);
   }
-} 
+
+  private async writable(ctx: RequestContext, id: string): Promise<void> {
+    const organization = await this.organizationService.findOneVisible(ctx, id);
+    if (!organization) {
+      throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
+    }
+    assertOrganizationWritable(ctx, organization.id);
+  }
+}

@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { FindOptionsWhere, In, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Tenant } from './tenant.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { RequestContext } from '../common/context/request-context';
+import { memberTenantIds } from '../auth/roles/grant-policy';
 
 @Injectable()
 export class TenantService {
@@ -17,8 +19,24 @@ export class TenantService {
     return this.tenantRepository.find();
   }
 
+  /** Tenants the caller may see: SuperAdmin all, OrgAdmin its organization, others their member tenants. */
+  async findVisible(caller: RequestContext): Promise<Tenant[]> {
+    const where = visibleTenants(caller);
+    if (!where) return this.findAll();
+    return where.length ? this.tenantRepository.find({ where }) : [];
+  }
+
   findOne(id: string): Promise<Tenant | null> {
     return this.tenantRepository.findOneBy({ id });
+  }
+
+  /** `findOne` restricted to what `findVisible` lists (a foreign tenant is simply not found). */
+  async findOneVisible(
+    caller: RequestContext,
+    id: string,
+  ): Promise<Tenant | null> {
+    const tenant = await this.findOne(id);
+    return tenant && isVisibleTo(caller, tenant) ? tenant : null;
   }
 
   /** Organization of each listed tenant (id and organization_id only; unknown ids are left out). */
@@ -31,7 +49,10 @@ export class TenantService {
     return new Map(rows.map((row) => [row.id, row.organizationId]));
   }
 
-  findByCodeAndOrganization(code: string, organizationId: string): Promise<Tenant | null> {
+  findByCodeAndOrganization(
+    code: string,
+    organizationId: string,
+  ): Promise<Tenant | null> {
     return this.tenantRepository.findOneBy({ code, organizationId });
   }
 
@@ -63,4 +84,27 @@ export class TenantService {
       this.realtimeGateway.broadcastEntityEvent('Deleted', 'tenant', { id });
     }
   }
-} 
+}
+
+function isVisibleTo(caller: RequestContext, tenant: Tenant): boolean {
+  return (
+    caller.isSuperAdmin ||
+    memberTenantIds(caller).includes(tenant.id) ||
+    (caller.legacyRole === 'OrgAdmin' &&
+      tenant.organizationId === caller.organizationId)
+  );
+}
+
+/** OR-ed clauses of the caller's visibility; undefined means everything (SuperAdmin). */
+function visibleTenants(
+  caller: RequestContext,
+): FindOptionsWhere<Tenant>[] | undefined {
+  if (caller.isSuperAdmin) return undefined;
+  const clauses: FindOptionsWhere<Tenant>[] = [];
+  const members = memberTenantIds(caller);
+  if (members.length) clauses.push({ id: In(members) });
+  if (caller.legacyRole === 'OrgAdmin' && caller.organizationId) {
+    clauses.push({ organizationId: caller.organizationId });
+  }
+  return clauses;
+}

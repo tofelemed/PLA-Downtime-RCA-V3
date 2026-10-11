@@ -3,7 +3,6 @@ import {
   UnauthorizedException,
   ConflictException,
   BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
@@ -11,12 +10,10 @@ import { OrganizationService } from '../organization/organization.service';
 import { TenantService } from '../tenant/tenant.service';
 import * as bcrypt from 'bcryptjs';
 import { User } from '../users/user.entity';
-import {
-  getRequestContext,
-  RequestContext,
-} from '../common/context/request-context';
+import { getRequestContext } from '../common/context/request-context';
 import { AuthenticatedUser } from './interfaces/jwt-payload.interface';
-import { canGrantRole, mapLegacyRole } from './roles/role-model';
+import { assertCallerMayRegister } from './roles/grant-policy';
+import { mapLegacyRole } from './roles/role-model';
 import { UserScopesService } from './scopes/user-scopes.service';
 import {
   SessionScope,
@@ -131,7 +128,8 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException('Invalid token');
     }
-    if (!isAccessToken(payload)) throw new UnauthorizedException('Invalid token');
+    if (!isAccessToken(payload))
+      throw new UnauthorizedException('Invalid token');
     return payload;
   }
 
@@ -212,7 +210,7 @@ export class AuthService {
         const newTenant = await this.tenantService.create({
           name: data.tenantName,
           code: tenantCode,
-          organizationId: organizationId!,
+          organizationId: organizationId,
           // isActive column doesn't exist in database schema
           // isActive: true,
         });
@@ -254,47 +252,6 @@ export class AuthService {
       return { user: publicUser(user) };
     }
     return this.login(user);
-  }
-}
-
-function assertCallerMayRegister(
-  caller: RequestContext,
-  data: {
-    role?: string;
-    tenantId?: string;
-    organizationId?: string;
-    organizationName?: string;
-    tenantName?: string;
-  },
-): void {
-  if (!data.role || !canGrantRole(caller.roles, data.role)) {
-    throw new ForbiddenException({
-      code: 'ROLE_GRANT_NOT_ALLOWED',
-      message: `Cannot grant role ${data.role}`,
-    });
-  }
-  if (caller.isSuperAdmin) {
-    return;
-  }
-  if (data.tenantId && data.tenantId !== caller.tenantId) {
-    throw new ForbiddenException({
-      code: 'TENANT_NOT_ALLOWED',
-      message: 'Users can only be registered into your own tenant',
-    });
-  }
-  if (data.organizationId && data.organizationId !== caller.organizationId) {
-    throw new ForbiddenException({
-      code: 'ORGANIZATION_NOT_ALLOWED',
-      message: 'Users can only be registered into your own organization',
-    });
-  }
-  // Creating organizations or tenants on the fly is a SuperAdmin operation
-  if (data.organizationName || data.tenantName) {
-    throw new ForbiddenException({
-      code: 'ORGANIZATION_CREATE_NOT_ALLOWED',
-      message:
-        'Only a SuperAdmin can create organizations or tenants during registration',
-    });
   }
 }
 
