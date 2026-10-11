@@ -4,6 +4,7 @@ import {
   effectiveRoles,
   legacyRoleAppliesIn,
   maySelectTenant,
+  organizationOf,
   rolesForLegacyRole,
   scopedTenantIds,
   type RoleSubject,
@@ -99,21 +100,49 @@ describe('maySelectTenant / scopedTenantIds (mirrors maySelectTenant)', () => {
   it('lists the home tenant and every scoped tenant once', () => {
     const viewer = user('Operator', DEMO_2, [scope(DEMO_2, 'operator'), scope(DEMO, 'viewer'), scope(DEMO, 'operator')]);
     expect(scopedTenantIds(viewer)).toEqual([DEMO_2, DEMO]);
-    expect(maySelectTenant(viewer, DEMO)).toBe(true);
-    expect(maySelectTenant(viewer, DEMO_2)).toBe(true);
-    expect(maySelectTenant(viewer, PARTNER)).toBe(false);
+    expect(maySelectTenant(viewer, { id: DEMO, organizationId: DEMO_ORG })).toBe(true);
+    expect(maySelectTenant(viewer, { id: DEMO_2, organizationId: DEMO_ORG })).toBe(true);
+    expect(maySelectTenant(viewer, { id: PARTNER, organizationId: PARTNER_ORG })).toBe(false);
   });
 
-  it('global admins may pick any plant in the UI; the server verifies', () => {
-    expect(maySelectTenant(user('SuperAdmin', DEMO), PARTNER)).toBe(true);
-    expect(maySelectTenant(user('OrgAdmin', DEMO), DEMO_2)).toBe(true);
+  it('SuperAdmin may pick any plant in the UI; the server verifies', () => {
+    expect(maySelectTenant(user('SuperAdmin', DEMO), { id: PARTNER, organizationId: PARTNER_ORG })).toBe(true);
+    expect(maySelectTenant(user('SuperAdmin', DEMO), { id: 'plant-unknown' })).toBe(true);
+  });
+
+  it('OrgAdmin may pick the plants of its organisation only (plus plants it holds a scope in)', () => {
+    const isabel = user('OrgAdmin', DEMO, [scope(DEMO, 'OrgAdmin'), scope(DEMO_2, 'OrgAdmin')]);
+    expect(maySelectTenant(isabel, { id: DEMO_2, organizationId: DEMO_ORG })).toBe(true);
+    expect(maySelectTenant(isabel, { id: PARTNER, organizationId: PARTNER_ORG })).toBe(false);
+    const lucas = user('OrgAdmin', PARTNER, [scope(PARTNER, 'OrgAdmin', PARTNER_ORG)], PARTNER_ORG);
+    expect(maySelectTenant(lucas, { id: PARTNER, organizationId: PARTNER_ORG })).toBe(true);
+    expect(maySelectTenant(lucas, { id: DEMO, organizationId: DEMO_ORG })).toBe(false);
+    expect(maySelectTenant(lucas, { id: DEMO_2, organizationId: DEMO_ORG })).toBe(false);
+    // a scope grant outside the organisation is still a membership the server accepts
+    const guest = user('OrgAdmin', DEMO, [scope(PARTNER, 'viewer', PARTNER_ORG)]);
+    expect(maySelectTenant(guest, { id: PARTNER, organizationId: PARTNER_ORG })).toBe(true);
+  });
+
+  it('OrgAdmin: an unknown organisation (of the user or the plant) is left to the server', () => {
+    const noOrg: RoleSubject = { role: 'OrgAdmin', tenantId: DEMO };
+    expect(organizationOf(noOrg)).toBeNull();
+    expect(maySelectTenant(noOrg, { id: PARTNER, organizationId: PARTNER_ORG })).toBe(true);
+    expect(maySelectTenant(user('OrgAdmin', DEMO), { id: 'plant-unknown' })).toBe(true);
+  });
+
+  it('organizationOf falls back to the home tenant scope, then to the plant list', () => {
+    const fromScope: RoleSubject = { role: 'OrgAdmin', tenantId: PARTNER, homeTenantId: PARTNER, scopes: [scope(PARTNER, 'OrgAdmin', PARTNER_ORG)] };
+    expect(organizationOf(fromScope)).toBe(PARTNER_ORG);
+    const fromList: RoleSubject = { role: 'OrgAdmin', tenantId: PARTNER };
+    expect(organizationOf(fromList, [{ id: DEMO, organizationId: DEMO_ORG }, { id: PARTNER, organizationId: PARTNER_ORG }])).toBe(PARTNER_ORG);
+    expect(organizationOf(user('TenantAdmin', DEMO))).toBe(DEMO_ORG);
   });
 
   it('a user without scopes (older session) may only pick the home tenant', () => {
     const engineer: RoleSubject = { role: 'Engineer', tenantId: DEMO };
     expect(scopedTenantIds(engineer)).toEqual([DEMO]);
-    expect(maySelectTenant(engineer, DEMO)).toBe(true);
-    expect(maySelectTenant(engineer, DEMO_2)).toBe(false);
+    expect(maySelectTenant(engineer, { id: DEMO, organizationId: DEMO_ORG })).toBe(true);
+    expect(maySelectTenant(engineer, { id: DEMO_2, organizationId: DEMO_ORG })).toBe(false);
     expect(scopedTenantIds({ role: 'Engineer' })).toEqual([]);
   });
 });

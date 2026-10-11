@@ -88,11 +88,39 @@ export function effectiveRoles(user: RoleSubject, acting: ActingPlant): string[]
   return [...new Set([...legacy, ...scoped])];
 }
 
+/** A plant as the selector and the stored selection know it. */
+export interface SelectablePlant {
+  id: string;
+  organizationId?: string | null;
+}
+
 /**
- * Whether the plant selector may offer a tenant: global admins see every plant (the server verifies);
- * everyone else their home tenant and the tenants they hold a scope in.
+ * The user's organisation: the session's `organizationId`, else the organisation of the home tenant
+ * (from its scope grant, or from `tenants` when the caller holds the plant list). Null when unknown.
  */
-export function maySelectTenant(user: RoleSubject, tenantId: string): boolean {
-  if (isGlobalAdmin(user)) return true;
-  return scopedTenantIds(user).includes(tenantId);
+export function organizationOf(user: RoleSubject, tenants: readonly SelectablePlant[] = []): string | null {
+  if (user.organizationId) return user.organizationId;
+  const home = homeTenantOf(user);
+  if (!home) return null;
+  const fromScope = (user.scopes ?? []).find((scope) => scope.tenantId === home)?.organizationId;
+  return fromScope ?? tenants.find((tenant) => tenant.id === home)?.organizationId ?? null;
+}
+
+/**
+ * Whether the plant selector may offer a plant: SuperAdmin every plant; OrgAdmin the plants of its own
+ * organisation; everyone their home tenant and the tenants they hold a scope in. An OrgAdmin whose
+ * organisation, or the plant's, is unknown is left to the server (403 TENANT_NOT_ALLOWED, shown by the
+ * plant access guard) rather than locked out of a plant it may hold.
+ */
+export function maySelectTenant(
+  user: RoleSubject,
+  plant: SelectablePlant,
+  organizationId: string | null = organizationOf(user),
+): boolean {
+  if (user.role === 'SuperAdmin') return true;
+  if (scopedTenantIds(user).includes(plant.id)) return true;
+  if (user.role !== 'OrgAdmin') return false;
+  const plantOrganization = plant.organizationId ?? null;
+  if (plantOrganization === null || organizationId === null) return true;
+  return plantOrganization === organizationId;
 }

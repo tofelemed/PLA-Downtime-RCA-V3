@@ -3376,7 +3376,7 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose, onP
                         </SelectTrigger>
                         <SelectContent>
                           {availablePlans.length === 0 ? (
-                            <SelectItem value="" disabled>No plans available</SelectItem>
+                            <div className="px-2 py-1.5 text-sm text-gray-500" aria-disabled="true">No plans available</div>
                           ) : (
                             availablePlans.map(plan => (
                               <SelectItem key={plan.id} value={plan.id}>{plan.name} ({formatDateRange(plan.startDate, plan.endDate)})</SelectItem>

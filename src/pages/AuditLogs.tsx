@@ -4,6 +4,7 @@ import { usePlantSelection } from '../contexts/PlantSelectionContext';
 import { reportingApi, AuditTrailReport } from '../services/api/reportingApi';
 import { auditApi, parseAuditDetails } from '../services/api/auditApi';
 import { userApi, UserRecord } from '../services/api/userApi';
+import { ApiError } from '../services/api/httpClient';
 import {
   ChartCard,
   CategoryBarChart,
@@ -109,7 +110,10 @@ export default function AuditLogs() {
       };
       const [reportData, userList] = await Promise.all([
         reportingApi.getAuditTrail(query),
-        userApi.getUsers({ tenantId }),
+        // the actor filter is a convenience: a role without the admin-only user list keeps an empty filter
+        userApi.getUsers({ tenantId }).catch((error: unknown) =>
+          error instanceof ApiError && error.status === 403 ? ([] as UserRecord[]) : Promise.reject(error),
+        ),
       ]);
       setAudit(reportData);
       setUsers(userList);

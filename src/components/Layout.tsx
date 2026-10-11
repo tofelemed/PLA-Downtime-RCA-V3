@@ -4,6 +4,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Navigation } from './Navigation';
 import PlantSelector from './PlantSelector';
 import { DisplayCurrencyToggle } from '@/features/display-currency/display-currency-toggle';
+import { PlantAccessGuard } from '@/features/v2-foundation/plant-access-guard';
 import { Button } from '@/components/ui/button';
 import { LogOut, User, Bell, Settings, Search } from 'lucide-react';
 import { brandingService, BrandingSettings } from '@/services/BrandingService';
@@ -197,7 +198,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </aside>
         {/* Enhanced Main Content */}
         <main className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'} h-[calc(100vh-5rem)] overflow-y-auto p-6 bg-gradient-to-br from-gray-50 via-blue-50 to-pink-50`}>
-          {children}
+          <PlantAccessGuard>{children}</PlantAccessGuard>
         </main>
       </div>
     </div>

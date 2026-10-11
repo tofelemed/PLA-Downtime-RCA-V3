@@ -19,6 +19,15 @@ const user = (role: string, tenantId?: string, scopes?: SessionScope[]): Authent
   ...(scopes ? { homeTenantId: tenantId ?? null, scopes } : {}),
 });
 const tenant = (id: string): Tenant => ({ id, name: id, organizationId: 'org' }) as Tenant;
+const plant = (id: string, organizationId: string): Tenant => ({ id, name: id, organizationId }) as Tenant;
+// the demo world of docs/DEMO_PERSONAS.md
+const DEMO = plant('plant-demo', 'org-demo');
+const DEMO_2 = plant('plant-demo-2', 'org-demo');
+const PARTNER = plant('plant-partner', 'org-partner');
+const orgAdmin = (home: Tenant, scopes: SessionScope[]): AuthenticatedUser => ({
+  ...user('OrgAdmin', home.id, scopes),
+  organizationId: home.organizationId,
+});
 
 describe('plant selection store', () => {
   beforeEach(() => window.localStorage.clear());
@@ -60,12 +69,39 @@ describe('plant selection store', () => {
     expect(defaultTenantFor(scoped, tenants)?.id).toBe('t2');
   });
 
-  it('lists every plant for global admins and only the scoped plants for everyone else', () => {
+  it('lists every plant for SuperAdmin, the organisation for OrgAdmin and only the scoped plants for everyone else', () => {
     const tenants = [tenant('t1'), tenant('t2'), tenant('t3')];
+    expect(selectableTenants(user('SuperAdmin'), tenants).map((t) => t.id)).toEqual(['t1', 't2', 't3']);
+    // an OrgAdmin whose session carries no organisation: the organisation of its home plant (from the list)
     expect(selectableTenants(user('OrgAdmin', 't1'), tenants).map((t) => t.id)).toEqual(['t1', 't2', 't3']);
     const viewer = user('Operator', 't2', [{ tenantId: 't2', role: 'operator' }, { tenantId: 't1', role: 'viewer' }]);
     expect(selectableTenants(viewer, tenants).map((t) => t.id)).toEqual(['t1', 't2']);
     expect(selectableTenants(user('Engineer', 't3'), tenants).map((t) => t.id)).toEqual(['t3']);
+  });
+
+  it('an OrgAdmin of Partner Org sees only the Partner plants; a Demo Org OrgAdmin never sees Partner Plant', () => {
+    const all = [DEMO, DEMO_2, PARTNER];
+    const lucas = orgAdmin(PARTNER, [{ tenantId: PARTNER.id, organizationId: 'org-partner', role: 'OrgAdmin' }]);
+    expect(selectableTenants(lucas, all).map((t) => t.id)).toEqual([PARTNER.id]);
+    expect(defaultTenantFor(lucas, all)?.id).toBe(PARTNER.id);
+    const isabel = orgAdmin(DEMO, [
+      { tenantId: DEMO.id, organizationId: 'org-demo', role: 'OrgAdmin' },
+      { tenantId: DEMO_2.id, organizationId: 'org-demo', role: 'OrgAdmin' },
+    ]);
+    expect(selectableTenants(isabel, all).map((t) => t.id)).toEqual([DEMO.id, DEMO_2.id]);
+    expect(isSelectionAllowed({ tenant: PARTNER }, isabel)).toBe(false);
+    expect(isSelectionAllowed({ tenant: PARTNER }, user('SuperAdmin'))).toBe(true);
+  });
+
+  it('a stored selection of a plant outside the OrgAdmin organisation is dropped (reset to the default plant)', () => {
+    const isabel = orgAdmin(DEMO, [{ tenantId: DEMO.id, organizationId: 'org-demo', role: 'OrgAdmin' }]);
+    window.localStorage.setItem(`proact.plantSelection.${isabel.id}`, JSON.stringify({ tenant: PARTNER }));
+    expect(loadPlantSelection(isabel)).toBeNull();
+    expect(defaultTenantFor(isabel, [PARTNER, DEMO_2, DEMO])?.id).toBe(DEMO.id);
+    // a stored plant whose organisation is unknown is left to the server (the plant access guard shows the refusal)
+    const unknownOrg = { id: PARTNER.id, name: PARTNER.name } as Tenant;
+    window.localStorage.setItem(`proact.plantSelection.${isabel.id}`, JSON.stringify({ tenant: unknownOrg }));
+    expect(loadPlantSelection(isabel)?.tenant?.id).toBe(PARTNER.id);
   });
 
   it('survives unreadable stored values', () => {

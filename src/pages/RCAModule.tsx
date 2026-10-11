@@ -30,7 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { treeToFlatList, flatListToTree } from '../lib/utils';
 import type { RCA as BackendRCA } from '../services/MasterDataService';
 import { usePlantSelection } from '../contexts/PlantSelectionContext';
-import { userApi, UserRecord } from '../services/api/userApi';
+import { userApi, AssignableUser } from '../services/api/userApi';
 import { RCACreateTaskButton, RCATasksLink } from '../components/rca/RCACreateTaskButton';
 import { loadLinkedTaskIds } from '../services/rca/rcaTaskBridge';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
@@ -263,7 +263,7 @@ export const RCAModule: React.FC = () => {
     setSelectedEventId('');
   }, [selectedRCA?.id]);
 
-  const [allUsers, setAllUsers] = useState<UserRecord[]>([]);
+  const [allUsers, setAllUsers] = useState<AssignableUser[]>([]);
   const [linkedRecommendationTaskIds, setLinkedRecommendationTaskIds] = useState<Set<string>>(new Set());
   const [rcaLinkedTaskCount, setRcaLinkedTaskCount] = useState(0);
 
@@ -297,20 +297,10 @@ export const RCAModule: React.FC = () => {
         return;
       }
 
-      console.log('Loading users via API for tenantId:', tenantId);
       try {
-        const tenantUsers = await userApi.getUsers({ tenantId });
-        if (cancelled) return;
-
-        if (tenantUsers.length === 0) {
-          console.log('No tenant-specific users returned, requesting full user list as fallback');
-          const allUsersList = await userApi.getUsers();
-          if (!cancelled) {
-            setAllUsers(allUsersList);
-          }
-        } else {
-          setAllUsers(tenantUsers);
-        }
+        // members of the acting plant only (`GET /users/assignable`): never the admin-only full list
+        const tenantUsers = await userApi.getAssignableUsers();
+        if (!cancelled) setAllUsers(tenantUsers);
       } catch (apiError) {
         console.error('Failed to load users from API:', apiError);
         if (!cancelled) {
@@ -1772,10 +1762,10 @@ export const RCAModule: React.FC = () => {
   function TeamMembersEditor({ teamMemberIds, onChange, allUsers, teamLeadId, onLeadChange, renderUser }: {
     teamMemberIds: string[];
     onChange: (ids: string[]) => void;
-    allUsers: UserRecord[];
+    allUsers: AssignableUser[];
     teamLeadId: string;
     onLeadChange: (id: string) => void;
-    renderUser: (user: UserRecord) => React.ReactNode;
+    renderUser: (user: AssignableUser) => React.ReactNode;
   }) {
     console.log('TeamMembersEditor received users:', allUsers.length);
     // Add/remove team members
@@ -3431,7 +3421,6 @@ Generated on: ${new Date().toISOString()}
                           </div>
                           <div>
                             <div className="font-semibold text-sm text-blue-900">{user.name}</div>
-                            <div className="text-xs text-gray-500">{user.role}</div>
                           </div>
                         </div>
                       )}
@@ -5489,12 +5478,11 @@ Generated on: ${new Date().toISOString()}
                       </SelectTrigger>
                       <SelectContent className="max-h-60 overflow-y-auto">
                         {allUsers.length === 0 && (
-                          <SelectItem value="" disabled>No users found</SelectItem>
+                          <div className="px-2 py-1.5 text-sm text-gray-500" aria-disabled="true">No users found</div>
                         )}
                         {allUsers.map(user => (
                           <SelectItem key={user.id} value={user.id} className="flex flex-col items-start">
                             <span className="font-semibold">{user.name}</span>
-                            <span className="text-xs text-gray-500">{user.role || 'User'}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -6596,12 +6584,11 @@ Generated on: ${new Date().toISOString()}
                   </SelectTrigger>
                   <SelectContent className="max-h-60 overflow-y-auto">
                     {allUsers.length === 0 && (
-                      <SelectItem value="" disabled>No users found</SelectItem>
+                      <div className="px-2 py-1.5 text-sm text-gray-500" aria-disabled="true">No users found</div>
                     )}
                     {allUsers.map(user => (
                       <SelectItem key={user.id} value={user.id} className="flex flex-col items-start">
                         <span className="font-semibold">{user.name}</span>
-                        <span className="text-xs text-gray-500">{user.role || 'User'}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>

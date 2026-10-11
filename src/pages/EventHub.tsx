@@ -24,6 +24,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import ReasonCodeTreePicker from '../components/reason-codes/ReasonCodeTreePicker';
 import EventFormFields from '../components/EventFormFields';
 import { AuditTrailViewer } from '../components/AuditTrailViewer';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { HistorianClient } from '@/services/historian/HistorianClient';
 import { PIClient, createTenantPIClient } from '@/services/pi/PIClient';
 import { PIHistorianProvider } from '@/services/historian/providers/pi/PIHistorianProvider';
@@ -1122,6 +1123,7 @@ export const EventHub: React.FC = () => {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
+              <ErrorBoundary>
               <DialogHeader>
                 <DialogTitle>Create Event</DialogTitle>
               </DialogHeader>
@@ -1509,7 +1511,7 @@ export const EventHub: React.FC = () => {
                         </SelectTrigger>
                         <SelectContent>
                           {plans.length === 0 && (
-                            <SelectItem value="" disabled>No plans available</SelectItem>
+                            <div className="px-2 py-1.5 text-sm text-gray-500" aria-disabled="true">No plans available</div>
                           )}
                           {plans.map((plan) => (
                             <SelectItem key={plan.id} value={plan.id}>
@@ -1712,6 +1714,7 @@ export const EventHub: React.FC = () => {
                   Create Event
                 </Button>
               </div>
+              </ErrorBoundary>
             </DialogContent>
           </Dialog>
         </div>

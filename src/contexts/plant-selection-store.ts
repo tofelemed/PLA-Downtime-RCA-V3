@@ -1,7 +1,7 @@
 import type { AuthenticatedUser } from '../services/api/authApi';
 import type { Tenant } from '../services/MasterDataService';
 import { createLogger } from '../lib/logger';
-import { homeTenantOf, isGlobalAdmin, maySelectTenant } from '../features/auth/effective-roles';
+import { homeTenantOf, maySelectTenant, organizationOf } from '../features/auth/effective-roles';
 import type { PlantSelection } from './PlantSelectionContext';
 
 const log = createLogger('plant-selection');
@@ -16,7 +16,13 @@ export function loadPlantSelection(user: AuthenticatedUser): PlantSelection | nu
   try {
     const raw = window.localStorage.getItem(KEY_PREFIX + user.id);
     const saved = raw ? (JSON.parse(raw) as PlantSelection) : null;
-    return saved && isSelectionAllowed(saved, user) ? saved : null;
+    if (saved && !isSelectionAllowed(saved, user)) {
+      log.warn('Ignoring saved plant selection the user may not act on; falling back to the default plant', {
+        tenantId: saved.tenant?.id,
+      });
+      return null;
+    }
+    return saved;
   } catch (error: unknown) {
     log.warn('Ignoring unreadable saved plant selection', error);
     return null;
@@ -34,27 +40,26 @@ export function savePlantSelection(user: AuthenticatedUser, selection: PlantSele
 
 /**
  * A user may act on their home tenant and on every tenant they hold a scope in (what the server's
- * `maySelectTenant` accepts); global admins may pick any plant.
+ * `maySelectTenant` accepts); SuperAdmin on any plant, OrgAdmin on the plants of its organisation.
  */
 export function isSelectionAllowed(selection: PlantSelection, user: AuthenticatedUser): boolean {
-  const tenantId = selection.tenant?.id;
-  if (!tenantId) return true;
-  return maySelectTenant(user, tenantId);
+  const tenant = selection.tenant;
+  if (!tenant?.id) return true;
+  return maySelectTenant(user, tenant);
 }
 
-/**
- * Default plant: the user's home tenant; otherwise the first listed plant they hold a scope in;
- * global admins without one get the first plant listed.
- */
+/** Default plant: the user's home tenant; otherwise the first plant listed that the user may select. */
 export function defaultTenantFor(user: AuthenticatedUser, tenants: readonly Tenant[]): Tenant | null {
   const home = homeTenantOf(user);
   const own = tenants.find((tenant) => tenant.id === home);
-  if (own) return own;
-  if (isGlobalAdmin(user)) return tenants[0] ?? null;
-  return tenants.find((tenant) => maySelectTenant(user, tenant.id)) ?? null;
+  return own ?? selectableTenants(user, tenants)[0] ?? null;
 }
 
-/** The plants the selector offers: every plant for global admins, otherwise the user's scoped plants. */
+/**
+ * The plants the selector offers: every plant for SuperAdmin, the plants of its organisation for OrgAdmin
+ * (the organisation of the home tenant when the session carries none), otherwise the user's scoped plants.
+ */
 export function selectableTenants(user: AuthenticatedUser, tenants: readonly Tenant[]): Tenant[] {
-  return tenants.filter((tenant) => maySelectTenant(user, tenant.id));
+  const organizationId = organizationOf(user, tenants);
+  return tenants.filter((tenant) => maySelectTenant(user, tenant, organizationId));
 }
