@@ -1,5 +1,5 @@
 import { globalEventBus } from '../events/EventBus';
-import { UniversalConnectorDB } from '../storage/UniversalConnectorDB';
+import { UniversalConnectorDB, ConnectionConfigStorage } from '../storage/UniversalConnectorDB';
 
 export interface MonitoredNode {
   id: string;
@@ -19,6 +19,15 @@ export interface MonitoredNode {
   createdAt: Date;
   updatedAt: Date;
 }
+
+const NODE_STATUS_TO_CONNECTION_STATUS: Record<
+  MonitoredNode['status'],
+  ConnectionConfigStorage['connectionStatus']
+> = {
+  Active: 'connected',
+  Inactive: 'disconnected',
+  Error: 'error',
+};
 
 export interface NodeSubscription {
   id: string;
@@ -558,6 +567,11 @@ export class OPCUAMonitoringService {
         name: node.displayName,
         type: 'opcua_monitored_node',
         endpoint: node.nodeId,
+        enabled: node.status === 'Active',
+        connectionStatus: NODE_STATUS_TO_CONNECTION_STATUS[node.status],
+        errorCount: node.errorCount,
+        createdAt: node.createdAt,
+        updatedAt: node.updatedAt,
         config: {
           ...node,
           timestamp: node.timestamp.toISOString(),

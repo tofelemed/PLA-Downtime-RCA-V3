@@ -5,7 +5,18 @@
 
 import { test, expect } from '@playwright/test';
 import { createTestFixture, TestFixture } from './test-utils/test-fixtures';
-import { apiRequest } from './test-utils/api-helpers';
+import { apiRequest, EntityRef } from './test-utils/api-helpers';
+
+interface UserProfile {
+  id?: string;
+  userId?: string;
+}
+
+interface AnalysisRecord {
+  id: string;
+  rcaId: string;
+  rootCause?: string;
+}
 
 test.describe('RCA advanced analysis tools API', () => {
   let fixture: TestFixture;
@@ -25,7 +36,7 @@ test.describe('RCA advanced analysis tools API', () => {
     fixture = await createTestFixture();
     const { tokens, tenant, unit } = fixture;
 
-    const event = await apiRequest('/production-events', {
+    const event = await apiRequest<EntityRef>('/production-events', {
       method: 'POST',
       token: tokens.accessToken,
       body: JSON.stringify({
@@ -41,7 +52,7 @@ test.describe('RCA advanced analysis tools API', () => {
     });
     createdIds.event = event.id;
 
-    const userProfile = await apiRequest('/auth/profile', {
+    const userProfile = await apiRequest<UserProfile>('/auth/profile', {
       method: 'GET',
       token: tokens.accessToken,
     });
@@ -50,7 +61,7 @@ test.describe('RCA advanced analysis tools API', () => {
       throw new Error('Could not resolve teamLeadId from auth profile');
     }
 
-    const rca = await apiRequest('/rcas', {
+    const rca = await apiRequest<EntityRef>('/rcas', {
       method: 'POST',
       token: tokens.accessToken,
       body: JSON.stringify({
@@ -96,7 +107,7 @@ test.describe('RCA advanced analysis tools API', () => {
     const { tokens, tenant } = fixture;
     const tenantId = tenant.id;
 
-    const fiveWhy = await apiRequest('/rca-analysis/five-why', {
+    const fiveWhy = await apiRequest<AnalysisRecord>('/rca-analysis/five-why', {
       method: 'POST',
       token: tokens.accessToken,
       body: JSON.stringify({
@@ -110,7 +121,7 @@ test.describe('RCA advanced analysis tools API', () => {
     createdIds.fiveWhy = fiveWhy.id;
     expect(fiveWhy.rcaId).toBe(rcaId);
 
-    const fishbone = await apiRequest('/rca-analysis/fishbone', {
+    const fishbone = await apiRequest<AnalysisRecord>('/rca-analysis/fishbone', {
       method: 'POST',
       token: tokens.accessToken,
       body: JSON.stringify({
@@ -122,7 +133,7 @@ test.describe('RCA advanced analysis tools API', () => {
     });
     createdIds.fishbone = fishbone.id;
 
-    const fmea = await apiRequest('/rca-analysis/fmea', {
+    const fmea = await apiRequest<AnalysisRecord>('/rca-analysis/fmea', {
       method: 'POST',
       token: tokens.accessToken,
       body: JSON.stringify({
@@ -135,7 +146,7 @@ test.describe('RCA advanced analysis tools API', () => {
     });
     createdIds.fmea = fmea.id;
 
-    const faultTree = await apiRequest('/rca-analysis/fault-tree', {
+    const faultTree = await apiRequest<AnalysisRecord>('/rca-analysis/fault-tree', {
       method: 'POST',
       token: tokens.accessToken,
       body: JSON.stringify({
@@ -147,7 +158,7 @@ test.describe('RCA advanced analysis tools API', () => {
     });
     createdIds.faultTree = faultTree.id;
 
-    const barrier = await apiRequest('/rca-analysis/barrier', {
+    const barrier = await apiRequest<AnalysisRecord>('/rca-analysis/barrier', {
       method: 'POST',
       token: tokens.accessToken,
       body: JSON.stringify({
@@ -165,7 +176,7 @@ test.describe('RCA advanced analysis tools API', () => {
     });
     createdIds.barrier = barrier.id;
 
-    const change = await apiRequest('/rca-analysis/change', {
+    const change = await apiRequest<AnalysisRecord>('/rca-analysis/change', {
       method: 'POST',
       token: tokens.accessToken,
       body: JSON.stringify({
@@ -185,19 +196,19 @@ test.describe('RCA advanced analysis tools API', () => {
     createdIds.change = change.id;
 
     const fetched = await Promise.all([
-      apiRequest(`/rca-analysis/five-why?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
-      apiRequest(`/rca-analysis/fishbone?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
-      apiRequest(`/rca-analysis/fmea?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
-      apiRequest(`/rca-analysis/fault-tree?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
-      apiRequest(`/rca-analysis/barrier?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
-      apiRequest(`/rca-analysis/change?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
+      apiRequest<AnalysisRecord>(`/rca-analysis/five-why?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
+      apiRequest<AnalysisRecord>(`/rca-analysis/fishbone?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
+      apiRequest<AnalysisRecord>(`/rca-analysis/fmea?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
+      apiRequest<AnalysisRecord>(`/rca-analysis/fault-tree?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
+      apiRequest<AnalysisRecord>(`/rca-analysis/barrier?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
+      apiRequest<AnalysisRecord>(`/rca-analysis/change?rcaId=${rcaId}&tenantId=${tenantId}`, { token: tokens.accessToken }),
     ]);
 
     for (const record of fetched) {
       expect(record?.rcaId).toBe(rcaId);
     }
 
-    const updatedFiveWhy = await apiRequest(`/rca-analysis/five-why/${fiveWhy.id}`, {
+    const updatedFiveWhy = await apiRequest<AnalysisRecord>(`/rca-analysis/five-why/${fiveWhy.id}`, {
       method: 'PUT',
       token: tokens.accessToken,
       body: JSON.stringify({ rootCause: 'Worn seal due to overdue maintenance' }),

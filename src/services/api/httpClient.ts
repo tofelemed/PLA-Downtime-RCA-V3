@@ -1,6 +1,30 @@
-export interface RequestOptions extends RequestInit {
+export interface RequestOptions extends Omit<RequestInit, 'body'> {
+  /** JSON-encoded (with `Content-Type: application/json`) unless it is FormData or a Content-Type is set. */
+  body?: unknown;
   query?: Record<string, unknown>;
   skipAuth?: boolean;
+}
+
+function isBodyInit(value: unknown): value is BodyInit {
+  return (
+    typeof value === 'string' ||
+    value instanceof Blob ||
+    value instanceof FormData ||
+    value instanceof URLSearchParams ||
+    value instanceof ArrayBuffer ||
+    ArrayBuffer.isView(value) ||
+    (typeof ReadableStream !== 'undefined' && value instanceof ReadableStream)
+  );
+}
+
+/** The body as fetch receives it; any other value is stringified the way fetch itself would. */
+function toFetchBody(body: unknown, headers: Headers): BodyInit | null | undefined {
+  if (body && !(body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+    return JSON.stringify(body);
+  }
+  if (body === undefined || body === null) return null;
+  return isBodyInit(body) ? body : String(body);
 }
 
 export class ApiError extends Error {
@@ -166,16 +190,10 @@ export class HttpClient {
       console.warn(`[HttpClient] No token available for authenticated request to ${path}`);
     }
 
-    let resolvedBody = body;
-    if (body && !(body instanceof FormData) && !requestHeaders.has('Content-Type')) {
-      requestHeaders.set('Content-Type', 'application/json');
-      resolvedBody = JSON.stringify(body);
-    }
-
     const response = await fetch(url, {
       ...rest,
       headers: requestHeaders,
-      body: resolvedBody,
+      body: toFetchBody(body, requestHeaders),
     });
 
     const contentType = response.headers.get('Content-Type') || '';

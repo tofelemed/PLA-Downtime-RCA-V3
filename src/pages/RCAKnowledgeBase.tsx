@@ -22,6 +22,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 interface RCAWithKnowledge extends RCA {
+  /** Not set by the v1 RCA mapper; the unit filter only matches RCAs that carry it. */
+  unitId?: string;
   knowledgeEntry?: RCAKnowledgeEntry;
   event?: ProductionEvent;
   daysToResolve?: number;

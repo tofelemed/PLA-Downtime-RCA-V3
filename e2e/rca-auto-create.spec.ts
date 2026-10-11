@@ -5,7 +5,19 @@
 
 import { test, expect } from '@playwright/test';
 import { createTestFixture, TestFixture } from './test-utils/test-fixtures';
-import { apiRequest } from './test-utils/api-helpers';
+import { apiRequest, EntityRef } from './test-utils/api-helpers';
+
+interface RcaSummary {
+  id: string;
+  eventId: string;
+  status: string;
+  priority: string;
+}
+
+interface ProductionEventSummary {
+  id: string;
+  rcaId?: string | null;
+}
 
 test.describe('RCA Auto-Creation', () => {
   let fixture: TestFixture;
@@ -111,7 +123,7 @@ test.describe('RCA Auto-Creation', () => {
     expect(config.autoCreateRca).toBe(true);
 
     const unit = fixture.unit;
-    const event = await apiRequest('/production-events', {
+    const event = await apiRequest<EntityRef>('/production-events', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify({
@@ -133,18 +145,18 @@ test.describe('RCA Auto-Creation', () => {
     createdEventId = event.id;
     expect(event.id).toBeDefined();
 
-    const rcas = await apiRequest(`/rcas?tenantId=${fixture.tenant.id}`, {
+    const rcas = await apiRequest<RcaSummary[]>(`/rcas?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
 
-    const linkedRca = rcas.find((r: any) => r.eventId === event.id);
+    const linkedRca = rcas.find((r) => r.eventId === event.id);
     expect(linkedRca).toBeDefined();
     expect(linkedRca.status).toBe('Draft');
     expect(linkedRca.priority).toBe('Critical');
     createdRcaId = linkedRca.id;
 
-    const refreshedEvent = await apiRequest(`/production-events/${event.id}`, {
+    const refreshedEvent = await apiRequest<ProductionEventSummary>(`/production-events/${event.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
@@ -168,7 +180,7 @@ test.describe('RCA Auto-Creation', () => {
       body: JSON.stringify({ autoCreateRca: false }),
     });
 
-    const event = await apiRequest('/production-events', {
+    const event = await apiRequest<EntityRef>('/production-events', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify({
@@ -186,11 +198,11 @@ test.describe('RCA Auto-Creation', () => {
       }),
     });
 
-    const rcas = await apiRequest(`/rcas?tenantId=${fixture.tenant.id}`, {
+    const rcas = await apiRequest<RcaSummary[]>(`/rcas?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
-    const linkedRca = rcas.find((r: any) => r.eventId === event.id);
+    const linkedRca = rcas.find((r) => r.eventId === event.id);
     expect(linkedRca).toBeUndefined();
 
     await apiRequest(`/production-events/${event.id}`, {

@@ -170,8 +170,8 @@ export const PlantHierarchyManager: React.FC<PlantHierarchyManagerProps> = ({
                             {org.code && <span className="text-sm text-gray-500 ml-2">({org.code})</span>}
                           </button>
                           <Badge className="bg-blue-100 text-blue-800">Organization</Badge>
-                          <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(org.status ?? 'Active')}`}>
-                            {org.status ?? 'Active'}
+                          <span className={`px-2 py-1 rounded text-xs ${getStatusBadge('Active')}`}>
+                            Active
                           </span>
                           <div className="flex gap-1">
                             {onEdit && (
@@ -228,8 +228,8 @@ export const PlantHierarchyManager: React.FC<PlantHierarchyManagerProps> = ({
                                         {tenant.code && <span className="text-sm text-gray-500 ml-2">({tenant.code})</span>}
                                       </button>
                                       <Badge className="bg-green-100 text-green-800">Plant</Badge>
-                                      <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(tenant.status ?? 'Active')}`}>
-                                        {tenant.status ?? 'Active'}
+                                      <span className={`px-2 py-1 rounded text-xs ${getStatusBadge('Active')}`}>
+                                        Active
                                       </span>
                                       <div className="flex gap-1">
                                         {onEdit && (
@@ -286,8 +286,8 @@ export const PlantHierarchyManager: React.FC<PlantHierarchyManagerProps> = ({
                                                     {unit.code && <span className="text-sm text-gray-500 ml-2">({unit.code})</span>}
                                                   </button>
                                                   <Badge className="bg-orange-100 text-orange-800">Unit</Badge>
-                                                  <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(unit.status ?? 'Active')}`}>
-                                                    {unit.status ?? 'Active'}
+                                                  <span className={`px-2 py-1 rounded text-xs ${getStatusBadge('Active')}`}>
+                                                    Active
                                                   </span>
                                                   <div className="flex gap-1">
                                                     {onEdit && (

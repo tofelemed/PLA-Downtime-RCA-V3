@@ -48,7 +48,7 @@ export const StreamingDashboard: React.FC = () => {
   const [connections, setConnections] = useState<Map<string, ProtocolConnection>>(new Map());
   const [streamData, setStreamData] = useState<StreamData[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [selectedProtocol, setSelectedProtocol] = useState<ProtocolType>('all');
+  const [selectedProtocol, setSelectedProtocol] = useState<ProtocolType | 'all'>('all');
   const [showProcessed, setShowProcessed] = useState(true);
   const [showRaw, setShowRaw] = useState(true);
   const [maxDataPoints, setMaxDataPoints] = useState(100);

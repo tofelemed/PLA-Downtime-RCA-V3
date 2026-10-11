@@ -86,7 +86,7 @@ export const DataSeedingPage: React.FC = () => {
   };
 
   const handleVerifyCementIndustryData = () => {
-    handleOperation('Cement Industry Data Verification', verifyCementIndustryData);
+    handleOperation('Cement Industry Data Verification', () => verifyCementIndustryData(session?.tenant?.id));
   };
 
   const handleDiagnoseCementIndustryData = () => {

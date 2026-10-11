@@ -143,7 +143,7 @@ function calculateOEE({ plan, events, unit, impactCodes, oeeCodes, dashboardConf
   
   // Planned Production Time (hours) - Weekly schedule
   const weeklyPlannedTime = plan.usefulProductionTime
-    ? Object.values(plan.usefulProductionTime).reduce((sum: number, t: any) => {
+    ? Object.values(plan.usefulProductionTime).reduce<number>((sum, t: unknown) => {
         const time = t as { start: string; end: string };
         if (time && time.start && time.end) {
           const [sh, sm] = time.start.split(':').map(Number);
@@ -287,6 +287,8 @@ export const PlanDashboard: React.FC<PlanDashboardProps> = ({ plan, onClose, onP
       impactCodeId: string;
       oeeCodeId: string;
       description: string;
+      productionEventId?: string;
+      productionEvent?: string;
     }>
   });
   const [editForm, setEditForm] = useState({

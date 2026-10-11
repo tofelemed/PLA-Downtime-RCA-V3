@@ -552,11 +552,7 @@ export class PIStore {
 
   async deleteHistorianTag(tagId: string): Promise<void> {
     try {
-      const tag = await piIntegrationApi.getHistorianTag(tagId);
       await piIntegrationApi.deleteHistorianTag(tagId);
-      if (tag?.tenantId) {
-        await this.syncHistorianTagsCache(tag.tenantId);
-      }
     } catch (error) {
       console.error('[PIStore] Failed to delete historian tag via API', error);
       throw error;

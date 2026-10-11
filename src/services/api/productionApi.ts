@@ -453,12 +453,12 @@ export const mapProductionEventDto = (dto: ProductionEventDto): ProductionEvent 
   parameter: dto.parameter ?? undefined,
   value: dto.value === null || dto.value === undefined ? undefined : Number(dto.value),
   limit: dto.limit === null || dto.limit === undefined ? undefined : Number(dto.limit),
-  limitType: dto.limitType ?? undefined,
+  limitType: (dto.limitType ?? undefined) as ProductionEvent['limitType'],
   breachDuration:
     dto.breachDuration === null || dto.breachDuration === undefined
       ? undefined
       : Number(dto.breachDuration),
-  solType: dto.solType ?? undefined,
+  solType: (dto.solType ?? undefined) as ProductionEvent['solType'],
   apmType: dto.apmType ?? undefined,
   severity: dto.severity as ProductionEvent['severity'] | undefined,
   recommendedAction: dto.recommendedAction ?? undefined,

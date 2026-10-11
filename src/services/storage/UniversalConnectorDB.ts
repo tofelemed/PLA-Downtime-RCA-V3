@@ -92,6 +92,7 @@ export interface ConnectionConfigStorage {
   id: string;
   name: string;
   type: string; // 'modbus', 'mqtt', 'websocket', 'pi', 'database', etc.
+  endpoint?: string;
   config: any;
   enabled: boolean;
   lastConnection?: Date;
@@ -415,6 +416,21 @@ export class UniversalConnectorDB {
     return await this.performTransaction('connectionConfigs', 'readonly', (store) => {
       return store.get(id);
     });
+  }
+
+  async updateConnectionStatus(
+    id: string,
+    connectionStatus: ConnectionConfigStorage['connectionStatus']
+  ): Promise<void> {
+    const existing = await this.getConnectionConfig(id);
+    if (!existing) return;
+    await this.saveConnectionConfig({ ...existing, connectionStatus });
+  }
+
+  async updateConnectionConfig(id: string, config: unknown): Promise<void> {
+    const existing = await this.getConnectionConfig(id);
+    if (!existing) return;
+    await this.saveConnectionConfig({ ...existing, config });
   }
 
   async getAllConnectionConfigs(): Promise<ConnectionConfigStorage[]> {

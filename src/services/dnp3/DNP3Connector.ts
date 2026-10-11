@@ -62,11 +62,11 @@ export class DNP3Connector extends BaseConnector implements IConnector {
   private dnp3Client: any = null;
   private dnp3Options: DNP3Options;
   private activePoints: Map<string, DNP3Point> = new Map();
-  private transforms: TransformConfig[] = [];
-  private filters: FilterConfig[] = [];
-  private metrics: DNP3Metrics;
+  protected transforms: TransformConfig[] = [];
+  protected filters: FilterConfig[] = [];
+  declare protected metrics: DNP3Metrics;
   private connectionStartTime: number = 0;
-  private isStreaming: boolean = false;
+  private streamingActive: boolean = false;
   private db: UniversalConnectorDB;
 
   constructor(config: ConnectionConfig, dnp3Options: DNP3Options) {
@@ -105,7 +105,7 @@ export class DNP3Connector extends BaseConnector implements IConnector {
       console.log(`🔌 Connecting to DNP3 device: ${this.dnp3Options.deviceId}`);
       
       // Store connection in IndexedDB
-      await this.db.storeConnectionConfig({
+      await this.db.saveConnectionConfig({
         id: this.config.id,
         name: this.config.name,
         type: 'dnp3',
@@ -169,68 +169,17 @@ export class DNP3Connector extends BaseConnector implements IConnector {
 
   protected async performRead(path: string, options?: Record<string, any>): Promise<any> {
     const [deviceId, pointType, index] = path.split('/');
-    const result = await this.readPoint(parseInt(deviceId), pointType, parseInt(index));
-    
-    // Store data point in IndexedDB
-    await this.db.storeDataPoint({
-      id: `${this.config.id}_${deviceId}_${pointType}_${index}`,
-      connectorId: this.config.id,
-      path,
-      value: result,
-      timestamp: new Date(),
-      quality: result.quality,
-      metadata: {
-        deviceId: parseInt(deviceId),
-        pointType,
-        index: parseInt(index),
-        protocol: 'DNP3'
-      }
-    });
-    
-    return result;
+    return await this.readPoint(parseInt(deviceId), pointType, parseInt(index));
   }
 
   protected async performWrite(path: string, data: any, options?: Record<string, any>): Promise<void> {
     const [deviceId, pointType, index] = path.split('/');
     await this.writePoint(parseInt(deviceId), pointType, parseInt(index), data);
-    
-    // Store write operation in IndexedDB
-    await this.db.storeDataPoint({
-      id: `${this.config.id}_${deviceId}_${pointType}_${index}_write`,
-      connectorId: this.config.id,
-      path,
-      value: data,
-      timestamp: new Date(),
-      quality: 'Good',
-      metadata: {
-        deviceId: parseInt(deviceId),
-        pointType,
-        index: parseInt(index),
-        operation: 'write',
-        protocol: 'DNP3'
-      }
-    });
   }
 
   protected async performQuery(query: string, options?: Record<string, any>): Promise<any[]> {
     const deviceId = parseInt(query) || this.dnp3Options.deviceId;
-    const result = await this.scanPoints(deviceId);
-    
-    // Store query result in IndexedDB
-    await this.db.storeQueryResult({
-      id: `${this.config.id}_query_${Date.now()}`,
-      connectorId: this.config.id,
-      query,
-      result,
-      timestamp: new Date(),
-      metadata: {
-        deviceId,
-        protocol: 'DNP3',
-        resultCount: result.length
-      }
-    });
-    
-    return result;
+    return await this.scanPoints(deviceId);
   }
 
   // DNP3 specific methods
@@ -310,7 +259,7 @@ export class DNP3Connector extends BaseConnector implements IConnector {
     this.transforms.sort((a, b) => a.order - b.order);
     
     // Store transform in IndexedDB
-    await this.db.storeStreamProcessor({
+    await this.db.saveStreamProcessor({
       id: transform.id,
       name: transform.name,
       type: transform.type,
@@ -329,7 +278,7 @@ export class DNP3Connector extends BaseConnector implements IConnector {
     this.transforms = this.transforms.filter(t => t.id !== transformId);
     
     // Remove transform from IndexedDB
-    await this.db.removeStreamProcessor(transformId);
+    await this.db.deleteStreamProcessor(transformId);
   }
 
   getTransforms(): TransformConfig[] {
@@ -342,7 +291,7 @@ export class DNP3Connector extends BaseConnector implements IConnector {
     this.filters.sort((a, b) => a.order - b.order);
     
     // Store filter in IndexedDB
-    await this.db.storeStreamProcessor({
+    await this.db.saveStreamProcessor({
       id: filter.id,
       name: filter.name,
       type: filter.type,
@@ -361,7 +310,7 @@ export class DNP3Connector extends BaseConnector implements IConnector {
     this.filters = this.filters.filter(f => f.id !== filterId);
     
     // Remove filter from IndexedDB
-    await this.db.removeStreamProcessor(filterId);
+    await this.db.deleteStreamProcessor(filterId);
   }
 
   getFilters(): FilterConfig[] {
@@ -370,7 +319,7 @@ export class DNP3Connector extends BaseConnector implements IConnector {
 
   // Streaming support
   async startStreaming(config: StreamConfig): Promise<void> {
-    if (this.isStreaming) {
+    if (this.streamingActive) {
       throw new Error('Streaming is already active');
     }
 
@@ -378,17 +327,11 @@ export class DNP3Connector extends BaseConnector implements IConnector {
       throw new Error('Not connected to DNP3 device');
     }
 
-    this.isStreaming = true;
+    this.streamingActive = true;
     console.log(`🚀 Starting DNP3 streaming for ${this.config.name}`);
 
     // Store streaming config in IndexedDB
-    await this.db.storeStreamConfig({
-      id: `${this.config.id}_stream`,
-      connectorId: this.config.id,
-      config,
-      enabled: true,
-      timestamp: new Date()
-    });
+    await this.saveStreamState({ ...config }, true);
 
     globalEventBus.publish('dnp3.streaming.started', {
       connectorId: this.config.id,
@@ -398,15 +341,15 @@ export class DNP3Connector extends BaseConnector implements IConnector {
   }
 
   async stopStreaming(): Promise<void> {
-    if (!this.isStreaming) {
+    if (!this.streamingActive) {
       return;
     }
 
-    this.isStreaming = false;
+    this.streamingActive = false;
     console.log(`🛑 Stopped DNP3 streaming for ${this.config.name}`);
 
     // Update streaming status in IndexedDB
-    await this.db.updateStreamConfig(`${this.config.id}_stream`, { enabled: false });
+    await this.saveStreamState({ enabled: false }, false);
 
     globalEventBus.publish('dnp3.streaming.stopped', {
       connectorId: this.config.id,
@@ -416,7 +359,7 @@ export class DNP3Connector extends BaseConnector implements IConnector {
   }
 
   isStreaming(): boolean {
-    return this.isStreaming;
+    return this.streamingActive;
   }
 
   // Metrics and health
@@ -424,7 +367,7 @@ export class DNP3Connector extends BaseConnector implements IConnector {
     this.metrics.connectionUptime = this.connectionStartTime ? Date.now() - this.connectionStartTime : 0;
     
     // Store metrics in IndexedDB
-    await this.db.storeStreamMetrics({
+    await this.db.saveStreamMetrics({
       id: `${this.config.id}_metrics_${Date.now()}`,
       timestamp: new Date(),
       totalEvents: this.metrics.reads + this.metrics.writes + this.metrics.events,
@@ -450,7 +393,7 @@ export class DNP3Connector extends BaseConnector implements IConnector {
       ...this.metrics,
       transforms: this.transforms.length,
       filters: this.filters.length,
-      isStreaming: this.isStreaming
+      isStreaming: this.streamingActive
     };
   }
 
@@ -465,14 +408,30 @@ export class DNP3Connector extends BaseConnector implements IConnector {
         unsolicited: this.dnp3Options.unsolicited,
         integrityScan: this.dnp3Options.integrityScan,
         eventScan: this.dnp3Options.eventScan,
-        isStreaming: this.isStreaming,
+        isStreaming: this.streamingActive,
         connectionUptime: this.metrics.connectionUptime
       }
     };
   }
 
   // Private methods
-  private updateMetrics(operation: 'read' | 'write', responseTime: number): void {
+  private async saveStreamState(config: Record<string, unknown>, enabled: boolean): Promise<void> {
+    await this.db.saveStreamProcessor({
+      id: `${this.config.id}_stream`,
+      name: `DNP3 Stream ${this.config.name}`,
+      type: 'stream',
+      config,
+      enabled,
+      order: 0,
+      inputSchema: {},
+      outputSchema: {},
+      metadata: { protocol: 'DNP3', isStream: true },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+  }
+
+  protected updateMetrics(operation: 'read' | 'write', responseTime: number): void {
     if (operation === 'read') {
       this.metrics.reads++;
       this.metrics.lastRead = new Date();
@@ -492,7 +451,7 @@ export class DNP3Connector extends BaseConnector implements IConnector {
     this.status.lastError = error?.message || 'Unknown DNP3 error';
     
     // Store error in IndexedDB
-    this.db.storeStreamAlert({
+    this.db.saveStreamAlert({
       id: `${this.config.id}_error_${Date.now()}`,
       type: 'error',
       message: error?.message || 'Unknown DNP3 error',
@@ -501,7 +460,8 @@ export class DNP3Connector extends BaseConnector implements IConnector {
       severity: 3,
       acknowledged: false,
       metadata: { protocol: 'DNP3', connectorId: this.config.id },
-      createdAt: new Date()
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
     
     globalEventBus.publish('dnp3.error', {
@@ -591,7 +551,7 @@ export class DNP3UniversalManager {
     this.connections.set(id, connector);
     
     // Store in IndexedDB
-    await this.db.storeConnectionConfig({
+    await this.db.saveConnectionConfig({
       id,
       name: config.name,
       type: 'dnp3',
@@ -630,7 +590,7 @@ export class DNP3UniversalManager {
       this.connections.delete(id);
       
       // Remove from IndexedDB
-      await this.db.removeConnectionConfig(id);
+      await this.db.deleteConnectionConfig(id);
       
       globalEventBus.publish('dnp3.manager.connection.removed', { 
         connectionId: id,
@@ -787,7 +747,7 @@ export class DNP3UniversalManager {
         this.connections.set(id, connector);
         
         // Store in IndexedDB
-        await this.db.storeConnectionConfig({
+        await this.db.saveConnectionConfig({
           id,
           name: data.config.name,
           type: 'dnp3',

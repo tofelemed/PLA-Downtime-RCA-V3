@@ -175,7 +175,7 @@ export class WebSocketConnector implements IConnector {
     return { ...this.config };
   }
 
-  async updateConfig(config: Partial<ConnectionConfig>): Promise<void> {
+  async updateConfig(config: Partial<WebSocketConfig>): Promise<void> {
     this.config = { ...this.config, ...config };
     
     // Reconnect if currently connected
@@ -467,10 +467,12 @@ export class WebSocketConnector implements IConnector {
       } else {
         throw new Error('Unsupported message format');
       }
-      
+      // ArrayBuffer has no `length`, so binary frames have always counted as 0 bytes here.
+      const receivedSize = typeof event.data === 'string' ? event.data.length : 0;
+
       // Update metrics
       this.metrics.messagesReceived++;
-      this.metrics.bytesReceived += event.data.length || 0;
+      this.metrics.bytesReceived += receivedSize;
       this.metrics.lastMessageTime = new Date();
       
       // Calculate latency if message has an ID
@@ -485,7 +487,7 @@ export class WebSocketConnector implements IConnector {
       globalEventBus.publish('websocket.message.received', { 
         messageId: message.id,
         topic: message.topic,
-        size: event.data.length || 0,
+        size: receivedSize,
         timestamp: new Date()
       });
       
@@ -643,12 +645,21 @@ export class WebSocketConnector implements IConnector {
   }
 
   // Cleanup
-  destroy(): void {
+  async destroy(): Promise<void> {
     this.disconnect();
     this.subscriptions.clear();
     this.messageQueue = [];
     this.clearReconnectTimer();
     this.stopHeartbeat();
+  }
+
+  // Same lifecycle as BaseConnector.reset: tear down, re-initialise, reconnect if enabled.
+  async reset(): Promise<void> {
+    await this.destroy();
+    await this.initialize();
+    if (this.config.enabled) {
+      await this.connect();
+    }
   }
 }
 

@@ -19,6 +19,11 @@ export interface TestUser {
   role?: string;
 }
 
+/** Minimal shape of any created resource: the API always returns its id. */
+export interface EntityRef {
+  id: string;
+}
+
 /**
  * Authenticate with the backend and return tokens
  */

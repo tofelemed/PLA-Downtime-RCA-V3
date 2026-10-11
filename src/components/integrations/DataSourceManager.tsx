@@ -443,7 +443,7 @@ export const DataSourceManager: React.FC = () => {
     }
     
     // Load protocol-specific options from existing connection
-    const loadProtocolOptions = () => {
+    const loadProtocolOptions = (): Partial<DataSourceForm> => {
       const options = connection.config.options || {};
       switch (connection.type) {
         case 'opcua':

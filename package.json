@@ -10,6 +10,7 @@
     "build:analyze": "vite build --mode analyze",
     "size": "size-limit",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json",
     "api:types": "openapi-typescript server/pro-act-backend/openapi/v2.json -o src/api/v2/schema.d.ts",
     "api:types:check": "openapi-typescript server/pro-act-backend/openapi/v2.json -o src/api/v2/schema.d.ts --check",
     "preview": "vite preview",

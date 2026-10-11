@@ -3,6 +3,8 @@ export interface CustomAttributeDefinition {
   entityType: 'Organization' | 'Tenant' | 'Unit' | 'Asset';
   name: string;
   displayName: string;
+  /** Help text under the field; the backend has it, `mapDefinitionDto` does not fill it yet. */
+  description?: string;
   dataType: 'string' | 'number' | 'boolean' | 'date' | 'select';
   isRequired: boolean;
   defaultValue?: string;
@@ -37,6 +39,7 @@ export interface ValidationRules {
 }
 
 export interface AttributeFormData {
+  entityType?: EntityType;
   name: string;
   displayName: string;
   dataType: 'string' | 'number' | 'boolean' | 'date' | 'select';
@@ -47,6 +50,7 @@ export interface AttributeFormData {
   minValue?: number;
   maxValue?: number;
   pattern?: string;
+  customValidation?: string;
   selectOptions?: string[];
   orderIndex: number;
   isActive: boolean;

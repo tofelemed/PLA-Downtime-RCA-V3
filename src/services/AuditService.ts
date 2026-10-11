@@ -46,6 +46,7 @@ export class AuditService {
       return {
         id: result.id || crypto.randomUUID(),
         userId: auditAction.userId,
+        userName: auditAction.userName,
         action: auditAction.action,
         entityType: auditAction.entityType,
         entityId: auditAction.entityId,

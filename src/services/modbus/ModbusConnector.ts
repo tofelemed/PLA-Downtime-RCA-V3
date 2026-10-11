@@ -34,11 +34,9 @@ export interface ModbusMetrics {
 }
 
 export class ModbusConnector extends BaseConnector implements IConnector {
-  private config: ModbusConfig;
-  private status: ConnectionStatus;
-  private metrics: ModbusMetrics;
-  private isConnected: boolean = false;
-  private subscriptions: Map<string, (data: any) => void> = new Map();
+  declare protected config: ModbusConfig;
+  declare protected metrics: ModbusMetrics;
+  private pollSubscriptions: Map<string, (data: unknown) => void> = new Map();
   private pollingInterval?: NodeJS.Timeout;
   private lastPoll: number = 0;
   private db: UniversalConnectorDB;
@@ -65,11 +63,32 @@ export class ModbusConnector extends BaseConnector implements IConnector {
     this.db = new UniversalConnectorDB();
   }
 
+  // BaseConnector hooks: this connector overrides the public operations directly.
+  protected performConnect(): Promise<boolean> {
+    return this.connect();
+  }
+
+  protected performDisconnect(): Promise<boolean> {
+    return this.disconnect();
+  }
+
+  protected performRead(path: string, options?: Record<string, unknown>): Promise<unknown> {
+    return this.read(path, options);
+  }
+
+  protected performWrite(path: string, data: unknown, options?: Record<string, unknown>): Promise<void> {
+    return this.write(path, data, options);
+  }
+
+  protected performQuery(query: string, options?: Record<string, unknown>): Promise<unknown[]> {
+    return this.query(query, options);
+  }
+
   // IConnector implementation
   async connect(): Promise<boolean> {
     try {
       // Store connection in IndexedDB
-      await this.db.storeConnectionConfig({
+      await this.db.saveConnectionConfig({
         id: this.config.id,
         name: this.config.name,
         type: 'modbus',
@@ -90,8 +109,8 @@ export class ModbusConnector extends BaseConnector implements IConnector {
       // Simulate Modbus connection
       // In production, this would use a proper Modbus library
       await this.simulateConnection();
-      
-      this.isConnected = true;
+
+      this.connected = true;
       this.status.connected = true;
       this.status.lastConnected = new Date();
       this.status.errorCount = 0;
@@ -120,7 +139,7 @@ export class ModbusConnector extends BaseConnector implements IConnector {
   async disconnect(): Promise<boolean> {
     try {
       this.stopPolling();
-      this.isConnected = false;
+      this.connected = false;
       this.status.connected = false;
       this.status.lastConnected = undefined;
       
@@ -194,24 +213,7 @@ export class ModbusConnector extends BaseConnector implements IConnector {
       this.updateResponseTime(responseTime);
       this.metrics.reads++;
       this.metrics.lastRead = new Date();
-      
-      // Store data point in IndexedDB
-      await this.db.storeDataPoint({
-        id: `${this.config.id}_${registerInfo.type}_${registerInfo.address}`,
-        connectorId: this.config.id,
-        path,
-        value,
-        timestamp: new Date(),
-        quality: 'Good',
-        metadata: {
-          registerType: registerInfo.type,
-          address: registerInfo.address,
-          count: registerInfo.count,
-          protocol: 'Modbus',
-          slaveId: this.config.slaveId
-        }
-      });
-      
+
       globalEventBus.publish('modbus.read', { 
         path,
         value,
@@ -246,25 +248,7 @@ export class ModbusConnector extends BaseConnector implements IConnector {
       this.updateResponseTime(responseTime);
       this.metrics.writes++;
       this.metrics.lastWrite = new Date();
-      
-      // Store write operation in IndexedDB
-      await this.db.storeDataPoint({
-        id: `${this.config.id}_${registerInfo.type}_${registerInfo.address}_write`,
-        connectorId: this.config.id,
-        path,
-        value: data,
-        timestamp: new Date(),
-        quality: 'Good',
-        metadata: {
-          registerType: registerInfo.type,
-          address: registerInfo.address,
-          count: registerInfo.count,
-          operation: 'write',
-          protocol: 'Modbus',
-          slaveId: this.config.slaveId
-        }
-      });
-      
+
       globalEventBus.publish('modbus.write', { 
         path,
         data,
@@ -287,18 +271,8 @@ export class ModbusConnector extends BaseConnector implements IConnector {
   async subscribe(topic: string, callback: (data: any) => void): Promise<string> {
     const subscriptionId = `modbus_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    this.subscriptions.set(subscriptionId, callback);
-    
-    // Store subscription in IndexedDB
-    await this.db.storeSubscription({
-      id: subscriptionId,
-      connectorId: this.config.id,
-      topic,
-      callback: callback.toString(), // Store function reference as string
-      enabled: true,
-      timestamp: new Date()
-    });
-    
+    this.pollSubscriptions.set(subscriptionId, callback);
+
     globalEventBus.publish('modbus.subscription.created', { 
       subscriptionId, 
       topic,
@@ -309,11 +283,8 @@ export class ModbusConnector extends BaseConnector implements IConnector {
   }
 
   async unsubscribe(subscriptionId: string): Promise<void> {
-    this.subscriptions.delete(subscriptionId);
-    
-    // Remove subscription from IndexedDB
-    await this.db.removeSubscription(subscriptionId);
-    
+    this.pollSubscriptions.delete(subscriptionId);
+
     globalEventBus.publish('modbus.subscription.removed', { 
       subscriptionId,
       timestamp: new Date()
@@ -339,7 +310,7 @@ export class ModbusConnector extends BaseConnector implements IConnector {
 
   async getMetrics(): Promise<Record<string, any>> {
     // Store metrics in IndexedDB
-    await this.db.storeStreamMetrics({
+    await this.db.saveStreamMetrics({
       id: `${this.config.id}_metrics_${Date.now()}`,
       timestamp: new Date(),
       totalEvents: this.metrics.reads + this.metrics.writes,
@@ -363,7 +334,7 @@ export class ModbusConnector extends BaseConnector implements IConnector {
     
     return {
       ...this.metrics,
-      subscriptions: this.subscriptions.size,
+      subscriptions: this.pollSubscriptions.size,
       connected: this.isConnected(),
       protocol: this.config.protocol,
       slaveId: this.config.slaveId
@@ -445,7 +416,7 @@ export class ModbusConnector extends BaseConnector implements IConnector {
   private parseRegisterPath(path: string): {
     type: 'coil' | 'discrete' | 'holding' | 'input';
     address: number;
-    count?: number;
+    count: number;
   } {
     const parts = path.split(':');
     const type = parts[0] as 'coil' | 'discrete' | 'holding' | 'input';
@@ -507,7 +478,7 @@ export class ModbusConnector extends BaseConnector implements IConnector {
   }
 
   private startPolling(): void {
-    if (this.subscriptions.size === 0) return;
+    if (this.pollSubscriptions.size === 0) return;
     
     this.pollingInterval = setInterval(async () => {
       if (!this.isConnected()) return;
@@ -518,7 +489,7 @@ export class ModbusConnector extends BaseConnector implements IConnector {
       this.lastPoll = now;
       
       // Poll subscribed registers
-      for (const [subscriptionId, callback] of this.subscriptions.entries()) {
+      for (const [subscriptionId, callback] of this.pollSubscriptions.entries()) {
         try {
           // This is a simplified polling implementation
           // In production, you'd poll specific registers based on subscription
@@ -550,7 +521,7 @@ export class ModbusConnector extends BaseConnector implements IConnector {
     this.metrics.errors++;
     
     // Store error in IndexedDB
-    this.db.storeStreamAlert({
+    this.db.saveStreamAlert({
       id: `${this.config.id}_error_${Date.now()}`,
       type: 'error',
       message: error?.message || 'Unknown error',
@@ -559,7 +530,8 @@ export class ModbusConnector extends BaseConnector implements IConnector {
       severity: 3,
       acknowledged: false,
       metadata: { protocol: 'Modbus', connectorId: this.config.id },
-      createdAt: new Date()
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
     
     globalEventBus.publish('modbus.error', { 
@@ -583,7 +555,7 @@ export class ModbusConnector extends BaseConnector implements IConnector {
   // Cleanup
   async destroy(): Promise<void> {
     await this.disconnect();
-    this.subscriptions.clear();
+    this.pollSubscriptions.clear();
   }
 }
 
@@ -602,7 +574,7 @@ export class ModbusUniversalManager {
     this.connections.set(id, connector);
     
     // Store in IndexedDB
-    await this.db.storeConnectionConfig({
+    await this.db.saveConnectionConfig({
       id,
       name: config.name,
       type: 'modbus',
@@ -640,7 +612,7 @@ export class ModbusUniversalManager {
       this.connections.delete(id);
       
       // Remove from IndexedDB
-      await this.db.removeConnectionConfig(id);
+      await this.db.deleteConnectionConfig(id);
       
       globalEventBus.publish('modbus.manager.connection.removed', { 
         connectionId: id,
@@ -797,7 +769,7 @@ export class ModbusUniversalManager {
         this.connections.set(id, connector);
         
         // Store in IndexedDB
-        await this.db.storeConnectionConfig({
+        await this.db.saveConnectionConfig({
           id,
           name: data.config.name,
           type: 'modbus',

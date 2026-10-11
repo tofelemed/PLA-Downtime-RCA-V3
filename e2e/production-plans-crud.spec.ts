@@ -10,6 +10,17 @@ import { loginViaAPI } from './test-utils/auth-helpers';
 import { createTestFixture, TestFixture } from './test-utils/test-fixtures';
 import { apiRequest } from './test-utils/api-helpers';
 
+interface PlanDto {
+  id: string;
+  name: string;
+  unitId: string;
+  tenantId: string;
+  startDate: string;
+  endDate: string;
+  status?: string | null;
+  plannedQuantity?: number;
+}
+
 test.describe('Production Plans CRUD Operations', () => {
   let fixture: TestFixture;
   let createdPlanIds: string[] = [];
@@ -52,7 +63,7 @@ test.describe('Production Plans CRUD Operations', () => {
       dataEntryFrequency: 'Daily',
     };
 
-    const plan = await apiRequest('/production-plans', {
+    const plan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -223,7 +234,7 @@ test.describe('Production Plans CRUD Operations', () => {
   // ==================== READ OPERATIONS ====================
 
   test('READ: should get all production plans', async () => {
-    const plans = await apiRequest(`/production-plans?tenantId=${fixture.tenant.id}`, {
+    const plans = await apiRequest<PlanDto[]>(`/production-plans?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
@@ -241,7 +252,7 @@ test.describe('Production Plans CRUD Operations', () => {
       endDate: new Date(Date.now() + 86400000).toISOString(),
     };
 
-    const createdPlan = await apiRequest('/production-plans', {
+    const createdPlan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -250,7 +261,7 @@ test.describe('Production Plans CRUD Operations', () => {
     createdPlanIds.push(createdPlan.id);
 
     // Then read it
-    const plan = await apiRequest(`/production-plans/${createdPlan.id}`, {
+    const plan = await apiRequest<PlanDto>(`/production-plans/${createdPlan.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
@@ -261,14 +272,14 @@ test.describe('Production Plans CRUD Operations', () => {
   });
 
   test('READ: should filter plans by tenantId', async () => {
-    const plans = await apiRequest(`/production-plans?tenantId=${fixture.tenant.id}`, {
+    const plans = await apiRequest<PlanDto[]>(`/production-plans?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
 
     expect(Array.isArray(plans)).toBe(true);
     // All plans should belong to the test tenant
-    plans.forEach((plan: any) => {
+    plans.forEach((plan) => {
       expect(plan.tenantId).toBe(fixture.tenant.id);
     });
   });
@@ -284,7 +295,7 @@ test.describe('Production Plans CRUD Operations', () => {
       status: 'Planned',
     };
 
-    const createdPlan = await apiRequest('/production-plans', {
+    const createdPlan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -292,14 +303,14 @@ test.describe('Production Plans CRUD Operations', () => {
 
     createdPlanIds.push(createdPlan.id);
 
-    const plans = await apiRequest(`/production-plans?tenantId=${fixture.tenant.id}&status=Planned`, {
+    const plans = await apiRequest<PlanDto[]>(`/production-plans?tenantId=${fixture.tenant.id}&status=Planned`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
 
     expect(Array.isArray(plans)).toBe(true);
     // Only check plans that have a status field
-    plans.forEach((plan: any) => {
+    plans.forEach((plan) => {
       if (plan.status !== null && plan.status !== undefined) {
         expect(plan.status).toBe('Planned');
       }
@@ -316,7 +327,7 @@ test.describe('Production Plans CRUD Operations', () => {
       endDate: new Date(Date.now() + 86400000).toISOString(),
     };
 
-    const createdPlan = await apiRequest('/production-plans', {
+    const createdPlan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -365,7 +376,7 @@ test.describe('Production Plans CRUD Operations', () => {
       status: 'Planned',
     };
 
-    const createdPlan = await apiRequest('/production-plans', {
+    const createdPlan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -375,7 +386,7 @@ test.describe('Production Plans CRUD Operations', () => {
 
     // Update the plan
     const updatedName = `E2E Updated Plan ${Date.now()}`;
-    const updatedPlan = await apiRequest(`/production-plans/${createdPlan.id}`, {
+    const updatedPlan = await apiRequest<PlanDto>(`/production-plans/${createdPlan.id}`, {
       method: 'PUT',
       token: fixture.tokens.accessToken,
       body: JSON.stringify({
@@ -400,7 +411,7 @@ test.describe('Production Plans CRUD Operations', () => {
       endDate: new Date(Date.now() + 86400000).toISOString(),
     };
 
-    const createdPlan = await apiRequest('/production-plans', {
+    const createdPlan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -480,7 +491,7 @@ test.describe('Production Plans CRUD Operations', () => {
       endDate: new Date(Date.now() + 86400000).toISOString(),
     };
 
-    const createdPlan = await apiRequest('/production-plans', {
+    const createdPlan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -515,7 +526,7 @@ test.describe('Production Plans CRUD Operations', () => {
       endDate: new Date(Date.now() + 86400000).toISOString(),
     };
 
-    const createdPlan = await apiRequest('/production-plans', {
+    const createdPlan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -550,7 +561,7 @@ test.describe('Production Plans CRUD Operations', () => {
       endDate: new Date(Date.now() + 86400000).toISOString(),
     };
 
-    const createdPlan = await apiRequest('/production-plans', {
+    const createdPlan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -635,7 +646,7 @@ test.describe('Production Plans CRUD Operations', () => {
       status: 'Planned',
     };
 
-    const createdPlan = await apiRequest('/production-plans', {
+    const createdPlan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -645,7 +656,7 @@ test.describe('Production Plans CRUD Operations', () => {
     expect(createdPlan.name).toBe(planData.name);
 
     // READ
-    const readPlan = await apiRequest(`/production-plans/${createdPlan.id}`, {
+    const readPlan = await apiRequest<PlanDto>(`/production-plans/${createdPlan.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
@@ -655,7 +666,7 @@ test.describe('Production Plans CRUD Operations', () => {
 
     // UPDATE
     const updatedName = `E2E Updated Integration Test ${Date.now()}`;
-    const updatedPlan = await apiRequest(`/production-plans/${createdPlan.id}`, {
+    const updatedPlan = await apiRequest<PlanDto>(`/production-plans/${createdPlan.id}`, {
       method: 'PUT',
       token: fixture.tokens.accessToken,
       body: JSON.stringify({
@@ -697,7 +708,7 @@ test.describe('Production Plans CRUD Operations', () => {
       endDate: sameDate,
     };
 
-    const plan = await apiRequest('/production-plans', {
+    const plan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -738,7 +749,7 @@ test.describe('Production Plans CRUD Operations', () => {
       endDate: endDate.toISOString(),
     };
 
-    const createdPlan = await apiRequest('/production-plans', {
+    const createdPlan = await apiRequest<PlanDto>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(planData),
@@ -867,11 +878,11 @@ test.describe('Production Plans CRUD Operations', () => {
     }
 
     // DELETE - Get plan ID from API to cleanup
-    const plans = await apiRequest(`/production-plans?tenantId=${fixture.tenant.id}`, {
+    const plans = await apiRequest<PlanDto[]>(`/production-plans?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
-    const testPlan = plans.find((p: any) => p.name === planName || p.name === `${planName} - Updated`);
+    const testPlan = plans.find((p) => p.name === planName || p.name === `${planName} - Updated`);
     if (testPlan) {
       createdPlanIds.push(testPlan.id);
     }

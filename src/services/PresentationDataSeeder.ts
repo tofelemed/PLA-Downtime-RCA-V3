@@ -1241,7 +1241,7 @@ export class PresentationDataSeeder {
       const processUpsetReason = reasonCodes.find(rc => rc.name.includes('Process Upset'))?.id;
       const materialDelayReason = reasonCodes.find(rc => rc.name.includes('Material Delay'))?.id;
 
-      const events = [
+      const eventSeeds: Omit<ProductionEvent, 'id' | 'createdAt' | 'updatedAt' | 'eventId' | 'source'>[] = [
         {
           unitId: units.find(u => u.name.includes('Kiln'))?.id,
           assetId: assets.find(a => a.name.includes('Rotary Kiln'))?.id,
@@ -1253,8 +1253,8 @@ export class PresentationDataSeeder {
           impactCodeId: equipmentFailureImpact,
           oeeCodeId: unplannedDowntimeOEE,
           reasonCodeId: reasonCodes.find(rc => rc.name.includes('Mechanical'))?.id,
-          quantityLost: 1250, // MT of clinker
-          costImpact: 106250, // $85/MT * 1250 MT
+          quantity:1250, // MT of clinker
+          cost:106250, // $85/MT * 1250 MT
           duration: 360, // 6 hours in minutes
           tenantId
         },
@@ -1269,8 +1269,8 @@ export class PresentationDataSeeder {
           impactCodeId: equipmentFailureImpact,
           oeeCodeId: unplannedDowntimeOEE,
           reasonCodeId: motorFailureReason,
-          quantityLost: 1200, // MT of raw meal
-          costImpact: 36000, // $30/MT * 1200 MT
+          quantity:1200, // MT of raw meal
+          cost:36000, // $30/MT * 1200 MT
           duration: 240, // 4 hours in minutes
           tenantId
         },
@@ -1280,13 +1280,14 @@ export class PresentationDataSeeder {
           description: 'Cement mill separator efficiency drop causing quality issues',
           startTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
           endTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000).toISOString(),
-          eventType: 'QualityIssue',
+          eventType: 'ProductionLoss',
+          lossCategory: 'Quality',
           status: 'In Progress',
           impactCodeId: qualityDefectsImpact,
           oeeCodeId: productionRejectsOEE,
           reasonCodeId: processUpsetReason,
-          quantityLost: 150, // MT of cement
-          costImpact: 12750, // $85/MT * 150 MT
+          quantity:150, // MT of cement
+          cost:12750, // $85/MT * 150 MT
           duration: 180, // 3 hours in minutes
           tenantId
         },
@@ -1296,13 +1297,14 @@ export class PresentationDataSeeder {
           description: 'Coal mill roller wear causing reduced grinding capacity',
           startTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
           endTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 + 12 * 60 * 60 * 1000).toISOString(),
-          eventType: 'PerformanceLoss',
+          eventType: 'ProductionLoss',
+          lossCategory: 'Performance',
           status: 'Closed',
           impactCodeId: reducedSpeedImpact,
           oeeCodeId: reducedSpeedOEE,
           reasonCodeId: reasonCodes.find(rc => rc.name.includes('Mechanical'))?.id,
-          quantityLost: 300, // MT of coal
-          costImpact: 15000, // $50/MT * 300 MT
+          quantity:300, // MT of coal
+          cost:15000, // $50/MT * 300 MT
           duration: 720, // 12 hours in minutes
           tenantId
         },
@@ -1312,13 +1314,14 @@ export class PresentationDataSeeder {
           description: 'Primary crusher hammer wear causing reduced throughput',
           startTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
           endTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000).toISOString(),
-          eventType: 'PerformanceLoss',
+          eventType: 'ProductionLoss',
+          lossCategory: 'Performance',
           status: 'Closed',
           impactCodeId: reducedSpeedImpact,
           oeeCodeId: reducedSpeedOEE,
           reasonCodeId: reasonCodes.find(rc => rc.name.includes('Mechanical'))?.id,
-          quantityLost: 1600, // MT of limestone
-          costImpact: 8000, // $5/MT * 1600 MT
+          quantity:1600, // MT of limestone
+          cost:8000, // $5/MT * 1600 MT
           duration: 240, // 4 hours in minutes
           tenantId
         },
@@ -1333,8 +1336,8 @@ export class PresentationDataSeeder {
           impactCodeId: equipmentFailureImpact,
           oeeCodeId: unplannedDowntimeOEE,
           reasonCodeId: reasonCodes.find(rc => rc.name.includes('Mechanical'))?.id,
-          quantityLost: 300, // MT of cement
-          costImpact: 25500, // $85/MT * 300 MT
+          quantity:300, // MT of cement
+          cost:25500, // $85/MT * 300 MT
           duration: 120, // 2 hours in minutes
           tenantId
         },
@@ -1349,12 +1352,15 @@ export class PresentationDataSeeder {
           impactCodeId: equipmentFailureImpact,
           oeeCodeId: unplannedDowntimeOEE,
           reasonCodeId: processUpsetReason,
-          quantityLost: 416, // MT of clinker (2 hours at 5000 TPD)
-          costImpact: 35360, // $85/MT * 416 MT
+          quantity:416, // MT of clinker (2 hours at 5000 TPD)
+          cost:35360, // $85/MT * 416 MT
           duration: 120, // 2 hours in minutes
           tenantId
         }
-      ].filter(event => event.unitId && event.assetId);
+      ];
+      const events = eventSeeds
+        .filter(event => event.unitId && event.assetId)
+        .map((event, index) => ({ ...event, eventId: `PRES-EVT-${Date.now()}-${index}`, source: 'Manual' as const }));
 
       for (const eventData of events) {
         await masterDataService.createProductionEvent(eventData);
@@ -1380,12 +1386,17 @@ export class PresentationDataSeeder {
         return;
       }
 
-      const losses = events.map(event => ({
-        planId: plans[0]?.id,
-        eventId: event.id,
+      const plan = plans[0];
+      const planDays = Math.max(1, Math.ceil((new Date(plan.endDate).getTime() - new Date(plan.startDate).getTime()) / (24 * 60 * 60 * 1000)));
+      const dailyPlan = Math.round(plan.plannedQuantity / planDays);
+      const losses: Omit<ProductionLoss, 'id' | 'createdAt' | 'updatedAt'>[] = events.map(event => ({
+        planId: plan.id,
         period: new Date(event.startTime).toISOString().split('T')[0],
-        quantityLost: event.quantityLost || 0,
-        costImpact: event.costImpact || 0,
+        shortRangePlan: dailyPlan,
+        actual: dailyPlan - (event.quantity || 0),
+        losses: event.quantity || 0,
+        unaccountedLoss: 0,
+        action: 'Reconcile',
         tenantId
       }));
 
@@ -1405,33 +1416,30 @@ export class PresentationDataSeeder {
     
     try {
       const units = await masterDataService.getUnits();
-      
+      const plans = await masterDataService.getProductionPlans({ tenantId });
+
       if (units.length === 0) {
         console.warn('No units found, skipping OEE summaries');
         return;
       }
 
-      const summaries = units.map(unit => ({
-        unitId: unit.id,
-        period: new Date().toISOString().split('T')[0],
-        availability: 85 + Math.random() * 10, // 85-95%
-        performance: 78 + Math.random() * 15,  // 78-93%
-        quality: 92 + Math.random() * 6,       // 92-98%
-        oee: 0, // Will be calculated
-        plannedProductionTime: 24 * 60, // 24 hours in minutes
-        actualProductionTime: 0, // Will be calculated
-        idealCycleTime: unit.idealCycleTime || 3.0,
-        actualCycleTime: 0, // Will be calculated
-        tenantId
-      }));
+      // An OEE summary belongs to a plan: one per unit that has a plan
+      for (const unit of units) {
+        const plan = plans.find(p => p.unitId === unit.id);
+        if (!plan) continue;
+        const availability = 85 + Math.random() * 10; // 85-95%
+        const performance = 78 + Math.random() * 15;  // 78-93%
+        const quality = 92 + Math.random() * 6;       // 92-98%
 
-      // Calculate derived values
-      for (const summary of summaries) {
-        summary.actualProductionTime = summary.plannedProductionTime * (summary.availability / 100);
-        summary.actualCycleTime = summary.idealCycleTime * (100 / summary.performance);
-        summary.oee = (summary.availability * summary.performance * summary.quality) / 10000;
-        
-        await masterDataService.createOEESummary(summary);
+        await masterDataService.createOEESummary({
+          planId: plan.id,
+          period: new Date().toISOString().split('T')[0],
+          availability,
+          performance,
+          quality,
+          overallOEE: (availability * performance * quality) / 10000,
+          tenantId
+        });
       }
 
       console.log('✅ OEE summaries seeded');
@@ -1521,53 +1529,8 @@ export class PresentationDataSeeder {
     console.log('📊 Seeding dashboard data...');
     
     try {
-      // Create dashboard configuration
-      const dashboardConfig = {
-        tenantId,
-        widgets: [
-          {
-            id: 'production-overview',
-            type: 'ProductionOverview',
-            position: { x: 0, y: 0, w: 6, h: 4 },
-            config: {
-              showTrends: true,
-              timeRange: '30d',
-              units: ['all']
-            }
-          },
-          {
-            id: 'oee-summary',
-            type: 'OEESummary',
-            position: { x: 6, y: 0, w: 6, h: 4 },
-            config: {
-              showTargets: true,
-              showTrends: true
-            }
-          },
-          {
-            id: 'recent-events',
-            type: 'RecentEvents',
-            position: { x: 0, y: 4, w: 8, h: 4 },
-            config: {
-              maxEvents: 10,
-              showStatus: true
-            }
-          },
-          {
-            id: 'rca-status',
-            type: 'RCAStatus',
-            position: { x: 8, y: 4, w: 4, h: 4 },
-            config: {
-              showPriorities: true,
-              showProgress: true
-            }
-          }
-        ],
-        layout: 'grid',
-        theme: 'dark'
-      };
-
-      await masterDataService.createDashboardConfiguration(dashboardConfig);
+      // Create the tenant's dashboard configuration (the default one, unless it already has one)
+      await masterDataService.initializeDashboardConfiguration(tenantId);
       console.log('✅ Dashboard configuration seeded');
     } catch (error) {
       console.warn('Could not create dashboard configuration:', error);

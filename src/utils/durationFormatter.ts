@@ -149,7 +149,7 @@ export function formatDuration(minutes: number, format: 'auto' | 'short' | 'long
       } else {
         display = `${hours} hour${hours !== 1 ? 's' : ''} and ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`;
         short = `${hours}h ${remainingMinutes}m`;
-        long = `${hours} hour${hours !== 1 ? 's' : ''} and ${remainingMinutes} minute${remainingMinutes !== 1 !== 1 ? 's' : ''}`;
+        long = `${hours} hour${hours !== 1 ? 's' : ''} and ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`;
       }
       unit = 'hours';
     } else if (totalMinutes < 10080) {

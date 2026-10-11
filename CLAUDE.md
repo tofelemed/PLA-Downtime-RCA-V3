@@ -20,11 +20,12 @@ npm run dev                          npm run start:dev
                                      npm run start:worker:dev # worker only (PROCESS_ROLE=api|worker|all, default all; worker health :4005)
 npm run build                        npm run build
 npm run lint                         npm run lint
+npm run typecheck                    # app + unit tests + e2e + configs (root tsconfig.json alone checks nothing)
 npm run test:run                     npm test                 # Jest *.spec.ts
 npx vitest run <file>                npx jest <file>
 npm run test:e2e                     npm run db:seed-demo-users
 npx playwright test e2e/<spec>       npx tsc --noEmit -p tsconfig.json   # typecheck
-npm run ci [-- --e2e]                # local CI: lint + unit + integration (+ e2e smoke), same steps as .github/workflows/ci.yml
+npm run ci [-- --e2e]                # local CI: lint + typecheck + unit + integration (+ e2e smoke), same steps as .github/workflows/ci.yml
 ```
 Docker: `cp .env.example .env` → `docker compose up -d --build` (see `docs/DOCKER.md`). Health `GET /api/health`; Swagger `/api`. Logins: `test@example.com` / `Test123!@#`, `*@acme.com` / `demo123`.
 

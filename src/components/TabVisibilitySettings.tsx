@@ -17,7 +17,7 @@ interface TabVisibilitySettingsProps {
     FailureWO: boolean;
     ProductionOutput: boolean;
   };
-  onToggle: (tabName: keyof typeof visibleTabs, visible: boolean) => void;
+  onToggle: (tabName: keyof TabVisibilitySettingsProps['visibleTabs'], visible: boolean) => void;
   onReset: () => void;
   eventCounts: {
     ProductionLoss: number;

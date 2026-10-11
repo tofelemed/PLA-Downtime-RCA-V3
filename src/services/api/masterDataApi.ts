@@ -16,6 +16,12 @@ export interface Tenant {
   code: string;
   description?: string;
   organizationId: string;
+  isActive: boolean;
+  address?: string;
+  contactPerson?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  timezone?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,7 +31,12 @@ export interface Unit {
   name: string;
   code: string;
   description?: string;
+  capacity?: number;
+  unitOfMeasure?: string;
+  /** Seconds per unit, for OEE performance. */
+  idealCycleTime?: number;
   tenantId: string;
+  organizationId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +51,7 @@ export interface Asset {
   assetType: string;
   criticality: string;
   status: string;
+  location?: string;
   manufacturer?: string;
   model?: string;
   serialNumber?: string;
@@ -55,10 +67,10 @@ export interface ImpactCode {
   code: string;
   name: string;
   description?: string;
-  category: string;
+  category: 'Quality' | 'Availability' | 'Performance';
   costPerUnit?: number;
   costPerHour?: number;
-  costBasis?: string;
+  costBasis?: 'perUnit' | 'perHour';
   tenantId: string;
   createdAt: string;
   updatedAt: string;
@@ -69,8 +81,8 @@ export interface OEECode {
   code: string;
   name: string;
   description?: string;
-  category: string;
-  impactType: string;
+  category: 'Planned' | 'Unplanned';
+  impactType: 'Availability' | 'Performance' | 'Quality';
   tenantId: string;
   createdAt: string;
   updatedAt: string;
@@ -81,7 +93,7 @@ export interface RCACauseCode {
   code: string;
   name: string;
   description?: string;
-  category: string;
+  category: 'Equipment' | 'Process' | 'Material' | 'Personnel' | 'Environment' | 'Method';
   parentId?: string;
   tenantId: string;
   createdAt: string;

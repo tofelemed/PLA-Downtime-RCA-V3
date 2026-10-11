@@ -62,6 +62,7 @@ export interface RCASimilarityMatch {
   matchReasons: string[]; // Why this is similar
   matchedFields: {
     equipment?: boolean;
+    eventType?: boolean;
     symptoms?: boolean;
     impactCodes?: boolean;
     keywords?: boolean;
@@ -143,6 +144,8 @@ export interface RCAAnalysisConfig {
 export interface FiveWhyAnalysis {
   id: string;
   rcaId: string;
+  /** Accepted by the backend create DTO. */
+  tenantId?: string;
   problem: string;
   whyLevels: {
     level: number;
@@ -161,6 +164,8 @@ export interface FiveWhyAnalysis {
 export interface FishboneDiagram {
   id: string;
   rcaId: string;
+  /** Accepted by the backend create DTO. */
+  tenantId?: string;
   effect: string; // The problem/effect being analyzed
   categories: {
     id: string;
@@ -180,6 +185,8 @@ export interface FishboneDiagram {
 export interface FMEAAnalysis {
   id: string;
   rcaId: string;
+  /** Accepted by the backend create DTO. */
+  tenantId?: string;
   failureMode: string;
   effects: {
     id: string;
@@ -202,6 +209,8 @@ export interface FMEAAnalysis {
 export interface FaultTreeAnalysis {
   id: string;
   rcaId: string;
+  /** Accepted by the backend create DTO. */
+  tenantId?: string;
   topEvent: string; // The undesired event
   nodes: {
     id: string;
@@ -219,6 +228,8 @@ export interface FaultTreeAnalysis {
 export interface BarrierAnalysis {
   id: string;
   rcaId: string;
+  /** Accepted by the backend create DTO. */
+  tenantId?: string;
   hazard: string;
   barriers: {
     id: string;
@@ -235,6 +246,8 @@ export interface BarrierAnalysis {
 export interface ChangeAnalysis {
   id: string;
   rcaId: string;
+  /** Accepted by the backend create DTO. */
+  tenantId?: string;
   question: string; // "What changed?"
   changes: {
     id: string;

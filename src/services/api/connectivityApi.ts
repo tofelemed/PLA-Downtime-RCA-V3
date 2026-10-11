@@ -38,7 +38,7 @@ export interface PullEventsResponse {
 export const connectivityApi = {
   // Get available event sources
   async getEventSources(tenantId: string): Promise<EventSource[]> {
-    const response = await httpClient.get('/connectivity/events/sources', {
+    const response = await httpClient.get<EventSource[]>('/connectivity/events/sources', {
       params: { tenantId },
     });
     return response.data;
@@ -46,7 +46,7 @@ export const connectivityApi = {
 
   // Pull events from any source
   async pullEvents(request: PullEventsRequest): Promise<PullEventsResponse> {
-    const response = await httpClient.post('/connectivity/events/pull', request);
+    const response = await httpClient.post<PullEventsResponse>('/connectivity/events/pull', request);
     return response.data;
   },
 
@@ -69,8 +69,7 @@ export const connectivityApi = {
   },
 
   async deleteOPCUAConnection(id: string) {
-    const response = await httpClient.delete(`/connectivity/opcua/connections/${id}`);
-    return response.data;
+    await httpClient.delete(`/connectivity/opcua/connections/${id}`);
   },
 
   async getOPCUAConnection(id: string) {
@@ -79,10 +78,11 @@ export const connectivityApi = {
   },
 
   async testOPCUAConnection(id: string, tenantId: string, testData: any) {
-    const response = await httpClient.post(`/connectivity/opcua/connections/${id}/test`, testData, {
-      params: { tenantId },
+    return httpClient.request(`/connectivity/opcua/connections/${id}/test`, {
+      method: 'POST',
+      body: testData,
+      query: { tenantId },
     });
-    return response.data;
   },
 
   // Modbus connections
@@ -104,8 +104,7 @@ export const connectivityApi = {
   },
 
   async deleteModbusConnection(id: string) {
-    const response = await httpClient.delete(`/connectivity/modbus/connections/${id}`);
-    return response.data;
+    await httpClient.delete(`/connectivity/modbus/connections/${id}`);
   },
 
   async getModbusConnection(id: string) {
@@ -114,10 +113,11 @@ export const connectivityApi = {
   },
 
   async testModbusConnection(id: string, tenantId: string, testData: any) {
-    const response = await httpClient.post(`/connectivity/modbus/connections/${id}/test`, testData, {
-      params: { tenantId },
+    return httpClient.request(`/connectivity/modbus/connections/${id}/test`, {
+      method: 'POST',
+      body: testData,
+      query: { tenantId },
     });
-    return response.data;
   },
 
   // MQTT connections
@@ -139,8 +139,7 @@ export const connectivityApi = {
   },
 
   async deleteMQTTConnection(id: string) {
-    const response = await httpClient.delete(`/connectivity/mqtt/connections/${id}`);
-    return response.data;
+    await httpClient.delete(`/connectivity/mqtt/connections/${id}`);
   },
 
   async getMQTTConnection(id: string) {
@@ -149,10 +148,11 @@ export const connectivityApi = {
   },
 
   async testMQTTConnection(id: string, tenantId: string, testData: any) {
-    const response = await httpClient.post(`/connectivity/mqtt/connections/${id}/test`, testData, {
-      params: { tenantId },
+    return httpClient.request(`/connectivity/mqtt/connections/${id}/test`, {
+      method: 'POST',
+      body: testData,
+      query: { tenantId },
     });
-    return response.data;
   },
 
   // EtherNet/IP connections
@@ -174,8 +174,7 @@ export const connectivityApi = {
   },
 
   async deleteEtherNetIPConnection(id: string) {
-    const response = await httpClient.delete(`/connectivity/ethernetip/connections/${id}`);
-    return response.data;
+    await httpClient.delete(`/connectivity/ethernetip/connections/${id}`);
   },
 
   async getEtherNetIPConnection(id: string) {
@@ -184,10 +183,11 @@ export const connectivityApi = {
   },
 
   async testEtherNetIPConnection(id: string, tenantId: string, testData: any) {
-    const response = await httpClient.post(`/connectivity/ethernetip/connections/${id}/test`, testData, {
-      params: { tenantId },
+    return httpClient.request(`/connectivity/ethernetip/connections/${id}/test`, {
+      method: 'POST',
+      body: testData,
+      query: { tenantId },
     });
-    return response.data;
   },
 
   // System integrations
@@ -226,10 +226,11 @@ export const connectivityApi = {
   },
 
   async performHealthCheck(tenantId: string) {
-    const response = await httpClient.post('/connectivity/health/check', null, {
-      params: { tenantId },
+    return httpClient.request('/connectivity/health/check', {
+      method: 'POST',
+      body: null,
+      query: { tenantId },
     });
-    return response.data;
   },
 
   // Protocol overview

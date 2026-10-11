@@ -105,8 +105,8 @@ export interface Unit extends BaseEntity {
   name: string;
   code: string;
   description?: string;
-  capacity: number;
-  unitOfMeasure: string;
+  capacity?: number;
+  unitOfMeasure?: string;
   idealCycleTime?: number; // seconds per unit for OEE Performance
 }
 
@@ -115,15 +115,19 @@ export interface Asset extends BaseEntity {
   code: string;
   unitId: string;
   description?: string;
-  assetType: 'Equipment' | 'Instrument' | 'System';
-  criticality: 'High' | 'Medium' | 'Low';
+  /** Free text on the backend; the forms offer Equipment, Instrument, System, Tool, Vehicle, Building, Other. */
+  assetType: string;
+  /** High | Medium | Low */
+  criticality: string;
   manufacturer?: string;
   model?: string;
   serialNumber?: string;
   installationDate?: string;
   lastMaintenanceDate?: string;
   nextMaintenanceDate?: string;
-  status: 'Active' | 'Inactive' | 'Maintenance' | 'Retired';
+  /** Active | Inactive | Maintenance | Retired | Offline */
+  status: string;
+  location?: string;
   tenantId: string;
 }
 
@@ -423,6 +427,8 @@ export interface AuditLog extends BaseEntity {
 }
 
 export interface Task extends BaseEntity {
+  /** Backend id (same as `id`). */
+  remoteId?: string;
   title: string;
   description?: string;
   assignedTo: string;
@@ -854,7 +860,8 @@ export class MasterDataService {
   }
 
   // Assets
-  async createAsset(data: Omit<Asset, 'id' | 'createdAt' | 'updatedAt'>): Promise<Asset> {
+  /** `tenantId` is optional: the backend create DTO accepts an asset without one. */
+  async createAsset(data: Omit<Asset, 'id' | 'createdAt' | 'updatedAt' | 'tenantId'> & { tenantId?: string }): Promise<Asset> {
     const payload: Partial<Asset> = {
       ...data,
       assetType: data.assetType ?? 'Equipment',

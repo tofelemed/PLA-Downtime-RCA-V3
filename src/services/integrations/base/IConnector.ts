@@ -22,7 +22,10 @@ export interface ConnectionConfig {
 }
 
 export interface AuthenticationConfig {
-  type: 'none' | 'basic' | 'api-key' | 'bearer' | 'oauth' | 'certificate';
+  // 'token' and 'custom' are used by the WebSocket connector.
+  type: 'none' | 'basic' | 'api-key' | 'bearer' | 'oauth' | 'certificate' | 'token' | 'custom';
+  token?: string;
+  headers?: Record<string, string>;
   username?: string;
   password?: string;
   apiKey?: string;

@@ -48,7 +48,7 @@ export async function verifyOilGasData(): Promise<void> {
       return;
     }
     
-    const { storageService, User } = await import('../services/StorageService');
+    const { storageService } = await import('../services/StorageService');
     
     const [
       impactCodes,

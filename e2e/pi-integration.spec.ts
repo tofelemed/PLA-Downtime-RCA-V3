@@ -5,7 +5,21 @@
 
 import { test, expect } from '@playwright/test';
 import { createTestFixture, TestFixture } from './test-utils/test-fixtures';
-import { apiRequest } from './test-utils/api-helpers';
+import { apiRequest, EntityRef } from './test-utils/api-helpers';
+
+interface EventSourceSummary {
+  id: string;
+  type: string;
+  sourceType: string;
+  enabled: boolean;
+}
+
+interface PullResponse {
+  success: boolean;
+  eventsFetched: number;
+  productionEventsCreated: number;
+  unmappedEventsCreated: number;
+}
 
 test.describe('PI Integration Validation', () => {
   let fixture: TestFixture;
@@ -19,7 +33,7 @@ test.describe('PI Integration Validation', () => {
   });
 
   test('PI-001: list pi-connections for tenant', async () => {
-    const connections = await apiRequest(`/pi-connections?tenantId=${fixture.tenant.id}`, {
+    const connections = await apiRequest<EntityRef[]>(`/pi-connections?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
@@ -27,12 +41,12 @@ test.describe('PI Integration Validation', () => {
   });
 
   test('PI-002: connectivity sources includes PI when connection exists', async () => {
-    const connections = await apiRequest(`/pi-connections?tenantId=${fixture.tenant.id}`, {
+    const connections = await apiRequest<EntityRef[]>(`/pi-connections?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
 
-    const sources = await apiRequest(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
+    const sources = await apiRequest<EventSourceSummary[]>(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
@@ -40,19 +54,19 @@ test.describe('PI Integration Validation', () => {
     expect(Array.isArray(sources)).toBe(true);
 
     if (connections.length > 0) {
-      const piSources = sources.filter((s: any) => s.type === 'PI');
+      const piSources = sources.filter((s) => s.type === 'PI');
       expect(piSources.length).toBeGreaterThan(0);
       expect(piSources[0].sourceType).toMatch(/PIConnection|SystemIntegration/);
     }
   });
 
   test('PI-003: pull response includes unmappedEventsCreated field', async () => {
-    const sources = await apiRequest(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
+    const sources = await apiRequest<EventSourceSummary[]>(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
 
-    const piSource = sources.find((s: any) => s.type === 'PI' && s.enabled);
+    const piSource = sources.find((s) => s.type === 'PI' && s.enabled);
     if (!piSource) {
       test.skip();
       return;
@@ -61,7 +75,7 @@ test.describe('PI Integration Validation', () => {
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000);
 
-    const pullResponse = await apiRequest('/connectivity/events/pull', {
+    const pullResponse = await apiRequest<PullResponse>('/connectivity/events/pull', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify({
@@ -99,7 +113,7 @@ test.describe('PI Integration Validation', () => {
   });
 
   test('PI-006: integration pi test-connection endpoint', async () => {
-    const connections = await apiRequest(`/pi-connections?tenantId=${fixture.tenant.id}`, {
+    const connections = await apiRequest<EntityRef[]>(`/pi-connections?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });

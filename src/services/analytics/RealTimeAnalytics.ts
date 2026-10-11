@@ -103,6 +103,7 @@ export type AlertSeverity = 'info' | 'warning' | 'critical' | 'error';
 
 export interface AlertDefinition {
   metricId: string;
+  metricName: string;
   type: AlertType;
   severity: AlertSeverity;
   message: string;
@@ -275,15 +276,13 @@ class AnalyticsStorageService {
       const transaction = db.transaction([this.stores.alerts], 'readonly');
       const store = transaction.objectStore(this.stores.alerts);
       
-      let request: IDBRequest;
-      if (acknowledged !== undefined) {
-        const index = store.index('acknowledged');
-        request = index.getAll(acknowledged);
-      } else {
-        request = store.getAll();
-      }
-      
-      request.onsuccess = () => resolve(request.result || []);
+      // Booleans are not valid IndexedDB keys, so filter on `acknowledged` in memory.
+      const request: IDBRequest<Alert[]> = store.getAll();
+
+      request.onsuccess = () => {
+        const alerts = request.result || [];
+        resolve(acknowledged === undefined ? alerts : alerts.filter(a => a.acknowledged === acknowledged));
+      };
       request.onerror = () => reject(request.error);
     });
   }

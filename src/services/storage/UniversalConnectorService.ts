@@ -175,14 +175,33 @@ export class UniversalConnectorService implements IUniversalConnectorService {
       activeSinks: dto.activeSinks,
       activeProcessors: dto.activeProcessors,
       errorRate: dto.errorRate,
-      dataQuality: dto.dataQuality || {
+      dataQuality: this.mapDtoDataQuality(dto),
+    };
+  }
+
+  private mapDtoDataQuality(dto: StreamMetricDto): StreamMetricsStorage['dataQuality'] {
+    const raw: Record<string, unknown> = dto.dataQuality ?? {};
+    const keys = ['completeness', 'accuracy', 'timeliness', 'validity', 'consistency'] as const;
+    const lastUpdated = raw.lastUpdated;
+    const hasDate = typeof lastUpdated === 'string' || lastUpdated instanceof Date;
+    if (!hasDate || !keys.every((key) => typeof raw[key] === 'number')) {
+      return {
         completeness: 100,
         accuracy: 100,
         timeliness: 100,
         validity: 100,
         consistency: 100,
         lastUpdated: new Date(dto.timestamp),
-      },
+      };
+    }
+    const score = (key: (typeof keys)[number]): number => Number(raw[key]);
+    return {
+      completeness: score('completeness'),
+      accuracy: score('accuracy'),
+      timeliness: score('timeliness'),
+      validity: score('validity'),
+      consistency: score('consistency'),
+      lastUpdated: new Date(lastUpdated),
     };
   }
 

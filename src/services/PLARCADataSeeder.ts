@@ -459,8 +459,10 @@ export class PLARCADataSeeder {
       const motorFailureReason = reasonCodes.find(rc => rc.name.includes('Motor Failure'))?.id;
       const processUpsetReason = reasonCodes.find(rc => rc.name.includes('Process Upset'))?.id;
 
-      const events = [
+      const candidates: Omit<ProductionEvent, 'id' | 'createdAt' | 'updatedAt'>[] = [
         {
+          eventId: `PLA-EVT-${Date.now()}-1`,
+          source: 'Manual',
           unitId: units[0]?.id,
           assetId: assets.find(a => a.name.includes('Pump A-001'))?.id,
           description: 'Pump A-001 seal failure causing production stoppage',
@@ -472,12 +474,14 @@ export class PLARCADataSeeder {
           impactCodeId: equipmentFailureImpact,
           oeeCodeId: unplannedDowntimeOEE,
           reasonCodeId: sealFailureReason,
-          quantityLost: 200,
+          quantity:200,
           cost: 10000,
           duration: 120, // 2 hours in minutes
           tenantId
         },
         {
+          eventId: `PLA-EVT-${Date.now()}-2`,
+          source: 'Manual',
           unitId: units[1]?.id,
           assetId: assets.find(a => a.name.includes('Pump B-001'))?.id,
           description: 'Pump B-001 motor failure during night shift',
@@ -489,12 +493,14 @@ export class PLARCADataSeeder {
           impactCodeId: equipmentFailureImpact,
           oeeCodeId: unplannedDowntimeOEE,
           reasonCodeId: motorFailureReason,
-          quantityLost: 150,
+          quantity:150,
           cost: 7500,
           duration: 240, // 4 hours in minutes
           tenantId
         },
         {
+          eventId: `PLA-EVT-${Date.now()}-3`,
+          source: 'Manual',
           unitId: units[2]?.id,
           assetId: assets.find(a => a.name.includes('Packaging'))?.id,
           description: 'Packaging machine jam causing quality issues',
@@ -506,12 +512,13 @@ export class PLARCADataSeeder {
           impactCodeId: qualityDefectsImpact,
           oeeCodeId: productionRejectsOEE,
           reasonCodeId: processUpsetReason,
-          quantityLost: 50,
+          quantity:50,
           cost: 2000,
           duration: 60, // 1 hour in minutes
           tenantId
         }
-      ].filter(event => event.unitId && event.assetId); // Only create events with valid IDs
+      ];
+      const events = candidates.filter(event => event.unitId && event.assetId); // Only create events with valid IDs
 
       for (const eventData of events) {
         await masterDataService.createProductionEvent(eventData);

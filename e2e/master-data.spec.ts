@@ -7,7 +7,7 @@
 import { test, expect } from '@playwright/test';
 import { loginViaAPI } from './test-utils/auth-helpers';
 import { createTestFixture, TestFixture } from './test-utils/test-fixtures';
-import { apiRequest } from './test-utils/api-helpers';
+import { apiRequest, EntityRef } from './test-utils/api-helpers';
 
 test.describe('Master Data Management', () => {
   let fixture: TestFixture;
@@ -108,7 +108,7 @@ test.describe('Master Data Management', () => {
     const { accessToken } = await authenticate();
     const { apiRequest } = await import('./test-utils/api-helpers');
     
-    const newOrg = await apiRequest('/organizations', {
+    const newOrg = await apiRequest<EntityRef>('/organizations', {
       method: 'POST',
       token: accessToken,
       body: JSON.stringify({

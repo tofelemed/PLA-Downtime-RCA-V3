@@ -421,13 +421,9 @@ export class DemoDataSeeder {
 
   // Clear all demo data
   async clearDemoData(): Promise<void> {
-    try {
-      await globalUniversalConnectorService.clearAllData();
-      this.isSeeded = false;
-      console.log('Demo data cleared successfully');
-    } catch (error) {
-      console.error('Failed to clear demo data:', error);
-    }
+    // UniversalConnectorService has no bulk clear (the old `clearAllData()` call threw and landed here), so
+    // nothing is deleted and the seeded flag stays as it is.
+    console.error('Failed to clear demo data:', new Error('UniversalConnectorService has no clearAllData'));
   }
 
   // Reset demo data (clear and reseed)

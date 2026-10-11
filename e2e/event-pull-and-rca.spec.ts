@@ -13,6 +13,50 @@ import { loginViaAPI } from './test-utils/auth-helpers';
 import { createTestFixture, TestFixture } from './test-utils/test-fixtures';
 import { apiRequest } from './test-utils/api-helpers';
 
+interface PiConnectionSummary {
+  id: string;
+  name: string;
+}
+
+interface EventSourceSummary {
+  id: string;
+  type: string;
+  enabled: boolean;
+}
+
+interface PullResponse {
+  success: boolean;
+  eventsFetched: number;
+  eventsStored: number;
+  productionEventsCreated: number;
+  unmappedEventsCreated: number;
+}
+
+interface ProductionEventDto {
+  id: string;
+  createdAt: string;
+  description?: string;
+  cost?: number;
+  severity?: string | null;
+  rcaId?: string | null;
+}
+
+interface RcaTriggerConfigSummary {
+  name: string;
+  isActive: boolean;
+  rules?: unknown[];
+}
+
+interface UserProfile {
+  id?: string;
+  userId?: string;
+}
+
+interface RcaDto {
+  id: string;
+  eventId: string;
+}
+
 test.describe('Event Pulling and RCA Creation', () => {
   let fixture: TestFixture;
   let createdEventIds: string[] = [];
@@ -24,7 +68,7 @@ test.describe('Event Pulling and RCA Creation', () => {
     
     // Check for PI connection
     try {
-      const connections = await apiRequest(`/pi-connections?tenantId=${fixture.tenant.id}`, {
+      const connections = await apiRequest<PiConnectionSummary[]>(`/pi-connections?tenantId=${fixture.tenant.id}`, {
         method: 'GET',
         token: fixture.tokens.accessToken,
       });
@@ -74,13 +118,13 @@ test.describe('Event Pulling and RCA Creation', () => {
     // Controller is @Controller('api/connectivity') with global prefix 'api'
     // This creates route: /api/api/connectivity/events/sources
     // But we need to use just /connectivity/events/sources since base URL has /api
-    const sources = await apiRequest(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
+    const sources = await apiRequest<EventSourceSummary[]>(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     }).catch(async (error) => {
       // If 404 or 500, try with /api prefix (in case route is /api/api/connectivity/...)
       if (error.message.includes('404') || error.message.includes('500')) {
-        return await apiRequest(`/api/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
+        return await apiRequest<EventSourceSummary[]>(`/api/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
           method: 'GET',
           token: fixture.tokens.accessToken,
         });
@@ -93,7 +137,7 @@ test.describe('Event Pulling and RCA Creation', () => {
     
     // Log source types
     if (sources.length > 0) {
-      const sourceTypes = sources.map((s: any) => s.type);
+      const sourceTypes = sources.map((s) => s.type);
       console.log('Source types:', sourceTypes);
     }
   });
@@ -105,13 +149,13 @@ test.describe('Event Pulling and RCA Creation', () => {
     }
 
     // Get PI sources - try /connectivity first (base URL has /api)
-    const sources = await apiRequest(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
+    const sources = await apiRequest<EventSourceSummary[]>(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     }).catch(async (error) => {
       // If 404 or 500, try with /api prefix
       if (error.message.includes('404') || error.message.includes('500')) {
-        return await apiRequest(`/api/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
+        return await apiRequest<EventSourceSummary[]>(`/api/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
           method: 'GET',
           token: fixture.tokens.accessToken,
         });
@@ -119,7 +163,7 @@ test.describe('Event Pulling and RCA Creation', () => {
       throw error;
     });
 
-    const piSource = sources.find((s: any) => s.type === 'PI' && s.enabled);
+    const piSource = sources.find((s) => s.type === 'PI' && s.enabled);
     if (!piSource) {
       test.skip();
       return;
@@ -129,7 +173,7 @@ test.describe('Event Pulling and RCA Creation', () => {
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const pullResponse = await apiRequest('/connectivity/events/pull', {
+    const pullResponse = await apiRequest<PullResponse>('/connectivity/events/pull', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify({
@@ -156,17 +200,17 @@ test.describe('Event Pulling and RCA Creation', () => {
     // If events were created, track them
     if (pullResponse.productionEventsCreated > 0) {
       // Fetch the created events
-      const events = await apiRequest(`/production-events?tenantId=${fixture.tenant.id}`, {
+      const events = await apiRequest<ProductionEventDto[]>(`/production-events?tenantId=${fixture.tenant.id}`, {
         method: 'GET',
         token: fixture.tokens.accessToken,
       });
       
       // Track the most recent events (likely the ones we just created)
       const recentEvents = events
-        .filter((e: any) => new Date(e.createdAt) > startTime)
+        .filter((e) => new Date(e.createdAt) > startTime)
         .slice(0, pullResponse.productionEventsCreated);
       
-      recentEvents.forEach((e: any) => {
+      recentEvents.forEach((e) => {
         if (!createdEventIds.includes(e.id)) {
           createdEventIds.push(e.id);
         }
@@ -189,7 +233,7 @@ test.describe('Event Pulling and RCA Creation', () => {
       cost: 50000, // High cost to trigger RCA rules
     };
 
-    const event = await apiRequest('/production-events', {
+    const event = await apiRequest<ProductionEventDto>('/production-events', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(eventData),
@@ -273,7 +317,7 @@ test.describe('Event Pulling and RCA Creation', () => {
       cost: 100000, // Very high cost
     };
 
-    const event = await apiRequest('/production-events', {
+    const event = await apiRequest<ProductionEventDto>('/production-events', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(highCostEvent),
@@ -283,13 +327,13 @@ test.describe('Event Pulling and RCA Creation', () => {
 
     // Get RCA trigger config
     try {
-      const rcaConfigs = await apiRequest(`/rca-trigger-configs?tenantId=${fixture.tenant.id}`, {
+      const rcaConfigs = await apiRequest<RcaTriggerConfigSummary[]>(`/rca-trigger-configs?tenantId=${fixture.tenant.id}`, {
         method: 'GET',
         token: fixture.tokens.accessToken,
       });
 
       if (rcaConfigs && rcaConfigs.length > 0) {
-        const activeConfig = rcaConfigs.find((c: any) => c.isActive);
+        const activeConfig = rcaConfigs.find((c) => c.isActive);
         if (activeConfig) {
           console.log('✅ Found active RCA trigger config:', activeConfig.name);
           console.log(`   Rules: ${activeConfig.rules?.length || 0}`);
@@ -319,7 +363,7 @@ test.describe('Event Pulling and RCA Creation', () => {
       cost: 75000,
     };
 
-    const event = await apiRequest('/production-events', {
+    const event = await apiRequest<ProductionEventDto>('/production-events', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(qualifyingEvent),
@@ -358,7 +402,7 @@ test.describe('Event Pulling and RCA Creation', () => {
     // Get user ID from auth profile
     let userId = '';
     try {
-      const profile = await apiRequest('/auth/profile', {
+      const profile = await apiRequest<UserProfile>('/auth/profile', {
         method: 'GET',
         token: fixture.tokens.accessToken,
       });
@@ -379,7 +423,7 @@ test.describe('Event Pulling and RCA Creation', () => {
       cost: 60000,
     };
 
-    const event = await apiRequest('/production-events', {
+    const event = await apiRequest<ProductionEventDto>('/production-events', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(eventData),
@@ -400,7 +444,7 @@ test.describe('Event Pulling and RCA Creation', () => {
       evidence: [],
     };
 
-    const rca = await apiRequest('/rcas', {
+    const rca = await apiRequest<RcaDto>('/rcas', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(rcaData),
@@ -426,7 +470,7 @@ test.describe('Event Pulling and RCA Creation', () => {
       cost: 80000,
     };
 
-    const event = await apiRequest('/production-events', {
+    const event = await apiRequest<ProductionEventDto>('/production-events', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(eventData),
@@ -500,7 +544,7 @@ test.describe('Event Pulling and RCA Creation', () => {
       cost: 90000,
     };
 
-    const event = await apiRequest('/production-events', {
+    const event = await apiRequest<ProductionEventDto>('/production-events', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(eventData),
@@ -527,7 +571,7 @@ test.describe('Event Pulling and RCA Creation', () => {
     // Plan 3.9: the fixture event belongs to a fresh "E2E Test Tenant", while the UI shows the user's
     // selected plant, so the Event Hub cannot list it; the event is checked through the API of its tenant
     // (Event Hub display is covered by event-hub-v2-ux04.spec.ts).
-    const stored = await apiRequest(`/production-events/${event.id}`, {
+    const stored = await apiRequest<ProductionEventDto>(`/production-events/${event.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
@@ -538,7 +582,7 @@ test.describe('Event Pulling and RCA Creation', () => {
     // Step 3: Get user ID and create RCA for the event
     let userId = '';
     try {
-      const profile = await apiRequest('/auth/profile', {
+      const profile = await apiRequest<UserProfile>('/auth/profile', {
         method: 'GET',
         token: fixture.tokens.accessToken,
       });
@@ -559,7 +603,7 @@ test.describe('Event Pulling and RCA Creation', () => {
       evidence: [],
     };
 
-    const rca = await apiRequest('/rcas', {
+    const rca = await apiRequest<RcaDto>('/rcas', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(rcaData),
@@ -571,7 +615,7 @@ test.describe('Event Pulling and RCA Creation', () => {
     console.log(`✅ Step 3: Created RCA ${rca.id} for event ${event.id}`);
 
     // Step 4: Verify RCA is linked to event
-    const updatedEvent = await apiRequest(`/production-events/${event.id}`, {
+    const updatedEvent = await apiRequest<ProductionEventDto>(`/production-events/${event.id}`, {
       method: 'GET',
       token: fixture.tokens.accessToken,
     });
@@ -598,7 +642,7 @@ test.describe('Event Pulling and RCA Creation', () => {
       cost: 150000, // Very high cost to trigger rules
     };
 
-    const event = await apiRequest('/production-events', {
+    const event = await apiRequest<ProductionEventDto>('/production-events', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify(triggerEvent),

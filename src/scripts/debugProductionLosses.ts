@@ -1,4 +1,4 @@
-import { masterDataService } from '../services/MasterDataService';
+import { masterDataService, type ProductionEvent } from '../services/MasterDataService';
 import { storageService } from '../services/StorageService';
 
 /**
@@ -61,7 +61,8 @@ export async function debugProductionLosses() {
     }
     
     // Get all production loss events
-    const lossEvents = await storageService.query('productionEvents', { eventType: 'ProductionLoss' });
+    const lossEvents = (await storageService.query<ProductionEvent>('productionEvents'))
+      .filter(event => event.eventType === 'ProductionLoss');
     console.log(`\n🎯 ProductionLoss Events: ${lossEvents.length}`);
     
     if (lossEvents.length > 0) {

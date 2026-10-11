@@ -5,7 +5,7 @@
  * All data is created via backend API calls.
  */
 
-import { apiRequest, authenticate, AuthTokens } from './api-helpers';
+import { apiRequest, authenticate, AuthTokens, EntityRef } from './api-helpers';
 
 export interface TestFixture {
   tokens: AuthTokens;
@@ -25,7 +25,7 @@ export async function createTestFixture(): Promise<TestFixture> {
   
   // Create organization with unique timestamp and random suffix
   const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  const organization = await apiRequest('/organizations', {
+  const organization = await apiRequest<EntityRef>('/organizations', {
     method: 'POST',
     token: tokens.accessToken,
     body: JSON.stringify({
@@ -36,7 +36,7 @@ export async function createTestFixture(): Promise<TestFixture> {
 
   // Create tenant with unique timestamp and random suffix
   const tenantUniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  const tenant = await apiRequest('/tenants', {
+  const tenant = await apiRequest<EntityRef>('/tenants', {
     method: 'POST',
     token: tokens.accessToken,
     body: JSON.stringify({
@@ -47,7 +47,7 @@ export async function createTestFixture(): Promise<TestFixture> {
   });
 
   // Create unit
-  const unit = await apiRequest('/units', {
+  const unit = await apiRequest<EntityRef>('/units', {
     method: 'POST',
     token: tokens.accessToken,
     body: JSON.stringify({
@@ -58,7 +58,7 @@ export async function createTestFixture(): Promise<TestFixture> {
   });
 
   // Products belong to a tenant (B18); plans refuse products of another or no tenant (plan 2.3)
-  const product = await apiRequest('/products', {
+  const product = await apiRequest<EntityRef>('/products', {
     method: 'POST',
     token: tokens.accessToken,
     body: JSON.stringify({
@@ -120,7 +120,7 @@ export async function createMinimalFixture(): Promise<{
 }> {
   const tokens = await authenticate();
   
-  const organization = await apiRequest('/organizations', {
+  const organization = await apiRequest<EntityRef>('/organizations', {
     method: 'POST',
     token: tokens.accessToken,
     body: JSON.stringify({

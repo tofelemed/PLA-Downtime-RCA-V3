@@ -2365,7 +2365,7 @@ export const EventHub: React.FC = () => {
                     
                     const points = [];
                     const baseValue = hasParam && selectedEvent.parameter === 'Separator Efficiency' ? 85 : 100;
-                    const limitValue = selectedEvent.limit ? parseFloat(selectedEvent.limit) : baseValue - 10;
+                    const limitValue = selectedEvent.limit ? parseFloat(String(selectedEvent.limit)) : baseValue - 10;
                     
                     for (let t = demoStart.getTime(); t <= demoEnd.getTime(); t += interval) {
                       const time = new Date(t);

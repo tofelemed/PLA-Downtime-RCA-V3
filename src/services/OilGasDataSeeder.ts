@@ -1,6 +1,86 @@
 // Oil and Gas Industry (ADNOC) Data Seeder
-import { masterDataService } from './MasterDataService';
+import {
+  masterDataService,
+  type LogicTreeNode,
+  type OEECode,
+  type ProductionEvent,
+  type RCA,
+  type RCACauseCode,
+  type RCAEvidence,
+  type RCARecommendation,
+} from './MasterDataService';
 import { storageService, User } from './StorageService';
+
+type NewEntity<T> = Omit<T, 'id' | 'createdAt' | 'updatedAt'>;
+type NewProductionEvent = NewEntity<ProductionEvent>;
+type EvidenceSeed = Omit<RCAEvidence, 'rcaId' | 'createdAt' | 'updatedAt'>;
+/** Seeded logic-tree nodes carry a display `code`, as nodes saved by the RCA module do. */
+type LogicNodeSeed = LogicTreeNode & { code: string };
+
+interface RecommendationSeed {
+  id: string;
+  description: string;
+  assignedTo: string;
+  dueDate?: string;
+  status: RCARecommendation['status'] | 'Planned';
+  verificationStatus?: string;
+  verificationDate?: string;
+}
+
+/**
+ * RCA seed shape. It carries narrative fields (unit, findings, corrective actions, …) that the v1
+ * `/rcas` contract does not store; `toRcaInput` maps the seed onto the declared `RCA` fields.
+ */
+interface RcaSeed extends Omit<NewEntity<RCA>, 'teamLeadId' | 'evidence' | 'logicTree' | 'recommendations'> {
+  teamLeadId?: string;
+  evidence: EvidenceSeed[];
+  logicTree?: LogicNodeSeed[];
+  recommendations: RecommendationSeed[];
+  unitId?: string;
+  assetId?: string;
+  closedDate?: string;
+  findings?: Record<string, string>;
+  rcaCauseCodeIds?: string[];
+  correctiveActions?: RecommendationSeed[];
+}
+
+const toRecommendation = (rec: RecommendationSeed, now: string): RCARecommendation => ({
+  id: rec.id,
+  rcaId: '',
+  title: rec.description,
+  description: rec.description,
+  priority: 'Medium',
+  assigneeId: rec.assignedTo,
+  dueDate: rec.dueDate,
+  status: rec.status === 'Planned' ? 'Open' : rec.status,
+  createdAt: now,
+  updatedAt: now,
+});
+
+function toRcaInput(seed: RcaSeed): NewEntity<RCA> {
+  const { unitId, assetId, closedDate, findings, rcaCauseCodeIds, correctiveActions, ...rca } = seed;
+  const now = new Date().toISOString();
+  return {
+    ...rca,
+    teamLeadId: seed.teamLeadId ?? '',
+    evidence: seed.evidence.map((item) => ({ ...item, rcaId: '', createdAt: now, updatedAt: now })),
+    recommendations: seed.recommendations.map((rec) => toRecommendation(rec, now)),
+  };
+}
+
+/** OEE classification for the seed's descriptive groups (`OEECode` only knows Planned/Unplanned + impact). */
+const OEE_GROUP_CLASSIFICATION: Record<string, Pick<OEECode, 'category' | 'impactType'>> = {
+  'Planned Downtime': { category: 'Planned', impactType: 'Availability' },
+  'Production Adjustment': { category: 'Planned', impactType: 'Performance' },
+  'Process Issue': { category: 'Unplanned', impactType: 'Performance' },
+  'Quality Issue': { category: 'Unplanned', impactType: 'Quality' },
+};
+const DEFAULT_OEE_CLASSIFICATION: Pick<OEECode, 'category' | 'impactType'> = {
+  category: 'Unplanned',
+  impactType: 'Availability',
+};
+
+const seedEventId = (prefix: string, index: number) => `${prefix}-${Date.now()}-${index}`;
 
 export class OilGasDataSeeder {
   private isSeeded = false;
@@ -548,8 +628,7 @@ export class OilGasDataSeeder {
       await masterDataService.createImpactCode({
         ...code,
         tenantId,
-        organizationId: '',
-        isActive: true
+        organizationId: ''
       });
     }
     console.log(`✅ Created ${impactCodes.length} Impact Codes with complete cost data`);
@@ -582,12 +661,14 @@ export class OilGasDataSeeder {
       { code: 'WEATHER_DELAY', name: 'Weather Delay', description: 'Weather-related disruption', category: 'External Factor', impactsOEE: true as const }
     ];
 
-    for (const code of oeeCodes) {
+    for (const { code, name, description, category: group } of oeeCodes) {
       await masterDataService.createOEECode({
-        ...code,
+        code,
+        name,
+        description,
+        ...(OEE_GROUP_CLASSIFICATION[group] ?? DEFAULT_OEE_CLASSIFICATION),
         tenantId,
-        organizationId: '',
-        isActive: true
+        organizationId: ''
       });
     }
     console.log(`✅ Created ${oeeCodes.length} OEE Codes`);
@@ -682,51 +763,48 @@ export class OilGasDataSeeder {
       await masterDataService.createReasonCode({
         ...code,
         tenantId,
-        organizationId: '',
-        isActive: true
+        organizationId: ''
       });
     }
     console.log(`✅ Created ${reasonCodes.length} Reason Codes`);
 
     // RCA Cause Codes
-    const rcaCauseCodes = [
+    const rcaCauseCodes: Array<Pick<RCACauseCode, 'code' | 'name' | 'description' | 'category'>> = [
       { code: 'ROOT_EQUIP_AGE', name: 'Equipment Age/Wear', description: 'Equipment at end of life', category: 'Equipment' },
-      { code: 'ROOT_DESIGN_FLAW', name: 'Design Flaw', description: 'Inherent design deficiency', category: 'Design' },
-      { code: 'ROOT_MAINT_PRACT', name: 'Maintenance Practice', description: 'Inadequate maintenance strategy', category: 'Maintenance' },
-      { code: 'ROOT_OPS_PRACT', name: 'Operating Practice', description: 'Suboptimal operating procedures', category: 'Operations' },
-      { code: 'ROOT_TRAINING', name: 'Training Deficiency', description: 'Insufficient personnel training', category: 'Human Factors' },
+      { code: 'ROOT_DESIGN_FLAW', name: 'Design Flaw', description: 'Inherent design deficiency', category: 'Equipment' },
+      { code: 'ROOT_MAINT_PRACT', name: 'Maintenance Practice', description: 'Inadequate maintenance strategy', category: 'Method' },
+      { code: 'ROOT_OPS_PRACT', name: 'Operating Practice', description: 'Suboptimal operating procedures', category: 'Method' },
+      { code: 'ROOT_TRAINING', name: 'Training Deficiency', description: 'Insufficient personnel training', category: 'Personnel' },
       { code: 'ROOT_PROC_CTRL', name: 'Process Control', description: 'Poor process control strategy', category: 'Process' },
-      { code: 'ROOT_MATERIAL', name: 'Material Defect', description: 'Material of construction issue', category: 'Materials' },
+      { code: 'ROOT_MATERIAL', name: 'Material Defect', description: 'Material of construction issue', category: 'Material' },
       { code: 'ROOT_ENVIRON', name: 'Environmental Condition', description: 'Harsh operating environment', category: 'Environment' },
-      { code: 'ROOT_VENDOR', name: 'Vendor Quality', description: 'Third-party equipment/service quality', category: 'External' },
-      { code: 'ROOT_MGMT_SYS', name: 'Management System', description: 'Management system deficiency', category: 'Management' }
+      { code: 'ROOT_VENDOR', name: 'Vendor Quality', description: 'Third-party equipment/service quality', category: 'Environment' },
+      { code: 'ROOT_MGMT_SYS', name: 'Management System', description: 'Management system deficiency', category: 'Method' }
     ];
 
     for (const code of rcaCauseCodes) {
       await masterDataService.createRCACauseCode({
         ...code,
         tenantId,
-        organizationId: '',
-        isActive: true
+        organizationId: ''
       });
     }
     console.log(`✅ Created ${rcaCauseCodes.length} RCA Cause Codes`);
 
     // Verification Status Codes
     const verificationCodes = [
-      { code: 'VERIFIED', name: 'Verified', description: 'Action verified effective', category: 'Status' },
-      { code: 'NOT_VERIFIED', name: 'Not Verified', description: 'Not yet verified', category: 'Status' },
-      { code: 'PARTIALLY_VER', name: 'Partially Verified', description: 'Partially effective', category: 'Status' },
-      { code: 'INEFFECTIVE', name: 'Ineffective', description: 'Action ineffective', category: 'Status' },
-      { code: 'PENDING', name: 'Pending', description: 'Pending verification', category: 'Status' }
+      { code: 'VERIFIED', name: 'Verified', description: 'Action verified effective', color: '#16a34a' },
+      { code: 'NOT_VERIFIED', name: 'Not Verified', description: 'Not yet verified', color: '#6b7280' },
+      { code: 'PARTIALLY_VER', name: 'Partially Verified', description: 'Partially effective', color: '#d97706' },
+      { code: 'INEFFECTIVE', name: 'Ineffective', description: 'Action ineffective', color: '#dc2626' },
+      { code: 'PENDING', name: 'Pending', description: 'Pending verification', color: '#2563eb' }
     ];
 
     for (const code of verificationCodes) {
       await masterDataService.createVerificationStatusCode({
         ...code,
         tenantId,
-        organizationId: '',
-        isActive: true
+        organizationId: ''
       });
     }
     console.log(`✅ Created ${verificationCodes.length} Verification Status Codes`);
@@ -918,7 +996,7 @@ export class OilGasDataSeeder {
           model: 'N/A',
           serialNumber: `SN-${assetData.code}`,
           installationDate: '2020-01-01',
-          status: 'Operational',
+          status: 'Active',
           lastMaintenanceDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           nextMaintenanceDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         });
@@ -963,11 +1041,8 @@ export class OilGasDataSeeder {
       { name: 'Asphalt', code: 'ASPH', description: 'Paving grade asphalt', unitOfMeasure: 'MT', category: 'Bitumen', specifications: { Penetration: '60/70' } }
     ];
 
-    for (const product of products) {
-      await masterDataService.createProduct({
-        ...product,
-        isActive: true
-      });
+    for (const { name, code, description, unitOfMeasure } of products) {
+      await masterDataService.createProduct({ name, code, description, unitOfMeasure, standardCost: 0 });
     }
     console.log(`✅ Created ${products.length} products`);
   }
@@ -1164,6 +1239,7 @@ export class OilGasDataSeeder {
       }
 
       const event: any = {
+        eventId: seedEventId('OG-EVT', i),
         eventType,
         unitId: randomUnit.id,
         assetId: randomAsset?.id,
@@ -1255,17 +1331,16 @@ export class OilGasDataSeeder {
         const dailyPlanned = plan.plannedQuantity / planDays;
         const actualQuantity = Math.floor(dailyPlanned * (0.85 + Math.random() * 0.25)); // 85-110% of daily plan
         
-        const outputEvent = {
-          eventType: 'ProductionOutput' as const,
+        const outputEvent: NewProductionEvent = {
+          eventId: seedEventId(`OG-OUT-${plan.id}`, i),
+          eventType: 'ProductionOutput',
           planId: plan.id, // LINK TO PLAN
           unitId: plan.unitId,
-          productId: plan.productId,
-          timestamp: eventDate.toISOString(),
           startTime: eventDate.toISOString(),
           quantity: actualQuantity,
           description: `Daily production: ${actualQuantity.toLocaleString()} ${product?.unitOfMeasure || 'units'} of ${product?.name || 'product'}`,
-          status: 'Closed' as const,
-          severity: 'Low' as const,
+          status: 'Closed',
+          severity: 'Low',
           source: 'Manual',
           tenantId,
           organizationId: ''
@@ -1291,43 +1366,37 @@ export class OilGasDataSeeder {
         const lossQuantity = Math.floor((plan.plannedQuantity / planDays) * (duration / (24 * 60)) * 0.8); // Lost production based on downtime
         totalLossQuantity += lossQuantity;
         
-        const lossEvent = {
-          eventType: 'ProductionLoss' as const,
+        const lossEvent: NewProductionEvent = {
+          eventId: seedEventId(`OG-LOSS-${plan.id}`, i),
+          eventType: 'ProductionLoss',
           planId: plan.id, // LINK TO PLAN
           unitId: plan.unitId,
-          productId: plan.productId,
-          timestamp: eventDate.toISOString(),
           startTime: eventDate.toISOString(),
           endTime: new Date(eventDate.getTime() + duration * 60 * 1000).toISOString(),
           duration: duration,
           quantity: lossQuantity,
           description: `Production loss: ${Math.floor(duration / 60)}h ${duration % 60}m downtime`,
           impactCodeId: impactCodes.find(c => c.code === 'PROD_LOSS')?.id,
-          lossCategory: ['Availability', 'Performance', 'Quality'][Math.floor(Math.random() * 3)] as any,
-          status: 'Closed' as const,
-          severity: duration > 240 ? 'High' : 'Medium' as any,
+          lossCategory: ['Availability', 'Performance', 'Quality'][Math.floor(Math.random() * 3)],
+          status: 'Closed',
+          severity: duration > 240 ? 'High' : 'Medium',
           source: 'Manual',
           tenantId,
           organizationId: ''
         };
-        
+
         await masterDataService.createProductionEvent(lossEvent);
-        
-        // Create corresponding production loss record immediately
+
+        // Create corresponding production loss record (daily plan vs. actual for the loss day)
+        const dailyPlan = Math.round(plan.plannedQuantity / planDays);
         await masterDataService.createProductionLoss({
           planId: plan.id, // LINK TO PLAN
-          unitId: plan.unitId,
-          assetId: lossEvent.assetId,
-          eventId: '', // Will be the event ID once saved
-          lossDate: eventDate.toISOString().split('T')[0],
-          lossType: 'Unplanned Downtime',
-          lossCategory: lossEvent.lossCategory,
-          quantity: lossQuantity,
-          duration: duration,
-          reasonCodeId: reasonCodes[Math.floor(Math.random() * reasonCodes.length)]?.id,
-          impactCodeId: lossEvent.impactCodeId,
-          description: lossEvent.description,
-          financialImpact: (duration / 60) * (impactCodes.find(ic => ic.id === lossEvent.impactCodeId)?.costPerHour || 85000),
+          period: eventDate.toISOString().split('T')[0],
+          shortRangePlan: dailyPlan,
+          actual: dailyPlan - lossQuantity,
+          losses: lossQuantity,
+          unaccountedLoss: 0,
+          action: 'Reconcile',
           tenantId,
           organizationId: ''
         });
@@ -1337,13 +1406,10 @@ export class OilGasDataSeeder {
       console.log(`   ✅ Created ${lossEventsToCreate} production loss records (planId: ${plan.id}) for plan: ${plan.name}`);
       
       // Calculate and update plan's actualQuantity from all plan-linked output events
-      const planOutputEvents = await masterDataService.getProductionEvents({ 
-        tenantId, 
-        planId: plan.id 
-      });
-      
+      const planOutputEvents = await masterDataService.getProductionEvents({ tenantId });
+
       const totalActualProduction = planOutputEvents
-        .filter(e => e.eventType === 'ProductionOutput')
+        .filter(e => e.planId === plan.id && e.eventType === 'ProductionOutput')
         .reduce((sum, e) => sum + (Number(e.quantity) || 0), 0);
       
       // Update the plan with actual quantity
@@ -1367,12 +1433,12 @@ export class OilGasDataSeeder {
     const oeeCodes = await masterDataService.getOEECodes({ tenantId });
     
     // Create specific high-impact events for RCA - using EventHub-compatible types
-    const rcaEvents = [
+    const rcaEvents: NewProductionEvent[] = [
       {
         eventType: 'FailureWO' as const,
         unitId: units.find(u => u.code === 'FCCU-01')?.id || units[0].id,
         assetId: assets.find(a => a.code === 'K-401')?.id,
-        timestamp: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+        eventId: seedEventId('OG-RCA', 1),
         startTime: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
         duration: 1440, // 24 hours
         endTime: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000 + 1440 * 60 * 1000).toISOString(),
@@ -1391,7 +1457,7 @@ export class OilGasDataSeeder {
         eventType: 'ProductionLoss' as const,
         unitId: units.find(u => u.code === 'ADU-01')?.id || units[0].id,
         assetId: assets.find(a => a.code === 'F-201')?.id,
-        timestamp: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+        eventId: seedEventId('OG-RCA', 2),
         startTime: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
         duration: 720, // 12 hours
         endTime: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000 + 720 * 60 * 1000).toISOString(),
@@ -1410,7 +1476,7 @@ export class OilGasDataSeeder {
         eventType: 'SOL' as const,
         unitId: units.find(u => u.code === 'GPP-01')?.id || units[0].id,
         assetId: assets.find(a => a.code === 'K-601')?.id,
-        timestamp: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
+        eventId: seedEventId('OG-RCA', 3),
         startTime: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
         description: 'Refrigeration compressor vibration alarm and shutdown',
         impactCodeId: impactCodes.find(c => c.code === 'VIBRATION')?.id,
@@ -1429,7 +1495,7 @@ export class OilGasDataSeeder {
         eventType: 'FailureWO' as const,
         unitId: units.find(u => u.code === 'HCU-01')?.id || units[0].id,
         assetId: assets.find(a => a.code === 'P-501')?.id,
-        timestamp: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+        eventId: seedEventId('OG-RCA', 4),
         startTime: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
         duration: 960, // 16 hours
         endTime: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000 + 960 * 60 * 1000).toISOString(),
@@ -1448,7 +1514,7 @@ export class OilGasDataSeeder {
         eventType: 'ProductionLoss' as const,
         unitId: units.find(u => u.code === 'UTIL-01')?.id || units[0].id,
         assetId: assets.find(a => a.code === 'GTG-901')?.id,
-        timestamp: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString(),
+        eventId: seedEventId('OG-RCA', 5),
         startTime: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString(),
         duration: 360, // 6 hours
         endTime: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000 + 360 * 60 * 1000).toISOString(),
@@ -1580,8 +1646,12 @@ export class OilGasDataSeeder {
       }
     ];
 
-    for (const template of templates) {
-      await masterDataService.createRCATemplate(template);
+    for (const { sections, isActive, ...template } of templates) {
+      await masterDataService.createRCATemplate({
+        ...template,
+        logicTreeStructure: { sections },
+        verificationChecklist: [],
+      });
       console.log(`✅ Created RCA template: ${template.name}`);
     }
   }
@@ -1618,7 +1688,7 @@ export class OilGasDataSeeder {
       
       console.log('  Creating RCA 1/7: FCC Air Blower (CLOSED - Full Data + Event Diagram)...');
       
-      const rca1 = await masterDataService.createRCA({
+      const rca1 = await masterDataService.createRCA(toRcaInput({
         title: 'FCC Air Blower Catastrophic Failure Investigation',
         description: 'Root cause analysis of catastrophic bearing failure in FCCU regenerator air blower. Event resulted in 48-hour unit shutdown, $2.5M production loss. Investigation identified inadequate lubrication and PM schedule gaps.',
         eventId: criticalEvents[0]?.id,
@@ -1754,7 +1824,7 @@ export class OilGasDataSeeder {
         
         tenantId,
         organizationId
-      });
+      }));
 
       // Create 5-Why for RCA 1
       await rcaAnalysisConfigService.createFiveWhyAnalysis({
@@ -1834,7 +1904,7 @@ export class OilGasDataSeeder {
       
       console.log('  Creating RCA 2/7: Crude Furnace (CLOSED - Full Data + Event Diagram)...');
       
-      const rca2 = await masterDataService.createRCA({
+      const rca2 = await masterDataService.createRCA(toRcaInput({
         title: 'Crude Furnace Tube Leak Analysis',
         description: 'Investigation of furnace tube failure causing emergency shutdown and oil release',
         eventId: criticalEvents[1]?.id,
@@ -1932,7 +2002,7 @@ export class OilGasDataSeeder {
         approvedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         tenantId,
         organizationId
-      });
+      }));
 
       await rcaAnalysisConfigService.createFiveWhyAnalysis({
         rcaId: rca2.id,
@@ -1979,7 +2049,7 @@ export class OilGasDataSeeder {
       
       console.log('  Creating RCA 3/7: Gas Compressor (APPROVAL phase)...');
       
-      const rca3 = await masterDataService.createRCA({
+      const rca3 = await masterDataService.createRCA(toRcaInput({
         title: 'Gas Compressor Anti-Surge Trip Investigation',
         description: 'Analysis of compressor trip due to anti-surge valve failure',
         eventId: criticalEvents[2]?.id,
@@ -2058,7 +2128,7 @@ export class OilGasDataSeeder {
         
         tenantId,
         organizationId
-      });
+      }));
 
       rcaCount++;
       console.log(`✅ RCA ${rcaCount}/7: ${rca3.title} (Approval with Event Diagram - 13 nodes)`);
@@ -2069,7 +2139,7 @@ export class OilGasDataSeeder {
       
       console.log('  Creating RCA 4/7: Hydrocracker (RECOMMENDATIONS phase)...');
       
-      const rca4 = await masterDataService.createRCA({
+      const rca4 = await masterDataService.createRCA(toRcaInput({
         title: 'Hydrocracker Catalyst Fouling Analysis',
         description: 'Investigation of accelerated catalyst deactivation',
         eventId: criticalEvents[3]?.id,
@@ -2138,7 +2208,7 @@ export class OilGasDataSeeder {
         
         tenantId,
         organizationId
-      });
+      }));
 
       rcaCount++;
       console.log(`✅ RCA ${rcaCount}/7: ${rca4.title} (Recommendations with Event Diagram - 14 nodes)`);
@@ -2149,7 +2219,7 @@ export class OilGasDataSeeder {
       
       console.log('  Creating RCA 5/7: SRU Furnace (ANALYSIS phase)...');
       
-      const rca5 = await masterDataService.createRCA({
+      const rca5 = await masterDataService.createRCA(toRcaInput({
         title: 'SRU Furnace Refractory Failure',
         description: 'Analysis of premature refractory degradation',
         eventId: criticalEvents[4]?.id,
@@ -2213,7 +2283,7 @@ export class OilGasDataSeeder {
         
         tenantId,
         organizationId
-      });
+      }));
 
       rcaCount++;
       console.log(`✅ RCA ${rcaCount}/7: ${rca5.title} (Analysis with Event Diagram - 13 nodes)`);
@@ -2224,7 +2294,7 @@ export class OilGasDataSeeder {
       
       console.log('  Creating RCA 6/7: VDU Vacuum (DATA COLLECTION phase)...');
       
-      const rca6 = await masterDataService.createRCA({
+      const rca6 = await masterDataService.createRCA(toRcaInput({
         title: 'Vacuum Distillation Unit Vacuum Loss',
         description: 'Investigation of sudden vacuum system degradation',
         eventId: criticalEvents[5]?.id,
@@ -2286,7 +2356,7 @@ export class OilGasDataSeeder {
         
         tenantId,
         organizationId
-      });
+      }));
 
       rcaCount++;
       console.log(`✅ RCA ${rcaCount}/7: ${rca6.title} (Data Collection with Event Diagram - 12 nodes)`);
@@ -2297,7 +2367,7 @@ export class OilGasDataSeeder {
       
       console.log('  Creating RCA 7/7: Cooling Tower (DRAFT phase)...');
       
-      const rca7 = await masterDataService.createRCA({
+      const rca7 = await masterDataService.createRCA(toRcaInput({
         title: 'Cooling Tower Efficiency Degradation',
         description: 'Initial investigation into reduced cooling tower performance',
         eventId: criticalEvents[6]?.id,
@@ -2345,7 +2415,7 @@ export class OilGasDataSeeder {
         
         tenantId,
         organizationId
-      });
+      }));
 
       rcaCount++;
       console.log(`✅ RCA ${rcaCount}/7: ${rca7.title} (Draft with Event Diagram - 11 nodes)`);
@@ -2378,7 +2448,6 @@ export class OilGasDataSeeder {
     const templates = await masterDataService.getRCATemplates({ tenantId });
     const units = await masterDataService.getUnits();
     const rcaCauseCodes = await masterDataService.getRCACauseCodes({ tenantId });
-    const users = await masterDataService.getUsers({ tenantId });
     
     // Filter for critical events
     const criticalEvents = events.filter(e => 
@@ -2386,7 +2455,7 @@ export class OilGasDataSeeder {
       (e.duration && e.duration > 360)
     ).slice(0, 10);
 
-    const investigations = [
+    const investigations: RcaSeed[] = [
       {
         title: 'FCC Air Blower Failure Investigation',
         description: 'Root cause analysis of catastrophic air blower failure in FCCU',
@@ -2558,7 +2627,7 @@ export class OilGasDataSeeder {
     ];
 
     for (const rca of investigations) {
-      await masterDataService.createRCA(rca);
+      await masterDataService.createRCA(toRcaInput(rca));
       console.log(`✅ Created RCA: ${rca.title}`);
     }
   }
@@ -2569,46 +2638,32 @@ export class OilGasDataSeeder {
     
     const events = await masterDataService.getProductionEvents({ tenantId });
     const units = await masterDataService.getUnits();
-    const reasonCodes = await masterDataService.getReasonCodes({ tenantId });
-    const impactCodes = await masterDataService.getImpactCodes({ tenantId });
-    
-    // Create production losses from ProductionLoss events (not Downtime)
-    const lossEvents = events.filter(e => e.eventType === 'ProductionLoss' && e.duration);
-    
+    const plans = await masterDataService.getProductionPlans({ tenantId });
+
+    // A production loss record belongs to a plan, so only plan-linked ProductionLoss events convert
+    const lossEvents = events.filter(e => e.eventType === 'ProductionLoss' && e.duration && e.planId);
+
     console.log(`   Found ${lossEvents.length} ProductionLoss events to convert to losses`);
-    
+
     for (const event of lossEvents) {
       const unit = units.find(u => u.id === event.unitId);
-      if (!unit) continue;
-      
+      const plan = plans.find(p => p.id === event.planId);
+      if (!unit || !plan) continue;
+
       // Use quantity from event if available, otherwise calculate from unit capacity
       const lossQuantity = event.quantity || Math.floor((unit.capacity / 24) * ((event.duration || 0) / 60));
-      
-      // Get cost from impact code if available
-      const impactCode = event.impactCodeId ? impactCodes.find(ic => ic.id === event.impactCodeId) : null;
-      let financialImpact = lossQuantity * 50; // Default $50 per barrel
-      
-      if (impactCode?.costPerHour && event.duration) {
-        financialImpact = (event.duration / 60) * impactCode.costPerHour;
-      } else if (impactCode?.costPerUnit && lossQuantity) {
-        financialImpact = lossQuantity * impactCode.costPerUnit;
-      }
-      
+      const planDays = Math.max(1, Math.ceil((new Date(plan.endDate).getTime() - new Date(plan.startDate).getTime()) / (24 * 60 * 60 * 1000)));
+      const dailyPlan = Math.round(plan.plannedQuantity / planDays);
+
       await masterDataService.createProductionLoss({
-        unitId: event.unitId,
-        assetId: event.assetId,
-        eventId: event.id,
-        lossDate: event.timestamp.split('T')[0],
-        lossType: 'Unplanned Downtime',
-        lossCategory: event.lossCategory || 'Availability',
-        quantity: lossQuantity,
-        duration: event.duration,
-        reasonCodeId: reasonCodes.length > 0 ? reasonCodes[Math.floor(Math.random() * reasonCodes.length)].id : undefined,
-        impactCodeId: event.impactCodeId,
-        description: `Production loss due to: ${event.description}`,
-        financialImpact: financialImpact,
-        tenantId,
-        organizationId: ''
+        planId: plan.id,
+        period: event.startTime.split('T')[0],
+        shortRangePlan: dailyPlan,
+        actual: dailyPlan - lossQuantity,
+        losses: lossQuantity,
+        unaccountedLoss: 0,
+        action: 'Reconcile',
+        tenantId
       });
     }
     
@@ -2621,22 +2676,27 @@ export class OilGasDataSeeder {
     
     const units = await masterDataService.getUnits();
     const events = await masterDataService.getProductionEvents({ tenantId });
-    
+    const plans = await masterDataService.getProductionPlans({ tenantId });
+
     // Generate OEE summaries for the past 60 days
     const now = new Date();
     for (let i = 0; i < 60; i++) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const dateStr = date.toISOString().split('T')[0];
-      
+
       for (const unit of units.slice(0, 5)) { // First 5 units
+        // An OEE summary belongs to a plan: use the unit's plan, skip units without one
+        const plan = plans.find(p => p.unitId === unit.id);
+        if (!plan) continue;
+
         // Calculate OEE components
-        const dayEvents = events.filter(e => 
-          e.unitId === unit.id && 
-          e.timestamp.startsWith(dateStr)
+        const dayEvents = events.filter(e =>
+          e.unitId === unit.id &&
+          e.startTime.startsWith(dateStr)
         );
-        
+
         const totalDowntime = dayEvents
-          .filter(e => e.eventType === 'Downtime')
+          .filter(e => e.eventType === 'ProductionLoss')
           .reduce((sum, e) => sum + (e.duration || 0), 0);
         
         const availability = Math.max(0, (1440 - totalDowntime) / 1440); // 1440 mins per day
@@ -2645,21 +2705,13 @@ export class OilGasDataSeeder {
         const oee = availability * performance * quality;
         
         await masterDataService.createOEESummary({
-          unitId: unit.id,
-          date: dateStr,
-          shift: 'All',
+          planId: plan.id,
+          period: dateStr,
           availability: Number((availability * 100).toFixed(2)),
           performance: Number((performance * 100).toFixed(2)),
           quality: Number((quality * 100).toFixed(2)),
-          oee: Number((oee * 100).toFixed(2)),
-          plannedProductionTime: 1440,
-          actualProductionTime: 1440 - totalDowntime,
-          downtime: totalDowntime,
-          idealCycleTime: unit.idealCycleTime || 60,
-          totalCount: Math.floor((1440 - totalDowntime) * 10),
-          goodCount: Math.floor((1440 - totalDowntime) * 10 * quality),
-          tenantId,
-          organizationId: ''
+          overallOEE: Number((oee * 100).toFixed(2)),
+          tenantId
         });
       }
     }

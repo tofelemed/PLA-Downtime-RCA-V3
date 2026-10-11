@@ -11,6 +11,12 @@ import {
   extractKeywords 
 } from '../types/RCAKnowledgeBase';
 
+/** Knowledge-base fields some RCA objects carry; `mapRcaDto` does not set them, so they are optional. */
+type KnowledgeSourceRCA = RCA & { unitId?: string; assetId?: string; findings?: string[]; tags?: string[] };
+
+/** Entry fields plus the payload-only ones (`isPublished`, `content`) an update may also set. */
+type KnowledgeEntryUpdate = Partial<RCAKnowledgeEntry> & { isPublished?: boolean; content?: string };
+
 class RCAKnowledgeBaseService {
   private static instance: RCAKnowledgeBaseService;
 
@@ -107,10 +113,10 @@ class RCAKnowledgeBaseService {
     };
   }
 
-  private buildUpdatePayload(updates: Partial<RCAKnowledgeEntry>): Partial<CreateKnowledgeBasePayload> {
+  private buildUpdatePayload(updates: KnowledgeEntryUpdate): Partial<CreateKnowledgeBasePayload> {
     const payload: Partial<CreateKnowledgeBasePayload> = {};
 
-    const assign = <K extends keyof Partial<RCAKnowledgeEntry>, V extends keyof CreateKnowledgeBasePayload>(
+    const assign = <K extends keyof KnowledgeEntryUpdate, V extends keyof CreateKnowledgeBasePayload>(
       sourceKey: K,
       targetKey: V,
     ) => {
@@ -172,7 +178,7 @@ class RCAKnowledgeBaseService {
   }
 
   // Create knowledge entry from completed RCA
-  async createKnowledgeEntry(rca: RCA, event?: ProductionEvent): Promise<RCAKnowledgeEntry> {
+  async createKnowledgeEntry(rca: KnowledgeSourceRCA, event?: ProductionEvent): Promise<RCAKnowledgeEntry> {
     try {
       // Get related data
       const units = rca.unitId ? await masterDataService.getUnits() : [];
@@ -362,7 +368,7 @@ class RCAKnowledgeBaseService {
   }
 
   // Update knowledge entry (e.g., when RCA is modified)
-  async updateKnowledgeEntry(id: string, updates: Partial<RCAKnowledgeEntry>): Promise<RCAKnowledgeEntry> {
+  async updateKnowledgeEntry(id: string, updates: KnowledgeEntryUpdate): Promise<RCAKnowledgeEntry> {
     const updated = await knowledgeBaseApi.updateEntry(id, this.buildUpdatePayload(updates));
     return this.mapDtoToEntry(updated);
   }
@@ -634,7 +640,7 @@ class RCAKnowledgeBaseService {
 
       // Get the current RCA data
       const allRCAs = await masterDataService.getRCAs({});
-      const rca = allRCAs.find(r => r.id === rcaId);
+      const rca: KnowledgeSourceRCA | undefined = allRCAs.find(r => r.id === rcaId);
       
       if (!rca) {
         console.warn('RCA not found:', rcaId);

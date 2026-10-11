@@ -46,7 +46,7 @@ export class CustomAttributeService {
     if (data.customValidation) validationRules.customValidation = data.customValidation;
 
     const baseDefinition: Omit<CustomAttributeDefinition, 'id' | 'createdAt' | 'updatedAt'> = {
-      entityType: data.entityType as EntityType,
+      entityType: data.entityType,
       name: data.name,
       displayName: data.displayName,
       dataType: data.dataType,
@@ -76,7 +76,7 @@ export class CustomAttributeService {
     if (data.customValidation) validationRules.customValidation = data.customValidation;
 
     const payload = buildUpdateDefinitionPayload({
-      entityType: data.entityType as EntityType | undefined,
+      entityType: data.entityType,
       name: data.name,
       displayName: data.displayName,
       dataType: data.dataType,

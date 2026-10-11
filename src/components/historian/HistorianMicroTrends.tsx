@@ -16,7 +16,8 @@ interface HistorianTag {
   name: string;
   path: string;
   units: string;
-  category: 'temperature' | 'pressure' | 'flow' | 'level' | 'power' | 'quality' | 'other';
+  /** temperature | pressure | flow | level | power | quality | other, or a custom category from the tag config */
+  category: string;
   currentValue?: number;
   trend?: 'up' | 'down' | 'stable';
   status?: 'normal' | 'warning' | 'alarm';

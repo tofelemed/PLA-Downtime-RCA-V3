@@ -33,7 +33,8 @@ interface ModulePermissions {
   settings: boolean;
 }
 
-const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, ModulePermissions> = {
+// Manager has no defaults: selecting a Manager starts from an empty permission set.
+const DEFAULT_ROLE_PERMISSIONS: Partial<Record<UserRole, ModulePermissions>> = {
   SuperAdmin: {
     dashboard: true,
     events: true,

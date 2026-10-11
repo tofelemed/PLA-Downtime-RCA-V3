@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.node.json",
+  "compilerOptions": { "lib": ["ES2023", "DOM"], "types": ["node"], "strict": false },
+  "include": ["e2e"]
+}

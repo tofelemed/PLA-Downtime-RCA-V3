@@ -237,7 +237,7 @@ class StreamingApi {
   // Data Sources
   async upsertDataSource(payload: UpsertStreamDataSourcePayload): Promise<StreamDataSourceDto> {
     const response = await httpClient.post<StreamDataSourceDto>(`${this.basePath}/data-sources`, payload);
-    return response;
+    return response.data;
   }
 
   async listDataSources(query?: StreamDataSourceQuery): Promise<StreamDataSourceDto[]> {
@@ -251,12 +251,12 @@ class StreamingApi {
     const response = await httpClient.get<StreamDataSourceDto[]>(
       `${this.basePath}/data-sources${params.toString() ? `?${params.toString()}` : ''}`
     );
-    return response;
+    return response.data;
   }
 
   async getDataSource(id: string): Promise<StreamDataSourceDto> {
     const response = await httpClient.get<StreamDataSourceDto>(`${this.basePath}/data-sources/${id}`);
-    return response;
+    return response.data;
   }
 
   async deleteDataSource(id: string): Promise<void> {
@@ -266,7 +266,7 @@ class StreamingApi {
   // Data Sinks
   async upsertDataSink(payload: UpsertStreamDataSinkPayload): Promise<StreamDataSinkDto> {
     const response = await httpClient.post<StreamDataSinkDto>(`${this.basePath}/data-sinks`, payload);
-    return response;
+    return response.data;
   }
 
   async listDataSinks(query?: StreamDataSinkQuery): Promise<StreamDataSinkDto[]> {
@@ -279,12 +279,12 @@ class StreamingApi {
     const response = await httpClient.get<StreamDataSinkDto[]>(
       `${this.basePath}/data-sinks${params.toString() ? `?${params.toString()}` : ''}`
     );
-    return response;
+    return response.data;
   }
 
   async getDataSink(id: string): Promise<StreamDataSinkDto> {
     const response = await httpClient.get<StreamDataSinkDto>(`${this.basePath}/data-sinks/${id}`);
-    return response;
+    return response.data;
   }
 
   async deleteDataSink(id: string): Promise<void> {
@@ -294,7 +294,7 @@ class StreamingApi {
   // Stream Processors
   async upsertProcessor(payload: UpsertStreamProcessorPayload): Promise<StreamProcessorDto> {
     const response = await httpClient.post<StreamProcessorDto>(`${this.basePath}/processors`, payload);
-    return response;
+    return response.data;
   }
 
   async listProcessors(query?: StreamProcessorQuery): Promise<StreamProcessorDto[]> {
@@ -307,12 +307,12 @@ class StreamingApi {
     const response = await httpClient.get<StreamProcessorDto[]>(
       `${this.basePath}/processors${params.toString() ? `?${params.toString()}` : ''}`
     );
-    return response;
+    return response.data;
   }
 
   async getProcessor(id: string): Promise<StreamProcessorDto> {
     const response = await httpClient.get<StreamProcessorDto>(`${this.basePath}/processors/${id}`);
-    return response;
+    return response.data;
   }
 
   async deleteProcessor(id: string): Promise<void> {
@@ -322,7 +322,7 @@ class StreamingApi {
   // Metrics
   async saveMetric(payload: UpsertStreamMetricPayload): Promise<StreamMetricDto> {
     const response = await httpClient.post<StreamMetricDto>(`${this.basePath}/metrics`, payload);
-    return response;
+    return response.data;
   }
 
   async getLatestMetric(query?: StreamMetricQuery): Promise<StreamMetricDto | null> {
@@ -333,7 +333,7 @@ class StreamingApi {
     const response = await httpClient.get<StreamMetricDto | null>(
       `${this.basePath}/metrics/latest${params.toString() ? `?${params.toString()}` : ''}`
     );
-    return response;
+    return response.data;
   }
 
   async getMetricHistory(query?: StreamMetricQuery): Promise<StreamMetricDto[]> {
@@ -345,13 +345,13 @@ class StreamingApi {
     const response = await httpClient.get<StreamMetricDto[]>(
       `${this.basePath}/metrics/history${params.toString() ? `?${params.toString()}` : ''}`
     );
-    return response;
+    return response.data;
   }
 
   // Alerts
   async upsertAlert(payload: UpsertStreamAlertPayload): Promise<StreamAlertDto> {
     const response = await httpClient.post<StreamAlertDto>(`${this.basePath}/alerts`, payload);
-    return response;
+    return response.data;
   }
 
   async listAlerts(query?: StreamAlertQuery): Promise<StreamAlertDto[]> {
@@ -364,7 +364,7 @@ class StreamingApi {
     const response = await httpClient.get<StreamAlertDto[]>(
       `${this.basePath}/alerts${params.toString() ? `?${params.toString()}` : ''}`
     );
-    return response;
+    return response.data;
   }
 
   async getActiveAlerts(query?: StreamAlertQuery): Promise<StreamAlertDto[]> {
@@ -376,12 +376,12 @@ class StreamingApi {
     const response = await httpClient.get<StreamAlertDto[]>(
       `${this.basePath}/alerts/active${params.toString() ? `?${params.toString()}` : ''}`
     );
-    return response;
+    return response.data;
   }
 
   async getAlert(id: string): Promise<StreamAlertDto> {
     const response = await httpClient.get<StreamAlertDto>(`${this.basePath}/alerts/${id}`);
-    return response;
+    return response.data;
   }
 
   async acknowledgeAlert(id: string): Promise<void> {
@@ -395,7 +395,7 @@ class StreamingApi {
   // Connection Configs
   async upsertConnectionConfig(payload: UpsertStreamConnectionConfigPayload): Promise<StreamConnectionConfigDto> {
     const response = await httpClient.post<StreamConnectionConfigDto>(`${this.basePath}/connection-configs`, payload);
-    return response;
+    return response.data;
   }
 
   async listConnectionConfigs(query?: StreamConnectionConfigQuery): Promise<StreamConnectionConfigDto[]> {
@@ -408,12 +408,12 @@ class StreamingApi {
     const response = await httpClient.get<StreamConnectionConfigDto[]>(
       `${this.basePath}/connection-configs${params.toString() ? `?${params.toString()}` : ''}`
     );
-    return response;
+    return response.data;
   }
 
   async getConnectionConfig(id: string): Promise<StreamConnectionConfigDto> {
     const response = await httpClient.get<StreamConnectionConfigDto>(`${this.basePath}/connection-configs/${id}`);
-    return response;
+    return response.data;
   }
 
   async deleteConnectionConfig(id: string): Promise<void> {
@@ -429,7 +429,7 @@ class StreamingApi {
     const response = await httpClient.get<any>(
       `${this.basePath}/export${params.toString() ? `?${params.toString()}` : ''}`
     );
-    return response;
+    return response.data;
   }
 
   async importAllData(payload: any): Promise<void> {

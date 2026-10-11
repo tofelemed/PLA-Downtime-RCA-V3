@@ -13,29 +13,22 @@ const INDEXEDDB_ALLOWLIST = new Set([
   'components/historian/EnhancedHistorianPage.tsx', // historian history → backend historian-history (3.7)
   'services/pi/PIStore.ts', // PI connection cache → v2 connections (3.7 integration console)
   'services/storage/UniversalConnectorDB.ts', // connector registry → v2 connections (3.7)
-  'services/alerts/AlertManager.ts', // streaming demo services (3.7, DEMO_MODE)
-  'services/analytics/RealTimeAnalytics.ts',
-  'services/correlation/EventCorrelation.ts',
+  'services/analytics/RealTimeAnalytics.ts', // streaming demo services (3.7, DEMO_MODE)
   'services/ethernetip/EtherNetIPConnector.ts',
-  'services/monitoring/PerformanceMonitor.ts',
   'services/profinet/ProfinetConnector.ts',
-  'services/quality/DataQualityMonitor.ts',
-  'services/streaming/filters/FilterEngine.ts',
   'services/StorageService.ts', // legacy store itself
   'services/OilGasDataSeeder.ts', // dev-only seeders and scripts below
   'services/PLARCADataSeeder.ts',
   'services/PresentationDataSeeder.ts',
-  'scripts/cleanupAllData.ts',
   'scripts/debugProductionLosses.ts',
   'scripts/diagnoseCementData.ts',
-  'scripts/fixSessionAndSidebar.ts',
   'scripts/seedCementIndustryData.ts',
   'scripts/seedOilGasData.ts',
   'scripts/testPlantSelector.ts',
 ]);
 
 /** Files using Math.random today (fabricated data, ids); 3.2–3.9 remove them per screen. */
-const MATH_RANDOM_FILE_LIMIT = 47;
+const MATH_RANDOM_FILE_LIMIT = 35;
 
 const NEW_CODE = ['api/', 'app/', 'features/', 'realtime/', 'lib/logger.ts', 'lib/lazy-named.ts', 'dev/'];
 

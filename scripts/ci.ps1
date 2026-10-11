@@ -35,6 +35,7 @@ function Invoke-Step {
 
 if (-not $SkipLint) {
   Invoke-Step 'Lint frontend' $Root { npm run lint }
+  Invoke-Step 'Typecheck frontend (app, tests, e2e, configs)' $Root { npm run typecheck }
   Invoke-Step 'Generated v2 API types match the OpenAPI snapshot' $Root { npm run api:types:check }
   Invoke-Step 'Lint backend' $Backend { npx eslint "{src,apps,libs,test}/**/*.ts" }
 }

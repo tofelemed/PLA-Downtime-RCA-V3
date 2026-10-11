@@ -104,7 +104,7 @@ export class UnifiedAnalyticsService {
   /**
    * Calculate event cost using standardized formula
    */
-  getEventCost(event: ProductionEvent): number {
+  getEventCost(event: ProductionEvent & { costImpact?: number }): number {
     // Check if cost is already provided
     const existingCost = Number(event.cost) || Number(event.costImpact) || 0;
     if (existingCost > 0) {

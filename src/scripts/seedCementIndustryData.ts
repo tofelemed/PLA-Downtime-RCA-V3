@@ -148,7 +148,7 @@ async function verifyCementIndustryData(tenantId: string) {
       masterDataService.getImpactCodes({ tenantId }),
       masterDataService.getOEECodes({ tenantId }),
       masterDataService.getReasonCodes({ tenantId }),
-      masterDataService.getDashboardConfigurations({ tenantId })
+      masterDataService.getDashboardConfiguration(tenantId).then(config => (config ? [config] : []))
     ]);
 
     console.log('📈 Cement Industry Data Verification Results:');

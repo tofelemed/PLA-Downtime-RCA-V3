@@ -33,7 +33,7 @@ export interface CreateUnmappedEventPayload {
   event?: Record<string, unknown>;
 }
 
-export interface UnmappedEventQuery {
+export type UnmappedEventQuery = {
   tenantId?: string;
   unitId?: string;
 }
