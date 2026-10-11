@@ -208,6 +208,24 @@ function validateTenancy(value: unknown, problems: Problems): void {
   }
 }
 
+/**
+ * A state map that maps no token to a required state would quarantine every running or stopped
+ * observation as `unmapped_value` (design §10: un-mapping a required state name is refused).
+ */
+export const REQUIRED_STATE_NAMES: readonly string[] = ['running', 'stopped'];
+
+/** The problem with a state value map, or null: at least one token must map to running or stopped. */
+export function stateMapProblem(map: unknown): string | null {
+  if (!isRecord(map)) return null;
+  const targets = Object.values(map).filter(
+    (entry): entry is string => typeof entry === 'string',
+  );
+  if (targets.some((entry) => REQUIRED_STATE_NAMES.includes(entry))) {
+    return null;
+  }
+  return `must map at least one token to ${REQUIRED_STATE_NAMES.join(' or ')}`;
+}
+
 function validateValueMaps(value: unknown, problems: Problems): void {
   if (!isRecord(value)) {
     problems.push('payloadProfile.valueMaps: must be an object');
@@ -219,6 +237,10 @@ function validateValueMaps(value: unknown, problems: Problems): void {
       continue;
     }
     validateStringMap(value[key], `payloadProfile.valueMaps.${key}`, problems);
+  }
+  const stateProblem = stateMapProblem(value.state);
+  if (stateProblem) {
+    problems.push(`payloadProfile.valueMaps.state: ${stateProblem}`);
   }
 }
 

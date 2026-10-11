@@ -12,11 +12,13 @@ export interface JobCommandDialogProps {
   job: IngestionJobView;
   /** null = closed */
   action: JobAction | null;
+  /** what each command does for this job kind (default: the PI pull-job wording) */
+  texts?: typeof ACTION_TEXT;
   onClose: () => void;
 }
 
 /** Confirmation of a job command with the reason kept in the audit trail (ING02). */
-export function JobCommandDialog({ job, action, onClose }: JobCommandDialogProps) {
+export function JobCommandDialog({ job, action, texts = ACTION_TEXT, onClose }: JobCommandDialogProps) {
   const [reason, setReason] = useState('');
   const command = useJobCommand();
   const close = () => {
@@ -29,7 +31,7 @@ export function JobCommandDialog({ job, action, onClose }: JobCommandDialogProps
     const done = await command.submit({ jobId: job.id, action, reason: reason.trim() || `${action} from the integration console` }).catch(() => null);
     if (done) close();
   };
-  const text = action ? ACTION_TEXT[action] : null;
+  const text = action ? texts[action] : null;
   return (
     <Dialog open={action !== null} onOpenChange={(next) => !next && close()}>
       <DialogContent data-testid="job-command-dialog">

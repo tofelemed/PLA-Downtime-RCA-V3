@@ -14,6 +14,16 @@ export const ERROR_CODE_INFO: Record<IngestionErrorCode, { label: string; sugges
   no_handler: { label: 'No handler for this record kind', suggestion: 'Not processed by this release; mark irrecoverable with the reason.' },
   processing_failed: { label: 'Processing failed', suggestion: 'Retry with a replay; if it keeps failing, report the reference.' },
   unknown_signal: { label: 'Unknown signal', suggestion: 'Define the signal for this source key, then replay.' },
+  // MQTT decode rejections (plan 1.8): the source object is the topic; the raw payload reference is in the detail
+  topic_shape: { label: 'Topic does not match the template', suggestion: 'Fix the topic template or the topic filters of the connection; the message is not replayable.' },
+  not_json: { label: 'Payload is not a JSON object', suggestion: 'The gateway published something else (bytes, text, array); fix the publisher, mark irrecoverable.' },
+  too_large: { label: 'Payload too large', suggestion: 'Raise maxMessageBytes on the connection or trim the message at the gateway; mark irrecoverable.' },
+  unsupported_version: { label: 'Unsupported schema_version', suggestion: 'The message declares a contract version this profile does not decode; align the gateway or the profile.' },
+  identity_mismatch: { label: 'Identity mismatch', suggestion: 'The ids in the payload disagree with the topic captures (event_id, boot_id / seq); check the gateway.' },
+  future_timestamp: { label: 'Timestamp in the future', suggestion: 'Beyond maxFutureSkewSeconds: fix the gateway clock (NTP) or the profile time settings; mark irrecoverable.' },
+  stale_timestamp: { label: 'Timestamp too old', suggestion: 'Older than maxPastSeconds: raise the window on the profile if the data is wanted, then the gateway must re-publish.' },
+  topic_not_allowed: { label: 'Topic outside the filters', suggestion: 'The broker delivered a topic the connection does not allow; narrow the broker ACL or the subscription.' },
+  unmapped_value: { label: 'Unmapped state / reason token', suggestion: 'Add the raw token to the value map on the Payload profile tab (no silent default), then replay.' },
 };
 
 export const ERROR_CODES = Object.keys(ERROR_CODE_INFO) as IngestionErrorCode[];

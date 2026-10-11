@@ -65,9 +65,9 @@ test.describe('Integration console — UX06 journey (plan 3.7)', () => {
     await openConsole(page);
     await expect(page.getByRole('tab', { name: 'Quarantine' })).toBeVisible();
 
-    // 1. configure: MQTT / Kafka are shown as not available (D09 / D10); PI with a write-only password
+    // 1. configure: Kafka is shown as not available (D10), MQTT is selectable (plan 1.8); PI with a write-only password
     await page.getByTestId('new-connection').click();
-    await expect(page.getByTestId('source-type-mqtt')).toBeDisabled();
+    await expect(page.getByTestId('source-type-mqtt')).toBeEnabled();
     await expect(page.getByTestId('source-type-kafka')).toBeDisabled();
     await page.getByTestId('source-type-pi_web_api').click();
     await page.fill('#pi-name', world.connectionName);

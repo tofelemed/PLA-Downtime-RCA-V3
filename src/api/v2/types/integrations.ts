@@ -24,6 +24,8 @@ export interface ConnectionView {
   displayName: string;
   endpointConfig: Record<string, unknown>;
   hasSecret: boolean;
+  /** MQTT: the client id the subscriber runs with (configured, or `proact-<id>`); null for other sources */
+  effectiveClientId: string | null;
   capabilities: ConnectionCapabilities;
   configVersion: number;
   isActive: boolean;
@@ -134,7 +136,17 @@ export type IngestionErrorCode =
   | 'order_conflict'
   | 'no_handler'
   | 'processing_failed'
-  | 'unknown_signal';
+  | 'unknown_signal'
+  // MQTT decode rejections (plan 1.8 design §4.2)
+  | 'topic_shape'
+  | 'not_json'
+  | 'too_large'
+  | 'unsupported_version'
+  | 'identity_mismatch'
+  | 'future_timestamp'
+  | 'stale_timestamp'
+  | 'topic_not_allowed'
+  | 'unmapped_value';
 
 export type ExceptionState = 'open' | 'resolved' | 'irrecoverable';
 

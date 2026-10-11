@@ -21,7 +21,7 @@ const job = (patch: Partial<IngestionJobView> = {}): IngestionJobView => ({
 });
 
 const connection = (patch: Partial<ConnectionView> = {}): ConnectionView => ({
-  id: 'c1', sourceType: 'pi_web_api', displayName: 'PI', endpointConfig: { piWebApiUrl: 'https://pi/piwebapi', username: 'reader' }, hasSecret: true,
+  id: 'c1', sourceType: 'pi_web_api', displayName: 'PI', endpointConfig: { piWebApiUrl: 'https://pi/piwebapi', username: 'reader' }, hasSecret: true, effectiveClientId: null,
   capabilities: {}, configVersion: 2, isActive: true, rowVersion: 4, createdAt: '2026-10-01T00:00:00Z', updatedAt: null, ...patch,
 });
 
@@ -84,9 +84,9 @@ describe('connections: write-only secret and staged diagnostics', () => {
     expect(connectionHealth({ connected: true, message: 'All PI Web API checks passed' })).toBe('connected');
   });
 
-  it('only PI is configurable; MQTT and Kafka are not available yet (D09/D10)', () => {
+  it('PI and MQTT (plan 1.8) are configurable; Kafka is not available yet (D10)', () => {
     expect(isSourceSupported('pi_web_api')).toBe(true);
-    expect(isSourceSupported('mqtt')).toBe(false);
+    expect(isSourceSupported('mqtt')).toBe(true);
     expect(isSourceSupported('kafka')).toBe(false);
   });
 

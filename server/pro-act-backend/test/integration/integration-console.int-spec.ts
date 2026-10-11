@@ -172,6 +172,23 @@ describe('integration console API (plan 3.7)', () => {
       expect((insecure.body as { code: string }).code).toBe('SECRET_REQUIRED');
       // both refusals leave the connection untouched (the sample test below still reaches the simulator)
     });
+    it('refuses payloadProfilePatch on a non-MQTT connection (422 PROFILE_PATCH_UNSUPPORTED)', async () => {
+      const { rowVersion, configVersion } = await current(piConnection);
+      const refused = await http()
+        .patch(`/api/v2/connections/${piConnection}`)
+        .set(bearer(admin))
+        .set('If-Match', `"${rowVersion}"`)
+        .send({
+          payloadProfilePatch: { valueMaps: { state: { RUN: 'running' } } },
+        })
+        .expect(422);
+      expect(refused.body).toMatchObject({
+        code: 'PROFILE_PATCH_UNSUPPORTED',
+        fieldErrors: [{ field: 'payloadProfilePatch' }],
+      });
+      expect((await current(piConnection)).configVersion).toBe(configVersion);
+    });
+
     it('refuses to edit a mirror of a v1 PI connection (409 LEGACY_CONNECTION)', async () => {
       const mirror = await insertConnection(
         harness.dataSource,

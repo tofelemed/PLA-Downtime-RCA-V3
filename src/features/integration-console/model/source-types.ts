@@ -11,9 +11,9 @@ export interface SourceTypeOption {
 }
 
 /**
- * Source types of the console (plan 3.7). Only PI Web API has an adapter today; MQTT and Kafka adapters
- * are scheduled last (decisions D09 / D10, plans 1.8 / 1.9), so they are shown as not available instead
- * of with controls that would do nothing; other protocols are planned for release 2.
+ * Source types of the console (plan 3.7). PI Web API and MQTT (plan 1.8) have adapters; the Kafka
+ * adapter is scheduled last (decision D10, plan 1.9), so it is shown as not available instead of with
+ * controls that would do nothing; other protocols are planned for release 2.
  */
 export const SOURCE_TYPE_OPTIONS: readonly SourceTypeOption[] = [
   {
@@ -25,8 +25,8 @@ export const SOURCE_TYPE_OPTIONS: readonly SourceTypeOption[] = [
   {
     type: 'mqtt',
     label: 'MQTT',
-    availability: 'scheduled',
-    description: 'Not available yet: the MQTT adapter is scheduled last (decision D09). Broker, TLS references, topics and identity strategy are configured here once it ships.',
+    availability: 'available',
+    description: 'Broker subscription hosted by the worker (persist before ack): broker, TLS, topic filters, payload profile and identity strategy.',
   },
   {
     type: 'kafka',

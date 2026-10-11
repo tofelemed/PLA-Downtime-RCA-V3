@@ -3,9 +3,8 @@ import type { ConnectionView } from '@/api/v2/types/integrations';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConsoleRefusal } from '../components/console-refusal';
+import { endpointSummary } from '../model/endpoint-summary';
 import { isSourceSupported, sourceTypeLabel } from '../model/source-types';
-
-const text = (value: unknown) => (typeof value === 'string' ? value : null);
 
 /** Name, type, endpoint (never a credential), config version and the edit / (de)activate commands. */
 export function ConnectionHeader({ connection, onEdit }: { connection: ConnectionView; onEdit: () => void }) {
@@ -20,10 +19,8 @@ export function ConnectionHeader({ connection, onEdit }: { connection: Connectio
         <Badge variant="outline">config v{connection.configVersion}</Badge>
         <Badge variant="outline" data-testid="connection-secret">{connection.hasSecret ? 'Credential stored (write-only)' : 'No credential'}</Badge>
       </div>
-      <p className="break-all text-xs text-muted-foreground">
-        {text(connection.endpointConfig.piWebApiUrl) ?? 'no endpoint'}
-        {text(connection.endpointConfig.username) ? ` · user ${text(connection.endpointConfig.username)}` : ''}
-        {connection.endpointConfig.allowInsecureTls === true ? ' · TLS verification disabled' : ''}
+      <p className="break-all text-xs text-muted-foreground" data-testid="connection-endpoint">
+        {endpointSummary(connection)}
       </p>
       {isSourceSupported(connection.sourceType) && (
         <div className="flex flex-wrap gap-2">

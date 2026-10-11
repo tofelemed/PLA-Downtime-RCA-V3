@@ -25,7 +25,7 @@ const refusal = (code: string) => ({ code, message: code, correlationId: 'corr-1
 const SECRET = 'typed-once-test-secret';
 
 const CONNECTION: ConnectionView = {
-  id: 'c1', sourceType: 'pi_web_api', displayName: 'PI sim', endpointConfig: { piWebApiUrl: 'http://127.0.0.1:9/piwebapi' }, hasSecret: true,
+  id: 'c1', sourceType: 'pi_web_api', displayName: 'PI sim', endpointConfig: { piWebApiUrl: 'http://127.0.0.1:9/piwebapi' }, hasSecret: true, effectiveClientId: null,
   capabilities: {}, configVersion: 1, isActive: true, rowVersion: 1, createdAt: '2026-10-10T00:00:00Z', updatedAt: null,
 };
 
@@ -47,13 +47,13 @@ describe('integration console flows (plan 3.7)', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('MQTT and Kafka are not selectable; a PI connection sends the password once and never keeps it', async () => {
+  it('Kafka is not selectable, MQTT is; a PI connection sends the password once and never keeps it', async () => {
     reply = () => json(201, CONNECTION);
     const onSaved = vi.fn();
     wrap(<ConnectionWizard open connection={null} onClose={() => undefined} onSaved={onSaved} />);
-    expect(screen.getByTestId('source-type-mqtt')).toBeDisabled();
+    expect(screen.getByTestId('source-type-mqtt')).toBeEnabled();
     expect(screen.getByTestId('source-type-kafka')).toBeDisabled();
-    expect(screen.getByTestId('source-type-mqtt').textContent).toMatch(/D09/);
+    expect(screen.getByTestId('source-type-kafka').textContent).toMatch(/D10/);
     fireEvent.click(screen.getByTestId('source-type-pi_web_api'));
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'PI sim' } });
     fireEvent.change(screen.getByLabelText('PI Web API URL'), { target: { value: 'http://127.0.0.1:9/piwebapi' } });

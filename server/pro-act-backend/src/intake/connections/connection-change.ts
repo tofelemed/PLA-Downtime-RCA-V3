@@ -12,6 +12,8 @@ import { SourceType } from '../envelope/canonical-envelope';
 export interface ConnectionChange {
   displayName?: string;
   endpointConfig?: Record<string, unknown>;
+  /** MQTT only: RFC 7396 merge patch of `endpointConfig.payloadProfile` (`profile-merge-patch.ts`) */
+  payloadProfilePatch?: Record<string, unknown>;
   secret?: string;
   isActive?: boolean;
 }

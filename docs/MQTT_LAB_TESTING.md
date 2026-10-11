@@ -1,9 +1,11 @@
 # MQTT lab testing — the owner demo path (plan 1.8 step 4)
 
 How to see Pro-Act consume contract v1 MQTT messages end to end on your own machine, with the bundled
-Compose broker and the publisher simulator instead of PI and the gateway. Everything here exists today;
-the console MQTT panel (3.7, plan 1.8 WP3 step 5) is not built yet, so the results are read through the
-v2 API and the Event Hub.
+Compose broker and the publisher simulator instead of PI and the gateway. Everything here exists today.
+The console MQTT panel (3.7, plan 1.8 WP3 step 5) is the point-and-click way: Integration console
+(`/connectivity`, flag `v2.integrationConsole`) → New → MQTT walks the same configuration as step 4 below
+in four steps, and the connection's Subscription / Payload profile / Quarantine tabs show what section 6
+reads through the API. The API path stays valid and is what this document shows.
 
 What you need: the Compose stack (`docker compose up -d`, see `docs/DOCKER.md`), `curl`, and the backend
 dependencies installed (`cd server/pro-act-backend && npm ci --legacy-peer-deps`) for `npm run mqtt:sim`.

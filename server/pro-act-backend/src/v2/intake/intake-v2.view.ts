@@ -1,3 +1,4 @@
+import { effectiveClientId } from '../../intake/adapters/mqtt/mqtt-config';
 import { IngestionException } from '../../intake/entities/ingestion-exception.entity';
 import { IngestionJobTransition } from '../../intake/entities/ingestion-job-transition.entity';
 import { IngestionJob } from '../../intake/entities/ingestion-job.entity';
@@ -8,6 +9,20 @@ import { ReplayRun } from '../../intake/entities/replay-run.entity';
 const iso = (value: Date | null | undefined): string | null =>
   value ? new Date(value).toISOString() : null;
 
+/** The MQTT client id the subscriber runs with (configured, or derived from the id); null otherwise. */
+function effectiveClientIdOf(connection: IntegrationConnection): string | null {
+  if (connection.sourceType !== 'mqtt') return null;
+  const mqtt = connection.endpointConfig?.mqtt;
+  const clientId =
+    typeof mqtt === 'object' && mqtt !== null && !Array.isArray(mqtt)
+      ? (mqtt as Record<string, unknown>).clientId
+      : undefined;
+  return effectiveClientId(
+    typeof clientId === 'string' ? clientId : undefined,
+    connection.id,
+  );
+}
+
 /** Connection without its secret (only whether one is stored). */
 export function toConnectionView(connection: IntegrationConnection) {
   return {
@@ -16,6 +31,7 @@ export function toConnectionView(connection: IntegrationConnection) {
     displayName: connection.displayName,
     endpointConfig: connection.endpointConfig,
     hasSecret: connection.secretRef !== null,
+    effectiveClientId: effectiveClientIdOf(connection),
     capabilities: connection.capabilities,
     configVersion: connection.configVersion,
     isActive: connection.isActive,

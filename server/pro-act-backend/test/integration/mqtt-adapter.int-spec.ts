@@ -24,6 +24,8 @@ interface ConnectionBody {
   rowVersion: number;
   configVersion: number;
   hasSecret: boolean;
+  effectiveClientId: string | null;
+  endpointConfig: Record<string, unknown>;
   capabilities: Record<string, unknown>;
 }
 
@@ -114,6 +116,14 @@ describe('MQTT adapter API (plan 1.8 step 1)', () => {
     await rows('DELETE FROM secrets');
   });
 
+  const current = async (id: string) =>
+    (
+      await http()
+        .get(`/api/v2/connections/${id}`)
+        .set(bearer(admin))
+        .expect(200)
+    ).body as ConnectionBody;
+
   describe('POST /connections (mqtt)', () => {
     it('creates a connection with an mqtt_password secret and the adapter capabilities', async () => {
       const created = await createMqtt('Lab broker', labConfig(), {
@@ -123,6 +133,7 @@ describe('MQTT adapter API (plan 1.8 step 1)', () => {
       expect(body).toMatchObject({
         hasSecret: true,
         configVersion: 1,
+        effectiveClientId: `proact-${body.id}`,
         capabilities: { replay: false, corrections: true, sequence: true },
       });
       expect(JSON.stringify(body)).not.toContain('lab-password');
@@ -276,6 +287,86 @@ describe('MQTT adapter API (plan 1.8 step 1)', () => {
         })
         .expect(422);
       expect((moved.body as ErrorBody).code).toBe('SECRET_REQUIRED');
+    });
+  });
+
+  describe('PATCH /connections/{id} payloadProfilePatch (plan 1.8 step 5)', () => {
+    const patch = (id: string, rowVersion: number, body: object) =>
+      http()
+        .patch(`/api/v2/connections/${id}`)
+        .set(bearer(admin))
+        .set('If-Match', `"${rowVersion}"`)
+        .send(body);
+
+    it('merges value maps into the stored profile without the password; topics and fields survive', async () => {
+      const created = await createMqtt(
+        'Lab broker',
+        labConfig({ mqtt: { clientId: 'proact-lab-1' } }),
+        { secret: 'lab-password' },
+      ).expect(201);
+      const { id, rowVersion } = created.body as ConnectionBody;
+      expect((created.body as ConnectionBody).effectiveClientId).toBe(
+        'proact-lab-1',
+      );
+      const patched = await patch(id, rowVersion, {
+        payloadProfilePatch: {
+          valueMaps: { state: { RUN: 'running', STOP: 'stopped' } },
+          time: { maxPastSeconds: 86_400 },
+          fields: { bootId: null },
+        },
+      }).expect(200);
+      const body = patched.body as ConnectionBody;
+      expect(body).toMatchObject({ configVersion: 2, hasSecret: true });
+      expect(body.endpointConfig.mqtt).toEqual(
+        labConfig({ mqtt: { clientId: 'proact-lab-1' } }).mqtt,
+      );
+      expect(body.endpointConfig.payloadProfile).toEqual({
+        ...(labConfig().payloadProfile as Record<string, unknown>),
+        fields: { eventTime: 'ts', sequence: 'seq' },
+        time: {
+          unit: 'iso',
+          maxFutureSkewSeconds: 300,
+          maxPastSeconds: 86_400,
+        },
+        valueMaps: { state: { RUN: 'running', STOP: 'stopped' } },
+      });
+      expect(JSON.stringify(body)).not.toContain('lab-password');
+
+      const unchanged = await patch(id, body.rowVersion, {
+        payloadProfilePatch: { time: { maxPastSeconds: 86_400 } },
+      }).expect(200);
+      expect((unchanged.body as ConnectionBody).configVersion).toBe(2);
+    });
+
+    it('refuses a state map without running or stopped, an invalid merged profile, and the patch next to endpointConfig', async () => {
+      const created = await createMqtt('Lab broker', labConfig()).expect(201);
+      const { id, rowVersion } = created.body as ConnectionBody;
+      const noRequired = await patch(id, rowVersion, {
+        payloadProfilePatch: { valueMaps: { state: { RUN: 'idle' } } },
+      }).expect(422);
+      expect(noRequired.body as ErrorBody).toMatchObject({
+        code: 'INVALID_ENDPOINT_CONFIG',
+        fieldErrors: [
+          {
+            field: 'endpointConfig.payloadProfile.valueMaps.state',
+            message: 'must map at least one token to running or stopped',
+          },
+        ],
+      });
+      const badTemplate = await patch(id, rowVersion, {
+        payloadProfilePatch: { topicTemplate: 'other/{unit}/events' },
+      }).expect(422);
+      expect(
+        (badTemplate.body as ErrorBody).fieldErrors?.map(
+          (error) => error.field,
+        ),
+      ).toContain('endpointConfig.payloadProfile.topicTemplate');
+      const both = await patch(id, rowVersion, {
+        endpointConfig: labConfig(),
+        payloadProfilePatch: {},
+      }).expect(422);
+      expect((both.body as ErrorBody).code).toBe('INVALID_CHANGE');
+      expect((await current(id)).configVersion).toBe(1);
     });
   });
 

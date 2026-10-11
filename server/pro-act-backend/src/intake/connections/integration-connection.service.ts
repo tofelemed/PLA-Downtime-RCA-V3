@@ -31,6 +31,7 @@ import {
   pickChange,
   sourceFailure,
 } from './connection-change';
+import { resolveProfilePatch } from './profile-merge-patch';
 
 export type { ConnectionChange } from './connection-change';
 
@@ -182,7 +183,7 @@ export class IntegrationConnectionService {
   async update(
     context: RequestContext,
     target: { id: string; expectedRevision: number },
-    change: ConnectionChange,
+    input: ConnectionChange,
   ): Promise<IntegrationConnection> {
     const tenantId = requireTenantId(context);
     return this.connections.manager.transaction(async (manager) => {
@@ -193,6 +194,7 @@ export class IntegrationConnectionService {
       if (!connection) return this.forTenant(tenantId, target.id);
       assertRevision(connection.rowVersion, target.expectedRevision);
       await assertNotLegacyMirror(manager, connection.id);
+      const change = resolveProfilePatch(connection, input);
       if (change.endpointConfig) {
         this.assertValidConfig(connection.sourceType, change.endpointConfig);
       }
@@ -206,11 +208,6 @@ export class IntegrationConnectionService {
           endpointConfig: change.endpointConfig ?? connection.endpointConfig,
         });
       }
-      const configChanged =
-        change.secret !== undefined ||
-        (change.endpointConfig !== undefined &&
-          canonicalJson(change.endpointConfig) !==
-            canonicalJson(connection.endpointConfig));
       if (change.secret !== undefined) {
         connection.secretRef = await this.replaceSecret(
           manager,
@@ -219,7 +216,9 @@ export class IntegrationConnectionService {
         );
       }
       Object.assign(connection, pickChange(change), {
-        configVersion: connection.configVersion + (configChanged ? 1 : 0),
+        configVersion:
+          connection.configVersion +
+          (configChanges(connection, change) ? 1 : 0),
         updatedBy: context.userId,
       });
       const saved = await manager.save(connection);
@@ -396,6 +395,19 @@ export class IntegrationConnectionService {
 
 function secretKind(sourceType: SourceType): string {
   return SECRET_KINDS[sourceType] ?? `${sourceType}_secret`;
+}
+
+/** A new secret or a materially different endpoint configuration (a rename does not count). */
+function configChanges(
+  connection: Pick<IntegrationConnection, 'endpointConfig'>,
+  change: ConnectionChange,
+): boolean {
+  return (
+    change.secret !== undefined ||
+    (change.endpointConfig !== undefined &&
+      canonicalJson(change.endpointConfig) !==
+        canonicalJson(connection.endpointConfig))
+  );
 }
 
 /**

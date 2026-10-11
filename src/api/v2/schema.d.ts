@@ -3789,6 +3789,10 @@ export interface components {
             endpointConfig?: {
                 [key: string]: unknown;
             };
+            /** @description MQTT connections only (plan 1.8): a JSON merge patch (RFC 7396) applied to the stored `endpointConfig.payloadProfile` - `null` removes a key, objects merge, other values replace - so a value-map edit never wipes the topics. The merged configuration is validated like a whole endpointConfig and bumps configVersion. 422 PROFILE_PATCH_UNSUPPORTED for other source types; 422 INVALID_CHANGE when sent together with endpointConfig. */
+            payloadProfilePatch?: {
+                [key: string]: unknown;
+            };
             /** @description Replaces the stored credential (write-only; never returned). Omit to keep the current one. */
             secret?: string;
             /** @description false deactivates the connection (its jobs stay as they are) */
@@ -6545,7 +6549,7 @@ export interface operations {
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
                 state?: "open" | "resolved" | "irrecoverable";
-                errorCode?: "unknown_template" | "unknown_code" | "unknown_unit" | "mapping_ambiguous" | "mapping_invalid_target" | "schema_invalid" | "unit_conflict" | "duration_conflict" | "order_conflict" | "no_handler" | "processing_failed" | "unknown_signal";
+                errorCode?: "unknown_template" | "unknown_code" | "unknown_unit" | "mapping_ambiguous" | "mapping_invalid_target" | "schema_invalid" | "unit_conflict" | "duration_conflict" | "order_conflict" | "no_handler" | "processing_failed" | "unknown_signal" | "topic_shape" | "not_json" | "too_large" | "unsupported_version" | "identity_mismatch" | "future_timestamp" | "stale_timestamp" | "topic_not_allowed" | "unmapped_value";
                 connectionId?: string;
                 sourceObjectId?: string;
             };

@@ -35,6 +35,20 @@ export class UpdateConnectionV2Dto {
   endpointConfig?: Record<string, unknown>;
 
   @ApiPropertyOptional({
+    type: 'object',
+    additionalProperties: true,
+    description:
+      'MQTT connections only (plan 1.8): a JSON merge patch (RFC 7396) applied to the stored ' +
+      '`endpointConfig.payloadProfile` - `null` removes a key, objects merge, other values replace - so a ' +
+      'value-map edit never wipes the topics. The merged configuration is validated like a whole ' +
+      'endpointConfig and bumps configVersion. 422 PROFILE_PATCH_UNSUPPORTED for other source types; ' +
+      '422 INVALID_CHANGE when sent together with endpointConfig.',
+  })
+  @IsOptional()
+  @IsObject()
+  payloadProfilePatch?: Record<string, unknown>;
+
+  @ApiPropertyOptional({
     maxLength: 4096,
     description:
       'Replaces the stored credential (write-only; never returned). Omit to keep the current one.',
