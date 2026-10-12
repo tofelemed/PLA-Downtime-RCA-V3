@@ -60,15 +60,18 @@ test.describe('Integration admin — quarantine', () => {
     }).toPass({ timeout: 60_000 });
     await page.screenshot({ path: test.info().outputPath('int-06a-quarantine.png'), fullPage: true });
 
+    // the row opens the item's own page (/connectivity/quarantine/:id)
+    const exceptionId = await row(page, 'not_json').getAttribute('data-exception-id');
     await row(page, 'not_json').click();
     const detail = page.getByTestId('exception-detail');
     await expect(detail).toHaveAttribute('data-code', 'not_json');
     await expect(detail).toHaveAttribute('data-state', 'open');
     await expect(page.getByTestId('raw-payload')).toBeVisible();
-    const exceptionId = await row(page, 'not_json').getAttribute('data-exception-id');
     await expect(page.getByTestId('exception-irrecoverable')).toBeDisabled(); // a reason is required
     await page.fill('#resolve-reason', 'P-INT: a non-JSON message from the simulator, nothing to replay');
     await page.getByTestId('exception-irrecoverable').click();
+    // closing for good is confirmed first
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Mark irrecoverable' }).click();
     // the actions say "Closed as irrecoverable." until the detail refetches, then the detail says "This item is irrecoverable."
     await expect(page.getByText(/Closed as irrecoverable\.|This item is irrecoverable\./)).toBeVisible({ timeout: 20_000 });
     await expect(detail).toHaveAttribute('data-state', 'irrecoverable', { timeout: 20_000 });
@@ -86,6 +89,7 @@ test.describe('Integration admin — quarantine', () => {
       await page.getByTestId('quarantine-refresh').click();
       await expect(row(page, 'too_large')).toBeVisible({ timeout: 3_000 });
     }).toPass({ timeout: 30_000 });
+    const exceptionId = await row(page, 'too_large').getAttribute('data-exception-id');
     await row(page, 'too_large').click();
     await expect(page.getByTestId('exception-detail')).toHaveAttribute('data-code', 'too_large');
     await expect(page.getByTestId('raw-payload-hidden')).toBeVisible();
@@ -95,7 +99,6 @@ test.describe('Integration admin — quarantine', () => {
     await expectHidden(page.getByTestId('exception-irrecoverable'));
     await page.screenshot({ path: test.info().outputPath('int-06b-noah-hidden-payload.png'), fullPage: true });
     const noah = await apiLogin(NOAH);
-    const exceptionId = await row(page, 'too_large').getAttribute('data-exception-id');
     expectRefused(await command(noah.token, `/v2/ingestion-exceptions/${exceptionId}/resolve`, { action: 'irrecoverable', reason: 'P-INT: engineer attempt' }), 'FORBIDDEN_ROLE');
     const detail = await call<{ state: string; raw: { payloadVisible: boolean } | null }>(noah.token, 'GET', `/v2/ingestion-exceptions/${exceptionId}`);
     expect(detail.status).toBe(200);
@@ -113,6 +116,7 @@ test.describe('Integration admin — quarantine', () => {
     await row(page, 'not_json').click();
     await expect(page.getByTestId('exception-detail')).toHaveAttribute('data-state', 'irrecoverable');
     await expect(page.getByText('This item is irrecoverable.')).toBeVisible();
+    await page.goBack();
     await page.locator('#q-state').selectOption('open');
     await expect(row(page, 'schema_invalid')).toBeVisible({ timeout: 20_000 });
   });

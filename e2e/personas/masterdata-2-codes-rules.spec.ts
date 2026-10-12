@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
 import { findCode, findRule } from '../test-utils/codes-world';
+import { adminRefusal, confirmDialog, ruleVersionRow, createCode, expectUnder, moveCode, openCode, openRule } from './support/codes-finance-ui';
 import { api, itemsOf, post } from './support/manager-api';
 import { expectHidden, expectRefused } from './support/hidden-controls';
 import { JONAS, MDA, PREFIX, asUser, mdaUnit, sessionOf, shortId, type Session } from './support/masterdata-world';
@@ -14,6 +15,7 @@ import { JONAS, MDA, PREFIX, asUser, mdaUnit, sessionOf, shortId, type Session }
  * - Zara (RULE_AUTHORS) drafts a coding_default rule (live 422), is not offered Activate (the server answers
  *   403 FORBIDDEN_ROLE to her and to Hiro), simulates; Jonas (manager) activates as setup; Zara is not
  *   offered Rollback (server: 403). Data: unit `P-MDA-CR …`, codes, rule `P-MDA-rule …` — kept.
+ * The tree starts collapsed, so where a code sits is read from the library search ("Under").
  */
 let hiro: Session;
 let zara: Session;
@@ -25,52 +27,12 @@ const ruleName = `${PREFIX}rule ${suffix}`;
 
 test.describe.configure({ mode: 'serial', timeout: 240_000 });
 
-const rowOf = (page: Page, entry: string) => page.locator(`[data-testid="code-row"][data-code="${entry}"]`);
-const refusal = (page: Page) => page.getByTestId('admin-refusal');
-
-async function openTab(page: Page, tab: string): Promise<void> {
-  await page.goto('/codes-admin');
-  await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
-  await page.getByTestId(`tab-${tab}`).click();
-}
-
-async function selectCode(page: Page, entry: string): Promise<void> {
-  await rowOf(page, entry).getByTestId('code-select').click();
-  await expect(page.getByTestId('code-detail')).toHaveAttribute('data-code', entry, { timeout: 20_000 });
-}
-
-async function createCode(page: Page, entry: string, name: string, parentLabel: string | null): Promise<void> {
-  await page.getByTestId('code-new').click();
-  await page.fill('#new-code', entry);
-  await page.fill('#new-name', name);
-  if (parentLabel === null) await page.getByTestId('new-parent').selectOption('');
-  else await page.getByTestId('new-parent').selectOption({ label: parentLabel });
-  await page.getByTestId('code-create-submit').click();
-  await expect(page.getByTestId('code-detail')).toHaveAttribute('data-code', entry, { timeout: 20_000 });
-}
-
-async function createFlatCode(page: Page, library: 'impact-codes' | 'oee-codes', entry: string, name: string): Promise<void> {
-  await page.getByTestId(`tab-${library}`).click();
-  await page.getByTestId('code-new').click();
-  await page.fill('#new-code', entry);
-  await page.fill('#new-name', name);
-  await page.getByTestId('code-create-submit').click();
-  await expect(page.getByTestId('code-detail')).toHaveAttribute('data-code', entry, { timeout: 20_000 });
-}
-
-async function moveCode(page: Page, entry: string, targetLabel: string): Promise<void> {
-  await selectCode(page, entry);
-  await page.getByTestId('code-move-target').selectOption({ label: targetLabel });
-  await page.getByTestId('code-move-submit').click();
-}
-
-async function openRule(page: Page, name: string): Promise<void> {
-  await openTab(page, 'rules');
-  await page.locator(`[data-testid="rule-item"][data-name="${name}"]`).click();
-  await expect(page.getByTestId('rule-detail')).toBeVisible({ timeout: 20_000 });
-}
-
 const mappingRow = (page: Page, kind: string, version: number) => page.locator(`[data-testid="mr-row"][data-kind="${kind}"][data-version="${version}"]`);
+
+async function openMappings(page: Page, reason: string): Promise<void> {
+  await openCode(page, 'reason-codes', reason);
+  await page.getByTestId('tab-code-mappings').click();
+}
 
 test.describe('Master data admin — codes, default mappings and declarative rules (/codes-admin)', () => {
   test.beforeAll(async () => {
@@ -82,80 +44,72 @@ test.describe('Master data admin — codes, default mappings and declarative rul
   test('MDA-02a Hiro: reason tree persists, reparent, cycle 422, retire impact 409 (not retired), versions', async ({ page }) => {
     await loginViaUI(page, MDA.hiro.email, MDA.hiro.password);
     await expect(page.locator('nav a[href="/codes-admin"]')).toBeVisible();
-    await openTab(page, 'reason-codes');
-    await createCode(page, ROOT, `${PREFIX}root`, null);
-    await createCode(page, CHILD, `${PREFIX}child`, `${ROOT} — ${PREFIX}root`);
-    await createCode(page, LEAF, `${PREFIX}leaf`, `${CHILD} — ${PREFIX}child`);
-    await createCode(page, ALT, `${PREFIX}alternative`, null);
+    await createCode(page, 'reason-codes', ROOT, `${PREFIX}root`, null);
+    await createCode(page, 'reason-codes', CHILD, `${PREFIX}child`, `${ROOT} — ${PREFIX}root`);
+    await createCode(page, 'reason-codes', LEAF, `${PREFIX}leaf`, `${CHILD} — ${PREFIX}child`);
+    await createCode(page, 'reason-codes', ALT, `${PREFIX}alternative`, null);
     const ids = Object.fromEntries(await Promise.all([ROOT, CHILD, LEAF, ALT].map(async (entry) => [entry, (await findCode(hiro.token, entry))?.id ?? ''])));
-    const expectTree = async (leafParent: string, leafDepth: string) => {
-      await expect(rowOf(page, ROOT)).toHaveAttribute('data-depth', '0');
-      await expect(rowOf(page, CHILD)).toHaveAttribute('data-parent', ids[ROOT]);
-      await expect(rowOf(page, LEAF)).toHaveAttribute('data-parent', ids[leafParent]);
-      await expect(rowOf(page, LEAF)).toHaveAttribute('data-depth', leafDepth);
-    };
-    await expectTree(CHILD, '2');
-    await openTab(page, 'reason-codes'); // reload → identical
-    await expectTree(CHILD, '2');
+    // each check reloads the library: the tree is stored, not kept in the browser
+    await expectUnder(page, 'reason-codes', ROOT, 'Top level');
+    await expectUnder(page, 'reason-codes', CHILD, `${PREFIX}root`);
+    await expectUnder(page, 'reason-codes', LEAF, `${PREFIX}root › ${PREFIX}child`);
 
     // validation: a code with spaces is refused by the server, nothing stored
     const bad = await post<{ code: string }>(hiro.token, '/v2/reason-codes', { code: `${PREFIX}bad code ${suffix}`, name: 'bad' });
     expect([400, 422]).toContain(bad.status);
     expect(await findCode(hiro.token, `${PREFIX}bad code ${suffix}`)).toBeNull();
 
-    await moveCode(page, LEAF, `${ALT} — ${PREFIX}alternative`);
-    await expect(rowOf(page, LEAF)).toHaveAttribute('data-parent', ids[ALT], { timeout: 20_000 });
-    await openTab(page, 'reason-codes');
-    await expectTree(ALT, '1');
-    await moveCode(page, LEAF, `${CHILD} — ${PREFIX}child`);
-    await expect(rowOf(page, LEAF)).toHaveAttribute('data-parent', ids[CHILD], { timeout: 20_000 });
-    expect((await findCode(hiro.token, LEAF))?.parentId).toBe(ids[CHILD]);
+    await moveCode(page, 'reason-codes', LEAF, `${ALT} — ${PREFIX}alternative`);
+    await expect.poll(async () => (await findCode(hiro.token, LEAF))?.parentId, { timeout: 20_000 }).toBe(ids[ALT]);
+    await expectUnder(page, 'reason-codes', LEAF, `${PREFIX}alternative`);
+    await moveCode(page, 'reason-codes', LEAF, `${CHILD} — ${PREFIX}child`);
+    await expect.poll(async () => (await findCode(hiro.token, LEAF))?.parentId, { timeout: 20_000 }).toBe(ids[CHILD]);
 
     // a cycle the stale screen cannot see: ALT moves under CHILD through the API, then ROOT → under ALT → 422
+    await openCode(page, 'reason-codes', ROOT);
     const alt = await findCode(hiro.token, ALT);
     const moved = await api(hiro.token, 'PUT', `/v2/reason-codes/${ids[ALT]}`, { parentId: ids[CHILD] }, { 'If-Match': `"${alt?.version}"` });
     expect(moved.status).toBe(200);
-    await moveCode(page, ROOT, `${ALT} — ${PREFIX}alternative`);
-    await expect(refusal(page)).toHaveAttribute('data-status', '422');
-    await expect(refusal(page)).toHaveAttribute('data-code', 'CODE_CYCLE');
+    await page.getByTestId('code-move-target').selectOption({ label: `${ALT} — ${PREFIX}alternative` });
+    await page.getByTestId('code-move-submit').click();
+    await expect(adminRefusal(page)).toHaveAttribute('data-status', '422');
+    await expect(adminRefusal(page)).toHaveAttribute('data-code', 'CODE_CYCLE');
 
     // retire a parent: the impact is shown, the server answers 409 — the code stays active
-    await openTab(page, 'reason-codes');
-    await selectCode(page, ROOT);
+    await openCode(page, 'reason-codes', ROOT);
     await page.getByTestId('code-retire').click();
     await expect(page.getByTestId('impact-children')).toHaveAttribute('data-count', '1');
-    await page.getByTestId('retire-confirm').click();
-    await expect(refusal(page)).toHaveAttribute('data-code', 'CODE_HAS_CHILDREN');
-    await expect(page.getByTestId('refusal-references')).toContainText('1 active child code(s)');
+    await confirmDialog(page, 'Retire code');
+    await expect(adminRefusal(page)).toHaveAttribute('data-code', 'CODE_HAS_CHILDREN');
+    await expect(page.getByTestId('refusal-references')).toContainText('1 active sub-code(s)');
     await page.keyboard.press('Escape');
-    await expect(rowOf(page, ROOT)).toHaveCount(1);
+    await expect(page.getByTestId('code-detail')).toHaveAttribute('data-active', 'true');
     const root = await api<{ active: boolean }>(hiro.token, 'GET', `/v2/reason-codes/${ids[ROOT]}`);
     expect(root.status).toBe(200);
     expect(root.body.active).toBe(true);
 
     // a rename is version 2 of the node and listed in the versions tab
-    await selectCode(page, CHILD);
+    await openCode(page, 'reason-codes', CHILD);
     await page.fill('#code-name', `${PREFIX}child renamed`);
     await page.getByTestId('code-save').click();
     await expect(page.getByTestId('code-detail')).toHaveAttribute('data-version', '2');
     await page.getByTestId('tab-code-versions').click();
-    await expect(page.locator('[data-testid="code-version"][data-version="2"] [data-testid="version-change"][data-key="name"]')).toContainText('child renamed');
+    const version2 = page.getByRole('row').filter({ has: page.locator('[data-testid="code-version"][data-version="2"]') });
+    await expect(version2.locator('[data-testid="version-change"][data-key="name"]')).toContainText('child renamed');
     await page.screenshot({ path: test.info().outputPath('mda-02a-reason-tree.png'), fullPage: true });
   });
 
   test('MDA-02b Hiro: impact and OEE codes, default mappings reason → OEE (two versions) and reason → impact', async ({ page }) => {
     await loginViaUI(page, MDA.hiro.email, MDA.hiro.password);
-    await openTab(page, 'reason-codes');
-    await createFlatCode(page, 'impact-codes', IMP, `${PREFIX}impact`);
-    await createFlatCode(page, 'oee-codes', OEE, `${PREFIX}oee`);
+    await createCode(page, 'impact-codes', IMP, `${PREFIX}impact`);
+    await createCode(page, 'oee-codes', OEE, `${PREFIX}oee`);
     const impact = await api<{ items: Array<{ id: string; code: string }> }>(hiro.token, 'GET', '/v2/impact-codes?limit=500');
     const impactId = itemsOf(impact.body).find((entry) => entry.code === IMP)?.id ?? '';
     expect(impactId).not.toBe('');
     const oee = await api<{ items: Array<{ code: string }> }>(hiro.token, 'GET', '/v2/oee-codes?limit=500');
     expect(itemsOf(oee.body).some((entry) => entry.code === OEE)).toBe(true);
 
-    await page.getByTestId('tab-mapping-rules').click();
-    await page.getByTestId('mr-reason').selectOption({ label: `${CHILD} — ${PREFIX}child renamed` });
+    await openMappings(page, CHILD);
     await page.getByTestId('mr-kind').selectOption('reason_to_oee');
     await page.getByTestId('mr-target').selectOption('availability');
     await page.getByTestId('mr-save').click();
@@ -178,17 +132,15 @@ test.describe('Master data admin — codes, default mappings and declarative rul
     expect(stored.find((rule) => rule.ruleKind === 'reason_to_impact')?.targetCodeId).toBe(impactId);
 
     // persists after a reload
-    await openTab(page, 'mapping-rules');
-    await page.getByTestId('mr-reason').selectOption({ label: `${CHILD} — ${PREFIX}child renamed` });
-    await page.getByTestId('mr-kind').selectOption('reason_to_oee');
+    await openMappings(page, CHILD);
     await expect(mappingRow(page, 'reason_to_oee', 2)).toHaveAttribute('data-target', 'performance', { timeout: 20_000 });
     await page.screenshot({ path: test.info().outputPath('mda-02b-mappings.png'), fullPage: true });
   });
 
   test('MDA-03 Zara drafts a rule (live 422), activation refused for her and Hiro (403), simulates; Jonas activates; rollback refused', async ({ page, browser }) => {
     await loginViaUI(page, MDA.zara.email, MDA.zara.password);
-    await openTab(page, 'rules');
-    await page.getByTestId('rule-new').click();
+    await page.goto('/codes-admin?tab=rules');
+    await page.getByTestId('rule-new').click({ timeout: 60_000 });
     await expect(page.getByTestId('rule-kind')).toHaveValue('coding_default');
     await page.fill('#rule-name', ruleName);
     const condition = (index: number) => page.getByTestId('rule-condition').nth(index);
@@ -234,24 +186,26 @@ test.describe('Master data admin — codes, default mappings and declarative rul
 
     // setup: the manager activates version 1; Zara's changed draft becomes version 2 after a second activation
     const jonas = await asUser(browser, JONAS);
-    await openRule(jonas, ruleName);
+    await openRule(jonas, zara.token, ruleName);
     await jonas.getByTestId('rule-activate').click();
+    await confirmDialog(jonas, 'Activate rule');
     await expect(jonas.getByTestId('rule-detail')).toHaveAttribute('data-active-version', '1', { timeout: 20_000 });
-    await openRule(page, ruleName);
+    await openRule(page, zara.token, ruleName);
     await page.getByTestId('action-value').selectOption('external');
     await expect(page.getByTestId('rule-validation')).toHaveAttribute('data-state', 'valid', { timeout: 20_000 });
     await page.getByTestId('rule-save').click();
     await expect(page.getByTestId('rule-detail')).toHaveAttribute('data-has-draft', 'true', { timeout: 20_000 });
-    await openRule(jonas, ruleName);
+    await openRule(jonas, zara.token, ruleName);
     await jonas.getByTestId('rule-activate').click();
+    await confirmDialog(jonas, 'Activate rule');
     await expect(jonas.getByTestId('rule-detail')).toHaveAttribute('data-active-version', '2', { timeout: 20_000 });
     await jonas.context().close();
 
     // Zara sees both versions but her rollback is refused; version 2 stays in force
-    await openRule(page, ruleName);
+    await openRule(page, zara.token, ruleName);
     await page.getByTestId('tab-rule-versions').click();
     await expect(page.locator('[data-testid="rule-version"][data-version="2"]')).toHaveAttribute('data-current', 'true');
-    await expectHidden(page.locator('[data-testid="rule-version"][data-version="1"]').getByTestId('rule-rollback'));
+    await expectHidden(ruleVersionRow(page, 1).getByTestId('rule-rollback'));
     const current = await findRule(zara.token, ruleName);
     const rollback = await post<{ code: string }>(zara.token, `/v2/rules/${stored?.id}/rollback`, { toVersion: 1 }, { 'If-Match': `"${current?.rowVersion}"` });
     expectRefused(rollback, 'FORBIDDEN_ROLE');

@@ -63,32 +63,22 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     section: 'production',
     capability: 'canViewOperations',
     description: 'What is down, why, how often and where',
-    flag: 'v2.downtimeAnalysis',
   },
   { name: 'Production Loss Analysis', href: '/pla-analytics', icon: EntityIcon.lossAnalysis, section: 'production', capability: 'canViewOperations', description: 'Where production is lost and why' },
-  {
-    name: 'Production Plans',
-    href: '/production-plans',
-    icon: EntityIcon.plan,
-    section: 'production',
-    capability: 'canViewAnalysis',
-    description: 'Plans and their period accounting',
-    activeAlso: ['/plans/'],
-  },
   {
     name: 'Plans, Profiles & Calendars',
     href: '/planning',
     icon: EntityIcon.planning,
     section: 'production',
     capability: 'canViewAnalysis',
-    description: 'Versioned plans, production profiles and calendars',
-    flag: 'v2.plansProfilesCalendars',
+    description: 'Production plans and their period accounting, profiles, rates and calendars',
+    activeAlso: ['/plans/'],
   },
   { name: 'RCA Analysis', href: '/rca', icon: EntityIcon.rcaCase, section: 'reliability', capability: 'canViewAnalysis', description: 'Root cause investigations' },
   { name: 'Knowledge Base', href: '/rca-knowledge-base', icon: EntityIcon.knowledge, section: 'reliability', capability: 'canViewAnalysis', description: 'Closed investigations and lessons learned' },
   { name: 'Tasks', href: '/tasks', icon: EntityIcon.task, section: 'reliability', capability: 'canViewOperations', description: 'Assign and track action items' },
   { name: 'Connectivity', href: '/connectivity', icon: EntityIcon.connection, section: 'integration', capability: 'canUseIntegrationConsole', description: 'Connections, ingestion jobs and mappings' },
-  // same gate as the page (EnhancedHistorian.tsx: canUseIntegrationConsole)
+  // listed for integration roles; the page reads signals and their samples, which every plant member may read
   { name: 'Enhanced Historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canUseIntegrationConsole', description: 'Time series of plant signals' },
   { name: 'Master Data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canManageMasterData', description: 'Plant hierarchy, units, assets and products' },
   {
@@ -98,7 +88,6 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     section: 'administration',
     capability: 'canViewAnalysis',
     description: 'Code libraries and status rules',
-    flag: 'v2.codesAdmin',
   },
   {
     name: 'Finance',
@@ -107,8 +96,6 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     section: 'administration',
     capability: 'canViewAnalysis',
     description: 'Valuation policy and exchange rates',
-    // plan 2.6 finance screens: part of the v2 admin area, listed only while its flag is on
-    flag: 'v2.codesAdmin',
   },
   { name: 'User Management', href: '/users', icon: EntityIcon.team, section: 'administration', capability: 'canAdministerTenant', description: 'Users and their access' },
   { name: 'Permissions', href: '/permissions', icon: EntityIcon.permission, section: 'administration', capability: 'canAdministerTenant', description: 'Roles and permissions' },

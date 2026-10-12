@@ -23,7 +23,15 @@ let world: PeriodWorld;
 
 test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
-const row = (page: Page, periodId: string) => page.locator(`[data-testid="period-row"][data-period-id="${periodId}"]`);
+/** The period's marker in the grid (`data-residual-state`, `data-workflow`) and its whole table row. */
+const marker = (page: Page, periodId: string) => page.locator(`[data-testid="period-row"][data-period-id="${periodId}"]`);
+const row = (page: Page, periodId: string) => page.locator('tr', { has: marker(page, periodId) });
+
+/** The plan's period grid (`/plans/:planId`); a period opens on its own page. */
+async function openGrid(page: Page): Promise<void> {
+  await page.goto(`/plans/${world.planId}`);
+  await expect(page.getByTestId('period-grid')).toBeVisible({ timeout: 60_000 });
+}
 const figure = (page: Page, key: string) => page.getByTestId('reconciliation-summary').getByTestId(`figure-${key}`);
 
 async function openPeriod(page: Page, periodId: string): Promise<void> {
@@ -63,8 +71,10 @@ test.describe('Manager persona — period accounting and adjustments (Plan Dashb
 
   test('J3a Jonas submits shift A; the submitter cannot approve (T36 SEPARATION_OF_DUTIES shown and 403)', async ({ page }) => {
     await loginViaUI(page, MANAGERS.jonas.email, MANAGERS.jonas.password);
-    await openPeriod(page, world.periods.a);
+    await openGrid(page);
     await expect(row(page, world.periods.a).getByTestId('cell-gap')).toHaveText('150.00 t');
+    await row(page, world.periods.a).click();
+    await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', /.+/, { timeout: 60_000 });
     await expect(figure(page, 'residual')).toHaveAttribute('data-value', '0');
     await expect(page.getByTestId('waterfall')).toHaveAttribute('data-closes', 'true');
     await page.getByTestId('wf-submit').click();
@@ -87,7 +97,7 @@ test.describe('Manager persona — period accounting and adjustments (Plan Dashb
     await expect(page.getByTestId('revision-history').locator('[data-action="approve"]')).toBeVisible();
     await page.getByTestId('export-start').click();
     await expect(page.getByTestId('export-job')).toHaveAttribute('data-state', 'completed', { timeout: 60_000 });
-    await expect(page.getByTestId('export-hash')).toHaveText(/sha256 [0-9a-f]{64}/);
+    await expect(page.getByTestId('export-hash')).toHaveText(/SHA-256\): [0-9a-f]{64}/);
     const download = page.waitForEvent('download');
     await page.getByTestId('export-download').click();
     expect((await download).suggestedFilename()).toMatch(/^proact-loss-lines-.+\.csv$/);
@@ -95,7 +105,8 @@ test.describe('Manager persona — period accounting and adjustments (Plan Dashb
 
     await page.reload();
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'approved', { timeout: 60_000 });
-    await expect(row(page, world.periods.a)).toHaveAttribute('data-workflow', 'approved');
+    await openGrid(page);
+    await expect(marker(page, world.periods.a)).toHaveAttribute('data-workflow', 'approved');
     const view = await api<{ revision: { lifecycle: string; approvedBy?: string | null; submittedBy?: string | null } }>(fatima.token, 'GET', `/v2/production-periods/${world.periods.a}/reconciliation`);
     expect(view.body.revision.lifecycle).toBe('approved');
     expect(view.body.revision.submittedBy ?? jonas.userId).toBe(jonas.userId);
@@ -117,8 +128,9 @@ test.describe('Manager persona — period accounting and adjustments (Plan Dashb
 
     const approver = await asUser(browser, MANAGERS.laura);
     await openPeriod(approver, world.periods.c);
-    await approver.getByTestId('wf-reason').fill(`${PREFIX}rejected: the 150 t line needs an event`);
     await approver.getByTestId('wf-reject').click();
+    await approver.getByTestId('wf-reason').fill(`${PREFIX}rejected: the 150 t line needs an event`);
+    await approver.getByRole('button', { name: 'Return revision' }).click();
     await expect(approver.getByTestId('period-detail')).not.toHaveAttribute('data-lifecycle', 'in_review');
     await expect(approver.getByTestId('revision-history').locator('[data-action="reject"]')).toBeVisible();
     const view = await api<{ revision: { lifecycle: string } }>(erik.token, 'GET', `/v2/production-periods/${world.periods.c}/reconciliation`);
@@ -140,17 +152,25 @@ test.describe('Manager persona — period accounting and adjustments (Plan Dashb
     expect([own.status, own.body.code]).toEqual([403, 'SEPARATION_OF_DUTIES']);
     const approved = await post<Adjustment>(fatima.token, `/v2/actuals/adjustments/${first.body.id}/approve`, { reason: `${PREFIX}recount verified` });
     expect([approved.status, approved.body.state]).toEqual([200, 'approved']);
-    const rejected = await post<Adjustment>(fatima.token, `/v2/actuals/adjustments/${second.body.id}/reject`, { reason: `${PREFIX}duplicate of the first recount` });
-    expect([rejected.status, rejected.body.state]).toEqual([200, 'rejected']);
+
+    // the second one is rejected in the period workspace: the reason is a required field of the dialog
+    await loginViaUI(page, MANAGERS.fatima.email, MANAGERS.fatima.password);
+    await openPeriod(page, world.periods.b);
+    const pending = page.getByTestId('adjustments').locator('tr', { has: page.locator('[data-testid="adjustment-row"][data-state="proposed"]') });
+    await expect(pending).toHaveCount(1, { timeout: 60_000 });
+    await pending.getByTestId('adjustment-reject').click();
+    await page.getByTestId('wf-reason').fill(`${PREFIX}duplicate of the first recount`);
+    await page.getByRole('button', { name: 'Reject adjustment' }).click();
+    await expect(page.locator('[data-testid="adjustment-row"][data-state="rejected"]')).toHaveCount(1, { timeout: 60_000 });
     const again = await post<{ code: string }>(fatima.token, `/v2/actuals/adjustments/${second.body.id}/approve`, {});
     expect([again.status, again.body.code]).toEqual([409, 'INVALID_TRANSITION']);
     expect((await api<Adjustment>(jonas.token, 'GET', `/v2/actuals/adjustments/${first.body.id}`)).body.state).toBe('approved');
     expect((await api<Adjustment>(jonas.token, 'GET', `/v2/actuals/adjustments/${second.body.id}`)).body.state).toBe('rejected');
 
-    // the approved adjustment is part of the actuals provenance the manager inspects (UX05)
-    await loginViaUI(page, MANAGERS.fatima.email, MANAGERS.fatima.password);
-    await openPeriod(page, world.periods.b);
-    await page.getByTestId('actuals-provenance').locator('summary').click();
-    await expect(page.getByTestId('actuals-provenance')).toContainText(/good -5[\d.]* \S* ?\(approved\)/, { timeout: 60_000 });
+    // the approved adjustment is listed with the period's adjustments the manager inspects (UX05)
+    await page.reload();
+    const approvedRow = page.getByTestId('adjustments').locator('tr', { has: page.locator('[data-testid="adjustment-row"][data-state="approved"]') });
+    await expect(approvedRow).toContainText('-5', { timeout: 60_000 });
+    await expect(approvedRow).toContainText('Approved');
   });
 });

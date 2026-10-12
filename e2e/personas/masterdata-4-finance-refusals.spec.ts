@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { loginViaUI } from '../test-utils/auth-helpers';
 import { findCode } from '../test-utils/codes-world';
 import { policiesOf } from '../test-utils/finance-world';
+import { fillDateTime, openLibrary, openRule } from './support/codes-finance-ui';
 import { api, itemsOf, post } from './support/manager-api';
 import { expectHidden, expectRefused } from './support/hidden-controls';
 import { JONAS, MDA, PREFIX, listMdaUnits, seedPlanWorld, sessionOf, shortId, utcDate, type Session } from './support/masterdata-world';
@@ -28,14 +29,11 @@ const policyNotes = `${PREFIX}policy ${suffix}`;
 
 test.describe.configure({ mode: 'serial', timeout: 240_000 });
 
-const fxRow = (page: Page, source: string) => page.locator(`[data-testid="fx-row"][data-source="${source}"]`);
-const fxState = (page: Page, source: string) => fxRow(page, source).getByTestId('version-state');
+const fxDetail = (page: Page) => page.getByTestId('fx-detail');
 
-async function openFinance(page: Page, tab: 'fx-rates' | 'policies'): Promise<void> {
-  await page.goto('/finance');
+async function openFinance(page: Page, tab: 'fx' | 'policies'): Promise<void> {
+  await page.goto(`/finance?tab=${tab}`);
   await expect(page.getByTestId('finance')).toBeVisible({ timeout: 60_000 });
-  await page.getByTestId(`tab-${tab}`).click();
-  if (tab === 'fx-rates') await page.locator('#fxPairFilter').selectOption('USD-IRR');
 }
 
 interface FxVersion {
@@ -66,28 +64,29 @@ test.describe('Master data admin — finance drafts, refusals and persistence', 
     const fxYear = nextFxYear(before);
     await loginViaUI(page, MDA.zara.email, MDA.zara.password);
     await expect(page.locator('nav a[href="/finance"]')).toBeVisible();
-    await openFinance(page, 'fx-rates');
+    await openFinance(page, 'fx');
     await page.getByTestId('fx-new').click();
     await page.selectOption('#fromCurrency', 'USD');
     await page.selectOption('#toCurrency', 'IRR');
     await page.fill('#rate', '0');
-    await page.fill('#fxEffectiveFrom', `${fxYear}-01-01T00:00`);
+    await fillDateTime(page, 'Valid from', `${fxYear}-01-01T00:00`);
     await page.fill('#fxSource', fxSource);
     await page.getByTestId('fx-save').click();
-    await expect(page.getByTestId('field-error-rate')).toContainText('> 0');
+    await expect(page.getByTestId('field-error-rate')).toContainText('greater than 0');
     expect((await fxVersions(zara.token)).find((v) => v.source === fxSource)).toBeUndefined();
     await page.fill('#rate', '2750000');
     await page.getByTestId('fx-save').click();
-    await expect(fxState(page, fxSource)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
-    await expect(fxRow(page, fxSource).getByTestId('fx-rate')).toHaveText('1 USD = 2750000 IRR');
+    // saving opens the version's page
+    await expect(fxDetail(page)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
+    await expect(fxDetail(page).getByTestId('fx-rate')).toHaveText('1 USD = 2750000 IRR');
 
-    // a profile writer is not an approver: no Approve / Retire on the FX row, and the server refuses the approval
-    await expectHidden(fxRow(page, fxSource).getByTestId('fx-approve'));
-    await expectHidden(fxRow(page, fxSource).getByTestId('fx-retire'));
+    // a profile writer is not an approver: no Approve / Retire on the FX page, and the server refuses the approval
+    await expectHidden(page.getByTestId('fx-approve'));
+    await expectHidden(page.getByTestId('fx-retire'));
     await page.screenshot({ path: test.info().outputPath('mda-06-fx-approve-hidden.png'), fullPage: true });
     const drafted = (await fxVersions(zara.token)).find((v) => v.source === fxSource);
     expectRefused(await post(zara.token, `/v2/fx-rates/${drafted?.id}/approve`, {}), 'FORBIDDEN_ROLE');
-    await expect(fxState(page, fxSource)).toHaveAttribute('data-state', 'draft');
+    await expect(fxDetail(page)).toHaveAttribute('data-state', 'draft');
 
     const draft = (await fxVersions(zara.token)).find((v) => v.source === fxSource);
     expect(draft?.state).toBe('draft');
@@ -99,10 +98,7 @@ test.describe('Master data admin — finance drafts, refusals and persistence', 
     }
     expect(approved.status).toBe(200);
     await page.reload();
-    await expect(page.getByTestId('finance')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('tab-fx-rates').click();
-    await page.locator('#fxPairFilter').selectOption('USD-IRR');
-    await expect(fxState(page, fxSource)).toHaveAttribute('data-state', 'approved');
+    await expect(fxDetail(page)).toHaveAttribute('data-state', 'approved', { timeout: 60_000 });
     const after = await fxVersions(zara.token);
     for (const version of before) expect(after.find((v) => v.id === version.id)?.state).toBe(version.state); // nothing retired
   });
@@ -200,17 +196,15 @@ test.describe('Master data admin — finance drafts, refusals and persistence', 
     expect(crew, 'a P-MDA-crew of masterdata-3 exists').not.toBe('');
 
     await loginViaUI(page, MDA.felix.email, MDA.felix.password);
-    await page.goto('/master-data');
-    await expect(page.getByRole('tablist').first()).toBeVisible({ timeout: 60_000 });
-    await page.getByRole('tab', { name: 'Units', exact: true }).click();
-    await page.getByPlaceholder('Search units...').fill(units[0].code);
-    await expect(page.getByText(units[0].name, { exact: true })).toBeVisible();
-    await page.goto('/codes-admin');
-    await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('tab-reason-codes').click();
-    await expect(page.locator(`[data-testid="code-row"][data-code="${root}"]`)).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId('tab-rules').click();
-    await expect(page.locator(`[data-testid="rule-item"][data-name="${rule?.name}"]`)).toBeVisible({ timeout: 30_000 });
+    await page.goto('/master-data/units');
+    await expect(page.getByRole('heading', { level: 1, name: 'Production units' })).toBeVisible({ timeout: 60_000 });
+    await page.getByRole('searchbox', { name: 'Search units' }).fill(units[0].code);
+    await expect(page.getByRole('link', { name: units[0].name, exact: true })).toBeVisible();
+    // the reason tree starts collapsed: the code is found with the library search; the rule opens on its own page
+    await openLibrary(page, 'reason-codes', root);
+    await expect(page.locator(`[data-testid="code-match"][data-code="${root}"]`)).toBeVisible({ timeout: 30_000 });
+    await openRule(page, felix.token, rule?.name ?? '');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(rule?.name ?? '');
     await page.goto('/planning?tab=calendars');
     await expect(page.getByTestId('calendars-tab')).toBeVisible({ timeout: 60_000 });
     await expect(page.locator('#crewSelect option', { hasText: crew })).toHaveCount(1);

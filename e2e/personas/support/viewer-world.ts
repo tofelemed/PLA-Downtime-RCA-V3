@@ -2,6 +2,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { loginViaUI } from '../../test-utils/auth-helpers';
 import { call, command, PLANTS, plantTrigger, selectPlant, type ApiErrorBody } from './admin-helpers';
+import { eventRowOf } from './event-hub-ui';
 
 /**
  * Shared world of the VIEWER persona journeys (docs/DEMO_PERSONAS.md): four users whose home plant is
@@ -27,7 +28,7 @@ export { call, command, plantTrigger, selectPlant, type ApiErrorBody };
 export const OPERATOR_MENU = ['/dashboard', '/pla-analytics', '/events', '/downtime', '/tasks'];
 export const OPERATOR_HIDDEN = ['/reports', '/planning', '/production-plans', '/rca', '/codes-admin', '/finance', '/users', '/master-data'];
 export const VIEWER_MENU = [
-  '/dashboard', '/reports', '/pla-analytics', '/production-plans', '/planning', '/events', '/downtime', '/rca',
+  '/dashboard', '/reports', '/pla-analytics', '/planning', '/events', '/downtime', '/rca',
   '/rca-knowledge-base', '/codes-admin', '/finance', '/tasks',
 ];
 export const VIEWER_HIDDEN = ['/master-data', '/users', '/permissions', '/admin', '/connectivity', '/enhanced-historian', '/audit', '/settings'];
@@ -136,7 +137,7 @@ export async function chooseUnit(page: Page, unitName: string, filterTestId = 'f
   await expect(page.getByTestId(filterTestId)).toHaveAttribute('aria-label', /1 selected/);
 }
 
-export const eventRow = (page: Page, id: string): Locator => page.locator(`[data-testid="event-row"][data-event-id="${id}"]`);
+export const eventRow = (page: Page, id: string): Locator => eventRowOf(page, id);
 export const currentStop = (page: Page, id: string): Locator => page.locator(`[data-testid="current-stop"][data-event-id="${id}"]`);
 
 /** The timezone the Event Hub form types in, read from its own hint ("Plant time (Europe/…)"). */

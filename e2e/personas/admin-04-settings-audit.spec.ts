@@ -37,16 +37,16 @@ test.describe('ADM-05 admin panel and application-wide settings', () => {
     const helena = await apiLogin(USERS.helena);
     await signIn(page, USERS.helena);
     await page.goto('/admin');
-    await expect(page.getByRole('heading', { name: 'Admin Panel' })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole('heading', { name: 'Admin panel', level: 1 })).toBeVisible({ timeout: 60_000 });
     await page.getByRole('tab', { name: 'Branding' }).click();
-    const subtitle = page.locator('#appSubtitle');
+    const subtitle = page.getByLabel('Subtitle');
     await expect(subtitle).toBeVisible();
     // retry-safe: a previous attempt may have left the probe value behind
     const original = (await subtitle.inputValue()).replace(` ${PROBE_SUFFIX}`, '');
 
     await subtitle.fill(PROBE_SUBTITLE);
-    await page.getByRole('button', { name: 'Save Changes' }).click();
-    await expectToast(page, 'Branding settings saved successfully');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expectToast(page, 'Branding saved');
     const saved = await call<Branding>(helena.token, 'GET', '/app-settings/branding/value');
     expect(saved.status).toBe(200);
     expect(saved.body.appSubtitle).toBe(PROBE_SUBTITLE);
@@ -55,9 +55,9 @@ test.describe('ADM-05 admin panel and application-wide settings', () => {
     await page.screenshot({ path: test.info().outputPath('adm-05a-branding-changed.png') });
 
     await page.getByRole('tab', { name: 'Branding' }).click();
-    await page.locator('#appSubtitle').fill(original);
-    await page.getByRole('button', { name: 'Save Changes' }).click();
-    await expectToast(page, 'Branding settings saved successfully');
+    await page.getByLabel('Subtitle').fill(original);
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expectToast(page, 'Branding saved');
     const restored = await call<Branding>(helena.token, 'GET', '/app-settings/branding/value');
     expect(restored.body.appSubtitle).toBe(original);
     await page.reload();
@@ -106,12 +106,12 @@ test.describe('ADM-06 audit log', () => {
     await signIn(page, USERS.helena);
     await selectPlant(page, PLANTS.demo2);
     await page.goto('/audit');
-    await expect(page.getByRole('heading', { name: 'Audit Logs' })).toBeVisible({ timeout: 60_000 });
-    await page.getByPlaceholder('Search user, action, entity...').fill(unit?.id ?? '');
+    await expect(page.getByRole('heading', { name: 'Audit log', level: 1 })).toBeVisible({ timeout: 60_000 });
+    await page.getByLabel('Search actions, records and details').fill(unit?.id ?? '');
     const row = page.locator('tbody tr').first();
     await expect(row).toBeVisible();
     await expect(row).toContainText('Unit');
-    await expect(row).toContainText(/UPDATE|CREATE/);
+    await expect(row).toContainText(/Changed|Created/);
     await page.screenshot({ path: test.info().outputPath('adm-06a-audit-dp2.png'), fullPage: true });
     // the actor column shows the SuperAdmin who acted on Demo Plant 2
     await expect(row.locator('td').nth(1)).toContainText(/Helena Fischer|helena\.fischer/);
@@ -148,8 +148,8 @@ test.describe('ADM-06 audit log', () => {
   test('ADM-06c OrgAdmin reaches /audit of its own plant; the audit menu is hidden from an Operator', async ({ page }) => {
     await signIn(page, USERS.ravi);
     await page.goto('/audit');
-    await expect(page.getByRole('heading', { name: 'Audit Logs' })).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByText('Total Entries')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Audit log', level: 1 })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole('table', { name: 'Audit entries' })).toBeVisible();
     await signOut(page);
     await signIn(page, USERS.liam);
     await expect(page.getByRole('link', { name: /Audit/ })).toHaveCount(0);

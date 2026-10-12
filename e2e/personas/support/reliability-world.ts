@@ -6,6 +6,7 @@ import { expect, type Page } from '@playwright/test';
 import { authenticate } from '../../test-utils/api-helpers';
 import { loginViaUI } from '../../test-utils/auth-helpers';
 import { call, command } from '../../test-utils/downtime-world';
+import { backToList, eventRowOf, fillPlantTime } from './event-hub-ui';
 
 /**
  * Shared world of the RELIABILITY ENGINEER persona journeys (docs/DEMO_PERSONAS.md): the four
@@ -136,16 +137,16 @@ export interface NewEventInput {
   description: string;
 }
 
-/** Records a downtime event through the Event Hub "New event" dialog; returns the id the server gave it. */
+/** Records a downtime event through the Event Hub "New event" page; returns the id the server gave it. */
 export async function createEventViaUi(page: Page, input: NewEventInput): Promise<string> {
-  await page.getByRole('button', { name: 'New event' }).click();
+  await page.getByRole('link', { name: 'New event' }).click();
   const form = page.getByTestId('event-form');
   await expect(form).toBeVisible();
   const hint = await form.getByText(/^Plant time \(/).first().textContent();
   const timezone = /\((.+)\)/.exec(hint ?? '')?.[1] ?? 'UTC';
   await form.locator('#unitId').selectOption({ label: input.unitName });
   await form.locator('#physicalType').selectOption('downtime');
-  await form.locator('#startLocal').fill(plantLocal(input.startIso, timezone));
+  await fillPlantTime(form, 'Start', plantLocal(input.startIso, timezone));
   if (input.durationMinutes !== undefined) await form.locator('#durationMinutes').fill(String(input.durationMinutes));
   await form.locator('#scheduleClass').selectOption(input.scheduleClass);
   await form.locator('#description').fill(input.description);
@@ -155,27 +156,26 @@ export async function createEventViaUi(page: Page, input: NewEventInput): Promis
   expect(response.status(), await response.text()).toBe(201);
   const body = (await response.json()) as { id: string };
   await expect(form).toBeHidden();
-  // the hub opens the new event's detail drawer by itself; the journeys open it from the list instead
+  // the save opens the new event's page; the journeys open it from the list instead
   const detail = page.getByTestId('event-detail');
   await expect(detail.getByText(input.description).first()).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(detail).toBeHidden();
+  await backToList(page);
   return body.id;
 }
 
 export const stopCard = (page: Page, id: string) => page.locator(`[data-testid="current-stop"][data-event-id="${id}"]`);
-export const eventRow = (page: Page, id: string) => page.locator(`[data-testid="event-row"][data-event-id="${id}"]`);
+export const eventRow = (page: Page, id: string) => eventRowOf(page, id);
 
 export async function openStop(page: Page, stopId: string): Promise<void> {
-  await stopCard(page, stopId).getByRole('button', { name: 'Open' }).click();
+  await stopCard(page, stopId).getByRole('link', { name: 'Open' }).click();
   await expect(page.getByTestId('event-detail')).toBeVisible();
 }
 
+/** Opens a case page: the overview, or the sub-page that holds links / actions / outcome. */
 export async function openCase(page: Page, caseId: string, tab?: 'links' | 'actions' | 'outcome'): Promise<void> {
-  await page.goto(`/rca?case=${caseId}`);
-  await expect(page.getByTestId('rca-v2')).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByTestId('case-title')).toBeVisible();
-  if (tab) await page.getByTestId(`tab-${tab}`).click();
+  const sub = tab === 'actions' ? '/actions' : tab ? '/links' : '';
+  await page.goto(`/rca/${caseId}${sub}`);
+  await expect(page.getByTestId('case-detail')).toBeVisible({ timeout: 60_000 });
 }
 
 export interface RecommendationBody {

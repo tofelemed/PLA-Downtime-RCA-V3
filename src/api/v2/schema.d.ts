@@ -84,6 +84,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/production-events/{id}/retract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retract a manual event (v2 equivalent of the v1 delete)
+         * @description Events are append-only: the event is tombstoned (physical state `retracted`, a `retraction` revision) and its window is recalculated; nothing is deleted. 409 SOURCE_OWNED for events delivered by a connected source (their source retracts them); 409 INVALID_STATE when already superseded or retracted; 412 STALE_REVISION; 404 for foreign or unknown ids.
+         */
+        post: operations["ProductionEventOperationsV2Controller_retract_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/production-events": {
         parameters: {
             query?: never;
@@ -102,6 +122,26 @@ export interface paths {
          * @description Requires `Idempotency-Key`. Give `endTime` or `durationSeconds` (both must agree within 1 s), or neither for an open event. Classifications default from `eventType`. 422 on interval violations.
          */
         post: operations["ProductionEventsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-events/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the filtered production events as CSV (newest first)
+         * @description Same filters as the list; from and to are required (≤ 400 days, 422 INVALID_RANGE / WINDOW_TOO_LARGE). At most 50,000 rows (422 EXPORT_TOO_LARGE). Columns: start_utc, end_utc, duration_seconds, unit, asset, event_type, physical_type, schedule_class, oee_component, reason_code, reason, physical_state, coding_state, rca_state, severity, source_kind, description, quantity, quantity_uom, cost.
+         */
+        get: operations["ProductionEventsV2Controller_exportCsv_v2"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -227,7 +267,7 @@ export interface paths {
         get: operations["SourceMappingsV2Controller_get_v2"];
         /**
          * Replace a mapping rule (next version)
-         * @description Requires `If-Match: "<rowVersion>"` (428 without, 412 when stale). Rules mirrored from a v1 hierarchy mapping are edited through v1 (409 LEGACY_MAPPING).
+         * @description Requires `If-Match: "<rowVersion>"` (428 without, 412 when stale). Rules mirrored from a v1 hierarchy mapping are adopted: the link to the v1 row is dropped and the rule is edited here from then on.
          */
         put: operations["SourceMappingsV2Controller_replace_v2"];
         post?: never;
@@ -1887,6 +1927,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/production-plans/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit the draft version for approval (draft → submitted)
+         * @description Requires `Idempotency-Key`. Records who submitted it on the plan; a submitted version stays editable and is approved or returned by a manager approver. 409 INVALID_TRANSITION for an approved or superseded version; submitting a submitted version returns it unchanged.
+         */
+        post: operations["ProductionPlanReviewV2Controller_submit_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-plans/{id}/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Return the submitted version to its author with a reason (submitted → draft)
+         * @description Requires `Idempotency-Key`. The reason is kept on the plan for the author. 403 SEPARATION_OF_DUTIES for the author of the version (any role); 409 INVALID_TRANSITION unless the version is submitted.
+         */
+        post: operations["ProductionPlanReviewV2Controller_returnToAuthor_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/plan-scenarios": {
         parameters: {
             query?: never;
@@ -2608,6 +2688,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reports/downtime-bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Several downtime breakdowns (views) from one run selection, window and unit set (T24)
+         * @description Reads stored KPI terms of the shown runs (approved revision, else the open draft — provisional); never computes on read. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days by period start. Each views token is <groupBy>[:duration|frequency][:<scheduleClass>]; every view equals `/reports/downtime` with that groupBy, metric and scheduleClass (no reason drill: use `/reports/downtime` with parentReasonId). The period summary and calculationRunIds are shared.
+         */
+        get: operations["KpiReportsV2Controller_downtimeBundle_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/reports/reliability": {
         parameters: {
             query?: never;
@@ -3024,6 +3124,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/rcas/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Counts of the cases of your scope by status, overdue and open critical */
+        get: operations["RcaCasesV2Controller_summary_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/evidence-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Evidence categories and locations of the tenant (pick lists of the evidence form) */
+        get: operations["RcaCasesV2Controller_evidenceOptions_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/rcas/{id}": {
         parameters: {
             query?: never;
@@ -3035,7 +3169,11 @@ export interface paths {
         get: operations["RcaCasesV2Controller_get_v2"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete an open case nothing refers to yet
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). 409 RCA_CASE_IN_USE once the case is closed, linked, has actions or a recommendation or knowledge entry points at it. Analysis records go with the case.
+         */
+        delete: operations["RcaCasesV2Controller_remove_v2"];
         options?: never;
         head?: never;
         /**
@@ -3043,6 +3181,26 @@ export interface paths {
          * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). Setting status Closed feeds the knowledge base (unpublished entry) and marks linked events RCA completed.
          */
         patch: operations["RcaCasesV2Controller_update_v2"];
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/logic-tree/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace the logic tree with a fresh copy of the case's template
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). 422 NO_TEMPLATE for a case opened without a template.
+         */
+        post: operations["RcaCasesV2Controller_resetLogicTree_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v2/rcas/{id}/outcome": {
@@ -3077,6 +3235,180 @@ export interface paths {
          * @description Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). 422 INVALID_REFERENCE for a target outside your scope.
          */
         post: operations["RcaLinksV2Controller_link_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/analyses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The analysis tool records of a case (null = not saved yet) */
+        get: operations["RcaCaseWorkspaceV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/analyses/five-why": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save the 5-Why analysis
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         */
+        put: operations["RcaCaseWorkspaceV2Controller_fiveWhy_v2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/analyses/fishbone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save the fishbone (Ishikawa) diagram
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         */
+        put: operations["RcaCaseWorkspaceV2Controller_fishbone_v2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/analyses/fmea": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save the FMEA (the server computes each cause RPN)
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         */
+        put: operations["RcaCaseWorkspaceV2Controller_fmea_v2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/analyses/fault-tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save the fault tree
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         */
+        put: operations["RcaCaseWorkspaceV2Controller_faultTree_v2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/analyses/barrier": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save the barrier analysis
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         */
+        put: operations["RcaCaseWorkspaceV2Controller_barrier_v2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/analyses/change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save the change analysis
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         */
+        put: operations["RcaCaseWorkspaceV2Controller_change_v2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Store an evidence file of the case (25 MiB, documents / images / videos)
+         * @description Answers the stored file name; reference it from an evidence item (`attachments`) and save the case. Not idempotent: a repeated upload stores another file, an unreferenced file is never served.
+         */
+        post: operations["RcaCaseWorkspaceV2Controller_upload_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/attachments/{fileName}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download an evidence file the case references (others 404) */
+        get: operations["RcaCaseWorkspaceV2Controller_download_v2"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3338,46 +3670,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v2/units": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List the units of the caller scope (keyset on createdAt, id)
-         * @description Tenant from the identity; a caller with unit-level grants sees only those units (`scope.unitIds`).
-         */
-        get: operations["UnitsV2Controller_list_v2"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v2/products": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List the products of the caller tenant (keyset on createdAt, id)
-         * @description Tenant from the identity; products are tenant master data, the same list for every member.
-         */
-        get: operations["ProductsV2Controller_list_v2"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v2/period-summaries": {
         parameters: {
             query?: never;
@@ -3518,6 +3810,1053 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reports/activity-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * RCA cases and tasks created in the window by status, priority and plant-local day (open, overdue); audit entries by action, entity type and day for audit readers
+         * @description Counts in SQL over records created in [from, to) (≤ 400 days, 422 INVALID_RANGE / WINDOW_TOO_LARGE). Tenant from identity; RCA cases of a unit-limited caller are those of its units; `audit` is null unless the caller may read the audit log (SuperAdmin, OrgAdmin, TenantAdmin, manager approver). Days are counted in the plant timezone (default site, else the plant, else UTC).
+         */
+        get: operations["ActivitySummaryV2Controller_summary_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Members of the acting plant (keyset by name or creation time)
+         * @description Home plant or a scope grant in the plant; organization-level users too for organization and super administrators. Filters: q (name, e-mail), roles, isActive. `manageable` says whether you may change the user.
+         */
+        get: operations["UsersV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a user (requires Idempotency-Key)
+         * @description Placed in the acting plant unless a super administrator chooses another; 409 EMAIL_EXISTS. Rank rule: a role at most your own; only users ranked strictly below you (and within your plant, or your organization for an organization administrator) can be edited, deactivated or deleted (403 ROLE_GRANT_NOT_ALLOWED / TENANT_NOT_ALLOWED / ORGANIZATION_NOT_ALLOWED).
+         */
+        post: operations["UsersV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/users/directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * User names for ids, or the active members of the plant (any member)
+         * @description With `ids`: names of those users (inactive too) who are members of the plant or placed in no plant; others are left out. Without `ids`: active members by name (keyset), for assignee pickers.
+         */
+        get: operations["UsersV2Controller_userDirectory_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/users/grantable-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Roles you may give (at most your own rank) */
+        get: operations["UsersV2Controller_grantableRoles_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One user of your reach (404 otherwise) */
+        get: operations["UsersV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a user and its scope grants
+         * @description 422 CANNOT_DELETE_SELF for your own account. Rank rule: a role at most your own; only users ranked strictly below you (and within your plant, or your organization for an organization administrator) can be edited, deactivated or deleted (403 ROLE_GRANT_NOT_ALLOWED / TENANT_NOT_ALLOWED / ORGANIZATION_NOT_ALLOWED).
+         */
+        delete: operations["UsersV2Controller_remove_v2"];
+        options?: never;
+        head?: never;
+        /**
+         * Change name, e-mail, role, password or active state of a user
+         * @description 422 CANNOT_DEACTIVATE_SELF for your own account. Rank rule: a role at most your own; only users ranked strictly below you (and within your plant, or your organization for an organization administrator) can be edited, deactivated or deleted (403 ROLE_GRANT_NOT_ALLOWED / TENANT_NOT_ALLOWED / ORGANIZATION_NOT_ALLOWED).
+         */
+        patch: operations["UsersV2Controller_update_v2"];
+        trace?: never;
+    };
+    "/api/v2/user-scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Scope grants in the acting plant (newest first)
+         * @description `lock` says why you may not revoke a grant (null when you may).
+         */
+        get: operations["UserScopesV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Grant a role in the plant or one of its units (requires Idempotency-Key)
+         * @description 409 SCOPE_EXISTS, 422 USER_INACTIVE / INVALID_REFERENCE. You cannot grant or revoke your own access (403 SELF_GRANT_NOT_ALLOWED), a role above your rank or for a user who is not ranked below you (403 ROLE_GRANT_NOT_ALLOWED); the grant mirroring a user’s role in its home plant changes with the role (422 HOME_SCOPE_REQUIRED). Every grant and revoke is audited.
+         */
+        post: operations["UserScopesV2Controller_grant_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/user-scopes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke a grant
+         * @description You cannot grant or revoke your own access (403 SELF_GRANT_NOT_ALLOWED), a role above your rank or for a user who is not ranked below you (403 ROLE_GRANT_NOT_ALLOWED); the grant mirroring a user’s role in its home plant changes with the role (422 HOME_SCOPE_REQUIRED). Every grant and revoke is audited.
+         */
+        delete: operations["UserScopesV2Controller_revoke_v2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tasks of the acting plant (keyset; earliest due first by default)
+         * @description Filters: statuses, priorities, assignedToMe or assigneeId, linkType + linkId, q (title, description), overdue, from/to on the due date (half-open). Names are resolved on the server.
+         */
+        get: operations["TasksV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a task (requires Idempotency-Key)
+         * @description 422 INVALID_ASSIGNEE when the assignee is not an active member of the plant.
+         */
+        post: operations["TasksV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/tasks/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Counts by status and overdue of the filtered tasks */
+        get: operations["TasksV2Controller_summary_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/tasks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One task of the acting plant (404 otherwise) */
+        get: operations["TasksV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        /** Delete a task */
+        delete: operations["TasksV2Controller_remove_v2"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a task
+         * @description Leaving Completed clears the completion time; linkType null removes the link.
+         */
+        patch: operations["TasksV2Controller_update_v2"];
+        trace?: never;
+    };
+    "/api/v2/tasks/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a task completed (requires Idempotency-Key) */
+        post: operations["TasksV2Controller_complete_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Audit entries of the acting plant (newest first, keyset)
+         * @description Filters: from/to (entry time, half-open; from ≥ to is 422 INVALID_RANGE), actions, entityTypes, userIds, entityId, q (action, entity type, details). Actor names are resolved on the server.
+         */
+        get: operations["AuditLogsV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/audit-logs/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Counts of the filtered entries: total, by action, by entity type, by UTC day */
+        get: operations["AuditLogsV2Controller_summary_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/audit-logs/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * CSV of the filtered entries (newest first, at most 10000 rows)
+         * @description Times in ISO 8601 UTC. `X-Export-Truncated: true` when more entries matched.
+         */
+        get: operations["AuditLogsV2Controller_export_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/audit-logs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One audit entry of the acting plant (404 otherwise) */
+        get: operations["AuditLogsV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/custom-attribute-definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Definitions that apply in the acting plant, in display order (keyset)
+         * @description The plant’s own, its organization’s and the shared ones. `editable` says whether you may change it.
+         */
+        get: operations["CustomAttributesV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a definition for the acting plant (requires Idempotency-Key)
+         * @description 409 ATTRIBUTE_EXISTS when the level already has this internal name.
+         */
+        post: operations["CustomAttributesV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/custom-attribute-definitions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One definition (404 when it does not apply in the plant) */
+        get: operations["CustomAttributesV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        /** Delete a definition and every value stored for it */
+        delete: operations["CustomAttributesV2Controller_remove_v2"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a definition
+         * @description 403 ATTRIBUTE_NOT_EDITABLE for a shared definition unless you are a super administrator.
+         */
+        patch: operations["CustomAttributesV2Controller_update_v2"];
+        trace?: never;
+    };
+    "/api/v2/dashboard-configuration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The plant’s dashboard settings (defaults while none are stored) */
+        get: operations["DashboardConfigV2Controller_get_v2"];
+        /** Store the plant’s dashboard settings (every section) */
+        put: operations["DashboardConfigV2Controller_save_v2"];
+        post?: never;
+        /** Reset to the defaults (removes the stored settings) */
+        delete: operations["DashboardConfigV2Controller_reset_v2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Organizations you may see, by name (keyset) */
+        get: operations["OrganizationsV2Controller_list_v2"];
+        put?: never;
+        /** Create an organization (requires Idempotency-Key); 409 CODE_EXISTS */
+        post: operations["OrganizationsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/organizations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete an organization without plants (409 ORGANIZATION_HAS_PLANTS) */
+        delete: operations["OrganizationsV2Controller_remove_v2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plants you may see, by name (keyset)
+         * @description Super administrators: all; organization administrators: their organization’s; others: their plants.
+         */
+        get: operations["PlantsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a plant in an organization (requires Idempotency-Key)
+         * @description Super administrators, or the organization’s administrator (403 ORGANIZATION_NOT_ALLOWED); 422 INVALID_TIMEZONE, 409 CODE_EXISTS.
+         */
+        post: operations["PlantsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/tenants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One plant you may see (404 otherwise) */
+        get: operations["PlantsV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete an empty plant
+         * @description 409 PLANT_IN_USE while it has units or users; 422 PLANT_IN_USE for the plant you act in.
+         */
+        delete: operations["PlantsV2Controller_remove_v2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/tenants/{id}/display-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Calendar system and digits of a plant
+         * @description Super administrators, or a plant administrator / manager approver acting in the plant (403 FORBIDDEN_ROLE).
+         */
+        patch: operations["PlantsV2Controller_updateDisplaySettings_v2"];
+        trace?: never;
+    };
+    "/api/v2/branding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The branding (defaults while none is stored) */
+        get: operations["BrandingV2Controller_get_v2"];
+        /** Store the branding (super administrators) */
+        put: operations["BrandingV2Controller_save_v2"];
+        post?: never;
+        /** Back to the default branding (super administrators) */
+        delete: operations["BrandingV2Controller_reset_v2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-policies/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The RCA trigger policy in force now (unit override, else tenant-wide)
+         * @description Without unitId the tenant-wide version. A tenant without any version gets the D13 default (3600 s, 3 failures in 30 days, recommend, no cost trigger) as version 1 on first read. unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE).
+         */
+        get: operations["RcaPoliciesV2Controller_current_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Versions of the tenant-wide or one unit’s RCA trigger policy (newest first)
+         * @description Keyset pages on the version number (limit 1–100, default 20).
+         */
+        get: operations["RcaPoliciesV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Record a new approved RCA trigger policy version, effective now
+         * @description Requires `Idempotency-Key`. Version n+1 of the scope (tenant-wide, or the unit override); the previous open version of the same scope ends now. The tenant-wide policy needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); 422 INVALID_POLICY when the body breaks the rca_policy contract.
+         */
+        post: operations["RcaPoliciesV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the units of the caller scope (keyset; sort createdAt, code or name)
+         * @description Tenant from the identity; a caller with unit-level grants sees only those units (`scope.unitIds`). `q` searches code and name; `status` = active | retired | all (default all).
+         */
+        get: operations["UnitsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a unit in the acting plant
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 MASTER_DATA_CODE_EXISTS when another unit of the plant has the code (case-insensitive).
+         */
+        post: operations["UnitsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/units/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one unit (ETag = row version); foreign ids are 404 */
+        get: operations["UnitsV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a unit
+         * @description Requires `If-Match: "<rowVersion>"` (428 / 412 STALE_REVISION). 409 MASTER_DATA_CODE_EXISTS for a code in use, 409 MASTER_DATA_RETIRED for a retired unit.
+         */
+        patch: operations["UnitsV2Controller_change_v2"];
+        trace?: never;
+    };
+    "/api/v2/units/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire a unit (history and references stay)
+         * @description Requires `Idempotency-Key`. 409 UNIT_HAS_ACTIVE_ASSETS (`details.activeAssets`) while the unit has active assets; 409 MASTER_DATA_RETIRED when already retired.
+         */
+        post: operations["UnitsV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/units/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore a retired unit
+         * @description Requires `Idempotency-Key`. 409 MASTER_DATA_NOT_RETIRED for an active unit.
+         */
+        post: operations["UnitsV2Controller_restore_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the assets of the caller scope (keyset; sort createdAt, code or name)
+         * @description Tenant from the identity; unit-scoped callers see the assets of their units. Filters: `unitIds`, `q` (code and name), `status` = active | retired | all (default all).
+         */
+        get: operations["AssetsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create an asset under an active unit of the acting plant
+         * @description Requires `Idempotency-Key` and a tenant-wide grant. 409 MASTER_DATA_CODE_EXISTS for a code in use in the plant; 422 INVALID_REFERENCE for a unit outside the plant or retired.
+         */
+        post: operations["AssetsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/assets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one asset (ETag = row version); foreign ids are 404 */
+        get: operations["AssetsV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change an asset (may move it to another active unit)
+         * @description Requires `If-Match: "<rowVersion>"` (428 / 412 STALE_REVISION). 409 MASTER_DATA_CODE_EXISTS, 409 MASTER_DATA_RETIRED, 422 INVALID_REFERENCE as on create.
+         */
+        patch: operations["AssetsV2Controller_change_v2"];
+        trace?: never;
+    };
+    "/api/v2/assets/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire an asset (history and references stay)
+         * @description Requires `Idempotency-Key`. 409 MASTER_DATA_RETIRED when already retired.
+         */
+        post: operations["AssetsV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/assets/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore a retired asset (its unit must be active)
+         * @description Requires `Idempotency-Key`. 409 MASTER_DATA_NOT_RETIRED for an active asset; 422 INVALID_REFERENCE while its unit is retired.
+         */
+        post: operations["AssetsV2Controller_restore_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the products of the acting plant (keyset; sort createdAt, code or name)
+         * @description Tenant from the identity; products are master data, the same list for every member. `includeOrganization=true` adds the products shared by every plant of the organisation. `q` searches code and name; `status` = active | retired | all (default all).
+         */
+        get: operations["ProductsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a product of the organisation (default) or of the acting plant
+         * @description Requires `Idempotency-Key` and a tenant-wide grant. 409 MASTER_DATA_CODE_EXISTS when a product of the plant, of the organisation or of another plant of the organisation has the code (case-insensitive).
+         */
+        post: operations["ProductsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one product of the plant or its organisation (ETag = row version); others are 404 */
+        get: operations["ProductsV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a product (an organisation product changes for every plant)
+         * @description Requires `If-Match: "<rowVersion>"` (428 / 412 STALE_REVISION). 409 MASTER_DATA_CODE_EXISTS, 409 MASTER_DATA_RETIRED.
+         */
+        patch: operations["ProductsV2Controller_change_v2"];
+        trace?: never;
+    };
+    "/api/v2/products/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire a product (is_active = false; profiles and plans keep it)
+         * @description Requires `Idempotency-Key`. 409 MASTER_DATA_RETIRED when already retired.
+         */
+        post: operations["ProductsV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/products/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore a retired product
+         * @description Requires `Idempotency-Key`. 409 MASTER_DATA_NOT_RETIRED for an active product.
+         */
+        post: operations["ProductsV2Controller_restore_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the RCA templates of the plant (keyset; no logic tree, `nodeCount` instead)
+         * @description `q` searches name and category; `status` = active | retired | all (default all); `sort` code sorts by name.
+         */
+        get: operations["RcaTemplatesV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create an RCA template
+         * @description Requires `Idempotency-Key` and a tenant-wide grant. 422 INVALID_REFERENCE for a logic tree beyond 500 nodes / 12 levels, repeated node ids, or checklists that are not active checklists of the plant.
+         */
+        post: operations["RcaTemplatesV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one RCA template with its logic tree (ETag = row version) */
+        get: operations["RcaTemplatesV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change an RCA template (a given `logicTree` replaces the whole tree)
+         * @description Requires `If-Match: "<rowVersion>"` (428 / 412). 409 MASTER_DATA_RETIRED for a retired template.
+         */
+        patch: operations["RcaTemplatesV2Controller_change_v2"];
+        trace?: never;
+    };
+    "/api/v2/rca-templates/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retire an RCA template (cases that used it keep it) */
+        post: operations["RcaTemplatesV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-templates/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a retired RCA template */
+        post: operations["RcaTemplatesV2Controller_restore_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-causes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List RCA causes of the plant (keyset; `activeChildren` per cause)
+         * @description `rootsOnly` = top-level causes, `parentId` = direct sub-causes; `q` searches code and name; `status` = active | retired | all (default all).
+         */
+        get: operations["RcaCausesV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create an RCA cause (top level or under an active cause)
+         * @description Requires `Idempotency-Key` and a tenant-wide grant. 409 MASTER_DATA_CODE_EXISTS for a code in use; 422 INVALID_REFERENCE for a parent that is not an active cause of the plant.
+         */
+        post: operations["RcaCausesV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-causes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one RCA cause (ETag = row version) */
+        get: operations["RcaCausesV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change an RCA cause; `parentId` moves it with its subtree (null = top level)
+         * @description Requires `If-Match: "<rowVersion>"` (428 / 412). 422 CODE_CYCLE for a parent inside its own subtree; 409 MASTER_DATA_CODE_EXISTS, 409 MASTER_DATA_RETIRED.
+         */
+        patch: operations["RcaCausesV2Controller_change_v2"];
+        trace?: never;
+    };
+    "/api/v2/rca-causes/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire an RCA cause
+         * @description 409 RCA_CAUSE_HAS_CHILDREN (`details.activeChildren`) while it has active sub-causes.
+         */
+        post: operations["RcaCausesV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-causes/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a retired RCA cause (its parent must be active) */
+        post: operations["RcaCausesV2Controller_restore_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/verification-checklists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the verification checklists of the plant (keyset)
+         * @description `q` searches code and name; `status` = active | retired | all (default all).
+         */
+        get: operations["VerificationChecklistsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a verification checklist
+         * @description Requires `Idempotency-Key` and a tenant-wide grant. 409 MASTER_DATA_CODE_EXISTS for a code in use.
+         */
+        post: operations["VerificationChecklistsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/verification-checklists/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one verification checklist (ETag = row version) */
+        get: operations["VerificationChecklistsV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a verification checklist (given `items` replace the list)
+         * @description Requires `If-Match: "<rowVersion>"` (428 / 412). 409 MASTER_DATA_CODE_EXISTS, 409 MASTER_DATA_RETIRED.
+         */
+        patch: operations["VerificationChecklistsV2Controller_change_v2"];
+        trace?: never;
+    };
+    "/api/v2/verification-checklists/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retire a verification checklist (templates keep naming it) */
+        post: operations["VerificationChecklistsV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/verification-checklists/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a retired verification checklist */
+        post: operations["VerificationChecklistsV2Controller_restore_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/master-data/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active master-data record counts of the acting plant
+         * @description Units, assets, products (plant and organisation), RCA templates, causes and verification checklists. Unit-scoped callers count only their units and those units’ assets.
+         */
+        get: operations["MasterDataSummaryV2Controller_summary_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3578,6 +4917,10 @@ export interface components {
              * @description Exclusive end: after the start, not in the future
              */
             endTime: string;
+        };
+        RetractEventV2Dto: {
+            /** @description Why the event is retracted (kept in the retraction revision) */
+            reason: string;
         };
         CreateProductionEventV2Dto: {
             /**
@@ -4487,6 +5830,16 @@ export interface components {
             expectedVersion: number;
             reason?: string;
         };
+        PlanSubmitDto: {
+            /** @description Number of the open (draft) version being submitted */
+            expectedVersion: number;
+        };
+        PlanReturnDto: {
+            /** @description Number of the submitted version being returned */
+            expectedVersion: number;
+            /** @description Why the version goes back to its author */
+            reason: string;
+        };
         ScenarioCreateDto: {
             /** @example Budget 2027 */
             name: string;
@@ -4800,9 +6153,30 @@ export interface components {
             title: string;
             description?: Record<string, never> | null;
             priority?: Record<string, never> | null;
-            ownerId?: Record<string, never> | null;
-            dueDate?: Record<string, never> | null;
+            ownerId?: string | null;
+            dueDate?: string | null;
             status?: Record<string, never> | null;
+            /** @description Estimated cost as a decimal string (no currency) */
+            estimatedCost?: Record<string, never> | null;
+        };
+        RcaEvidenceSeriesDto: {
+            /** @enum {string|null} */
+            provider?: "pi" | null;
+            streams?: Record<string, never> | null;
+            /** @enum {string|null} */
+            mode?: "recorded" | "interpolated" | "summary" | "plot" | null;
+            start?: string | null;
+            end?: string | null;
+            interval?: Record<string, never> | null;
+            intervals?: Record<string, never> | null;
+            summaryTypes?: Record<string, never> | null;
+        };
+        RcaEvidenceAttachmentDto: {
+            /** @description Stored file name returned by the upload */
+            fileName: string;
+            name: string;
+            contentType?: Record<string, never> | null;
+            size?: Record<string, never> | null;
         };
         RcaEvidenceItemDto: {
             id?: string;
@@ -4810,8 +6184,25 @@ export interface components {
             description?: Record<string, never> | null;
             type?: Record<string, never> | null;
             source?: Record<string, never> | null;
-            collectedAt?: Record<string, never> | null;
-            collectedBy?: Record<string, never> | null;
+            collectedAt?: string | null;
+            collectedBy?: string | null;
+            category?: Record<string, never> | null;
+            location?: Record<string, never> | null;
+            occurredAt?: string | null;
+            assetId?: string | null;
+            /** @enum {string|null} */
+            severity?: "Low" | "Medium" | "High" | "Critical" | null;
+            tags?: string[];
+            verified?: boolean | null;
+            /** @enum {string|null} */
+            fiveP?: "Parts" | "Paper" | "People" | "Place" | "Process" | null;
+            task?: Record<string, never> | null;
+            taskDueDate?: string | null;
+            /** @enum {string|null} */
+            taskStatus?: "pending" | "completed" | null;
+            nodeIds?: string[];
+            timeSeries?: components["schemas"]["RcaEvidenceSeriesDto"] | null;
+            attachments?: components["schemas"]["RcaEvidenceAttachmentDto"][];
         };
         RcaLogicNodeDto: {
             id: string;
@@ -4820,6 +6211,34 @@ export interface components {
             kind?: Record<string, never> | null;
             status?: Record<string, never> | null;
             notes?: Record<string, never> | null;
+            code?: Record<string, never> | null;
+            description?: Record<string, never> | null;
+            verified?: boolean | null;
+        };
+        RcaDiagramPositionDto: {
+            x: number;
+            y: number;
+        };
+        RcaDiagramNodeDto: {
+            id: string;
+            label: string;
+            /** @enum {string|null} */
+            type?: "Failure" | "Alarm" | "Action" | "Note" | "Maintenance" | "Inspection" | "Operator Action" | "Info" | null;
+            timestamp?: string | null;
+            description?: Record<string, never> | null;
+            asset?: Record<string, never> | null;
+            /** @enum {string|null} */
+            severity?: "Low" | "Medium" | "High" | "Critical" | null;
+            position: components["schemas"]["RcaDiagramPositionDto"];
+        };
+        RcaDiagramEdgeDto: {
+            id: string;
+            source: string;
+            target: string;
+        };
+        RcaEventDiagramDto: {
+            nodes: components["schemas"]["RcaDiagramNodeDto"][];
+            edges: components["schemas"]["RcaDiagramEdgeDto"][];
         };
         RcaCaseV2CreateDto: {
             title: string;
@@ -4846,6 +6265,8 @@ export interface components {
             recommendations?: components["schemas"]["RcaRecommendationItemDto"][];
             evidence?: components["schemas"]["RcaEvidenceItemDto"][];
             logicTree?: components["schemas"]["RcaLogicNodeDto"][];
+            teamCharter?: Record<string, never> | null;
+            eventDiagram?: components["schemas"]["RcaEventDiagramDto"] | null;
         };
         RcaCaseV2UpdateDto: {
             title?: string;
@@ -4872,6 +6293,8 @@ export interface components {
             recommendations?: components["schemas"]["RcaRecommendationItemDto"][];
             evidence?: components["schemas"]["RcaEvidenceItemDto"][];
             logicTree?: components["schemas"]["RcaLogicNodeDto"][];
+            teamCharter?: Record<string, never> | null;
+            eventDiagram?: components["schemas"]["RcaEventDiagramDto"] | null;
         };
         RcaLinkV2CreateDto: {
             /** @enum {string} */
@@ -4879,6 +6302,92 @@ export interface components {
             /** @description Event, loss line or occurrence id (uuid), or the work order number */
             targetId: string;
             reason?: string;
+        };
+        FiveWhyLevelDto: {
+            level: number;
+            question: string;
+            answer: string;
+            justification?: Record<string, never> | null;
+        };
+        FiveWhyV2Dto: {
+            problem: string;
+            whyLevels: components["schemas"]["FiveWhyLevelDto"][];
+            rootCause: string;
+        };
+        FishboneCauseDto: {
+            id: string;
+            description: string;
+            isPrimary: boolean;
+            /** @enum {string} */
+            likelihood: "High" | "Medium" | "Low";
+        };
+        FishboneCategoryDto: {
+            id: string;
+            name: string;
+            causes: components["schemas"]["FishboneCauseDto"][];
+        };
+        FishboneV2Dto: {
+            effect: string;
+            categories: components["schemas"]["FishboneCategoryDto"][];
+        };
+        FmeaEffectDto: {
+            id: string;
+            description: string;
+            severity: number;
+            currentControls: string;
+            detection: number;
+        };
+        FmeaCauseDto: {
+            id: string;
+            description: string;
+            occurrence: number;
+            recommendedActions?: string[];
+        };
+        FmeaV2Dto: {
+            failureMode: string;
+            effects: components["schemas"]["FmeaEffectDto"][];
+            causes: components["schemas"]["FmeaCauseDto"][];
+        };
+        FaultTreeNodeDto: {
+            id: string;
+            /** @enum {string} */
+            type: "AND" | "OR" | "Event" | "BasicEvent" | "UndevelopedEvent";
+            description: string;
+            parentId?: Record<string, never> | null;
+            probability?: Record<string, never> | null;
+        };
+        FaultTreeV2Dto: {
+            topEvent: string;
+            nodes: components["schemas"]["FaultTreeNodeDto"][];
+        };
+        BarrierDto: {
+            id: string;
+            /** @enum {string} */
+            type: "Prevention" | "Detection" | "Mitigation" | "Recovery";
+            description: string;
+            /** @enum {string} */
+            effectiveness: "Strong" | "Moderate" | "Weak" | "Failed";
+            failureReason?: Record<string, never> | null;
+            recommendations?: string[];
+        };
+        BarrierV2Dto: {
+            hazard: string;
+            barriers: components["schemas"]["BarrierDto"][];
+        };
+        ChangeRecordDto: {
+            id: string;
+            /** @enum {string} */
+            category: "People" | "Equipment" | "Process" | "Materials" | "Environment" | "Management";
+            description: string;
+            /** @description Calendar date of the change (YYYY-MM-DD) */
+            changeDate: string;
+            relatedToIncident: boolean;
+            /** @enum {string} */
+            impactLevel: "High" | "Medium" | "Low";
+        };
+        ChangeV2Dto: {
+            question: string;
+            changes: components["schemas"]["ChangeRecordDto"][];
         };
         EventRcaLinkV2Dto: {
             /** @description Existing case of your scope */
@@ -4941,6 +6450,486 @@ export interface components {
         RcaKnowledgeVoteDto: {
             /** @description true = helpful, false = not helpful */
             helpful: boolean;
+        };
+        GrantableRolesView: {
+            /** @description Legacy roles (`users.role`) */
+            roles: string[];
+            /** @description Scope roles (`user_scopes`) */
+            scopeRoles: string[];
+        };
+        CreateUserV2Dto: {
+            name: string;
+            email: string;
+            password: string;
+            /** @enum {string} */
+            role: "SuperAdmin" | "OrgAdmin" | "TenantAdmin" | "Manager" | "Analyst" | "Engineer" | "Operator";
+            /** @description Home plant; defaults to the acting plant (organization and super administrators may be created without one) */
+            tenantId?: string;
+            /** @description Organization; defaults to the plant’s organization */
+            organizationId?: string;
+            /** @default true */
+            isActive: boolean;
+        };
+        UpdateUserV2Dto: {
+            name?: string;
+            email?: string;
+            /**
+             * @description A role change is a grant: at most your own rank
+             * @enum {string}
+             */
+            role?: "SuperAdmin" | "OrgAdmin" | "TenantAdmin" | "Manager" | "Analyst" | "Engineer" | "Operator";
+            isActive?: boolean;
+            password?: string;
+        };
+        GrantUserScopeDto: {
+            userId: string;
+            /** @enum {string} */
+            role: "manager_approver" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
+            /** @description Limit the grant to this unit of the plant (omit for the whole plant) */
+            unitId?: string;
+        };
+        TaskSummaryView: {
+            total: number;
+            open: number;
+            inProgress: number;
+            completed: number;
+            cancelled: number;
+            /** @description Due before now and not completed or cancelled */
+            overdue: number;
+            asOf: string;
+        };
+        CreateTaskV2Dto: {
+            title: string;
+            description?: string;
+            /** @description An active member of the plant */
+            assigneeId: string;
+            /** @enum {string} */
+            priority: "Low" | "Medium" | "High" | "Critical";
+            /**
+             * @default Open
+             * @enum {string}
+             */
+            status: "Open" | "In Progress" | "Completed" | "Cancelled";
+            /** @description ISO 8601 instant */
+            dueDate?: string;
+            /** @enum {string} */
+            linkType?: "RCA" | "RCARecommendation" | "ProductionEvent" | "ProductionPlan";
+            /** @description Required with linkType */
+            linkId?: string;
+        };
+        UpdateTaskV2Dto: {
+            title?: string;
+            description?: Record<string, never> | null;
+            assigneeId?: string;
+            /** @enum {string} */
+            priority?: "Low" | "Medium" | "High" | "Critical";
+            /** @enum {string} */
+            status?: "Open" | "In Progress" | "Completed" | "Cancelled";
+            /** @description ISO 8601 instant; null clears it */
+            dueDate?: Record<string, never> | null;
+            /**
+             * @description null removes the link
+             * @enum {string|null}
+             */
+            linkType?: "RCA" | "RCARecommendation" | "ProductionEvent" | "ProductionPlan" | null;
+            linkId?: Record<string, never> | null;
+        };
+        AuditCount: {
+            key: string;
+            count: number;
+        };
+        AuditDayCount: {
+            /** @description UTC day, YYYY-MM-DD */
+            day: string;
+            count: number;
+        };
+        AuditSummaryView: {
+            total: number;
+            byAction: components["schemas"]["AuditCount"][];
+            byEntityType: components["schemas"]["AuditCount"][];
+            byDay: components["schemas"]["AuditDayCount"][];
+            asOf: string;
+        };
+        AttributeValidationDto: {
+            minLength?: number;
+            maxLength?: number;
+            minValue?: number;
+            maxValue?: number;
+            /** @description Regular expression the text must match */
+            pattern?: string;
+        };
+        CreateAttributeDefinitionDto: {
+            description?: string;
+            isRequired?: boolean;
+            defaultValue?: string;
+            validationRules?: components["schemas"]["AttributeValidationDto"];
+            /** @description Choices of a select attribute */
+            selectOptions?: string[];
+            displayOrder?: number;
+            isActive?: boolean;
+            /** @enum {string} */
+            entityType: "Organization" | "Tenant" | "Unit" | "Asset";
+            /** @description Internal name: lowercase letters, digits and underscores, starting with a letter */
+            name: string;
+            displayName: string;
+            /** @enum {string} */
+            dataType: "string" | "number" | "boolean" | "date" | "select";
+        };
+        UpdateAttributeDefinitionDto: {
+            description?: string;
+            isRequired?: boolean;
+            defaultValue?: string;
+            validationRules?: components["schemas"]["AttributeValidationDto"];
+            /** @description Choices of a select attribute */
+            selectOptions?: string[];
+            displayOrder?: number;
+            isActive?: boolean;
+            displayName?: string;
+            /** @enum {string} */
+            dataType?: "string" | "number" | "boolean" | "date" | "select";
+        };
+        OeeSettingsDto: {
+            availabilityWeight: number;
+            performanceWeight: number;
+            qualityWeight: number;
+            targetOEE: number;
+            targetAvailability: number;
+            targetPerformance: number;
+            targetQuality: number;
+        };
+        LossSettingsDto: {
+            lossValuePerUnit: number;
+            highLossThreshold: number;
+            criticalLossThreshold: number;
+            defaultUnaccountedLossPercentage: number;
+            defaultLossCategories: string[];
+        };
+        CostSettingsDto: {
+            /** @enum {string} */
+            costCalculationMethod: "perUnit" | "perHour" | "fixed";
+            defaultCostPerUnit: number;
+            defaultCostPerHour: number;
+            highCostThreshold: number;
+            criticalCostThreshold: number;
+        };
+        BottleneckSettingsDto: {
+            lossWeight: number;
+            costWeight: number;
+            oeeWeight: number;
+            lowRiskThreshold: number;
+            mediumRiskThreshold: number;
+            highRiskThreshold: number;
+        };
+        DisplaySettingsDto: {
+            showOEE: boolean;
+            showLosses: boolean;
+            showCosts: boolean;
+            showCapacity: boolean;
+            showActions: boolean;
+            decimalPlaces: number;
+            currencySymbol: string;
+            /** @enum {string} */
+            numberFormat: "en-US" | "en-GB" | "de-DE" | "custom";
+            /** @enum {string} */
+            theme: "default" | "high-contrast" | "colorblind-friendly";
+        };
+        PerformanceSettingsDto: {
+            /** @description seconds */
+            defaultIdealCycleTime: number;
+            /** @enum {string} */
+            performanceCalculationMethod: "cycleTime" | "outputRate" | "efficiency";
+            lowPerformanceThreshold: number;
+            highPerformanceThreshold: number;
+        };
+        QualitySettingsDto: {
+            /** @enum {string} */
+            qualityCalculationMethod: "defects" | "rework" | "scrap";
+            lowQualityThreshold: number;
+            highQualityThreshold: number;
+        };
+        AvailabilitySettingsDto: {
+            /** @enum {string} */
+            availabilityCalculationMethod: "uptime" | "downtime" | "scheduled";
+            lowAvailabilityThreshold: number;
+            highAvailabilityThreshold: number;
+        };
+        DashboardSettingsDto: {
+            oee: components["schemas"]["OeeSettingsDto"];
+            losses: components["schemas"]["LossSettingsDto"];
+            costs: components["schemas"]["CostSettingsDto"];
+            bottleneckRisk: components["schemas"]["BottleneckSettingsDto"];
+            display: components["schemas"]["DisplaySettingsDto"];
+            performance: components["schemas"]["PerformanceSettingsDto"];
+            quality: components["schemas"]["QualitySettingsDto"];
+            availability: components["schemas"]["AvailabilitySettingsDto"];
+        };
+        DashboardConfigV2View: {
+            settings: components["schemas"]["DashboardSettingsDto"];
+            /** @description false while the plant uses the defaults */
+            isStored: boolean;
+            updatedAt: string | null;
+            updatedByName: string | null;
+        };
+        CreateOrganizationV2Dto: {
+            /** @description Short unique code (letters, digits, - _ .) */
+            code: string;
+            name: string;
+            description?: string;
+        };
+        CreatePlantV2Dto: {
+            /** @description Short unique code (letters, digits, - _ .) */
+            code: string;
+            name: string;
+            description?: string;
+            organizationId: string;
+            /** @description IANA timezone of the plant, e.g. Asia/Tehran */
+            timezone: string;
+            /**
+             * @default gregorian
+             * @enum {string}
+             */
+            calendarSystem: "gregorian" | "persian";
+            /**
+             * @default latin
+             * @enum {string}
+             */
+            digits: "latin" | "persian";
+        };
+        PlantDisplaySettingsV2Dto: {
+            /** @enum {string} */
+            calendarSystem?: "gregorian" | "persian";
+            /** @enum {string} */
+            digits?: "latin" | "persian";
+        };
+        BrandingV2View: {
+            appName: string;
+            appSubtitle?: string;
+            /** @description Image address or inline image */
+            logoUrl?: string;
+            logoInitials?: string;
+            /** @example #2563eb */
+            primaryColor?: string;
+            /** @example #ec4899 */
+            secondaryColor?: string;
+            /** @description Image address or inline image */
+            faviconUrl?: string;
+            logoSize?: number;
+            /** @enum {string} */
+            logoObjectFit?: "contain" | "cover" | "fill" | "none" | "scale-down";
+            logoBorderRadius?: number;
+            logoContainerSize?: number;
+            logoContainerRadius?: number;
+            logoContainerPadding?: number;
+            logoBackgroundOpacity?: number;
+            /** @description false while the defaults apply */
+            isStored: boolean;
+            updatedAt: string | null;
+        };
+        BrandingV2Dto: {
+            appName: string;
+            appSubtitle?: string;
+            /** @description Image address or inline image */
+            logoUrl?: string;
+            logoInitials?: string;
+            /** @example #2563eb */
+            primaryColor?: string;
+            /** @example #ec4899 */
+            secondaryColor?: string;
+            /** @description Image address or inline image */
+            faviconUrl?: string;
+            logoSize?: number;
+            /** @enum {string} */
+            logoObjectFit?: "contain" | "cover" | "fill" | "none" | "scale-down";
+            logoBorderRadius?: number;
+            logoContainerSize?: number;
+            logoContainerRadius?: number;
+            logoContainerPadding?: number;
+            logoBackgroundOpacity?: number;
+        };
+        RcaPolicyCreateDto: {
+            /**
+             * Format: uuid
+             * @description A unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted = the tenant-wide policy (needs a tenant-wide grant, 403 TENANT_SCOPE_REQUIRED)
+             */
+            unitId?: Record<string, never> | null;
+            /** @description Unplanned downtime at or above this many seconds fires the duration trigger; 0 disables it */
+            durationThresholdSeconds: number;
+            /** @description Functional failures of one asset within repeatWindowDays that fire the repeat trigger */
+            repeatCount: number;
+            repeatWindowDays: number;
+            /**
+             * @description recommend = suggest a case; create = open the case
+             * @enum {string}
+             */
+            autoCreate: "recommend" | "create";
+            /** @description Approved valued impact at or above this fires the cost trigger; null disables it */
+            costThreshold?: Record<string, never> | null;
+            notes?: string;
+        };
+        UnitV2CreateDto: {
+            /** @example EXT-LINE-3 */
+            code: string;
+            name: string;
+            description?: Record<string, never> | null;
+            /** @example t */
+            unitOfMeasure?: Record<string, never> | null;
+            /** @description Legacy v1 capacity (decimal string, up to 4 decimals); not used by v2 calculations */
+            capacity?: Record<string, never> | null;
+            /** @description Legacy v1 ideal cycle time, seconds per unit (decimal string); not used by v2 calculations */
+            idealCycleTimeSeconds?: Record<string, never> | null;
+        };
+        UnitV2ChangeDto: {
+            code?: string;
+            name?: string;
+            description?: Record<string, never> | null;
+            unitOfMeasure?: Record<string, never> | null;
+            capacity?: Record<string, never> | null;
+            idealCycleTimeSeconds?: Record<string, never> | null;
+        };
+        AssetV2CreateDto: {
+            description?: Record<string, never> | null;
+            /** @example Equipment */
+            assetType?: Record<string, never> | null;
+            manufacturer?: Record<string, never> | null;
+            model?: Record<string, never> | null;
+            serialNumber?: Record<string, never> | null;
+            /** @enum {string|null} */
+            criticality?: "High" | "Medium" | "Low" | null;
+            /** @example Active */
+            status?: Record<string, never> | null;
+            location?: Record<string, never> | null;
+            code: string;
+            name: string;
+            /**
+             * Format: uuid
+             * @description Active unit of the acting plant
+             */
+            unitId: string;
+        };
+        AssetV2ChangeDto: {
+            description?: Record<string, never> | null;
+            /** @example Equipment */
+            assetType?: Record<string, never> | null;
+            manufacturer?: Record<string, never> | null;
+            model?: Record<string, never> | null;
+            serialNumber?: Record<string, never> | null;
+            /** @enum {string|null} */
+            criticality?: "High" | "Medium" | "Low" | null;
+            /** @example Active */
+            status?: Record<string, never> | null;
+            location?: Record<string, never> | null;
+            code?: string;
+            name?: string;
+            /**
+             * Format: uuid
+             * @description Move the asset to another active unit
+             */
+            unitId?: string;
+        };
+        ProductV2CreateDto: {
+            /** @example t */
+            uom?: Record<string, never> | null;
+            description?: Record<string, never> | null;
+            /** @description Unconfirmed legacy cost (decimal string); not used by v2 calculations */
+            legacyStandardCost?: Record<string, never> | null;
+            code: string;
+            name: string;
+            /**
+             * @description organization: shared by every plant of the organisation (the v1 model); plant: the acting plant only (needed to use the product in profiles and plans)
+             * @default organization
+             * @enum {string}
+             */
+            availability: "organization" | "plant";
+        };
+        ProductV2ChangeDto: {
+            /** @example t */
+            uom?: Record<string, never> | null;
+            description?: Record<string, never> | null;
+            /** @description Unconfirmed legacy cost (decimal string); not used by v2 calculations */
+            legacyStandardCost?: Record<string, never> | null;
+            code?: string;
+            name?: string;
+        };
+        LogicTreeNodeDto: {
+            /** @description Client-generated node id, unique in the tree */
+            id: string;
+            name: string;
+            code: string;
+            /** @enum {string} */
+            category: "Equipment" | "Process" | "Material" | "Personnel" | "Environment" | "Method";
+            description?: string;
+            /** @description Kept from v1 templates */
+            note?: string;
+            /** @description Kept from v1 templates */
+            finding?: boolean;
+            children?: components["schemas"]["LogicTreeNodeDto"][];
+        };
+        RcaTemplateV2CreateDto: {
+            description?: Record<string, never> | null;
+            /** @description Top-level nodes; at most 500 nodes, 12 levels */
+            logicTree?: components["schemas"]["LogicTreeNodeDto"][];
+            /** @description Active verification checklists of the plant */
+            checklistIds?: string[];
+            name: string;
+            /** @example Equipment failure */
+            category: string;
+        };
+        RcaTemplateV2ChangeDto: {
+            description?: Record<string, never> | null;
+            /** @description Top-level nodes; at most 500 nodes, 12 levels */
+            logicTree?: components["schemas"]["LogicTreeNodeDto"][];
+            /** @description Active verification checklists of the plant */
+            checklistIds?: string[];
+            name?: string;
+            category?: string;
+        };
+        RcaCauseV2CreateDto: {
+            description?: Record<string, never> | null;
+            code: string;
+            name: string;
+            /** @enum {string} */
+            category: "Equipment" | "Process" | "Material" | "Personnel" | "Environment" | "Method";
+            /**
+             * Format: uuid
+             * @description Parent cause (null = top level)
+             */
+            parentId?: Record<string, never> | null;
+        };
+        RcaCauseV2ChangeDto: {
+            description?: Record<string, never> | null;
+            code?: string;
+            name?: string;
+            /** @enum {string} */
+            category?: "Equipment" | "Process" | "Material" | "Personnel" | "Environment" | "Method";
+            /**
+             * Format: uuid
+             * @description Move under this cause; null = top level
+             */
+            parentId?: Record<string, never> | null;
+        };
+        VerificationChecklistV2CreateDto: {
+            description?: Record<string, never> | null;
+            /**
+             * @description Badge colour, #RRGGBB
+             * @example #3B82F6
+             */
+            color?: Record<string, never> | null;
+            /** @description Checklist items in order (at most 100) */
+            items?: string[];
+            code: string;
+            name: string;
+        };
+        VerificationChecklistV2ChangeDto: {
+            description?: Record<string, never> | null;
+            /**
+             * @description Badge colour, #RRGGBB
+             * @example #3B82F6
+             */
+            color?: Record<string, never> | null;
+            /** @description Checklist items in order (at most 100) */
+            items?: string[];
+            code?: string;
+            name?: string;
         };
     };
     responses: never;
@@ -5061,6 +7050,33 @@ export interface operations {
             };
         };
     };
+    ProductionEventOperationsV2Controller_retract_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ETag of the event as read (428 without, 412 when stale) */
+                "If-Match": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetractEventV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ProductionEventsV2Controller_list_v2: {
         parameters: {
             query?: {
@@ -5086,6 +7102,11 @@ export interface operations {
                 physicalStates?: ("open" | "closed" | "superseded" | "retracted")[];
                 codingStates?: ("uncoded" | "coded" | "reviewed")[];
                 rcaStates?: ("none" | "required" | "linked" | "completed")[];
+                sourceKinds?: ("manual" | "source" | "derived" | "imported")[];
+                /** @description Severity labels as stored (e.g. Critical, High, Medium, Low); repeat for several */
+                severities?: string[];
+                /** @description Case-insensitive text contained in the description or the business event id. Meant to be combined with a from/to window (an unbounded text search scans every event of the scope). */
+                q?: string;
                 /** @description true: still running (no end time, not superseded or retracted); false: ended, superseded or retracted */
                 isOpen?: boolean;
             };
@@ -5123,6 +7144,48 @@ export interface operations {
         responses: {
             /** @description Created; `ETag` carries the revision */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductionEventsV2Controller_exportCsv_v2: {
+        parameters: {
+            query: {
+                /** @description Repeat the parameter for several units */
+                unitIds?: string[];
+                assetIds?: string[];
+                /** @description Reason code ids */
+                reasonIds?: string[];
+                eventTypes?: string[];
+                statuses?: string[];
+                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory")[];
+                scheduleClasses?: ("planned" | "unplanned" | "external" | "unknown")[];
+                oeeComponents?: ("availability" | "performance" | "quality" | "idle" | "none")[];
+                physicalStates?: ("open" | "closed" | "superseded" | "retracted")[];
+                codingStates?: ("uncoded" | "coded" | "reviewed")[];
+                rcaStates?: ("none" | "required" | "linked" | "completed")[];
+                sourceKinds?: ("manual" | "source" | "derived" | "imported")[];
+                /** @description Severity labels as stored (e.g. Critical, High, Medium, Low); repeat for several */
+                severities?: string[];
+                /** @description Case-insensitive text contained in the description or the business event id. Meant to be combined with a from/to window (an unbounded text search scans every event of the scope). */
+                q?: string;
+                /** @description true: still running (no end time, not superseded or retracted); false: ended, superseded or retracted */
+                isOpen?: boolean;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from: string;
+                /** @description Window end, ISO 8601 (exclusive); at most 400 days after from */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7949,6 +10012,56 @@ export interface operations {
             };
         };
     };
+    ProductionPlanReviewV2Controller_submit_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanSubmitDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductionPlanReviewV2Controller_returnToAuthor_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanReturnDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     PlanScenariosV2Controller_list_v2: {
         parameters: {
             query?: {
@@ -8890,6 +11003,36 @@ export interface operations {
             };
         };
     };
+    KpiReportsV2Controller_downtimeBundle_v2: {
+        parameters: {
+            query: {
+                /** @description Periods starting at or after this instant (ISO 8601 with offset) */
+                from: string;
+                /** @description Periods starting before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only). */
+                unitIds?: string[];
+                /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
+                approvedOnly?: boolean;
+                /** @description Include micro-stops (shorter than the oee_policy threshold) in every view; default availability stops only */
+                includeMicroStops?: boolean;
+                /** @description Repeat for each view: `<groupBy>[:<metric>][:<scheduleClass>]` with groupBy one of reason, reasonLevel1, impact, oee, asset, shift, crew, day, week, month; metric duration (default) or frequency; no class = every class. Duplicate tokens are answered once (first kept). */
+                views: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     KpiReportsV2Controller_reliability_v2: {
         parameters: {
             query: {
@@ -9469,6 +11612,9 @@ export interface operations {
                 reasonCodeId?: string;
                 /** @description Case-insensitive title search */
                 q?: string;
+                priority?: "Low" | "Medium" | "High" | "Critical";
+                /** @description true = target close date passed and not Closed; false = the others */
+                overdue?: boolean;
             };
             header?: never;
             path?: never;
@@ -9507,6 +11653,40 @@ export interface operations {
             };
         };
     };
+    RcaCasesV2Controller_summary_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCasesV2Controller_evidenceOptions_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RcaCasesV2Controller_get_v2: {
         parameters: {
             query?: never;
@@ -9519,6 +11699,27 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCasesV2Controller_remove_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9544,6 +11745,27 @@ export interface operations {
         };
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCasesV2Controller_resetLogicTree_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9615,6 +11837,221 @@ export interface operations {
             };
             /** @description Linked */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseWorkspaceV2Controller_list_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseWorkspaceV2Controller_fiveWhy_v2: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FiveWhyV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseWorkspaceV2Controller_fishbone_v2: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FishboneV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseWorkspaceV2Controller_fmea_v2: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FmeaV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseWorkspaceV2Controller_faultTree_v2: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FaultTreeV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseWorkspaceV2Controller_barrier_v2: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BarrierV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseWorkspaceV2Controller_change_v2: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseWorkspaceV2Controller_upload_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseWorkspaceV2Controller_download_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                fileName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9964,60 +12401,6 @@ export interface operations {
             };
         };
     };
-    UnitsV2Controller_list_v2: {
-        parameters: {
-            query?: {
-                /** @description Opaque cursor returned as nextCursor by the previous page */
-                cursor?: string;
-                limit?: number;
-                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
-                sort?: string;
-                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
-                from?: string;
-                /** @description Window end, ISO 8601 (exclusive) */
-                to?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProductsV2Controller_list_v2: {
-        parameters: {
-            query?: {
-                /** @description Opaque cursor returned as nextCursor by the previous page */
-                cursor?: string;
-                limit?: number;
-                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
-                sort?: string;
-                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
-                from?: string;
-                /** @description Window end, ISO 8601 (exclusive) */
-                to?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     PeriodSummariesV2Controller_list_v2: {
         parameters: {
             query?: {
@@ -10202,6 +12585,1908 @@ export interface operations {
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
             };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ActivitySummaryV2Controller_summary_v2: {
+        parameters: {
+            query: {
+                /** @description Records created at or after this instant (ISO 8601 with offset) */
+                from: string;
+                /** @description Records created before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "name" | "-name" | "-createdAt" | "createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Case-insensitive search in name and e-mail */
+                q?: string;
+                roles?: ("SuperAdmin" | "OrgAdmin" | "TenantAdmin" | "Manager" | "Analyst" | "Engineer" | "Operator")[];
+                /** @description true = active only, false = deactivated only */
+                isActive?: boolean;
+                /** @description plant (default): members of the acting plant, plus organization-level users for organization and super administrators; everyone: every user (super administrators only) */
+                reach?: "plant" | "everyone";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserV2Dto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersV2Controller_userDirectory_v2: {
+        parameters: {
+            query?: {
+                /** @description Resolve these users (inactive ones too); repeated parameter, at most 100 */
+                ids?: string[];
+                /** @description Search in names */
+                q?: string;
+                /** @description Opaque cursor of the previous page */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersV2Controller_grantableRoles_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantableRolesView"];
+                };
+            };
+        };
+    };
+    UsersV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersV2Controller_remove_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersV2Controller_update_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserScopesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-createdAt" | "createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Grants of this user only */
+                userId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserScopesV2Controller_grant_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantUserScopeDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserScopesV2Controller_revoke_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TasksV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description dueDate: earliest due first, tasks without a due date last */
+                sort?: "dueDate" | "-createdAt" | "createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                priorities?: ("Low" | "Medium" | "High" | "Critical")[];
+                /** @description Tasks assigned to you only */
+                assignedToMe?: boolean;
+                assigneeId?: string;
+                linkType?: "RCA" | "RCARecommendation" | "ProductionEvent" | "ProductionPlan";
+                /** @description Tasks linked to this record */
+                linkId?: string;
+                /** @description Search in title and description */
+                q?: string;
+                statuses?: ("Open" | "In Progress" | "Completed" | "Cancelled")[];
+                /** @description Due before now and not completed or cancelled */
+                overdue?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TasksV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTaskV2Dto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TasksV2Controller_summary_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                priorities?: ("Low" | "Medium" | "High" | "Critical")[];
+                /** @description Tasks assigned to you only */
+                assignedToMe?: boolean;
+                assigneeId?: string;
+                linkType?: "RCA" | "RCARecommendation" | "ProductionEvent" | "ProductionPlan";
+                /** @description Tasks linked to this record */
+                linkId?: string;
+                /** @description Search in title and description */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskSummaryView"];
+                };
+            };
+        };
+    };
+    TasksV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TasksV2Controller_remove_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TasksV2Controller_update_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTaskV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TasksV2Controller_complete_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuditLogsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-timestamp" | "timestamp";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Actions (CREATE, UPDATE, LOGIN, …) */
+                actions?: string[];
+                /** @description Entity types (User, Task, RCA, …) */
+                entityTypes?: string[];
+                /** @description Actors */
+                userIds?: string[];
+                /** @description Entries of one record */
+                entityId?: string;
+                /** @description Case-insensitive search in action, entity type and details */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuditLogsV2Controller_summary_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Actions (CREATE, UPDATE, LOGIN, …) */
+                actions?: string[];
+                /** @description Entity types (User, Task, RCA, …) */
+                entityTypes?: string[];
+                /** @description Actors */
+                userIds?: string[];
+                /** @description Entries of one record */
+                entityId?: string;
+                /** @description Case-insensitive search in action, entity type and details */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditSummaryView"];
+                };
+            };
+        };
+    };
+    AuditLogsV2Controller_export_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Actions (CREATE, UPDATE, LOGIN, …) */
+                actions?: string[];
+                /** @description Entity types (User, Task, RCA, …) */
+                entityTypes?: string[];
+                /** @description Actors */
+                userIds?: string[];
+                /** @description Entries of one record */
+                entityId?: string;
+                /** @description Case-insensitive search in action, entity type and details */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuditLogsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CustomAttributesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                entityType?: "Organization" | "Tenant" | "Unit" | "Asset";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CustomAttributesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAttributeDefinitionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CustomAttributesV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CustomAttributesV2Controller_remove_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CustomAttributesV2Controller_update_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAttributeDefinitionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DashboardConfigV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardConfigV2View"];
+                };
+            };
+        };
+    };
+    DashboardConfigV2Controller_save_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DashboardSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardConfigV2View"];
+                };
+            };
+        };
+    };
+    DashboardConfigV2Controller_reset_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardConfigV2View"];
+                };
+            };
+        };
+    };
+    OrganizationsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OrganizationsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrganizationV2Dto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OrganizationsV2Controller_remove_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlantsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Plants of this organization only */
+                organizationId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlantsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlantV2Dto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlantsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlantsV2Controller_remove_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlantsV2Controller_updateDisplaySettings_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlantDisplaySettingsV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BrandingV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandingV2View"];
+                };
+            };
+        };
+    };
+    BrandingV2Controller_save_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandingV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandingV2View"];
+                };
+            };
+        };
+    };
+    BrandingV2Controller_reset_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandingV2View"];
+                };
+            };
+        };
+    };
+    RcaPoliciesV2Controller_current_v2: {
+        parameters: {
+            query?: {
+                /** @description A unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted = the tenant-wide policy */
+                unitId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaPoliciesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description A unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted = the tenant-wide policy */
+                unitId?: string;
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaPoliciesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaPolicyCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "code" | "-code" | "name" | "-name" | "createdAt" | "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Case-insensitive search in code and name */
+                q?: string;
+                /** @description active = not retired, retired = retired only, all = both */
+                status?: "active" | "retired" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitV2CreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitsV2Controller_change_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitV2ChangeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitsV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitsV2Controller_restore_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "code" | "-code" | "name" | "-name" | "createdAt" | "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Case-insensitive search in code and name */
+                q?: string;
+                /** @description active = not retired, retired = retired only, all = both */
+                status?: "active" | "retired" | "all";
+                /** @description Assets of these units only (repeat the parameter) */
+                unitIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetV2CreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetsV2Controller_change_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetV2ChangeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetsV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetsV2Controller_restore_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "code" | "-code" | "name" | "-name" | "createdAt" | "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Case-insensitive search in code and name */
+                q?: string;
+                /** @description active = not retired, retired = retired only, all = both */
+                status?: "active" | "retired" | "all";
+                /** @description Also list the products shared by every plant of the organisation (no plant). Pickers of profiles and plans leave it off: those need a product of the plant. */
+                includeOrganization?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductV2CreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductsV2Controller_change_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductV2ChangeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductsV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductsV2Controller_restore_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaTemplatesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "code" | "-code" | "name" | "-name" | "createdAt" | "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Case-insensitive search in code and name */
+                q?: string;
+                /** @description active = not retired, retired = retired only, all = both */
+                status?: "active" | "retired" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaTemplatesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaTemplateV2CreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaTemplatesV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaTemplatesV2Controller_change_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaTemplateV2ChangeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaTemplatesV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaTemplatesV2Controller_restore_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCausesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "code" | "-code" | "name" | "-name" | "createdAt" | "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Case-insensitive search in code and name */
+                q?: string;
+                /** @description active = not retired, retired = retired only, all = both */
+                status?: "active" | "retired" | "all";
+                /** @description Direct sub-causes of this cause */
+                parentId?: string;
+                /** @description Top-level causes only */
+                rootsOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCausesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaCauseV2CreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCausesV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCausesV2Controller_change_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaCauseV2ChangeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCausesV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCausesV2Controller_restore_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    VerificationChecklistsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "code" | "-code" | "name" | "-name" | "createdAt" | "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Case-insensitive search in code and name */
+                q?: string;
+                /** @description active = not retired, retired = retired only, all = both */
+                status?: "active" | "retired" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    VerificationChecklistsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerificationChecklistV2CreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    VerificationChecklistsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    VerificationChecklistsV2Controller_change_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerificationChecklistV2ChangeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    VerificationChecklistsV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    VerificationChecklistsV2Controller_restore_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MasterDataSummaryV2Controller_summary_v2: {
+        parameters: {
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { PLANTS, openPlantTree, selectPlant } from './support/admin-helpers';
 import { expectHidden, expectRefused } from './support/hidden-controls';
-import { apiLogin, BROKER, call, command, DEMO_EVENTS_CONNECTION, DEMO_PLANT, DEMO_PLANT_2, findConnection, INT_USERS, newSuffix, NOAH, openConsole, PREFIX, selectConnection, uiLogin } from './support/integration-world';
+import { apiLogin, BROKER, call, command, DEMO_EVENTS_CONNECTION, DEMO_PLANT, DEMO_PLANT_2, findConnection, findOnPages, INT_USERS, newSuffix, NOAH, openConsole, PREFIX, selectConnection, uiLogin } from './support/integration-world';
 
 /**
  * INTEGRATION ADMIN persona — journeys 1 (menu and access), 8 (cross-plant) and 9 (refusals).
@@ -27,7 +27,7 @@ test.describe('Integration admin — access, cross-plant, refusals', () => {
     await expect(page.getByTestId('integration-console')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole('tab', { name: 'Quarantine' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Source mappings' })).toBeVisible();
-    await expect(page.getByTestId('connection-item').filter({ hasText: DEMO_EVENTS_CONNECTION })).toBeVisible();
+    await findOnPages(page, page.getByTestId('connection-item').filter({ hasText: DEMO_EVENTS_CONNECTION }));
     await page.screenshot({ path: test.info().outputPath('int-01a-console.png'), fullPage: true });
   });
 
@@ -61,7 +61,7 @@ test.describe('Integration admin — access, cross-plant, refusals', () => {
     await uiLogin(page, INT_USERS.diego);
     await selectPlant(page, PLANTS.demo2);
     await openConsole(page);
-    await expect(page.getByText('Select a connection or create one.')).toBeVisible();
+    await expect(page.getByTestId('connections-list')).toBeVisible();
     await expect(page.getByTestId('connection-item').filter({ hasText: DEMO_EVENTS_CONNECTION })).toHaveCount(0);
     const name = `${PREFIX}dp2-mqtt-${suffix}`;
     await page.getByTestId('new-connection').click();
@@ -133,7 +133,6 @@ test.describe('Integration admin — access, cross-plant, refusals', () => {
     await uiLogin(page, INT_USERS.diego);
     await page.goto('/codes-admin');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('tab-reason-codes').click();
     await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 });
     await expectHidden(page.getByTestId('code-new'));
     await page.screenshot({ path: test.info().outputPath('int-09b-codes-read-only.png'), fullPage: true });

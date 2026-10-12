@@ -92,21 +92,23 @@ test.describe('Operator — analytics, tasks and plant selection', () => {
     const title = tag('J7-task');
     await loginOperator(page, OPERATORS.carlos);
     await page.goto('/tasks');
-    await expect(page.getByRole('heading', { name: 'Task Management' })).toBeVisible({ timeout: 60_000 });
-    await page.getByRole('button', { name: /New Task/i }).click();
-    const dialog = page.getByRole('dialog', { name: 'Create Task' });
-    // the dialog's labels are not linked to their inputs (no htmlFor): first textbox = Title, textarea = Description
-    await dialog.getByRole('textbox').first().fill(title);
-    await dialog.locator('textarea').fill('P-OPS operator task: check the line after the stop');
-    await dialog.getByRole('button', { name: 'Create Task' }).click();
-    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Tasks', level: 1 })).toBeVisible({ timeout: 60_000 });
+    await page.getByRole('link', { name: 'New task' }).click();
+    // the task form is a page (`/tasks/new`); the assignee defaults to the operator
+    await expect(page.getByRole('heading', { name: 'New task', level: 1 })).toBeVisible({ timeout: 30_000 });
+    await page.getByLabel('Title').fill(title);
+    await page.getByLabel('Description').fill('P-OPS operator task: check the line after the stop');
+    await page.getByRole('button', { name: 'Create task' }).click();
+    await expect(page.getByRole('heading', { name: title, level: 1 })).toBeVisible({ timeout: 30_000 });
+    await page.goto('/tasks');
+    await page.getByLabel('Search tasks').fill(title);
     const taskRow = page.locator('tr', { hasText: title });
-    await expect(taskRow).toBeVisible();
+    await expect(taskRow).toBeVisible({ timeout: 30_000 });
     await expect(taskRow).toContainText('Open');
 
-    await taskRow.getByRole('button', { name: 'Mark complete' }).click();
+    await taskRow.getByRole('button', { name: /^Mark .* complete$/ }).click();
     await expect(taskRow).toContainText('Completed');
-    await expect(taskRow.getByRole('button', { name: 'Mark complete' })).toHaveCount(0);
+    await expect(taskRow.getByRole('button', { name: /^Mark .* complete$/ })).toHaveCount(0);
 
     // re-login: still there and still completed; the API agrees
     await logoutViaHeader(page);

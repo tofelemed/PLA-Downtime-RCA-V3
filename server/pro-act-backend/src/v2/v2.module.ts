@@ -6,6 +6,7 @@ import { EventRcaLinkV2Controller } from './rca/event-rca-link-v2.controller';
 import { RcaActionsV2Controller } from './rca/rca-actions-v2.controller';
 import { RcaCasesV2Controller } from './rca/rca-cases-v2.controller';
 import { RcaLinksV2Controller } from './rca/rca-links-v2.controller';
+import { RcaCaseWorkspaceV2Controller } from './rca/rca-case-workspace-v2.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { ProductionEventModule } from '../production-event/production-event.module';
@@ -86,6 +87,7 @@ import { PlanGenerationJobsV2Controller } from './plans/plan-generation-jobs-v2.
 import { PlanScenariosV2Controller } from './plans/plan-scenarios-v2.controller';
 import { PlansV2Service } from './plans/plans-v2.service';
 import { ProductionPlansV2Controller } from './plans/production-plans-v2.controller';
+import { ProductionPlanReviewV2Controller } from './plans/production-plan-review-v2.controller';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { PeriodsModule } from '../periods/periods.module';
 import { AccountingModule } from '../accounting/accounting.module';
@@ -115,10 +117,7 @@ import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
 import { FeatureFlagsV2Controller } from './feature-flags/feature-flags-v2.controller';
 import { RulesModule } from '../rules/rules.module';
 import { RulesV2Controller } from './rules/rules-v2.controller';
-import { UnitsV2Controller } from './units/units-v2.controller';
-import { UnitsV2Service } from './units/units-v2.service';
-import { ProductsV2Controller } from './products/products-v2.controller';
-import { ProductsV2Service } from './products/products-v2.service';
+import { MasterDataV2Module } from './master-data/master-data-v2.module';
 import {
   PeriodSummariesV2Controller,
   WaterfallReportV2Controller,
@@ -126,6 +125,11 @@ import {
 import { PeriodOverviewService } from './period-overview/period-overview.service';
 import { PlaReportsV2Controller } from './pla-reports/pla-reports-v2.controller';
 import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
+import { ActivitySummaryV2Controller } from './activity-summary/activity-summary-v2.controller';
+import { ActivitySummaryV2Service } from './activity-summary/activity-summary-v2.service';
+import { AdministrationV2Module, ADMINISTRATION_V2_CONTROLLERS } from './administration/administration-v2.module';
+import { RcaPoliciesV2Controller } from './rca-policies/rca-policies-v2.controller';
+import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
 
 /**
  * Home of every `/api/v2` resource (see CONVENTIONS.md). Kept separate from the v1 feature modules so the
@@ -185,6 +189,8 @@ import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
     RulesModule,
     RcaCaseModule,
     RcaKnowledgeModule,
+    AdministrationV2Module,
+    MasterDataV2Module,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
@@ -212,6 +218,7 @@ import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
     ValuationRatesV2Controller,
     RateImportsV2Controller,
     ProductionPlansV2Controller,
+    ProductionPlanReviewV2Controller,
     PlanScenariosV2Controller,
     PlanGenerationJobsV2Controller,
     ProductionPeriodsV2Controller,
@@ -231,14 +238,16 @@ import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
     RulesV2Controller,
     RcaCasesV2Controller,
     RcaLinksV2Controller,
+    RcaCaseWorkspaceV2Controller,
     EventRcaLinkV2Controller,
     RcaActionsV2Controller,
     RcaKnowledgeV2Controller,
-    UnitsV2Controller,
-    ProductsV2Controller,
     PeriodSummariesV2Controller,
     WaterfallReportV2Controller,
     PlaReportsV2Controller,
+    ActivitySummaryV2Controller,
+    ...ADMINISTRATION_V2_CONTROLLERS,
+    RcaPoliciesV2Controller,
   ],
   providers: [
     ProductionEventsV2Service,
@@ -252,8 +261,6 @@ import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
     IntakeQueriesV2Service,
     SignalsV2Service,
     CalendarsV2Service,
-    UnitsV2Service,
-    ProductsV2Service,
     ProfilesV2Service,
     PlansV2Service,
     PeriodsV2Service,
@@ -263,6 +270,8 @@ import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
     LossValueReportV2Service,
     PeriodOverviewService,
     PlaReportsV2Service,
+    ActivitySummaryV2Service,
+    RcaPoliciesV2Service,
   ],
 })
 export class V2Module {}

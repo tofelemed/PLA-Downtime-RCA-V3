@@ -4,6 +4,7 @@ import { call, command } from '../test-utils/downtime-world';
 import { scopeUrl } from '../test-utils/pla-world';
 import { AISHA, HANNAH, SAMUEL, SETUP_MANAGER, apiSession, type Session } from './support/engineer-users';
 import { approvePeriod, event, seedEngineerWorld, submitManualLine, until, type EngineerWorld } from './support/engineer-world';
+import { backToList, eventRowOf, openEventRow } from './support/event-hub-ui';
 
 /**
  * Production engineer persona — event coding on the v2 Event Hub (journey 4) and the analytics screens
@@ -21,7 +22,7 @@ let stopC = '';
 
 test.describe.configure({ mode: 'serial', timeout: 150_000 });
 
-const row = (page: Page, id: string) => page.locator(`[data-testid="event-row"][data-event-id="${id}"]`);
+const row = (page: Page, id: string) => eventRowOf(page, id);
 const tile = (page: Page, metric: string) => page.getByTestId('kpi-summary').getByTestId(`kpi-${metric}`);
 const bar = (page: Page, key: string) => page.locator(`[data-testid="pareto-bar"][data-key="${key}"]`);
 
@@ -63,23 +64,22 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
   test('J4 Hannah codes a stop (reason + schedule class) in the drawer, then bulk-codes two stops after a preview; the codes persist', async ({ page }) => {
     await loginViaUI(page, HANNAH.email, HANNAH.password);
     await openHub(page);
-    await row(page, world.stops.a).getByRole('button').first().click();
-    const drawer = page.getByTestId('event-detail');
-    await drawer.getByRole('button', { name: 'Edit / code' }).click();
+    await openEventRow(page, world.stops.a);
+    const detail = page.getByTestId('event-detail');
+    await detail.getByRole('button', { name: 'Edit / code' }).click();
     const form = page.getByTestId('event-form');
     await form.locator('#reasonCodeId').selectOption(world.reasons.feed);
     await form.locator('#scheduleClass').selectOption('unplanned');
     await expect(form.getByTestId('impacted-periods')).toBeVisible();
     await form.getByRole('button', { name: 'Save' }).click();
     await expect(form).toBeHidden();
-    await expect(drawer.getByLabel('Coding state: Coded')).toBeVisible();
-    await page.keyboard.press('Escape');
+    await expect(detail.getByLabel('Coding state: Coded')).toBeVisible();
+    await backToList(page);
     await expect(row(page, world.stops.a).getByTestId('event-reason')).toContainText('feed interruption');
 
     // DT10 bulk coding: select two stops → preview (nothing changes) → apply
-    const startOf = (ms: number) => new Date(ms).toISOString();
-    await page.getByRole('checkbox', { name: `Select event starting ${startOf(world.dayStart + 10 * HOUR)}` }).click();
-    await page.getByRole('checkbox', { name: `Select event starting ${startOf(world.dayStart + 12 * HOUR)}` }).click();
+    await row(page, world.stops.b).getByRole('checkbox').click();
+    await row(page, stopC).getByRole('checkbox').click();
     await expect(page.getByTestId('selection-count')).toHaveText('2 selected');
     await page.getByRole('button', { name: 'Bulk code' }).click();
     const dialog = page.getByTestId('bulk-code-dialog');
@@ -122,7 +122,7 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
     await page.getByTestId('trend-by').selectOption('shift');
     await shiftTrend;
     await expect(page.getByTestId('residual-bucket')).toHaveCount(3);
-    await page.getByTestId('tab-loss-tree').click();
+    await page.getByTestId('tab-losses').click();
     await expect(page.getByTestId('loss-tree')).toBeVisible();
     expect(writes).toEqual([]); // KPI03: reading analytics writes nothing
     await page.screenshot({ path: test.info().outputPath('engineer-pla-analytics.png') });
@@ -150,7 +150,6 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
     const drill = page.getByTestId('drill-events');
     await expect(drill).toHaveAttribute('data-reason-id', world.reasons.motor);
     await expect(drill.getByTestId('event-row')).toHaveCount(2);
-    await expect(drill.getByTestId('drill-count')).toHaveText('2');
     await page.locator('#downtime-trend').selectOption('shift');
     await expect.poll(() => new URL(page.url()).searchParams.get('trend')).toBe('shift');
     await page.screenshot({ path: test.info().outputPath('engineer-downtime-drill.png') });

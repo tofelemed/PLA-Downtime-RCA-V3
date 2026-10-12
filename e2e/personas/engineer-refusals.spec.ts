@@ -22,7 +22,6 @@ test.describe('Engineer — refusals (journey 5)', () => {
     await loginViaUI(page, MATEO.email, MATEO.password);
     await page.goto('/codes-admin');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('tab-reason-codes').click();
     await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 }); // reads are allowed
     await expectHidden(page.getByTestId('code-new'));
     await page.screenshot({ path: test.info().outputPath('engineer-codes-admin-no-create.png') });

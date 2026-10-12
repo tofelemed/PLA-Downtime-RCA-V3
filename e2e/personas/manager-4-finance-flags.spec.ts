@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
 import { policiesOf, type PolicySummary } from '../test-utils/finance-world';
+import { confirmDialog, fillDateTime } from './support/codes-finance-ui';
 import { api, itemsOf, post } from './support/manager-api';
 import { expectRefused, expectSodDisabled } from './support/hidden-controls';
 import { ADMINS, PREFIX, sessionOf, shortId, type Session } from './support/manager-users';
@@ -33,18 +34,9 @@ let fxWindow = { from: '' };
 
 test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
-const fxRow = (page: Page, source: string) => page.locator(`[data-testid="fx-row"][data-source="${source}"]`);
-const fxState = (page: Page, source: string) => fxRow(page, source).getByTestId('version-state');
-
-async function openFinance(page: Page, tab: 'fx-rates' | 'policies'): Promise<void> {
-  await page.goto('/finance');
-  // first visit compiles the lazy page chunk on the dev server
-  await expect(page.getByTestId('finance')).toBeVisible({ timeout: 60_000 });
-  await page.getByTestId(`tab-${tab}`).click();
-  if (tab === 'fx-rates') await page.locator('#fxPairFilter').selectOption('USD-IRR');
-}
 
 interface FxVersion {
+  id: string;
   version: number;
   state: string;
   source: string | null;
@@ -58,6 +50,25 @@ async function fxVersions(token: string): Promise<FxVersion[]> {
   return itemsOf(list.body);
 }
 
+const fxDetail = (page: Page) => page.getByTestId('fx-detail');
+
+/** The FX version's page (looked up by its source through the API: the list is paged). */
+async function openFx(page: Page, token: string, source: string): Promise<void> {
+  const id = (await fxVersions(token)).find((v) => v.source === source)?.id;
+  expect(id, `FX version ${source}`).toBeDefined();
+  await page.goto(`/finance/fx/${id}`);
+  // first visit compiles the lazy page chunk on the dev server
+  await expect(fxDetail(page)).toBeVisible({ timeout: 60_000 });
+}
+
+/** The policy version's page (looked up by its notes through the API). */
+async function openPolicy(page: Page, token: string, notes: string): Promise<void> {
+  const id = (await policiesOf(token)).find((p) => p.notes === notes)?.id;
+  expect(id, `policy ${notes}`).toBeDefined();
+  await page.goto(`/finance/policies/${id}`);
+  await expect(page.getByTestId('policy-detail')).toBeVisible({ timeout: 60_000 });
+}
+
 test.describe('Manager persona — finance approvals and feature flags', () => {
   test.beforeAll(async () => {
     [mei, oliver, anna] = await Promise.all([sessionOf(ADMINS.mei), sessionOf(ADMINS.oliver), sessionOf(ADMINS.anna)]);
@@ -69,20 +80,20 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
   test('J6a Mei drafts a future USD → IRR FX version (zero rate refused first)', async ({ page }) => {
     await loginViaUI(page, ADMINS.mei.email, ADMINS.mei.password);
     await expect(page.locator('a[href="/finance"]').first()).toBeVisible();
-    await openFinance(page, 'fx-rates');
-    await page.getByTestId('fx-new').click();
+    await page.goto('/finance?tab=fx');
+    await page.getByTestId('fx-new').click({ timeout: 60_000 });
     await page.selectOption('#fromCurrency', 'USD');
     await page.selectOption('#toCurrency', 'IRR');
     await page.fill('#rate', '0');
-    await page.fill('#fxEffectiveFrom', fxWindow.from);
+    await fillDateTime(page, 'Valid from', fxWindow.from);
     await page.fill('#fxSource', fxSource);
     await page.getByTestId('fx-save').click();
-    await expect(page.getByTestId('field-error-rate')).toContainText('> 0');
+    await expect(page.getByTestId('field-error-rate')).toContainText('greater than 0');
     expect((await fxVersions(mei.token)).find((v) => v.source === fxSource)).toBeUndefined();
     await page.fill('#rate', '2750000');
     await page.getByTestId('fx-save').click();
-    await expect(fxState(page, fxSource)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
-    await expect(fxRow(page, fxSource).getByTestId('fx-rate')).toHaveText('1 USD = 2750000 IRR');
+    await expect(fxDetail(page)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
+    await expect(fxDetail(page).getByTestId('fx-rate')).toHaveText('1 USD = 2750000 IRR');
   });
 
   test('J6b Oliver approves it: the overlap with the live version is shown (409), supersede closes it in 2099', async ({ page }) => {
@@ -91,43 +102,40 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
     const inForceToday = live.find((v) => v.effectiveFrom <= new Date().toISOString() && (v.effectiveTo === null || v.effectiveTo > new Date().toISOString()));
     expect(inForceToday, 'Demo Plant has a live USD → IRR rate before the test').toBeDefined();
     await loginViaUI(page, ADMINS.oliver.email, ADMINS.oliver.password);
-    await openFinance(page, 'fx-rates');
-    await fxRow(page, fxSource).getByTestId('fx-approve').click();
-    const refusal = fxRow(page, fxSource).getByTestId('refusal');
-    await expect.poll(async () => ((await refusal.count()) > 0 ? 'refused' : await fxState(page, fxSource).getAttribute('data-state')), { timeout: 20_000 }).not.toBe('draft');
+    await openFx(page, oliver.token, fxSource);
+    await page.getByTestId('fx-approve').click();
+    await confirmDialog(page, 'Approve rate');
+    const refusal = page.getByRole('alertdialog').getByTestId('refusal');
+    await expect.poll(async () => ((await refusal.count()) > 0 ? 'refused' : await fxDetail(page).getAttribute('data-state')), { timeout: 20_000 }).not.toBe('draft');
     if ((await refusal.count()) > 0) {
       await expect(refusal).toHaveAttribute('data-code', 'VERSION_OVERLAP');
       await expect(refusal.getByTestId('refusal-conflict')).toHaveCount(1);
-      await expect(fxState(page, fxSource)).toHaveAttribute('data-state', 'draft');
-      await fxRow(page, fxSource).getByTestId('fx-supersede').click();
-      await fxRow(page, fxSource).getByTestId('fx-approve').click();
-        test.info().annotations.push({ type: 'note', description: 'VERSION_OVERLAP with an open-ended approved version; approved with supersede' });
+      await expect(fxDetail(page)).toHaveAttribute('data-state', 'draft');
+      await page.getByTestId('fx-supersede').click();
+      await confirmDialog(page, 'Approve rate');
+      test.info().annotations.push({ type: 'note', description: 'VERSION_OVERLAP with an open-ended approved version; approved with supersede' });
     }
-    await expect(fxState(page, fxSource)).toHaveAttribute('data-state', 'approved', { timeout: 20_000 });
+    await expect(fxDetail(page)).toHaveAttribute('data-state', 'approved', { timeout: 20_000 });
     const after = await fxVersions(oliver.token);
     expect(after.find((v) => v.source === fxSource)?.state).toBe('approved');
     for (const version of live) expect(after.find((v) => v.version === version.version)?.state).toBe('approved'); // nothing retired
     expect(after.find((v) => v.version === inForceToday?.version)?.effectiveFrom).toBe(inForceToday?.effectiveFrom); // the live rate still applies today
     await page.reload();
-    await expect(page.getByTestId('finance')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('tab-fx-rates').click();
-    await page.locator('#fxPairFilter').selectOption('USD-IRR');
-    await expect(fxState(page, fxSource)).toHaveAttribute('data-state', 'approved');
+    await expect(fxDetail(page)).toHaveAttribute('data-state', 'approved', { timeout: 60_000 });
   });
 
   test("J6c valuation policy: Mei's own approval is disabled with the SoD reason and refused by the server (SEPARATION_OF_DUTIES); Oliver approves; older versions unchanged", async ({ browser }) => {
     const author = await browser.newPage();
     await loginViaUI(author, ADMINS.mei.email, ADMINS.mei.password);
-    await openFinance(author, 'policies');
-    await expect(author.getByTestId('policy-banner')).toBeVisible({ timeout: 20_000 });
+    await author.goto('/finance');
+    await expect(author.getByTestId('policy-banner')).toBeVisible({ timeout: 60_000 });
     await author.getByTestId('policy-new').click();
-    await author.fill('#policyEffectiveFrom', '2099-01-01T00:00');
+    await fillDateTime(author, 'Starts', '2099-01-01T00:00');
     await author.fill('#policyNotes', policyNotes);
     await author.getByTestId('policy-save').click();
-    const row = author.getByTestId('policy-row').filter({ hasText: policyNotes });
-    await expect(row).toHaveAttribute('data-status', 'unapproved', { timeout: 20_000 });
+    await expect(author.getByTestId('policy-detail')).toHaveAttribute('data-status', 'unapproved', { timeout: 20_000 });
     // the author sees Approve disabled with the separation-of-duties reason; the server refuses her (403)
-    await expectSodDisabled(row.getByTestId('policy-approve-start'));
+    await expectSodDisabled(author.getByTestId('policy-approve-start'));
     const drafted = (await policiesOf(mei.token)).find((p) => p.notes === policyNotes);
     expectRefused(await post(mei.token, `/v2/valuation-policies/${drafted?.id}/approve`, {}), 'SEPARATION_OF_DUTIES');
     expect((await policiesOf(mei.token)).find((p) => p.notes === policyNotes)?.approved).toBe(false);
@@ -135,11 +143,10 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
 
     const approver = await browser.newPage();
     await loginViaUI(approver, ADMINS.oliver.email, ADMINS.oliver.password);
-    await openFinance(approver, 'policies');
-    const theirs = approver.getByTestId('policy-row').filter({ hasText: policyNotes });
-    await theirs.getByTestId('policy-approve-start').click();
-    await theirs.getByTestId('policy-approve-submit').click();
-    await expect(theirs).toHaveAttribute('data-status', 'approved', { timeout: 20_000 });
+    await openPolicy(approver, oliver.token, policyNotes);
+    await approver.getByTestId('policy-approve-start').click();
+    await confirmDialog(approver, `Approve version ${drafted?.version}`);
+    await expect(approver.getByTestId('policy-detail')).toHaveAttribute('data-status', 'approved', { timeout: 20_000 });
     const after = await policiesOf(oliver.token);
     expect(after.find((p) => p.notes === policyNotes)?.approved).toBe(true);
     expect(after.filter((p) => p.notes !== policyNotes)).toEqual(policiesBefore); // the owner's versions are untouched

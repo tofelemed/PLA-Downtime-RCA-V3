@@ -20,7 +20,6 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   'Event Hub': ALL,
   'Downtime Analysis': ALL,
   'Production Loss Analysis': ALL,
-  'Production Plans': NOT_OPERATOR,
   'Plans, Profiles & Calendars': NOT_OPERATOR,
   // Reliability
   'RCA Analysis': NOT_OPERATOR,
@@ -70,12 +69,10 @@ describe('navigation items by capability', () => {
     expect(menuFor(manager, null)).toEqual(menuFor(legacyUser('Manager')));
   });
 
-  it('flags hide their screens', () => {
+  it('Codes & Rules and Finance are v2 only: listed without any feature flag', () => {
     const names = visibleNavigationItems(capabilitiesOf(['SuperAdmin']), {}).map((item) => item.name);
-    expect(names).not.toContain('Downtime Analysis');
-    expect(names).not.toContain('Plans, Profiles & Calendars');
-    expect(names).not.toContain('Codes & Rules');
-    expect(names).not.toContain('Finance');
+    expect(names).toContain('Codes & Rules');
+    expect(names).toContain('Finance');
     expect(names).toContain('Dashboard');
   });
 
@@ -165,8 +162,8 @@ describe('navigation sections', () => {
     expect(isNavItemActive(byHref('/rca'), '/rca/cases/1')).toBe(true);
     expect(isNavItemActive(byHref('/rca'), '/rca-knowledge-base')).toBe(false);
     expect(isNavItemActive(byHref('/rca-knowledge-base'), '/rca-knowledge-base')).toBe(true);
-    expect(isNavItemActive(byHref('/production-plans'), '/plans/p1/periods/x')).toBe(true);
-    expect(isNavItemActive(byHref('/planning'), '/plans/p1')).toBe(false);
+    expect(isNavItemActive(byHref('/planning'), '/plans/p1/periods/x')).toBe(true);
+    expect(isNavItemActive(byHref('/planning'), '/planning/plans/p1')).toBe(true);
   });
 });
 

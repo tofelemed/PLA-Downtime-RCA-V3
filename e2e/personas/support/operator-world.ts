@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { authenticate } from '../../test-utils/api-helpers';
 import { loginViaUI } from '../../test-utils/auth-helpers';
 import { call, command } from '../../test-utils/downtime-world';
+import { eventRowOf } from './event-hub-ui';
 
 /**
  * Shared world of the OPERATOR persona tests (docs/DEMO_PERSONAS.md): the five operators of Demo
@@ -106,17 +107,19 @@ export async function chooseUnit(page: Page, filterTestId: string, unitName: str
   await expect(page.getByTestId(filterTestId)).toHaveAttribute('aria-label', /1 selected/);
 }
 
-export const row = (page: Page, id: string): Locator => page.locator(`[data-testid="event-row"][data-event-id="${id}"]`);
+export const row = (page: Page, id: string): Locator => eventRowOf(page, id);
 export const stop = (page: Page, id: string): Locator => page.locator(`[data-testid="current-stop"][data-event-id="${id}"]`);
 
 export async function codeReason(page: Page, reasonId: string): Promise<void> {
-  const drawer = page.getByTestId('event-detail');
-  await drawer.getByRole('button', { name: 'Edit / code' }).click();
+  const detail = page.getByTestId('event-detail');
+  await detail.getByRole('button', { name: 'Edit / code' }).click();
   const form = page.getByTestId('event-form');
   await form.locator('#reasonCodeId').selectOption(reasonId);
   await expect(form.getByTestId('impacted-periods')).toBeVisible();
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
+  // the save returns to the event page
+  await expect(detail).toBeVisible();
 }
 
 /** The timezone the form types in, read from its own hint ("Plant time (Europe/…)"). */

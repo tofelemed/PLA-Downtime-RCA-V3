@@ -60,3 +60,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Report export files written by the local API/worker (plan 2.9)
 /storage
+
+# RCA attachments (UPLOAD_ROOT = <cwd>/uploads)
+/uploads/

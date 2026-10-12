@@ -71,12 +71,13 @@ test.describe('Reliability engineer — RCA knowledge base (journey 5)', () => {
     await expect(page.getByRole('heading', { name: 'RCA Knowledge Base' })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('rca-knowledge-v2')).toBeVisible();
     await page.getByLabel('Search knowledge entries').fill(caseTitle);
-    const row = page.getByTestId('knowledge-list').getByRole('button', { name: new RegExp(caseTitle) });
+    const row = page.getByTestId('knowledge-list').getByRole('row', { name: `Open entry ${caseTitle}` });
     await expect(row).toBeVisible();
     await row.click();
     const detail = page.getByTestId('knowledge-detail');
     await expect(detail.getByRole('heading', { name: caseTitle })).toBeVisible();
     await expect(detail).toContainText(rootCause);
+    await detail.getByRole('button', { name: 'Quality' }).click(); // secondary detail behind a disclosure
     await expect(detail.getByTestId('quality-breakdown')).toBeVisible();
     await page.screenshot({ path: test.info().outputPath('j5-knowledge-entry.png'), fullPage: true });
 

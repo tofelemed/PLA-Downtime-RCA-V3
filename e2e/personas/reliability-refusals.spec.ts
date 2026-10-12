@@ -24,7 +24,6 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     await uiLogin(page, REL_USERS.sebastian);
     await page.goto('/codes-admin');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('tab-reason-codes').click();
     await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 }); // reads are allowed
     await expectHidden(page.getByTestId('code-new'));
     await page.screenshot({ path: test.info().outputPath('r1-codes-read-only.png'), fullPage: true });
@@ -93,8 +92,7 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     await page.getByTestId('add-action').click();
     const error = page.getByTestId('command-error');
     await expect(error).toBeVisible();
-    await expect(error).toContainText('Refused (');
-    await expect(error).toContainText(/verificationWindow/i);
+    await expect(error).toContainText(/verification ?window/i);
     await page.screenshot({ path: test.info().outputPath('v1-action-validation.png'), fullPage: true });
 
     await form.locator('#action-claim').fill('500');

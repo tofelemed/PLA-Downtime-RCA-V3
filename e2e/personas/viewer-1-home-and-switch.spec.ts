@@ -5,6 +5,7 @@ import {
   readOnlyBadge, selectPlant, signOut, tag, trackV2Calls, uiLogin, unitOptionsOf, unitsOf, type ListBody,
   type UnitView, type ViewerSession,
 } from './support/viewer-world';
+import { backToList, fillPlantTime } from './support/event-hub-ui';
 
 /**
  * VIEWER persona — journeys 1, 2 and 6 (docs/DEMO_PERSONAS.md): a viewer is an Operator in its home plant
@@ -48,12 +49,12 @@ test.describe('Viewer — home plant, plant switch, persistence', () => {
     await expectMenu(page, OPERATOR_MENU, OPERATOR_HIDDEN);
 
     await openHub(page, line1.name);
-    await page.getByRole('button', { name: 'New event' }).click();
+    await page.getByRole('link', { name: 'New event' }).click();
     const form = page.getByTestId('event-form');
     await expect(form.locator('#unitId')).toHaveValue(line1.id);
     const timezone = await plantTimezoneOf(form);
-    await form.locator('#startLocal').fill(plantLocal(new Date(Date.now() - 40 * MINUTE), timezone));
-    await form.locator('#endLocal').fill(plantLocal(new Date(Date.now() - 10 * MINUTE), timezone));
+    await fillPlantTime(form, 'Start', plantLocal(new Date(Date.now() - 40 * MINUTE), timezone));
+    await fillPlantTime(form, 'End (empty = still running)', plantLocal(new Date(Date.now() - 10 * MINUTE), timezone));
     await form.locator('#description').fill(label);
     const created = page.waitForResponse((r) => r.url().endsWith('/v2/production-events') && r.request().method() === 'POST');
     await form.getByRole('button', { name: 'Save' }).click();
@@ -62,7 +63,7 @@ test.describe('Viewer — home plant, plant switch, persistence', () => {
     expect(response.request().headers()['x-tenant-id']).toBe(DEMO2.id);
     const event = (await response.json()) as EventBody;
     await expect(form).toBeHidden();
-    await page.keyboard.press('Escape');
+    await backToList(page);
     await expect(eventRow(page, event.id)).toBeVisible();
     await page.screenshot({ path: test.info().outputPath('viewer-j1-home-event.png'), fullPage: true });
 

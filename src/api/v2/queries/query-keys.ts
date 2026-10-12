@@ -34,7 +34,15 @@ export type V2Resource =
   | 'rca-cases'
   | 'rca-recommendations'
   | 'rca-knowledge'
-  | 'valuation';
+  | 'valuation'
+  | 'users'
+  | 'user-scopes'
+  | 'tasks'
+  | 'audit-logs'
+  | 'admin-config'
+  | 'assets'
+  | 'rca-settings'
+  | 'master-data';
 
 export interface V2Window {
   from?: string;

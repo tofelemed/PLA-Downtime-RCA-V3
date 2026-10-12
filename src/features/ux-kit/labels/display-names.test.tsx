@@ -57,13 +57,19 @@ describe('display-name resolvers', () => {
     expect(client.getQueryData(['v1', 'tenant-a', 'assets'])).toBeDefined();
   });
 
-  it('useUserNames resolves plant members and degrades silently on a refusal (no retry)', async () => {
-    fetchMock.mockImplementation(async () => json(200, [{ id: 'u2', name: 'Sara Ahmadi' }]));
-    const { result } = renderHook(() => useUserNames(), { wrapper });
-    await waitFor(() => expect(result.current.nameOf('u2')).toBe('Sara Ahmadi'));
-    expect(result.current.nameOf('d9800d1c-0000-4000-8000-000000000000')).toBe('Unknown user');
+  it('useUserNames resolves plant members from the v2 directory, asks for inactive ones by id, and degrades silently', async () => {
+    const INACTIVE = 'd9800d1c-0000-4000-8000-000000000000';
+    fetchMock.mockImplementation(async (url: string) =>
+      url.includes('ids=')
+        ? json(200, page([{ id: INACTIVE, name: 'Former Lead', isActive: false }]))
+        : json(200, page([{ id: 'u2', name: 'Sara Ahmadi', isActive: true }])),
+    );
+    const { result } = renderHook(() => useUserNames(['u2', INACTIVE]), { wrapper });
+    await waitFor(() => expect(result.current.nameOf(INACTIVE)).toBe('Former Lead'));
+    expect(result.current.nameOf('u2')).toBe('Sara Ahmadi');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/v2/users/directory');
 
-    client = new QueryClient();
+    client = new QueryClient({ defaultOptions: { queries: { retry: 3 } } });
     fetchMock.mockReset();
     fetchMock.mockImplementation(async () => json(403, { code: 'FORBIDDEN', message: 'Forbidden', correlationId: 'c', retryable: false }));
     const refused = renderHook(() => useUserNames(), { wrapper });

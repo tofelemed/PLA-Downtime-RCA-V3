@@ -70,9 +70,15 @@ test.describe('Integration admin — mappings and report import', () => {
     await uiLogin(page, INT_USERS.freya);
     await openConsole(page);
     await page.getByTestId('tab-mappings').click();
-    const row = page.locator(`[data-testid="source-mapping"][data-match="${matchValue}"]`);
-    await expect(row).toBeVisible({ timeout: 30_000 });
-    await expect(row).toContainText('pattern');
+    // the rules are paged (20 per page, oldest first): narrow to patterns and page forward to the new rule
+    await page.locator('#mappings-kind').selectOption('pattern');
+    const link = page.locator(`[data-testid="source-mapping"][data-match="${matchValue}"]`);
+    const row = page.getByRole('row').filter({ has: link });
+    await expect(async () => {
+      if ((await link.count()) === 0) await page.getByRole('button', { name: 'Next page' }).click();
+      await expect(link).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 60_000 });
+    await expect(row).toContainText('Pattern');
     await expect(row).toContainText(unit.name);
     await expect(row).toContainText(state.connectionName);
     await page.screenshot({ path: test.info().outputPath('int-07a-source-mappings.png'), fullPage: true });

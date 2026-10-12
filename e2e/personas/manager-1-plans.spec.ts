@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
 import { api, itemsOf } from './support/manager-api';
-import { addRateDraft, local, openPlanOfUnit, openPlanningTab, openProfile, previewPeriods, previewTargets, rateRow } from './support/manager-planning';
+import { fillPlantDateTime } from '../test-utils/planning-world';
+import { addRateDraft, local, openPlanOfUnit, openPlanningTab, openProfile, previewPeriods, previewTargets, rateLine, rateRow } from './support/manager-planning';
 import { asUser, MANAGERS, PREFIX, sessionOf, utcDate, type Session } from './support/manager-users';
 import { seedPlanningUnit, type PlanningUnit } from './support/manager-world';
 
@@ -46,8 +47,8 @@ async function versionState(token: string, id: string): Promise<{ state: string;
 async function fillPlanForm(page: Page, to: string): Promise<void> {
   await page.fill('#planName', planName);
   await page.selectOption('#planUnit', { label: planUnit.unitName });
-  await page.fill('#planFrom', local(dayStart));
-  await page.fill('#planTo', local(to));
+  await fillPlantDateTime(page, 'Window start', local(dayStart));
+  await fillPlantDateTime(page, 'Window end (exclusive)', local(to));
   await page.fill('#headerTarget', '2160');
   await page.selectOption('#slice-0-product', { label: `${planUnit.productName} (${planUnit.productCode})` });
 }
@@ -72,10 +73,10 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     await fillPlanForm(page, dayStart); // to == from: validation error, nothing saved
     await page.getByTestId('plan-save').click();
     await expect(page.getByTestId('plan-form')).toBeVisible();
-    await expect(page.getByTestId('plan-form').locator('[data-testid^="field-error-"]').first()).toContainText('after');
+    await expect(page.getByTestId('field-planTo')).toContainText('after');
     expect(await findPlanId(jonas.token, planUnit.unitId, planName)).toBe('');
 
-    await page.fill('#planTo', local(nextDay));
+    await fillPlantDateTime(page, 'Window end (exclusive)', local(nextDay));
     await page.getByTestId('plan-save').click();
     await expect(page.getByTestId('plan-detail')).toBeVisible();
     // 3 × 8 h at the approved planning rate of 90 t/h = 720 t per shift, Σ = header
@@ -111,9 +112,8 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
 
     // persists after a reload
     await page.reload();
-    await expect(page.getByTestId('planning-page')).toBeVisible({ timeout: 60_000 });
-    await page.selectOption('#planUnitFilter', { label: planUnit.unitName });
-    await page.getByTestId('plan-row').filter({ hasText: planName }).first().click();
+    await expect(page.getByTestId('plan-detail').getByTestId('version-state').first()).toHaveAttribute('data-state', 'approved', { timeout: 60_000 });
+    await openPlanOfUnit(page, planUnit.unitName, planName);
     await expect(page.getByTestId('plan-detail').getByTestId('version-state').first()).toHaveAttribute('data-state', 'approved');
   });
 
@@ -125,7 +125,7 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     await page.fill('#calTimezone', 'UTC');
     await page.fill('#calDayStart', '07:00'); // a change enables "Save"; the effective date is still missing
     await page.getByTestId('calendar-save').click(); // no effective date: refused, nothing stored
-    await expect(page.locator('[data-testid^="field-error-"], [data-testid="refusal"]').first()).toBeVisible();
+    await expect(page.getByTestId('calendar-editor').locator('[role="alert"]').first()).toBeVisible();
     await page.fill('#calFrom', utcDate(-1));
     await page.getByTestId('calendar-save').click();
     await expect(page.getByTestId('calendar-editor')).toHaveAttribute('data-state', 'draft');
@@ -138,6 +138,7 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     const versions = await api<{ items: Array<{ state: string }> }>(jonas.token, 'GET', `/v2/calendar-versions?unitId=${calUnit.unitId}&limit=20`);
     expect(itemsOf(versions.body).map((v) => v.state)).toEqual(['published']);
 
+    await openPlanningTab(page, 'calendars');
     await page.fill('#crewName', crewName);
     await page.getByRole('button', { name: 'Add crew' }).click();
     await expect(page.locator('#crewSelect')).toHaveValue(/.+/, { timeout: 15_000 });
@@ -145,8 +146,8 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     await page.fill('#rotationAnchor', utcDate(0));
     await page.fill('#rotationFrom', utcDate(0));
     await page.getByRole('button', { name: 'Add rotation' }).click();
-    await expect(page.getByTestId('rotation-list').locator('li')).toHaveCount(1, { timeout: 60_000 }); // the server re-assigns future shift instances
-    await expect(page.getByTestId('rotation-list').locator('li').first()).toContainText('cycle');
+    await expect(page.getByTestId('rotation-row')).toHaveCount(1, { timeout: 60_000 }); // the server re-assigns future shift instances
+    await expect(page.getByTestId('rotation-list').locator('tbody tr').first()).toContainText('A,A,B,B,C,C');
     const crews = await api<{ items: Array<{ name: string }> }>(jonas.token, 'GET', '/v2/crews?limit=200');
     expect(crews.status).toBe(200);
     expect(itemsOf(crews.body).map((crew) => crew.name)).toContain(crewName);
@@ -161,7 +162,7 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     await erik.selectOption('#unitId', calUnit.unitId);
     await erik.fill('#quantityUom', 't');
     await erik.selectOption('#rateTimebase', 'h');
-    await erik.fill('#effectiveFrom', local(from));
+    await fillPlantDateTime(erik, 'Effective from', local(from));
     await erik.getByTestId('profile-save').click(); // no product: validation error shown, nothing stored
     await expect(erik.getByTestId('field-error-productId')).toBeVisible();
     await erik.selectOption('#productId', calUnit.productId);
@@ -195,7 +196,7 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     await draft.getByTestId('approve-version').click();
     await expect(draft).toHaveAttribute('data-state', 'approved', { timeout: 20_000 });
     await expect(rateRow(laura, 'planning', 1)).toHaveAttribute('data-state', 'approved');
-    await expect(rateRow(laura, 'planning', 1)).not.toContainText('open');
+    await expect(rateLine(laura, 'planning', 1)).not.toContainText('open-ended');
     const rates = await api<{ items: Array<{ version: number; state: string; effectiveTo: string | null }> }>(jonas.token, 'GET', `/v2/profiles/${profileId}/rates?limit=20`);
     const planning = itemsOf(rates.body).filter((rate) => rate.state === 'approved');
     expect(planning.map((rate) => rate.version).sort()).toEqual([1, 2]);
@@ -209,12 +210,12 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     await openPlanningTab(page, 'calendars');
     await page.selectOption('#calendarScope', { label: calUnit.unitName });
     await page.selectOption('#crewSelect', { label: crewName });
-    await expect(page.getByTestId('rotation-list').locator('li')).toHaveCount(1, { timeout: 20_000 });
+    await expect(page.getByTestId('rotation-row')).toHaveCount(1, { timeout: 20_000 });
     await page.fill('#rotationCycle', 'A,A,B,B,C,C,-,-');
     await page.fill('#rotationAnchor', utcDate(30));
     await page.fill('#rotationFrom', utcDate(30));
     await page.getByRole('button', { name: 'Add rotation' }).click();
     // POST /v2/crew-rotations accepts `cycle: Array<string | null>` (null = day off, what the screen sends for "-")
-    await expect(page.getByTestId('rotation-list').locator('li')).toHaveCount(2, { timeout: 60_000 });
+    await expect(page.getByTestId('rotation-row')).toHaveCount(2, { timeout: 60_000 });
   });
 });

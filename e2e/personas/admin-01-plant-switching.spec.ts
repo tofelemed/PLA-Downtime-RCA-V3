@@ -223,7 +223,7 @@ test.describe('ADM-02 OrgAdmin plant isolation', () => {
     );
     if (demoPlan) {
       await page.goto(`/plans/${demoPlan.id}`);
-      await expect(page.getByTestId('plan-dashboard-off').or(page.locator('[role="alert"]')).first()).toBeVisible({ timeout: 60_000 });
+      await expect(page.locator('[role="alert"]').first()).toBeVisible({ timeout: 60_000 });
       await expect(page.locator('body')).not.toContainText(demoPlan.name);
       await page.screenshot({ path: test.info().outputPath('adm-02c-plan-deep-link.png'), fullPage: true });
     }

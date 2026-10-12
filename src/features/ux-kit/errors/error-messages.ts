@@ -1,7 +1,12 @@
 import type { ErrorMessage } from './error-message';
 import { ACCOUNTING_MESSAGES } from './messages-accounting';
 import { ADMIN_MESSAGES } from './messages-admin';
+import { ADMINISTRATION_MESSAGES } from './messages-administration';
+import { CODES_FINANCE_MESSAGES } from './messages-codes-finance';
 import { COMMON_MESSAGES } from './messages-common';
+import { MASTER_DATA_MESSAGES } from './messages-master-data';
+import { EVENT_MESSAGES } from './messages-events';
+import { RCA_MESSAGES } from './messages-rca';
 
 export type { ErrorMessage } from './error-message';
 
@@ -13,6 +18,11 @@ export const ERROR_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   ...COMMON_MESSAGES,
   ...ACCOUNTING_MESSAGES,
   ...ADMIN_MESSAGES,
+  ...ADMINISTRATION_MESSAGES,
+  ...MASTER_DATA_MESSAGES,
+  ...CODES_FINANCE_MESSAGES,
+  ...EVENT_MESSAGES,
+  ...RCA_MESSAGES,
 };
 
 /** No response at all (fetch `TypeError`, offline, CORS, DNS). */

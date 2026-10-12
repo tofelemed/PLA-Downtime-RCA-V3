@@ -40,4 +40,14 @@ export const STALE_TIME: Readonly<Record<V2Resource, number>> = {
   'rca-knowledge': 30_000,
   // finance (FX rates, valuation policy versions): refreshed by their writes
   valuation: 30_000,
+  // administration: refreshed by their writes
+  users: 30_000,
+  'user-scopes': 30_000,
+  tasks: 30_000,
+  'audit-logs': 30_000,
+  'admin-config': 5 * MINUTE,
+  // master data (units / assets / products / RCA settings): refreshed by the writes that change them
+  assets: 5 * MINUTE,
+  'rca-settings': 5 * MINUTE,
+  'master-data': 5 * MINUTE,
 };

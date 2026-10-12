@@ -18,7 +18,15 @@ let aisha: Session;
 
 test.describe.configure({ mode: 'serial', timeout: 120_000 });
 
-const row = (page: Page, periodId: string) => page.locator(`[data-testid="period-row"][data-period-id="${periodId}"]`);
+/** The period's marker in the grid (`data-residual-state`, `data-workflow`) and its whole table row. */
+const marker = (page: Page, periodId: string) => page.locator(`[data-testid="period-row"][data-period-id="${periodId}"]`);
+const row = (page: Page, periodId: string) => page.locator('tr', { has: marker(page, periodId) });
+
+/** The plan's period grid (`/plans/:planId`); a period opens on its own page. */
+async function openGrid(page: Page): Promise<void> {
+  await page.goto(`/plans/${world.planId}`);
+  await expect(page.getByTestId('period-grid')).toBeVisible({ timeout: 60_000 });
+}
 const figure = (page: Page, key: string) => page.getByTestId('reconciliation-summary').getByTestId(`figure-${key}`);
 
 async function openPeriod(page: Page, periodId: string): Promise<void> {
@@ -54,10 +62,12 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     page.on('request', (request) => {
       if (request.url().includes('/api/') && request.method() !== 'GET') writes.push(`${request.method()} ${request.url()}`);
     });
-    await openPeriod(page, world.periods.a);
-    await expect(row(page, world.periods.a)).toHaveAttribute('data-residual-state', 'unaccounted');
+    await openGrid(page);
+    await expect(marker(page, world.periods.a)).toHaveAttribute('data-residual-state', 'unaccounted');
     await expect(row(page, world.periods.a).getByTestId('cell-gap')).toHaveText('150.00 t');
     await expect(row(page, world.periods.a).getByTestId('cell-attributed')).toHaveText('140.00 t');
+    await row(page, world.periods.a).click();
+    await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', /.+/, { timeout: 60_000 });
     await expect(figure(page, 'residual')).toHaveAttribute('data-value', '10');
     await expect(page.getByTestId('waterfall')).toHaveAttribute('data-closes', 'true');
     await page.getByTestId('actuals-provenance').locator('summary').click();
@@ -70,20 +80,18 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     await page.getByTestId('manual-line-add').click();
     await page.getByTestId('save-lines').click();
     await expect(figure(page, 'residual')).toHaveAttribute('data-value', '0');
-    await expect(row(page, world.periods.a)).toHaveAttribute('data-residual-state', 'balanced');
 
     // a stale tab of the same engineer still shows the draft after this tab submits
     const stale = await staleTab(browser, NOAH, world.periods.a);
     await expect(stale.getByTestId('wf-submit')).toBeEnabled();
     await page.getByTestId('wf-submit').click();
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
-    await expect(row(page, world.periods.a)).toHaveAttribute('data-workflow', 'in_review');
     await page.screenshot({ path: test.info().outputPath('engineer-period-submitted.png') });
 
     await stale.getByTestId('wf-submit').click();
     const problem = stale.getByTestId('workflow-problem');
     await expect(problem).toHaveAttribute('data-code', 'INVALID_TRANSITION');
-    await expect(problem).toContainText('in_review accounting revision cannot become in_review');
+    await expect(problem).not.toContainText('in_review'); // plain words, no state tokens
     await stale.context().close();
 
     await page.reload();
@@ -100,6 +108,9 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     const view = await call<{ revision: { lifecycle: string }; lines: unknown[] }>((await apiSession(NOAH)).token, 'GET', `/v2/production-periods/${world.periods.a}/reconciliation`);
     expect(view.body.revision.lifecycle).toBe('in_review');
     expect(view.body.lines).toHaveLength(3);
+    await openGrid(page);
+    await expect(marker(page, world.periods.a)).toHaveAttribute('data-residual-state', 'balanced');
+    await expect(marker(page, world.periods.a)).toHaveAttribute('data-workflow', 'in_review');
   });
 
   test('J3 Aisha proposes an actuals adjustment (PERIOD_WRITERS); the engineers cannot approve it (403) and the proposal shows in the provenance', async ({ page }) => {
@@ -125,24 +136,28 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
 
     await loginViaUI(page, NOAH.email, NOAH.password);
     await openPeriod(page, world.periods.b);
-    await page.getByTestId('actuals-provenance').locator('summary').click();
-    const provenance = page.getByTestId('actuals-provenance');
-    await expect(provenance).toContainText('Adjustments: good -5');
-    await expect(provenance).toContainText('(proposed)');
-    // UX observation: the v2 period workspace has no control to propose or decide an adjustment; the
-    // persona's "cannot approve" is therefore the API 403 above, and the screen shows the proposal only.
-    await expect(page.getByTestId('period-detail')).not.toContainText('Approve adjustment');
+    const proposed = page.getByTestId('adjustments').locator('tr', { has: page.locator('[data-testid="adjustment-row"][data-state="proposed"]') });
+    await expect(proposed).toContainText('-5', { timeout: 60_000 });
+    await expect(proposed).toContainText('Waiting for approval');
+    // an engineer proposes (the button leads to the form) but is never offered the decision controls
+    await expect(page.getByTestId('adjustment-propose')).toBeVisible();
+    await expectHidden(page.getByTestId('adjustment-approve'));
+    await expectHidden(page.getByTestId('adjustment-reject'));
   });
 
   test('J7 Mateo (another engineer of the plant) sees the submitted accounting and the proposal after his own login', async ({ page }) => {
     await loginViaUI(page, MATEO.email, MATEO.password);
+    await openGrid(page);
+    await expect(row(page, world.periods.a).getByTestId('cell-attributed')).toHaveText('150.00 t');
+    await expect(marker(page, world.periods.a)).toHaveAttribute('data-residual-state', 'balanced');
     await openPeriod(page, world.periods.a);
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
-    await expect(row(page, world.periods.a).getByTestId('cell-attributed')).toHaveText('150.00 t');
-    await expect(row(page, world.periods.a)).toHaveAttribute('data-residual-state', 'balanced');
-    // UX observation: the history names other users by the first 8 characters of their id, not by name
+    // the history names the submitter, never by id; the user directory (GET /users/assignable) may not list
+    // the submitter for this viewer, which reads "Unknown user" (known gap B2 in docs/UI_GUIDELINES.md §5)
     const noah = await apiSession(NOAH);
-    await expect(page.getByTestId('revision-history').locator('[data-action="submit"]')).toContainText(`user ${noah.userId.slice(0, 8)}`);
+    const submitLine = page.getByTestId('revision-history').locator('tr', { has: page.locator('[data-action="submit"]') });
+    await expect(submitLine).toContainText(new RegExp(`${NOAH.name}|Unknown user`));
+    await expect(submitLine).not.toContainText(noah.userId.slice(0, 8));
     // an engineer is not an approver: no Approve / Reject / gate is offered, and the server still refuses
     await expect(page.getByTestId('workflow-bar')).toBeVisible();
     await expectHidden(page.getByTestId('wf-approve'));
@@ -155,7 +170,6 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
     await page.screenshot({ path: test.info().outputPath('engineer-approve-refused.png') });
     await openPeriod(page, world.periods.b);
-    await page.getByTestId('actuals-provenance').locator('summary').click();
-    await expect(page.getByTestId('actuals-provenance')).toContainText('Adjustments: good -5');
+    await expect(page.getByTestId('adjustments').locator('[data-testid="adjustment-row"][data-state="proposed"]')).toHaveCount(1, { timeout: 60_000 });
   });
 });

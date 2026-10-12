@@ -61,11 +61,11 @@ test.describe('Operator — scope and role limits', () => {
 
     // the unit picker of the filters and of the create form know one unit only
     expect(await unitOptionsOf(page, 'filter-units')).toEqual([world.line1.name]);
-    await page.getByRole('button', { name: 'New event' }).click();
+    await page.getByRole('link', { name: 'New event' }).click();
     const form = page.getByTestId('event-form');
     const options = await form.locator('#unitId option').evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).value).filter(Boolean));
     expect(options).toEqual([world.line1.id]);
-    await page.keyboard.press('Escape');
+    await form.getByRole('button', { name: 'Keep draft and close' }).click();
     await expect(form).toBeHidden();
 
     // every listed event belongs to the line; the foreign event is not among them
@@ -120,7 +120,6 @@ test.describe('Operator — scope and role limits', () => {
     // Codes & rules by URL: the page renders read-only, New code is not offered (the server refuses it below)
     await page.goto('/codes-admin');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('tab-reason-codes').click();
     await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 });
     await expectHidden(page.getByTestId('code-new'));
     await page.screenshot({ path: test.info().outputPath('operator-roles-j5-codes.png') });

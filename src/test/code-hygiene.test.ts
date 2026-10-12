@@ -10,12 +10,7 @@ const ROOT = join(process.cwd(), 'src');
 
 /** Remaining IndexedDB users. Dev-only seeders/scripts never reach production (vite-prod-bundle-guard). */
 const INDEXEDDB_ALLOWLIST = new Set([
-  'components/historian/EnhancedHistorianPage.tsx', // historian history → backend historian-history (3.7)
-  'services/pi/PIStore.ts', // PI connection cache → v2 connections (3.7 integration console)
   'services/storage/UniversalConnectorDB.ts', // connector registry → v2 connections (3.7)
-  'services/analytics/RealTimeAnalytics.ts', // streaming demo services (3.7, DEMO_MODE)
-  'services/ethernetip/EtherNetIPConnector.ts',
-  'services/profinet/ProfinetConnector.ts',
   'services/StorageService.ts', // legacy store itself
   'services/OilGasDataSeeder.ts', // dev-only seeders and scripts below
   'services/PLARCADataSeeder.ts',

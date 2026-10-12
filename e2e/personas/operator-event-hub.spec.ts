@@ -5,6 +5,7 @@ import {
   plantTimezoneOf, reasonPair, row, session, stop, tag, unitByCode, type EventBody, type ListBody, type ReasonCodeView,
   type UnitView,
 } from './support/operator-world';
+import { backToList, fillPlantTime, openEventRow } from './support/event-hub-ui';
 
 /**
  * OPERATOR persona — Event Hub v2 (/events) journeys of plan 3.2 (UX04): current stop → code → split →
@@ -39,11 +40,11 @@ test.describe('Operator — Event Hub v2', () => {
     let stopId = (await stops.count()) > 0 ? await stops.first().getAttribute('data-event-id') : null;
     if (!stopId) {
       // nothing is running on the line: record the stop through the UI (end empty = still running)
-      await page.getByRole('button', { name: 'New event' }).click();
+      await page.getByRole('link', { name: 'New event' }).click();
       const form = page.getByTestId('event-form');
       await expect(form.locator('#unitId')).toHaveValue(world.unit.id);
       const timezone = await plantTimezoneOf(form);
-      await form.locator('#startLocal').fill(plantLocal(new Date(Date.now() - 40 * MINUTE), timezone));
+      await fillPlantTime(form, 'Start', plantLocal(new Date(Date.now() - 40 * MINUTE), timezone));
       await form.locator('#description').fill(label);
       const created = page.waitForResponse((r) => r.url().endsWith('/v2/production-events') && r.request().method() === 'POST');
       await form.getByRole('button', { name: 'Save' }).click();
@@ -51,14 +52,14 @@ test.describe('Operator — Event Hub v2', () => {
       expect(response.status()).toBe(201);
       stopId = ((await response.json()) as EventBody).id;
       await expect(form).toBeHidden();
-      await page.keyboard.press('Escape');
+      await backToList(page);
     }
     expect(stopId).toBeTruthy();
     const id = stopId as string;
 
     await expect(stop(page, id)).toBeVisible();
     await expect(stop(page, id).getByTestId('current-stop-elapsed')).toHaveText(/\d+:\d{2}/);
-    await stop(page, id).getByRole('button', { name: 'Open' }).click();
+    await stop(page, id).getByRole('link', { name: 'Open' }).click();
     await codeReason(page, world.reasons[0].id);
     await expect(page.getByTestId('event-detail').getByLabel('Coding state: Coded')).toBeVisible();
 
@@ -73,23 +74,23 @@ test.describe('Operator — Event Hub v2', () => {
     const running = result.events.find((event) => event.isOpen);
     const ended = result.events.find((event) => !event.isOpen);
     expect(running && ended).toBeTruthy();
+    // the split opens the first part's page; Back returns to the list with the same filters
+    await backToList(page);
     await expect(row(page, running!.id)).toBeVisible();
     await expect(row(page, ended!.id)).toBeVisible();
     await expect(row(page, id)).toHaveCount(0);
 
-    await page.keyboard.press('Escape');
-    await row(page, running!.id).getByRole('button').first().click();
+    await openEventRow(page, running!.id);
     await codeReason(page, world.reasons[1].id);
+    await backToList(page);
     await expect(row(page, running!.id).getByTestId('event-reason')).toContainText(world.reasons[1].name);
     await expect(row(page, ended!.id).getByTestId('event-reason')).toContainText(world.reasons[0].name);
 
-    await page.keyboard.press('Escape');
     await stop(page, running!.id).getByRole('button', { name: 'Close stop' }).click();
     const close = page.getByTestId('close-dialog');
     await close.locator('#close-reason').fill(`${label} restarted`);
     await close.getByRole('button', { name: 'Close stop' }).click();
     await expect(stop(page, running!.id)).toHaveCount(0);
-    await page.keyboard.press('Escape');
     await expect(row(page, running!.id).getByTestId('event-duration')).not.toContainText('Running');
     await page.screenshot({ path: test.info().outputPath('operator-event-hub-j1.png'), fullPage: true });
 
@@ -113,28 +114,28 @@ test.describe('Operator — Event Hub v2', () => {
     const before = await call<ListBody<EventBody>>(world.yuki, 'GET', `/v2/production-events?${window}`);
     await loginOperator(page, OPERATORS.yuki);
     await openHub(page, world.unit.name);
-    await page.getByRole('button', { name: 'New event' }).click();
+    await page.getByRole('link', { name: 'New event' }).click();
     const form = page.getByTestId('event-form');
     await expect(form.locator('#unitId')).toHaveValue(unit);
     await form.locator('#description').fill(tag('J2'));
 
     // end before start: the server refuses the interval, the error lands on a field or the form
-    await form.locator('#startLocal').fill('2026-10-01T09:00');
-    await form.locator('#endLocal').fill('2026-10-01T08:00');
+    await fillPlantTime(form, 'Start', '2026-10-01T09:00');
+    await fillPlantTime(form, 'End (empty = still running)', '2026-10-01T08:00');
     await form.getByRole('button', { name: 'Save' }).click();
     const fieldOrFormError = form.locator('[data-testid^="error-"], [data-testid="form-error"]').first();
     await expect(fieldOrFormError).toBeVisible();
     await expect(form).toBeVisible();
 
     // end and duration disagree: the server's field error reaches the duration input
-    await form.locator('#endLocal').fill('2026-10-01T10:00');
+    await fillPlantTime(form, 'End (empty = still running)', '2026-10-01T10:00');
     await form.locator('#durationMinutes').fill('30');
     await form.getByRole('button', { name: 'Save' }).click();
     await expect(form.getByTestId('error-durationMinutes')).toBeVisible();
     await expect(form).toBeVisible();
     await page.screenshot({ path: test.info().outputPath('operator-event-hub-j2.png') });
 
-    await page.keyboard.press('Escape');
+    await form.getByRole('button', { name: 'Keep draft and close' }).click();
     await expect(form).toBeHidden();
     const after = await call<ListBody<EventBody>>(world.yuki, 'GET', `/v2/production-events?${window}`);
     expect(after.body.items.length).toBe(before.body.items.length);
@@ -149,7 +150,7 @@ test.describe('Operator — Event Hub v2', () => {
     const eventId = created.body.id;
     await loginOperator(page, OPERATORS.yuki);
     await openHub(page, world.unit.name);
-    await row(page, eventId).getByRole('button').first().click();
+    await openEventRow(page, eventId);
     await page.getByTestId('event-detail').getByRole('button', { name: 'Edit / code' }).click();
     const form = page.getByTestId('event-form');
     const mine = `${label} belt slipped (typed before reconnect)`;
@@ -160,7 +161,7 @@ test.describe('Operator — Event Hub v2', () => {
     await expect(form).toBeHidden();
     await page.reload();
     await openHub(page, world.unit.name);
-    await row(page, eventId).getByRole('button').first().click();
+    await openEventRow(page, eventId);
     await page.getByTestId('event-detail').getByRole('button', { name: 'Edit / code' }).click();
     const restored = page.getByTestId('event-form');
     await expect(restored.getByTestId('draft-restored')).toBeVisible();

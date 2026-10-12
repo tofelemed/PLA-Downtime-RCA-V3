@@ -4,6 +4,9 @@ import { RcaKnowledgeV2CommandsService } from '../rca-knowledge-base/knowledge-v
 import { RcaKnowledgeV2Service } from '../rca-knowledge-base/knowledge-v2.service';
 import { RcaKnowledgeModule } from '../rca-knowledge-base/rca-knowledge.module';
 import { RcaActionsService } from '../rca-case/rca-actions.service';
+import { RcaAnalysesService } from '../rca-case/rca-analyses.service';
+import { RcaAttachmentsService } from '../rca-case/rca-attachments.service';
+import { RcaCaseCommandsService } from '../rca-case/rca-case-commands.service';
 import { RcaCasesService } from '../rca-case/rca-cases.service';
 import { RcaLinksService } from '../rca-case/rca-links.service';
 import { RcaRecommendationsService } from '../rca-case/rca-recommendations.service';
@@ -80,6 +83,7 @@ import { PlanPeriod } from '../plans/entities/plan-period.entity';
 import { PlanScenario } from '../plans/entities/plan-scenario.entity';
 import { PlanVersion } from '../plans/entities/plan-version.entity';
 import { PlanApprovalService } from '../plans/plan-approval.service';
+import { PlanReviewService } from '../plans/plan-review.service';
 import { PlanGenerationJobsService } from '../plans/plan-generation-jobs.service';
 import { PlanLegacyBridge } from '../plans/plan-legacy-bridge.service';
 import { PlanPeriodGeneratorService } from '../plans/plan-period-generator.service';
@@ -120,6 +124,9 @@ import { RuleCommandsService } from '../rules/rule-commands.service';
 import { RuleSimulationService } from '../rules/rule-simulation.service';
 import { RulesModule } from '../rules/rules.module';
 import { RulesService } from '../rules/rules.service';
+import { withMasterDataStubs } from './master-data/master-data-v2.stubs';
+import { withAdministrationStubs } from './administration/administration-v2.stubs';
+import { ActivitySummaryV2Service } from './activity-summary/activity-summary-v2.service';
 
 /** Stands in for the v1 event module (and its RCA/realtime graph): only the document is needed. */
 @Module({
@@ -246,6 +253,7 @@ class ProfilesModuleStub {}
     { provide: PlanVersionsService, useValue: {} },
     { provide: PlanPeriodGeneratorService, useValue: {} },
     { provide: PlanApprovalService, useValue: {} },
+    { provide: PlanReviewService, useValue: {} },
     { provide: PlanGenerationJobsService, useValue: {} },
     { provide: PlanLegacyBridge, useValue: {} },
   ],
@@ -254,6 +262,7 @@ class ProfilesModuleStub {}
     PlanVersionsService,
     PlanPeriodGeneratorService,
     PlanApprovalService,
+    PlanReviewService,
     PlanGenerationJobsService,
     PlanLegacyBridge,
   ],
@@ -355,6 +364,9 @@ class RulesModuleStub {}
 /** Stands in for the plan 3.9 RCA case module. */
 const RCA_SERVICES = [
   RcaCasesService,
+  RcaCaseCommandsService,
+  RcaAnalysesService,
+  RcaAttachmentsService,
   RcaLinksService,
   RcaRecommendationsService,
   RcaActionsService,
@@ -381,7 +393,7 @@ class RcaKnowledgeModuleStub {}
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
 async function generate(): Promise<string> {
-  const moduleRef = await Test.createTestingModule({ imports: [V2Module] })
+  const moduleRef = await withAdministrationStubs(withMasterDataStubs(Test.createTestingModule({ imports: [V2Module] })))
     .overrideProvider(getRepositoryToken(ProductionEvent))
     .useValue({})
     .overrideProvider(getRepositoryToken(Unit))
@@ -443,6 +455,8 @@ async function generate(): Promise<string> {
     .overrideProvider(getRepositoryToken(ProductionPeriod))
     .useValue({})
     .overrideProvider(getRepositoryToken(CalculationRun))
+    .useValue({})
+    .overrideProvider(ActivitySummaryV2Service)
     .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)

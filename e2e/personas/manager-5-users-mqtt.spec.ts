@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
+import { selectConnection } from './support/integration-world';
 import { api, itemsOf } from './support/manager-api';
 import { ADMINS, MANAGERS, PASSWORD, PREFIX, sessionOf, shortId, utcDate, type Session } from './support/manager-users';
 
@@ -24,15 +25,15 @@ test.describe.configure({ mode: 'serial', timeout: 240_000 });
 
 async function openUsers(page: Page): Promise<void> {
   await page.goto('/users');
-  await expect(page.getByRole('heading', { name: 'User Management' })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('heading', { name: 'Users', level: 1 })).toBeVisible({ timeout: 60_000 });
 }
 
 async function fillUserDialog(page: Page, user: { name: string; email: string; password: string }): Promise<void> {
-  await page.getByRole('button', { name: 'Add User' }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.fill('#name', user.name);
-  await page.fill('#email', user.email);
-  await page.fill('#password', user.password);
+  await page.getByRole('link', { name: 'Add user' }).click();
+  await expect(page.getByRole('heading', { name: 'Add user', level: 1 })).toBeVisible({ timeout: 60_000 });
+  await page.getByLabel('Name', { exact: true }).fill(user.name);
+  await page.getByLabel('E-mail').fill(user.email);
+  await page.getByLabel('Password').fill(user.password);
 }
 
 async function jobCommand(page: Page, action: 'pause' | 'resume', reason: string): Promise<void> {
@@ -51,26 +52,30 @@ test.describe('Manager persona — users and the MQTT demo connection', () => {
     await expect(page.locator('nav a[href="/users"]')).toBeVisible();
     await openUsers(page);
     await fillUserDialog(page, operator);
-    await page.getByRole('dialog').getByRole('combobox').click();
+    await page.getByLabel('Role').click();
     const options = page.getByRole('option');
-    await expect(options.filter({ hasText: 'Operator' })).toHaveCount(1);
-    await expect(options.filter({ hasText: 'Super Admin' })).toHaveCount(0);
-    await expect(options.filter({ hasText: 'Tenant Admin' })).toHaveCount(0);
-    await options.filter({ hasText: 'Operator' }).click();
-    await page.getByRole('button', { name: 'Create' }).click();
-    await expect(page.getByText('User created successfully').first()).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText(operator.email).first()).toBeVisible();
+    await expect(options.filter({ hasText: /^Operator$/ })).toHaveCount(1);
+    // the server offers roles up to the caller's own (Plant administrator), never above it
+    await expect(options.filter({ hasText: 'Super administrator' })).toHaveCount(0);
+    await expect(options.filter({ hasText: 'Organization administrator' })).toHaveCount(0);
+    await options.filter({ hasText: /^Operator$/ }).click();
+    await page.getByRole('button', { name: 'Create user' }).click();
+    await expect(page.getByText('User created').first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: operator.name, level: 1 })).toBeVisible({ timeout: 20_000 });
     const users = await api<Array<{ email: string; role: string; tenantId: string | null }>>(anna.token, 'GET', `/users?tenantId=${anna.tenantId}`);
     const stored = itemsOf(users.body).find((user) => user.email === operator.email);
     expect(stored).toMatchObject({ role: 'Operator', tenantId: anna.tenantId });
 
+    await openUsers(page);
     await fillUserDialog(page, operator); // same e-mail again: refused, shown as an error
-    await page.getByRole('button', { name: 'Create' }).click();
-    await expect(page.getByText(/already|exists|failed|error/i).first()).toBeVisible({ timeout: 20_000 });
-    await page.keyboard.press('Escape');
+    await page.getByLabel('Role').click();
+    await page.getByRole('option').filter({ hasText: /^Operator$/ }).click();
+    await page.getByRole('button', { name: 'Create user' }).click();
+    await expect(page.getByText(/already exists/i).first()).toBeVisible({ timeout: 20_000 });
     expect(itemsOf((await api<Array<{ email: string }>>(anna.token, 'GET', `/users?tenantId=${anna.tenantId}`)).body).filter((user) => user.email === operator.email)).toHaveLength(1);
 
-    await page.reload();
+    await openUsers(page);
+    await page.getByLabel('Search users by name or e-mail').fill(operator.email);
     await expect(page.getByText(operator.email).first()).toBeVisible({ timeout: 60_000 });
   });
 
@@ -87,9 +92,10 @@ test.describe('Manager persona — users and the MQTT demo connection', () => {
     await expect(page.locator('nav a[href="/connectivity"]')).toBeVisible();
     await page.goto('/connectivity');
     await expect(page.getByTestId('integration-console')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('connection-item').filter({ hasText: MQTT_DEMO }).click();
+    // the connections table is paged; the name opens the connection's own page
+    await selectConnection(page, MQTT_DEMO);
     await expect(page.getByTestId('connection-detail')).toHaveAttribute('data-source-type', 'mqtt');
-    const connectionId = (await page.getByTestId('connection-item').filter({ hasText: MQTT_DEMO }).getAttribute('data-connection-id')) ?? '';
+    const connectionId = (await page.getByTestId('connection-detail').getAttribute('data-connection-id')) ?? '';
     expect(connectionId).not.toBe('');
     await expect(page.getByTestId('mqtt-status')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId('mqtt-status')).toHaveAttribute('data-job-state', 'running', { timeout: 30_000 });

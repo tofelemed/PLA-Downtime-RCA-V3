@@ -89,15 +89,18 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await expect(panel.getByTestId('rca-recommendations')).toContainText('provisional');
     await page.screenshot({ path: test.info().outputPath('j1-rca-badge.png'), fullPage: true });
     await panel.getByTestId('open-link-rca').click();
-    const dialog = page.getByTestId('link-rca-dialog');
-    await expect(dialog.getByTestId('evidence-package')).toBeVisible();
-    await expect(dialog.getByTestId('evidence-package')).toContainText('Approved impact');
-    await dialog.getByRole('tab', { name: 'New case' }).click();
-    await dialog.locator('#new-case-title').fill(caseTitle);
-    await dialog.locator('#link-reason').fill(`${PREFIX}reason: long unplanned stop, policy recommendation accepted`);
-    await dialog.getByTestId('link-rca-submit').click();
-    await expect(panel.getByRole('status')).toContainText(`Linked to ${caseTitle}`);
-    await expect(panel.getByTestId('rca-recommendations')).toHaveCount(0);
+    // "Create / link RCA" opens /rca/new?eventId= (a page, not a dialog): evidence preview, new or existing case
+    await expect(page).toHaveURL(/\/rca\/new\?eventId=/);
+    await expect(page.getByTestId('evidence-package')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('evidence-package')).toContainText('Approved impact');
+    await page.locator('#case-title').fill(caseTitle);
+    await page.locator('#link-reason').fill(`${PREFIX}reason: long unplanned stop, policy recommendation accepted`);
+    await page.getByTestId('link-rca-submit').click();
+    await expect(page.getByRole('heading', { name: caseTitle, level: 1 })).toBeVisible({ timeout: 60_000 });
+    await expect(page).toHaveURL(/\/rca\/[0-9a-f-]{36}$/);
+    await openHub(page, world.unitName);
+    await openStop(page, world.stopId);
+    await expect(page.getByTestId('event-rca-panel').getByTestId('rca-recommendations')).toHaveCount(0);
     await expect(page.getByTestId('event-detail').getByLabel('RCA state: RCA linked')).toBeVisible();
 
     const found = await call<{ items: Array<{ id: string }> }>(viktor.token, 'GET', `/v2/rcas?q=${encodeURIComponent(caseTitle)}`);
@@ -118,28 +121,38 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await uiLogin(page, REL_USERS.viktor);
     await openCase(page, world.caseId);
     await page.locator('#edit-description').fill(`${PREFIX}problem: pump P-101 tripped repeatedly after the coupling change`);
-    const recs = page.getByTestId('rec');
-    await recs.getByLabel('Recommendations title').fill('Realign the coupling');
-    await recs.getByLabel('Recommendations Description').fill('Laser alignment after every seal change');
-    await recs.getByRole('button', { name: 'Add' }).click();
-    const evidence = page.getByTestId('ev');
-    await evidence.getByLabel('Evidence title').fill('Vibration trend');
-    await evidence.getByLabel('Evidence Source (tag, document, photo)').fill('P101.VIB');
-    await evidence.getByRole('button', { name: 'Add' }).click();
-    await page.getByLabel('Logic tree node').fill('Pump trips');
-    await page.getByRole('button', { name: 'Add node' }).click();
-    await page.getByLabel('Logic tree node').fill('High vibration');
-    await page.getByLabel('Parent node').selectOption({ label: 'Pump trips' });
-    await page.getByRole('button', { name: 'Add node' }).click();
     await page.locator('#edit-root-cause').fill('Coupling misalignment');
     await page.getByTestId('save-case').click();
     await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
-
-    await openCase(page, world.caseId);
+    // recommendations, evidence and the logic tree have their own sub-pages of the case
+    await page.goto(`/rca/${world.caseId}/actions/recommendations/new`);
+    await page.locator('#rec-title').fill('Realign the coupling');
+    await page.locator('#rec-description').fill('Laser alignment after every seal change');
+    await page.getByTestId('save-recommendation').click();
     await expect(page.getByTestId('rec')).toContainText('Realign the coupling');
-    await expect(page.getByTestId('ev')).toContainText('P101.VIB');
+    await page.goto(`/rca/${world.caseId}/evidence/new`);
+    await page.locator('#ev-title').fill('Vibration trend');
+    await page.locator('#ev-source').fill('P101.VIB');
+    await page.getByTestId('save-evidence').click();
+    await expect(page.getByTestId('evidence-detail')).toContainText('P101.VIB');
+    await page.goto(`/rca/${world.caseId}/analysis/logic-tree`);
+    await page.getByTestId('add-root-node').click();
+    await page.locator('#node-label').fill('Pump trips');
+    await page.getByTestId('save-node').click();
     await expect(page.getByTestId('logic-tree')).toContainText('Pump trips');
+    await page.getByRole('button', { name: 'Add a node below Pump trips' }).click();
+    await page.locator('#node-label').fill('High vibration');
+    await page.getByTestId('save-node').click();
     await expect(page.getByTestId('logic-tree')).toContainText('High vibration');
+
+    await openCase(page, world.caseId, 'actions');
+    await expect(page.getByTestId('rec')).toContainText('Realign the coupling');
+    await page.getByTestId('tab-evidence').click();
+    await expect(page.getByTestId('evidence-list')).toContainText('Vibration trend');
+    await page.getByTestId('tab-analysis').click();
+    await page.getByTestId('tool-logic-tree').click();
+    await expect(page.getByTestId('logic-tree')).toContainText('High vibration');
+    await page.getByTestId('tab-overview').click();
     await expect(page.locator('#edit-root-cause')).toHaveValue('Coupling misalignment');
     const saved = await call<{ rootCause: string; recommendations: unknown[]; evidence: unknown[]; logicTree: Array<{ parentId: string | null }> }>(
       viktor.token,
@@ -164,11 +177,11 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await page.getByTestId('tab-links').click();
     const add = page.getByTestId('add-link');
     await add.getByLabel('Link type').selectOption('event');
-    await add.getByLabel('Target id').fill(world.secondStopId);
+    await add.getByLabel('Work order number or reference').fill(world.secondStopId);
     await add.getByRole('button', { name: 'Link' }).click();
     await expect(add.getByRole('status')).toHaveText('Linked.');
     await expect(page.getByTestId('link-row')).toHaveCount(2);
-    const row = page.getByTestId('link-row').filter({ hasText: world.secondStopId });
+    const row = page.locator(`[data-testid="link-row"][data-target-id="${world.secondStopId}"]`);
     await row.getByRole('button', { name: 'Evidence' }).click();
     await expect(row.getByTestId('evidence-package')).toContainText('Approved impact');
     const links = await call<Array<{ linkType: string; targetId: string }>>(viktor.token, 'GET', `/v2/rcas/${world.caseId}/links`);
@@ -185,10 +198,10 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await page.goto('/rca');
     await expect(page.getByTestId('rca-v2')).toBeVisible({ timeout: 60_000 });
     await page.getByLabel('Search case titles').fill(caseTitle);
-    await page.getByTestId('case-list').getByRole('button', { name: caseTitle }).click();
-    await expect(page.getByTestId('case-title')).toHaveText(caseTitle);
-    await expect(page.getByTestId('rec')).toContainText('Realign the coupling');
+    await page.getByTestId('case-list').getByRole('row', { name: `Open case ${caseTitle}` }).click();
+    await expect(page.getByRole('heading', { name: caseTitle, level: 1 })).toBeVisible();
     await page.getByTestId('tab-actions').click();
+    await expect(page.getByTestId('rec')).toContainText('Realign the coupling');
     const form = page.getByTestId('action-form');
     await form.locator('#action-title').fill(`${PREFIX}action-amara-${suffix}`);
     await form.locator('#action-due').fill(day(14));
@@ -235,13 +248,13 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await page.getByTestId('add-action').click();
     await expect(page.getByTestId('action-row').filter({ hasText: seal })).toContainText('50,000,000');
 
-    await page.getByTestId('tab-outcome').click();
+    await page.getByTestId('tab-links').click(); // the outcome sits under "Links & outcome"
     await expect(page.getByTestId('outcome-claimed')).toContainText('1,000.00');
     await expect(page.getByTestId('outcome-claimed')).toContainText('50,000,000');
     await expect(page.getByTestId('outcome-realized')).toContainText(`${realign}: 3`);
     await expect(page.getByTestId('outcome-panel')).toContainText('Approved historical loss');
 
-    await page.getByRole('tab', { name: 'Analysis' }).click();
+    await page.getByTestId('tab-overview').click();
     await selectStatus(page, 'Closed');
     await page.getByTestId('save-case').click();
     await expect(page.getByTestId('case-status')).toHaveText('Closed');

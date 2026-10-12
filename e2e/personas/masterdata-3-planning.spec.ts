@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
-import { plantLocal } from '../test-utils/planning-world';
+import { fillPlantDateTime, plantLocal } from '../test-utils/planning-world';
 import { api, itemsOf, ok, post } from './support/manager-api';
 import { expectHidden, expectRefused } from './support/hidden-controls';
 import { JONAS, MDA, PREFIX, mdaProduct, mdaUnit, sessionOf, shortId, utcDate, type Session } from './support/masterdata-world';
@@ -48,7 +48,7 @@ async function addRateDraft(page: Page, kind: string, rate: string): Promise<voi
   await page.getByTestId('rate-add').click();
   await page.selectOption('#rateKind', kind);
   await page.fill('#rate', rate);
-  await page.fill('#rateEffectiveFrom', local(from));
+  await fillPlantDateTime(page, 'Effective from', local(from));
   await page.getByTestId('rate-save').click();
 }
 
@@ -74,7 +74,7 @@ test.describe('Master data admin — calendars, crews, profiles and rates (/plan
     await page.fill('#calTimezone', 'UTC');
     await page.fill('#calDayStart', '07:00'); // a change enables "Save"; the effective date is still missing
     await page.getByTestId('calendar-save').click();
-    await expect(page.locator('[data-testid^="field-error-"], [data-testid="refusal"]').first()).toBeVisible();
+    await expect(page.getByTestId('calendar-editor').locator('[role="alert"]').first()).toBeVisible();
     expect(itemsOf((await api<{ items: unknown[] }>(felix.token, 'GET', `/v2/calendar-versions?unitId=${unit.unitId}&limit=20`)).body)).toHaveLength(0);
     await page.fill('#calFrom', utcDate(-1));
     await page.getByTestId('calendar-save').click();
@@ -91,6 +91,7 @@ test.describe('Master data admin — calendars, crews, profiles and rates (/plan
     expect(itemsOf(versions.body)[0].operationalDayStart).toBe('07:00');
 
     // a crew and a rotation with two days off per cycle (the field documents "-" = off)
+    await openTab(page, 'calendars');
     await page.fill('#crewName', crewName);
     await page.getByRole('button', { name: 'Add crew' }).click();
     await expect(page.locator('#crewSelect')).toHaveValue(/.+/, { timeout: 20_000 });
@@ -99,8 +100,8 @@ test.describe('Master data admin — calendars, crews, profiles and rates (/plan
     await page.fill('#rotationFrom', utcDate(0));
     await page.getByRole('button', { name: 'Add rotation' }).click();
     await expect(page.getByTestId('crew-rotations').getByTestId('refusal')).toHaveCount(0);
-    await expect(page.getByTestId('rotation-list').locator('li')).toHaveCount(1, { timeout: 60_000 }); // the server re-assigns future shift instances
-    await expect(page.getByTestId('rotation-list').locator('li').first()).toContainText('cycle');
+    await expect(page.getByTestId('rotation-row')).toHaveCount(1, { timeout: 60_000 }); // the server re-assigns future shift instances
+    await expect(page.getByTestId('rotation-list').locator('tbody tr').first()).toContainText('A,A,B,B,C,C,-,-');
     const crews = await api<{ items: Array<{ id: string; name: string }> }>(felix.token, 'GET', '/v2/crews?limit=200');
     expect(crews.status).toBe(200);
     const crew = itemsOf(crews.body).find((entry) => entry.name === crewName);
@@ -118,7 +119,7 @@ test.describe('Master data admin — calendars, crews, profiles and rates (/plan
     await page.selectOption('#unitId', unit.unitId);
     await page.fill('#quantityUom', 't');
     await page.selectOption('#rateTimebase', 'h');
-    await page.fill('#effectiveFrom', local(from));
+    await fillPlantDateTime(page, 'Effective from', local(from));
     await page.getByTestId('profile-save').click(); // no product: validation error shown, nothing stored
     await expect(page.getByTestId('field-error-productId')).toBeVisible();
     expect(itemsOf((await api<{ items: unknown[] }>(felix.token, 'GET', `/v2/profiles?unitId=${unit.unitId}&limit=20`)).body)).toHaveLength(0);

@@ -80,7 +80,7 @@ test.describe('Reliability engineer — RCA trigger policy (journey 8)', () => {
     });
     await expectNoRecommendation(amara.token, stopId);
     await expect(eventRow(page, stopId)).toBeVisible();
-    await eventRow(page, stopId).getByRole('button').first().click();
+    await eventRow(page, stopId).getByRole('link').first().click();
     const detail = page.getByTestId('event-detail');
     await expect(detail).toBeVisible();
     await expect(detail.getByTestId('event-rca-panel')).toBeVisible();
@@ -100,7 +100,7 @@ test.describe('Reliability engineer — RCA trigger policy (journey 8)', () => {
     });
     await expectNoRecommendation(amara.token, stopId);
     await expect(eventRow(page, stopId)).toBeVisible();
-    await eventRow(page, stopId).getByRole('button').first().click();
+    await eventRow(page, stopId).getByRole('link').first().click();
     await expect(page.getByTestId('event-detail').getByTestId('rca-recommendations')).toHaveCount(0);
   });
 });

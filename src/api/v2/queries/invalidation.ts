@@ -38,6 +38,14 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   rca_knowledge: ['rca-knowledge'],
   fx_rate: ['valuation'],
   valuation_policy: ['valuation'],
+  user: ['users', 'user-scopes'],
+  user_scope: ['user-scopes', 'users'],
+  task: ['tasks'],
+  admin_config: ['admin-config'],
+  unit: ['units', 'assets', 'master-data'],
+  asset: ['assets', 'master-data'],
+  product: ['products', 'master-data'],
+  rca_settings: ['rca-settings', 'master-data'],
 };
 
 /** Resources to refresh for an entity type; an unknown type refreshes the whole tenant (safe default). */

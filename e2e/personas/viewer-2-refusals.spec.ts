@@ -75,7 +75,7 @@ test.describe('Viewer — every write in Demo Plant is refused (READ_ONLY_ROLE)'
     await expect(page.getByTestId('read-only-hint').first()).toBeVisible();
     await expect(page.getByTestId('read-only-hint').first()).toHaveText(/Read-only/);
     await expectHidden(page.getByTestId('new-event'));
-    await expectHidden(page.getByRole('button', { name: 'New event' }));
+    await expectHidden(page.getByRole('link', { name: 'New event' }));
     await page.screenshot({ path: test.info().outputPath('viewer-r1-read-only-hub.png') });
     const create = await command<ApiErrorBody & { id?: string }>(pedro.token, '/v2/production-events', {
       unitId: unit.id, startTime: new Date(Date.now() - 30 * MINUTE).toISOString(), durationSeconds: 600, physicalType: 'downtime', description: label,
@@ -91,9 +91,9 @@ test.describe('Viewer — every write in Demo Plant is refused (READ_ONLY_ROLE)'
     // the running stop is listed with Open only (no Close stop); its detail offers no Edit / Split / Close
     const card = currentStop(page, stop.id);
     await expect(card).toBeVisible();
-    await expect(card.getByRole('button', { name: 'Open' })).toBeVisible();
+    await expect(card.getByRole('link', { name: 'Open' })).toBeVisible();
     await expectHidden(card.getByRole('button', { name: 'Close stop' }));
-    await card.getByRole('button', { name: 'Open' }).click();
+    await card.getByRole('link', { name: 'Open' }).click();
     const detail = page.getByTestId('event-detail');
     await expect(detail).toBeVisible();
     await expectHidden(detail.getByRole('button', { name: 'Edit / code' }));
@@ -172,7 +172,6 @@ test.describe('Viewer — every write in Demo Plant is refused (READ_ONLY_ROLE)'
     await loginAsViewerInDemoPlant(page, VIEWERS.nadia);
     await page.goto('/codes-admin');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('tab-reason-codes').click();
     await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 }); // reads are allowed
     await expect(page.getByTestId('read-only-hint').first()).toBeVisible();
     await expectHidden(page.getByTestId('code-new'));

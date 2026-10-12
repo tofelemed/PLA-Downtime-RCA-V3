@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { apiLogin, call, DEMO_UNIT_CODE, eventsByEventId, findConnection, INT_USERS, jobCommand, loadState, newSuffix, openConsole, runSim, saveState, seededEventIds, selectConnection, simEventId, subscribeJob, uiLogin, unitByCode, type IntSession, type IntState } from './support/integration-world';
+import { showMoreFilters } from './support/event-hub-ui';
 
 /**
  * INTEGRATION ADMIN persona — journeys 4 (subscription lifecycle) and 5 (payload profile editor) on
@@ -32,7 +33,7 @@ test.describe('Integration admin — MQTT subscription and payload profile', () 
     await openConsole(page);
     await selectConnection(page, state.connectionName);
     await expect(page.getByTestId('mqtt-status')).toHaveAttribute('data-status', 'connected', { timeout: 90_000 });
-    await expect(page.getByTestId('mqtt-job-state')).toHaveText('job running');
+    await expect(page.getByTestId('mqtt-job-state')).toHaveAttribute('data-state', 'running');
     const before = await counters(omar.token, state.connectionId);
 
     // the seed is unique per attempt: a re-run with the same seed is a set of duplicates / revisions to Pro-Act
@@ -58,6 +59,7 @@ test.describe('Integration admin — MQTT subscription and payload profile', () 
     await page.getByTestId('filter-units').click();
     await page.locator(`#filter-units-${unit.id}`).click();
     await page.keyboard.press('Escape');
+    await showMoreFilters(page);
     await page.getByTestId('filter-physical-states').click();
     await page.locator('#filter-physical-states-retracted').click();
     await page.keyboard.press('Escape');

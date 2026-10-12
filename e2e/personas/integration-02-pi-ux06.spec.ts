@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { seedPiWorld, stopSimulator, type PiWorld } from './support/integration-pi-world';
-import { apiLogin, eventsByEventId, findConnection, INT_USERS, jobsOf, newSuffix, openConsole, uiLogin, type IntSession } from './support/integration-world';
+import { apiLogin, eventsByEventId, findConnection, INT_USERS, findOnPages, jobsOf, newSuffix, openConsole, selectConnection, uiLogin, type IntSession } from './support/integration-world';
 
 /**
  * INTEGRATION ADMIN persona — journey 2, the UX06 PI journey (plan 3.7) as Elena: configure a PI
@@ -105,7 +105,7 @@ test.describe('Integration admin — UX06 PI journey', () => {
     await expect(jobRow(page, 'limited').locator('[data-testid="job-transition"][data-action="stop"]')).toBeVisible();
 
     // 6. quarantine shows the unknown unit; bind via discovery; dry run; replay → the event exists once
-    await page.getByTestId('tab-quarantine').click();
+    await page.goto('/connectivity?tab=quarantine'); // the quarantine is a tab of the console, the connection has its own page
     await page.getByTestId('q-connection').selectOption({ label: world.connectionName });
     const item = page.locator(`[data-testid="exception-row"][data-source-id="${world.recentFrame}"]`);
     await expect(async () => {
@@ -132,7 +132,7 @@ test.describe('Integration admin — UX06 PI journey', () => {
     expect((await eventsByEventId(elena.token, world.unitId, world.recentFrame))[0].durationSeconds).toBe(900);
 
     // 7. bounded backfill of 7 days (drained: stops once caught up) brings the 3-day-old frame, no duplicates
-    await page.getByTestId('tab-connections').click();
+    await page.goto(`/connectivity/connections/${connectionId}?tab=jobs`);
     await createJob(page, 'backfill', '7');
     await expect(jobRow(page, 'backfill')).toHaveAttribute('data-state', 'stopped', { timeout: 90_000 });
     await expect.poll(async () => (await eventsByEventId(elena.token, world.unitId, world.oldFrame)).length, { intervals: [2_000], timeout: 30_000 }).toBe(1);
@@ -164,12 +164,11 @@ test.describe('Integration admin — UX06 PI journey', () => {
     expect(await eventsByEventId(fresh.token, world.unitId, world.oldFrame)).toHaveLength(1);
     await uiLogin(page, INT_USERS.elena);
     await openConsole(page);
-    await page.getByTestId('connection-item').filter({ hasText: world.connectionName }).click();
-    await expect(page.getByTestId('connection-detail')).toBeVisible();
+    await selectConnection(page, world.connectionName);
     await page.getByTestId('tab-jobs').click();
     await expect(jobRow(page, 'production')).toBeVisible({ timeout: 20_000 });
-    await page.getByTestId('tab-mappings').click();
+    await page.goto('/connectivity?tab=mappings');
     // the bound rule carries the discovered path or element id; both contain the journey suffix
-    await expect(page.locator('[data-testid="source-mapping"]').filter({ hasText: suffix }).first()).toBeVisible();
+    await findOnPages(page, page.locator('[data-testid="source-mapping"]').filter({ hasText: suffix }));
   });
 });

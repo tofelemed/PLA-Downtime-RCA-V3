@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { authenticate } from '../../test-utils/api-helpers';
 import { loginViaUI } from '../../test-utils/auth-helpers';
 import { call, command } from '../../test-utils/downtime-world';
@@ -77,8 +77,19 @@ export async function openConsole(page: Page): Promise<void> {
   await expect(page.getByTestId('integration-console')).toBeVisible({ timeout: 60_000 });
 }
 
+/** Finds `locator` on a paged table (20 rows per page), pressing "Next page" until it shows. */
+export async function findOnPages(page: Page, locator: Locator): Promise<void> {
+  await expect(async () => {
+    if ((await locator.count()) === 0) await page.getByRole('button', { name: 'Next page' }).first().click();
+    await expect(locator.first()).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 60_000 });
+}
+
+/** Opens a connection's own page from the paged connections table. */
 export async function selectConnection(page: Page, name: string): Promise<void> {
-  await page.getByTestId('connection-item').filter({ hasText: name }).first().click();
+  const item = page.getByTestId('connection-item').filter({ hasText: name });
+  await findOnPages(page, item);
+  await item.first().click();
   await expect(page.getByTestId('connection-detail')).toBeVisible({ timeout: 30_000 });
 }
 

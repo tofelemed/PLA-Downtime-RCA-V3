@@ -29,3 +29,6 @@ dist-ssr
 # Playwright output
 test-results/
 playwright-report/
+
+# RCA attachments stored by the backend (UPLOAD_ROOT = <cwd>/uploads)
+uploads/

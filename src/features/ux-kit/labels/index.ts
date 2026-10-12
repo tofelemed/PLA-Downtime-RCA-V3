@@ -8,6 +8,8 @@ export * from './workflow-labels';
 export * from './planning-labels';
 export * from './integration-labels';
 export * from './admin-labels';
+export * from './administration-labels';
+export * from './master-data-labels';
 export { looksLikeRawId, assertNoRawId } from './assert-no-raw-id';
 export type { NameResolver } from './name-resolver';
 export { useUnitNames } from './use-unit-names';

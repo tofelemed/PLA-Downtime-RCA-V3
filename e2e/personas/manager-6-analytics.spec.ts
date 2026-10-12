@@ -129,7 +129,7 @@ test.describe('Manager persona — Downtime Analysis and PLA analytics', () => {
     await expect(waterfall).toHaveAttribute('data-ledger', 'capacity');
     await expect(waterfall).toHaveAttribute('data-closes', 'true');
     const treeRequest = reportRequest(page, 'loss-tree', (url) => url.searchParams.get('ledger') === 'capacity' && url.searchParams.getAll('unitIds').includes(unit));
-    await page.getByTestId('tab-loss-tree').click();
+    await page.getByTestId('tab-losses').click();
     await treeRequest;
     await expect(page.getByTestId('loss-tree')).toBeVisible();
 
@@ -145,7 +145,7 @@ test.describe('Manager persona — Downtime Analysis and PLA analytics', () => {
     await page.getByTestId('tab-oee').click();
     await expect(page.getByTestId('pla-oee-operational')).toContainText('Operational OEE (ISO 22400)');
     await expect(page.getByTestId('pla-oee-reconciled')).toContainText('Reconciled PLA OEE');
-    await expect(page.getByRole('tab')).toHaveCount(8);
+    await expect(page.getByRole('tab')).toHaveCount(5); // at most 5 views (UI guidelines §2)
     expect(writes).toEqual([]); // KPI03: reading analytics writes nothing
     await page.screenshot({ path: test.info().outputPath('manager-pla-analytics.png') });
   });

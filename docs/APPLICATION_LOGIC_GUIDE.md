@@ -263,7 +263,7 @@ quantityOver(seconds)  = ratePerSecond × seconds
 - Planning rate 29.44 t/h (92 % of sustained, as seeded), so planning capacity = 235.52 t.
 - A rate change inside a stop is valued per version (T30): 30 min at 100 t/h + 30 min at 120 t/h = 110 t lost.
 
-**Where you see it:** `/planning?tab=profiles`, in the profile's "Rates" table, which includes a "Per second (server)" column.
+**Where you see it:** `/planning?tab=profiles` → the profile's page (`/planning/profiles/:profileId`), in its "Rates" table, which includes a "Per second (server)" column.
 
 ```mermaid
 stateDiagram-v2
@@ -352,7 +352,7 @@ Example: 100 t over three equal leaves gives 33.33333333 + 33.33333333 + 33.3333
 - Every shift has the same planning capacity of 235.52 t, so each gets 55.5555… t truncated, and the last shift takes the remainder.
 - With a turnaround, its excluded shifts get 0 and the others share the 5,000 t.
 
-**Where you see it:** `/planning?tab=plans` → **Preview periods** (columns Target, Planning cap., Sustained cap.; Σ badge "= header").
+**Where you see it:** `/planning?tab=plans` → the plan's page (`/planning/plans/:planId`) → **Preview periods** (columns Target, Planning cap., Sustained cap.; Σ badge "= header").
 
 ---
 
@@ -476,7 +476,7 @@ A stop on Extruder Line 1, 09:10–10:25 (4,500 s), is split at 09:40:
 
 If it had a quantity of 30 t, the children get 12 t and 18 t.
 
-**Where you see it:** **Event Hub**: state badges, the drawer tabs "Source vs effective", "History", "Review", "Evidence", "Periods", and the Split, Merge, Close stop and Bulk code dialogs.
+**Where you see it:** **Event Hub**: state badges, the event page (`/events/:eventId`) with tabs "Values", "History", "Review", "Evidence", "Periods", and the Split, Merge, Close stop and Bulk code dialogs.
 
 ---
 
@@ -620,7 +620,7 @@ stateDiagram-v2
     p --> r : manager rejects with reason
 ```
 
-**Where you see it:** Plan Dashboard → period → "Actuals provenance" (method, coverage, source segments, exceptions, adjustments). There is no adjustment screen yet; it is API-only.
+**Where you see it:** the period page (`/plans/:planId/periods/:periodId`) → "Actuals provenance" (method, coverage, source segments, exceptions, adjustments) and the "Actuals adjustments" section, where manager approvers approve or reject. Engineers and manager approvers propose at `/plans/:planId/periods/:periodId/adjustments/new`.
 
 ---
 
@@ -770,7 +770,7 @@ Every recalculation is an immutable **calculation run**.
 - Runs are serialized per period.
 - **What triggers a recalculation:** an event change, an adjustment approval, a report import, a plan approval, or **Recompute**.
 
-**Where you see it:** Plan Dashboard period → "Reconciliation summary", "Run ledgers (plan vs capacity)", "Loss lines (plan ledger)" and the waterfall. Production Loss Analysis → Waterfall (whole window).
+**Where you see it:** the period page (`/plans/:planId/periods/:periodId`) → "Reconciliation summary", "Run ledgers (plan vs capacity)", "Loss lines (plan ledger)" and the waterfall. Production Loss Analysis → Waterfall (whole window).
 
 ---
 
@@ -874,7 +874,7 @@ In the UI (`src/features/auth/approval-gate.ts`):
 - for the author it is **disabled** with "You authored this: another approver must approve it (separation of duties).";
 - otherwise it is enabled.
 
-**Where you see it:** Plan Dashboard workflow bar (Recompute, Submit for approval, Cancel draft, Approve, Reject, Unlock (revise)), "Revision history" and "Change proposals".
+**Where you see it:** the period page's workflow bar (Recompute, Submit for approval, Cancel draft, Approve, Reject, Unlock (revise)), "Revision history" and "Change proposals".
 
 ---
 
@@ -933,7 +933,7 @@ Contribution margin of HDPE PE100 on Extruder Line 1 = 300 USD/t; FX 1 USD = 2,6
 **Where you see it:**
 - **Finance** (`/finance`): Valuation policy and FX rates.
 - `/planning?tab=profiles` → "Valuation rates".
-- Plan Dashboard "Loss value" tiles.
+- Period accounting (`/plans/:planId`) "Loss value" tiles.
 - Production Loss Analysis → Loss tree (Metric: Contribution margin / Standard cost / Operational cost) and Top opportunities.
 - RCA → "Approved impact".
 
@@ -1167,8 +1167,8 @@ stateDiagram-v2
 This replaces the old browser-side similarity score of up to 100 points (§23).
 
 **Where you see it:**
-- **Event Hub** drawer: "RCA recommended: …", **Create / link RCA**.
-- **RCA Analysis** (`/rca`): Analysis, Links, Actions and Outcome tabs.
+- **Event Hub** event page (`/events/:eventId`): "RCA recommended: …", **Create / link RCA** (opens `/rca/new?eventId=…`).
+- **RCA Analysis** (`/rca`): each case (`/rca/:caseId`) has the sections Overview, Evidence (`/evidence`), Analysis (`/analysis`), Recommendations & actions (`/actions`) and Links & outcome (`/links`).
 - **Knowledge Base** (`/rca-knowledge-base`).
 
 ---
@@ -1314,14 +1314,14 @@ Measurements become versioned samples of a **signal** (counter, rate, state). Th
 
 The rebuild follows "expand and contract" (MIG02):
 - new **v2** tables, APIs and screens are built beside the old **v1** ones;
-- each plant is switched screen by screen with a **feature flag**;
-- v1 screens stay behind the flags until pilot acceptance (decision C4).
+- plants were first switched screen by screen with a **feature flag**;
+- since 2026-10-12 the application is **v2-only** (owner requirement): every route serves its v2 screen in every plant, the v1 screens and the frontend flag gates are removed, and v1 backend endpoints stay until a cleanup step confirms no callers.
 
 ### 16.2 The eight flags (`feature-flags/feature-flag-keys.ts`)
 
 All flags default to off. They are set per plant.
 
-| Flag | Screens it switches to v2 | Backend effect |
+| Flag | Screens it used to switch (now always v2) | Backend effect |
 |---|---|---|
 | `v2.codesAdmin` | `/codes-admin`, `/finance` | — |
 | `v2.integrationConsole` | `/connectivity` | — |
@@ -1332,8 +1332,7 @@ All flags default to off. They are set per plant.
 | `v2.plaAnalytics` | `/dashboard`, `/pla-analytics`, `/reports` | — |
 | `v2.rca` | `/rca`, the Event Hub RCA panel | enables the v2 trigger service; disables the v1 auto-create |
 
-- Flag **off**: the v1 page, or for pages with no v1 version, "… is not switched on for this plant".
-- An unknown or unreachable flag renders v1.
+- The flags stay in the registry and the API, but no screen reads them any more: a flag that is off no longer shows a v1 page or a "… is not switched on for this plant" notice. `v2.rca` still matters on the server (trigger service, §14) and `v2.planDashboard` still retires the v1 writes listed above.
 - **Who switches:** a `manager_approver` with a plant-wide grant, via `PUT /api/v2/feature-flags/<key>`. It is audited. There is no flag screen.
 
 ### 16.3 Cutover ([CUTOVER_RUNBOOK.md](CUTOVER_RUNBOOK.md), `migration-cutover/`)
@@ -1474,7 +1473,7 @@ Event history is separate (`event_revisions`, per event). So are ingestion-job t
 
 **`X-Client-Audited: true`:** a client that already wrote its own audit row sends this header, so the server does not log the action twice.
 
-**Where you see it:** **Audit Logs** (`/audit`, SuperAdmin and OrgAdmin), Event Hub "History", Plan Dashboard "Revision history", and the job "Audit trail".
+**Where you see it:** **Audit Logs** (`/audit`, entry pages `/audit/:entryId`; SuperAdmin, OrgAdmin, TenantAdmin and manager approvers), Event Hub "History", the period page's "Revision history", and the job "Audit trail".
 
 ---
 
@@ -1522,7 +1521,7 @@ Others: `PlanVersionApproved`, `ProfileBaselineChanged`, `PeriodRecalculateReque
 - **Delivery reconciliation** lists every approved revision against the delivery of its `PeriodApproved` message: delivered, pending, dead or missing. A failed delivery never undoes an approval.
 - External targets (webhook, CMMS, Kafka republish) are deferred (D12). In R1 the only outputs are exports and the outbox.
 
-**Where you see it:** Plan Dashboard "Export (approved content only)"; Reports → **Exports**; Production Loss Analysis and Downtime Analysis export buttons (enabled only with "Approved only").
+**Where you see it:** the period page's "Export (approved content only)"; Reports → **Exports**; Production Loss Analysis and Downtime Analysis export buttons (enabled only with "Approved only").
 
 ---
 
@@ -1659,8 +1658,8 @@ Others: `PlanVersionApproved`, `ProfileBaselineChanged`, `PeriodRecalculateReque
     To see how many objects would be re-processed before changing anything. Replays are bounded and audited.
 25. **Why did pausing MQTT not lose messages but stopping did?**
     Pause disconnects and keeps the broker session, so the broker queues messages. Stop drops the session.
-26. **Why do I see a v1 screen in one plant and a v2 screen in another?**
-    Feature flags are per plant. A plant moves to v2 only through the cutover order.
+26. **Why do two plants behave differently on RCA triggers?**
+    Screens are the same everywhere (v2 only), but the per-plant flag `v2.rca` still decides whether the server uses the v2 RCA policy or the old v1 trigger config.
 27. **Why can't a viewer save a task or an event?**
     Every write by a viewer-only caller is refused (`READ_ONLY_ROLE`). Exports and previews are allowed.
 28. **Why can't I switch to Partner Plant?**
@@ -1682,7 +1681,7 @@ Others: `PlanVersionApproved`, `ProfileBaselineChanged`, `PeriodRecalculateReque
 
 | Topic | Older document says | Code (trusted) |
 |---|---|---|
-| Where logic runs | `PROACT_APPLICATION_GUIDE.md` §5, §8, §10: OEE, cost, loss % and status rules computed in the browser | v2 computes everything on the server (calculation runs); browser heuristics are removed on v2 screens. v1 screens still behave as described for flag-off plants |
+| Where logic runs | `PROACT_APPLICATION_GUIDE.md` §5, §8, §10: OEE, cost, loss % and status rules computed in the browser | v2 computes everything on the server (calculation runs); browser heuristics are removed. The v1 screens are deleted (v2-only since 2026-10-12) |
 | Unaccounted loss | Guide §5.3: a fixed 25–40 % estimate | Plan ledger residual = gap − attributed, signed, never estimated |
 | Loss value | Guide §5.4: flat 100 $/unit | Approved valuation rates and policy, IRR and USD through FX, null when missing |
 | OEE | Guide §8.1: three different OEEs, heuristics on the dashboards | Operational ISO 22400 OEE plus a labelled reconciled OEE, from stored KPI results |
@@ -1699,7 +1698,7 @@ Others: `PlanVersionApproved`, `ProfileBaselineChanged`, `PeriodRecalculateReque
 | Plan default rate | Guide §3.3: 100 units/h placeholder | No default rate; approved planning rates only |
 | SoD coverage | `PERSONA_TESTING_REPORT.md` §4 and DECISIONS 2.2 / 2.3: no SoD for plans, profiles, rates, FX | Extended to them on 2026-10-12 (`assertNotAuthor`) |
 | Capability hiding | `PERSONA_TESTING_REPORT.md` §4: write controls shown to users who are refused | Hidden by capability (2026-10-12); the server stays the authority |
-| Downtime route | `CUTOVER_RUNBOOK.md` table: `/downtime-analysis` | `/downtime` (`src/App.tsx`) |
+| Downtime route | `CUTOVER_RUNBOOK.md` table: `/downtime-analysis` | `/downtime` (`src/app/routes/production.tsx`) |
 | Integration console MQTT | Plan 3.7 text: MQTT and Kafka "not available" | MQTT is available (1.8 wizard, subscription, profile, quarantine); Kafka is still not available |
 | Database schema | Guide §10.3: `DB_SYNCHRONIZE=true` | Migrations only; synchronize is off |
 | JWT lifetime | Guide §11: 24 h access token | 15-minute access token with a rotated refresh token (3.11) |

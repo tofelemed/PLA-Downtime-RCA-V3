@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
 import { call, command } from '../test-utils/downtime-world';
-import { plantLocal } from '../test-utils/planning-world';
+import { fillPlantDateTime, plantLocal } from '../test-utils/planning-world';
 import { AISHA, HANNAH, NOAH, SETUP_MANAGER, apiSession } from './support/engineer-users';
 import { seedEngineerWorld, type EngineerWorld } from './support/engineer-world';
 import { expectHidden, expectRefused } from './support/hidden-controls';
@@ -67,21 +67,22 @@ test.describe('Engineer — plans, profiles & calendars (journey 1 and planning 
     await openTab(page, 'plans');
     await page.selectOption('#planUnitFilter', { label: world.unitName });
     await page.getByTestId('plan-new').click();
+    await expect(page).toHaveURL(/\/planning\/plans\/new$/);
     await page.fill('#planName', planName);
     await page.selectOption('#planUnit', { label: world.unitName });
 
     // validation: an empty window and no header target are refused before anything reaches the server
     await page.getByTestId('plan-save').click();
-    await expect(page.getByTestId('field-error-planFrom')).toHaveText('validFrom is required');
+    await expect(page.getByTestId('field-planFrom')).toContainText('Enter the window start');
     await expect(page.getByTestId('field-error-headerTarget')).toContainText('needs a header target');
-    await page.fill('#planFrom', local(nextDay));
-    await page.fill('#planTo', local(dayStart));
+    await fillPlantDateTime(page, 'Window start', local(nextDay));
+    await fillPlantDateTime(page, 'Window end (exclusive)', local(dayStart));
     await page.getByTestId('plan-save').click();
-    await expect(page.getByTestId('field-error-planTo')).toHaveText('validTo must be after validFrom');
+    await expect(page.getByTestId('field-planTo')).toContainText('The window end must be after the start');
     expect(await findPlan((await apiSession(NOAH)).token, planName)).toBeNull();
 
-    await page.fill('#planFrom', local(dayStart));
-    await page.fill('#planTo', local(nextDay));
+    await fillPlantDateTime(page, 'Window start', local(dayStart));
+    await fillPlantDateTime(page, 'Window end (exclusive)', local(nextDay));
     await page.fill('#headerTarget', '1000');
     await page.selectOption('#slice-0-product', { label: `${world.productName} (${world.productCode})` });
     await page.getByTestId('plan-save').click();
@@ -102,13 +103,13 @@ test.describe('Engineer — plans, profiles & calendars (journey 1 and planning 
     await expect(page.getByTestId('plan-detail').getByTestId('version-state').first()).toHaveAttribute('data-state', 'draft');
     expect(stored?.version).toMatchObject({ unitId: world.unitId, approvalState: 'draft', headerTarget: '1000' });
 
-    await page.reload();
-    await expect(page.getByTestId('planning-page')).toBeVisible({ timeout: 60_000 });
+    await openTab(page, 'plans');
     await page.selectOption('#planUnitFilter', { label: world.unitName });
     const row = page.getByTestId('plan-row').filter({ hasText: planName });
     await expect(row).toHaveCount(1);
     await row.click();
-    await expect(page.getByTestId('plan-detail')).toContainText(planName);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(planName);
+    await expect(page.getByTestId('plan-detail')).toBeVisible();
     await expect(page.getByTestId('plan-edit')).toBeVisible(); // a draft stays editable by the engineer
   });
 
