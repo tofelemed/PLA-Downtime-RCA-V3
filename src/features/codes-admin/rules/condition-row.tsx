@@ -1,6 +1,6 @@
-import { X } from 'lucide-react';
+import { IconButton } from '@/features/ux-kit/icon-button';
+import { ActionIcon } from '@/lib/icons';
 import type { RulesSchemaView } from '@/api/v2/types/rules';
-import { Button } from '@/components/ui/button';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
 import type { Option } from '../hooks/use-reference-options';
 import type { ConditionRow } from '../model/rule-form';
@@ -50,9 +50,7 @@ export function ConditionRowEditor({ row, schema, references, errors, disabled, 
           onChange={(value) => onChange({ value })}
           references={field?.references ? (references[field.references] ?? null) : null}
         />
-        <Button type="button" variant="ghost" size="icon" aria-label="Remove condition" onClick={onRemove}>
-          <X className="h-4 w-4" />
-        </Button>
+        <IconButton icon={ActionIcon.remove} label="Remove condition" onClick={onRemove} />
       </fieldset>
       {errors.map((message) => (
         <p key={message} role="alert" className="text-xs text-destructive" data-testid="row-error">

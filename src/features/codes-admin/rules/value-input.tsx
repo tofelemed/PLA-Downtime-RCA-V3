@@ -1,4 +1,5 @@
 import type { RuleFieldSpecView, RuleOperatorView } from '@/api/v2/types/rules';
+import { humanize } from '@/features/ux-kit/labels/humanize';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
 import type { Option } from '../hooks/use-reference-options';
@@ -20,13 +21,13 @@ export interface ValueInputProps {
 export function ValueInput({ id, field, operator, value, onChange, references }: ValueInputProps) {
   if (!field || !operator || operator.value === 'none') return <span className="text-xs text-muted-foreground">no value</span>;
   const label = `Value for ${field.label}`;
-  const choices = field.type === 'enum' ? (field.values ?? []).map((entry) => ({ value: entry, label: entry })) : field.type === 'reference' ? references : null;
+  const choices = field.type === 'enum' ? (field.values ?? []).map((entry) => ({ value: entry, label: humanize(entry) })) : field.type === 'reference' ? references : null;
   if (operator.value === 'single' && choices) {
     return <NativeSelect id={id} testId="rule-value" ariaLabel={label} value={value} onChange={onChange} placeholder="Choose…" options={choices} />;
   }
   const hint =
     operator.value === 'list'
-      ? choices
+      ? field.type === 'enum' && choices
         ? `comma-separated: ${choices.slice(0, 3).map((entry) => entry.value).join(', ')}${choices.length > 3 ? ', …' : ''}`
         : 'comma-separated values'
       : operator.value === 'glob'

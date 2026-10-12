@@ -7,7 +7,7 @@ import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
 import { useV2Command } from './use-v2-command';
-import { flattenPages, useV2InfiniteList } from './use-v2-list';
+import { usePagedQuery } from './use-paged-query';
 import { useV2TenantId } from './use-v2-tenant';
 
 export type RuleCreateBody = Omit<BodyOf<'/api/v2/rules', 'post'>, 'definition'> & { definition: RuleDefinitionDef };
@@ -16,10 +16,17 @@ export type RuleSimulateBody = BodyOf<'/api/v2/rules/{id}/simulate', 'post'>;
 
 type RuleRef = Pick<RuleView, 'id' | 'rowVersion'>;
 
-/** Rules of the acting tenant, newest first. */
-export function useRules() {
-  const list = useV2InfiniteList<RuleView>({ resource: 'rules', path: '/rules', query: { limit: 200 }, key: {} });
-  return { ...list, items: flattenPages(list.data?.pages) };
+export interface RuleListFilters {
+  kind?: RuleKind;
+  state?: RuleView['state'];
+}
+
+/** Rules of the acting tenant, newest first, 20 per page (filtered on the server). */
+export function useRules(filters: RuleListFilters = {}) {
+  const query: Record<string, string> = {};
+  if (filters.kind) query.kind = filters.kind;
+  if (filters.state) query.state = filters.state;
+  return usePagedQuery<RuleView>({ resource: 'rules', path: '/rules', query, key: { filters: query } });
 }
 
 export function useRule(id: string | null) {

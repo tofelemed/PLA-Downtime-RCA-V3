@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useUnits } from '@/api/v2/queries/units';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useSimulateRule } from '@/api/v2/queries/rules';
-import type { RuleView } from '@/api/v2/types/rules';
+import type { RulesSchemaView, RuleView } from '@/api/v2/types/rules';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/features/integration-console/components/field';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
@@ -20,7 +20,7 @@ const PRESETS = [
  * Simulation step (NFR02): the server runs the draft (or a chosen version) over stored events of the
  * window and records the run; the panel shows its before/after counts and sample diffs as returned.
  */
-export function SimulationPanel({ rule, timezone }: { rule: RuleView; timezone: string }) {
+export function SimulationPanel({ rule, schema }: { rule: RuleView; schema: RulesSchemaView }) {
   const { canAuthorRules } = useCapabilities();
   const units = useUnits();
   const simulate = useSimulateRule();
@@ -72,7 +72,7 @@ export function SimulationPanel({ rule, timezone }: { rule: RuleView; timezone: 
         </Button>
       </div>
       {simulate.error ? <AdminRefusalAlert error={simulate.error} /> : null}
-      {simulate.data && <SimulationResult result={simulate.data} timezone={timezone} />}
+      {simulate.data && <SimulationResult result={simulate.data} schema={schema} />}
     </div>
   );
 }

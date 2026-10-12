@@ -1,19 +1,18 @@
-import { Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { StatusIcon } from '@/lib/icons';
 
 /**
  * Plan 2.6 "Decisions / risks": approvals of policies, FX rates or valuation rates do not queue a
- * recalculation; values appear when a period is next recomputed or swept.
+ * recalculation; values appear when a period is next recomputed or swept. Said once, on the page.
  */
 export function RecalculationNotice() {
   return (
     <Alert data-testid="recalculation-notice">
-      <Info className="h-4 w-4" />
+      <StatusIcon.info className="h-4 w-4" aria-hidden="true" />
       <AlertTitle>Approving does not recalculate</AlertTitle>
       <AlertDescription>
-        Approving a valuation policy, an FX rate or a valuation rate changes nothing that is already calculated. Values appear when a period is
-        next recalculated (a change to it, “recalculate” on the period, or the scheduled sweep). Approved period revisions get a change proposal,
-        never an overwrite.
+        Values already calculated stay as they are. New values appear when a period is next recalculated; approved periods get a change
+        proposal, never an overwrite.
       </AlertDescription>
     </Alert>
   );

@@ -1,12 +1,10 @@
-import { useActivateRule, useRetireRule } from '@/api/v2/queries/rules';
 import type { RulesSchemaView, RuleView } from '@/api/v2/types/rules';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { approvalAccess } from '@/features/auth/approval-gate';
-import { useCapabilities } from '@/features/auth/use-capabilities';
-import { ApproveButton } from '@/features/ux-kit/approve-button';
-import { AdminRefusalAlert } from '../components/admin-refusal-alert';
+import { labelOf, RULE_KIND_LABELS, RULE_STATE_LABELS } from '@/features/ux-kit/labels';
+import { PageHeader } from '@/features/ux-kit/page-layout';
+import { useUrlParam } from '../hooks/use-url-param';
+import { RuleActions } from './rule-actions';
 import { RuleEditor } from './rule-editor';
 import { RuleVersions } from './rule-versions';
 import { SimulationPanel } from './simulation-panel';
@@ -14,68 +12,54 @@ import { SimulationPanel } from './simulation-panel';
 export interface RuleDetailProps {
   rule: RuleView;
   schema: RulesSchemaView;
-  timezone: string;
   currentUserId: string | null;
 }
 
-/**
- * One rule: builder for the draft, simulation, version timeline with rollback. Activation is a second
- * person's act (the server answers 403 SEPARATION_OF_DUTIES to the draft author): the author sees it
- * disabled with the reason; roles that can never approve do not see it.
- */
-export function RuleDetail({ rule, schema, timezone, currentUserId }: RuleDetailProps) {
-  const { canApproveRules } = useCapabilities();
-  const activate = useActivateRule();
-  const retire = useRetireRule();
-  const ownDraft = Boolean(rule.draft && rule.draft.authorId === currentUserId);
-  const access = approvalAccess(canApproveRules, rule.draft?.authorId, currentUserId);
+const TABS = ['builder', 'simulation', 'versions'] as const;
+type RuleTab = (typeof TABS)[number];
+
+function RuleSummary({ rule, ownDraft }: { rule: RuleView; ownDraft: boolean }) {
   return (
-    <section className="space-y-3 rounded-md border p-3" data-testid="rule-detail" data-state={rule.state} data-active-version={rule.activeVersion ?? ''} data-has-draft={Boolean(rule.draft)}>
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold">{rule.name}</h2>
-          <p className="text-xs text-muted-foreground">
-            {schema.kinds.find((entry) => entry.kind === rule.kind)?.label ?? rule.kind} · {rule.appliedBy}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={rule.state === 'active' ? 'outline' : 'secondary'}>{rule.state}</Badge>
-          {rule.activeVersion !== null && <Badge variant="outline">v{rule.activeVersion} in force</Badge>}
-          {rule.draft && <Badge variant="secondary">draft pending{ownDraft ? ' (yours)' : ''}</Badge>}
-          {rule.draft && rule.state !== 'retired' && (
-            <ApproveButton access={access} size="sm" onClick={() => activate.submit({ rule }).catch(() => undefined)} disabled={activate.isPending} data-testid="rule-activate">
-              Activate draft
-            </ApproveButton>
-          )}
-          {rule.state !== 'retired' && canApproveRules && (
-            <Button size="sm" variant="destructive" onClick={() => retire.submit({ rule }).catch(() => undefined)} disabled={retire.isPending} data-testid="rule-retire">
-              Retire
-            </Button>
-          )}
-        </div>
-      </header>
-      {activate.error ? <AdminRefusalAlert error={activate.error} /> : null}
-      {retire.error ? <AdminRefusalAlert error={retire.error} /> : null}
-      <Tabs defaultValue="builder">
-        <TabsList>
-          <TabsTrigger value="builder">Builder</TabsTrigger>
-          <TabsTrigger value="simulation" data-testid="tab-simulation">
-            Simulation
-          </TabsTrigger>
-          <TabsTrigger value="versions" data-testid="tab-rule-versions">
-            Versions
-          </TabsTrigger>
+    <span className="flex flex-wrap items-center gap-2">
+      <Badge variant={rule.state === 'active' ? 'outline' : 'secondary'}>{labelOf(RULE_STATE_LABELS, rule.state)}</Badge>
+      <span>{labelOf(RULE_KIND_LABELS, rule.kind)}</span>
+      {rule.activeVersion !== null && <Badge variant="outline">Version {rule.activeVersion} in force</Badge>}
+      {rule.draft && <Badge variant="secondary">Draft waiting{ownDraft ? ' (yours)' : ''}</Badge>}
+    </span>
+  );
+}
+
+/**
+ * One rule: header with activation and retirement, then builder, simulation and version history as
+ * tabs in the URL (`?tab=`).
+ */
+export function RuleDetail({ rule, schema, currentUserId }: RuleDetailProps) {
+  const [tab, setTab] = useUrlParam<RuleTab>('tab', TABS, 'builder');
+  const ownDraft = Boolean(rule.draft && rule.draft.authorId === currentUserId);
+  return (
+    <div className="space-y-6" data-testid="rule-detail" data-state={rule.state} data-active-version={rule.activeVersion ?? ''} data-has-draft={Boolean(rule.draft)}>
+      <PageHeader
+        title={rule.name}
+        back={{ to: '/codes-admin?tab=rules', label: 'Rules' }}
+        description={<RuleSummary rule={rule} ownDraft={ownDraft} />}
+        actions={<RuleActions rule={rule} currentUserId={currentUserId} />}
+      />
+      <Tabs value={tab} onValueChange={(value) => setTab(value as RuleTab)}>
+        <TabsList className="h-auto flex-wrap">
+          <TabsTrigger value="builder" data-testid="tab-builder">Builder</TabsTrigger>
+          <TabsTrigger value="simulation" data-testid="tab-simulation">Simulation</TabsTrigger>
+          <TabsTrigger value="versions" data-testid="tab-rule-versions">Versions</TabsTrigger>
         </TabsList>
-        <TabsContent value="builder">
+        <TabsContent value="builder" className="pt-4">
           <RuleEditor key={`${rule.id}:${rule.rowVersion}`} schema={schema} rule={rule} onSaved={() => undefined} />
         </TabsContent>
-        <TabsContent value="simulation">
-          <SimulationPanel key={`${rule.id}:${rule.rowVersion}`} rule={rule} timezone={timezone} />
+        <TabsContent value="simulation" className="pt-4">
+          <SimulationPanel key={`${rule.id}:${rule.rowVersion}`} rule={rule} schema={schema} />
         </TabsContent>
-        <TabsContent value="versions">
-          <RuleVersions rule={rule} schema={schema} timezone={timezone} />
+        <TabsContent value="versions" className="pt-4">
+          <RuleVersions rule={rule} schema={schema} />
         </TabsContent>
       </Tabs>
-    </section>
+    </div>
   );
 }

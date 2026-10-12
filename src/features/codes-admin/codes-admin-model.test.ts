@@ -128,7 +128,7 @@ describe('rule form (mirrors the API 422 fieldErrors)', () => {
       { field: 'definition.when', message: 'has 22 conditions' },
       { field: 'definition.when.all.9.op', message: 'unknown row' },
     ]);
-    expect(errors.rows).toEqual({ r2: ['value: must be a number'], r3: ['op: is not allowed'], a1: ['value: must be one of: planned'] });
+    expect(errors.rows).toEqual({ r2: ['Value: must be a number'], r3: ['Operator: is not allowed'], a1: ['Value: must be one of: planned'] });
     expect(errors.general).toEqual(['when has 22 conditions', 'when.all.9.op unknown row']);
   });
 });

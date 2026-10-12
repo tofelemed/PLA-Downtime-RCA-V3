@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -37,7 +37,8 @@ describe('codes & rules hygiene (plan 3.8)', () => {
   });
 
   it('the Admin Panel and the v1 Event Hub no longer compile or load user rules (B15)', () => {
-    for (const file of ['pages/AdminPanel.tsx', 'pages/EventHub.tsx']) {
+    // a retired page (the v1 Event Hub was removed) cannot load rules any more
+    for (const file of ['pages/AdminPanel.tsx', 'pages/EventHub.tsx'].filter((name) => existsSync(join(SRC, name)))) {
       const text = readFileSync(join(SRC, file), 'utf8');
       expect(text, file).not.toMatch(CODE);
       expect(text, file).not.toMatch(/localStorage\.(get|set)Item\(\s*['"]statusAutomationRules/);

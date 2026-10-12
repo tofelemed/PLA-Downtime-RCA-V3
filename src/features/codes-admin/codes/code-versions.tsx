@@ -1,54 +1,70 @@
 import { useMemo } from 'react';
-import { useCodeVersions } from '@/api/v2/queries/codes-admin';
+import { useCodeList, useCodeVersions } from '@/api/v2/queries/codes-admin';
 import type { CodeDetailView, CodeLibraryPath } from '@/api/v2/types/codes-admin';
-import { DataState } from '@/features/ux-kit/data-state';
-import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { PlantTime } from '@/features/ux-kit/plant-time';
-import { snapshotLabel, versionTimeline } from '../model/version-diff';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { FAILURE_GROUP_KIND_LABELS, labelOf } from '@/features/ux-kit/labels';
+import { OEE_COMPONENT_LABELS, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels/codes-finance-labels';
+import { usePlantDates } from '../hooks/use-plant-dates';
+import { snapshotLabel, versionTimeline, type SnapshotChange, type VersionEntry } from '../model/version-diff';
 
 export interface CodeVersionsProps {
   library: CodeLibraryPath;
   code: CodeDetailView;
-  codes: readonly CodeDetailView[];
-  timezone: string;
 }
 
-type Value = string | number | boolean | null | undefined;
+type Value = SnapshotChange['before'];
 
-/** Version history of a code, newest first, each with what changed (parents shown by code). */
-export function CodeVersions({ library, code, codes, timezone }: CodeVersionsProps) {
-  const versions = useCodeVersions(library, code.id);
-  const entries = useMemo(() => versionTimeline(versions.data ?? []), [versions.data]);
-  const show = (key: string, value: Value) => {
+/** A snapshot value as text: codes by their code, enum values by their label, never an id. */
+function useValueText(library: CodeLibraryPath) {
+  const own = useCodeList(library, { includeRetired: true });
+  const impacts = useCodeList('impact-codes', { includeRetired: true });
+  return (key: string, value: Value): string => {
     if (value === null || value === undefined || value === '') return '—';
-    if (key === 'parentId' || key === 'defaults.impactCodeId') return codes.find((entry) => entry.id === value)?.code ?? String(value);
-    return String(value);
+    const text = String(value);
+    if (key === 'parentId') return own.items.find((entry) => entry.id === text)?.code ?? 'Another code';
+    if (key === 'defaults.impactCodeId') return impacts.items.find((entry) => entry.id === text)?.code ?? 'Another impact code';
+    if (key === 'defaults.oeeComponent') return labelOf(OEE_COMPONENT_LABELS, text);
+    if (key === 'defaults.scheduleClass') return labelOf(SCHEDULE_CLASS_LABELS, text);
+    if (key === 'groupKind') return labelOf(FAILURE_GROUP_KIND_LABELS, text);
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    return text;
   };
+}
+
+/** Version history of a code, newest first, 20 per page, each with what changed. */
+export function CodeVersions({ library, code }: CodeVersionsProps) {
+  const versions = useCodeVersions(library, code.id);
+  const dates = usePlantDates();
+  const show = useValueText(library);
+  const entries = useMemo(() => versionTimeline(versions.data ?? []), [versions.data]);
+  const columns: Array<DataTableColumn<VersionEntry>> = [
+    { id: 'version', header: 'Version', nowrap: true, cell: (entry) => <span data-testid="code-version" data-version={entry.version}>Version {entry.version}</span> },
+    { id: 'valid', header: 'Valid', nowrap: true, cell: (entry) => dates.validity(entry.effectiveFrom, entry.effectiveTo) },
+    {
+      id: 'changes',
+      header: 'What changed',
+      cell: (entry) =>
+        entry.changes.length === 0 ? (
+          <span className="text-muted-foreground">Only the validity changed.</span>
+        ) : (
+          <ul className="space-y-0.5 text-sm" data-version={entry.version}>
+            {entry.changes.map((change) => (
+              <li key={change.key} data-testid="version-change" data-key={change.key}>
+                {snapshotLabel(change.key)}: <span className="text-muted-foreground line-through">{show(change.key, change.before)}</span> → {show(change.key, change.after)}
+              </li>
+            ))}
+          </ul>
+        ),
+    },
+  ];
   return (
-    <DataState state={dataStateOf(versions, { isEmpty: entries.length === 0 })} error={versions.error} detail="No versions recorded yet (the first change records a baseline).">
-      <ol className="space-y-2" data-testid="code-versions">
-        {entries.map((entry) => (
-          <li key={entry.version} className="rounded border p-2 text-sm" data-testid="code-version" data-version={entry.version}>
-            <p className="font-medium">
-              Version {entry.version} · from <PlantTime iso={entry.effectiveFrom} tz={timezone} withDate />
-              {entry.effectiveTo && (
-                <>
-                  {' '}
-                  to <PlantTime iso={entry.effectiveTo} tz={timezone} withDate />
-                </>
-              )}
-            </p>
-            <ul className="mt-1 space-y-0.5 text-xs">
-              {entry.changes.map((change) => (
-                <li key={change.key} data-testid="version-change" data-key={change.key}>
-                  {snapshotLabel(change.key)}: <span className="line-through text-muted-foreground">{show(change.key, change.before)}</span> → <span>{show(change.key, change.after)}</span>
-                </li>
-              ))}
-              {entry.changes.length === 0 && <li className="text-muted-foreground">No field changes (validity only).</li>}
-            </ul>
-          </li>
-        ))}
-      </ol>
-    </DataState>
+    <DataTable
+      caption={`Versions of ${code.code}`}
+      columns={columns}
+      rows={entries}
+      getRowKey={(entry) => String(entry.version)}
+      status={{ isLoading: versions.isLoading, isError: versions.isError, error: versions.error, onRetry: () => void versions.refetch() }}
+      empty={{ title: 'No versions recorded yet', text: 'The first change records a baseline.' }}
+    />
   );
 }

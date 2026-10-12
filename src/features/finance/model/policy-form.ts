@@ -8,8 +8,7 @@ import {
   type TimeBasisRule,
   type ValuationPolicyView,
 } from '@/api/v2/types/valuation';
-import { plantLocalToUtc } from '@/features/event-hub/model/plant-local-time';
-import type { FieldErrors } from '@/features/plans-profiles-calendars/model/profile-form';
+import type { FieldErrors } from './field-errors';
 
 /**
  * A new valuation policy version (plan 2.6, VAL01, D08). The form starts from an existing version's
@@ -23,7 +22,8 @@ export interface PolicyFormValues {
   reportingCurrencies: string[];
   fxPolicy: FxPolicy;
   independentImpactCodeIds: string[];
-  effectiveFrom: string;
+  /** ISO UTC instant (DateTimeInput) */
+  effectiveFrom: string | null;
   notes: string;
 }
 
@@ -46,23 +46,23 @@ export function policyFormOf(source: ValuationPolicyView | null): PolicyFormValu
     reportingCurrencies: [...currencies],
     fxPolicy: oneOf(body.fxPolicy, FX_POLICIES, 'snapshot'),
     independentImpactCodeIds: stringList(body.independentImpactCodeIds),
-    effectiveFrom: '',
+    effectiveFrom: null,
     notes: '',
   };
 }
 
-export function validatePolicyForm(values: PolicyFormValues, timezone: string): FieldErrors {
+export function validatePolicyForm(values: PolicyFormValues): FieldErrors {
   const errors: FieldErrors = {};
-  if (!plantLocalToUtc(values.effectiveFrom, timezone)) errors.effectiveFrom = 'effectiveFrom is required';
+  if (!values.effectiveFrom) errors.effectiveFrom = 'Enter the date and time it starts.';
   const currencies = values.reportingCurrencies;
-  if (currencies.length < 1) errors.reportingCurrencies = 'reportingCurrencies must contain at least 1 elements';
-  else if (currencies.length > 2) errors.reportingCurrencies = 'reportingCurrencies must contain no more than 2 elements';
-  else if (!currencies.every((code) => CURRENCY.test(code))) errors.reportingCurrencies = 'reportingCurrencies must be an ISO 4217 code';
-  if (values.notes.trim().length > NOTES_MAX) errors.notes = `notes must be at most ${NOTES_MAX} characters`;
+  if (currencies.length < 1) errors.reportingCurrencies = 'Choose at least one reporting currency.';
+  else if (currencies.length > 2) errors.reportingCurrencies = 'Choose at most two reporting currencies.';
+  else if (!currencies.every((code) => CURRENCY.test(code))) errors.reportingCurrencies = 'Choose currencies from the list.';
+  if (values.notes.trim().length > NOTES_MAX) errors.notes = `Use at most ${NOTES_MAX} characters.`;
   return errors;
 }
 
-export function policyCreateBody(values: PolicyFormValues, timezone: string): ValuationPolicyCreateBody {
+export function policyCreateBody(values: PolicyFormValues): ValuationPolicyCreateBody {
   const independent = values.timeBasisRule === 'independent_components';
   return {
     defaultBasis: values.defaultBasis,
@@ -70,7 +70,7 @@ export function policyCreateBody(values: PolicyFormValues, timezone: string): Va
     reportingCurrencies: [...values.reportingCurrencies],
     fxPolicy: values.fxPolicy,
     independentImpactCodeIds: independent ? [...values.independentImpactCodeIds] : [],
-    effectiveFrom: plantLocalToUtc(values.effectiveFrom, timezone) as string,
+    effectiveFrom: values.effectiveFrom as string,
     notes: values.notes.trim() || null,
   };
 }

@@ -1,14 +1,16 @@
 import { test, expect, type Browser, type Page } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
 import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
 import { call, command } from './test-utils/downtime-world';
 import { ensureApprover } from './test-utils/dashboard-world';
 import { downtime, findCode, findRule, retireRule, seedCodesWorld, type CodesWorld } from './test-utils/codes-world';
+import { adminRefusal, confirmDialog, ruleVersionRow, createCode, expectUnder, moveCode, openCode, openLibrary, openRule } from './personas/support/codes-finance-ui';
 
 /**
  * Plan 3.8 exit tests on `/codes-admin` (flag `v2.codesAdmin`, switched on for the demo tenant by the
  * manager and left on):
- * - T18 UI: 3-level reason tree → reload → identical; reparent (picker and drag) → persisted; a cycle
+ * - T18 UI: 3-level reason tree → reload → identical (collapsed tree, paged top level, search); reparent ("Move under") → persisted; a cycle
  *   the API refuses → 422 shown; retire a parent → impact dialog with counts, 409 with counts; a new
  *   mapping version leaves the historical one unchanged; versions and mapping preview; codes of another
  *   tenant are never listed; a production engineer gets 403 shown clearly.
@@ -29,34 +31,10 @@ const FLAG = 'v2.codesAdmin';
 
 let manager = '';
 let approver = '';
+let engineer = '';
 let world: CodesWorld;
 
 test.describe.configure({ mode: 'serial', timeout: 240_000 });
-
-const rowOf = (page: Page, code: string) => page.locator(`[data-testid="code-row"][data-code="${code}"]`);
-const refusal = (page: Page) => page.getByTestId('admin-refusal');
-
-async function openTab(page: Page, tab: string): Promise<void> {
-  await page.goto('/codes-admin');
-  // first visit compiles the lazy page chunk on the dev server
-  await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
-  await page.getByTestId(`tab-${tab}`).click();
-}
-
-async function selectCode(page: Page, code: string): Promise<void> {
-  await rowOf(page, code).getByTestId('code-select').click();
-  await expect(page.getByTestId('code-detail')).toHaveAttribute('data-code', code);
-}
-
-async function createCode(page: Page, code: string, name: string, parentLabel: string | null): Promise<void> {
-  await page.getByTestId('code-new').click();
-  await page.fill('#new-code', code);
-  await page.fill('#new-name', name);
-  if (parentLabel === null) await page.getByTestId('new-parent').selectOption('');
-  else await page.getByTestId('new-parent').selectOption({ label: parentLabel });
-  await page.getByTestId('code-create-submit').click();
-  await expect(page.getByTestId('code-detail')).toHaveAttribute('data-code', code, { timeout: 20_000 });
-}
 
 async function asUser(browser: Browser, user: { email: string; password: string }): Promise<Page> {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -74,6 +52,7 @@ test.describe('Codes & rules — T18 UI and T22 (plan 3.8)', () => {
     expect((await call(manager, 'PUT', `/v2/feature-flags/${FLAG}`, { enabled: true })).status).toBe(200);
     await ensureApprover(manager, user.tenantId, user.organizationId, APPROVER.email, APPROVER.password);
     approver = (await authenticate(APPROVER.email, APPROVER.password)).accessToken;
+    engineer = (await authenticate(ENGINEER.email, ENGINEER.password)).accessToken;
     const superAdmin = (await authenticate(ADMIN.email, ADMIN.password)).accessToken;
     world = await seedCodesWorld(manager, user.tenantId, superAdmin);
   });
@@ -89,70 +68,58 @@ test.describe('Codes & rules — T18 UI and T22 (plan 3.8)', () => {
     const code = (name: string) => `E2E-${name}-${world.suffix}`;
     const [ROOT, CHILD, LEAF, ALT] = [code('ROOT'), code('CHILD'), code('LEAF'), code('ALT')];
     await loginViaUI(page, MANAGER.email, MANAGER.password);
-    await openTab(page, 'reason-codes');
 
-    // build a 3-level tree (the parent defaults to the selected code) and a second root
-    await createCode(page, ROOT, 'E2E root', null);
-    await createCode(page, CHILD, 'E2E child', `${ROOT} — E2E root`);
-    await createCode(page, LEAF, 'E2E leaf', `${CHILD} — E2E child`);
-    await createCode(page, ALT, 'E2E alternative', null);
+    // build a 3-level tree and a second root; each code opens on its own page
+    await createCode(page, 'reason-codes', ROOT, 'E2E root', null);
+    await createCode(page, 'reason-codes', CHILD, 'E2E child', `${ROOT} — E2E root`);
+    await createCode(page, 'reason-codes', LEAF, 'E2E leaf', `${CHILD} — E2E child`);
+    await createCode(page, 'reason-codes', ALT, 'E2E alternative', null);
     const ids = Object.fromEntries(await Promise.all([ROOT, CHILD, LEAF, ALT].map(async (entry) => [entry, (await findCode(manager, entry))?.id ?? ''])));
-    const expectTree = async (leafParent: string, leafDepth: string) => {
-      await expect(rowOf(page, ROOT)).toHaveAttribute('data-depth', '0');
-      await expect(rowOf(page, CHILD)).toHaveAttribute('data-parent', ids[ROOT]);
-      await expect(rowOf(page, LEAF)).toHaveAttribute('data-parent', ids[leafParent]);
-      await expect(rowOf(page, LEAF)).toHaveAttribute('data-depth', leafDepth);
-    };
-    await expectTree(CHILD, '2');
-    await openTab(page, 'reason-codes'); // reload → identical
-    await expectTree(CHILD, '2');
+    // the tree starts collapsed: where a code sits is read from the library search (each check reloads)
+    await expectUnder(page, 'reason-codes', ROOT, 'Top level');
+    await expectUnder(page, 'reason-codes', CHILD, 'E2E root');
+    await expectUnder(page, 'reason-codes', LEAF, 'E2E root › E2E child');
+    // the top level is paged (20 per page): opening a root shows only its own sub-codes
+    await openLibrary(page, 'reason-codes');
+    await expect(page.locator('[data-testid="code-tree"] > li').first()).toBeVisible({ timeout: 30_000 });
+    expect(await page.locator('[data-testid="code-tree"] > li').count()).toBeLessThanOrEqual(20);
+    await expect(page.locator('[data-testid="code-tree"] [data-testid="code-row"][data-depth="1"]')).toHaveCount(0);
     // codes of another tenant are never listed (NFR01)
-    if (world.foreignCode) await expect(rowOf(page, world.foreignCode)).toHaveCount(0);
+    if (world.foreignCode) {
+      await openLibrary(page, 'reason-codes', world.foreignCode);
+      await expect(page.locator(`[data-testid="code-match"][data-code="${world.foreignCode}"]`)).toHaveCount(0);
+    }
 
-    // reparent with the picker → persisted; drag back → persisted
-    await selectCode(page, LEAF);
-    await page.getByTestId('code-move-target').selectOption({ label: `${ALT} — E2E alternative` });
-    await page.getByTestId('code-move-submit').click();
-    await expect(rowOf(page, LEAF)).toHaveAttribute('data-parent', ids[ALT], { timeout: 20_000 });
-    await openTab(page, 'reason-codes');
-    await expectTree(ALT, '1');
-    // drag with the handle; a tall viewport keeps both rows on screen so nothing scrolls mid-drag
-    await page.setViewportSize({ width: 1024, height: 6000 });
-    const handle = await rowOf(page, LEAF).getByTestId('drag-handle').boundingBox();
-    const target = await rowOf(page, CHILD).getByTestId('code-select').boundingBox();
-    expect(handle && target).toBeTruthy();
-    await page.mouse.move((handle?.x ?? 0) + 4, (handle?.y ?? 0) + 4);
-    await page.mouse.down();
-    await page.mouse.move((target?.x ?? 0) + 20, (target?.y ?? 0) + 6, { steps: 8 });
-    await page.mouse.up();
-    await expect(rowOf(page, LEAF)).toHaveAttribute('data-parent', ids[CHILD], { timeout: 20_000 });
-    expect((await findCode(manager, LEAF))?.parentId).toBe(ids[CHILD]);
-    await page.setViewportSize({ width: 1024, height: 768 });
+    // reparent with the picker → persisted; back under CHILD → persisted
+    await moveCode(page, 'reason-codes', LEAF, `${ALT} — E2E alternative`);
+    await expect.poll(async () => (await findCode(manager, LEAF))?.parentId, { timeout: 20_000 }).toBe(ids[ALT]);
+    await expectUnder(page, 'reason-codes', LEAF, 'E2E alternative');
+    await moveCode(page, 'reason-codes', LEAF, `${CHILD} — E2E child`);
+    await expect.poll(async () => (await findCode(manager, LEAF))?.parentId, { timeout: 20_000 }).toBe(ids[CHILD]);
 
     // a cycle the stale screen cannot see: ALT moves under CHILD elsewhere, then ROOT → under ALT → 422
+    await openCode(page, 'reason-codes', ROOT);
     const alt = await findCode(manager, ALT);
     const moved = await call(manager, 'PUT', `/v2/reason-codes/${ids[ALT]}`, { parentId: ids[CHILD] }, { 'If-Match': `"${alt?.version}"` });
     expect(moved.status).toBe(200);
-    await selectCode(page, ROOT);
     await page.getByTestId('code-move-target').selectOption({ label: `${ALT} — E2E alternative` });
     await page.getByTestId('code-move-submit').click();
-    await expect(refusal(page)).toHaveAttribute('data-status', '422');
-    await expect(refusal(page)).toHaveAttribute('data-code', 'CODE_CYCLE');
-    await expect(refusal(page)).toContainText('parentId');
+    await expect(adminRefusal(page)).toHaveAttribute('data-status', '422');
+    await expect(adminRefusal(page)).toHaveAttribute('data-code', 'CODE_CYCLE');
+    await expect(adminRefusal(page)).toContainText('A code cannot be placed under itself');
 
-    // retire a parent: impact counts first, then 409 with the same counts
-    await openTab(page, 'reason-codes');
-    await selectCode(page, ROOT);
+    // retire a parent: the confirmation lists the impact first, then the 409 with the same counts
+    await openCode(page, 'reason-codes', ROOT);
     await page.getByTestId('code-retire').click();
     await expect(page.getByTestId('impact-children')).toHaveAttribute('data-count', '1');
-    await page.getByTestId('retire-confirm').click();
-    await expect(refusal(page)).toHaveAttribute('data-code', 'CODE_HAS_CHILDREN');
-    await expect(page.getByTestId('refusal-references')).toContainText('1 active child code(s)');
+    await confirmDialog(page, 'Retire code');
+    await expect(adminRefusal(page)).toHaveAttribute('data-code', 'CODE_HAS_CHILDREN');
+    await expect(page.getByTestId('refusal-references')).toContainText('1 active sub-code(s)');
     await page.keyboard.press('Escape');
 
     // a new mapping version leaves the historical one unchanged
-    await page.getByTestId('tab-mapping-rules').click();
-    await page.getByTestId('mr-reason').selectOption({ label: `${CHILD} — E2E child` });
+    await openCode(page, 'reason-codes', CHILD);
+    await page.getByTestId('tab-code-mappings').click();
     await page.getByTestId('mr-kind').selectOption('reason_to_schedule_class');
     await page.getByTestId('mr-target').selectOption('planned');
     await page.getByTestId('mr-save').click();
@@ -166,38 +133,38 @@ test.describe('Codes & rules — T18 UI and T22 (plan 3.8)', () => {
     // the mapping versions start now, so this earlier event keeps the event-type default (unknown)
     const coded = await downtime(manager, world, 3, 0.5, ids[CHILD]);
     expect(coded.classification.scheduleClass).toBe('unknown');
-    await page.getByTestId('tab-reason-codes').click();
-    await selectCode(page, CHILD);
+    await page.getByTestId('tab-code-details').click();
     await page.fill('#code-name', 'E2E child renamed');
     await page.getByTestId('code-save').click();
     await expect(page.getByTestId('code-detail')).toHaveAttribute('data-version', '2');
     await page.getByTestId('tab-code-versions').click();
-    await expect(page.locator('[data-testid="code-version"][data-version="2"] [data-testid="version-change"][data-key="name"]')).toContainText('E2E child renamed');
-    await page.getByTestId('tab-mapping-preview').click();
+    const version2 = page.getByRole('row').filter({ has: page.locator('[data-testid="code-version"][data-version="2"]') });
+    await expect(version2.locator('[data-testid="version-change"][data-key="name"]')).toContainText('E2E child renamed');
+    await page.getByTestId('tab-code-mappings').click();
+    await page.getByRole('button', { name: 'Effect on the last 30 days' }).click();
     await expect(page.getByTestId('mapping-preview')).toHaveAttribute('data-events', '1');
     await expect(page.locator('[data-testid="preview-axis"][data-axis="scheduleClass"]')).toHaveAttribute('data-proposed', 'unplanned');
     await expect(page.locator('[data-testid="preview-axis"][data-axis="scheduleClass"]')).toHaveAttribute('data-differ', '1');
 
-    // retire the leaf (no children): it leaves the active tree
-    await selectCode(page, LEAF);
+    // retire the leaf (no children): it is retired and leaves the active tree
+    await openCode(page, 'reason-codes', LEAF);
     await page.getByTestId('code-retire').click();
     await expect(page.getByTestId('impact-children')).toHaveAttribute('data-count', '0');
-    await page.getByTestId('retire-confirm').click();
-    await expect(rowOf(page, LEAF)).toHaveCount(0, { timeout: 20_000 });
+    await confirmDialog(page, 'Retire code');
+    await expect(page.getByTestId('code-detail')).toHaveAttribute('data-active', 'false', { timeout: 20_000 });
+    await openLibrary(page, 'reason-codes', LEAF);
+    await expect(page.locator(`[data-testid="code-match"][data-code="${LEAF}"]`)).toHaveCount(0, { timeout: 20_000 });
     const list = await call<{ items: Array<{ code: string }> }>(manager, 'GET', '/v2/reason-codes?limit=500');
     if (world.foreignCode) expect(list.body.items.map((item) => item.code)).not.toContain(world.foreignCode);
   });
 
   test('T18: a production engineer sees the codes but a write is refused with 403, shown clearly', async ({ page }) => {
     await loginViaUI(page, ENGINEER.email, ENGINEER.password);
-    await openTab(page, 'reason-codes');
-    await page.getByTestId('code-new').click();
-    await page.fill('#new-code', `E2E-ENG-${world.suffix}`);
-    await page.fill('#new-name', 'E2E engineer attempt');
-    await page.getByTestId('new-parent').selectOption('');
-    await page.getByTestId('code-create-submit').click();
-    await expect(refusal(page)).toHaveAttribute('data-status', '403');
-    await expect(refusal(page)).toHaveAttribute('data-kind', 'role');
+    await openLibrary(page, 'reason-codes');
+    // the screen no longer offers code writes to a role that cannot make them; the server still refuses one
+    await expect(page.getByTestId('code-new')).toHaveCount(0);
+    const attempt = await command<{ code: string }>(engineer, '/v2/reason-codes', { code: `E2E-ENG-${world.suffix}`, name: 'E2E engineer attempt' });
+    expect(attempt.status).toBe(403);
     expect(await findCode(manager, `E2E-ENG-${world.suffix}`)).toBeNull();
   });
 
@@ -206,8 +173,8 @@ test.describe('Codes & rules — T18 UI and T22 (plan 3.8)', () => {
     const before = await downtime(manager, world, 30, 2);
     expect(before.classification.scheduleClass).toBe('unknown');
     await loginViaUI(page, MANAGER.email, MANAGER.password);
-    await openTab(page, 'rules');
-    await page.getByTestId('rule-new').click();
+    await page.goto('/codes-admin?tab=rules');
+    await page.getByTestId('rule-new').click({ timeout: 60_000 });
     await page.fill('#rule-name', name);
     const condition = (index: number) => page.getByTestId('rule-condition').nth(index);
     await page.getByTestId('action-target').selectOption('scheduleClass');
@@ -247,22 +214,22 @@ test.describe('Codes & rules — T18 UI and T22 (plan 3.8)', () => {
     expect(bad.body.fieldErrors.map((error) => error.field)).toEqual(expect.arrayContaining(['definition.when.all.0.field', 'definition.when.all.0.op']));
 
     // the author cannot activate (403 SEPARATION_OF_DUTIES); the draft simulates on the stored events
-    await page.getByTestId('rule-activate').click();
-    await expect(refusal(page)).toHaveAttribute('data-code', 'SEPARATION_OF_DUTIES');
-    await expect(refusal(page)).toHaveAttribute('data-status', '403');
+    await expect(page.getByTestId('rule-activate')).toBeDisabled();
+    const own = await call<{ code: string }>(manager, 'POST', `/v2/rules/${stored?.id}/activate`, {}, { 'Idempotency-Key': randomUUID(), 'If-Match': `"${stored?.rowVersion}"` });
+    expect([own.status, own.body.code]).toEqual([403, 'SEPARATION_OF_DUTIES']);
     await page.getByTestId('tab-simulation').click();
     await page.getByTestId('sim-unit').selectOption({ label: world.unitName });
     await page.getByTestId('sim-run').click();
     await expect(page.getByTestId('sim-result')).toHaveAttribute('data-version', 'draft');
     await expect(page.getByTestId('sim-result')).toHaveAttribute('data-matched', '1');
     await expect(page.getByTestId('sim-result')).toHaveAttribute('data-changed', '1');
-    await expect(page.locator('[data-testid="sim-field"][data-field="scheduleClass"]')).toContainText('unplanned: 1');
+    await expect(page.getByRole('row').filter({ has: page.locator('[data-testid="sim-field"][data-field="scheduleClass"]') })).toContainText('Unplanned: 1');
 
     // the second approver activates version 1; the server applies it to new events
     const second = await asUser(browser, APPROVER);
-    await openTab(second, 'rules');
-    await second.locator(`[data-testid="rule-item"][data-name="${name}"]`).click();
+    await openRule(second, manager, name);
     await second.getByTestId('rule-activate').click();
+    await confirmDialog(second, 'Activate rule');
     await expect(second.getByTestId('rule-detail')).toHaveAttribute('data-active-version', '1', { timeout: 20_000 });
     const long = await downtime(manager, world, 20, 2);
     expect(long.classification.scheduleClass).toBe('unplanned');
@@ -278,22 +245,22 @@ test.describe('Codes & rules — T18 UI and T22 (plan 3.8)', () => {
     expect(again.body).toMatchObject({ matched: first.body.matched, changed: first.body.changed, fields: first.body.fields });
 
     // a changed draft becomes version 2; rollback to version 1 adds version 3 and restores the behaviour
-    await openTab(page, 'rules');
-    await page.locator(`[data-testid="rule-item"][data-name="${name}"]`).click();
+    await openRule(page, manager, name);
     await page.getByTestId('action-value').selectOption('external');
     await expect(page.getByTestId('rule-validation')).toHaveAttribute('data-state', 'valid', { timeout: 20_000 });
     await page.getByTestId('rule-save').click();
     await expect(page.getByTestId('rule-detail')).toHaveAttribute('data-has-draft', 'true', { timeout: 20_000 });
-    await openTab(second, 'rules');
-    await second.locator(`[data-testid="rule-item"][data-name="${name}"]`).click();
+    await openRule(second, manager, name);
     await second.getByTestId('rule-activate').click();
+    await confirmDialog(second, 'Activate rule');
     await expect(second.getByTestId('rule-detail')).toHaveAttribute('data-active-version', '2', { timeout: 20_000 });
     expect((await downtime(manager, world, 12, 2)).classification.scheduleClass).toBe('external');
     await second.getByTestId('tab-rule-versions').click();
-    const v2 = second.locator('[data-testid="rule-version"][data-version="2"]');
-    await expect(v2.locator('[data-change="added"]')).toContainText('external');
-    await expect(v2.locator('[data-change="removed"]')).toContainText('unplanned');
-    await second.locator('[data-testid="rule-version"][data-version="1"]').getByTestId('rule-rollback').click();
+    const v2 = ruleVersionRow(second, 2);
+    await expect(v2.locator('[data-change="added"]')).toContainText(/external/i);
+    await expect(v2.locator('[data-change="removed"]')).toContainText(/unplanned/i);
+    await ruleVersionRow(second, 1).getByTestId('rule-rollback').click();
+    await confirmDialog(second, 'Restore version');
     await expect(second.getByTestId('rule-detail')).toHaveAttribute('data-active-version', '3', { timeout: 20_000 });
     await expect(second.locator('[data-testid="rule-version"][data-version="3"]')).toHaveAttribute('data-origin', 'rollback');
     expect((await downtime(manager, world, 8, 2)).classification.scheduleClass).toBe('unplanned');

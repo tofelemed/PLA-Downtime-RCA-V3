@@ -83,3 +83,29 @@ export function canDrop(codes: readonly CodeDetailView[], draggedId: string, tar
   if (targetId === null) return failureLevelFits(moving.groupKind, null);
   return moveTargets(codes, draggedId).some((code) => code.id === targetId);
 }
+
+/** "Mechanical › Bearings": the names above a code (search results), nearest last; "" for a top-level code. */
+export function ancestorsLabel(codes: readonly CodeDetailView[], code: CodeDetailView): string {
+  const byId = new Map(codes.map((entry) => [entry.id, entry]));
+  const names: string[] = [];
+  const seen = new Set<string>([code.id]);
+  let parent = code.parentId ? byId.get(code.parentId) : undefined;
+  while (parent && !seen.has(parent.id)) {
+    seen.add(parent.id);
+    names.unshift(parent.name);
+    parent = parent.parentId ? byId.get(parent.parentId) : undefined;
+  }
+  return names.join(' › ');
+}
+
+/** Codes whose code or name contains the search text (case-insensitive), sorted by code. */
+export function searchCodes(codes: readonly CodeDetailView[], text: string): CodeDetailView[] {
+  const needle = text.trim().toLowerCase();
+  if (needle === '') return [];
+  return codes
+    .filter((code) => code.code.toLowerCase().includes(needle) || code.name.toLowerCase().includes(needle))
+    .sort(byCode);
+}
+
+/** Whether a code can hold sub-codes (failure groups stop at the remedy level). */
+export const canHaveChildren = (code: CodeDetailView): boolean => code.groupKind !== 'remedy';

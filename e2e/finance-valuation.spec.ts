@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
+import { confirmDialog, fillDateTime } from './personas/support/codes-finance-ui';
 import { expectRefused, expectSodDisabled } from './personas/support/hidden-controls';
 import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
@@ -8,11 +9,12 @@ import { E2E_FX_SOURCE, ensureFinanceTenant, FINANCE_TENANT, FINANCE_AUTHOR, pol
 import { secondApproverPage, secondApproverToken } from './test-utils/second-approver';
 
 /**
- * Finance screens (plan 2.6 UI, prerequisite of 3.10) at `/finance` behind `v2.codesAdmin`:
- * - FX rates in Demo Plant: manager@acme.com creates a USD → IRR draft for a dedicated past window; its own
- *   approve control is disabled (D06 separation of duties, 2026-10-12) and the second approver approves
- *   it; a second draft for the same window is refused at approval with 409 VERSION_OVERLAP listing the
- *   first; both are retired again through the screen.
+ * Finance screens (plan 2.6 UI, prerequisite of 3.10) at `/finance`:
+ * - FX rates in Demo Plant: manager@acme.com creates a USD → IRR draft for a dedicated past window (each
+ *   saved draft opens its own page); its own approve control is disabled (D06 separation of duties,
+ *   2026-10-12) and the second approver approves it after a confirmation; a second draft for the same
+ *   window is refused at approval with 409 VERSION_OVERLAP listing the first; both are retired again
+ *   through the screen (each retire asks first).
  * - Valuation policy in the dedicated "E2E Test Tenant finance": the author creates a draft and its own
  *   approval is refused with 403 SEPARATION_OF_DUTIES. Demo Plant's policy versions are never touched
  *   (checked before / after).
@@ -27,22 +29,31 @@ const suffix = Date.now().toString(36);
 
 test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
-const fxRow = (page: Page, source: string) => page.locator(`[data-testid="fx-row"][data-source="${source}"]`);
+const fxDetail = (page: Page) => page.getByTestId('fx-detail');
 
-async function openFinance(page: Page): Promise<void> {
-  await page.goto('/finance');
+async function fxIdOf(source: string): Promise<string> {
+  const list = await call<{ items: Array<{ id: string; source: string | null }> }>(manager, 'GET', '/v2/fx-rates?fromCurrency=USD&toCurrency=IRR&limit=200');
+  const id = list.body.items.find((rate) => rate.source === source)?.id;
+  expect(id, `FX version ${source}`).toBeDefined();
+  return id ?? '';
+}
+
+/** The FX version's page (the list is paged; the version is looked up by its source). */
+async function openFx(page: Page, source: string): Promise<void> {
+  await page.goto(`/finance/fx/${await fxIdOf(source)}`);
   // first visit compiles the lazy page chunk on the dev server
-  await expect(page.getByTestId('finance')).toBeVisible({ timeout: 60_000 });
+  await expect(fxDetail(page)).toBeVisible({ timeout: 60_000 });
 }
 
 async function addFxDraft(page: Page, source: string, rate: string): Promise<void> {
-  await page.getByTestId('fx-new').click();
+  await page.goto('/finance?tab=fx');
+  await page.getByTestId('fx-new').click({ timeout: 60_000 });
   await page.fill('#rate', rate);
-  await page.fill('#fxEffectiveFrom', WINDOW.from);
-  await page.fill('#fxEffectiveTo', WINDOW.to);
+  await fillDateTime(page, 'Valid from', WINDOW.from);
+  await fillDateTime(page, 'Valid until', WINDOW.to);
   await page.fill('#fxSource', source);
   await page.getByTestId('fx-save').click();
-  await expect(fxRow(page, source).getByTestId('version-state')).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
+  await expect(fxDetail(page)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
 }
 
 test.describe('Finance — FX rates and valuation policy approval (plan 3.10 prerequisite)', () => {
@@ -63,34 +74,32 @@ test.describe('Finance — FX rates and valuation policy approval (plan 3.10 pre
     const [first, second] = [`${E2E_FX_SOURCE} ${suffix} A`, `${E2E_FX_SOURCE} ${suffix} B`];
     await loginViaUI(page, MANAGER.email, MANAGER.password);
     await expect(page.locator('a[href="/finance"]').first()).toBeVisible();
-    await openFinance(page);
-    await page.getByTestId('tab-fx-rates').click();
-    await page.locator('#fxPairFilter').selectOption('USD-IRR');
 
     await addFxDraft(page, first, '585000.25');
-    await expect(fxRow(page, first).getByTestId('fx-rate')).toHaveText('1 USD = 585000.25 IRR');
-    await expect(fxRow(page, first).getByTestId('fx-approve')).toBeDisabled();
+    await expect(fxDetail(page).getByTestId('fx-rate')).toHaveText('1 USD = 585000.25 IRR');
+    await expect(page.getByTestId('fx-approve')).toBeDisabled();
     await addFxDraft(page, second, '590000');
 
     const approver = await secondApproverPage(browser);
-    await openFinance(approver);
-    await approver.getByTestId('tab-fx-rates').click();
-    await approver.locator('#fxPairFilter').selectOption('USD-IRR');
-    await fxRow(approver, first).getByTestId('fx-approve').click();
-    await expect(fxRow(approver, first).getByTestId('version-state')).toHaveAttribute('data-state', 'approved', { timeout: 20_000 });
-    await fxRow(approver, second).getByTestId('fx-approve').click();
-    const refusal = fxRow(approver, second).getByTestId('refusal');
+    await openFx(approver, first);
+    await approver.getByTestId('fx-approve').click();
+    await confirmDialog(approver, 'Approve rate');
+    await expect(fxDetail(approver)).toHaveAttribute('data-state', 'approved', { timeout: 20_000 });
+    await openFx(approver, second);
+    await approver.getByTestId('fx-approve').click();
+    await confirmDialog(approver, 'Approve rate');
+    const refusal = approver.getByRole('alertdialog').getByTestId('refusal');
     await expect(refusal).toHaveAttribute('data-code', 'VERSION_OVERLAP', { timeout: 20_000 });
     await expect(refusal.getByTestId('refusal-conflict')).toHaveCount(1);
-    await expect(fxRow(approver, second).getByTestId('version-state')).toHaveAttribute('data-state', 'draft');
+    await approver.keyboard.press('Escape');
+    await expect(fxDetail(approver)).toHaveAttribute('data-state', 'draft');
     await approver.context().close();
 
-    await page.reload();
-    await page.getByTestId('tab-fx-rates').click();
-    await page.locator('#fxPairFilter').selectOption('USD-IRR');
     for (const source of [second, first]) {
-      await fxRow(page, source).getByTestId('fx-retire').click();
-      await expect(fxRow(page, source).getByTestId('version-state')).toHaveAttribute('data-state', 'retired', { timeout: 20_000 });
+      await openFx(page, source);
+      await page.getByTestId('fx-retire').click();
+      await confirmDialog(page, 'Retire rate');
+      await expect(fxDetail(page)).toHaveAttribute('data-state', 'retired', { timeout: 20_000 });
     }
   });
 
@@ -106,15 +115,16 @@ test.describe('Finance — FX rates and valuation policy approval (plan 3.10 pre
       route.request().method() === 'GET' ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(selection) }) : route.abort(),
     );
     await loginViaUI(page, FINANCE_AUTHOR.email, FINANCE_AUTHOR.password);
-    await openFinance(page);
-    await expect(page.getByTestId('recalculation-notice')).toBeVisible();
+    await page.goto('/finance');
+    await expect(page.getByTestId('recalculation-notice')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('policy-banner')).toBeVisible({ timeout: 20_000 });
 
     await page.getByTestId('policy-new').click();
-    await page.fill('#policyEffectiveFrom', '2099-01-01T00:00');
+    await fillDateTime(page, 'Starts', '2099-01-01T00:00');
     await page.fill('#policyNotes', notes);
     await page.getByTestId('policy-save').click();
-    const row = page.getByTestId('policy-row').filter({ hasText: notes });
+    // saving opens the version's page
+    const row = page.getByTestId('policy-detail');
     await expect(row).toHaveAttribute('data-status', 'unapproved', { timeout: 20_000 });
     await expect(row).toContainText('You');
 

@@ -1,56 +1,48 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { useApproveValuationPolicy } from '@/api/v2/queries/valuation';
 import type { ValuationPolicyView } from '@/api/v2/types/valuation';
 import { approvalAccess } from '@/features/auth/approval-gate';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { ApproveButton } from '@/features/ux-kit/approve-button';
-import { RefusalNotice } from '@/features/plans-profiles-calendars/components/refusal-notice';
-import type { PolicyStatus } from '../model/policy-status';
+import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
+import { FinanceRefusalAlert } from '../components/finance-refusal-alert';
+import { currenciesLabel, type PolicyStatus } from '../model/policy-status';
 
 export interface PolicyApproveProps {
   policy: ValuationPolicyView;
   status: PolicyStatus;
-  timezone: string;
 }
 
 /**
- * The finance sign-off of one version (VAL01) after an explicit confirmation. The server checks role,
- * tenant-wide grant and separation of duties (403 SEPARATION_OF_DUTIES for the author), shown as is.
- * Only manager approvers see it; the author sees it disabled with the separation-of-duties reason.
+ * The finance sign-off of one version (VAL01) after a confirmation. The server checks role, access to
+ * the whole plant and separation of duties (403 for the author); a refusal keeps the dialog open with
+ * the reason. Only manager approvers see it; the author sees it disabled with the reason.
  */
-export function PolicyApprove({ policy, status, timezone }: PolicyApproveProps) {
+export function PolicyApprove({ policy, status }: PolicyApproveProps) {
   const approve = useApproveValuationPolicy();
-  const [confirming, setConfirming] = useState(false);
+  const [open, setOpen] = useState(false);
   const access = approvalAccess(useCapabilities().canManagePolicies, policy.createdBy, useCurrentUserId());
-  if (status === 'approved') return <span className="text-xs text-muted-foreground">Approved — immutable</span>;
-  if (status === 'placeholder') return <span className="text-xs text-muted-foreground">History — no currency, cannot be approved</span>;
-  if (access === 'hidden') return null;
-  const submit = () => approve.submit({ id: policy.id }).then(() => setConfirming(false)).catch(() => undefined);
+  if (status !== 'unapproved' || access === 'hidden') return null;
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) approve.reset();
+  };
   return (
-    <div className="space-y-2" data-testid="policy-approve">
-      {!confirming ? (
-        <ApproveButton access={access} size="sm" onClick={() => setConfirming(true)} data-testid="policy-approve-start">
-          Approve…
-        </ApproveButton>
-      ) : (
-        <div className="space-y-2 rounded-md border p-2 text-xs" data-testid="policy-approve-confirm">
-          <p>
-            Approve v{policy.version} ({policy.reportingCurrencies.join(' + ')}) as the valuation basis from its start? This is the finance sign-off;
-            it is not undone here. Periods are revalued only on their next recalculation.
-          </p>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={submit} disabled={approve.isPending} data-testid="policy-approve-submit">
-              Approve v{policy.version}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setConfirming(false)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
-      <RefusalNotice error={approve.error} timezone={timezone} />
-    </div>
+    <>
+      <ApproveButton access={access} onClick={() => setOpen(true)} data-testid="policy-approve-start">
+        Approve…
+      </ApproveButton>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={`Approve version ${policy.version}?`}
+        description={`Version ${policy.version} (${currenciesLabel(policy)}) becomes the valuation basis from its start. This is the finance sign-off and cannot be undone here. Periods are revalued only when they are next recalculated.`}
+        confirmLabel={`Approve version ${policy.version}`}
+        onConfirm={() => approve.submit({ id: policy.id })}
+      >
+        {approve.error ? <FinanceRefusalAlert error={approve.error} /> : null}
+      </ConfirmDialog>
+    </>
   );
 }

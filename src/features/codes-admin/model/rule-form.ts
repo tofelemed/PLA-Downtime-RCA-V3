@@ -7,6 +7,7 @@ import type {
   RuleScalar,
   RulesSchemaView,
 } from '@/api/v2/types/rules';
+import { humanize } from '@/features/ux-kit/labels/humanize';
 
 /** One condition as the builder edits it: pickers, and the value as typed text (lists comma-separated). */
 export interface ConditionRow {
@@ -109,6 +110,9 @@ export interface RowErrors {
   general: string[];
 }
 
+/** Names of the parts of a row the server names in its field paths. */
+const PART_LABELS: Readonly<Record<string, string>> = { field: 'Field', op: 'Operator', value: 'Value', set: 'Field to set', flag: 'Flag' };
+
 const PATH = /^definition\.(when\.(all|any)\.(\d+)|then\.(\d+))(?:\.(\w+))?/;
 
 /**
@@ -124,7 +128,7 @@ export function errorsByRow(draft: RuleDraft, fieldErrors: ReadonlyArray<{ field
         ? draft[match[2] as ConditionList][Number(match[3])]
         : draft.actions[Number(match[4])]
       : undefined;
-    const text = match?.[5] ? `${match[5]}: ${error.message}` : error.message;
+    const text = match?.[5] ? `${PART_LABELS[match[5]] ?? humanize(match[5])}: ${error.message}` : error.message;
     if (row) result.rows[row.key] = [...(result.rows[row.key] ?? []), text];
     else result.general.push(`${error.field.replace(/^definition\.?/, '') || 'definition'} ${error.message}`.trim());
   }

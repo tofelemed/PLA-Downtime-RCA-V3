@@ -1,87 +1,74 @@
-import { useState } from 'react';
-import { useRule, useRules, useRulesSchema } from '@/api/v2/queries/rules';
+import { useNavigate } from 'react-router-dom';
+import { useRules } from '@/api/v2/queries/rules';
+import type { RuleKind, RuleState, RuleView } from '@/api/v2/types/rules';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { Label } from '@/components/ui/label';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { DataState } from '@/features/ux-kit/data-state';
-import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { NativeSelect } from '@/features/integration-console/components/native-select';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { labelOf, RULE_KIND_LABELS, RULE_STATE_LABELS } from '@/features/ux-kit/labels';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
-import { RuleDetail } from './rule-detail';
-import { RuleEditor } from './rule-editor';
+import { ActionIcon } from '@/lib/icons';
+import { useUrlParam } from '../hooks/use-url-param';
+
+const STATES = ['', 'draft', 'active', 'retired'] as const;
+const KINDS = ['', 'coding_default', 'status_derivation', 'rca_trigger_hint', 'validation'] as const;
+const STATE_OPTIONS = STATES.filter(Boolean).map((value) => ({ value, label: RULE_STATE_LABELS[value as RuleState] }));
+const KIND_OPTIONS = KINDS.filter(Boolean).map((value) => ({ value, label: RULE_KIND_LABELS[value as RuleKind] }));
+
+const COLUMNS: Array<DataTableColumn<RuleView>> = [
+  { id: 'name', header: 'Name', cell: (rule) => <span data-testid="rule-item" data-name={rule.name} data-state={rule.state}>{rule.name}</span> },
+  { id: 'kind', header: 'Kind', cell: (rule) => labelOf(RULE_KIND_LABELS, rule.kind) },
+  { id: 'state', header: 'State', cell: (rule) => <Badge variant={rule.state === 'active' ? 'outline' : 'secondary'}>{labelOf(RULE_STATE_LABELS, rule.state)}</Badge> },
+  { id: 'version', header: 'In force', nowrap: true, cell: (rule) => (rule.activeVersion === null ? '—' : `Version ${rule.activeVersion}`) },
+  { id: 'draft', header: 'Draft waiting', cell: (rule) => (rule.draft ? 'Yes' : '—') },
+  { id: 'priority', header: 'Priority', align: 'right', cell: (rule) => rule.priority },
+];
 
 /**
- * Declarative admin rules (plan 3.8, NFR02): list, builder, simulation, versions. Rules are data the
- * server validates and evaluates; nothing here executes a rule.
+ * Declarative admin rules (plan 3.8, NFR02), 20 per page with state and kind filters in the URL; a row
+ * opens the rule's page. Rules are data the server validates and evaluates; nothing here executes one.
  */
-export function RulesPanel({ timezone }: { timezone: string }) {
-  const { session } = useAuth();
+export function RulesPanel() {
+  const navigate = useNavigate();
   const { canAuthorRules } = useCapabilities();
-  const schema = useRulesSchema();
-  const rules = useRules();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const selected = useRule(creating ? null : selectedId);
+  const [state, setState] = useUrlParam('state', STATES, '');
+  const [kind, setKind] = useUrlParam('kind', KINDS, '');
+  const rules = useRules({ state: state || undefined, kind: kind || undefined });
   return (
-    <DataState state={dataStateOf(schema)} error={schema.error}>
-      {schema.data && (
-        <div className="grid gap-4 lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)]" data-testid="rules-panel">
-          <section className="space-y-2" aria-label="Rules">
-            {canAuthorRules ? (
-              <Button size="sm" onClick={() => setCreating(true)} data-testid="rule-new">
-                New rule
-              </Button>
-            ) : (
-              <ReadOnlyHint />
-            )}
-            <DataState state={dataStateOf(rules, { isEmpty: rules.items.length === 0 })} error={rules.error} detail="No rules yet.">
-              <ul className="space-y-1">
-                {rules.items.map((rule) => (
-                  <li key={rule.id}>
-                    <button
-                      type="button"
-                      className={`w-full rounded px-2 py-1 text-left text-sm ${rule.id === selectedId && !creating ? 'bg-muted' : ''}`}
-                      onClick={() => {
-                        setCreating(false);
-                        setSelectedId(rule.id);
-                      }}
-                      data-testid="rule-item"
-                      data-name={rule.name}
-                      data-state={rule.state}
-                    >
-                      <span className="block truncate">{rule.name}</span>
-                      <span className="flex gap-1 text-xs text-muted-foreground">
-                        <Badge variant="outline">{rule.state}</Badge>
-                        {rule.activeVersion !== null && <span>v{rule.activeVersion}</span>}
-                        {rule.draft && <span>· draft</span>}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </DataState>
-          </section>
-          {creating ? (
-            <section className="rounded-md border p-3" aria-label="New rule">
-              <h2 className="mb-2 text-lg font-semibold">New rule (draft)</h2>
-              <RuleEditor
-                schema={schema.data}
-                rule={null}
-                onSaved={(rule) => {
-                  setCreating(false);
-                  setSelectedId(rule.id);
-                }}
-              />
-            </section>
-          ) : selected.data ? (
-            <RuleDetail rule={selected.data} schema={schema.data} timezone={timezone} currentUserId={session?.user.id ?? null} />
-          ) : selectedId ? (
-            <DataState state={selected.isError ? 'error' : 'loading'} error={selected.error} />
+    <div className="space-y-4" data-testid="rules-panel">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-44 space-y-1">
+          <Label htmlFor="rule-state-filter">State</Label>
+          <NativeSelect id="rule-state-filter" value={state} onChange={(value) => setState(value as RuleState)} placeholder="All states" options={STATE_OPTIONS} />
+        </div>
+        <div className="w-52 space-y-1">
+          <Label htmlFor="rule-kind-filter">Kind</Label>
+          <NativeSelect id="rule-kind-filter" value={kind} onChange={(value) => setKind(value as RuleKind)} placeholder="All kinds" options={KIND_OPTIONS} />
+        </div>
+        <div className="ml-auto">
+          {canAuthorRules ? (
+            <Button onClick={() => navigate('/codes-admin/rules/new')} data-testid="rule-new">
+              <ActionIcon.add aria-hidden="true" />
+              New rule
+            </Button>
           ) : (
-            <p className="text-sm text-muted-foreground">Select a rule or create one. Rules become active only when a second approver activates them.</p>
+            <ReadOnlyHint />
           )}
         </div>
-      )}
-    </DataState>
+      </div>
+      <DataTable
+        caption="Rules"
+        columns={COLUMNS}
+        rows={rules.rows}
+        getRowKey={(rule) => rule.id}
+        pager={rules.pager}
+        status={rules.status}
+        empty={{ title: 'No rules yet', text: 'Rules become active only when a second person activates them.' }}
+        onRowClick={(rule) => navigate(`/codes-admin/rules/${rule.id}`)}
+        rowLabel={(rule) => `Rule ${rule.name}`}
+      />
+    </div>
   );
 }

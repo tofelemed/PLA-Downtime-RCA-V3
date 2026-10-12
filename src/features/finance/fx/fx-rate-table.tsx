@@ -1,53 +1,48 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useNavigate } from 'react-router-dom';
 import type { FxRateView } from '@/api/v2/types/valuation';
-import { PlantTime } from '@/features/ux-kit/plant-time';
-import { VersionStateBadge } from '@/features/plans-profiles-calendars/components/version-state-badge';
-import { FxVersionActions } from './fx-version-actions';
+import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
+import { DataTable, type DataTableColumn, type DataTableEmpty, type DataTableStatus, type PagerModel } from '@/features/ux-kit/data-table';
+import { VersionStateBadge } from '../components/version-state-badge';
 
 export interface FxRateTableProps {
   rates: readonly FxRateView[];
-  timezone: string;
+  pager?: PagerModel;
+  status?: DataTableStatus;
+  empty?: DataTableEmpty;
 }
 
-/** FX rate versions in server order; the rate is the server's decimal string, shown unrounded. */
-export function FxRateTable({ rates, timezone }: FxRateTableProps) {
+/** Exchange rate versions in server order, 20 per page; the rate is the server's decimal string, unrounded. */
+export function FxRateTable({ rates, pager, status, empty }: FxRateTableProps) {
+  const navigate = useNavigate();
+  const dates = usePlantDates();
+  const columns: Array<DataTableColumn<FxRateView>> = [
+    {
+      id: 'pair',
+      header: 'Currencies',
+      nowrap: true,
+      cell: (rate) => (
+        <span data-testid="fx-row" data-source={rate.source ?? ''} data-state={rate.state}>
+          {rate.fromCurrency} → {rate.toCurrency}
+        </span>
+      ),
+    },
+    { id: 'version', header: 'Version', nowrap: true, cell: (rate) => `Version ${rate.version}` },
+    { id: 'rate', header: 'Rate', align: 'right', nowrap: true, cell: (rate) => <span className="font-mono text-xs" data-testid="fx-rate">1 {rate.fromCurrency} = {rate.rate} {rate.toCurrency}</span> },
+    { id: 'valid', header: 'Valid', nowrap: true, cell: (rate) => dates.validity(rate.effectiveFrom, rate.effectiveTo) },
+    { id: 'source', header: 'Source', cell: (rate) => rate.source ?? '—' },
+    { id: 'state', header: 'State', cell: (rate) => <VersionStateBadge state={rate.state} /> },
+  ];
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Pair</TableHead>
-          <TableHead>Version</TableHead>
-          <TableHead>Rate</TableHead>
-          <TableHead>Effective [from, to)</TableHead>
-          <TableHead>Source</TableHead>
-          <TableHead>State</TableHead>
-          <TableHead>Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rates.map((rate) => (
-          <TableRow key={rate.id} data-testid="fx-row" data-id={rate.id} data-source={rate.source ?? ''}>
-            <TableCell>
-              {rate.fromCurrency} → {rate.toCurrency}
-            </TableCell>
-            <TableCell>v{rate.version}</TableCell>
-            <TableCell className="font-mono text-xs" data-testid="fx-rate">
-              1 {rate.fromCurrency} = {rate.rate} {rate.toCurrency}
-            </TableCell>
-            <TableCell className="text-xs">
-              <PlantTime iso={rate.effectiveFrom} tz={timezone} withDate /> →{' '}
-              {rate.effectiveTo ? <PlantTime iso={rate.effectiveTo} tz={timezone} withDate /> : 'open-ended'}
-            </TableCell>
-            <TableCell className="text-xs">{rate.source ?? '—'}</TableCell>
-            <TableCell>
-              <VersionStateBadge state={rate.state} />
-            </TableCell>
-            <TableCell className="min-w-[16rem]">
-              <FxVersionActions id={rate.id} state={rate.state} timezone={timezone} authorId={rate.createdBy} />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <DataTable
+      caption="Exchange rates"
+      columns={columns}
+      rows={rates}
+      getRowKey={(rate) => rate.id}
+      pager={pager}
+      status={status}
+      empty={empty}
+      onRowClick={(rate) => navigate(`/finance/fx/${rate.id}`)}
+      rowLabel={(rate) => `${rate.fromCurrency} to ${rate.toCurrency} version ${rate.version}`}
+    />
   );
 }

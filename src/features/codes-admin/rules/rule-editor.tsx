@@ -62,7 +62,7 @@ export function RuleEditor({ schema, rule, onSaved }: RuleEditorProps) {
         <Field id="rule-name" label="Name">
           <Input id="rule-name" value={draft.name} onChange={(event) => state.patch({ name: event.target.value })} disabled={readOnly} />
         </Field>
-        <Field id="rule-kind" label="Kind" hint={schema.kinds.find((entry) => entry.kind === draft.kind)?.appliedBy}>
+        <Field id="rule-kind" label="Kind">
           <NativeSelect id="rule-kind" testId="rule-kind" value={draft.kind} onChange={(value) => state.setKind(value as RuleKind)} options={schema.kinds.map((entry) => ({ value: entry.kind, label: entry.label }))} disabled={Boolean(rule)} />
         </Field>
         <Field id="rule-priority" label="Priority (lower runs first)">
@@ -77,7 +77,7 @@ export function RuleEditor({ schema, rule, onSaved }: RuleEditorProps) {
       <ConditionsSection list="any" state={state} schema={schema} references={references} errors={errors} disabled={readOnly} />
       <ActionsSection state={state} schema={schema} references={references} errors={errors} disabled={readOnly} />
       <ValidationSummary check={checked.data} checking={checked.isFetching} general={errors.general} limits={schema.limits} />
-      {saveError ? <AdminRefusalAlert error={saveError} /> : null}
+      {saveError ? <AdminRefusalAlert error={saveError} withFields={false} /> : null}
       {canAuthorRules && (
         <Button onClick={save} disabled={readOnly || create.isPending || change.isPending || draft.name.trim() === ''} data-testid="rule-save">
           {rule ? 'Save draft' : 'Create draft'}

@@ -25,6 +25,16 @@ export const LIBRARIES: Readonly<Record<CodeLibraryPath, LibrarySpec>> = {
   'loss-category-defs': { path: 'loss-category-defs', label: 'Loss categories', hierarchical: true, fields: ['reportOrder'] },
 };
 
+/** Library order of the picker (reason codes first: the library most plants edit). */
+export const LIBRARY_PATHS: readonly CodeLibraryPath[] = ['reason-codes', 'impact-codes', 'oee-codes', 'failure-code-groups', 'loss-category-defs'];
+
+/** Whether a route or URL value names a library. */
+export const isCodeLibrary = (value: string | undefined): value is CodeLibraryPath =>
+  value !== undefined && (LIBRARY_PATHS as readonly string[]).includes(value);
+
+/** "Reason code" from "Reason codes" (dialog titles, buttons). */
+export const singularLabel = (library: CodeLibraryPath): string => LIBRARIES[library].label.replace(/ies$/, 'y').replace(/s$/, '');
+
 /** Editable values of a code as form text. */
 export interface CodeForm {
   name: string;

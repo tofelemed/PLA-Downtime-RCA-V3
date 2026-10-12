@@ -1,6 +1,7 @@
-import { X } from 'lucide-react';
+import { IconButton } from '@/features/ux-kit/icon-button';
+import { humanize } from '@/features/ux-kit/labels/humanize';
+import { ActionIcon } from '@/lib/icons';
 import type { RuleKind, RulesSchemaView } from '@/api/v2/types/rules';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
 import type { Option } from '../hooks/use-reference-options';
@@ -21,7 +22,7 @@ export interface ActionRowEditorProps {
 export function ActionRowEditor({ row, kind, schema, impactCodes, errors, disabled, onChange, onRemove }: ActionRowEditorProps) {
   const spec = schema.kinds.find((entry) => entry.kind === kind);
   const target = spec?.sets.find((entry) => entry.field === row.field);
-  const values = target?.values ? target.values.map((value) => ({ value, label: value })) : target?.references ? (impactCodes ?? []) : [];
+  const values = target?.values ? target.values.map((value) => ({ value, label: humanize(value) })) : target?.references ? (impactCodes ?? []) : [];
   return (
     <div className="space-y-1" data-testid="rule-action" data-row={row.key} data-invalid={errors.length > 0}>
       <fieldset disabled={disabled} className="grid gap-2 sm:grid-cols-[auto_1fr_1.5fr_auto] sm:items-center">
@@ -53,9 +54,7 @@ export function ActionRowEditor({ row, kind, schema, impactCodes, errors, disabl
             />
           </>
         )}
-        <Button type="button" variant="ghost" size="icon" aria-label="Remove action" onClick={onRemove}>
-          <X className="h-4 w-4" />
-        </Button>
+        <IconButton icon={ActionIcon.remove} label="Remove action" onClick={onRemove} />
       </fieldset>
       {errors.map((message) => (
         <p key={message} role="alert" className="text-xs text-destructive" data-testid="row-error">

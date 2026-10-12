@@ -1,4 +1,5 @@
 import type { CodeVersionView } from '@/api/v2/types/codes-admin';
+import { humanize } from '@/features/ux-kit/labels/humanize';
 
 type Snapshot = CodeVersionView['snapshot'];
 type SnapshotValue = Snapshot[string];
@@ -19,7 +20,7 @@ export interface VersionEntry {
 }
 
 /** Bookkeeping keys that change with every version and say nothing about the content. */
-const IGNORED = new Set(['version', 'effectiveFrom', 'effectiveTo', 'path', 'level', 'library', 'id']);
+const IGNORED = new Set(['version', 'effectiveFrom', 'effectiveTo', 'path', 'level', 'library', 'id', 'tenantId', 'rowVersion', 'createdAt', 'updatedAt', 'createdBy']);
 
 const LABELS: Readonly<Record<string, string>> = {
   name: 'Name',
@@ -35,7 +36,7 @@ const LABELS: Readonly<Record<string, string>> = {
   code: 'Code',
 };
 
-export const snapshotLabel = (key: string): string => LABELS[key] ?? key;
+export const snapshotLabel = (key: string): string => LABELS[key] ?? humanize(key);
 
 /** Field-by-field difference of two snapshots (presentation only; versions are stored by the server). */
 export function snapshotChanges(previous: Snapshot | null, next: Snapshot): SnapshotChange[] {
