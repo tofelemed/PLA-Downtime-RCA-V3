@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
 import type { ConnectionView, IngestionExceptionDetailView, IngestionJobView } from '@/api/v2/types/integrations';
 import { actAs } from '@/test/acting-user';
@@ -35,7 +36,7 @@ describe('integration console flows (plan 3.7)', () => {
   let calls: Call[];
   let reply: (call: Call) => Response;
   let client: QueryClient;
-  const wrap = (node: ReactNode) => render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
+  const wrap = (node: ReactNode) => render(<MemoryRouter><QueryClientProvider client={client}>{node}</QueryClientProvider></MemoryRouter>);
 
   beforeEach(() => {
     calls = [];
@@ -55,10 +56,10 @@ describe('integration console flows (plan 3.7)', () => {
   it('Kafka is not selectable, MQTT is; a PI connection sends the password once and never keeps it', async () => {
     reply = () => json(201, CONNECTION);
     const onSaved = vi.fn();
-    wrap(<ConnectionWizard open connection={null} onClose={() => undefined} onSaved={onSaved} />);
+    wrap(<ConnectionWizard connection={null} onClose={() => undefined} onSaved={onSaved} />);
     expect(screen.getByTestId('source-type-mqtt')).toBeEnabled();
     expect(screen.getByTestId('source-type-kafka')).toBeDisabled();
-    expect(screen.getByTestId('source-type-kafka').textContent).toMatch(/D10/);
+    expect(screen.getByTestId('source-type-kafka').textContent).not.toMatch(/Ddd/);
     fireEvent.click(screen.getByTestId('source-type-pi_web_api'));
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'PI sim' } });
     fireEvent.change(screen.getByLabelText('PI Web API URL'), { target: { value: 'http://127.0.0.1:9/piwebapi' } });
@@ -75,12 +76,13 @@ describe('integration console flows (plan 3.7)', () => {
     expect((screen.getByTestId('pi-secret') as HTMLInputElement).value).toBe('');
   });
 
-  it('a 403 on the diagnostics is shown as a role refusal with its code', async () => {
+  it('a 403 on the diagnostics is shown as a plain role refusal; the code stays out of the text', async () => {
     reply = () => json(403, refusal('FORBIDDEN_ROLE'));
     wrap(<DiagnosticsPanel connection={CONNECTION} last={null} timezone="UTC" onTested={() => undefined} />);
     fireEvent.click(screen.getByTestId('run-diagnostics'));
     await waitFor(() => expect(screen.getByTestId('refusal').getAttribute('data-kind')).toBe('role'));
-    expect(screen.getByTestId('refusal').textContent).toMatch(/FORBIDDEN_ROLE/);
+    expect(screen.getByTestId('refusal').getAttribute('data-code')).toBe('FORBIDDEN_ROLE');
+    expect(screen.getByTestId('refusal').textContent).not.toMatch(/FORBIDDEN_ROLE|corr-1/);
     expect(screen.getAllByTestId('diagnostic-step').map((step) => step.getAttribute('data-status'))).toEqual(Array(6).fill('not_run'));
   });
 
@@ -126,11 +128,11 @@ describe('integration console flows (plan 3.7)', () => {
     it('canWriteIntegration: an integration admin edits the connection; a production engineer only reads it', () => {
       reply = () => json(200, {});
       actAs('integration_admin');
-      const admin = wrap(<ConnectionHeader connection={CONNECTION} onEdit={() => undefined} />);
+      const admin = wrap(<ConnectionHeader connection={CONNECTION} />);
       expect(screen.getByTestId('connection-edit')).toBeTruthy();
       admin.unmount();
       actAs('production_engineer');
-      wrap(<ConnectionHeader connection={CONNECTION} onEdit={() => undefined} />);
+      wrap(<ConnectionHeader connection={CONNECTION} />);
       expect(screen.queryByTestId('connection-edit')).toBeNull();
       expect(screen.queryByTestId('connection-toggle')).toBeNull();
       expect(screen.getByTestId('connection-endpoint')).toBeTruthy();

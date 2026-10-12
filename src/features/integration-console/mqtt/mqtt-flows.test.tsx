@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
 import type { ConnectionView } from '@/api/v2/types/integrations';
 
@@ -43,7 +44,7 @@ describe('MQTT console flows (plan 1.8 step 5)', () => {
   let calls: Call[];
   let reply: (call: Call) => Response;
   let client: QueryClient;
-  const wrap = (node: ReactNode) => render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
+  const wrap = (node: ReactNode) => render(<MemoryRouter><QueryClientProvider client={client}>{node}</QueryClientProvider></MemoryRouter>);
 
   beforeEach(() => {
     calls = [];

@@ -1,10 +1,13 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { ifMatchOf } from '../etag-cache';
 import type { BodyOf } from '../schema-types';
 import type {
   AttributeMappingPreviewView,
   AttributeMappingVersionView,
   EffectiveTemplateMapping,
   FieldCatalogView,
+  MatchKind,
   MappingPreviewView,
   SourceMappingView,
 } from '../types/integration-mappings';
@@ -12,6 +15,7 @@ import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
 import { useV2Command } from './use-v2-command';
+import { usePagedQuery } from './use-paged-query';
 import { flattenPages, useV2InfiniteList } from './use-v2-list';
 import { useV2TenantId } from './use-v2-tenant';
 
@@ -67,15 +71,41 @@ export function useSaveAttributeMapping() {
   );
 }
 
-/** Source → plant mapping rules of one connection (and the "every connection" rules). */
-export function useSourceMappings() {
+/** Source → plant mapping rules of the tenant (every connection's and the "any connection" ones), pages of 20. */
+export function useSourceMappingsPage(includeInactive: boolean, matchKind?: MatchKind) {
+  return usePagedQuery<SourceMappingView>({
+    resource: 'source-mappings',
+    path: '/source-mappings',
+    query: { includeInactive, matchKind },
+    key: { filters: { includeInactive, matchKind: matchKind ?? null } },
+  });
+}
+
+/** Every active rule of the tenant (lookup for the stage tracker); later pages are followed. */
+export function useActiveSourceMappings() {
   const list = useV2InfiniteList<SourceMappingView>({
     resource: 'source-mappings',
     path: '/source-mappings',
     query: { limit: 200 },
-    key: {},
+    key: { filters: { lookup: true } },
   });
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = list;
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
   return { ...list, items: flattenPages(list.data?.pages) };
+}
+
+/** One mapping rule (ETag = rowVersion); null id = a new rule. */
+export function useSourceMapping(id: string | null) {
+  const tenantId = useV2TenantId();
+  return useQuery({
+    queryKey: v2Keys.detail(tenantId ?? '-', 'source-mappings', id ?? '-'),
+    enabled: Boolean(tenantId && id),
+    staleTime: STALE_TIME['source-mappings'],
+    queryFn: async ({ signal }) =>
+      (await v2.get<SourceMappingView, '/api/v2/source-mappings/{id}'>('/api/v2/source-mappings/{id}', { path: { id: id as string }, signal })).data,
+  });
 }
 
 /** Resolves sample identifiers like an incoming record would be (read-only POST). */
@@ -89,5 +119,18 @@ export function useSourceMappingPreview() {
 export function useCreateSourceMapping() {
   return useMappingCommand<SourceMappingBody, SourceMappingView>('source_mapping', async (body, idempotencyKey) =>
     (await v2.post<SourceMappingView, '/api/v2/source-mappings'>('/api/v2/source-mappings', { body, idempotencyKey })).data,
+  );
+}
+
+/** Replaces a rule as its next version under If-Match (412 when someone else changed it). */
+export function useReplaceSourceMapping() {
+  return useMappingCommand<{ mapping: Pick<SourceMappingView, 'id' | 'rowVersion'>; body: SourceMappingBody }, SourceMappingView>(
+    'source_mapping',
+    async (input) =>
+      (await v2.put<SourceMappingView, '/api/v2/source-mappings/{id}'>('/api/v2/source-mappings/{id}', {
+        path: { id: input.mapping.id },
+        body: input.body,
+        ifMatch: ifMatchOf(input.mapping.rowVersion),
+      })).data,
   );
 }

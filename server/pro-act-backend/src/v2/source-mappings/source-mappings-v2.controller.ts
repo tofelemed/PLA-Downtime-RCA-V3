@@ -114,7 +114,8 @@ export class SourceMappingsV2Controller {
     summary: 'Replace a mapping rule (next version)',
     description:
       'Requires `If-Match: "<rowVersion>"` (428 without, 412 when stale). Rules mirrored from a v1 ' +
-      'hierarchy mapping are edited through v1 (409 LEGACY_MAPPING).',
+      'hierarchy mapping are adopted: the link to the v1 row is dropped and the rule is edited here from ' +
+      'then on.',
   })
   @ApiHeader({ name: 'If-Match', required: true })
   replace(

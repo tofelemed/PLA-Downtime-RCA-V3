@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ifMatchOf } from '../etag-cache';
 import type { BodyOf, QueryOf } from '../schema-types';
@@ -6,6 +7,7 @@ import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
 import { useV2Command } from './use-v2-command';
+import { usePagedQuery } from './use-paged-query';
 import { flattenPages, useV2InfiniteList } from './use-v2-list';
 import { useV2TenantId } from './use-v2-tenant';
 
@@ -13,7 +15,10 @@ export type ConnectionCreateBody = BodyOf<'/api/v2/connections', 'post'>;
 export type ConnectionUpdateBody = BodyOf<'/api/v2/connections/{id}', 'patch'>;
 export type SampleQuery = QueryOf<'/api/v2/connections/{id}/sample', 'get'>;
 
-/** Connections of the acting tenant, secrets redacted (`hasSecret` only; plan 1.5 / 3.7). */
+/**
+ * Every connection of the acting tenant, secrets redacted (`hasSecret` only): a lookup list for names
+ * and filters, so later pages are followed instead of cutting the list off.
+ */
 export function useConnections(includeInactive: boolean) {
   const list = useV2InfiniteList<ConnectionView>({
     resource: 'connections',
@@ -21,7 +26,21 @@ export function useConnections(includeInactive: boolean) {
     query: { limit: 100, includeInactive },
     key: { filters: { includeInactive } },
   });
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = list;
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
   return { ...list, items: flattenPages(list.data?.pages) };
+}
+
+/** The connections table: keyset pages of 20. */
+export function useConnectionsPage(includeInactive: boolean) {
+  return usePagedQuery<ConnectionView>({
+    resource: 'connections',
+    path: '/connections',
+    query: { includeInactive },
+    key: { filters: { includeInactive, view: 'page' } },
+  });
 }
 
 export function useConnection(id: string | null) {

@@ -32,13 +32,13 @@ export const SOURCE_TYPE_OPTIONS: readonly SourceTypeOption[] = [
     type: 'kafka',
     label: 'Kafka',
     availability: 'scheduled',
-    description: 'Not available yet: the Kafka source adapter is scheduled last (decision D10). Brokers, consumer group, security, decoder and offset policy are configured here once it ships.',
+    description: 'Not available yet: the Kafka source adapter comes last. Brokers, consumer group, security, decoder and offset policy are configured here once it ships.',
   },
   {
     type: 'opc_ua',
     label: 'OPC UA and other protocols',
     availability: 'planned',
-    description: 'Planned for release 2; the simulated protocol cards of the legacy Connectivity screen are not part of the console.',
+    description: 'Planned as server-side adapters in a later release. Until then, plant data reaches Pro-Act through PI or MQTT.',
   },
 ];
 

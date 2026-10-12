@@ -51,7 +51,7 @@ export function JobCreateForm({ connectionId, scope }: { connectionId: string; s
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Scope: {scope.scopeId ? `${scope.scopeType} ${scope.scopeId}${scope.templateName ? `, template ${scope.templateName}` : ', all templates'}` : 'choose a database under Discovery first'}
+        Reads: {scope.scopeId ? `the AF ${scope.scopeType} chosen under Discovery${scope.templateName ? `, template ${scope.templateName}` : ', all templates'}` : 'choose a database under Discovery first'}
       </p>
       <ConsoleRefusal error={create.error ?? command.error} />
     </div>

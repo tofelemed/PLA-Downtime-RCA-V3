@@ -65,7 +65,7 @@ test.describe('Integration console — UX06 journey (plan 3.7)', () => {
     await openConsole(page);
     await expect(page.getByRole('tab', { name: 'Quarantine' })).toBeVisible();
 
-    // 1. configure: Kafka is shown as not available (D10), MQTT is selectable (plan 1.8); PI with a write-only password
+    // 1. configure: Kafka is shown as not available, MQTT is selectable (plan 1.8); PI with a write-only password
     await page.getByTestId('new-connection').click();
     await expect(page.getByTestId('source-type-mqtt')).toBeEnabled();
     await expect(page.getByTestId('source-type-kafka')).toBeDisabled();
@@ -126,7 +126,7 @@ test.describe('Integration console — UX06 journey (plan 3.7)', () => {
     await expect(jobRow(page, 'limited').locator('[data-testid="job-transition"][data-action="stop"]')).toBeVisible();
 
     // 6. quarantine shows the unknown unit; bind via discovery; dry run; replay → the event exists once
-    await page.getByTestId('tab-quarantine').click();
+    await page.goto('/connectivity?tab=quarantine'); // the quarantine is a tab of the console, the connection has its own page
     await page.getByTestId('q-connection').selectOption({ label: world.connectionName });
     const item = page.locator(`[data-testid="exception-row"][data-source-id="${world.recentFrame}"]`);
     await expect(async () => {
@@ -153,7 +153,7 @@ test.describe('Integration console — UX06 journey (plan 3.7)', () => {
     expect((await eventsOf(manager, world.unitId, world.recentFrame))[0].durationSeconds).toBe(900);
 
     // 7. bounded backfill of 7 days (drained: stops once caught up) brings the 3-day-old frame, no duplicates
-    await page.getByTestId('tab-connections').click();
+    await page.goto(`/connectivity/connections/${connectionId}?tab=jobs`);
     await createJob(page, 'backfill', '7');
     await expect(jobRow(page, 'backfill')).toHaveAttribute('data-state', 'stopped', { timeout: 90_000 });
     await expect.poll(async () => (await eventsOf(manager, world.unitId, world.oldFrame)).length, { timeout: 30_000 }).toBe(1);
@@ -179,12 +179,13 @@ test.describe('Integration console — UX06 journey (plan 3.7)', () => {
   test('a non-writer sees 403 refusals clearly and no raw payload', async ({ page }) => {
     await loginViaUI(page, ENGINEER.email, ENGINEER.password);
     await openConsole(page);
-    await page.getByTestId('connection-item').filter({ hasText: world.connectionName }).click();
+    // the connection has its own page (the list is paged)
+    await page.goto(`/connectivity/connections/${(await findConnection(manager, world.connectionName))?.id ?? ''}`);
     await page.getByTestId('tab-diagnostics').click();
     await page.getByTestId('run-diagnostics').click();
     await expect(page.getByTestId('refusal')).toHaveAttribute('data-kind', 'role');
     await expect(page.getByTestId('refusal')).toContainText('integration administrator');
-    await page.getByTestId('tab-quarantine').click();
+    await page.goto('/connectivity?tab=quarantine'); // the quarantine is a tab of the console, the connection has its own page
     await page.locator('#q-state').selectOption('resolved');
     await page.getByTestId('q-connection').selectOption({ label: world.connectionName });
     await page.locator(`[data-testid="exception-row"][data-source-id="${world.recentFrame}"]`).click();

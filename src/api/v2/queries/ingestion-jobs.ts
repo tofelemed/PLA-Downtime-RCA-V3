@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { BodyOf } from '../schema-types';
 import type { IngestionJobView, JobAction, JobState, JobTransitionView } from '../types/integrations';
@@ -11,7 +12,7 @@ import { useV2TenantId } from './use-v2-tenant';
 export type JobCreateBody = BodyOf<'/api/v2/connections/{id}/jobs', 'post'>;
 
 /** Live job state (lease, heartbeat, cursor, health) is polled while a job is active and the tab visible. */
-export const JOB_POLL_MS = 5_000;
+export const JOB_POLL_MS = 10_000;
 
 /** States whose lease / heartbeat / cursor move on their own; every other state changes only by a command. */
 const ACTIVE_JOB_STATES: ReadonlySet<string> = new Set<JobState>(['running', 'draining']);
@@ -21,7 +22,7 @@ export function jobPollInterval(states: ReadonlyArray<string | null | undefined>
   return states.some((state) => state && ACTIVE_JOB_STATES.has(state)) ? JOB_POLL_MS : false;
 }
 
-/** Ingestion jobs of one connection, oldest first (plan 1.5, ING02). */
+/** Ingestion jobs of one connection, oldest first (plan 1.5, ING02); every page (the stages need all). */
 export function useIngestionJobs(connectionId: string) {
   const list = useV2InfiniteList<IngestionJobView>({
     resource: 'ingestion-jobs',
@@ -30,6 +31,10 @@ export function useIngestionJobs(connectionId: string) {
     key: { filters: { connectionId } },
     refetchInterval: (pages) => jobPollInterval(flattenPages(pages).map((job) => job.state)),
   });
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = list;
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
   return { ...list, items: flattenPages(list.data?.pages) };
 }
 

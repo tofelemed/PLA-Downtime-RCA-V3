@@ -1,13 +1,16 @@
 import { useState } from 'react';
+import { useConnection } from '@/api/v2/queries/integration-connections';
 import { useCreateSourceMapping, useSourceMappingPreview } from '@/api/v2/queries/integration-mappings';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useUnits } from '@/api/v2/queries/units';
 import type { MappingSample, SourceMappingView } from '@/api/v2/types/integration-mappings';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useUnitNames } from '@/features/ux-kit/labels';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { Field } from '../components/field';
 import { NativeSelect } from '../components/native-select';
+import { sourceSystemOf } from '../model/mapping-form';
 import type { BindTarget } from '../model/exception-flow';
 import { ResolutionPreview } from './resolution-preview';
 
@@ -28,12 +31,13 @@ const sampleOf = (target: BindTarget): MappingSample =>
  */
 export function BindSourceDialog({ connectionId, target, onClose, onBound }: BindSourceDialogProps) {
   const units = useUnits();
+  const connection = useConnection(connectionId);
   const [unitId, setUnitId] = useState('');
   const preview = useSourceMappingPreview();
   const create = useCreateSourceMapping();
   const unitList = flattenPages(units.data?.pages);
   const options = unitList.map((unit) => ({ value: unit.id, label: `${unit.name} (${unit.code})` }));
-  const nameOf = (id: string) => unitList.find((unit) => unit.id === id)?.name ?? id.slice(0, 8);
+  const { nameOf } = useUnitNames();
   const close = () => {
     preview.reset();
     create.reset();
@@ -42,7 +46,7 @@ export function BindSourceDialog({ connectionId, target, onClose, onBound }: Bin
   };
   const bind = async () => {
     if (!target || !unitId) return;
-    const body = { matchKind: target.matchKind, matchValue: target.matchValue, targetType: 'unit' as const, targetId: unitId, precedence: 0, connectionId, sourceSystem: 'PI', isActive: true };
+    const body = { matchKind: target.matchKind, matchValue: target.matchValue, targetType: 'unit' as const, targetId: unitId, precedence: 0, connectionId, sourceSystem: sourceSystemOf(connection.data?.sourceType), isActive: true };
     const mapping = await create.submit(body).catch(() => null);
     if (!mapping) return;
     close();

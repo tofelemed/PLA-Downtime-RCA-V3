@@ -1,3 +1,4 @@
+import { humanize, labelOf, MAPPING_TARGET_LABELS, MATCH_KIND_LABELS } from '@/features/ux-kit/labels';
 import type { MappingPreviewView } from '@/api/v2/types/integration-mappings';
 
 const STATUS_TEXT = {
@@ -14,13 +15,13 @@ export function ResolutionPreview({ preview, nameOf }: { preview: MappingPreview
       {preview.results.map((result, index) => (
         <li key={index} data-status={result.status}>
           <span className="font-medium">{STATUS_TEXT[result.status]}</span>
-          {result.tier && <span className="text-muted-foreground"> · tier {result.tier}</span>}
+          {result.tier && <span className="text-muted-foreground"> · matched by {labelOf(MATCH_KIND_LABELS, result.tier).toLowerCase()}</span>}
           {result.unitId && <span className="text-muted-foreground"> · unit {nameOf(result.unitId)} (rule v{result.version})</span>}
           {result.candidates.length > 0 && (
             <ul className="ml-4 list-disc text-xs">
               {result.candidates.map((candidate) => (
                 <li key={candidate.mappingId}>
-                  {candidate.targetType} {nameOf(candidate.targetId)} · precedence {candidate.precedence} · {candidate.origin}
+                  {labelOf(MAPPING_TARGET_LABELS, candidate.targetType)} {nameOf(candidate.targetId)} · precedence {candidate.precedence} · {humanize(candidate.origin)}
                 </li>
               ))}
             </ul>

@@ -96,3 +96,94 @@ export const REPLAY_STATE_LABELS: Readonly<Record<ReplayState, string>> = {
   completed: 'Completed',
   failed: 'Failed',
 };
+
+/** Job kinds the console creates (the `purpose` kept in a job's scope). */
+export const JOB_PURPOSE_LABELS: Readonly<Record<string, string>> = {
+  limited: 'Limited ingestion',
+  backfill: 'Bounded backfill',
+  production: 'Production cadence',
+  subscribe: 'Broker subscription',
+};
+
+/** Outcome counters of a job's last page and of replay runs. */
+export const INTAKE_OUTCOME_LABELS: Readonly<Record<string, string>> = {
+  accepted: 'Accepted',
+  created: 'Created',
+  updated: 'Updated',
+  duplicate: 'Duplicate',
+  duplicates: 'Duplicates',
+  stale: 'Stale',
+  conflict: 'Conflict',
+  quarantined: 'Quarantined',
+  objects: 'Records',
+  normalized: 'Processed',
+  unchanged: 'Unchanged',
+  failed: 'Failed',
+  received: 'Received',
+};
+
+/** How a source mapping rule matches (resolution order). */
+export const MATCH_KIND_LABELS: Readonly<Record<string, string>> = {
+  exact_id: 'Exact id',
+  exact_path: 'Exact path',
+  pattern: 'Pattern',
+  af_binding: 'AF element binding',
+};
+
+export const MAPPING_TARGET_LABELS: Readonly<Record<string, string>> = {
+  unit: 'Unit',
+  asset: 'Asset',
+};
+
+/** Result of resolving a sample against the mapping rules. */
+export const MAPPING_STATUS_LABELS: Readonly<Record<string, string>> = {
+  mapped: 'Mapped',
+  ambiguous: 'Ambiguous (equal precedence, different targets)',
+  invalid_target: 'Target outside this plant',
+  unmapped: 'Not mapped',
+};
+
+export const SIGNAL_TYPE_LABELS: Readonly<Record<string, string>> = {
+  rate: 'Rate',
+  counter: 'Counter (totalizer)',
+  state: 'State',
+  quality: 'Quality',
+  level: 'Level',
+  output_increment: 'Output increments',
+  other: 'Other',
+};
+
+export const SIGNAL_TIMEBASE_LABELS: Readonly<Record<string, string>> = {
+  s: 'per second',
+  min: 'per minute',
+  h: 'per hour',
+  d: 'per day',
+};
+
+export const INTERPOLATION_LABELS: Readonly<Record<string, string>> = {
+  step: 'Step (hold last value)',
+  linear: 'Linear',
+};
+
+export const RESET_POLICY_LABELS: Readonly<Record<string, string>> = {
+  none: 'Never resets',
+  known_instant: 'Resets at known instants',
+  detect_drop: 'Detect resets from drops',
+};
+
+/** Sample quality of a stored signal value. */
+export const SAMPLE_QUALITY_LABELS: Readonly<Record<string, string>> = {
+  good: 'Good',
+  uncertain: 'Uncertain',
+  questionable: 'Questionable',
+  substituted: 'Substituted',
+  bad: 'Bad',
+};
+
+/** Quantity engines of the signal preview. */
+export const SIGNAL_ENGINE_LABELS: Readonly<Record<string, string>> = {
+  counter_delta: 'Counter difference',
+  rate_integration: 'Rate integration',
+  output_events: 'Output increments',
+  none: 'No quantity for this signal type',
+};

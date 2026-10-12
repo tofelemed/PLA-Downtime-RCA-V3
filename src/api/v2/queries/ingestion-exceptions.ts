@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { BodyOf, QueryOf } from '../schema-types';
 import type { JobAccepted } from '../types/envelopes';
 import type { IngestionExceptionDetailView, IngestionExceptionView, ReplayRunView } from '../types/integrations';
@@ -6,39 +7,47 @@ import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
 import { useV2Command } from './use-v2-command';
-import { flattenPages, useV2InfiniteList } from './use-v2-list';
+import { usePagedQuery } from './use-paged-query';
 import { useV2TenantId } from './use-v2-tenant';
 
 export type ExceptionFilters = Pick<QueryOf<'/api/v2/ingestion-exceptions', 'get'>, 'state' | 'errorCode' | 'connectionId'>;
 export type ReplayBody = BodyOf<'/api/v2/connections/{id}/replays', 'post'>;
 
 const RUN_POLL_MS = 2_000;
-const PAGE_SIZE = 100;
 
-/** Quarantine (ING05), newest `lastSeen` first; filters are server-side; pages load as the list scrolls. */
-export function useIngestionExceptions(filters: ExceptionFilters) {
-  const list = useV2InfiniteList<IngestionExceptionView>({
+/** Quarantine (ING05), newest `lastSeen` first; filters are server-side; keyset pages of 20. */
+export function useIngestionExceptionsPage(filters: ExceptionFilters) {
+  return usePagedQuery<IngestionExceptionView>({
     resource: 'ingestion-exceptions',
     path: '/ingestion-exceptions',
-    query: { ...filters, limit: PAGE_SIZE },
+    query: { ...filters },
     key: { filters: { ...filters } },
   });
-  return { ...list, items: flattenPages(list.data?.pages) };
 }
+
+const exceptionQuery = (tenantId: string | null, id: string | null) => ({
+  queryKey: v2Keys.detail(tenantId ?? '-', 'ingestion-exceptions', id ?? '-'),
+  staleTime: STALE_TIME['ingestion-exceptions'],
+  queryFn: async ({ signal }: { signal: AbortSignal }) =>
+    (await v2.get<IngestionExceptionDetailView, '/api/v2/ingestion-exceptions/{id}'>('/api/v2/ingestion-exceptions/{id}', {
+      path: { id: id as string },
+      signal,
+    })).data,
+});
 
 /** One exception with its retained raw delivery (payload for integration writers only). */
 export function useIngestionException(id: string | null) {
   const tenantId = useV2TenantId();
-  return useQuery({
-    queryKey: v2Keys.detail(tenantId ?? '-', 'ingestion-exceptions', id ?? '-'),
-    enabled: Boolean(tenantId && id),
-    staleTime: STALE_TIME['ingestion-exceptions'],
-    queryFn: async ({ signal }) =>
-      (await v2.get<IngestionExceptionDetailView, '/api/v2/ingestion-exceptions/{id}'>('/api/v2/ingestion-exceptions/{id}', {
-        path: { id: id as string },
-        signal,
-      })).data,
-  });
+  return useQuery({ ...exceptionQuery(tenantId, id), enabled: Boolean(tenantId && id) });
+}
+
+/** Loads an exception's detail ahead of navigation (row hover / focus). */
+export function usePrefetchIngestionException(): (id: string) => void {
+  const tenantId = useV2TenantId();
+  const client = useQueryClient();
+  return useCallback((id: string) => {
+    if (tenantId) void client.prefetchQuery(exceptionQuery(tenantId, id));
+  }, [client, tenantId]);
 }
 
 const isFinal = (run: ReplayRunView | undefined): boolean => run?.state === 'completed' || run?.state === 'failed';

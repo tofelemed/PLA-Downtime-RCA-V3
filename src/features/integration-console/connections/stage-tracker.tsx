@@ -1,8 +1,9 @@
-import { CheckCircle2, CircleDashed, AlertCircle } from 'lucide-react';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { StatusIcon } from '@/lib/icons';
 import type { StageResult } from '../model/stages';
 
-const ICON = { done: CheckCircle2, attention: AlertCircle, pending: CircleDashed } as const;
+const ICON = { done: StatusIcon.success, attention: StatusIcon.warning, pending: StatusIcon.pending } as const;
+const STATUS_TEXT = { done: 'done', attention: 'needs attention', pending: 'not done yet' } as const;
 const COLOR = { done: 'text-green-600', attention: 'text-amber-600', pending: 'text-muted-foreground' } as const;
 
 /** UX06 checklist of one connection: every stage with its result and time. */
@@ -16,7 +17,7 @@ export function StageTracker({ stages, timezone }: { stages: readonly StageResul
             <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${COLOR[stage.status]}`} aria-hidden />
             <div>
               <p className="font-medium">
-                {index + 1}. {stage.label} <span className="sr-only">({stage.status})</span>
+                {index + 1}. {stage.label} <span className="sr-only">({STATUS_TEXT[stage.status]})</span>
               </p>
               <p className="text-xs text-muted-foreground">
                 {stage.detail}

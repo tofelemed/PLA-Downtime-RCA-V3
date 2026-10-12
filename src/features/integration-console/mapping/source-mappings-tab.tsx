@@ -1,54 +1,95 @@
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useConnections } from '@/api/v2/queries/integration-connections';
-import { useSourceMappings } from '@/api/v2/queries/integration-mappings';
-import { useUnits } from '@/api/v2/queries/units';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DataState } from '@/features/ux-kit/data-state';
-import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { useSourceMappingsPage } from '@/api/v2/queries/integration-mappings';
+import type { SourceMappingView } from '@/api/v2/types/integration-mappings';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { useCapabilities } from '@/features/auth/use-capabilities';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { labelOf, MAPPING_TARGET_LABELS, MATCH_KIND_LABELS, useAssetNames, useUnitNames } from '@/features/ux-kit/labels';
+import { ActionIcon } from '@/lib/icons';
+import { NativeSelect } from '../components/native-select';
+import { useUrlParam } from '../hooks/use-url-param';
+import { mappingPath, NEW_MAPPING_PATH } from '../paths';
+
+const INACTIVE = ['no', 'yes'] as const;
+const KINDS = ['any', 'exact_id', 'exact_path', 'pattern', 'af_binding'] as const;
+const KIND_OPTIONS = KINDS.filter((kind) => kind !== 'any').map((kind) => ({ value: kind, label: labelOf(MATCH_KIND_LABELS, kind) }));
+
+interface Names {
+  targetName: (rule: SourceMappingView) => string;
+  connectionName: (id: string | null) => string;
+}
+
+function columnsOf({ targetName, connectionName }: Names): DataTableColumn<SourceMappingView>[] {
+  return [
+    {
+      id: 'value',
+      header: 'Source value',
+      cell: (rule) => (
+        <Link to={mappingPath(rule.id)} data-testid="source-mapping" data-match={rule.matchValue} className="break-all font-medium underline-offset-2 hover:underline">
+          {rule.matchValue}
+        </Link>
+      ),
+    },
+    { id: 'kind', header: 'Match', nowrap: true, cell: (rule) => labelOf(MATCH_KIND_LABELS, rule.matchKind) },
+    { id: 'target', header: 'Maps to', cell: (rule) => <span>{`${labelOf(MAPPING_TARGET_LABELS, rule.targetType)} ${targetName(rule)}`}</span> },
+    { id: 'connection', header: 'Connection', cell: (rule) => <span>{connectionName(rule.connectionId)}</span> },
+    { id: 'precedence', header: 'Precedence', align: 'right', nowrap: true, cell: (rule) => rule.precedence },
+    { id: 'version', header: 'Version', nowrap: true, cell: (rule) => `v${rule.version}${rule.isActive ? '' : ' · inactive'}` },
+  ];
+}
 
 /**
- * Source → plant rules of the tenant (ING03), in resolution order of their kind: exact id, exact path,
- * pattern, AF binding. Rules mirrored from the v1 hierarchy mapping are edited in v1 until 3.10.
+ * Source → plant rules of the tenant (ING03), 20 per page: exact id, exact path, pattern or AF binding to
+ * a unit or asset. A rule opens its editor; writers add rules with "New mapping".
  */
 export function SourceMappingsTab() {
-  const mappings = useSourceMappings();
-  const units = flattenPages(useUnits().data?.pages);
+  const { canWriteIntegration } = useCapabilities();
+  const [inactive, setInactive] = useUrlParam('inactive', INACTIVE, 'no');
+  const [kind, setKind] = useUrlParam('kind', KINDS, 'any');
+  const list = useSourceMappingsPage(inactive === 'yes', kind === 'any' ? undefined : kind);
+  const units = useUnitNames();
+  const assets = useAssetNames();
   const connections = useConnections(true);
-  const unitName = (id: string) => units.find((unit) => unit.id === id)?.name ?? id.slice(0, 8);
-  const connectionName = (id: string | null) => (id ? connections.items.find((connection) => connection.id === id)?.displayName ?? id.slice(0, 8) : 'every connection');
+  const columns = useMemo(() => {
+    const targetName = (rule: SourceMappingView) => (rule.targetType === 'unit' ? units.nameOf(rule.targetId) : assets.nameOf(rule.targetId));
+    const connectionName = (id: string | null) => (id ? connections.items.find((connection) => connection.id === id)?.displayName ?? 'Unknown connection' : 'Every connection');
+    return columnsOf({ targetName, connectionName });
+  }, [units, assets, connections.items]);
   return (
-    <DataState state={dataStateOf(mappings, { isEmpty: mappings.items.length === 0 })} error={mappings.error} detail={mappings.items.length === 0 ? 'No source mapping rule yet.' : undefined}>
-      <div className="overflow-x-auto" data-testid="source-mappings">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Kind</TableHead>
-              <TableHead>Source value</TableHead>
-              <TableHead>Target</TableHead>
-              <TableHead>Connection</TableHead>
-              <TableHead>Precedence</TableHead>
-              <TableHead>Version</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {mappings.items.map((rule) => (
-              <TableRow key={rule.id} data-testid="source-mapping" data-match={rule.matchValue}>
-                <TableCell>{rule.matchKind}</TableCell>
-                <TableCell className="max-w-72 break-all">{rule.matchValue}</TableCell>
-                <TableCell>
-                  {rule.targetType} {rule.targetType === 'unit' ? unitName(rule.targetId) : rule.targetId.slice(0, 8)}
-                </TableCell>
-                <TableCell>{connectionName(rule.connectionId)}</TableCell>
-                <TableCell>{rule.precedence}</TableCell>
-                <TableCell>
-                  v{rule.version} {!rule.isActive && <Badge variant="outline">inactive</Badge>} {rule.legacyMappingId && <Badge variant="outline">v1</Badge>}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+    <div className="space-y-3" data-testid="source-mappings">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="w-48">
+            <NativeSelect id="mappings-kind" ariaLabel="Match" value={kind === 'any' ? '' : kind} placeholder="Any match" options={KIND_OPTIONS} onChange={(next) => setKind((next || 'any') as (typeof KINDS)[number])} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox id="mappings-inactive" checked={inactive === 'yes'} onCheckedChange={(checked) => setInactive(checked === true ? 'yes' : 'no')} />
+            <Label htmlFor="mappings-inactive" className="text-sm">
+              Show inactive
+            </Label>
+          </div>
+        </div>
+        {canWriteIntegration && (
+          <Button asChild size="sm" variant="outline">
+            <Link to={NEW_MAPPING_PATH} data-testid="new-mapping">
+              <ActionIcon.add className="mr-1 h-4 w-4" aria-hidden="true" /> New mapping
+            </Link>
+          </Button>
+        )}
       </div>
-    </DataState>
+      <DataTable
+        caption="Source mappings"
+        columns={columns}
+        rows={list.rows}
+        getRowKey={(rule) => rule.id}
+        pager={list.pager}
+        status={list.status}
+        empty={{ title: 'No mapping rules yet', text: 'Bind a source from the quarantine, or add a rule with New mapping.' }}
+      />
+    </div>
   );
 }

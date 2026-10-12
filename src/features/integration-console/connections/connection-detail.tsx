@@ -5,82 +5,84 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { DiscoveryPanel } from '../discovery/discovery-panel';
-import type { ConsoleSession } from '../hooks/use-console-session';
 import { useConnectionStages } from '../hooks/use-connection-stages';
+import { useConsoleSession } from '../hooks/use-console-session';
+import { useUrlParam } from '../hooks/use-url-param';
 import { JobsPanel } from '../jobs/jobs-panel';
 import { EMPTY_SCOPE, type SourceScope } from '../model/discovery';
 import { isSourceSupported } from '../model/source-types';
 import { LazyMqttConnectionPanel } from '../mqtt/mqtt-lazy';
 import { SignalsPanel } from '../signals/signals-panel';
-import { ConnectionHeader } from './connection-header';
 import { DiagnosticsPanel } from './diagnostics-panel';
 import { StageTracker } from './stage-tracker';
 
 export interface ConnectionDetailProps {
   connection: ConnectionView;
-  session: ConsoleSession;
   timezone: string;
-  onEdit: () => void;
 }
+
+const PI_TABS = ['stages', 'diagnostics', 'discovery', 'jobs', 'signals'] as const;
+type PiTab = (typeof PI_TABS)[number];
 
 /**
- * One connection end to end (UX06): stages, staged diagnostics, discovery and mapping, jobs with replay,
- * signals. The scope chosen under Discovery is the scope new jobs read. MQTT connections get the
- * subscription panel (plan 1.8 step 5) instead of the PI stages. Diagnostics and discovery are
- * integration-writer commands (the server refuses them to other roles), so only writers see those tabs.
+ * One connection end to end (UX06) under its page header: stages, staged diagnostics, discovery and
+ * mapping, jobs with replay, signals; the tab is in the URL. MQTT connections get the subscription
+ * panel instead. Diagnostics and discovery are writer commands, so only writers see those tabs.
  */
-export function ConnectionDetail({ connection, session, timezone, onEdit }: ConnectionDetailProps) {
+export function ConnectionDetail({ connection, timezone }: ConnectionDetailProps) {
   if (connection.sourceType === 'mqtt') {
     return (
-      <section aria-label={connection.displayName} className="space-y-4" data-testid="connection-detail" data-connection-id={connection.id} data-source-type="mqtt">
-        <ConnectionHeader connection={connection} onEdit={onEdit} />
+      <div data-testid="connection-detail" data-connection-id={connection.id} data-source-type="mqtt">
         <Suspense fallback={<DataState state="loading" />}>
-          <LazyMqttConnectionPanel connection={connection} session={session} timezone={timezone} />
+          <LazyMqttConnectionPanel connection={connection} timezone={timezone} />
         </Suspense>
-      </section>
+      </div>
     );
   }
-  return <PiConnectionDetail connection={connection} session={session} timezone={timezone} onEdit={onEdit} />;
+  if (!isSourceSupported(connection.sourceType)) {
+    return (
+      <p className="text-sm text-muted-foreground" data-testid="connection-detail" data-connection-id={connection.id}>
+        No adapter for this source type is installed yet; it cannot be tested or run from here.
+      </p>
+    );
+  }
+  return <PiConnectionDetail connection={connection} timezone={timezone} />;
 }
 
-function PiConnectionDetail({ connection, session, timezone, onEdit }: ConnectionDetailProps) {
+function PiConnectionDetail({ connection, timezone }: ConnectionDetailProps) {
   const { canWriteIntegration } = useCapabilities();
-  const [tab, setTab] = useState('stages');
+  const session = useConsoleSession();
+  const [tab, setTab] = useUrlParam<PiTab>('tab', PI_TABS, 'stages');
   const [scope, setScope] = useState<SourceScope>(EMPTY_SCOPE);
   const jobs = useIngestionJobs(connection.id);
   const stages = useConnectionStages(connection, jobs.items, session);
-  const supported = isSourceSupported(connection.sourceType);
   return (
-    <section aria-label={connection.displayName} className="space-y-4" data-testid="connection-detail" data-connection-id={connection.id}>
-      <ConnectionHeader connection={connection} onEdit={onEdit} />
-      {!supported ? (
-        <p className="text-sm text-muted-foreground">No adapter for this source type is installed yet; it cannot be tested or run from the console.</p>
-      ) : (
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="stages">Stages</TabsTrigger>
-            {canWriteIntegration && <TabsTrigger value="diagnostics" data-testid="tab-diagnostics">Diagnostics</TabsTrigger>}
-            {canWriteIntegration && <TabsTrigger value="discovery" data-testid="tab-discovery">Discovery and mapping</TabsTrigger>}
-            <TabsTrigger value="jobs" data-testid="tab-jobs">Jobs and replay</TabsTrigger>
-            <TabsTrigger value="signals">Signals</TabsTrigger>
-          </TabsList>
-          <TabsContent value="stages">
-            <StageTracker stages={stages} timezone={timezone} />
-          </TabsContent>
-          <TabsContent value="diagnostics">
-            <DiagnosticsPanel connection={connection} last={session.testOf(connection.id)} timezone={timezone} onTested={(result) => session.recordTest(connection.id, result)} />
-          </TabsContent>
-          <TabsContent value="discovery" forceMount hidden={tab !== 'discovery'}>
-            <DiscoveryPanel connectionId={connection.id} scope={scope} timezone={timezone} onScope={setScope} onSampled={() => session.recordSample(connection.id)} />
-          </TabsContent>
-          <TabsContent value="jobs">
-            <JobsPanel connectionId={connection.id} scope={scope} timezone={timezone} jobs={jobs} />
-          </TabsContent>
-          <TabsContent value="signals">
-            <SignalsPanel connectionId={connection.id} />
-          </TabsContent>
-        </Tabs>
-      )}
-    </section>
+    <div data-testid="connection-detail" data-connection-id={connection.id}>
+      <Tabs value={tab} onValueChange={(next) => setTab(next as PiTab)}>
+        <TabsList className="h-auto flex-wrap">
+          <TabsTrigger value="stages">Stages</TabsTrigger>
+          {canWriteIntegration && <TabsTrigger value="diagnostics" data-testid="tab-diagnostics">Diagnostics</TabsTrigger>}
+          {canWriteIntegration && <TabsTrigger value="discovery" data-testid="tab-discovery">Discovery and mapping</TabsTrigger>}
+          <TabsTrigger value="jobs" data-testid="tab-jobs">Jobs and replay</TabsTrigger>
+          <TabsTrigger value="signals" data-testid="tab-signals">Signals</TabsTrigger>
+        </TabsList>
+        <TabsContent value="stages" className="mt-4">
+          <StageTracker stages={stages} timezone={timezone} />
+        </TabsContent>
+        <TabsContent value="diagnostics" className="mt-4">
+          <DiagnosticsPanel connection={connection} last={session.testOf(connection.id)} timezone={timezone} onTested={(result) => session.recordTest(connection.id, result)} />
+        </TabsContent>
+        {/* kept mounted: the chosen scope and the sample survive a look at the jobs */}
+        <TabsContent value="discovery" className="mt-4" forceMount hidden={tab !== 'discovery'}>
+          <DiscoveryPanel connectionId={connection.id} scope={scope} timezone={timezone} onScope={setScope} onSampled={() => session.recordSample(connection.id)} />
+        </TabsContent>
+        <TabsContent value="jobs" className="mt-4">
+          <JobsPanel connectionId={connection.id} scope={scope} timezone={timezone} jobs={jobs} />
+        </TabsContent>
+        <TabsContent value="signals" className="mt-4">
+          <SignalsPanel connectionId={connection.id} timezone={timezone} />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

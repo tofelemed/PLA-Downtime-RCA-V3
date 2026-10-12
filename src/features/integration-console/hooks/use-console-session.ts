@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import type { ConnectionTestView } from '@/api/v2/types/integrations';
 
 export interface SessionTest {
@@ -13,27 +13,51 @@ export interface ConsoleSession {
   recordSample: (connectionId: string) => void;
 }
 
+interface SessionState {
+  tests: Readonly<Record<string, SessionTest>>;
+  samples: Readonly<Record<string, string>>;
+}
+
+let state: SessionState = { tests: {}, samples: {} };
+const listeners = new Set<() => void>();
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+const snapshot = () => state;
+const update = (next: SessionState) => {
+  state = next;
+  for (const listener of listeners) listener();
+};
+
+function recordTest(connectionId: string, result: ConnectionTestView): void {
+  update({ ...state, tests: { ...state.tests, [connectionId]: { result, at: new Date().toISOString() } } });
+}
+
+function recordSample(connectionId: string): void {
+  update({ ...state, samples: { ...state.samples, [connectionId]: new Date().toISOString() } });
+}
+
+/** Test seam: forget what this browser session learned. */
+export function resetConsoleSession(): void {
+  update({ tests: {}, samples: {} });
+}
+
 /**
  * What this browser session learned about each connection that the server does not store: the last
- * diagnostics result and when source records were sampled (plan 3.7 stage tracker). Memory only — no
- * browser storage; a reload starts over, the server-backed stages stay.
+ * diagnostics result and when source records were sampled (stage tracker). Memory only, shared by the
+ * console's pages (list, detail, editor) so it survives moving between them; a reload starts over and
+ * connection ids are tenant-unique, so a plant switch never mixes results.
  */
 export function useConsoleSession(): ConsoleSession {
-  const [tests, setTests] = useState<Record<string, SessionTest>>({});
-  const [samples, setSamples] = useState<Record<string, string>>({});
-  const recordTest = useCallback((connectionId: string, result: ConnectionTestView) => {
-    setTests((current) => ({ ...current, [connectionId]: { result, at: new Date().toISOString() } }));
-  }, []);
-  const recordSample = useCallback((connectionId: string) => {
-    setSamples((current) => ({ ...current, [connectionId]: new Date().toISOString() }));
-  }, []);
+  const current = useSyncExternalStore(subscribe, snapshot, snapshot);
   return useMemo(
     () => ({
-      testOf: (connectionId: string) => tests[connectionId] ?? null,
+      testOf: (connectionId: string) => current.tests[connectionId] ?? null,
       recordTest,
-      sampledAt: (connectionId: string) => samples[connectionId] ?? null,
+      sampledAt: (connectionId: string) => current.samples[connectionId] ?? null,
       recordSample,
     }),
-    [tests, samples, recordTest, recordSample],
+    [current],
   );
 }

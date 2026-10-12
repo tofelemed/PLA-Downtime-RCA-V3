@@ -51,7 +51,7 @@ export function MappingPreview({ preview, timezone }: { preview: AttributeMappin
         <ul className="list-disc pl-5 text-sm text-destructive" data-testid="preview-diagnostics">
           {preview.diagnostics.map((entry) => (
             <li key={`${entry.code}-${entry.field ?? ''}`} data-code={entry.code}>
-              {entry.code}: {entry.message}
+              {entry.message}
             </li>
           ))}
         </ul>

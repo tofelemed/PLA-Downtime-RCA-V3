@@ -1,76 +1,54 @@
-import { Plus } from 'lucide-react';
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { useConnectionsPage } from '@/api/v2/queries/integration-connections';
 import type { ConnectionView } from '@/api/v2/types/integrations';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { useConnections } from '@/api/v2/queries/integration-connections';
-import { useCapabilities } from '@/features/auth/use-capabilities';
-import { DataState } from '@/features/ux-kit/data-state';
-import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { useUrlParam } from '../hooks/use-url-param';
 import { sourceTypeLabel } from '../model/source-types';
+import { connectionPath } from '../paths';
 
-export interface ConnectionsListProps {
-  selectedId: string | null;
-  includeInactive: boolean;
-  onIncludeInactive: (value: boolean) => void;
-  onSelect: (connection: ConnectionView) => void;
-  onCreate: () => void;
-}
+const COLUMNS: DataTableColumn<ConnectionView>[] = [
+  {
+    id: 'name',
+    header: 'Name',
+    cell: (connection) => (
+      <Link to={connectionPath(connection.id)} data-testid="connection-item" data-connection-id={connection.id} className="font-medium underline-offset-2 hover:underline">
+        {connection.displayName}
+      </Link>
+    ),
+  },
+  { id: 'type', header: 'Source', nowrap: true, cell: (connection) => sourceTypeLabel(connection.sourceType) },
+  { id: 'state', header: 'State', nowrap: true, cell: (connection) => (connection.isActive ? 'Active' : 'Inactive') },
+  { id: 'config', header: 'Settings version', align: 'right', nowrap: true, cell: (connection) => connection.configVersion },
+  { id: 'secret', header: 'Credential', nowrap: true, cell: (connection) => (connection.hasSecret ? 'Stored' : 'None') },
+];
 
-/** `GET /connections` (secrets redacted): source type, state, config version, credential stored. */
-export function ConnectionsList({ selectedId, includeInactive, onIncludeInactive, onSelect, onCreate }: ConnectionsListProps) {
-  const { canWriteIntegration } = useCapabilities();
-  const connections = useConnections(includeInactive);
-  const state = dataStateOf(connections, { isEmpty: connections.items.length === 0 });
+const INACTIVE = ['no', 'yes'] as const;
+
+/** `GET /connections` (secrets redacted) as a table of 20 per page; a name opens the connection's page. */
+export function ConnectionsList() {
+  const [inactive, setInactive] = useUrlParam('inactive', INACTIVE, 'no');
+  const list = useConnectionsPage(inactive === 'yes');
+  const columns = useMemo(() => COLUMNS, []);
   return (
-    <section aria-label="Connections" className="space-y-3" data-testid="connections-list">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Connections</h2>
-        {canWriteIntegration ? (
-          <Button size="sm" onClick={onCreate} data-testid="new-connection">
-            <Plus className="mr-1 h-4 w-4" /> New
-          </Button>
-        ) : (
-          <ReadOnlyHint />
-        )}
-      </div>
+    <div className="space-y-3" data-testid="connections-list">
       <div className="flex items-center gap-2">
-        <Checkbox id="include-inactive" checked={includeInactive} onCheckedChange={(checked) => onIncludeInactive(checked === true)} />
+        <Checkbox id="include-inactive" checked={inactive === 'yes'} onCheckedChange={(checked) => setInactive(checked === true ? 'yes' : 'no')} />
         <Label htmlFor="include-inactive" className="text-sm">
           Show inactive
         </Label>
       </div>
-      <DataState
-        state={state}
-        error={connections.error}
-        onRetry={() => void connections.refetch()}
-        detail={state === 'empty' ? 'No connection is configured. PI details are pending (D02): create one when the PI administrator provides the URL and credentials (a simulator works for testing).' : undefined}
-      >
-        <ul className="space-y-2">
-          {connections.items.map((connection) => (
-            <li key={connection.id}>
-              <button
-                type="button"
-                data-testid="connection-item"
-                data-connection-id={connection.id}
-                aria-current={connection.id === selectedId}
-                onClick={() => onSelect(connection)}
-                className={`w-full rounded-md border p-3 text-left text-sm ${connection.id === selectedId ? 'border-primary bg-muted' : 'hover:bg-muted/50'}`}
-              >
-                <span className="block font-medium">{connection.displayName}</span>
-                <span className="mt-1 flex flex-wrap gap-1">
-                  <Badge variant="secondary">{sourceTypeLabel(connection.sourceType)}</Badge>
-                  <Badge variant="outline">{connection.isActive ? 'Active' : 'Inactive'}</Badge>
-                  <Badge variant="outline">config v{connection.configVersion}</Badge>
-                  {!connection.hasSecret && <Badge variant="outline">No credential</Badge>}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </DataState>
-    </section>
+      <DataTable
+        caption="Connections"
+        columns={columns}
+        rows={list.rows}
+        getRowKey={(connection) => connection.id}
+        pager={list.pager}
+        status={list.status}
+        empty={{ title: 'No connections yet', text: 'Create a connection once the PI administrator or broker owner provides the address and credentials.' }}
+      />
+    </div>
   );
 }

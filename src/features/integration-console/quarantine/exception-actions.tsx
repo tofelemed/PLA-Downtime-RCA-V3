@@ -3,10 +3,16 @@ import { useReplayRun, useRequestReplay, useResolveException } from '@/api/v2/qu
 import type { IngestionExceptionDetailView } from '@/api/v2/types/integrations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { Field } from '../components/field';
 import { ReplayRunStatus } from '../jobs/replay-run-status';
 import { canReplayAfterDryRun, resolutionReducer } from '../model/exception-flow';
+
+const CLOSED_TEXT: Record<'resolved' | 'irrecoverable', string> = {
+  resolved: 'This item is resolved.',
+  irrecoverable: 'This item is irrecoverable.',
+};
 
 const isAccepted = (value: unknown): value is { jobId: string } => typeof (value as { jobId?: unknown } | null)?.jobId === 'string';
 
@@ -32,7 +38,7 @@ export function ExceptionActions({ exception }: { exception: IngestionExceptionD
     if (!outcome) return;
     dispatch(isAccepted(outcome) ? { type: 'replay-started', runId: outcome.jobId } : { type: 'closed' });
   };
-  if (exception.state !== 'open') return <p className="text-sm text-muted-foreground">This item is {exception.state}.</p>;
+  if (exception.state !== 'open') return <p className="text-sm text-muted-foreground">{CLOSED_TEXT[exception.state]}</p>;
   return (
     <div className="space-y-2" data-testid="exception-actions" data-step={state.step}>
       <Field id="resolve-reason" label="Reason (audited, required)">
@@ -45,9 +51,18 @@ export function ExceptionActions({ exception }: { exception: IngestionExceptionD
         <Button size="sm" onClick={() => void close('replay')} disabled={!why || !canReplayAfterDryRun(dryRun.data) || resolve.isPending} data-testid="exception-replay">
           Replay and resolve
         </Button>
-        <Button size="sm" variant="destructive" onClick={() => void close('irrecoverable')} disabled={!why || resolve.isPending} data-testid="exception-irrecoverable">
-          Mark irrecoverable
-        </Button>
+        <ConfirmDialog
+          trigger={
+            <Button size="sm" variant="destructive" disabled={!why || resolve.isPending} data-testid="exception-irrecoverable">
+              Mark irrecoverable
+            </Button>
+          }
+          title="Close this item as irrecoverable?"
+          description="It leaves the quarantine for good and is never replayed. The reason is kept in the audit trail."
+          confirmLabel="Mark irrecoverable"
+          destructive
+          onConfirm={() => close('irrecoverable')}
+        />
       </div>
       <ConsoleRefusal error={request.error ?? resolve.error} />
       {state.step === 'dry-run' && <ReplayRunStatus runId={state.runId} />}

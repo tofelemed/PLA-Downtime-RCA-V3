@@ -314,7 +314,7 @@ describe('source → plant mapping (plan 1.3)', () => {
         .expect(412);
     });
 
-    it('mirrors v1 hierarchy mappings and keeps them v1-owned', async () => {
+    it('mirrors v1 hierarchy mappings and adopts a mirrored rule on a v2 edit', async () => {
       const legacy = await app.get(HierarchyMappingService).create({
         sourceType: 'PI',
         sourceIdentifier: 'EL-LEGACY',
@@ -348,8 +348,18 @@ describe('source → plant mapping (plan 1.3)', () => {
           targetType: 'unit',
           targetId: world.unitA2,
         })
-        .expect(409);
-      expect(json<{ code: string }>(response).code).toBe('LEGACY_MAPPING');
+        .expect(200);
+      expect(json<unknown>(response)).toMatchObject({
+        id: mirrored[0].id,
+        legacyMappingId: null,
+        version: 2,
+        targetId: world.unitA2,
+      });
+      const adopted = await rows<{ legacy_mapping_id: string | null }>(
+        `SELECT legacy_mapping_id FROM source_mappings WHERE id = $1`,
+        [mirrored[0].id],
+      );
+      expect(adopted[0].legacy_mapping_id).toBeNull();
       expect(
         await app.get(HierarchyMappingService).findHierarchyMapping({
           sourceType: 'PI',

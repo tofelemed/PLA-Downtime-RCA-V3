@@ -1,8 +1,9 @@
-import { CheckCircle2, CircleDashed, MinusCircle, XCircle } from 'lucide-react';
 import { useTestConnection } from '@/api/v2/queries/integration-connections';
 import type { ConnectionView } from '@/api/v2/types/integrations';
 import { Button } from '@/components/ui/button';
+import { DIAGNOSTIC_STATUS_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { StatusIcon, type AppIcon } from '@/lib/icons';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { ToneBadge } from '../components/tone-badge';
 import type { SessionTest } from '../hooks/use-console-session';
@@ -15,12 +16,12 @@ export interface DiagnosticsPanelProps {
   onTested: (result: SessionTest['result']) => void;
 }
 
-const ICONS: Record<DiagnosticRow['status'], typeof CheckCircle2> = {
-  ok: CheckCircle2,
-  failed: XCircle,
-  skipped: MinusCircle,
-  not_applicable: MinusCircle,
-  not_run: CircleDashed,
+const ICONS: Record<DiagnosticRow['status'], AppIcon> = {
+  ok: StatusIcon.success,
+  failed: StatusIcon.error,
+  skipped: StatusIcon.info,
+  not_applicable: StatusIcon.info,
+  not_run: StatusIcon.pending,
 };
 
 /**
@@ -57,7 +58,7 @@ export function DiagnosticsPanel({ connection, last, timezone, onTested }: Diagn
             <li key={row.key} className="flex items-start gap-2 p-2" data-testid="diagnostic-step" data-step={row.key} data-status={row.status}>
               <Icon className={`mt-0.5 h-4 w-4 ${row.status === 'failed' ? 'text-destructive' : row.status === 'ok' ? 'text-green-600' : 'text-muted-foreground'}`} aria-hidden />
               <span className="w-48 shrink-0 font-medium">{row.label}</span>
-              <span className="text-muted-foreground">{row.status.replace('_', ' ')}{row.detail ? ` — ${row.detail}` : ''}</span>
+              <span className="text-muted-foreground">{row.status === 'not_run' ? 'Not run' : labelOf(DIAGNOSTIC_STATUS_LABELS, row.status)}{row.detail ? ` — ${row.detail}` : ''}</span>
             </li>
           );
         })}

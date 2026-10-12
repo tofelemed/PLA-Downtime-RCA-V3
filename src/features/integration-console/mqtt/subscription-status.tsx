@@ -1,5 +1,6 @@
 import type { ConnectionView } from '@/api/v2/types/integrations';
 import { Badge } from '@/components/ui/badge';
+import { JOB_STATE_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ToneBadge } from '../components/tone-badge';
@@ -34,7 +35,7 @@ export function SubscriptionStatus({ connection, subscription, timezone }: Subsc
         <ToneBadge tone={status.tone} testId="mqtt-status-badge">
           {status.label}
         </ToneBadge>
-        {job && <Badge variant="outline" data-testid="mqtt-job-state">job {job.state}</Badge>}
+        {job && <Badge variant="outline" data-testid="mqtt-job-state" data-state={job.state}>Job: {labelOf(JOB_STATE_LABELS, job.state).toLowerCase()}</Badge>}
         {health.sourceAvailable !== null && (
           <ToneBadge tone={health.sourceAvailable ? 'ok' : 'warning'} testId="mqtt-source-available">
             source {health.sourceAvailable ? 'available' : 'unavailable (Last Will / OFFLINE)'}

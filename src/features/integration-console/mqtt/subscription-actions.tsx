@@ -28,7 +28,12 @@ export function SubscriptionActions({ job, timezone }: { job: IngestionJobView |
           Audit trail
         </Button>
       </div>
-      {job.lastError && <p className="text-xs text-destructive">{job.lastError}</p>}
+      {job.lastError && (
+        <details className="text-xs text-destructive">
+          <summary className="cursor-pointer">The subscription reported an error — details</summary>
+          <p className="break-all">{job.lastError}</p>
+        </details>
+      )}
       {trail && <JobTransitions jobId={job.id} timezone={timezone} />}
       <JobCommandDialog job={job} action={action} texts={MQTT_ACTION_TEXT} onClose={() => setAction(null)} />
     </div>

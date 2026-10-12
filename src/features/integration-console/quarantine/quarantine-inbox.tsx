@@ -1,74 +1,98 @@
-import { useState } from 'react';
-import { useIngestionExceptions, type ExceptionFilters } from '@/api/v2/queries/ingestion-exceptions';
+import { useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useIngestionExceptionsPage, usePrefetchIngestionException } from '@/api/v2/queries/ingestion-exceptions';
 import { useConnections } from '@/api/v2/queries/integration-connections';
 import type { IngestionExceptionView } from '@/api/v2/types/integrations';
 import { Button } from '@/components/ui/button';
-import { DataState } from '@/features/ux-kit/data-state';
-import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { EXCEPTION_STATE_LABELS, INGESTION_ERROR_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { VirtualList } from '@/features/ux-kit/virtual-list';
+import { ActionIcon } from '@/lib/icons';
+import { useQuarantineFilters } from '../hooks/use-quarantine-filters';
 import { ERROR_CODE_INFO } from '../model/exception-flow';
-import { ExceptionDetail } from './exception-detail';
+import { exceptionPath } from '../paths';
 import { QuarantineFilters } from './quarantine-filters';
+import { SourceRef } from '../components/source-ref';
 
 export interface QuarantineInboxProps {
   timezone: string;
-  /** preselected connection filter */
+  /** pins the connection filter (a connection's own quarantine tab) */
   connectionId?: string;
 }
 
+interface ColumnContext {
+  timezone: string;
+  from: string;
+  nameOf: (id: string) => string;
+  prefetch: (id: string) => void;
+}
+
+function columnsOf({ timezone, from, nameOf, prefetch }: ColumnContext): DataTableColumn<IngestionExceptionView>[] {
+  return [
+    {
+      id: 'problem',
+      header: 'Problem',
+      cell: (item) => (
+        <Link
+          to={exceptionPath(item.id)}
+          state={{ from }}
+          onMouseEnter={() => prefetch(item.id)}
+          onFocus={() => prefetch(item.id)}
+          data-testid="exception-row"
+          data-exception-id={item.id}
+          data-source-id={item.sourceObjectId}
+          data-code={item.errorCode}
+          className="font-medium underline-offset-2 hover:underline"
+        >
+          {ERROR_CODE_INFO[item.errorCode]?.label ?? labelOf(INGESTION_ERROR_LABELS, item.errorCode)}
+        </Link>
+      ),
+    },
+    { id: 'connection', header: 'Connection', cell: (item) => <span>{nameOf(item.connectionId)}</span> },
+    { id: 'source', header: 'Source object', cell: (item) => <SourceRef value={item.sourceObjectId} /> },
+    { id: 'occurrences', header: 'Occurrences', align: 'right', nowrap: true, cell: (item) => item.occurrences },
+    { id: 'lastSeen', header: 'Last seen', nowrap: true, cell: (item) => <PlantTime iso={item.lastSeen} tz={timezone} withDate /> },
+    { id: 'state', header: 'State', nowrap: true, cell: (item) => labelOf(EXCEPTION_STATE_LABELS, item.state) },
+  ];
+}
+
 /**
- * Quarantine inbox (ING05): open items newest first with code, connection, occurrences and first / last
- * seen; server-side filters, a virtualised list paged by keyset; the detail resolves an item. Unmapped
- * PI events live here (the v2 replacement of the v1 Plan Dashboard unmapped modal).
+ * Quarantine inbox (ING05): items newest first with problem, connection, occurrences and last seen;
+ * server-side filters kept in the URL; keyset pages of 20. A row opens the item's own page, where it is
+ * resolved. Unmapped PI events and rejected MQTT messages wait here.
  */
 export function QuarantineInbox({ timezone, connectionId }: QuarantineInboxProps) {
-  const [filters, setFilters] = useState<ExceptionFilters>({ state: 'open', connectionId });
-  const [selected, setSelected] = useState<string | null>(null);
+  const [filters, setFilters] = useQuarantineFilters(connectionId);
   const connections = useConnections(true);
-  const list = useIngestionExceptions(filters);
-  const nameOf = (id: string) => connections.items.find((connection) => connection.id === id)?.displayName ?? id.slice(0, 8);
-  const row = (item: IngestionExceptionView) => (
-    <button
-      type="button"
-      onClick={() => setSelected(item.id)}
-      aria-current={item.id === selected}
-      data-testid="exception-row"
-      data-exception-id={item.id}
-      data-source-id={item.sourceObjectId}
-      data-code={item.errorCode}
-      className={`w-full border-b p-2 text-left text-sm ${item.id === selected ? 'bg-muted' : 'hover:bg-muted/50'}`}
-    >
-      <span className="block font-medium">{ERROR_CODE_INFO[item.errorCode]?.label ?? item.errorCode}</span>
-      <span className="block text-xs text-muted-foreground">
-        {nameOf(item.connectionId)} · {item.sourceObjectId} · ×{item.occurrences} · last <PlantTime iso={item.lastSeen} tz={timezone} withDate />
-      </span>
-    </button>
-  );
+  const list = useIngestionExceptionsPage(filters);
+  const prefetch = usePrefetchIngestionException();
+  const location = useLocation();
+  const from = `${location.pathname}${location.search}`;
+  const names = connections.items;
+  const columns = useMemo(() => {
+    const nameOf = (id: string) => names.find((connection) => connection.id === id)?.displayName ?? 'Unknown connection';
+    return columnsOf({ timezone, from, nameOf, prefetch });
+  }, [timezone, from, names, prefetch]);
   return (
     <section aria-label="Quarantine" className="space-y-3" data-testid="quarantine-inbox">
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex-1">
-          <QuarantineFilters filters={filters} connections={connections.items} onChange={setFilters} />
+          <QuarantineFilters filters={filters} connections={connections.items} fixedConnection={Boolean(connectionId)} onChange={setFilters} />
         </div>
-        <Button size="sm" variant="outline" onClick={() => void list.refetch()} disabled={list.isFetching} data-testid="quarantine-refresh">
+        <Button size="sm" variant="outline" onClick={() => list.status.onRetry()} disabled={list.status.isRefreshing} data-testid="quarantine-refresh">
+          <ActionIcon.refresh className="mr-1 h-4 w-4" aria-hidden="true" />
           Refresh
         </Button>
       </div>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <DataState state={dataStateOf(list, { isEmpty: list.items.length === 0 })} error={list.error} detail={list.items.length === 0 ? 'Nothing quarantined for these filters.' : undefined}>
-          <VirtualList
-            items={list.items}
-            rowHeight={56}
-            height={480}
-            getKey={(item) => item.id}
-            renderRow={row}
-            onEndReached={() => list.hasNextPage && !list.isFetchingNextPage && void list.fetchNextPage()}
-            className="rounded-md border"
-          />
-        </DataState>
-        {selected ? <ExceptionDetail id={selected} timezone={timezone} /> : <p className="text-sm text-muted-foreground">Select an item to see what failed and resolve it.</p>}
-      </div>
+      <DataTable
+        caption="Quarantined items"
+        columns={columns}
+        rows={list.rows}
+        getRowKey={(item) => item.id}
+        pager={list.pager}
+        status={list.status}
+        empty={{ title: 'Nothing quarantined', text: 'Nothing is waiting for these filters.' }}
+      />
     </section>
   );
 }

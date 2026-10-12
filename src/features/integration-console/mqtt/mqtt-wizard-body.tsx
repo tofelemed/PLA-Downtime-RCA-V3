@@ -1,13 +1,15 @@
 import type { ConnectionView } from '@/api/v2/types/integrations';
 import { Button } from '@/components/ui/button';
-import { DialogFooter } from '@/components/ui/dialog';
 import { ConsoleRefusal } from '../components/console-refusal';
+import { useUrlParam } from '../hooks/use-url-param';
 import { useMqttWizard } from './hooks/use-mqtt-wizard';
 import { errorsOfStep, WIZARD_STEPS, type WizardStep } from './model/mqtt-steps';
 import { AdvancedStep } from './steps/advanced-step';
 import { BasicsStep } from './steps/basics-step';
 import { ConnectionStep } from './steps/connection-step';
 import { ProfileStep } from './steps/profile-step';
+
+const STEP_KEYS: readonly WizardStep[] = WIZARD_STEPS.map((step) => step.key);
 
 export interface MqttWizardBodyProps {
   /** null = create */
@@ -22,7 +24,8 @@ export interface MqttWizardBodyProps {
  * mirror the server's for instant feedback; a 422 lands on the step that owns the field.
  */
 export function MqttWizardBody({ connection, onClose, onSaved }: MqttWizardBodyProps) {
-  const wizard = useMqttWizard(connection, onSaved);
+  const stepState = useUrlParam<WizardStep>('step', STEP_KEYS, 'profile');
+  const wizard = useMqttWizard(connection, onSaved, stepState);
   const last = wizard.step === WIZARD_STEPS[WIZARD_STEPS.length - 1].key;
   const stepProps = { form: wizard.form, errors: wizard.errors, onChange: wizard.change };
   const stepHasErrors = (step: WizardStep) => Object.keys(errorsOfStep(wizard.errors, step)).length > 0;
@@ -50,7 +53,7 @@ export function MqttWizardBody({ connection, onClose, onSaved }: MqttWizardBodyP
       {wizard.step === 'connection' && <ConnectionStep {...stepProps} hasSecret={connection?.hasSecret ?? false} />}
       {wizard.step === 'advanced' && <AdvancedStep {...stepProps} />}
       <ConsoleRefusal error={wizard.failed} />
-      <DialogFooter className="gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button variant="outline" onClick={onClose}>
           Cancel
         </Button>
@@ -65,7 +68,7 @@ export function MqttWizardBody({ connection, onClose, onSaved }: MqttWizardBodyP
         <Button onClick={() => void wizard.save()} disabled={wizard.isPending} data-testid="connection-save">
           {connection ? 'Save changes' : 'Create connection'}
         </Button>
-      </DialogFooter>
+      </div>
     </div>
   );
 }

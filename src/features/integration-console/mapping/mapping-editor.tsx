@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { ConsoleRefusal } from '../components/console-refusal';
+import { SourceRef } from '../components/source-ref';
 import { useMappingDraft } from '../hooks/use-mapping-draft';
 import { NO_TEMPLATE, previewBody } from '../model/mapping-draft';
 import { MappingPreview } from './mapping-preview';
@@ -40,7 +41,7 @@ export function MappingEditor({ connectionId, sample, timezone }: MappingEditorP
         <h3 className="font-semibold">Mapping: {templateName}</h3>
         {mapping.effective && <Badge variant="secondary">{mapping.effective.eventType}</Badge>}
         {mapping.effective?.override && <Badge variant="outline">override v{mapping.effective.override.version} in force</Badge>}
-        <span className="text-xs text-muted-foreground">sample {sample.sourceObjectId}</span>
+        <span className="text-xs text-muted-foreground">sample <SourceRef value={sample.sourceObjectId} /></span>
       </div>
       <DataState state={state} error={mapping.query.error}>
         <MappingRulesTable draft={mapping.draft} changed={mapping.changed} overrideFields={overrideFields} catalog={catalog.data?.fields ?? []} onPatch={mapping.patch} />

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { JOB_POLL_MS, useIngestionJobs } from '@/api/v2/queries/ingestion-jobs';
+import { useIngestionJobs } from '@/api/v2/queries/ingestion-jobs';
 import type { IngestionJobView } from '@/api/v2/types/integrations';
+import { useJobClock } from '../../hooks/use-job-clock';
 import { mqttHealthOf, subscribeJobOf, subscriptionStatus, type MqttHealthView, type SubscriptionStatusView } from '../model/mqtt-health';
 
 export interface MqttSubscription {
@@ -14,23 +14,13 @@ export interface MqttSubscription {
   error: unknown;
 }
 
-/** Wall clock ticking with the job poll (ages are display only). */
-function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), JOB_POLL_MS);
-    return () => window.clearInterval(timer);
-  }, []);
-  return now;
-}
-
 /**
  * The subscribe job of an MQTT connection with its parsed health (design §8), polled with the jobs
  * list. The worker creates the job; the console only reads and commands it.
  */
 export function useMqttSubscription(connectionId: string): MqttSubscription {
   const jobs = useIngestionJobs(connectionId);
-  const now = useNow();
+  const now = useJobClock(jobs.items.map((item) => item.state));
   const job = subscribeJobOf(jobs.items);
   const health = mqttHealthOf(job?.health);
   return { job, health, status: subscriptionStatus(job, health, now), now, isLoading: jobs.isLoading, isError: jobs.isError, error: jobs.error };

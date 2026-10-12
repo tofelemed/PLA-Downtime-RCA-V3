@@ -111,7 +111,11 @@ export class SourceMappingsV2Service {
     return toSourceMappingView(await this.saveUnique(row));
   }
 
-  /** PUT replaces the rule (`If-Match` on rowVersion); `version` counts the edits. */
+  /**
+   * PUT replaces the rule (`If-Match` on rowVersion); `version` counts the edits. A rule mirrored from a
+   * v1 hierarchy mapping is adopted: `legacyMappingId` is cleared, so the v1 mirror (which deletes by
+   * `legacyMappingId`) no longer touches it.
+   */
   async replace(
     context: RequestContext,
     target: { id: string; expectedRevision: number },
@@ -119,16 +123,10 @@ export class SourceMappingsV2Service {
   ): Promise<SourceMappingV2View> {
     const existing = await this.find(context, target.id);
     assertRevision(existing.rowVersion, target.expectedRevision);
-    if (existing.legacyMappingId) {
-      throw new ConflictException({
-        code: 'LEGACY_MAPPING',
-        message:
-          'This rule mirrors a v1 hierarchy mapping; edit it through /api/hierarchy-mappings until plan 3.10',
-      });
-    }
     await this.assertTarget(existing.tenantId, dto);
     Object.assign(existing, columnsOf(dto), {
       version: existing.version + 1,
+      legacyMappingId: null,
       updatedBy: context.userId,
     });
     return toSourceMappingView(await this.saveUnique(existing));

@@ -28,8 +28,13 @@ const stepIndex = (step: WizardStep) => WIZARD_STEPS.findIndex((entry) => entry.
  * step's rules; `save` checks everything, sends the create / change, and maps the server's 422 field
  * errors back onto the owning step. The form (and the typed password) lives only in memory.
  */
-export function useMqttWizard(connection: ConnectionView | null, onSaved: (connection: ConnectionView) => void): MqttWizard {
-  const [step, setStep] = useState<WizardStep>('profile');
+export function useMqttWizard(
+  connection: ConnectionView | null,
+  onSaved: (connection: ConnectionView) => void,
+  stepState?: readonly [WizardStep, (step: WizardStep) => void],
+): MqttWizard {
+  const [localStep, setLocalStep] = useState<WizardStep>('profile');
+  const [step, setStep] = stepState ?? [localStep, setLocalStep];
   const [form, setForm] = useState<MqttConnectionForm>(() => (connection ? mqttFormFromConnection(connection) : emptyMqttForm()));
   const [errors, setErrors] = useState<MqttFormErrors>({});
   const create = useCreateConnection();

@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useReplayRun } from '@/api/v2/queries/ingestion-exceptions';
 import { invalidateForChange } from '@/api/v2/queries/invalidation';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
+import { INTAKE_OUTCOME_LABELS, labelOf, REPLAY_STATE_LABELS } from '@/features/ux-kit/labels';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { ToneBadge } from '../components/tone-badge';
 import { replayCounts } from '../model/exception-flow';
@@ -26,16 +27,21 @@ export function ReplayRunStatus({ runId }: { runId: string }) {
   return (
     <div className="space-y-1 text-sm" data-testid="replay-run" data-state={data.state} data-dry-run={data.dryRun} data-objects={data.counts?.objects ?? 0}>
       <ToneBadge tone={tone}>
-        {data.dryRun ? 'Dry run' : 'Replay'} {data.state}
+        {data.dryRun ? 'Dry run' : 'Replay'}: {labelOf(REPLAY_STATE_LABELS, data.state).toLowerCase()}
       </ToneBadge>
       <ul className="flex flex-wrap gap-3 text-xs" data-testid="replay-counts">
         {replayCounts(data).map(([key, value]) => (
           <li key={key} data-count={key} data-value={value}>
-            {key}: {value}
+            {labelOf(INTAKE_OUTCOME_LABELS, key)}: {value}
           </li>
         ))}
       </ul>
-      {data.lastError && <p className="text-xs text-destructive">{data.lastError}</p>}
+      {data.lastError && (
+        <details className="text-xs text-destructive">
+          <summary className="cursor-pointer">The run failed — details</summary>
+          <p className="break-all">{data.lastError}</p>
+        </details>
+      )}
     </div>
   );
 }

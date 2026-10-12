@@ -2,11 +2,11 @@ import type { SourceType } from '@/api/v2/types/integrations';
 import { Badge } from '@/components/ui/badge';
 import { SOURCE_TYPE_OPTIONS } from '../model/source-types';
 
-const AVAILABILITY_LABEL = { available: 'Available', scheduled: 'Not available yet', planned: 'Planned R2' } as const;
+const AVAILABILITY_LABEL = { available: 'Available', scheduled: 'Not available yet', planned: 'Planned' } as const;
 
 /**
  * Source type choice of the wizard: PI is selectable; MQTT and Kafka are shown disabled with the reason
- * (adapters scheduled last, D09 / D10), never as controls that would do nothing.
+ * (adapters come later), never as controls that would do nothing.
  */
 export function SourceTypePicker({ onPick }: { onPick: (type: SourceType) => void }) {
   return (
