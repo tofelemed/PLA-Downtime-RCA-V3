@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { DashboardConfigurationService } from './dashboard-configuration.service';
 import { DashboardConfigApiPayload, DashboardConfigApiRecord } from './dashboard-configuration.mapper';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @ApiTags('Dashboard Configurations')
 @ApiBearerAuth()
@@ -30,8 +31,8 @@ export class DashboardConfigurationController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Promise<DashboardConfigApiRecord | null> {
-    return this.configService.findOne(id);
+  findOne(@Param('id') id: string): Promise<DashboardConfigApiRecord> {
+    return findOrThrow(this.configService.findOne(id), 'DashboardConfiguration', id);
   }
 
   @Post()

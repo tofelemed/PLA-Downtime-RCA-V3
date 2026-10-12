@@ -14,18 +14,6 @@ interface TriageNote {
 
 const NOTES: TriageNote[] = [
   {
-    call: 'GET /api/connectivity/integrations/pi',
-    category: 'live-5xx',
-    severity: 'high',
-    note: 'Root cause is the shadowed route: `integrations/:id` (declared first, no ParseUUIDPipe) receives "pi" → Postgres "invalid input syntax for type uuid" → 500 (backend log, SystemIntegrationService.findOne).',
-  },
-  {
-    call: 'GET /api/connectivity/integrations/cmms',
-    category: 'live-5xx',
-    severity: 'high',
-    note: 'Same root cause as /pi: `integrations/:id` swallows "cmms" → invalid uuid → 500.',
-  },
-  {
     call: 'GET /api/pi-browser/{tenantId}/eventframes',
     category: 'live-4xx',
     severity: 'low',
@@ -42,24 +30,6 @@ const NOTES: TriageNote[] = [
     category: 'retired-route',
     severity: 'low',
     note: 'By design for plants with v2.planDashboard on (Demo Plant): the legacy PlanDashboard that calls these writes renders only when the flag is off (src/features/plan-dashboard/plan-dashboard-switch.tsx:23). Remove the calls when the v1 dashboard is retired.',
-  },
-  {
-    call: 'POST /api/verification-status-codes',
-    category: 'body-mismatch',
-    severity: 'high',
-    note: 'Confirmed sent: src/components/rca-settings/VerificationChecklists.tsx:125 passes `color` (default #3B82F6) and `items`, so creating a verification checklist always fails with 400 "property color / items should not exist" (live: POST {color, items} → 400). The update DTO accepts both but the entity has no such columns (see the PUT 500).',
-  },
-  {
-    call: 'POST /api/rca-cause-codes',
-    category: 'body-mismatch',
-    severity: 'high',
-    note: 'Confirmed sent: src/components/rca-settings/RCACauseLibraryTree.tsx:127 sends `parentId` when adding a child cause → 400 "property parentId should not exist"; only root causes (parentId undefined) can be added. Add parentId to CreateRcaCauseCodeDto (the tree needs it).',
-  },
-  {
-    call: 'PUT /api/rca-cause-codes/{id}',
-    category: 'body-mismatch',
-    severity: 'medium',
-    note: 'MasterDataService.updateRCACauseCode forwards parentId when a caller sets it (re-parenting a cause would fail); the tree editor does not send it today.',
   },
   {
     call: 'POST /api/unmapped-events',
@@ -100,20 +70,4 @@ export function applyTriage(defects: Defect[]): Defect[] {
 }
 
 /** Defects found while reviewing the generated ones (reproduced by hand; evidence recorded). */
-export const MANUAL_FINDINGS: Defect[] = [
-  {
-    severity: 'high',
-    category: 'live-5xx',
-    method: 'PUT',
-    path: '/api/verification-status-codes/{id}',
-    frontend:
-      'src/components/rca-settings/VerificationChecklists.tsx:116 (masterDataService.updateVerificationStatusCode)',
-    backend:
-      'VerificationStatusCodeController.update @ server/pro-act-backend/src/verification-status-code/verification-status-code.controller.ts:38; UpdateVerificationStatusCodeDto',
-    detail:
-      'The edit form always sends `color` (and `items`); UpdateVerificationStatusCodeDto whitelists both, but the VerificationStatusCode entity has neither column, so repository.update throws EntityPropertyNotFoundError → 500 on every checklist edit.',
-    fix: 'Either add color / items columns (migration with down) or drop them from UpdateVerificationStatusCodeDto and the form payload; keep the create and update DTOs consistent.',
-    evidence:
-      'PUT /api/verification-status-codes/<absent id> {"color":"#3B82F6","items":["a"]} → 500, log: Property "color" was not found in "VerificationStatusCode".',
-  },
-];
+export const MANUAL_FINDINGS: Defect[] = [];

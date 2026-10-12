@@ -16,6 +16,7 @@ import { UpdateUnitDto } from './dto/update-unit.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 /** Master data (§13.2): any member reads; writes need master_data_admin or manager_approver (admins via satisfiesRole). */
 @ApiTags('Units')
@@ -34,8 +35,8 @@ export class UnitController {
 
   @Get(':id')
   @ApiResponse({ status: 200, description: 'Get unit by ID', type: Unit })
-  findOne(@Param('id') id: string): Promise<Unit | null> {
-    return this.unitService.findOne(id);
+  findOne(@Param('id') id: string): Promise<Unit> {
+    return findOrThrow(this.unitService.findOne(id), 'Unit', id);
   }
 
   @Post()

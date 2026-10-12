@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Task } from './task.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 export interface TaskQuery {
   assignedTo?: string;
@@ -80,20 +81,17 @@ export class TaskService {
     if (patch.status && patch.status !== 'Completed') {
       patch.completedDate = undefined;
     }
+    await findOrThrow(this.findOne(id), 'Task', id);
     await this.taskRepository.update(id, patch);
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'task', updated);
-    }
+    const updated = await findOrThrow(this.findOne(id), 'Task', id);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'task', updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const task = await this.findOne(id);
+    await findOrThrow(this.findOne(id), 'Task', id);
     await this.taskRepository.delete(id);
-    if (task) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'task', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'task', { id });
   }
 
   findByAssignedTo(assignedTo: string): Promise<Task[]> {

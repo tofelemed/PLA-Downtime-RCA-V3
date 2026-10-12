@@ -3,6 +3,7 @@ import { ProductionPlanTemplateService } from './production-plan-template.servic
 import { ProductionPlanTemplate } from './production-plan-template.entity';
 import { ApiTags, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @ApiTags('Production Plan Templates')
 @ApiBearerAuth()
@@ -22,8 +23,8 @@ export class ProductionPlanTemplateController {
 
   @Get(':id')
   @ApiResponse({ status: 200, description: 'Get production plan template by ID', type: ProductionPlanTemplate })
-  findOne(@Param('id') id: string): Promise<ProductionPlanTemplate | null> {
-    return this.templateService.findOne(id);
+  findOne(@Param('id') id: string): Promise<ProductionPlanTemplate> {
+    return findOrThrow(this.templateService.findOne(id), 'ProductionPlanTemplate', id);
   }
 
   @Post()

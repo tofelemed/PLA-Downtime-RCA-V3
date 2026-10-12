@@ -14,6 +14,7 @@ import { Tenant } from './tenant.entity';
 import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { UpdateTenantDisplaySettingsDto } from './dto/update-tenant-display-settings.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { assertOrganizationWritable } from '../auth/roles/org-access';
@@ -75,6 +76,24 @@ export class TenantController {
     if (data.organizationId)
       assertOrganizationWritable(ctx, data.organizationId);
     return this.tenantService.update(id, data);
+  }
+
+  /** No `@Roles`: who may write is the tenant-setting rule, checked in the service. */
+  @Put(':id/display-settings')
+  @ApiBody({ type: UpdateTenantDisplaySettingsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Calendar and digit display of the tenant updated',
+    type: Tenant,
+  })
+  @ApiResponse({ status: 403, description: 'FORBIDDEN_ROLE' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND (tenant not visible)' })
+  updateDisplaySettings(
+    @Ctx() ctx: RequestContext,
+    @Param('id') id: string,
+    @Body() data: UpdateTenantDisplaySettingsDto,
+  ): Promise<Tenant> {
+    return this.tenantService.updateDisplaySettings(ctx, id, data);
   }
 
   @Delete(':id')

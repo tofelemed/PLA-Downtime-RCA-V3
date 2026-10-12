@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { authApi, AuthenticatedUser, LoginRequest, LoginResponse } from '../services/api/authApi';
 import { httpClient } from '../services/api/httpClient';
 import { masterDataApi, Organization, Tenant } from '../services/api/masterDataApi';
@@ -203,23 +203,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     applyTokens(activeTokens);
     user = await withSessionGrants(user);
 
-    let organization: Organization | null = options?.organizationFallback ?? null;
-    if (user.organizationId) {
-      try {
-        organization = await masterDataApi.getOrganization(user.organizationId);
-      } catch (error) {
-        console.warn('Unable to load organization details', error);
-      }
-    }
-
-    let tenant: Tenant | null = options?.tenantFallback ?? null;
-    if (user.tenantId) {
-      try {
-        tenant = await masterDataApi.getTenant(user.tenantId);
-      } catch (error) {
-        console.warn('Unable to load tenant details', error);
-      }
-    }
+    // organisation and tenant are independent reads: fetched in parallel (cold-load waterfall, UI/UX audit §4)
+    const [organization, tenant] = await Promise.all([
+      user.organizationId
+        ? masterDataApi.getOrganization(user.organizationId).catch((error: unknown) => {
+            console.warn('Unable to load organization details', error);
+            return options?.organizationFallback ?? null;
+          })
+        : Promise.resolve(options?.organizationFallback ?? null),
+      user.tenantId
+        ? masterDataApi.getTenant(user.tenantId).catch((error: unknown) => {
+            console.warn('Unable to load tenant details', error);
+            return options?.tenantFallback ?? null;
+          })
+        : Promise.resolve(options?.tenantFallback ?? null),
+    ]);
 
     return {
       user,
@@ -331,21 +329,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
+  // stable context value: consumers re-render when the session or loading state changes, not on every render
+  const actions = useRef({ login, logout, selectTenant, refreshSession, clearAuthState });
+  actions.current = { login, logout, selectTenant, refreshSession, clearAuthState };
+  const value = useMemo<AuthContextType>(
+    () => ({
       session,
-      login,
-      logout,
-      selectTenant,
       isLoading,
+      login: (email, password) => actions.current.login(email, password),
+      logout: () => actions.current.logout(),
+      selectTenant: (tenantId) => actions.current.selectTenant(tenantId),
       getAccessToken: () => tokensRef.current?.accessToken ?? null,
-      refreshSession,
-      expireSession: clearAuthState,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+      refreshSession: () => actions.current.refreshSession(),
+      expireSession: () => actions.current.clearAuthState(),
+    }),
+    [session, isLoading],
   );
-};
 
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};

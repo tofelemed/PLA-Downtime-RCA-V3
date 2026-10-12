@@ -4,8 +4,10 @@ import type { QueryParams } from '../request-url';
 import type { QueryOf, Schema } from '../schema-types';
 import type { AnalyticsResponse } from '../types/envelopes';
 import type { DowntimeReportView, OeeReportView, ReliabilityReportView } from '../types/reports';
+import { sameTenantQuery } from './placeholder';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
+import { stabilizeWindowParams } from './time-window';
 import { useV2TenantId } from './use-v2-tenant';
 
 export type ReportKind =
@@ -40,18 +42,25 @@ export function reportKey(tenantId: string, kind: ReportKind, query: ReportQuery
   });
 }
 
-/** One `GET /reports/{kind}` analytics read, cached under its report key (T24); null query = idle. */
+/**
+ * One `GET /reports/{kind}` analytics read, cached under its report key (T24); null query = idle.
+ * Heavy reads: kept while filters change (previous result as placeholder), never refetched on window
+ * focus (realtime notices and mutations invalidate them), window bounds minute-stable.
+ */
 export function useReport<TData>(kind: ReportKind, query: ReportQueryBase | null, tz?: string) {
   const tenantId = useV2TenantId();
-  return useQuery({
+  const enabled = Boolean(tenantId && query);
+  return useQuery<AnalyticsResponse<TData>>({
     queryKey: query ? reportKey(tenantId ?? '-', kind, query, tz) : ['v2', tenantId, 'reports', 'idle'],
-    enabled: Boolean(tenantId && query),
+    enabled,
     staleTime: STALE_TIME.reports,
+    refetchOnWindowFocus: false,
+    placeholderData: (previous, previousQuery) => (enabled && sameTenantQuery(tenantId, previousQuery) ? previous : undefined),
     queryFn: async ({ signal }) =>
       (await v2Request<AnalyticsResponse<TData>>({
         method: 'GET',
         path: `/reports/${kind}`,
-        query: query as unknown as QueryParams,
+        query: stabilizeWindowParams(query ?? {}) as unknown as QueryParams,
         signal,
       })).data,
   });

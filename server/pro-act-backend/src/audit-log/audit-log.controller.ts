@@ -12,6 +12,7 @@ import { SkipAudit } from './skip-audit.decorator';
 import { AUDIT_READERS } from './audit-roles';
 import { Ctx } from '../common/context/ctx.decorator';
 import { RequestContext } from '../common/context/request-context';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @ApiTags('Audit Logs')
 @ApiBearerAuth()
@@ -74,16 +75,20 @@ export class AuditLogController {
   @Roles(...AUDIT_READERS)
   @ApiResponse({
     status: 200,
-    description: 'Get audit log by ID (null outside the acting tenant)',
+    description: 'Get audit log by ID (404 outside the acting tenant)',
     type: AuditLog,
   })
   findOne(
     @Ctx() ctx: RequestContext,
     @Param('id') id: string,
-  ): Promise<AuditLog | null> {
-    return this.auditLogService.findOneInTenant(
+  ): Promise<AuditLog> {
+    return findOrThrow(
+      this.auditLogService.findOneInTenant(
+        id,
+        this.auditLogService.readableTenant(ctx),
+      ),
+      'AuditLog',
       id,
-      this.auditLogService.readableTenant(ctx),
     );
   }
 

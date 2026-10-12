@@ -18,6 +18,13 @@ export default {
 			}
 		},
 		extend: {
+			// one layering scale (docs/UI_GUIDELINES.md): page content < sidebar < header < overlays < toasts
+			zIndex: {
+				sidebar: '20',
+				header: '30',
+				overlay: '50',
+				toast: '100',
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',

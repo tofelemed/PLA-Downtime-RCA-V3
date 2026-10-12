@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { ReasonCode } from './reason-code.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class ReasonCodeService {
@@ -38,20 +39,17 @@ export class ReasonCodeService {
   }
 
   async update(id: string, data: Partial<ReasonCode>): Promise<ReasonCode | null> {
+    await findOrThrow(this.findOne(id), 'ReasonCode', id);
     await this.reasonCodeRepository.update(id, data);
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'reasonCode', updated);
-    }
+    const updated = await findOrThrow(this.findOne(id), 'ReasonCode', id);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'reasonCode', updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const reasonCode = await this.findOne(id);
+    await findOrThrow(this.findOne(id), 'ReasonCode', id);
     await this.reasonCodeRepository.delete(id);
-    if (reasonCode) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'reasonCode', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'reasonCode', { id });
   }
 
   findByTenant(tenantId: string): Promise<ReasonCode[]> {

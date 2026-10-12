@@ -1,0 +1,77 @@
+import { type KeyboardEvent, useEffect, useId, useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { boundsError, dateToText, parseDateText } from './date-input-model';
+import { describedBy } from './described-by';
+import { FieldMessages } from './field-messages';
+
+/** Props of {@link PersianDateField}: an ISO date in, an ISO date (or `''`) out. */
+export interface PersianDateFieldProps {
+  id: string;
+  value: string;
+  onChange: (isoDate: string) => void;
+  ariaLabel?: string;
+  min?: string;
+  max?: string;
+  disabled?: boolean;
+  required?: boolean;
+  /** an error owned by the caller (e.g. a range out of order) */
+  error?: string | null;
+}
+
+/**
+ * Jalali text entry `YYYY/MM/DD` (Latin or Persian digits, `/` or `-`). Parses on blur and Enter,
+ * keeps unreadable text visible with an inline error, and shows the Gregorian equivalent as a hint.
+ */
+export function PersianDateField({ id, value, onChange, ariaLabel, min, max, disabled, required, error }: PersianDateFieldProps) {
+  const [text, setText] = useState(() => dateToText(value, 'persian'));
+  const [ownError, setOwnError] = useState<string | null>(null);
+  const hintId = useId();
+  const errorId = useId();
+
+  useEffect(() => {
+    setText(dateToText(value, 'persian'));
+    setOwnError(null);
+  }, [value]);
+
+  const commit = () => {
+    const parsed = parseDateText(text, 'persian');
+    const problem = parsed.error ?? boundsError(parsed.value, 'persian', min, max);
+    setOwnError(problem);
+    if (problem) return;
+    setText(dateToText(parsed.value, 'persian'));
+    if (parsed.value !== value) onChange(parsed.value);
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commit();
+    }
+  };
+
+  const shownError = ownError ?? error ?? null;
+  const hint = value && !ownError ? `Gregorian ${value}` : null;
+  const messages = { hintId, hint, errorId, error: shownError };
+  return (
+    <div>
+      <Input
+        id={id}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        placeholder="YYYY/MM/DD"
+        dir="ltr"
+        value={text}
+        aria-label={ariaLabel}
+        aria-invalid={shownError !== null}
+        aria-describedby={describedBy(messages)}
+        aria-required={required || undefined}
+        disabled={disabled}
+        onChange={(event) => setText(event.target.value)}
+        onBlur={commit}
+        onKeyDown={onKeyDown}
+      />
+      <FieldMessages {...messages} />
+    </div>
+  );
+}

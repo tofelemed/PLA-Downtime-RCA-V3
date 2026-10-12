@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { RequestContext } from '../common/context/request-context';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 import { PlanLegacyBridge } from '../plans/plan-legacy-bridge.service';
 import { ProductionPlan } from './production-plan.entity';
 
@@ -66,8 +67,7 @@ export class ProductionPlanService {
     id: string,
     data: Partial<ProductionPlan>,
   ): Promise<ProductionPlan | null> {
-    const before = await this.findOne(id);
-    if (!before) return null;
+    const before = await findOrThrow(this.findOne(id), 'ProductionPlan', id);
     await this.bridge.assertWritable(context, before);
     if (data.unitId !== undefined || data.productId !== undefined) {
       await this.bridge.assertCreatable(context, {
@@ -90,8 +90,7 @@ export class ProductionPlanService {
   }
 
   async remove(context: RequestContext, id: string): Promise<void> {
-    const plan = await this.findOne(id);
-    if (!plan) return;
+    const plan = await findOrThrow(this.findOne(id), 'ProductionPlan', id);
     await this.bridge.assertDeletable(context, plan);
     await this.planRepository.delete(id);
   }

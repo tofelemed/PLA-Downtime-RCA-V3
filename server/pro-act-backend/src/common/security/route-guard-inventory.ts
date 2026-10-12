@@ -78,38 +78,55 @@ function routesOf(controller: Type<unknown>): RouteGuardEntry[] {
   );
   const prototype = controller.prototype as Record<string, unknown>;
 
-  return Object.getOwnPropertyNames(prototype)
-    .filter(
-      (name) => name !== 'constructor' && typeof prototype[name] === 'function',
-    )
-    .flatMap((name) => {
-      const handler = prototype[name] as (...args: unknown[]) => unknown;
-      const requestMethod = Reflect.getMetadata(METHOD_METADATA, handler) as
-        | RequestMethod
-        | undefined;
-      if (requestMethod === undefined) {
-        return [];
+  return handlerNames(prototype).flatMap((name) => {
+    const handler = prototype[name] as (...args: unknown[]) => unknown;
+    const requestMethod = Reflect.getMetadata(METHOD_METADATA, handler) as
+      | RequestMethod
+      | undefined;
+    if (requestMethod === undefined) {
+      return [];
+    }
+    return [
+      {
+        controller: controller.name,
+        handler: name,
+        method: RequestMethod[requestMethod],
+        path:
+          `${classPath}${normalizePath(Reflect.getMetadata(PATH_METADATA, handler))}` ||
+          '/',
+        version,
+        guarded:
+          classGuarded ||
+          hasGuards(Reflect.getMetadata(GUARDS_METADATA, handler)),
+        isPublic:
+          classPublic || Reflect.getMetadata(IS_PUBLIC_KEY, handler) === true,
+        readOnlyAllowed:
+          classReadOnly ||
+          Reflect.getMetadata(READ_ONLY_ALLOWED_KEY, handler) === true,
+      },
+    ];
+  });
+}
+
+/**
+ * Method names along the prototype chain, the way Nest's `MetadataScanner` finds route handlers: routes
+ * declared on a base controller (e.g. `CodeLibraryV2Controller`) are registered for every subclass. A
+ * subclass override shadows the base method of the same name, so each name is listed once.
+ */
+function handlerNames(prototype: Record<string, unknown>): string[] {
+  const names = new Set<string>();
+  for (
+    let level: object | null = prototype;
+    level !== null && level !== Object.prototype;
+    level = Object.getPrototypeOf(level) as object | null
+  ) {
+    for (const name of Object.getOwnPropertyNames(level)) {
+      if (name !== 'constructor' && typeof prototype[name] === 'function') {
+        names.add(name);
       }
-      return [
-        {
-          controller: controller.name,
-          handler: name,
-          method: RequestMethod[requestMethod],
-          path:
-            `${classPath}${normalizePath(Reflect.getMetadata(PATH_METADATA, handler))}` ||
-            '/',
-          version,
-          guarded:
-            classGuarded ||
-            hasGuards(Reflect.getMetadata(GUARDS_METADATA, handler)),
-          isPublic:
-            classPublic || Reflect.getMetadata(IS_PUBLIC_KEY, handler) === true,
-          readOnlyAllowed:
-            classReadOnly ||
-            Reflect.getMetadata(READ_ONLY_ALLOWED_KEY, handler) === true,
-        },
-      ];
-    });
+    }
+  }
+  return [...names];
 }
 
 function normalizePath(raw: unknown): string {

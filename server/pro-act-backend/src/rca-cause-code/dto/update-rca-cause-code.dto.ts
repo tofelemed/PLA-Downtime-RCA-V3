@@ -22,11 +22,15 @@ export class UpdateRcaCauseCodeDto {
   @IsOptional()
   category?: string;
 
-  // Note: parentId doesn't exist in database schema
-  // @ApiProperty({ required: false })
-  // @IsUUID()
-  // @IsOptional()
-  // parentId?: string;
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    description:
+      'Re-parent the cause (same tenant, not inside its own subtree); null makes it a root',
+  })
+  @IsUUID()
+  @IsOptional()
+  parentId?: string | null;
 
   @ApiProperty({ required: false })
   @IsUUID()

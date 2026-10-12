@@ -3,7 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { io } from 'socket.io-client';
 import { invalidateForChange, resyncTenant } from '@/api/v2/queries/invalidation';
 import { SOCKET_BASE_URL } from '@/services/api/apiBaseUrl';
+import { createInvalidationBatcher, INVALIDATION_BATCH_MS } from './invalidation-batcher';
 import { realtimeBus } from './realtime-bus';
+import { setRealtimeStatus } from './realtime-status';
 import type { RealtimeCredentials, SocketFactory } from './realtime-types';
 import { ScopedRealtimeClient } from './scoped-socket';
 
@@ -22,12 +24,16 @@ export interface ScopedRealtimeOptions {
   getAccessToken: () => string | null;
   factory?: SocketFactory;
   baseUrl?: string;
+  /** coalescing window of cache invalidations in ms (default 500; 0 = apply each notice at once) */
+  batchMs?: number;
 }
 
 /**
- * Keeps one scoped realtime connection for the acting tenant (plan 3.1): every notice invalidates the
- * cached results it can affect (event → events, overlapping periods, reports); a gap or an unknown
- * position after reconnect refetches the tenant's snapshot. A tenant change opens a new connection.
+ * Keeps one scoped realtime connection for the acting tenant (plan 3.1): notices are coalesced for
+ * `batchMs` and then invalidate, once per entity type and merged window, the cached results they can
+ * affect (event → events, overlapping periods, reports); a gap or an unknown position after reconnect
+ * refetches the tenant's snapshot. A tenant change opens a new connection. The connection state feeds
+ * the header's live indicator (`realtime-status.ts`).
  */
 export function useScopedRealtime(options: ScopedRealtimeOptions): void {
   const queryClient = useQueryClient();
@@ -36,6 +42,7 @@ export function useScopedRealtime(options: ScopedRealtimeOptions): void {
   tokenRef.current = options.getAccessToken;
   const factory = options.factory ?? defaultSocketFactory;
   const baseUrl = options.baseUrl ?? SOCKET_BASE_URL;
+  const batchMs = options.batchMs ?? INVALIDATION_BATCH_MS;
 
   useEffect(() => {
     if (!tenantId || !tokenRef.current()) return undefined;
@@ -43,26 +50,33 @@ export function useScopedRealtime(options: ScopedRealtimeOptions): void {
       const token = tokenRef.current();
       return token ? { token, tenantId } : null;
     };
+    const batcher = createInvalidationBatcher((notices) => {
+      for (const notice of notices) void invalidateForChange(queryClient, notice);
+    }, batchMs);
     const client = new ScopedRealtimeClient(
       factory,
       {
         onNotice: (notice) => {
-          void invalidateForChange(queryClient, {
-            tenantId,
-            entityType: notice.entityType,
-            entityId: notice.entityId,
-            window: notice.window,
-          });
+          const change = { tenantId, entityType: notice.entityType, entityId: notice.entityId, window: notice.window };
+          if (batchMs > 0) batcher.add(change);
+          else void invalidateForChange(queryClient, change);
           realtimeBus.publish({ kind: 'notice', notice });
         },
         onResync: (rooms) => {
+          batcher.dispose();
           void resyncTenant(queryClient, tenantId);
           realtimeBus.publish({ kind: 'resync', rooms });
         },
+        onConnectionChange: (connected) => setRealtimeStatus(connected ? 'live' : 'offline'),
       },
       credentials,
     );
+    setRealtimeStatus('connecting');
     client.start(`${baseUrl}/realtime`);
-    return () => client.stop();
-  }, [tenantId, queryClient, factory, baseUrl]);
+    return () => {
+      batcher.dispose();
+      client.stop();
+      setRealtimeStatus('idle');
+    };
+  }, [tenantId, queryClient, factory, baseUrl, batchMs]);
 }

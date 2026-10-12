@@ -138,11 +138,10 @@ describe('v1 audit logs: roles and tenant scope', () => {
       .set(bearer(manager))
       .expect(200);
     expect((own.body as AuditRow).id).toBe(rows.a);
-    const foreign = await http()
+    await http()
       .get(`/api/audit-logs/${rows.b}`)
       .set(bearer(manager))
-      .expect(200);
-    expect((foreign.body as Partial<AuditRow>).id).toBeUndefined();
+      .expect(404);
   });
 
   it('lets a SuperAdmin read the tenant it selects with X-Tenant-Id', async () => {

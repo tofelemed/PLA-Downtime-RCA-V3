@@ -113,6 +113,14 @@ describe('write access coverage for read-only callers (plan 3.11)', () => {
         !PUBLIC_ROUTE_ALLOWLIST.has(routeKey(entry)),
     );
     expect(targets.length).toBeGreaterThan(150);
+    // routes inherited from a base controller are probed too (v2 code libraries)
+    expect(targets.map(routeKey)).toEqual(
+      expect.arrayContaining([
+        'OeeCodesV2Controller.create',
+        'OeeCodesV2Controller.change',
+        'ReasonCodesV2Controller.retire',
+      ]),
+    );
     const accepted: string[] = [];
     for (const entry of targets) {
       const method = entry.method.toLowerCase() as

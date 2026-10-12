@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @ApiTags('Tasks')
 @ApiBearerAuth()
@@ -51,8 +52,8 @@ export class TaskController {
 
   @Get(':id')
   @ApiResponse({ status: 200, description: 'Get task by ID', type: Task })
-  findOne(@Param('id') id: string): Promise<Task | null> {
-    return this.taskService.findOne(id);
+  findOne(@Param('id') id: string): Promise<Task> {
+    return findOrThrow(this.taskService.findOne(id), 'Task', id);
   }
 
   @Post()

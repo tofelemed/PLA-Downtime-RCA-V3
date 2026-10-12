@@ -22,11 +22,14 @@ export class CreateRcaCauseCodeDto {
   @IsOptional()
   category?: string;
 
-  // Note: parentId doesn't exist in database schema
-  // @ApiProperty({ required: false })
-  // @IsUUID()
-  // @IsOptional()
-  // parentId?: string;
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    description: 'Parent cause (same tenant); omitted or null for a root cause',
+  })
+  @IsUUID()
+  @IsOptional()
+  parentId?: string | null;
 
   @ApiProperty({ required: false })
   @IsUUID()

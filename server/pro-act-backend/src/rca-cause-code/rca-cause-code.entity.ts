@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  JoinColumn,
+  ManyToOne,
+} from 'typeorm';
 
 @Entity('rca_cause_codes')
 export class RCACauseCode {
@@ -17,9 +26,15 @@ export class RCACauseCode {
   @Column({ type: 'varchar', length: 100, nullable: true })
   category?: string;
 
-  // Note: Database schema doesn't have 'parentId'
-  // @Column({ type: 'uuid', nullable: true })
-  // parentId?: string;
+  /** Parent cause in the cause library tree (same tenant, acyclic); null for a root cause. */
+  @Index()
+  @Column({ name: 'parent_id', type: 'uuid', nullable: true })
+  parentId?: string | null;
+
+  /** Deleting a cause deletes its subtree (the tree editor confirms "and all its children"). */
+  @ManyToOne(() => RCACauseCode, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'parent_id' })
+  parent?: RCACauseCode | null;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;

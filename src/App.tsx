@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,27 +9,28 @@ import { Layout } from "./components/Layout";
 import { LoginForm } from "./components/LoginForm";
 import { PlantSelectionProvider } from "./contexts/PlantSelectionContext";
 import { DisplayCurrencyProvider } from "@/features/display-currency/display-currency-provider";
+import { CalendarPreferenceProvider } from "@/features/settings/calendar-preference-provider";
 import { createAppQueryClient } from "./app/query-client";
-import * as Pages from "./app/lazy-pages";
+import { PROTECTED_ROUTES } from "./app/routes";
 import { V2SessionBridge } from "./features/v2-foundation/v2-session-bridge";
 import { RealtimeBridge } from "./features/v2-foundation/realtime-bridge";
-import { FlaggedRoute } from "./features/v2-foundation/flagged-route";
 
 const queryClient = createAppQueryClient();
+const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const PageFallback = () => (
   <div className="min-h-[40vh] flex items-center justify-center" role="status" aria-label="Loading page">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
   </div>
 );
 
-const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
+const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { session, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center" role="status" aria-label="Signing in">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -45,61 +46,23 @@ const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
   );
 };
 
-const SettingsPlaceholder = () => (
-  <div className="text-center py-12">
-    <h2 className="text-2xl font-bold mb-2">Settings</h2>
-    <p className="text-gray-500">System configuration coming soon</p>
-  </div>
+/** Routes come from the per-area modules in `src/app/routes/` (one file per area, owned by its track). */
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+    {PROTECTED_ROUTES.map((route) => (
+      <Route key={route.path} path={route.path} element={<ProtectedRoute>{route.element}</ProtectedRoute>} />
+    ))}
+    <Route
+      path="*"
+      element={
+        <Suspense fallback={<PageFallback />}>
+          <NotFound />
+        </Suspense>
+      }
+    />
+  </Routes>
 );
-
-/** Protected routes; each page is a lazily loaded chunk (plan 3.1 step 6). */
-const PROTECTED_ROUTES: Array<[path: string, element: ReactNode]> = [
-  ["/dashboard", <FlaggedRoute flag="v2.plaAnalytics" v1={<Pages.Dashboard />} v2={<Pages.DashboardV2 />} />],
-  ["/users", <Pages.UserManagement />],
-  ["/admin", <Pages.AdminPanel />],
-  ["/permissions", <Pages.PermissionsManagement />],
-  ["/master-data", <Pages.MasterData />],
-  ["/codes-admin", <FlaggedRoute flag="v2.codesAdmin" v1={<Pages.CodesAdminOff />} v2={<Pages.CodesAdmin />} />],
-  ["/finance", <FlaggedRoute flag="v2.codesAdmin" v1={<Pages.FinanceOff />} v2={<Pages.Finance />} />],
-  ["/events", <FlaggedRoute flag="v2.eventHub" v1={<Pages.EventHub />} v2={<Pages.EventHubV2 />} />],
-  ["/downtime", <FlaggedRoute flag="v2.downtimeAnalysis" v1={<Pages.DowntimeAnalysisOff />} v2={<Pages.DowntimeAnalysis />} />],
-  ["/planning", <FlaggedRoute flag="v2.plansProfilesCalendars" v1={<Pages.PlanningOff />} v2={<Pages.Planning />} />],
-  ["/plans/:planId", <FlaggedRoute flag="v2.planDashboard" v1={<Pages.PlanDashboardOff />} v2={<Pages.PlanDashboardV2 />} />],
-  ["/plans/:planId/periods/:periodId", <FlaggedRoute flag="v2.planDashboard" v1={<Pages.PlanDashboardOff />} v2={<Pages.PlanDashboardV2 />} />],
-  ["/rca", <FlaggedRoute flag="v2.rca" v1={<Pages.RCAModule />} v2={<Pages.RcaV2 />} />],
-  ["/rca-knowledge-base", <FlaggedRoute flag="v2.rca" v1={<Pages.RCAKnowledgeBase />} v2={<Pages.RcaKnowledgeV2 />} />],
-  ["/test-rca-tools", <Pages.TestRCAAnalysisTools />],
-  ["/connectivity", <FlaggedRoute flag="v2.integrationConsole" v1={<Pages.Connectivity />} v2={<Pages.IntegrationConsole />} />],
-  ["/enhanced-historian", <Pages.EnhancedHistorian />],
-  ["/pla-analytics", <FlaggedRoute flag="v2.plaAnalytics" v1={<Pages.PLADashboard />} v2={<Pages.PlaAnalyticsV2 />} />],
-  ["/reports", <FlaggedRoute flag="v2.plaAnalytics" v1={<Pages.Reports />} v2={<Pages.ReportsV2 />} />],
-  ["/audit", <Pages.AuditLogs />],
-  ["/tasks", <Pages.Tasks />],
-  ["/settings", <SettingsPlaceholder />],
-  ["/production-plans", <Pages.ProductionPlans />],
-];
-
-/** Development builds only: legacy demo seeding (A4) and the UX kit playground. */
-const DEV_ROUTES: Array<[path: string, element: ReactNode]> = Pages.DEV_PAGES.map(([path, Page]) => [path, <Page />]);
-
-const AppRoutes = () => {
-  return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      {[...PROTECTED_ROUTES, ...DEV_ROUTES].map(([path, element]) => (
-        <Route key={path} path={path} element={<ProtectedRoute>{element}</ProtectedRoute>} />
-      ))}
-      <Route
-        path="*"
-        element={
-          <Suspense fallback={<PageFallback />}>
-            <Pages.NotFound />
-          </Suspense>
-        }
-      />
-    </Routes>
-  );
-};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -109,11 +72,13 @@ const App = () => (
       <AuthProvider>
         <PlantSelectionProvider>
           <DisplayCurrencyProvider>
-            <V2SessionBridge />
-            <RealtimeBridge />
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
+            <CalendarPreferenceProvider>
+              <V2SessionBridge />
+              <RealtimeBridge />
+              <BrowserRouter>
+                <AppRoutes />
+              </BrowserRouter>
+            </CalendarPreferenceProvider>
           </DisplayCurrencyProvider>
         </PlantSelectionProvider>
       </AuthProvider>

@@ -87,9 +87,10 @@ describe('UX states and scope header (plan 3.1, UX03)', () => {
     expect(dataStateOf(idle)).toBe('ready');
   });
 
-  it('an error state shows the correlation id; incomplete still shows the content', () => {
+  it('an error state offers a support reference without showing the correlation id; incomplete still shows the content', () => {
     render(<DataState state="error" error={apiError(500, 'INTERNAL_ERROR')} />);
-    expect(screen.getByText('Reference: corr-9')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy support reference' })).toBeInTheDocument();
+    expect(screen.queryByText(/corr-9/)).toBeNull();
     render(
       <DataState state="incomplete" detail="2 of 21 shifts have no actuals">
         <p>table</p>
@@ -99,11 +100,15 @@ describe('UX states and scope header (plan 3.1, UX03)', () => {
     expect(screen.getByText('table')).toBeInTheDocument();
   });
 
-  it('an error state of a 4xx refusal shows its code and message; a 5xx stays generic', () => {
-    render(<DataState state="error" error={apiError(422, 'TOO_MANY_PERIODS')} />);
-    expect(screen.getByText('Refused (TOO_MANY_PERIODS)')).toBeInTheDocument();
+  it('an error state of a 4xx refusal shows a plain title (code only in data-code); a 5xx stays generic', () => {
+    const { container } = render(<DataState state="error" error={apiError(422, 'TOO_MANY_PERIODS')} />);
+    expect(screen.getByText('Too many periods selected')).toBeInTheDocument();
+    expect(screen.queryByText(/TOO_MANY_PERIODS/)).toBeNull();
+    expect(container.querySelector('[data-code="TOO_MANY_PERIODS"]')).not.toBeNull();
     expect(screen.queryByText('The request failed.')).toBeNull();
     render(<DataState state="error" error={apiError(500, 'INTERNAL_ERROR')} />);
+    expect(screen.getByText('The server could not complete the request')).toBeInTheDocument();
+    render(<DataState state="error" />);
     expect(screen.getByText('Could not load')).toBeInTheDocument();
     expect(screen.getByText('The request failed.')).toBeInTheDocument();
   });

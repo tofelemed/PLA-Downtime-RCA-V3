@@ -1,6 +1,24 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Check,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import {
+  CalendarSystem,
+  DEFAULT_CALENDAR_SYSTEM,
+  DEFAULT_DIGIT_SYSTEM,
+  DigitSystem,
+} from './tenant-display-settings';
 
 @Entity('tenants')
+@Check(
+  'CHK_tenants_calendar_system',
+  `"calendar_system" IN ('gregorian', 'persian')`,
+)
+@Check('CHK_tenants_digits', `"digits" IN ('latin', 'persian')`)
 export class Tenant {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -34,6 +52,24 @@ export class Tenant {
 
   @Column({ name: 'timezone', type: 'varchar', length: 100, nullable: true })
   timezone?: string;
+
+  /** Calendar dates are displayed in (display only; storage and exports stay ISO Gregorian). */
+  @Column({
+    name: 'calendar_system',
+    type: 'varchar',
+    length: 16,
+    default: DEFAULT_CALENDAR_SYSTEM,
+  })
+  calendarSystem: CalendarSystem;
+
+  /** Digit shapes numbers and dates are displayed with. */
+  @Column({
+    name: 'digits',
+    type: 'varchar',
+    length: 8,
+    default: DEFAULT_DIGIT_SYSTEM,
+  })
+  digits: DigitSystem;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

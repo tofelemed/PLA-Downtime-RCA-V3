@@ -14,12 +14,13 @@ export class VerificationStatusCode {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  // Note: Database schema doesn't have 'color' or 'items'
-  // @Column({ type: 'varchar', length: 50 })
-  // color: string;
+  /** Badge colour of the checklist (hex, e.g. `#3B82F6`); rows created before the column have none. */
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  color?: string | null;
 
-  // @Column('simple-array', { nullable: true })
-  // items?: string[];
+  /** Checklist items in display order (the settings form's ordered list of labels). */
+  @Column({ type: 'jsonb', default: () => "'[]'" })
+  items: string[];
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;

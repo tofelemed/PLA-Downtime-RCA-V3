@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { Organization, Tenant, Unit, Asset } from '../services/MasterDataService';
 import { useAuth } from './AuthContext';
 import { loadPlantSelection, savePlantSelection } from './plant-selection-store';
@@ -34,13 +34,18 @@ export const PlantSelectionProvider = ({ children }: { children: ReactNode }) =>
     setLoading(false);
   }, [user, authLoading]);
 
-  const setSelection = (next: PlantSelection | null) => {
-    setSelectionState(next);
-    if (user) savePlantSelection(user, next);
-  };
+  const setSelection = useCallback(
+    (next: PlantSelection | null) => {
+      setSelectionState(next);
+      if (user) savePlantSelection(user, next);
+    },
+    [user],
+  );
+  // stable value: the ~60 consumers re-render only when the selection or loading state changes
+  const value = useMemo(() => ({ selection, setSelection, loading }), [selection, setSelection, loading]);
 
   return (
-    <PlantSelectionContext.Provider value={{ selection, setSelection, loading }}>
+    <PlantSelectionContext.Provider value={value}>
       {children}
     </PlantSelectionContext.Provider>
   );

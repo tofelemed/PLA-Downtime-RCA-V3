@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProductionLoss } from './production-loss.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class ProductionLossService {
@@ -28,20 +29,17 @@ export class ProductionLossService {
   }
 
   async update(id: string, data: Partial<ProductionLoss>): Promise<ProductionLoss | null> {
+    await findOrThrow(this.findOne(id), 'ProductionLoss', id);
     await this.lossRepository.update(id, data);
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'productionLoss', updated);
-    }
+    const updated = await findOrThrow(this.findOne(id), 'ProductionLoss', id);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'productionLoss', updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const loss = await this.findOne(id);
+    await findOrThrow(this.findOne(id), 'ProductionLoss', id);
     await this.lossRepository.delete(id);
-    if (loss) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'productionLoss', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'productionLoss', { id });
   }
 
   findByPlan(planId: string): Promise<ProductionLoss[]> {

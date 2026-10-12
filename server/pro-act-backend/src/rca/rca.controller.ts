@@ -8,6 +8,7 @@ import { CreateRcaDto } from './dto/create-rca.dto';
 import { UpdateRcaDto } from './dto/update-rca.dto';
 import { Ctx } from '../common/context/ctx.decorator';
 import { RequestContext } from '../common/context/request-context';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @ApiTags('RCAs')
 @ApiBearerAuth()
@@ -44,8 +45,8 @@ export class RCAController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Promise<RCA | null> {
-    return this.rcaService.findOne(id);
+  findOne(@Param('id') id: string): Promise<RCA> {
+    return findOrThrow(this.rcaService.findOne(id), 'RCA', id);
   }
 
   @Post()

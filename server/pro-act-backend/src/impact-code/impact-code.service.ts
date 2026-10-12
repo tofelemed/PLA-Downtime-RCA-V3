@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { ImpactCode } from './impact-code.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class ImpactCodeService {
@@ -31,19 +32,16 @@ export class ImpactCodeService {
   }
 
   async update(id: string, data: Partial<ImpactCode>): Promise<ImpactCode | null> {
+    await findOrThrow(this.findOne(id), 'ImpactCode', id);
     await this.impactCodeRepository.update(id, data);
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'impactCode', updated);
-    }
+    const updated = await findOrThrow(this.findOne(id), 'ImpactCode', id);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'impactCode', updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const code = await this.findOne(id);
+    await findOrThrow(this.findOne(id), 'ImpactCode', id);
     await this.impactCodeRepository.delete(id);
-    if (code) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'impactCode', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'impactCode', { id });
   }
 } 

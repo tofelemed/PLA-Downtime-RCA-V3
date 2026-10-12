@@ -84,3 +84,46 @@ describe('route guard inventory', () => {
     ]);
   });
 });
+
+abstract class BaseLibraryController {
+  @Get()
+  list(): void {}
+
+  @Get(':id')
+  get(): void {}
+
+  @Post(':id/retire')
+  retire(): void {}
+}
+
+@Controller({ path: 'library', version: '2' })
+@UseGuards(JwtAuthGuard)
+class LibraryController extends BaseLibraryController {
+  @Get(':id')
+  override get(): void {}
+
+  @Get('extra')
+  extra(): void {}
+}
+
+describe('route guard inventory of inherited routes', () => {
+  const entries = inventoryRoutes([LibraryController]);
+
+  it('lists routes declared on a base controller once per subclass', () => {
+    expect(
+      entries.map(
+        (entry) => `${entry.method} ${entry.path} (${routeKey(entry)})`,
+      ),
+    ).toEqual([
+      'GET /library/:id (LibraryController.get)',
+      'GET /library/extra (LibraryController.extra)',
+      'GET /library (LibraryController.list)',
+      'POST /library/:id/retire (LibraryController.retire)',
+    ]);
+  });
+
+  it('applies the subclass guards and version to inherited routes', () => {
+    expect(entries.every((entry) => entry.guarded)).toBe(true);
+    expect(entries.every((entry) => entry.version === '2')).toBe(true);
+  });
+});

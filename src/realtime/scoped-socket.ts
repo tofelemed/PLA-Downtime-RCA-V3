@@ -15,6 +15,8 @@ export interface ScopedSocketHandlers {
   onNotice(notice: RealtimeNotice): void;
   /** messages may have been missed: refetch the snapshot of these rooms */
   onResync(rooms: string[], reason: ResyncReason): void;
+  /** the socket connected (true) or lost / could not open its connection (false) */
+  onConnectionChange?(connected: boolean): void;
 }
 
 /** Remembers the last `capacity` ids (dedupe across replays and multi-room deliveries). */
@@ -61,10 +63,17 @@ export class ScopedRealtimeClient {
   start(url: string): void {
     if (this.socket) return;
     const socket = this.factory(url, (callback) => callback(this.credentials() ?? {}));
-    socket.on('connect', () => this.subscribe());
+    socket.on('connect', () => {
+      this.handlers.onConnectionChange?.(true);
+      this.subscribe();
+    });
+    socket.on('disconnect', () => this.handlers.onConnectionChange?.(false));
     socket.on('realtime.message', (payload) => this.receive(payload));
     socket.on('realtime.error', (payload) => log.warn('Realtime channel error', payload));
-    socket.on('connect_error', (error) => log.warn('Realtime connection refused', (error as Error)?.message));
+    socket.on('connect_error', (error) => {
+      this.handlers.onConnectionChange?.(false);
+      log.warn('Realtime connection refused', (error as Error)?.message);
+    });
     this.socket = socket;
   }
 

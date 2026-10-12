@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { DashboardConfiguration } from './dashboard-configuration.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 import {
   DashboardConfigApiPayload,
   DashboardConfigApiRecord,
@@ -43,22 +44,19 @@ export class DashboardConfigurationService {
     return record;
   }
 
-  async update(id: string, data: DashboardConfigApiPayload): Promise<DashboardConfigApiRecord | null> {
+  async update(id: string, data: DashboardConfigApiPayload): Promise<DashboardConfigApiRecord> {
     const mapped = fromApiPayload(data);
+    await findOrThrow(this.findOne(id), 'DashboardConfiguration', id);
     await this.configRepository.update(id, mapped);
-    const updated = await this.configRepository.findOne({ where: { id } });
-    if (!updated) return null;
-    const record = toApiRecord(updated);
+    const record = await findOrThrow(this.findOne(id), 'DashboardConfiguration', id);
     this.realtimeGateway.broadcastEntityEvent('Updated', 'dashboardConfiguration', record);
     return record;
   }
 
   async remove(id: string): Promise<void> {
-    const config = await this.configRepository.findOne({ where: { id } });
+    await findOrThrow(this.findOne(id), 'DashboardConfiguration', id);
     await this.configRepository.delete(id);
-    if (config) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'dashboardConfiguration', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'dashboardConfiguration', { id });
   }
 
   findByTenant(tenantId: string): Promise<DashboardConfigApiRecord[]> {

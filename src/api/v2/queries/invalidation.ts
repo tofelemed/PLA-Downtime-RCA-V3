@@ -69,19 +69,25 @@ function overlapPredicate(change: ChangeNotice['window']) {
   };
 }
 
+/** A refetch already running for a query is kept, not restarted (a burst of notices → one request). */
+const KEEP_RUNNING_FETCH = { cancelRefetch: false } as const;
+
 /** Invalidates the cached results a change can affect, one tenant only; returns the resources touched. */
 export async function invalidateForChange(queryClient: QueryClient, notice: ChangeNotice): Promise<readonly V2Resource[] | null> {
   const resources = resourcesFor(notice.entityType);
   if (!resources) {
-    await queryClient.invalidateQueries({ queryKey: v2Keys.all(notice.tenantId) });
+    await queryClient.invalidateQueries({ queryKey: v2Keys.all(notice.tenantId) }, KEEP_RUNNING_FETCH);
     return null;
   }
   await Promise.all(
     resources.map((resource) =>
-      queryClient.invalidateQueries({
-        queryKey: v2Keys.resource(notice.tenantId, resource),
-        predicate: overlapPredicate(notice.window ?? null),
-      }),
+      queryClient.invalidateQueries(
+        {
+          queryKey: v2Keys.resource(notice.tenantId, resource),
+          predicate: overlapPredicate(notice.window ?? null),
+        },
+        KEEP_RUNNING_FETCH,
+      ),
     ),
   );
   return resources;
@@ -89,5 +95,5 @@ export async function invalidateForChange(queryClient: QueryClient, notice: Chan
 
 /** Snapshot refetch after a gap or reconnect: every v2 query of the tenant. */
 export function resyncTenant(queryClient: QueryClient, tenantId: string): Promise<void> {
-  return queryClient.invalidateQueries({ queryKey: v2Keys.all(tenantId) });
+  return queryClient.invalidateQueries({ queryKey: v2Keys.all(tenantId) }, KEEP_RUNNING_FETCH);
 }

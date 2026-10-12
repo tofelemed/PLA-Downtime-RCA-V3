@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { EvidenceCategory } from './evidence-category.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class EvidenceCategoryService {
@@ -38,20 +39,17 @@ export class EvidenceCategoryService {
   }
 
   async update(id: string, data: Partial<EvidenceCategory>): Promise<EvidenceCategory | null> {
+    await findOrThrow(this.findOne(id), 'EvidenceCategory', id);
     await this.categoryRepository.update(id, data);
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'evidenceCategory', updated);
-    }
+    const updated = await findOrThrow(this.findOne(id), 'EvidenceCategory', id);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'evidenceCategory', updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const category = await this.findOne(id);
+    await findOrThrow(this.findOne(id), 'EvidenceCategory', id);
     await this.categoryRepository.delete(id);
-    if (category) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'evidenceCategory', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'evidenceCategory', { id });
   }
 
   findByTenant(tenantId: string): Promise<EvidenceCategory[]> {

@@ -5,6 +5,7 @@ import { UnmappedEventService } from './unmapped-event.service';
 import { UnmappedEvent } from './unmapped-event.entity';
 import { CreateUnmappedEventDto } from './dto/create-unmapped-event.dto';
 import { UpdateUnmappedEventDto } from './dto/update-unmapped-event.dto';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @ApiTags('Unmapped Events')
 @ApiBearerAuth()
@@ -21,8 +22,8 @@ export class UnmappedEventController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Promise<UnmappedEvent | null> {
-    return this.eventService.findOne(id);
+  findOne(@Param('id') id: string): Promise<UnmappedEvent> {
+    return findOrThrow(this.eventService.findOne(id), 'UnmappedEvent', id);
   }
 
   @Post()

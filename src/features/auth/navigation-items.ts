@@ -1,96 +1,123 @@
-import type { LucideIcon } from 'lucide-react';
-import {
-  Activity,
-  AlertTriangle,
-  BarChart3,
-  Calendar,
-  CheckSquare,
-  Code,
-  Coins,
-  Database,
-  FileText,
-  Lock,
-  Settings,
-  Shield,
-  TrendingDown,
-  UserCog,
-  Users,
-} from 'lucide-react';
+import { EntityIcon, type AppIcon } from '@/lib/icons';
 import type { FeatureFlagKey } from '@/api/v2/types/flags';
 import type { Capabilities, CapabilityKey } from './capabilities';
+
+/** Sidebar sections, in display order (docs/UI_UX_AUDIT.md §1). */
+export type NavSectionKey = 'overview' | 'production' | 'reliability' | 'integration' | 'administration';
+
+export interface NavSection {
+  key: NavSectionKey;
+  label: string;
+  icon: AppIcon;
+}
+
+export const NAV_SECTIONS: readonly NavSection[] = [
+  { key: 'overview', label: 'Overview', icon: EntityIcon.dashboard },
+  { key: 'production', label: 'Production', icon: EntityIcon.plant },
+  { key: 'reliability', label: 'Reliability', icon: EntityIcon.rcaCase },
+  { key: 'integration', label: 'Integration', icon: EntityIcon.integration },
+  { key: 'administration', label: 'Administration', icon: EntityIcon.administration },
+];
 
 export interface NavigationItem {
   name: string;
   href: string;
-  icon: LucideIcon;
+  icon: AppIcon;
+  section: NavSectionKey;
   /** the capability (of the selected plant) that lists the item */
   capability: CapabilityKey;
   description: string;
   /** listed only while the flag is on for the plant */
   flag?: FeatureFlagKey;
+  /** other path prefixes that belong to this item (e.g. `/plans/` sub-pages of Production Plans) */
+  activeAlso?: readonly string[];
 }
 
+const DEV_ITEMS: readonly NavigationItem[] = import.meta.env.DEV
+  ? [
+      // legacy demo seeding: development builds only (plan 3.1 step 7, decision A4)
+      {
+        name: 'Data Seeding',
+        href: '/data-seeding',
+        icon: EntityIcon.dataSource,
+        section: 'administration',
+        capability: 'canAdministerTenant',
+        description: 'Manage test data for PLA and RCA',
+      },
+    ]
+  : [];
+
 /**
- * The sidebar, in order. Each entry names the capability that shows it, so a scope role (e.g.
- * `master_data_admin`, `integration_admin`, `viewer`) reaches the same screens its API rights cover.
+ * The sidebar, section by section and in order. Each entry names the capability that shows it, so a
+ * scope role (e.g. `master_data_admin`, `integration_admin`, `viewer`) reaches the same screens its API
+ * rights cover. Every item has its own icon from the registry (`src/lib/icons.ts`).
  */
 export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: BarChart3, capability: 'canViewOperations', description: 'View analytics and quick stats' },
-  { name: 'Reports', href: '/reports', icon: BarChart3, capability: 'canViewAnalysis', description: 'OEE, loss, RCA, audit, and task reports' },
-  { name: 'Production Loss Analysis', href: '/pla-analytics', icon: BarChart3, capability: 'canViewOperations', description: 'Deep-dive production loss analytics' },
-  { name: 'Production Plans', href: '/production-plans', icon: Calendar, capability: 'canViewAnalysis', description: 'Manage and review production plans' },
-  {
-    name: 'Plans, Profiles & Calendars',
-    href: '/planning',
-    icon: Calendar,
-    capability: 'canViewAnalysis',
-    description: 'Versioned plans, production profiles and calendars (v2)',
-    flag: 'v2.plansProfilesCalendars',
-  },
-  { name: 'Event Hub', href: '/events', icon: AlertTriangle, capability: 'canViewOperations', description: 'Monitor and analyze events' },
+  { name: 'Dashboard', href: '/dashboard', icon: EntityIcon.dashboard, section: 'overview', capability: 'canViewOperations', description: 'Key figures of the selected plant' },
+  { name: 'Reports', href: '/reports', icon: EntityIcon.report, section: 'overview', capability: 'canViewAnalysis', description: 'OEE, loss, downtime and reconciliation reports' },
+  { name: 'Event Hub', href: '/events', icon: EntityIcon.event, section: 'production', capability: 'canViewOperations', description: 'Stops and production events' },
   {
     name: 'Downtime Analysis',
     href: '/downtime',
-    icon: TrendingDown,
+    icon: EntityIcon.downtime,
+    section: 'production',
     capability: 'canViewOperations',
-    description: 'What is down, why, how often and where (v2)',
-    // UX01 entry point of the plan 3.3 screen: listed only while its flag is on for the plant
+    description: 'What is down, why, how often and where',
     flag: 'v2.downtimeAnalysis',
   },
-  { name: 'RCA Analysis', href: '/rca', icon: FileText, capability: 'canViewAnalysis', description: 'Root Cause Analysis investigations' },
-  { name: 'Knowledge Base', href: '/rca-knowledge-base', icon: Database, capability: 'canViewAnalysis', description: 'Closed RCAs & lessons learned' },
-  { name: 'Master Data', href: '/master-data', icon: Code, capability: 'canManageMasterData', description: 'Configure master data' },
+  { name: 'Production Loss Analysis', href: '/pla-analytics', icon: EntityIcon.lossAnalysis, section: 'production', capability: 'canViewOperations', description: 'Where production is lost and why' },
+  {
+    name: 'Production Plans',
+    href: '/production-plans',
+    icon: EntityIcon.plan,
+    section: 'production',
+    capability: 'canViewAnalysis',
+    description: 'Plans and their period accounting',
+    activeAlso: ['/plans/'],
+  },
+  {
+    name: 'Plans, Profiles & Calendars',
+    href: '/planning',
+    icon: EntityIcon.planning,
+    section: 'production',
+    capability: 'canViewAnalysis',
+    description: 'Versioned plans, production profiles and calendars',
+    flag: 'v2.plansProfilesCalendars',
+  },
+  { name: 'RCA Analysis', href: '/rca', icon: EntityIcon.rcaCase, section: 'reliability', capability: 'canViewAnalysis', description: 'Root cause investigations' },
+  { name: 'Knowledge Base', href: '/rca-knowledge-base', icon: EntityIcon.knowledge, section: 'reliability', capability: 'canViewAnalysis', description: 'Closed investigations and lessons learned' },
+  { name: 'Tasks', href: '/tasks', icon: EntityIcon.task, section: 'reliability', capability: 'canViewOperations', description: 'Assign and track action items' },
+  { name: 'Connectivity', href: '/connectivity', icon: EntityIcon.connection, section: 'integration', capability: 'canUseIntegrationConsole', description: 'Connections, ingestion jobs and mappings' },
+  // same gate as the page (EnhancedHistorian.tsx: canUseIntegrationConsole)
+  { name: 'Enhanced Historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canUseIntegrationConsole', description: 'Time series of plant signals' },
+  { name: 'Master Data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canManageMasterData', description: 'Plant hierarchy, units, assets and products' },
   {
     name: 'Codes & Rules',
     href: '/codes-admin',
-    icon: Code,
+    icon: EntityIcon.code,
+    section: 'administration',
     capability: 'canViewAnalysis',
-    description: 'Versioned code libraries and declarative rules (v2)',
+    description: 'Code libraries and status rules',
     flag: 'v2.codesAdmin',
   },
   {
     name: 'Finance',
     href: '/finance',
-    icon: Coins,
+    icon: EntityIcon.finance,
+    section: 'administration',
     capability: 'canViewAnalysis',
-    description: 'Valuation policy approval and FX rates (v2)',
+    description: 'Valuation policy and exchange rates',
     // plan 2.6 finance screens: part of the v2 admin area, listed only while its flag is on
     flag: 'v2.codesAdmin',
   },
-  { name: 'User Management', href: '/users', icon: Users, capability: 'canAdministerTenant', description: 'Manage users and access' },
+  { name: 'User Management', href: '/users', icon: EntityIcon.team, section: 'administration', capability: 'canAdministerTenant', description: 'Users and their access' },
+  { name: 'Permissions', href: '/permissions', icon: EntityIcon.permission, section: 'administration', capability: 'canAdministerTenant', description: 'Roles and permissions' },
   // the page's gate: TenantAdmin gets the plant-level tabs, the application-wide ones stay SuperAdmin-only
-  { name: 'Admin Panel', href: '/admin', icon: UserCog, capability: 'canUseAdminPanel', description: 'Admin tools and settings' },
-  { name: 'Permissions', href: '/permissions', icon: Lock, capability: 'canAdministerTenant', description: 'Set permissions and roles' },
-  { name: 'Connectivity', href: '/connectivity', icon: Activity, capability: 'canUseIntegrationConsole', description: 'System connectivity status' },
-  // same gate as the page (EnhancedHistorian.tsx: canUseIntegrationConsole)
-  { name: 'Enhanced Historian', href: '/enhanced-historian', icon: Database, capability: 'canUseIntegrationConsole', description: 'Multi-attribute time series analysis' },
-  { name: 'Tasks', href: '/tasks', icon: CheckSquare, capability: 'canViewOperations', description: 'Assign and track action items' },
-  { name: 'Audit Logs', href: '/audit', icon: Shield, capability: 'canViewAuditLogs', description: 'View audit logs' },
-  { name: 'Settings', href: '/settings', icon: Settings, capability: 'canAdministerTenant', description: 'System settings' },
-  // legacy demo seeding: development builds only (plan 3.1 step 7, decision A4)
-  ...(import.meta.env.DEV
-    ? [{ name: 'Data Seeding', href: '/data-seeding', icon: Database, capability: 'canAdministerTenant' as const, description: 'Manage test data for PLA and RCA' }]
-    : []),
+  { name: 'Admin Panel', href: '/admin', icon: EntityIcon.admin, section: 'administration', capability: 'canUseAdminPanel', description: 'Administration tools' },
+  { name: 'Audit Logs', href: '/audit', icon: EntityIcon.audit, section: 'administration', capability: 'canViewAuditLogs', description: 'Who changed what, and when' },
+  // the server's tenant-setting write rule (TenantAdmin / manager_approver in the plant, SuperAdmin)
+  { name: 'Settings', href: '/settings', icon: EntityIcon.settings, section: 'administration', capability: 'canManagePlantSettings', description: 'Plant settings: calendar and number display' },
+  ...DEV_ITEMS,
 ];
 
 /** The items the user sees: capability held in the selected plant and, when flagged, the flag on. */
@@ -101,3 +128,29 @@ export function visibleNavigationItems(
 ): NavigationItem[] {
   return items.filter((item) => capabilities[item.capability] && (!item.flag || flagsOn[item.flag] === true));
 }
+
+export interface NavGroup {
+  section: NavSection;
+  items: NavigationItem[];
+}
+
+/** Visible items grouped by section, in section order; sections without a visible item are dropped. */
+export function groupNavigationItems(items: readonly NavigationItem[], sections: readonly NavSection[] = NAV_SECTIONS): NavGroup[] {
+  return sections
+    .map((section) => ({ section, items: items.filter((item) => item.section === section.key) }))
+    .filter((group) => group.items.length > 0);
+}
+
+/**
+ * Whether `pathname` belongs to the item: the path itself or a sub-path (`/rca/cases/1` is RCA, but
+ * `/rca-knowledge-base` is not), plus the item's `activeAlso` prefixes.
+ */
+export function isNavItemActive(item: Pick<NavigationItem, 'href' | 'activeAlso'>, pathname: string): boolean {
+  if (pathname === item.href || pathname.startsWith(`${item.href}/`)) return true;
+  return (item.activeAlso ?? []).some((prefix) => pathname.startsWith(prefix));
+}
+
+/** The flags the menu depends on (every `flag` named by an item). */
+export const NAVIGATION_FLAGS: readonly FeatureFlagKey[] = [
+  ...new Set(NAVIGATION_ITEMS.flatMap((item) => (item.flag ? [item.flag] : []))),
+];

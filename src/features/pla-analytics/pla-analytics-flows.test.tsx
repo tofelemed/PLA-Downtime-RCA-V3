@@ -61,7 +61,7 @@ describe('PLA analytics data flows (plan 3.6)', () => {
     expect(tree?.searchParams.get('metric')).toBe('margin');
   });
 
-  it('a refused report tile shows the server code and message, not "The request failed."', async () => {
+  it('a refused report tile explains the refusal in plain language, not "The request failed."', async () => {
     const refusal = { code: 'UOM_MIXED', message: 'the periods are measured in different units', correlationId: 'corr-422', retryable: false };
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(refusal), { status: 422, headers: { 'Content-Type': 'application/json' } })));
     function Tile() {
@@ -73,10 +73,10 @@ describe('PLA analytics data flows (plan 3.6)', () => {
       );
     }
     render(<Tile />, { wrapper });
-    const alert = await screen.findByText('Refused (UOM_MIXED)');
+    const alert = await screen.findByText('Different units of measure cannot be added up');
     expect(alert.closest('[data-state="error"]')?.getAttribute('data-code')).toBe('UOM_MIXED');
-    expect(screen.getByText('the periods are measured in different units')).toBeTruthy();
-    expect(screen.getByText('Reference: corr-422')).toBeTruthy();
+    expect(screen.queryByText(/UOM_MIXED|corr-422/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Copy support reference' })).toBeTruthy();
     expect(screen.queryByText('The request failed.')).toBeNull();
     expect(screen.queryByText('figures')).toBeNull();
   });

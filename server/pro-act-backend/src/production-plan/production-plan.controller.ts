@@ -8,6 +8,7 @@ import { CreateProductionPlanDto } from './dto/create-production-plan.dto';
 import { UpdateProductionPlanDto } from './dto/update-production-plan.dto';
 import { Ctx } from '../common/context/ctx.decorator';
 import { RequestContext } from '../common/context/request-context';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @ApiTags('Production Plans')
 @ApiBearerAuth()
@@ -32,8 +33,8 @@ export class ProductionPlanController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Promise<ProductionPlan | null> {
-    return this.planService.findOne(id);
+  findOne(@Param('id') id: string): Promise<ProductionPlan> {
+    return findOrThrow(this.planService.findOne(id), 'ProductionPlan', id);
   }
 
   @Post()

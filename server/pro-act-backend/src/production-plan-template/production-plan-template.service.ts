@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { ProductionPlanTemplate } from './production-plan-template.entity';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class ProductionPlanTemplateService {
@@ -32,12 +33,14 @@ export class ProductionPlanTemplateService {
     return this.templateRepository.save(template);
   }
 
-  async update(id: string, data: Partial<ProductionPlanTemplate>): Promise<ProductionPlanTemplate | null> {
+  async update(id: string, data: Partial<ProductionPlanTemplate>): Promise<ProductionPlanTemplate> {
+    await findOrThrow(this.findOne(id), 'ProductionPlanTemplate', id);
     await this.templateRepository.update(id, data);
-    return this.findOne(id);
+    return findOrThrow(this.findOne(id), 'ProductionPlanTemplate', id);
   }
 
   async remove(id: string): Promise<void> {
+    await findOrThrow(this.findOne(id), 'ProductionPlanTemplate', id);
     await this.templateRepository.delete(id);
   }
 

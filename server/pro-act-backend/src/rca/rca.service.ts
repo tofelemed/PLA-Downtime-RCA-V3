@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { Repository } from 'typeorm';
 import { RCA } from './rca.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 /** v1 body: arrays of the JSON text columns are serialized (3.9: the DTO accepts text or arrays). */
 export type RcaWriteBody = Omit<Partial<RCA>, 'recommendations' | 'evidence' | 'logicTree'> & {
@@ -66,23 +67,20 @@ export class RCAService {
 
   async update(id: string, data: RcaWriteBody): Promise<RCA | null> {
     // v1 writes move row_version too, so a v2 If-Match sees them (plan 3.9)
+    await findOrThrow(this.findOne(id), 'RCA', id);
     await this.rcaRepository.update(id, {
       ...normalizeRcaPayload(data),
       rowVersion: () => '"row_version" + 1',
     });
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'rca', updated);
-    }
+    const updated = await findOrThrow(this.findOne(id), 'RCA', id);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'rca', updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const rca = await this.findOne(id);
+    await findOrThrow(this.findOne(id), 'RCA', id);
     await this.rcaRepository.delete(id);
-    if (rca) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'rca', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'rca', { id });
   }
 
   findByStatus(status: string): Promise<RCA[]> {

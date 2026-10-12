@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Unit } from './unit.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class UnitService {
@@ -31,19 +32,16 @@ export class UnitService {
   }
 
   async update(id: string, data: Partial<Unit>): Promise<Unit | null> {
+    await findOrThrow(this.findOne(id), 'Unit', id);
     await this.unitRepository.update(id, data);
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'unit', updated);
-    }
+    const updated = await findOrThrow(this.findOne(id), 'Unit', id);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'unit', updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const unit = await this.findOne(id);
+    await findOrThrow(this.findOne(id), 'Unit', id);
     await this.unitRepository.delete(id);
-    if (unit) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'unit', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'unit', { id });
   }
 } 

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { OEECode } from './oee-code.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class OEECodeService {
@@ -31,19 +32,16 @@ export class OEECodeService {
   }
 
   async update(id: string, data: Partial<OEECode>): Promise<OEECode | null> {
+    await findOrThrow(this.findOne(id), 'OEECode', id);
     await this.oeeCodeRepository.update(id, data);
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'oeeCode', updated);
-    }
+    const updated = await findOrThrow(this.findOne(id), 'OEECode', id);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'oeeCode', updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const code = await this.findOne(id);
+    await findOrThrow(this.findOne(id), 'OEECode', id);
     await this.oeeCodeRepository.delete(id);
-    if (code) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'oeeCode', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'oeeCode', { id });
   }
 } 

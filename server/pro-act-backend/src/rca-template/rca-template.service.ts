@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { RCATemplate } from './rca-template.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class RCATemplateService {
@@ -49,20 +50,17 @@ export class RCATemplateService {
       ...(data.logicTreeStructure !== undefined && { logicTreeStructure: data.logicTreeStructure ?? null }),
       // ...(data.verificationChecklist !== undefined && { verificationChecklist: data.verificationChecklist ?? [] }),
     };
+    await findOrThrow(this.findOne(id), 'RCATemplate', id);
     await this.templateRepository.update(id, updatePayload);
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'rcaTemplate', updated);
-    }
+    const updated = await findOrThrow(this.findOne(id), 'RCATemplate', id);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'rcaTemplate', updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const template = await this.findOne(id);
+    await findOrThrow(this.findOne(id), 'RCATemplate', id);
     await this.templateRepository.delete(id);
-    if (template) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'rcaTemplate', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'rcaTemplate', { id });
   }
 
   findByTenant(tenantId: string): Promise<RCATemplate[]> {

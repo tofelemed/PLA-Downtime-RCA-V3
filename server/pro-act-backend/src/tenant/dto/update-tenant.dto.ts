@@ -1,5 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsEmail, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsEmail,
+  IsUUID,
+  IsIn,
+} from 'class-validator';
+import {
+  CALENDAR_SYSTEMS,
+  CalendarSystem,
+  DIGIT_SYSTEMS,
+  DigitSystem,
+} from '../tenant-display-settings';
 
 export class UpdateTenantDto {
   @ApiProperty({ required: false })
@@ -51,4 +64,14 @@ export class UpdateTenantDto {
   @IsString()
   @IsOptional()
   timezone?: string;
+
+  @ApiProperty({ required: false, enum: CALENDAR_SYSTEMS })
+  @IsOptional()
+  @IsIn(CALENDAR_SYSTEMS)
+  calendarSystem?: CalendarSystem;
+
+  @ApiProperty({ required: false, enum: DIGIT_SYSTEMS })
+  @IsOptional()
+  @IsIn(DIGIT_SYSTEMS)
+  digits?: DigitSystem;
 } 

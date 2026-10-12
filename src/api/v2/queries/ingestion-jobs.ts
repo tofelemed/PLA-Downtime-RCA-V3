@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { BodyOf } from '../schema-types';
-import type { IngestionJobView, JobAction, JobTransitionView } from '../types/integrations';
+import type { IngestionJobView, JobAction, JobState, JobTransitionView } from '../types/integrations';
 import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
@@ -10,8 +10,16 @@ import { useV2TenantId } from './use-v2-tenant';
 
 export type JobCreateBody = BodyOf<'/api/v2/connections/{id}/jobs', 'post'>;
 
-/** Live job state (lease, heartbeat, cursor, health) is polled while the panel is open. */
+/** Live job state (lease, heartbeat, cursor, health) is polled while a job is active and the tab visible. */
 export const JOB_POLL_MS = 5_000;
+
+/** States whose lease / heartbeat / cursor move on their own; every other state changes only by a command. */
+const ACTIVE_JOB_STATES: ReadonlySet<string> = new Set<JobState>(['running', 'draining']);
+
+/** Poll interval for a set of job states: only while one is active (commands and realtime refresh the rest). */
+export function jobPollInterval(states: ReadonlyArray<string | null | undefined>): number | false {
+  return states.some((state) => state && ACTIVE_JOB_STATES.has(state)) ? JOB_POLL_MS : false;
+}
 
 /** Ingestion jobs of one connection, oldest first (plan 1.5, ING02). */
 export function useIngestionJobs(connectionId: string) {
@@ -20,7 +28,7 @@ export function useIngestionJobs(connectionId: string) {
     path: '/ingestion-jobs',
     query: { connectionId, limit: 100 },
     key: { filters: { connectionId } },
-    refetchInterval: JOB_POLL_MS,
+    refetchInterval: (pages) => jobPollInterval(flattenPages(pages).map((job) => job.state)),
   });
   return { ...list, items: flattenPages(list.data?.pages) };
 }
@@ -28,11 +36,13 @@ export function useIngestionJobs(connectionId: string) {
 /** Audit trail of a job (commands, lease take-overs, drained, failed), oldest first. */
 export function useJobTransitions(jobId: string | null) {
   const tenantId = useV2TenantId();
-  return useQuery({
+  return useQuery<JobTransitionView[]>({
     queryKey: v2Keys.detail(tenantId ?? '-', 'ingestion-jobs', jobId ?? '-', 'transitions'),
     enabled: Boolean(tenantId && jobId),
     staleTime: STALE_TIME['ingestion-jobs'],
-    refetchInterval: JOB_POLL_MS,
+    // the last transition says where the job is; stopped / failed / paused jobs never poll
+    refetchInterval: (query) => jobPollInterval([query.state.data?.at(-1)?.toState]),
+    refetchIntervalInBackground: false,
     queryFn: async ({ signal }) =>
       (await v2.get<JobTransitionView[], '/api/v2/ingestion-jobs/{id}/transitions'>('/api/v2/ingestion-jobs/{id}/transitions', {
         path: { id: jobId as string },

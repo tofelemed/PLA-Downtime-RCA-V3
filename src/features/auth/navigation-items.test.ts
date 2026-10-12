@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FeatureFlagKey } from '@/api/v2/types/flags';
 import { capabilitiesOf } from './capabilities';
 import { effectiveRoles, type RoleSubject } from './effective-roles';
-import { NAVIGATION_ITEMS, visibleNavigationItems } from './navigation-items';
+import { groupNavigationItems, isNavItemActive, NAV_SECTIONS, NAVIGATION_ITEMS, visibleNavigationItems } from './navigation-items';
 
 /**
  * The menu of each legacy demo user in its home plant (one legacy-role list per item): the menu
@@ -13,26 +13,32 @@ const ALL = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager', 'Analyst', 'Eng
 const NOT_OPERATOR = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager', 'Analyst', 'Engineer'];
 const ADMINS = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin'];
 const PREVIOUS_MENU: Record<string, string[]> = {
+  // Overview
   Dashboard: ALL,
   Reports: NOT_OPERATOR,
+  // Production
+  'Event Hub': ALL,
+  'Downtime Analysis': ALL,
   'Production Loss Analysis': ALL,
   'Production Plans': NOT_OPERATOR,
   'Plans, Profiles & Calendars': NOT_OPERATOR,
-  'Event Hub': ALL,
-  'Downtime Analysis': ALL,
+  // Reliability
   'RCA Analysis': NOT_OPERATOR,
   'Knowledge Base': NOT_OPERATOR,
+  Tasks: ALL,
+  // Integration
+  Connectivity: ADMINS,
+  'Enhanced Historian': ADMINS,
+  // Administration
   'Master Data': ADMINS,
   'Codes & Rules': NOT_OPERATOR,
   Finance: NOT_OPERATOR,
   'User Management': ADMINS,
-  'Admin Panel': ['SuperAdmin', 'TenantAdmin'],
   Permissions: ADMINS,
-  Connectivity: ADMINS,
-  'Enhanced Historian': ADMINS,
-  Tasks: ALL,
+  'Admin Panel': ['SuperAdmin', 'TenantAdmin'],
   'Audit Logs': ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager'],
-  Settings: ADMINS,
+  // plant settings follow the server's tenant-setting write rule (TenantAdmin / manager_approver)
+  Settings: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager'],
   'Data Seeding': ADMINS,
 };
 
@@ -49,7 +55,7 @@ const menuFor = (user: RoleSubject, tenantId: string | null = HOME) =>
   visibleNavigationItems(capabilitiesOf(effectiveRoles(user, { tenantId })), FLAGS_ON).map((item) => item.name);
 
 describe('navigation items by capability', () => {
-  it('every item is still listed, in the same order', () => {
+  it('every item is still listed, in section order', () => {
     expect(NAVIGATION_ITEMS.map((item) => item.name)).toEqual(Object.keys(PREVIOUS_MENU));
   });
 
@@ -119,6 +125,48 @@ describe('navigation items by capability', () => {
     expect(menuFor(grace, HOME)).toEqual(menuFor(legacyUser('Engineer')));
     expect(menuFor(grace, 'plant-demo-2')).toEqual(menuFor(legacyUser('Operator')));
     expect(menuFor(grace, 'plant-partner')).toEqual([]);
+  });
+});
+
+describe('navigation sections', () => {
+  const sectionsOf = (role: string) =>
+    groupNavigationItems(visibleNavigationItems(capabilitiesOf(effectiveRoles(legacyUser(role), { tenantId: HOME })), FLAGS_ON)).map(
+      (group) => group.section.key,
+    );
+
+  it('every item belongs to a known section and items are listed section by section', () => {
+    const keys = NAV_SECTIONS.map((section) => section.key);
+    const positions = NAVIGATION_ITEMS.map((item) => keys.indexOf(item.section));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+  });
+
+  it('every item has its own icon', () => {
+    expect(new Set(NAVIGATION_ITEMS.map((item) => item.icon)).size).toBe(NAVIGATION_ITEMS.length);
+  });
+
+  it.each([
+    ['SuperAdmin', ['overview', 'production', 'reliability', 'integration', 'administration']],
+    ['TenantAdmin', ['overview', 'production', 'reliability', 'integration', 'administration']],
+    ['Manager', ['overview', 'production', 'reliability', 'administration']],
+    ['Engineer', ['overview', 'production', 'reliability', 'administration']],
+    ['Operator', ['overview', 'production', 'reliability']],
+  ])('a %s sees only the sections that hold one of its items', (role, sections) => {
+    expect(sectionsOf(role)).toEqual(sections);
+  });
+
+  it('a viewer in a plant where it has no role sees no section at all', () => {
+    expect(groupNavigationItems(visibleNavigationItems(capabilitiesOf([]), FLAGS_ON))).toEqual([]);
+  });
+
+  it('active item: own path and sub-paths only, plus activeAlso prefixes', () => {
+    const byHref = (href: string) => NAVIGATION_ITEMS.find((item) => item.href === href)!;
+    expect(isNavItemActive(byHref('/rca'), '/rca')).toBe(true);
+    expect(isNavItemActive(byHref('/rca'), '/rca/cases/1')).toBe(true);
+    expect(isNavItemActive(byHref('/rca'), '/rca-knowledge-base')).toBe(false);
+    expect(isNavItemActive(byHref('/rca-knowledge-base'), '/rca-knowledge-base')).toBe(true);
+    expect(isNavItemActive(byHref('/production-plans'), '/plans/p1/periods/x')).toBe(true);
+    expect(isNavItemActive(byHref('/planning'), '/plans/p1')).toBe(false);
   });
 });
 

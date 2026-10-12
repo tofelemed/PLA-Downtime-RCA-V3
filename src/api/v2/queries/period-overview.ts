@@ -13,8 +13,10 @@ import type {
 } from '../types/period-overview';
 import type { PlanView } from '../types/plans';
 import type { ApprovalActionView, ChangeProposalView, ReconciliationView } from '../types/reconciliation';
+import { sameEntityQuery, sameTenantQuery } from './placeholder';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
+import { stabilizeWindowParams } from './time-window';
 import { useV2InfiniteList } from './use-v2-list';
 import { useV2TenantId } from './use-v2-tenant';
 
@@ -41,10 +43,12 @@ export function usePeriodSummaries(filters: PeriodGridFilters | null, tz?: strin
 /** One v2 GET of the period-accounting family, cached per tenant, period and variant. */
 function usePeriodRead<T>(periodId: string | null, variant: string, path: string, query?: QueryParams) {
   const tenantId = useV2TenantId();
-  return useQuery({
+  return useQuery<T>({
     queryKey: v2Keys.detail(tenantId ?? '-', 'period-accounting', periodId ?? '-', variant),
     enabled: Boolean(tenantId && periodId),
     staleTime: STALE_TIME['period-accounting'],
+    // a view toggle of the same period keeps the previous view on screen; another period never does
+    placeholderData: (previous, previousQuery) => (sameEntityQuery(tenantId, periodId, previousQuery) ? previous : undefined),
     queryFn: async ({ signal }) => (await v2Request<T>({ method: 'GET', path, query, signal })).data,
   });
 }
@@ -65,10 +69,11 @@ export function useChangeProposals(periodId: string | null) {
 /** Ledger waterfall of the periods (server bars with start / end that close to actual). */
 export function useWaterfall(periodIds: string[], ledger: LedgerKind, view: RevisionSelector) {
   const tenantId = useV2TenantId();
-  return useQuery({
+  return useQuery<WaterfallView>({
     queryKey: v2Keys.list(tenantId ?? '-', 'period-accounting', { filters: { kind: 'waterfall', periodIds: [...periodIds].sort() }, ledger, revisionSelector: view }),
     enabled: Boolean(tenantId && periodIds.length),
     staleTime: STALE_TIME['period-accounting'],
+    placeholderData: (previous, previousQuery) => (sameTenantQuery(tenantId, previousQuery) ? previous : undefined),
     queryFn: async ({ signal }) =>
       (await v2Request<WaterfallView>({ method: 'GET', path: '/reports/waterfall', query: { periodIds, ledger, view }, signal })).data,
   });
@@ -85,7 +90,7 @@ export interface LossValueQuery {
 /** Loss value of a window (2.6 report): per kind and reporting currency, with valuation status and reasons. */
 export function useLossValue(query: LossValueQuery | null) {
   const tenantId = useV2TenantId();
-  return useQuery({
+  return useQuery<AnalyticsResponse<LossValueReportView>>({
     queryKey: v2Keys.list(tenantId ?? '-', 'reports', {
       scope: { unitIds: query?.unitIds },
       window: { from: query?.from, to: query?.to },
@@ -94,11 +99,13 @@ export function useLossValue(query: LossValueQuery | null) {
     }),
     enabled: Boolean(tenantId && query),
     staleTime: STALE_TIME.reports,
+    refetchOnWindowFocus: false,
+    placeholderData: (previous, previousQuery) => (query && sameTenantQuery(tenantId, previousQuery) ? previous : undefined),
     queryFn: async ({ signal }) =>
       (await v2Request<AnalyticsResponse<LossValueReportView>>({
         method: 'GET',
         path: '/reports/loss-value',
-        query: { ...(query as LossValueQuery), groupBy: 'kind' } as unknown as QueryParams,
+        query: { ...stabilizeWindowParams(query as LossValueQuery), groupBy: 'kind' } as unknown as QueryParams,
         signal,
       })).data,
   });

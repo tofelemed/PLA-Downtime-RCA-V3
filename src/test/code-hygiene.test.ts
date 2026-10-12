@@ -30,7 +30,7 @@ const INDEXEDDB_ALLOWLIST = new Set([
 /** Files using Math.random today (fabricated data, ids); 3.2–3.9 remove them per screen. */
 const MATH_RANDOM_FILE_LIMIT = 35;
 
-const NEW_CODE = ['api/', 'app/', 'features/', 'realtime/', 'lib/logger.ts', 'lib/lazy-named.ts', 'dev/'];
+const NEW_CODE = ['api/', 'app/', 'features/', 'realtime/', 'lib/logger.ts', 'lib/icons.ts', 'lib/lazy-with-preload.ts', 'lib/dates/', 'dev/'];
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

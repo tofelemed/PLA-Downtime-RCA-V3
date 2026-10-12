@@ -1,6 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, In, Repository } from 'typeorm';
+import { canWriteSetting } from '../app-settings/app-settings-access.policy';
+import { UpdateTenantDisplaySettingsDto } from './dto/update-tenant-display-settings.dto';
 import { randomUUID } from 'crypto';
 import { Tenant } from './tenant.entity';
 import { RealtimeGateway } from '../realtime.gateway';
@@ -74,6 +80,39 @@ export class TenantService {
     if (updated) {
       this.realtimeGateway.broadcastEntityEvent('Updated', 'tenant', updated);
     }
+    return updated;
+  }
+
+  /**
+   * Calendar and digit display of one tenant. Same rule as a tenant-owned app setting: SuperAdmin,
+   * or a TenantAdmin / manager approver acting in that tenant. Only these two columns change.
+   */
+  async updateDisplaySettings(
+    caller: RequestContext,
+    id: string,
+    dto: UpdateTenantDisplaySettingsDto,
+  ): Promise<Tenant> {
+    const tenant = await this.findOneVisible(caller, id);
+    if (!tenant) {
+      throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
+    }
+    if (!canWriteSetting({ tenantId: tenant.id, userId: null }, caller)) {
+      throw new ForbiddenException({
+        code: 'FORBIDDEN_ROLE',
+        message:
+          'Only a plant administrator or a manager approver of this plant can change its display settings',
+      });
+    }
+    const changes: Partial<Tenant> = {};
+    if (dto.calendarSystem) changes.calendarSystem = dto.calendarSystem;
+    if (dto.digits) changes.digits = dto.digits;
+    if (!Object.keys(changes).length) return tenant;
+    await this.tenantRepository.update(tenant.id, changes);
+    const updated = (await this.findOne(tenant.id)) ?? {
+      ...tenant,
+      ...changes,
+    };
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'tenant', updated);
     return updated;
   }
 

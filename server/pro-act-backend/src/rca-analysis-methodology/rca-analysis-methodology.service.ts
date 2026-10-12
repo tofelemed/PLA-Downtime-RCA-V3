@@ -20,6 +20,7 @@ import { UpdateBarrierAnalysisDto } from './dto/update-barrier-analysis.dto';
 import { RcaChangeAnalysis } from './entities/change-analysis.entity';
 import { CreateChangeAnalysisDto } from './dto/create-change-analysis.dto';
 import { UpdateChangeAnalysisDto } from './dto/update-change-analysis.dto';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class RCAAnalysisMethodologyService {
@@ -79,6 +80,11 @@ export class RCAAnalysisMethodologyService {
   }
 
   async deleteFiveWhy(id: string): Promise<void> {
+    await findOrThrow(
+      this.fiveWhyRepository.findOneBy({ id }),
+      'FiveWhyAnalysis',
+      id,
+    );
     await this.fiveWhyRepository.delete(id);
   }
 
@@ -113,6 +119,11 @@ export class RCAAnalysisMethodologyService {
   }
 
   async deleteFishbone(id: string): Promise<void> {
+    await findOrThrow(
+      this.fishboneRepository.findOneBy({ id }),
+      'FishboneDiagram',
+      id,
+    );
     await this.fishboneRepository.delete(id);
   }
 
@@ -149,6 +160,11 @@ export class RCAAnalysisMethodologyService {
   }
 
   async deleteFmea(id: string): Promise<void> {
+    await findOrThrow(
+      this.fmeaRepository.findOneBy({ id }),
+      'FmeaAnalysis',
+      id,
+    );
     await this.fmeaRepository.delete(id);
   }
 
@@ -185,6 +201,11 @@ export class RCAAnalysisMethodologyService {
   }
 
   async deleteFaultTree(id: string): Promise<void> {
+    await findOrThrow(
+      this.faultTreeRepository.findOneBy({ id }),
+      'FaultTreeAnalysis',
+      id,
+    );
     await this.faultTreeRepository.delete(id);
   }
 
@@ -219,6 +240,11 @@ export class RCAAnalysisMethodologyService {
   }
 
   async deleteBarrier(id: string): Promise<void> {
+    await findOrThrow(
+      this.barrierRepository.findOneBy({ id }),
+      'BarrierAnalysis',
+      id,
+    );
     await this.barrierRepository.delete(id);
   }
 
@@ -253,6 +279,11 @@ export class RCAAnalysisMethodologyService {
   }
 
   async deleteChange(id: string): Promise<void> {
+    await findOrThrow(
+      this.changeRepository.findOneBy({ id }),
+      'ChangeAnalysis',
+      id,
+    );
     await this.changeRepository.delete(id);
   }
 }

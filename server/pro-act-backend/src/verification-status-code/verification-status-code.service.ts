@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { VerificationStatusCode } from './verification-status-code.entity';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class VerificationStatusCodeService {
@@ -31,19 +32,16 @@ export class VerificationStatusCodeService {
   }
 
   async update(id: string, data: Partial<VerificationStatusCode>): Promise<VerificationStatusCode | null> {
+    await findOrThrow(this.findOne(id), 'VerificationStatusCode', id);
     await this.verificationStatusCodeRepository.update(id, data);
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'verificationStatusCode', updated);
-    }
+    const updated = await findOrThrow(this.findOne(id), 'VerificationStatusCode', id);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'verificationStatusCode', updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const code = await this.findOne(id);
+    await findOrThrow(this.findOne(id), 'VerificationStatusCode', id);
     await this.verificationStatusCodeRepository.delete(id);
-    if (code) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'verificationStatusCode', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'verificationStatusCode', { id });
   }
 } 

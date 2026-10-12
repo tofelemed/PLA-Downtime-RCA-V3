@@ -21,6 +21,7 @@ import { StreamAlertQueryDto } from './dto/stream-alert-query.dto';
 import { StreamConnectionConfigQueryDto } from './dto/stream-connection-config-query.dto';
 import { ImportStreamingPayloadDto } from './dto/import-streaming-payload.dto';
 import { RealtimeGateway } from '../realtime.gateway';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class StreamingService {
@@ -78,10 +79,7 @@ export class StreamingService {
   }
 
   async deleteDataSource(id: string): Promise<void> {
-    const existing = await this.dataSourceRepository.findOne({ where: { id } });
-    if (!existing) {
-      return;
-    }
+    await findOrThrow(this.dataSourceRepository.findOneBy({ id }), 'StreamDataSource', id);
     await this.dataSourceRepository.delete(id);
     this.realtimeGateway.broadcastEntityDeleted('streamDataSource', id);
   }
@@ -124,10 +122,7 @@ export class StreamingService {
   }
 
   async deleteDataSink(id: string): Promise<void> {
-    const existing = await this.dataSinkRepository.findOne({ where: { id } });
-    if (!existing) {
-      return;
-    }
+    await findOrThrow(this.dataSinkRepository.findOneBy({ id }), 'StreamDataSink', id);
     await this.dataSinkRepository.delete(id);
     this.realtimeGateway.broadcastEntityDeleted('streamDataSink', id);
   }
@@ -167,10 +162,7 @@ export class StreamingService {
   }
 
   async deleteStreamProcessor(id: string): Promise<void> {
-    const existing = await this.processorRepository.findOne({ where: { id } });
-    if (!existing) {
-      return;
-    }
+    await findOrThrow(this.processorRepository.findOneBy({ id }), 'StreamProcessor', id);
     await this.processorRepository.delete(id);
     this.realtimeGateway.broadcastEntityDeleted('streamProcessor', id);
   }
@@ -266,10 +258,7 @@ export class StreamingService {
   }
 
   async deleteAlert(id: string): Promise<void> {
-    const existing = await this.alertRepository.findOne({ where: { id } });
-    if (!existing) {
-      return;
-    }
+    await findOrThrow(this.alertRepository.findOneBy({ id }), 'StreamAlert', id);
     await this.alertRepository.delete(id);
     this.realtimeGateway.broadcastEntityDeleted('streamAlert', id);
   }
@@ -313,10 +302,7 @@ export class StreamingService {
   }
 
   async deleteConnectionConfig(id: string): Promise<void> {
-    const existing = await this.connectionConfigRepository.findOne({ where: { id } });
-    if (!existing) {
-      return;
-    }
+    await findOrThrow(this.connectionConfigRepository.findOneBy({ id }), 'StreamConnectionConfig', id);
     await this.connectionConfigRepository.delete(id);
     this.realtimeGateway.broadcastEntityDeleted('streamConnectionConfig', id);
   }

@@ -44,9 +44,16 @@ export interface Capabilities {
   canManagePolicies: boolean;
   /** v2 production events: any member whose role is not read-only (WriteAccessGuard) */
   canWriteEvents: boolean;
+  /**
+   * plant display settings (calendar system, digits): the server's tenant-setting rule
+   * (`app-settings-access.policy.ts` canWriteSetting: TenantAdmin or manager_approver in the plant, SuperAdmin)
+   */
+  canManagePlantSettings: boolean;
 }
 
 const GLOBAL_ROLES = ['SuperAdmin', 'OrgAdmin'];
+/** server/pro-act-backend/src/app-settings/app-settings-access.policy.ts canWriteSetting (tenant-owned settings) */
+const PLANT_SETTINGS_WRITERS = ['TenantAdmin', 'manager_approver'] as const;
 const OPERATIONS_ONLY_ROLES: ReadonlySet<string> = new Set(['Operator', 'operator']);
 const READ_ONLY_ROLES: ReadonlySet<string> = new Set(ServerRoles.READ_ONLY_ROLES);
 
@@ -73,6 +80,7 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canWriteIntegration: may(ServerRoles.INTEGRATION_WRITERS),
     canManagePolicies: may(ServerRoles.POLICY_ROLES),
     canWriteEvents: !readOnly,
+    canManagePlantSettings: may(PLANT_SETTINGS_WRITERS),
   };
 }
 

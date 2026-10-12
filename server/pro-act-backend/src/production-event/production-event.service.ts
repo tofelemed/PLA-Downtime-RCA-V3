@@ -16,6 +16,7 @@ import { EventRevisionService } from './revisions/event-revision.service';
 import { actorFromContext, RevisionActor } from './revisions/revision-actor';
 import { EventFacts } from './revisions/event-facts';
 import { ShiftLabelsService } from '../calendar/shift-labels.service';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 /** Relations loaded on every read; `reasonCode` and `rca` were dropped at some point (B17) and are back. */
 const EVENT_RELATIONS = [
@@ -145,31 +146,30 @@ export class ProductionEventService {
   async update(
     id: string,
     data: UpdateProductionEventDto,
-  ): Promise<ProductionEvent | null> {
+  ): Promise<ProductionEvent> {
     const fields = withoutClientDuration(data);
-    const changed = await this.revisions.applyUserChange({
-      actor: actorFromContext(getRequestContext()),
-      eventId: id,
-      patch: (existing) =>
-        ({
-          ...fields,
-          ...prepareUpdate(existing, data),
-        }) as Partial<ProductionEvent>,
-    });
-    if (!changed) {
-      return null;
-    }
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.publishUpdated(updated);
-    }
+    await findOrThrow(
+      this.revisions.applyUserChange({
+        actor: actorFromContext(getRequestContext()),
+        eventId: id,
+        patch: (existing) =>
+          ({
+            ...fields,
+            ...prepareUpdate(existing, data),
+          }) as Partial<ProductionEvent>,
+      }),
+      'ProductionEvent',
+      id,
+    );
+    const updated = await findOrThrow(this.findOne(id), 'ProductionEvent', id);
+    this.publishUpdated(updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const event = await this.findOne(id);
+    const event = await findOrThrow(this.findOne(id), 'ProductionEvent', id);
     await this.eventRepository.delete(id);
-    if (event?.tenantId) {
+    if (event.tenantId) {
       this.realtimeGateway.broadcastEntityEvent(
         'Deleted',
         'productionEvent',

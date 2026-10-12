@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository } from 'typeorm';
 import { RequestContext } from '../common/context/request-context';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 import { RealtimeGateway } from '../realtime.gateway';
 import {
   canReadSetting,
@@ -107,8 +108,11 @@ export class AppSettingsService {
   }
 
   async remove(key: string, context: RequestContext): Promise<void> {
-    const setting = await this.findOne(key, context);
-    if (!setting) return;
+    const setting = await findOrThrow(
+      this.findOne(key, context),
+      'AppSetting',
+      key,
+    );
     this.assertWritable(setting, context);
     await this.settingsRepository.delete(key);
     this.publish('Deleted', { ...setting, value: '' });

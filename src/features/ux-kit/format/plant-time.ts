@@ -1,3 +1,5 @@
+import { type CalendarPreference, DEFAULT_CALENDAR_PREFERENCE, formatDateTime, formatTime } from '@/lib/dates';
+
 /**
  * Plant-local time with zone and offset (spec §3.3, I14; D03 Asia/Tehran). Uses the IANA database in
  * `Intl` — no client clock or browser zone is involved, so every viewer sees the plant's wall clock.
@@ -50,10 +52,16 @@ export function plantTimeParts(iso: string, timezone: string): PlantTimeParts | 
   };
 }
 
-/** `06:00 (+04:00 Asia/Dubai)`, with `withDate` `2026-10-09 06:00 (+04:00 Asia/Dubai)`; invalid → "—". */
-export function formatPlantTime(iso: string | null | undefined, timezone: string, withDate = false): string {
-  const parts = iso ? plantTimeParts(iso, timezone) : null;
-  if (!parts) return '—';
-  const clock = withDate ? `${parts.date} ${parts.time}` : parts.time;
-  return `${clock} (${parts.offset} ${parts.timezone})`;
+/**
+ * `06:00 (+04:00 Asia/Dubai)`, with `withDate` `2026-10-09 06:00 (+04:00 Asia/Dubai)`; invalid → "—".
+ * Delegates to `@/lib/dates`; a Persian `preference` gives `1405/07/20 10:00 (+03:30 Asia/Tehran)`.
+ */
+export function formatPlantTime(
+  iso: string | null | undefined,
+  timezone: string,
+  withDate = false,
+  preference: CalendarPreference = DEFAULT_CALENDAR_PREFERENCE,
+): string {
+  const options = { timeZone: timezone, ...preference, withZone: true };
+  return withDate ? formatDateTime(iso, options) : formatTime(iso, options);
 }

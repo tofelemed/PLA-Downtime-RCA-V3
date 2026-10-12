@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { UnmappedEvent } from './unmapped-event.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 import { CreateUnmappedEventDto } from './dto/create-unmapped-event.dto';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @Injectable()
 export class UnmappedEventService {
@@ -89,19 +90,16 @@ export class UnmappedEventService {
         typeof data.endTime === 'string' ? new Date(data.endTime) : data.endTime;
     }
 
+    await findOrThrow(this.findOne(id), 'UnmappedEvent', id);
     await this.eventRepository.update(id, updatePayload);
-    const updated = await this.findOne(id);
-    if (updated) {
-      this.realtimeGateway.broadcastEntityEvent('Updated', 'unmappedEvent', updated);
-    }
+    const updated = await findOrThrow(this.findOne(id), 'UnmappedEvent', id);
+    this.realtimeGateway.broadcastEntityEvent('Updated', 'unmappedEvent', updated);
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const event = await this.findOne(id);
+    await findOrThrow(this.findOne(id), 'UnmappedEvent', id);
     await this.eventRepository.delete(id);
-    if (event) {
-      this.realtimeGateway.broadcastEntityEvent('Deleted', 'unmappedEvent', { id });
-    }
+    this.realtimeGateway.broadcastEntityEvent('Deleted', 'unmappedEvent', { id });
   }
 }

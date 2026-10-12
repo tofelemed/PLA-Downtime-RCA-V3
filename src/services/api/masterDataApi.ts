@@ -22,6 +22,8 @@ export interface Tenant {
   contactEmail?: string;
   contactPhone?: string;
   timezone?: string;
+  calendarSystem?: 'gregorian' | 'persian';
+  digits?: 'latin' | 'persian';
   createdAt: string;
   updatedAt: string;
 }
@@ -215,6 +217,16 @@ export const masterDataApi = {
     return httpClient.request<Tenant>(`tenants/${id}`, {
       method: 'PUT',
       body: payload,
+    });
+  },
+
+  updateTenantDisplaySettings(
+    tenantId: string,
+    body: Pick<Tenant, 'calendarSystem' | 'digits'>,
+  ): Promise<Tenant> {
+    return httpClient.request<Tenant>(`tenants/${tenantId}/display-settings`, {
+      method: 'PUT',
+      body,
     });
   },
 

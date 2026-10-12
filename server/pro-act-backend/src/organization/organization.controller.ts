@@ -19,6 +19,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { assertOrganizationWritable } from '../auth/roles/org-access';
 import { Ctx } from '../common/context/ctx.decorator';
 import { RequestContext } from '../common/context/request-context';
+import { findOrThrow } from '../common/helpers/find-or-throw';
 
 /**
  * Reads list what the caller may see (SuperAdmin all, everyone else their own organization and the
@@ -51,8 +52,12 @@ export class OrganizationController {
   findOne(
     @Ctx() ctx: RequestContext,
     @Param('id') id: string,
-  ): Promise<Organization | null> {
-    return this.organizationService.findOneVisible(ctx, id);
+  ): Promise<Organization> {
+    return findOrThrow(
+      this.organizationService.findOneVisible(ctx, id),
+      'Organization',
+      id,
+    );
   }
 
   @Post()
