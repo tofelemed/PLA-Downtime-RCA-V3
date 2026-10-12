@@ -9,7 +9,8 @@ import { ADMINS, MANAGERS, PASSWORD, PREFIX, sessionOf, shortId, utcDate, type S
  * 8. User management (`/users`, TenantAdmin): Anna registers an Operator `P-MGR-operator …` of Demo
  *    Plant through the screen (the role picker offers no Super Admin), the operator signs in through the
  *    login form; a duplicate e-mail is refused; granting SuperAdmin through either write route is
- *    refused by the server.
+ *    refused by the server. Anna sees Grace (home plant Demo Plant 2, viewer in Demo Plant) by name with a
+ *    "From Demo Plant 2" badge; her profile is read-only here (owner decision 2026-10-12).
  * 9. Integration console (`/connectivity`, TenantAdmin): Benjamin opens the MQTT demo connection card,
  *    sees the subscription health, pauses and resumes the subscription (left running), views the
  *    quarantine of the connection. A Manager has no Connectivity entry in the menu.
@@ -130,6 +131,31 @@ test.describe('Manager persona — users and the MQTT demo connection', () => {
     const opened = await console.isVisible().catch(() => false);
     test.info().annotations.push({ type: 'observation', description: opened ? 'Manager can open /connectivity directly (menu hides it)' : 'Manager is refused on /connectivity' });
     await expect(page.getByText(/something went wrong|unexpected error/i)).toHaveCount(0);
+  });
+
+  test('J8d Anna sees Grace (home Demo Plant 2, viewer here) by name with her home plant; her profile stays read-only', async ({ page }) => {
+    // owner decision 2026-10-12: plant admins see and manage the access of users granted into their plant
+    const graceEmail = 'grace.whitfield@demo.acme.com';
+    type Listed = { id: string; email: string; name: string; tenantName: string | null; manageable: boolean; accessManageable: boolean };
+    const listed = itemsOf((await api<{ items: Listed[] }>(anna.token, 'GET', `/v2/users?q=${encodeURIComponent(graceEmail)}`)).body);
+    const grace = listed.find((user) => user.email === graceEmail);
+    expect(grace, 'Grace is listed in Demo Plant').toBeTruthy();
+    expect(grace).toMatchObject({ tenantName: 'Demo Plant 2', manageable: false, accessManageable: true });
+    const names = await api<{ items: Array<{ id: string; name: string }> }>(anna.token, 'GET', `/v2/users/directory?ids=${grace?.id ?? ''}`);
+    expect(names.body.items.map((user) => user.name)).toEqual([grace?.name]);
+    const refused = await api<{ code?: string }>(anna.token, 'PATCH', `/v2/users/${grace?.id ?? ''}`, { name: 'P-MGR renamed' });
+    expect([refused.status, refused.body.code]).toEqual([403, 'HOME_PLANT_ONLY']);
+
+    await loginViaUI(page, ADMINS.anna.email, ADMINS.anna.password);
+    await openUsers(page);
+    await page.getByLabel('Search users by name or e-mail').fill('grace');
+    const row = page.getByRole('row', { name: new RegExp(graceEmail, 'i') });
+    await expect(row).toBeVisible({ timeout: 30_000 });
+    await expect(row.getByText('From Demo Plant 2')).toBeVisible();
+    await row.click();
+    await expect(page.getByText(/Home plant: Demo Plant 2/)).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByLabel('Name', { exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Grant access' })).toBeVisible();
   });
 
   test('J8c granting SuperAdmin is refused by the server (both write routes)', async () => {

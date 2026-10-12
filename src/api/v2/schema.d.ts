@@ -3839,7 +3839,7 @@ export interface paths {
         };
         /**
          * Members of the acting plant (keyset by name or creation time)
-         * @description Home plant or a scope grant in the plant; organization-level users too for organization and super administrators. Filters: q (name, e-mail), roles, isActive. `manageable` says whether you may change the user.
+         * @description Home plant or a scope grant in the plant (from any plant); organization-level users too for organization and super administrators. Filters: q (name, e-mail), roles, isActive. `manageable` says whether you may change the profile (only from the home plant, unless super administrator); `accessManageable` whether you may grant or revoke roles in this plant.
          */
         get: operations["UsersV2Controller_list_v2"];
         put?: never;
@@ -3891,6 +3891,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/users/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One user of the plant's organization by exact e-mail (to grant access)
+         * @description Case-insensitive exact match, never a partial search; users of other organizations are not found (404).
+         */
+        get: operations["UsersV2Controller_lookup_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/users/{id}": {
         parameters: {
             query?: never;
@@ -3904,14 +3924,14 @@ export interface paths {
         post?: never;
         /**
          * Delete a user and its scope grants
-         * @description 422 CANNOT_DELETE_SELF for your own account. Rank rule: a role at most your own; only users ranked strictly below you (and within your plant, or your organization for an organization administrator) can be edited, deactivated or deleted (403 ROLE_GRANT_NOT_ALLOWED / TENANT_NOT_ALLOWED / ORGANIZATION_NOT_ALLOWED).
+         * @description 422 CANNOT_DELETE_SELF for your own account; 403 HOME_PLANT_ONLY for a user whose home plant is another plant. Rank rule: a role at most your own; only users ranked strictly below you (and within your plant, or your organization for an organization administrator) can be edited, deactivated or deleted (403 ROLE_GRANT_NOT_ALLOWED / TENANT_NOT_ALLOWED / ORGANIZATION_NOT_ALLOWED).
          */
         delete: operations["UsersV2Controller_remove_v2"];
         options?: never;
         head?: never;
         /**
          * Change name, e-mail, role, password or active state of a user
-         * @description 422 CANNOT_DEACTIVATE_SELF for your own account. Rank rule: a role at most your own; only users ranked strictly below you (and within your plant, or your organization for an organization administrator) can be edited, deactivated or deleted (403 ROLE_GRANT_NOT_ALLOWED / TENANT_NOT_ALLOWED / ORGANIZATION_NOT_ALLOWED).
+         * @description 422 CANNOT_DEACTIVATE_SELF for your own account; 403 HOME_PLANT_ONLY for a user whose home plant is another plant. Rank rule: a role at most your own; only users ranked strictly below you (and within your plant, or your organization for an organization administrator) can be edited, deactivated or deleted (403 ROLE_GRANT_NOT_ALLOWED / TENANT_NOT_ALLOWED / ORGANIZATION_NOT_ALLOWED).
          */
         patch: operations["UsersV2Controller_update_v2"];
         trace?: never;
@@ -3931,7 +3951,7 @@ export interface paths {
         put?: never;
         /**
          * Grant a role in the plant or one of its units (requires Idempotency-Key)
-         * @description 409 SCOPE_EXISTS, 422 USER_INACTIVE / INVALID_REFERENCE. You cannot grant or revoke your own access (403 SELF_GRANT_NOT_ALLOWED), a role above your rank or for a user who is not ranked below you (403 ROLE_GRANT_NOT_ALLOWED); the grant mirroring a user’s role in its home plant changes with the role (422 HOME_SCOPE_REQUIRED). Every grant and revoke is audited.
+         * @description `userId` of a user the plant sees, or `email` (exact) of a user of the plant’s organization for a first grant (404 when none). 409 SCOPE_EXISTS, 422 USER_INACTIVE / INVALID_REFERENCE. You cannot grant or revoke your own access (403 SELF_GRANT_NOT_ALLOWED), a role above your rank or for a user who is not ranked below you (403 ROLE_GRANT_NOT_ALLOWED); the grant mirroring a user’s role in its home plant changes with the role (422 HOME_SCOPE_REQUIRED). Every grant and revoke is audited.
          */
         post: operations["UserScopesV2Controller_grant_v2"];
         delete?: never;
@@ -6482,7 +6502,10 @@ export interface components {
             password?: string;
         };
         GrantUserScopeDto: {
-            userId: string;
+            /** @description The user (required unless `email`) */
+            userId?: string;
+            /** @description Exact e-mail of a user of the plant's organization (instead of `userId`) */
+            email?: string;
             /** @enum {string} */
             role: "manager_approver" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
             /** @description Limit the grant to this unit of the plant (omit for the whole plant) */
@@ -12717,6 +12740,25 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GrantableRolesView"];
                 };
+            };
+        };
+    };
+    UsersV2Controller_lookup_v2: {
+        parameters: {
+            query: {
+                email: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -12412,7 +12412,7 @@
     },
     "/api/v2/users": {
       "get": {
-        "description": "Home plant or a scope grant in the plant; organization-level users too for organization and super administrators. Filters: q (name, e-mail), roles, isActive. `manageable` says whether you may change the user.",
+        "description": "Home plant or a scope grant in the plant (from any plant); organization-level users too for organization and super administrators. Filters: q (name, e-mail), roles, isActive. `manageable` says whether you may change the profile (only from the home plant, unless super administrator); `accessManageable` whether you may grant or revoke roles in this plant.",
         "operationId": "UsersV2Controller_list_v2",
         "parameters": [
           {
@@ -12659,6 +12659,37 @@
         ]
       }
     },
+    "/api/v2/users/lookup": {
+      "get": {
+        "description": "Case-insensitive exact match, never a partial search; users of other organizations are not found (404).",
+        "operationId": "UsersV2Controller_lookup_v2",
+        "parameters": [
+          {
+            "name": "email",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "maxLength": 255,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One user of the plant's organization by exact e-mail (to grant access)",
+        "tags": [
+          "v2 · Users"
+        ]
+      }
+    },
     "/api/v2/users/{id}": {
       "get": {
         "operationId": "UsersV2Controller_get_v2",
@@ -12688,7 +12719,7 @@
         ]
       },
       "patch": {
-        "description": "422 CANNOT_DEACTIVATE_SELF for your own account. Rank rule: a role at most your own; only users ranked strictly below you (and within your plant, or your organization for an organization administrator) can be edited, deactivated or deleted (403 ROLE_GRANT_NOT_ALLOWED / TENANT_NOT_ALLOWED / ORGANIZATION_NOT_ALLOWED).",
+        "description": "422 CANNOT_DEACTIVATE_SELF for your own account; 403 HOME_PLANT_ONLY for a user whose home plant is another plant. Rank rule: a role at most your own; only users ranked strictly below you (and within your plant, or your organization for an organization administrator) can be edited, deactivated or deleted (403 ROLE_GRANT_NOT_ALLOWED / TENANT_NOT_ALLOWED / ORGANIZATION_NOT_ALLOWED).",
         "operationId": "UsersV2Controller_update_v2",
         "parameters": [
           {
@@ -12726,7 +12757,7 @@
         ]
       },
       "delete": {
-        "description": "422 CANNOT_DELETE_SELF for your own account. Rank rule: a role at most your own; only users ranked strictly below you (and within your plant, or your organization for an organization administrator) can be edited, deactivated or deleted (403 ROLE_GRANT_NOT_ALLOWED / TENANT_NOT_ALLOWED / ORGANIZATION_NOT_ALLOWED).",
+        "description": "422 CANNOT_DELETE_SELF for your own account; 403 HOME_PLANT_ONLY for a user whose home plant is another plant. Rank rule: a role at most your own; only users ranked strictly below you (and within your plant, or your organization for an organization administrator) can be edited, deactivated or deleted (403 ROLE_GRANT_NOT_ALLOWED / TENANT_NOT_ALLOWED / ORGANIZATION_NOT_ALLOWED).",
         "operationId": "UsersV2Controller_remove_v2",
         "parameters": [
           {
@@ -12837,7 +12868,7 @@
         ]
       },
       "post": {
-        "description": "409 SCOPE_EXISTS, 422 USER_INACTIVE / INVALID_REFERENCE. You cannot grant or revoke your own access (403 SELF_GRANT_NOT_ALLOWED), a role above your rank or for a user who is not ranked below you (403 ROLE_GRANT_NOT_ALLOWED); the grant mirroring a user’s role in its home plant changes with the role (422 HOME_SCOPE_REQUIRED). Every grant and revoke is audited.",
+        "description": "`userId` of a user the plant sees, or `email` (exact) of a user of the plant’s organization for a first grant (404 when none). 409 SCOPE_EXISTS, 422 USER_INACTIVE / INVALID_REFERENCE. You cannot grant or revoke your own access (403 SELF_GRANT_NOT_ALLOWED), a role above your rank or for a user who is not ranked below you (403 ROLE_GRANT_NOT_ALLOWED); the grant mirroring a user’s role in its home plant changes with the role (422 HOME_SCOPE_REQUIRED). Every grant and revoke is audited.",
         "operationId": "UserScopesV2Controller_grant_v2",
         "parameters": [],
         "requestBody": {
@@ -20703,7 +20734,13 @@
         "type": "object",
         "properties": {
           "userId": {
-            "type": "string"
+            "type": "string",
+            "description": "The user (required unless `email`)"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Exact e-mail of a user of the plant's organization (instead of `userId`)"
           },
           "role": {
             "type": "string",
@@ -20723,7 +20760,6 @@
           }
         },
         "required": [
-          "userId",
           "role"
         ]
       },

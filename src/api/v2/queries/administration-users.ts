@@ -32,6 +32,21 @@ export function useUsersPage(filters: UserFilters) {
 
 export const useUser = (id: string | null | undefined) => useAdminRecord<UserView>('users', id, `/users/${id ?? ''}`);
 
+/**
+ * A user of the plant's organization by exact e-mail (`GET /v2/users/lookup`), to grant a first role in
+ * this plant; disabled until an e-mail is given. A 404 (no such user in the organization) is not retried.
+ */
+export function useUserLookup(email: string | null) {
+  const tenantId = useV2TenantId();
+  return useQuery({
+    queryKey: v2Keys.list(tenantId ?? '-', 'users', { filters: { lookup: email ?? '' } }),
+    enabled: Boolean(tenantId && email),
+    staleTime: STALE_TIME.users,
+    retry: shouldRetryQuery,
+    queryFn: ({ signal }) => adminCall<UserView>('GET', '/users/lookup', { query: { email: email ?? '' }, signal }),
+  });
+}
+
 export const useGrantableRoles = () => useAdminRead<GrantableRolesView>('users', '/users/grantable-roles');
 
 /**

@@ -106,6 +106,14 @@ export class UserDirectoryQueryDto {
   limit: number = 200;
 }
 
+/** `GET /v2/users/lookup`: one user of the plant's organization by exact e-mail (to grant access). */
+export class UserLookupQueryDto {
+  @ApiProperty({ maxLength: 255 })
+  @IsEmail()
+  @MaxLength(255)
+  email: string;
+}
+
 export class CreateUserV2Dto {
   @ApiProperty({ maxLength: 255 })
   @IsString()

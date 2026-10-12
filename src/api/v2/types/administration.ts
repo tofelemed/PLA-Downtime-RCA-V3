@@ -27,8 +27,10 @@ export interface UserView {
   organizationName: string | null;
   createdAt: string;
   updatedAt: string;
-  /** the caller may edit, deactivate or delete this user */
+  /** the caller may edit, deactivate or delete this user (never a user whose home plant is another plant) */
   manageable: boolean;
+  /** the caller may grant or revoke this user's roles in the acting plant */
+  accessManageable: boolean;
 }
 
 export interface CreateUserInput {
@@ -77,11 +79,8 @@ export interface UserScopeView {
   lock: ScopeLock;
 }
 
-export interface GrantScopeInput {
-  userId: string;
-  role: ScopeRole;
-  unitId?: string;
-}
+/** A grant for a user of the plant (`userId`), or a first grant by exact e-mail within the organization. */
+export type GrantScopeInput = { role: ScopeRole; unitId?: string } & ({ userId: string } | { email: string });
 
 export type TaskStatus = 'Open' | 'In Progress' | 'Completed' | 'Cancelled';
 export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Critical';

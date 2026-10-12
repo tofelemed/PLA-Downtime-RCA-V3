@@ -15,6 +15,7 @@ import { UserAccessSection } from './components/user-access-section';
 import { UserDetailsForm } from './components/user-details-form';
 import { UserLifecycleActions } from './components/user-lifecycle-actions';
 import { UserStatusBadge } from './components/user-status-badge';
+import { useFromOtherPlant } from './components/use-from-other-plant';
 import { EMPTY_USER_FORM, formOf, toCreateInput, toUpdateInput, type UserFormValues } from './model/user-form';
 
 const BACK = { to: '/users', label: 'Users' };
@@ -64,12 +65,27 @@ function EditUser({ id }: { id: string }) {
   return <UserDetail user={user.data} />;
 }
 
+/** Why the profile is read-only: the user's home plant is another plant, or rank and reach. */
+function ReadOnlyNote({ user, fromOtherPlant }: { user: UserView; fromOtherPlant: boolean }) {
+  if (user.manageable) return null;
+  const text = fromOtherPlant
+    ? `Home plant: ${user.tenantName ?? 'another plant'}. You manage this user's access in this plant; their profile, role and status are changed in their home plant.`
+    : 'You can see this user but not change it: it has your rank or a higher one, or it belongs elsewhere.';
+  return (
+    <Alert>
+      <StatusIcon.info aria-hidden="true" className="h-4 w-4" />
+      <AlertDescription>{text}</AlertDescription>
+    </Alert>
+  );
+}
+
 function UserDetail({ user }: { user: UserView }) {
   const navigate = useNavigate();
   const { session } = useAuth();
   const update = useUpdateUser();
   const feedback = useCommandFeedback();
   const isSelf = session?.user.id === user.id;
+  const fromOtherPlant = useFromOtherPlant(user);
   const submit = async (values: UserFormValues) => {
     const body = toUpdateInput(values, user);
     if (Object.keys(body).length === 0) return navigate(BACK.to);
@@ -78,16 +94,11 @@ function UserDetail({ user }: { user: UserView }) {
   return (
     <Page>
       <PageHeader title={user.name} back={BACK} description={`${roleLabel(user.role)} · ${user.tenantName ?? user.organizationName ?? 'All plants'}`} meta={<UserStatusBadge isActive={user.isActive} />} />
-      {!user.manageable && (
-        <Alert>
-          <StatusIcon.info aria-hidden="true" className="h-4 w-4" />
-          <AlertDescription>You can see this user but not change it: it has your rank or a higher one, or it belongs elsewhere.</AlertDescription>
-        </Alert>
-      )}
+      <ReadOnlyNote user={user} fromOtherPlant={fromOtherPlant} />
       <Section title="Details">
         <UserDetailsForm key={user.updatedAt} mode="edit" initial={formOf(user)} choosePlant={false} readOnly={!user.manageable} submitLabel="Save changes" onSubmit={submit} onCancel={() => navigate(BACK.to)} />
       </Section>
-      <UserAccessSection userId={user.id} userName={user.name} canWrite={user.manageable} />
+      <UserAccessSection userId={user.id} userName={user.name} canWrite={user.accessManageable} />
       {user.manageable && (
         <Section title="Status" description="Deactivated users cannot sign in; their history keeps their name.">
           <UserLifecycleActions user={user} isSelf={isSelf} />

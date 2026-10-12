@@ -2,6 +2,7 @@ import type { UserView } from '@/api/v2/types/administration';
 import type { DataTableColumn } from '@/features/ux-kit/data-table';
 import { roleLabel } from '@/features/ux-kit/labels';
 import { UiIcon } from '@/lib/icons';
+import { FromPlantBadge } from './from-plant-badge';
 import { UserStatusBadge } from './user-status-badge';
 
 /** Where a user belongs: its plant, else its organization, else "All plants" (super administrators). */
@@ -16,7 +17,10 @@ export const USER_COLUMNS: ReadonlyArray<DataTableColumn<UserView>> = [
     header: 'Name',
     cell: (user) => (
       <div className="min-w-0">
-        <p className="font-medium">{user.name}</p>
+        <p className="flex flex-wrap items-center gap-2 font-medium">
+          {user.name}
+          <FromPlantBadge user={user} />
+        </p>
         <p className="truncate text-xs text-muted-foreground">{user.email}</p>
       </div>
     ),

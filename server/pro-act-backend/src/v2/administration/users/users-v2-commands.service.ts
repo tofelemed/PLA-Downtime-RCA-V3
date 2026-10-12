@@ -7,16 +7,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   assertCallerMayGrant,
-  assertCallerMayManage,
   assertCallerMayRegister,
 } from '../../../auth/roles/grant-policy';
 import { mapLegacyRole } from '../../../auth/roles/role-model';
 import { UserScope } from '../../../auth/scopes/user-scope.entity';
 import { UserScopesService } from '../../../auth/scopes/user-scopes.service';
 import { RequestContext } from '../../../common/context/request-context';
-import { User } from '../../../users/user.entity';
 import { UsersService } from '../../../users/users.service';
 import { PlaceNamesService } from '../common/place-names.service';
+import { DirectoryUser } from './plant-user-directory';
+import { assertMayEditProfile } from './user-manage-rules';
 import { CreateUserV2Dto, UpdateUserV2Dto } from './users-v2.dto';
 import { UserV2View } from './user-v2.view';
 import { UsersV2Service } from './users-v2.service';
@@ -38,14 +38,14 @@ function refuseSelf(code: string, message: string): never {
 /**
  * User writes of the administration API, on the v1 grant policy (`grant-policy.ts`): a role at most the
  * caller's rank, placed in the caller's plant / organization unless SuperAdmin, and only users ranked
- * strictly below the caller are edited, deactivated or deleted. A new plant user gets the tenant scope of
+ * strictly below the caller are edited, deactivated or deleted, and only from their home plant (a user
+ * granted in from another plant keeps its profile there, `assertMayEditProfile`). A new plant user gets the tenant scope of
  * its role (as registration does); a role change moves that home scope with it, so a demoted user keeps
  * no approver rights through a stale scope row.
  */
 @Injectable()
 export class UsersV2CommandsService {
   constructor(
-    @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(UserScope) private readonly scopes: Repository<UserScope>,
     private readonly legacyUsers: UsersService,
     private readonly userScopes: UserScopesService,
@@ -92,7 +92,7 @@ export class UsersV2CommandsService {
         'You cannot deactivate your own account',
       );
     }
-    assertCallerMayManage(context, target);
+    assertMayEditProfile(context, target);
     const roleChanged = body.role !== undefined && body.role !== target.role;
     if (roleChanged) assertCallerMayGrant(context, body.role);
     if (body.email && body.email.toLowerCase() !== target.email.toLowerCase()) {
@@ -115,7 +115,7 @@ export class UsersV2CommandsService {
     if (id === context.userId) {
       refuseSelf('CANNOT_DELETE_SELF', 'You cannot delete your own account');
     }
-    assertCallerMayManage(context, target);
+    assertMayEditProfile(context, target);
     await this.legacyUsers.remove(id);
   }
 
@@ -167,7 +167,10 @@ export class UsersV2CommandsService {
   }
 
   /** The home-plant scope row that mirrors the old role follows the new one (or goes, if already held). */
-  private async moveHomeScope(target: User, role: string): Promise<void> {
+  private async moveHomeScope(
+    target: DirectoryUser,
+    role: string,
+  ): Promise<void> {
     if (!target.tenantId) return;
     const home = {
       userId: target.id,

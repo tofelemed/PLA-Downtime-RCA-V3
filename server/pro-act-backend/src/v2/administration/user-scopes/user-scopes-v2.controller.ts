@@ -59,7 +59,9 @@ export class UserScopesV2Controller {
   @ApiOperation({
     summary:
       'Grant a role in the plant or one of its units (requires Idempotency-Key)',
-    description: `409 SCOPE_EXISTS, 422 USER_INACTIVE / INVALID_REFERENCE. ${RULES}`,
+    description:
+      '`userId` of a user the plant sees, or `email` (exact) of a user of the plant’s organization for a first ' +
+      `grant (404 when none). 409 SCOPE_EXISTS, 422 USER_INACTIVE / INVALID_REFERENCE. ${RULES}`,
   })
   grant(
     @Ctx() ctx: RequestContext,

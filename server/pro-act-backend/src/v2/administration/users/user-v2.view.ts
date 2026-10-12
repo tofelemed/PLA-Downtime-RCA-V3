@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { User } from '../../../users/user.entity';
+import { DirectoryUser } from './plant-user-directory';
 
 /** `GET /v2/users` item: a user without the password hash, with plant and organization names. */
 export interface UserV2View {
@@ -15,8 +15,13 @@ export interface UserV2View {
   organizationName: string | null;
   createdAt: string;
   updatedAt: string;
-  /** whether the caller may edit, deactivate or delete this user (rank and reach rules) */
+  /**
+   * whether the caller may edit, deactivate or delete this user (rank and reach rules); false for a user
+   * whose home plant is another plant: the profile is changed there (or by a super administrator)
+   */
   manageable: boolean;
+  /** whether the caller may grant or revoke this user's roles in the acting plant (rank rule) */
+  accessManageable: boolean;
 }
 
 /** `GET /v2/users/directory` item: what a name resolver or an assignee picker needs. */
@@ -40,10 +45,16 @@ export interface PlaceNames {
   organizations: ReadonlyMap<string, string>;
 }
 
+/** What the caller may change about a user (see `user-manage-rules.ts`). */
+export interface UserPermissions {
+  manageable: boolean;
+  accessManageable: boolean;
+}
+
 export function toUserView(
-  user: User,
+  user: DirectoryUser,
   names: PlaceNames,
-  manageable: boolean,
+  permissions: UserPermissions,
 ): UserV2View {
   return {
     id: user.id,
@@ -61,6 +72,7 @@ export function toUserView(
       : null,
     createdAt: new Date(user.createdAt).toISOString(),
     updatedAt: new Date(user.updatedAt).toISOString(),
-    manageable,
+    manageable: permissions.manageable,
+    accessManageable: permissions.accessManageable,
   };
 }

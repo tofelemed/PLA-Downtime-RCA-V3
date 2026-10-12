@@ -10,6 +10,7 @@ import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
 import { LEGACY_ROLE_LABELS } from '@/features/ux-kit/labels';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
+import { GrantByEmailDialog } from './components/grant-by-email-dialog';
 import { USER_COLUMNS } from './components/user-columns';
 
 const DEFAULTS = { q: '', role: ALL, status: 'active' } as const;
@@ -46,14 +47,17 @@ function UsersScreen() {
     <Page width="wide">
       <PageHeader
         title="Users"
-        description="Members of the selected plant: their role, status and access."
+        description="Members of the selected plant: their role, status and access. Users granted access from another plant show their home plant."
         actions={
-          <Button asChild>
-            <Link to="/users/new">
-              <ActionIcon.add aria-hidden="true" />
-              Add user
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <GrantByEmailDialog />
+            <Button asChild>
+              <Link to="/users/new">
+                <ActionIcon.add aria-hidden="true" />
+                Add user
+              </Link>
+            </Button>
+          </div>
         }
       />
       <Section title="Members">

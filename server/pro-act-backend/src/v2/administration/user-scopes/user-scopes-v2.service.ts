@@ -19,6 +19,7 @@ import { keysetPage } from '../../common/keyset-page';
 import { listResponse, ListResponse } from '../../common/response';
 import { parseSort } from '../../common/sort-spec';
 import { PlaceNamesService } from '../common/place-names.service';
+import { PlantUserDirectory } from '../users/plant-user-directory';
 import {
   assertMayGrant,
   assertNotLocked,
@@ -47,6 +48,7 @@ export class UserScopesV2Service {
     @InjectRepository(Unit) private readonly units: Repository<Unit>,
     @InjectRepository(Site) private readonly sites: Repository<Site>,
     private readonly places: PlaceNamesService,
+    private readonly plantUsers: PlantUserDirectory,
   ) {}
 
   async list(
@@ -77,7 +79,7 @@ export class UserScopesV2Service {
     body: GrantUserScopeDto,
   ): Promise<UserScopeV2View> {
     const tenantId = requireTenantId(context);
-    const holder = await this.holder(body.userId);
+    const holder = await this.grantee(tenantId, body);
     if (!holder) throw notFound();
     assertMayGrant(context, holder, body.role);
     const scopeKind = body.unitId ? 'unit' : 'tenant';
@@ -112,38 +114,65 @@ export class UserScopesV2Service {
       .andWhere('s.id = :id', { id })
       .getOne();
     if (!scope) throw notFound();
-    const holder = await this.holder(scope.userId);
+    const [holder] = await this.holders(scope.tenantId, [scope.userId]);
     assertNotLocked(revokeLock(context, scope, holder));
     await this.scopes.delete({ id: scope.id, tenantId: scope.tenantId });
   }
 
-  private async holder(userId: string): Promise<GrantHolder | undefined> {
-    const [holder] = await this.holders([userId]);
+  /**
+   * Who receives a new grant: a user the plant may see (`userId`), or — for a first grant into the plant —
+   * the user with exactly this e-mail in the plant's organization (`email`, never a fuzzy search).
+   */
+  private async grantee(
+    tenantId: string,
+    body: GrantUserScopeDto,
+  ): Promise<GrantHolder | undefined> {
+    if (body.userId && body.email) {
+      throw new UnprocessableEntityException({
+        code: 'VALIDATION_FAILED',
+        message: 'Send either userId or email, not both',
+      });
+    }
+    if (body.email) return this.plantUsers.byEmail(tenantId, body.email);
+    if (!body.userId) return undefined;
+    const [holder] = await this.holders(tenantId, [body.userId]);
     return holder;
   }
 
-  /** Users as row-level security lets the caller see them (members of the caller's plants). */
+  /**
+   * Holders and granters by id: members of the plant from any plant (`PlantUserDirectory`), then the users
+   * row-level security lets the caller see (members of its own plants, users placed in no plant).
+   */
   private async holders(
+    tenantId: string,
     ids: readonly string[],
   ): Promise<Array<GrantHolder & { name: string }>> {
     const unique = [...new Set(ids)];
     if (unique.length === 0) return [];
-    const rows = await this.users.find({
-      where: { id: In(unique) },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        tenantId: true,
-        organizationId: true,
-        isActive: true,
-      },
-    });
-    return rows.map((row) => ({
-      ...row,
-      tenantId: row.tenantId ?? null,
-      organizationId: row.organizationId ?? null,
-    }));
+    const members = await this.plantUsers.members(tenantId, unique);
+    const found = new Set(members.map((member) => member.id));
+    const rest = unique.filter((id) => !found.has(id));
+    const visible = rest.length
+      ? await this.users.find({
+          where: { id: In(rest) },
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            tenantId: true,
+            organizationId: true,
+            isActive: true,
+          },
+        })
+      : [];
+    return [
+      ...members,
+      ...visible.map((row) => ({
+        ...row,
+        tenantId: row.tenantId ?? null,
+        organizationId: row.organizationId ?? null,
+      })),
+    ];
   }
 
   private async assertUnitOfPlant(
@@ -169,7 +198,7 @@ export class UserScopesV2Service {
       row.createdBy ? [row.userId, row.createdBy] : [row.userId],
     );
     const [holders, scopeNames] = await Promise.all([
-      this.holders(people),
+      this.holders(requireTenantId(context), people),
       this.scopeNames(rows),
     ]);
     const byId = new Map(holders.map((holder) => [holder.id, holder]));

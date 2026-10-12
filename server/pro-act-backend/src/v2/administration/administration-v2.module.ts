@@ -33,6 +33,7 @@ import { TasksV2Controller } from './tasks/tasks-v2.controller';
 import { TasksV2Service } from './tasks/tasks-v2.service';
 import { UserScopesV2Controller } from './user-scopes/user-scopes-v2.controller';
 import { UserScopesV2Service } from './user-scopes/user-scopes-v2.service';
+import { PlantUserDirectory } from './users/plant-user-directory';
 import { UserDirectoryService } from './users/user-directory.service';
 import { UsersV2CommandsService } from './users/users-v2-commands.service';
 import { UsersV2Controller } from './users/users-v2.controller';
@@ -41,6 +42,7 @@ import { UsersV2Service } from './users/users-v2.service';
 /** Services the administration controllers inject (stubbed by the OpenAPI snapshot test). */
 export const ADMINISTRATION_V2_PROVIDERS = [
   PlaceNamesService,
+  PlantUserDirectory,
   UserDirectoryService,
   UsersV2Service,
   UsersV2CommandsService,

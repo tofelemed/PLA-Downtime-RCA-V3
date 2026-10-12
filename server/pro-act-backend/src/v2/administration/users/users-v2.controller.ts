@@ -30,6 +30,7 @@ import {
   CreateUserV2Dto,
   UpdateUserV2Dto,
   UserDirectoryQueryDto,
+  UserLookupQueryDto,
   UsersListQueryDto,
 } from './users-v2.dto';
 import { UsersV2CommandsService } from './users-v2-commands.service';
@@ -62,8 +63,10 @@ export class UsersV2Controller {
   @ApiOperation({
     summary: 'Members of the acting plant (keyset by name or creation time)',
     description:
-      'Home plant or a scope grant in the plant; organization-level users too for organization and super ' +
-      'administrators. Filters: q (name, e-mail), roles, isActive. `manageable` says whether you may change the user.',
+      'Home plant or a scope grant in the plant (from any plant); organization-level users too for organization ' +
+      'and super administrators. Filters: q (name, e-mail), roles, isActive. `manageable` says whether you may ' +
+      'change the profile (only from the home plant, unless super administrator); `accessManageable` whether ' +
+      'you may grant or revoke roles in this plant.',
   })
   list(
     @Ctx() ctx: RequestContext,
@@ -95,6 +98,21 @@ export class UsersV2Controller {
     return this.reads.grantableRoles(ctx);
   }
 
+  @Get('lookup')
+  @Roles(...USER_WRITERS)
+  @ApiOperation({
+    summary:
+      "One user of the plant's organization by exact e-mail (to grant access)",
+    description:
+      'Case-insensitive exact match, never a partial search; users of other organizations are not found (404).',
+  })
+  lookup(
+    @Ctx() ctx: RequestContext,
+    @Query() query: UserLookupQueryDto,
+  ): Promise<UserV2View> {
+    return this.reads.lookup(ctx, query.email);
+  }
+
   @Get(':id')
   @Roles(...USER_READERS)
   @ApiOperation({ summary: 'One user of your reach (404 otherwise)' })
@@ -123,7 +141,7 @@ export class UsersV2Controller {
   @Roles(...USER_WRITERS)
   @ApiOperation({
     summary: 'Change name, e-mail, role, password or active state of a user',
-    description: `422 CANNOT_DEACTIVATE_SELF for your own account. ${RULES}`,
+    description: `422 CANNOT_DEACTIVATE_SELF for your own account; 403 HOME_PLANT_ONLY for a user whose home plant is another plant. ${RULES}`,
   })
   update(
     @Ctx() ctx: RequestContext,
@@ -138,7 +156,7 @@ export class UsersV2Controller {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete a user and its scope grants',
-    description: `422 CANNOT_DELETE_SELF for your own account. ${RULES}`,
+    description: `422 CANNOT_DELETE_SELF for your own account; 403 HOME_PLANT_ONLY for a user whose home plant is another plant. ${RULES}`,
   })
   remove(
     @Ctx() ctx: RequestContext,

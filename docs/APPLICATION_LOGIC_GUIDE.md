@@ -1401,6 +1401,11 @@ stateDiagram-v2
 
    - You may grant a role only up to your own rank.
    - You can manage only users strictly below you: no peers (SuperAdmin excepted).
+8. **Users of a plant** (`/v2/users`, `/v2/users/directory`, task assignees, user names on every screen): the users whose **home plant** it is, plus the users of **any plant** who hold a scope grant there (owner decision 2026-10-12).
+   - Row-level security hides other plants' `users` rows, so these reads go through one reviewed exception: the SECURITY DEFINER function `app_plant_user_directory(tenant)` (migration `PlantUserDirectory`). It returns only id, name, e-mail, role, active state, home plant, organization and timestamps, and refuses a tenant the database session is not bound to. The API passes only the acting plant.
+   - A user granted in from another plant shows **"From <home plant>"** in the list. The plant administrator can grant and revoke that user's roles **in this plant** (`accessManageable`).
+   - Profile, role, password, status and delete stay with the **home plant** (or a SuperAdmin): `manageable` is false and the server answers 403 `HOME_PLANT_ONLY`.
+   - **First grant from another plant:** "Grant access by e-mail" on `/users`. The administrator types the user's **exact e-mail** (`GET /v2/users/lookup`, then `POST /v2/user-scopes { email, role }`). Only users of the plant's own organization are found (`users.organization_id`, else the home plant's organization); there is no partial search.
 
 ### 17.2 Role × capability matrix
 

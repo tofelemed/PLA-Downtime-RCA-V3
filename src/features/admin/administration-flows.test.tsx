@@ -26,7 +26,10 @@ const list = (items: unknown[], nextCursor: string | null = null) => ({ items, n
 const USER = {
   id: 'u-2', name: 'Anna Keller', email: 'anna@demo.test', role: 'TenantAdmin', isActive: true, tenantId: 'tenant-a', tenantName: 'Demo Plant',
   organizationId: 'o1', organizationName: 'Demo Org', createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z', manageable: true,
+  accessManageable: true,
 };
+/** A viewer granted into the selected plant from her home plant (owner decision 2026-10-12). */
+const GRANTEE = { ...USER, id: 'u-3', name: 'Grace Whitfield', email: 'grace@demo.test', role: 'Operator', tenantId: 'tenant-b', tenantName: 'Demo Plant 2', manageable: false };
 const TASK = {
   id: 't1', title: 'Replace seal', description: null, assigneeId: 'u-2', assigneeName: 'Anna Keller', assignedById: 'u-1', assignedByName: 'Test user',
   priority: 'High', status: 'In Progress', dueDate: '2026-10-01T20:00:00Z', completedAt: null, overdue: true, linkType: 'RCA', linkId: 'c1',
@@ -55,7 +58,7 @@ describe('administration screens on v2', () => {
       const call = { method: init.method ?? 'GET', url: new URL(url), headers: new Headers(init.headers) };
       calls.push(call);
       const path = call.url.pathname;
-      if (path === '/api/v2/users') return json(200, list([USER], 'next'));
+      if (path === '/api/v2/users') return json(200, list([USER, GRANTEE], 'next'));
       if (path === '/api/v2/tasks') return json(200, list([TASK]));
       if (path === '/api/v2/tasks/summary') return json(200, SUMMARY);
       return json(200, list([]));
@@ -77,6 +80,14 @@ describe('administration screens on v2', () => {
     expect(first?.url.searchParams.get('isActive')).toBe('true');
     fireEvent.change(screen.getByLabelText('Search users by name or e-mail'), { target: { value: 'anna' } });
     await waitFor(() => expect(calls.some((call) => call.url.searchParams.get('q') === 'anna')).toBe(true));
+  });
+
+  it('marks users granted in from another plant with their home plant', async () => {
+    wrap(<UsersPage />, '/users');
+    expect(await screen.findByText('Grace Whitfield')).toBeTruthy();
+    expect(screen.getByText('From Demo Plant 2')).toBeTruthy();
+    expect(screen.queryByText('From Demo Plant')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Grant access by e-mail' })).toBeTruthy();
   });
 
   it('refuses the users page to an operator with a plain message', () => {

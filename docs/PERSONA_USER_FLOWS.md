@@ -348,6 +348,7 @@ Routes are in `code font`. Buttons are in **bold**. Field labels are in "quotes"
    - A duplicate e-mail is refused (`EMAIL_EXISTS`).
    - The new user logs in and sees only the operator menu.
    - To give someone a scope role in this plant, open their page (`/users/:userId`), section **Access in this plant** → **Grant access** (see 4.1, flow 4).
+   - To give a first role to a user of another plant of the organization: `/users` → **Grant access by e-mail**, type their exact e-mail, **Find**, choose the role → **Grant access**.
 2. **Master data:** units, assets, products. Same steps as 4.10, flow 1.
 3. **Connections:** watch and pause the MQTT subscription. Same steps as 4.9, flow 5.
    - A TenantAdmin holds manager approver, which the server also accepts for integration writes.
@@ -356,7 +357,7 @@ Routes are in `code font`. Buttons are in **bold**. Field labels are in "quotes"
 - Grant "Super Admin" or "Organization Admin": `ROLE_GRANT_NOT_ALLOWED` "Cannot grant role X".
 - Manage another TenantAdmin (a peer).
 - Act on Demo Plant 2 or Partner Plant (`TENANT_NOT_ALLOWED`).
-- Grant to, or assign tasks to, users whose home plant is another plant (§7).
+- Change the profile, role, password or status of a user whose home plant is another plant (`HOME_PLANT_ONLY`). Such a user ("From <home plant>" in the list) keeps the profile at home; here the administrator manages only their access.
 
 ### 4.4 Manager approver
 
@@ -1039,5 +1040,4 @@ stateDiagram-v2
 
 These are real limits of the current build, not mistakes in this guide.
 
-1. **A plant administrator cannot see users whose home plant is another plant.** Members who reach this plant through a scope grant appear as "Unknown user" and cannot be listed, granted to or assigned tasks by a plant administrator. Fixing it needs an owner decision (a row-level-security exception).
-2. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.
+1. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.
