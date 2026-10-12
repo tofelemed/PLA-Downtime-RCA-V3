@@ -13,16 +13,19 @@ export interface NativeSelectProps {
   placeholder?: string;
   disabled?: boolean;
   invalid?: boolean;
+  /** accessible name when no visible `<label for>` points at the select */
+  ariaLabel?: string;
 }
 
 /** Plain `<select>` (keyboard- and test-friendly, as in the 3.2 / 3.3 screens). */
-export function NativeSelect({ id, value, options, onChange, placeholder, disabled, invalid }: NativeSelectProps) {
+export function NativeSelect({ id, value, options, onChange, placeholder, disabled, invalid, ariaLabel }: NativeSelectProps) {
   return (
     <select
       id={id}
       className={SELECT_CLASS}
       value={value}
       disabled={disabled}
+      aria-label={ariaLabel}
       aria-invalid={invalid || undefined}
       aria-describedby={invalid ? `${id}-error` : undefined}
       onChange={(event) => onChange(event.target.value)}

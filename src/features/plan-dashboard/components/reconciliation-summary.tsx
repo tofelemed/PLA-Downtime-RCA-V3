@@ -1,5 +1,7 @@
 import type { ReconciliationView, SliceReconciliationView } from '@/api/v2/types/reconciliation';
+import { labelOf } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { FLAG_LABELS } from '../model/display';
 
 /** Server flags of a residual beyond tolerance (plan 2.5 / 2.8): shown in red. */
 const BLOCKING_FLAGS = new Set(['unaccounted', 'over_accounted', 'conflict']);
@@ -30,7 +32,7 @@ export function ReconciliationSummary({ view }: { view: ReconciliationView }) {
               </dd>
             </div>
           ))}
-          {slice.flags.length > 0 && <p className="col-span-full text-xs text-muted-foreground">Flags: {slice.flags.join(', ')}</p>}
+          {slice.flags.length > 0 && <p className="col-span-full text-xs text-muted-foreground">Status: {slice.flags.map((f) => labelOf(FLAG_LABELS, f)).join(', ')}</p>}
         </dl>
       ))}
       {view.slices.length === 0 && <p className="text-sm text-muted-foreground">No calculated slices yet (recompute the period).</p>}

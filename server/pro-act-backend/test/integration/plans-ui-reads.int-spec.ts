@@ -53,12 +53,18 @@ describe('v2 reads for the plans / profiles UI (plan 3.4)', () => {
     );
     const [item] = mine.items;
     expect(Object.keys(item).sort()).toEqual([
+      'availability',
       'code',
+      'createdAt',
+      'description',
       'id',
       'isActive',
       'name',
+      'rowVersion',
       'uom',
+      'updatedAt',
     ]);
+    expect(item).not.toHaveProperty('legacyStandardCost');
     expect(item.code).toMatch(/^HDPE-/);
     expect(item).toMatchObject({ uom: 't', isActive: true });
     expect(mine.scope).toEqual({ tenantId: env.world.tenantA });

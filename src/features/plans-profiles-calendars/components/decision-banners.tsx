@@ -1,35 +1,26 @@
-import { Info } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { StatusIcon } from '@/lib/icons';
 
-/**
- * Open owner decisions that change what these screens mean (plan 3.4 "Decisions / risks"): shown until
- * they are recorded in plans/DECISIONS.md. D03 is recorded (Asia/Tehran, 06:00, 3 × 8 h); the calendar
- * itself is configuration created here — nothing is seeded.
- */
+const NOTES: Readonly<Record<string, { id: string; text: string }>> = {
+  profiles: {
+    id: 'valuation',
+    text: 'Rates are entered in IRR or USD. Losses are valued only after finance approves a valuation policy. Plans need approved rates: there is no default rate.',
+  },
+  calendars: {
+    id: 'calendar',
+    text: 'Create and publish the plant calendar here. A holiday with “Reduced hours” is flagged in the preview but does not shorten the shifts yet.',
+  },
+};
+
+/** One short note per tab about what is not decided or not automatic yet (plain language, no codes). */
 export function DecisionBanners({ tab }: { tab: string }) {
-  if (tab === 'profiles') {
-    return (
-      <Alert data-testid="decision-banner" data-decision="D08">
-        <Info className="h-4 w-4" />
-        <AlertTitle>Valuation (D08) partly open</AlertTitle>
-        <AlertDescription>
-          Rates are entered in IRR or USD. Nothing is valued until finance approves a valuation policy (shown as “unvalued (policy pending)”), and
-          the v1 product standard rate stays an unconfirmed legacy cost (D08 Q3). Plans need explicit approved rates — there is no default rate.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-  if (tab === 'calendars') {
-    return (
-      <Alert data-testid="decision-banner" data-decision="D03">
-        <Info className="h-4 w-4" />
-        <AlertTitle>Plant calendar (D03)</AlertTitle>
-        <AlertDescription>
-          Recorded: Asia/Tehran, operational day 06:00, three 8-hour shifts, holidays excluded. Create and publish it here; the “reduced” holiday
-          treatment has no reduction rule yet and is only warned about.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-  return null;
+  const note = NOTES[tab];
+  if (!note) return null;
+  const Icon = StatusIcon.info;
+  return (
+    <Alert data-testid="decision-banner" data-decision={note.id}>
+      <Icon className="h-4 w-4" aria-hidden="true" />
+      <AlertDescription>{note.text}</AlertDescription>
+    </Alert>
+  );
 }

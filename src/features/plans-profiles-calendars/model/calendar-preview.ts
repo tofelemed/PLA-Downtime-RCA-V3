@@ -1,4 +1,5 @@
 import type { CalendarWarning, ShiftInstancePreview } from '@/api/v2/types/calendars';
+import { humanize } from '@/features/ux-kit/labels';
 
 /**
  * Display helpers of the calendar preview (plan 3.4, CAL02). Nothing here derives schedule figures: the
@@ -40,9 +41,9 @@ const TEXT: Record<string, string> = {
   dst_split: 'A shift boundary falls in the repeated hour: two instances with distinct offsets',
   holiday_reduced: 'Reduced holiday: shifts kept (no reduction rule decided yet)',
   crew_conflict: 'More than one crew rotates onto this shift',
-  timezone_fallback: 'The site has no valid IANA zone: UTC was used',
+  timezone_fallback: 'The site has no valid time zone: UTC was used',
 };
 
 export function warningText(warning: CalendarWarning): string {
-  return TEXT[warning.code] ?? warning.code;
+  return TEXT[warning.code] ?? humanize(warning.code);
 }

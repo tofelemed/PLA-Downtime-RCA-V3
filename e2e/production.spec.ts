@@ -45,108 +45,6 @@ test.describe('Production Module', () => {
     await fixture.cleanup();
   });
 
-  test('should display production plans list', async ({ page }) => {
-    await loginViaAPI(page);
-    await page.goto('/production-plans');
-    
-    // Wait for plans page to load
-    await page.waitForLoadState('networkidle');
-    await page.waitForSelector('h1, button, table, [role="list"], div', { timeout: 10000 });
-    
-    // Plans might be filtered by tenant/unit, so wait a bit for data to load
-    await page.waitForTimeout(2000);
-    
-    // Try to find the plan - it might be in PlanList component
-    // Check if plan name appears anywhere on the page
-    const planVisible = await page.locator(`text=${productionPlan.name}`).first().isVisible({ timeout: 5000 }).catch(() => false);
-    
-    if (!planVisible) {
-      // Plan might not be visible due to filtering - check if any plans are shown
-      const hasPlans = await page.locator('text=/Production Plan|Plan Name|No plans/i').first().isVisible({ timeout: 3000 }).catch(() => false);
-      expect(hasPlans).toBeTruthy(); // At least the page structure should be there
-    } else {
-      await expect(page.locator(`text=${productionPlan.name}`).first()).toBeVisible();
-    }
-  });
-
-  test('should create new production plan via UI', async ({ page }) => {
-    await loginViaAPI(page);
-    await page.goto('/production-plans');
-    
-    // Wait for page to load
-    await page.waitForLoadState('networkidle');
-    await page.waitForSelector('h1, button', { timeout: 10000 });
-    await page.waitForTimeout(2000); // Give time for data to load
-    
-    // Click create button - look for button with "Create" or "Add" or Plus icon
-    const createButtons = page.locator('button:has-text("Create"), button:has-text("Add"), button:has-text("New Plan")');
-    const createButtonCount = await createButtons.count();
-    
-    if (createButtonCount > 0) {
-      await createButtons.first().click({ timeout: 10000 });
-    } else {
-      // Try finding button with Plus icon
-      const plusButton = page.locator('button:has(svg)').first();
-      await plusButton.click({ timeout: 5000 });
-    }
-    
-    // Wait for dialog/form to appear - PlanForm uses Dialog component
-    await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
-    await page.waitForTimeout(2000); // Wait for dialog animation and form to render
-    
-    // PlanForm has input with id="name" - try multiple selectors
-    const planName = `E2E New Plan ${Date.now()}`;
-    
-    // Try to find the name input - it has id="name", or look for input with label "Plan Name"
-    let nameInput = page.locator('[role="dialog"] input#name').first();
-    
-    // If not found, try finding by label
-    if (!(await nameInput.isVisible({ timeout: 2000 }).catch(() => false))) {
-      // Look for input near "Plan Name" label
-      const planNameLabel = page.locator('[role="dialog"] label:has-text("Plan Name")').first();
-      if (await planNameLabel.isVisible({ timeout: 2000 }).catch(() => false)) {
-        // Find input that follows the label
-        nameInput = planNameLabel.locator('..').locator('input').first();
-      } else {
-        // Fallback: find first text input in dialog
-        nameInput = page.locator('[role="dialog"] input[type="text"]').first();
-      }
-    }
-    
-    // Wait for input to be visible and enabled
-    await nameInput.waitFor({ state: 'visible', timeout: 10000 });
-    await nameInput.fill(planName);
-    
-    // Try to find and fill unit dropdown - it might be a Select component
-    const unitSelectTrigger = page.locator('[role="dialog"] button[role="combobox"], [role="dialog"] select').first();
-    if (await unitSelectTrigger.isVisible({ timeout: 2000 })) {
-      // If it's a Select component (combobox), click to open
-      if (await unitSelectTrigger.getAttribute('role') === 'combobox') {
-        await unitSelectTrigger.click();
-        await page.waitForTimeout(500);
-        // Select the unit option
-        const unitOption = page.locator(`[role="option"]:has-text("${fixture.unit.name}"), [role="option"][value="${fixture.unit.id}"]`).first();
-        await unitOption.click({ timeout: 5000 });
-      } else {
-        // Regular select
-        await unitSelectTrigger.selectOption({ value: fixture.unit.id });
-      }
-    }
-    
-    // Submit - look for submit button in dialog
-    const submitButton = page.locator('[role="dialog"] button[type="submit"], [role="dialog"] button:has-text("Create"), [role="dialog"] button:has-text("Save")');
-    await submitButton.click({ timeout: 5000 });
-    
-    // Wait for dialog to close
-    await page.waitForSelector('[role="dialog"]', { state: 'hidden', timeout: 5000 }).catch(() => {});
-    await page.waitForTimeout(2000);
-    
-    // Verify plan appears in list - scroll to it
-    const planLocator = page.locator(`text=${planName}`).first();
-    await planLocator.scrollIntoViewIfNeeded();
-    await expect(planLocator).toBeVisible({ timeout: 10000 });
-  });
-
   test('should create production event via UI', async ({ page }) => {
     await loginViaAPI(page);
     await page.goto('/events');
@@ -237,45 +135,15 @@ test.describe('Production Module', () => {
     await expect(eventLocator).toBeVisible({ timeout: 10000 });
   });
 
-  test('should view production plan details', async ({ page }) => {
+  // The v1 Production Plans screen was replaced by the v2 plans list (plans are created, edited, approved
+  // and accounted there: e2e/personas/engineer-planning.spec.ts, manager-1-plans.spec.ts); the old address
+  // still opens it.
+  test('the old Production Plans address opens the v2 plans list', async ({ page }) => {
     await loginViaAPI(page);
     await page.goto('/production-plans');
-    
-    // Wait for page to load
-    await page.waitForLoadState('networkidle');
-    await page.waitForSelector('h1, button, table, [role="list"], [class*="Card"]', { timeout: 10000 });
-    await page.waitForTimeout(3000); // Give time for data to load
-    
-    // Plans might be filtered by tenant/unit - check if any plans are visible
-    // First, check if the plan list is empty or if plans are filtered out
-    const planNameText = productionPlan.name;
-    const planLocator = page.locator(`text=${planNameText}`).first();
-    
-    // Check if plan is visible
-    const isVisible = await planLocator.isVisible({ timeout: 5000 }).catch(() => false);
-    
-    if (!isVisible) {
-      // Plan might not be visible due to filtering - this is expected behavior
-      // The test passes if the page loads correctly, even if the specific plan isn't shown
-      // (plans are filtered by tenant/unit in the backend)
-      const hasPlansSection = await page.locator('text=/Production Plan|Plan Name|No plans/i').first().isVisible({ timeout: 3000 }).catch(() => false);
-      expect(hasPlansSection).toBeTruthy(); // At least verify the page structure is there
-      return; // Skip the rest of the test
-    }
-    
-    // Plan is visible - scroll to it and click
-    await planLocator.scrollIntoViewIfNeeded();
-    await planLocator.waitFor({ state: 'visible', timeout: 10000 });
-    
-    // Click on the plan - it might be a link, button, or card
-    const planCard = planLocator.locator('..').locator('..').first();
-    await planCard.click({ timeout: 10000 });
-    
-    // Wait for details to load (might navigate or show modal/dashboard)
-    await page.waitForTimeout(2000);
-    
-    // Verify plan name is still visible (either in details view or still in list)
-    await expect(planLocator).toBeVisible({ timeout: 10000 });
+    await expect(page).toHaveURL(/\/planning\?tab=plans/);
+    await expect(page.getByTestId('planning-page')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('plans-tab')).toBeVisible({ timeout: 60_000 });
   });
 });
 

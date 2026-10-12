@@ -15,6 +15,7 @@ import { PlanGenerationProcessor } from './plan-generation.processor';
 import { PlanInputsLoader } from './plan-inputs.loader';
 import { PlanLegacyBridge } from './plan-legacy-bridge.service';
 import { PlanPeriodGeneratorService } from './plan-period-generator.service';
+import { PlanReviewService } from './plan-review.service';
 import { PlanReferences } from './plan-references';
 import { PlanScenariosService } from './plan-scenarios.service';
 import { PlanVersionsService } from './plan-versions.service';
@@ -45,6 +46,7 @@ import { PlanVersionsService } from './plan-versions.service';
     PlanInputsLoader,
     PlanPeriodGeneratorService,
     PlanApprovalService,
+    PlanReviewService,
     PlanGenerationJobsService,
     PlanGenerationProcessor,
     PlanLegacyBridge,
@@ -54,6 +56,7 @@ import { PlanVersionsService } from './plan-versions.service';
     PlanVersionsService,
     PlanPeriodGeneratorService,
     PlanApprovalService,
+    PlanReviewService,
     PlanGenerationJobsService,
     PlanLegacyBridge,
   ],

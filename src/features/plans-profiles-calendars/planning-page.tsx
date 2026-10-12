@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { usePlantSelection } from '@/contexts/PlantSelectionContext';
 import { DataState } from '@/features/ux-kit/data-state';
+import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { ScopeHeader } from '@/features/ux-kit/scope-header';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { DecisionBanners } from './components/decision-banners';
@@ -20,9 +21,9 @@ const TABS = [
 ] as const;
 
 /**
- * Plans, profiles and calendars on v2 (plan 3.4) behind `v2.plansProfilesCalendars`: capability and
- * schedule as versioned master data, previews from the server before every approval. The tab is in the
- * URL (`?tab=`), so a link opens the same view.
+ * Production plans, profiles and calendars: capability and schedule as versioned master data, previews
+ * from the server before every approval. The tab is in the URL (`?tab=`); records, forms and editors are
+ * sub-pages (`/planning/plans/…`, `/planning/profiles/…`, `/planning/calendars/…`).
  */
 export function PlanningPage() {
   const tenantId = useV2TenantId();
@@ -30,28 +31,31 @@ export function PlanningPage() {
   const zone = usePlantTimezone();
   const [params, setParams] = useSearchParams();
   const tab = TABS.some((t) => t.value === params.get('tab')) ? (params.get('tab') as string) : 'plans';
-  if (!tenantId) return <DataState state="no-permission" detail="Choose a plant (tenant) to manage its plans, profiles and calendars." />;
+  if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to manage its plans, profiles and calendars." />;
   return (
-    <div className="space-y-4" data-testid="planning-page">
-      <div>
-        <h1 className="text-2xl font-semibold">Plans, profiles & calendars</h1>
-        <ScopeHeader scopeLabel={selection?.tenant?.name ?? 'Plant'} timezone={zone.timezone} timezoneIsFallback={zone.source === 'utc-fallback'} />
-      </div>
-      <DecisionBanners tab={tab} />
-      <Tabs value={tab} onValueChange={(next) => setParams({ tab: next }, { replace: true })}>
-        <TabsList>
-          {TABS.map((t) => (
-            <TabsTrigger key={t.value} value={t.value} data-testid={`tab-${t.value}`}>
-              {t.label}
-            </TabsTrigger>
+    <Page width="wide">
+      <div data-testid="planning-page" className="space-y-6">
+        <PageHeader
+          title="Plans, profiles & calendars"
+          description="Versioned production plans, the rates they use and the shift calendar they run on."
+          meta={<ScopeHeader scopeLabel={selection?.tenant?.name ?? 'Plant'} timezone={zone.timezone} timezoneIsFallback={zone.source === 'utc-fallback'} />}
+        />
+        <DecisionBanners tab={tab} />
+        <Tabs value={tab} onValueChange={(next) => setParams({ tab: next }, { replace: true })}>
+          <TabsList className="h-auto flex-wrap">
+            {TABS.map((t) => (
+              <TabsTrigger key={t.value} value={t.value} data-testid={`tab-${t.value}`}>
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {TABS.map(({ value, Component }) => (
+            <TabsContent key={value} value={value} className="pt-3">
+              <Suspense fallback={<Skeleton className="h-64 w-full" />}>{tab === value && <Component />}</Suspense>
+            </TabsContent>
           ))}
-        </TabsList>
-        {TABS.map(({ value, Component }) => (
-          <TabsContent key={value} value={value}>
-            <Suspense fallback={<Skeleton className="h-64 w-full" />}>{tab === value && <Component />}</Suspense>
-          </TabsContent>
-        ))}
-      </Tabs>
-    </div>
+        </Tabs>
+      </div>
+    </Page>
   );
 }

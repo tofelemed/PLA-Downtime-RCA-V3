@@ -61,10 +61,39 @@ function pickRevision(
 
 const groupBy = <T>(rows: readonly T[], key: (row: T) => string) => {
   const map = new Map<string, T[]>();
-  for (const row of rows)
-    map.set(key(row), [...(map.get(key(row)) ?? []), row]);
+  for (const row of rows) {
+    const group = map.get(key(row));
+    if (group) group.push(row);
+    else map.set(key(row), [row]);
+  }
   return map;
 };
+
+/**
+ * Columns the states read of a run and of its plan candidates (`candidatesOf`): runs and loss lines carry
+ * large JSON columns (fingerprint, valuation context, evidence) that no state uses, and loading them for a
+ * page of 500 periods dominated the PLA reports (plan 3.6 profiling, docs/UI_UX_AUDIT.md finding 6).
+ */
+const RUN_COLUMNS = {
+  id: true,
+  tenantId: true,
+  periodId: true,
+  revisionId: true,
+  actualsRunId: true,
+  status: true,
+  engineVersion: true,
+  policyVersions: true,
+  startedAt: true,
+  completedAt: true,
+} as const;
+const CANDIDATE_COLUMNS = {
+  id: true,
+  runId: true,
+  sliceId: true,
+  kind: true,
+  quantity: true,
+  autoKey: true,
+} as const;
 
 async function revisionsOf(manager: EntityManager, periodIds: string[]) {
   const rows = periodIds.length
@@ -92,6 +121,7 @@ async function runContent(manager: EntityManager, runs: CalculationRun[]) {
     };
   const [lines, totals, actuals] = await Promise.all([
     manager.find(LossLine, {
+      select: CANDIDATE_COLUMNS,
       where: {
         runId: In(runIds),
         ledger: 'plan',
@@ -198,7 +228,10 @@ export async function loadPeriodStates(
     r.currentRunId ? [r.currentRunId] : [],
   );
   const runs = runIds.length
-    ? await manager.find(CalculationRun, { where: { id: In(runIds) } })
+    ? await manager.find(CalculationRun, {
+        select: RUN_COLUMNS,
+        where: { id: In(runIds) },
+      })
     : [];
   const runsById = new Map(runs.map((r) => [r.id, r]));
   const [content, lineSets, rules] = await Promise.all([

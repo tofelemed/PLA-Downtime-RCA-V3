@@ -1,4 +1,4 @@
-import { plantLocalToUtc, utcToPlantLocal } from '@/features/event-hub/model/plant-local-time';
+import { plantLocalToUtc, utcToPlantLocal } from '@/lib/dates';
 import type { CalendarCreateBody, CalendarPatchBody } from '@/api/v2/queries/calendars';
 import type { CalendarDefinition, CalendarVersionView, ExclusionKind, Holiday, ShiftTemplate } from '@/api/v2/types/calendars';
 import type { FieldErrors } from './profile-form';
@@ -70,12 +70,12 @@ export function draftOf(version: CalendarVersionView): CalendarDraft {
 
 function templateErrors(templates: readonly TemplateRow[]): FieldErrors {
   const errors: FieldErrors = {};
-  if (templates.length === 0) errors.shiftTemplates = 'shiftTemplates must contain at least 1 element';
+  if (templates.length === 0) errors.shiftTemplates = 'Add at least one shift';
   templates.forEach((t, i) => {
-    if (!t.name.trim()) errors[`shiftTemplates.${i}.name`] = 'name is required';
-    if (!LOCAL_TIME.test(t.startLocal)) errors[`shiftTemplates.${i}.startLocal`] = 'startLocal must be a local time HH:mm';
-    if (!LOCAL_TIME.test(t.endLocal)) errors[`shiftTemplates.${i}.endLocal`] = 'endLocal must be a local time HH:mm';
-    if (t.days && !DAYS.test(t.days)) errors[`shiftTemplates.${i}.daysOfWeek`] = 'days are ISO weekdays 1–7, comma separated';
+    if (!t.name.trim()) errors[`shiftTemplates.${i}.name`] = 'Enter a name';
+    if (!LOCAL_TIME.test(t.startLocal)) errors[`shiftTemplates.${i}.startLocal`] = 'Use a time like 06:00';
+    if (!LOCAL_TIME.test(t.endLocal)) errors[`shiftTemplates.${i}.endLocal`] = 'Use a time like 06:00';
+    if (t.days && !DAYS.test(t.days)) errors[`shiftTemplates.${i}.daysOfWeek`] = 'Use weekdays 1–7 (Monday = 1), separated by commas';
   });
   return errors;
 }
@@ -83,23 +83,23 @@ function templateErrors(templates: readonly TemplateRow[]): FieldErrors {
 function listErrors(draft: CalendarDraft): FieldErrors {
   const errors: FieldErrors = {};
   draft.holidays.forEach((h, i) => {
-    if (!LOCAL_DATE.test(h.date)) errors[`holidays.${i}.date`] = 'date must be a local date YYYY-MM-DD';
-    if (!h.name.trim()) errors[`holidays.${i}.name`] = 'name is required';
+    if (!LOCAL_DATE.test(h.date)) errors[`holidays.${i}.date`] = 'Enter a date';
+    if (!h.name.trim()) errors[`holidays.${i}.name`] = 'Enter a name';
   });
   draft.exclusions.forEach((e, i) => {
-    if (!plantLocalToUtc(e.from, draft.timezone)) errors[`exclusions.${i}.from`] = 'from is required';
-    if (!plantLocalToUtc(e.to, draft.timezone)) errors[`exclusions.${i}.to`] = 'to is required';
-    if (!e.reason.trim()) errors[`exclusions.${i}.reason`] = 'reason is required';
+    if (!plantLocalToUtc(e.from, draft.timezone)) errors[`exclusions.${i}.from`] = 'Enter the start';
+    if (!plantLocalToUtc(e.to, draft.timezone)) errors[`exclusions.${i}.to`] = 'Enter the end';
+    if (!e.reason.trim()) errors[`exclusions.${i}.reason`] = 'Enter a reason';
   });
   return errors;
 }
 
 export function validateCalendarDraft(draft: CalendarDraft): FieldErrors {
   const errors: FieldErrors = { ...templateErrors(draft.templates), ...listErrors(draft) };
-  if (!draft.timezone.trim()) errors.timezone = 'timezone is required';
-  if (!LOCAL_TIME.test(draft.operationalDayStart)) errors.operationalDayStart = 'operationalDayStart must be a local time HH:mm';
-  if (!LOCAL_DATE.test(draft.effectiveFrom)) errors.effectiveFrom = 'effectiveFrom must be a local date YYYY-MM-DD';
-  if (draft.effectiveTo && !LOCAL_DATE.test(draft.effectiveTo)) errors.effectiveTo = 'effectiveTo must be a local date YYYY-MM-DD';
+  if (!draft.timezone.trim()) errors.timezone = 'Enter the time zone';
+  if (!LOCAL_TIME.test(draft.operationalDayStart)) errors.operationalDayStart = 'Use a time like 06:00';
+  if (!LOCAL_DATE.test(draft.effectiveFrom)) errors.effectiveFrom = 'Enter the first operational date';
+  if (draft.effectiveTo && !LOCAL_DATE.test(draft.effectiveTo)) errors.effectiveTo = 'Enter a valid date';
   return errors;
 }
 

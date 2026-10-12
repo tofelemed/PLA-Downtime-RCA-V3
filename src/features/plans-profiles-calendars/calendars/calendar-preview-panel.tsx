@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { useCalendarPreview } from '@/api/v2/queries/calendars';
+import type { CalendarPreviewView } from '@/api/v2/types/calendars';
+import { DateInput } from '@/features/ux-kit/date-inputs';
 import { DurationText } from '@/features/ux-kit/duration-text';
+import { Section } from '@/features/ux-kit/page-layout';
+import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { StatusIcon } from '@/lib/icons';
 import { FormField } from '../components/form-field';
 import { NativeSelect, type Option } from '../components/native-select';
 import { RefusalNotice } from '../components/refusal-notice';
@@ -21,7 +23,32 @@ export interface CalendarPreviewPanelProps {
   timezone: string;
 }
 
-/** `POST /calendars/preview` for one unit and operational dates (≤ 62 days): instances, DST warnings, diff. */
+function PreviewResult({ view }: { view: CalendarPreviewView }) {
+  const pref = useCalendarPreference();
+  const dstWarnings = view.warnings.filter(isDstWarning);
+  const Icon = StatusIcon.warning;
+  return (
+    <div className="space-y-2">
+      <p className="text-sm" data-testid="preview-scheduled" data-seconds={view.scheduledSeconds}>
+        Scheduled time ({view.timezone}): <DurationText seconds={view.scheduledSeconds} /> · {view.instances.length} shifts · compared with what is stored: {view.diff.added.length} added,{' '}
+        {view.diff.removed.length} removed, {view.diff.changed.length} changed, {view.diff.unchangedCount} unchanged
+      </p>
+      {dstWarnings.length > 0 && (
+        <ul className="space-y-1 rounded-md border border-amber-400 bg-amber-50 p-2 text-sm dark:bg-amber-950" data-testid="dst-warnings" role="status">
+          {dstWarnings.map((warning) => (
+            <li key={`${warning.code}-${warning.localDate}-${warning.shiftName}`} className="flex items-center gap-2" data-testid="dst-warning" data-code={warning.code}>
+              <Icon className="h-4 w-4 text-amber-700" aria-hidden="true" />
+              {formatOperationalDate(warning.localDate, pref)} {warning.shiftName ?? ''}: {warningText(warning)}
+            </li>
+          ))}
+        </ul>
+      )}
+      <CalendarPreviewTable preview={view} />
+    </div>
+  );
+}
+
+/** Server preview for one unit and up to 62 operational dates: shifts, clock-change warnings, differences. */
 export function CalendarPreviewPanel({ candidate, request, unitOptions, defaultUnitId, timezone }: CalendarPreviewPanelProps) {
   const [unitId, setUnitId] = useState(defaultUnitId);
   const [localFrom, setLocalFrom] = useState('');
@@ -36,52 +63,24 @@ export function CalendarPreviewPanel({ candidate, request, unitOptions, defaultU
     // a new editor request (click) runs the preview with the current inputs
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request]);
-  const view = preview.data;
-  const dstWarnings = view?.warnings.filter(isDstWarning) ?? [];
+  const title = candidate?.candidateVersionId ? 'Preview of the stored version' : candidate ? 'Preview of the unsaved edits' : 'Preview';
   return (
-    <Card data-testid="calendar-preview">
-      <CardHeader>
-        <CardTitle className="text-base">Preview {candidate?.candidateVersionId ? '(stored version)' : candidate ? '(unsaved edits)' : ''}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid gap-2 sm:grid-cols-4">
+    <Section title={title}>
+      <div className="space-y-3" data-testid="calendar-preview">
+        <div className="grid items-end gap-2 sm:grid-cols-4">
           <FormField id="previewUnit" label="Unit">
             <NativeSelect id="previewUnit" value={unitId} options={unitOptions} placeholder="Choose a unit" onChange={setUnitId} />
           </FormField>
-          <FormField id="previewFrom" label="First operational date">
-            <Input id="previewFrom" type="date" value={localFrom} onChange={(e) => setLocalFrom(e.target.value)} />
-          </FormField>
-          <FormField id="previewTo" label="Last operational date">
-            <Input id="previewTo" type="date" value={localTo} onChange={(e) => setLocalTo(e.target.value)} />
-          </FormField>
-          <div className="flex items-end">
-            <Button onClick={run} disabled={!ready || preview.isPending} data-testid="calendar-preview-submit">
-              Run preview
-            </Button>
-          </div>
+          <DateInput id="previewFrom" label="First operational date" value={localFrom} onChange={setLocalFrom} />
+          <DateInput id="previewTo" label="Last operational date" value={localTo} onChange={setLocalTo} />
+          <Button onClick={run} disabled={!ready || preview.isPending} data-testid="calendar-preview-submit">
+            Run preview
+          </Button>
         </div>
-        {!candidate && <p className="text-sm text-muted-foreground">Choose “Preview” on a calendar version or on unsaved edits.</p>}
+        {!candidate && <p className="text-sm text-muted-foreground">Choose “Preview” above to check this version or your unsaved edits.</p>}
         <RefusalNotice error={preview.error} timezone={timezone} />
-        {view && (
-          <div className="space-y-2">
-            <p className="text-sm" data-testid="preview-scheduled" data-seconds={view.scheduledSeconds}>
-              Scheduled time ({view.timezone}): <DurationText seconds={view.scheduledSeconds} /> · {view.instances.length} instances · diff vs stored: +{view.diff.added.length} / −
-              {view.diff.removed.length} / changed {view.diff.changed.length} / unchanged {view.diff.unchangedCount}
-            </p>
-            {dstWarnings.length > 0 && (
-              <ul className="space-y-1 rounded-md border border-amber-400 bg-amber-50 p-2 text-sm dark:bg-amber-950" data-testid="dst-warnings" role="status">
-                {dstWarnings.map((warning) => (
-                  <li key={`${warning.code}-${warning.localDate}-${warning.shiftName}`} className="flex items-center gap-2" data-testid="dst-warning" data-code={warning.code}>
-                    <AlertTriangle className="h-4 w-4 text-amber-700" aria-hidden />
-                    {warning.localDate} {warning.shiftName ?? ''}: {warningText(warning)}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <CalendarPreviewTable preview={view} />
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        {preview.data && <PreviewResult view={preview.data} />}
+      </div>
+    </Section>
   );
 }

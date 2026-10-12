@@ -1,96 +1,109 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
-import { usePlans } from '@/api/v2/queries/plans';
+import type { ApprovalState, PlanView } from '@/api/v2/types/plans';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { DataState } from '@/features/ux-kit/data-state';
-import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { BASIS_SHORT_LABELS, labelOf, VERSION_STATE_LABELS } from '@/features/ux-kit/labels';
+import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
+import { ActionIcon, EntityIcon } from '@/lib/icons';
 import { FormField } from '../components/form-field';
-import { LoadMore } from '../components/load-more';
 import { NativeSelect } from '../components/native-select';
 import { VersionStateBadge } from '../components/version-state-badge';
-import { usePlanningRefs } from '../hooks/use-planning-refs';
-import type { PlanFormMode } from '../hooks/use-plan-form';
-import { PlanDetail } from './plan-detail';
-import { PlanFormDialog } from './plan-form-dialog';
+import { usePagedPlans, usePrefetchPlanVersion } from '../hooks/use-plan-reads';
+import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
+
+const STATES: ApprovalState[] = ['draft', 'submitted', 'approved', 'superseded'];
+
+function columnsOf(refs: PlanningRefs, prefetch: (plan: PlanView) => void): DataTableColumn<PlanView>[] {
+  return [
+    {
+      id: 'name',
+      header: 'Plan',
+      cell: (plan) => (
+        <span className="font-medium" data-testid="plan-row" data-plan-id={plan.id} onMouseEnter={() => prefetch(plan)}>
+          {plan.name}
+        </span>
+      ),
+    },
+    { id: 'unit', header: 'Unit', cell: (plan) => refs.unitName(plan.version.unitId) },
+    { id: 'version', header: 'Version', nowrap: true, cell: (plan) => `Version ${plan.currentVersion ?? plan.version.version}` },
+    { id: 'basis', header: 'Basis', cell: (plan) => labelOf(BASIS_SHORT_LABELS, plan.version.basis) },
+    {
+      id: 'window',
+      header: 'Window',
+      nowrap: true,
+      cell: (plan) => (
+        <span className="text-xs">
+          <PlantTime iso={plan.version.validFrom} tz={refs.timezone} withDate /> → <PlantTime iso={plan.version.validTo} tz={refs.timezone} withDate />
+        </span>
+      ),
+    },
+    { id: 'state', header: 'State', cell: (plan) => <VersionStateBadge state={plan.version.approvalState} /> },
+    {
+      id: 'periods',
+      header: 'Period accounting',
+      headerLabel: 'Period accounting',
+      cell: (plan) => (
+        <Link to={`/plans/${plan.id}`} className="inline-flex items-center gap-1 text-sm underline" data-testid="plan-periods-link" onClick={(event) => event.stopPropagation()}>
+          <EntityIcon.plan className="h-4 w-4" aria-hidden="true" />
+          Periods
+        </Link>
+      ),
+    },
+  ];
+}
 
 /**
- * Versioned plans (plan 3.4 step 3, PLAN02–PLAN04): header and slices, preview of the exact per-shift
- * targets, generation, server-gated approval, new versions after approval and the version history.
+ * Versioned plans, 20 per page: a row opens the plan (versions, preview, generation, approval) at
+ * `/planning/plans/:planId`; "Periods" opens its period accounting at `/plans/:planId`.
  */
 export function PlansTab() {
   const { canWritePlans } = useCapabilities();
   const refs = usePlanningRefs();
+  const navigate = useNavigate();
+  const prefetch = usePrefetchPlanVersion();
   const [unitId, setUnitId] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [form, setForm] = useState<PlanFormMode | null>(null);
-  const plans = usePlans(unitId || undefined);
-  const items = flattenPages(plans.data?.pages);
-  const selected = items.find((plan) => plan.id === selectedId) ?? null;
+  const [state, setState] = useState<ApprovalState | ''>('');
+  const plans = usePagedPlans({ unitId, state });
+  const stateOptions = STATES.map((value) => ({ value, label: labelOf(VERSION_STATE_LABELS, value) }));
   return (
-    <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]" data-testid="plans-tab">
-      <section className="space-y-3">
-        {canWritePlans ? (
-          <Button size="sm" onClick={() => setForm({ kind: 'create' })} data-testid="plan-new">
-            New plan
-          </Button>
-        ) : (
+    <div className="space-y-4" data-testid="plans-tab">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-64">
+          <FormField id="planUnitFilter" label="Unit">
+            <NativeSelect id="planUnitFilter" value={unitId} options={refs.unitOptions} placeholder="All units" onChange={setUnitId} />
+          </FormField>
+        </div>
+        <div className="w-56">
+          <FormField id="planStateFilter" label="Current version">
+            <NativeSelect id="planStateFilter" value={state} options={stateOptions} placeholder="Any state" onChange={(v) => setState(v as ApprovalState | '')} />
+          </FormField>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
           <ReadOnlyHint />
-        )}
-        <FormField id="planUnitFilter" label="Unit">
-          <NativeSelect id="planUnitFilter" value={unitId} options={refs.unitOptions} placeholder="All units" onChange={setUnitId} />
-        </FormField>
-        <DataState state={dataStateOf(plans, { isEmpty: items.length === 0 })} error={plans.error} detail="No versioned plans for this filter.">
-          <ul className="max-h-[32rem] space-y-1 overflow-auto" data-testid="plan-list">
-            {items.map((plan) => (
-              <li key={plan.id}>
-                <button
-                  type="button"
-                  className={`w-full rounded-md border p-2 text-left text-sm hover:bg-muted ${plan.id === selectedId ? 'border-primary bg-muted' : ''}`}
-                  aria-pressed={plan.id === selectedId}
-                  data-testid="plan-row"
-                  data-plan-id={plan.id}
-                  onClick={() => setSelectedId(plan.id)}
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{plan.name}</span>
-                    <VersionStateBadge state={plan.version.approvalState} />
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {refs.unitName(plan.version.unitId)} · v{plan.currentVersion} · {plan.version.basis}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          <LoadMore hasNextPage={plans.hasNextPage} isFetchingNextPage={plans.isFetchingNextPage} fetchNextPage={plans.fetchNextPage} />
-        </DataState>
-      </section>
-      <section>
-        {selected ? (
-          <PlanDetail
-            key={selected.id}
-            plan={selected}
-            refs={refs}
-            onEdit={(version) => setForm({ kind: 'edit', plan: selected, version })}
-            onNewVersion={(version) => setForm({ kind: 'new-version', plan: selected, version })}
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">Select a plan to preview its periods, approve it or see its versions.</p>
-        )}
-      </section>
-      {form && (
-        <PlanFormDialog
-          mode={form}
-          refs={refs}
-          onClose={() => setForm(null)}
-          onSaved={(planId) => {
-            setForm(null);
-            setSelectedId(planId);
-          }}
-        />
-      )}
+          {canWritePlans && (
+            <Button asChild size="sm" data-testid="plan-new">
+              <Link to="/planning/plans/new">
+                <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
+                New plan
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
+      <DataTable
+        caption="Production plans"
+        columns={columnsOf(refs, prefetch)}
+        rows={plans.rows}
+        getRowKey={(plan) => plan.id}
+        pager={plans.pager}
+        status={plans.status}
+        empty={{ title: 'No plans', text: 'No versioned plans match these filters.' }}
+        onRowClick={(plan) => navigate(`/planning/plans/${plan.id}`)}
+        rowLabel={(plan) => `Open plan ${plan.name}`}
+      />
     </div>
   );
 }

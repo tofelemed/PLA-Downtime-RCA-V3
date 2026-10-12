@@ -1,6 +1,7 @@
 import type { CurrencyValueView, GridWorkflowState, ResidualState } from '@/api/v2/types/period-overview';
 import type { CandidateState, ReconciliationView } from '@/api/v2/types/reconciliation';
 import { formatCurrencyAmount } from '@/features/display-currency/money-format';
+import { humanize } from '@/features/ux-kit/labels';
 
 /** Labels and display rules of the Plan Dashboard (plan 3.5); no figure is derived here. */
 export const WORKFLOW_LABELS: Record<GridWorkflowState, string> = {
@@ -19,6 +20,20 @@ export const RESIDUAL_LABELS: Record<ResidualState, string> = {
   over_accounted: 'Over-accounted',
   overproduction: 'Overproduction',
   conflict: 'Conflict (loss on overproduction)',
+};
+
+/** Server flags of a slice or ledger (residual states, overrides that changed underneath). */
+export const FLAG_LABELS: Readonly<Record<string, string>> = {
+  unaccounted: 'Unaccounted',
+  over_accounted: 'Over-accounted',
+  overproduction: 'Overproduction',
+  conflict: 'Loss on overproduction',
+  within_tolerance: 'Within tolerance',
+  balanced: 'Balanced',
+  baseline_changed: 'Changed since the decision',
+  not_computable: 'Not computable',
+  no_target: 'No target',
+  no_actuals: 'No actuals',
 };
 
 /** Residual states that block submission (ACC10) and are shown in red. */
@@ -42,8 +57,17 @@ export const KIND_LABELS: Record<string, string> = {
   tolerance_adjustment: 'Tolerance adjustment',
 };
 
-/** Readiness is a display label only (WF01: Open / Reconciled ≠ workflow state). */
-export const READINESS_LABELS: Record<string, string> = { open: 'Open', reconciled: 'Reconciled' };
+/** Data quality of a period's actuals (server tokens). */
+export const QUALITY_LABELS: Readonly<Record<string, string>> = {
+  measured: 'Measured',
+  estimated: 'Estimated',
+  excluded: 'Excluded',
+  missing: 'Missing',
+  partial: 'Partly measured',
+  complete: 'Complete',
+  incomplete: 'Incomplete',
+  provisional: 'Provisional',
+};
 
 /** `1,234.57 USD` from a decimal string, rounded for display only; null amounts say why (never 0). */
 export function formatMoney(value: CurrencyValueView): string {
@@ -55,14 +79,14 @@ export function formatMoney(value: CurrencyValueView): string {
 }
 
 const VALUATION_REASON_LABELS: Record<string, string> = {
-  policy_unapproved: 'Valuation policy not approved by finance (D08)',
+  policy_unapproved: 'Valuation policy not approved by finance',
   fx_rate_missing: 'No approved FX rate for the date',
   rate_missing: 'No approved valuation rate',
   uom_mismatch: 'Rate unit differs from the loss unit',
 };
 
 export function valuationReasonLabel(reason: string): string {
-  return VALUATION_REASON_LABELS[reason] ?? reason.replace(/_/g, ' ');
+  return VALUATION_REASON_LABELS[reason] ?? humanize(reason);
 }
 
 export interface ActionGate {
@@ -84,11 +108,17 @@ export function reviewGate(view: ReconciliationView, userId: string | null): Act
   return { allowed: true, reason: null, code: null };
 }
 
-/** A short, stable label for a user or service id (the API returns ids only). */
-export function actorLabel(actorId: string | null, userId: string | null, service?: string | null): string {
-  if (!actorId) return service ? `service ${service}` : '—';
+const SERVICE_LABELS: Readonly<Record<string, string>> = {
+  'accounting-worker': 'the accounting service',
+  'actuals-worker': 'the actuals service',
+  worker: 'the background service',
+};
+
+/** Who did it: "you", the user's name (`nameOf` from the user directory) or the service, never an id. */
+export function actorLabel(actorId: string | null, userId: string | null, nameOf: (id: string) => string, service?: string | null): string {
+  if (!actorId) return service ? (SERVICE_LABELS[service] ?? 'an automatic service') : '—';
   if (actorId === userId) return 'you';
-  return `user ${actorId.slice(0, 8)}`;
+  return nameOf(actorId);
 }
 
 /** `"0.875"` → `"87.5 %"`: a ratio shown as a percentage by moving the decimal point (no float maths). */

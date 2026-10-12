@@ -50,14 +50,17 @@ export function useWorkflowActions(view: ReconciliationView) {
   const period = periodRefOf(view);
   const revision = view.revision.revision;
 
-  const run = async (command: WorkflowCommand, action: () => Promise<ReconciliationView | null>) => {
+  /** resolves true when the command succeeded; a refusal is kept in `problem` and resolves false */
+  const run = async (command: WorkflowCommand, action: () => Promise<ReconciliationView | null>): Promise<boolean> => {
     setPending(command);
     setProblem(null);
     try {
       const next = await action();
       if (next) queryClient.setQueryData(reconciliationKey(tenantId, view.periodId), next);
+      return true;
     } catch (error) {
       setProblem(workflowProblemOf(error));
+      return false;
     } finally {
       setPending(null);
     }

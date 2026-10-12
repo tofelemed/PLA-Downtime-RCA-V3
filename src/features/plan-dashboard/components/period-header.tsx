@@ -1,7 +1,8 @@
 import { Badge } from '@/components/ui/badge';
 import type { AnalyticsResponse } from '@/api/v2/types/envelopes';
 import type { PeriodAccountingView } from '@/api/v2/types/period-overview';
-import type { ReconciliationView } from '@/api/v2/types/reconciliation';
+import type { ReconciliationView, ToleranceView } from '@/api/v2/types/reconciliation';
+import { humanize, labelOf, policyRefsLabel, REVISION_LIFECYCLE_LABELS, useUserNames } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ScopeHeader } from '@/features/ux-kit/scope-header';
 
@@ -13,40 +14,52 @@ export interface PeriodHeaderProps {
   timezone: string;
 }
 
-const LIFECYCLE_LABELS: Record<string, string> = { draft: 'Draft', in_review: 'In review', approved: 'Approved', cancelled: 'Cancelled' };
+const toleranceText = (t: ToleranceView) => (t.mode === 'zero' ? 'Tolerance: none' : t.mode === 'percent' ? `Tolerance: ${t.value} %` : `Tolerance: ${t.value}`);
 
-/** Period scope, plan version, revision and lifecycle, run id, engine and policy versions (§16.2 header). */
-export function PeriodHeader({ view, accounting, unitName, planLabel, timezone }: PeriodHeaderProps) {
-  const run = accounting?.data.run ?? null;
-  const uom = view.slices[0]?.uom ?? null;
+function CalculationDetails({ accounting, timezone }: { accounting: PeriodAccountingView['run']; timezone: string }) {
+  if (!accounting) return <Badge variant="outline">Not calculated yet</Badge>;
   return (
-    <header className="space-y-1" data-testid="period-header">
+    <>
+      <Badge variant="outline" data-testid="run-badge">
+        Calculated <PlantTime iso={accounting.completedAt ?? accounting.startedAt} tz={timezone} withDate />
+      </Badge>
+      <details className="text-xs text-muted-foreground" data-testid="calculation-details">
+        <summary className="cursor-pointer">Details</summary>
+        <p>Calculation engine {accounting.engineVersion}</p>
+        <p>Policies: {policyRefsLabel(accounting.policyVersions)}</p>
+      </details>
+    </>
+  );
+}
+
+/** Period scope, plan version, revision and lifecycle, when it was calculated and the tolerance; versions behind "Details". */
+export function PeriodHeader({ view, accounting, unitName, planLabel, timezone }: PeriodHeaderProps) {
+  const users = useUserNames();
+  const uom = view.slices[0]?.uom ?? null;
+  const revision = view.revision;
+  return (
+    <header className="space-y-2" data-testid="period-header">
       <h2 className="text-lg font-semibold">
         <PlantTime iso={view.utcStart} tz={timezone} withDate /> → <PlantTime iso={view.utcEnd} tz={timezone} withDate />
       </h2>
-      <ScopeHeader scopeLabel={unitName} timezone={timezone} uom={uom} baseline={planLabel} isProvisional={view.revision.lifecycle !== 'approved'} asOf={accounting?.asOf ?? null} />
-      <div className="flex flex-wrap gap-2 text-xs">
-        <Badge variant="outline" data-testid="revision-badge" data-lifecycle={view.revision.lifecycle}>
-          Revision {view.revision.revision} · {LIFECYCLE_LABELS[view.revision.lifecycle] ?? view.revision.lifecycle}
-          {view.revision.isStale ? ' · stale' : ''}
+      <ScopeHeader scopeLabel={unitName} timezone={timezone} uom={uom} baseline={planLabel} isProvisional={revision.lifecycle !== 'approved'} asOf={accounting?.asOf ?? null} />
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <Badge variant="outline" data-testid="revision-badge" data-lifecycle={revision.lifecycle}>
+          Revision {revision.revision} · {labelOf(REVISION_LIFECYCLE_LABELS, revision.lifecycle)}
+          {revision.isStale ? ' · inputs changed' : ''}
         </Badge>
-        {view.publishedRevision !== null && <Badge variant="outline">Published: revision {view.publishedRevision}</Badge>}
-        <Badge variant="outline" title={view.baseRunId ?? undefined}>
-          Run {view.baseRunId ? view.baseRunId.slice(0, 8) : 'none'}
-          {run ? ` · ${run.engineVersion}` : ''}
-        </Badge>
-        {run?.policyVersions.map((p) => (
-          <Badge key={p.id} variant="outline">
-            {p.kind}@{p.version}
-          </Badge>
-        ))}
-        <Badge variant="outline">
-          Tolerance {view.tolerance.mode}
-          {view.tolerance.mode === 'zero' ? '' : ` ${view.tolerance.value}`}
-        </Badge>
+        {view.publishedRevision !== null && <Badge variant="outline">Approved: revision {view.publishedRevision}</Badge>}
+        <Badge variant="outline">{toleranceText(view.tolerance)}</Badge>
+        <CalculationDetails accounting={accounting?.data.run ?? null} timezone={timezone} />
       </div>
-      {view.revision.isStale && <p className="text-sm text-destructive">Inputs changed after submission ({view.revision.staleReason ?? 'stale'}): recompute and resubmit.</p>}
-      {view.revision.rejectReason && view.revision.lifecycle === 'draft' && <p className="text-sm">Returned by the reviewer: {view.revision.rejectReason}</p>}
+      {revision.isStale && (
+        <p className="text-sm text-destructive">Inputs changed after submission{revision.staleReason ? ` (${humanize(revision.staleReason).toLowerCase()})` : ''}: recompute and resubmit.</p>
+      )}
+      {revision.rejectReason && revision.lifecycle === 'draft' && (
+        <p className="text-sm" data-testid="reject-reason">
+          Returned by {users.nameOf(revision.rejectedBy)}: {revision.rejectReason}
+        </p>
+      )}
     </header>
   );
 }

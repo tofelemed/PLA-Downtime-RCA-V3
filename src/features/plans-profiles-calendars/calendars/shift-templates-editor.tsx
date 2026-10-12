@@ -14,7 +14,7 @@ const FIELDS: ReadonlyArray<[key: keyof TemplateRow, label: string, apiField: st
   ['name', 'Name', 'name'],
   ['startLocal', 'Start (local)', 'startLocal'],
   ['endLocal', 'End (local)', 'endLocal'],
-  ['days', 'ISO weekdays (empty = all)', 'daysOfWeek'],
+  ['days', 'Weekdays 1–7, Monday = 1 (empty = every day)', 'daysOfWeek'],
 ];
 
 /** Shift templates: an end at or before the start crosses midnight (equal = 24 h), as the server reads it. */

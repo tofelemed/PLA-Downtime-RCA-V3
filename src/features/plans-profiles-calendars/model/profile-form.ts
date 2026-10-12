@@ -1,4 +1,4 @@
-import { plantLocalToUtc, utcToPlantLocal } from '@/features/event-hub/model/plant-local-time';
+import { plantLocalToUtc, utcToPlantLocal } from '@/lib/dates';
 import type { ProfileCreateBody, ProfilePatchBody, RateCreateBody, ValuationRateCreateBody } from '@/api/v2/queries/profile-commands';
 import type { CapacityModel, ProfileView, RateKind, RateTimebase, ValuationBasis } from '@/api/v2/types/profiles';
 
@@ -52,20 +52,20 @@ export function profileFormOf(profile: ProfileView, timezone: string): ProfileFo
 export function validityErrors(from: string, to: string, timezone: string): FieldErrors {
   const errors: FieldErrors = {};
   const start = plantLocalToUtc(from, timezone);
-  if (!start) errors.effectiveFrom = 'effectiveFrom is required';
+  if (!start) errors.effectiveFrom = 'Enter the start';
   const end = to ? plantLocalToUtc(to, timezone) : null;
-  if (to && !end) errors.effectiveTo = 'effectiveTo must be a date and time';
-  if (start && end && end <= start) errors.effectiveTo = 'effectiveTo must be after effectiveFrom';
+  if (to && !end) errors.effectiveTo = 'Enter a valid end';
+  if (start && end && end <= start) errors.effectiveTo = 'The end must be after the start';
   return errors;
 }
 
 export function validateProfileForm(values: ProfileFormValues, timezone: string, creating: boolean): FieldErrors {
   const errors = validityErrors(values.effectiveFrom, values.effectiveTo, timezone);
-  if (creating && !values.unitId) errors.unitId = 'unitId is required';
-  if (creating && !values.productId) errors.productId = 'productId is required';
-  if (creating && !MODE.test(values.operatingMode)) errors.operatingMode = 'operatingMode must be 1–64 letters, digits, _ . -';
-  if (!values.quantityUom.trim()) errors.quantityUom = 'quantityUom is required';
-  if (!values.rateTimebase) errors.rateTimebase = 'rateTimebase is required';
+  if (creating && !values.unitId) errors.unitId = 'Choose a unit';
+  if (creating && !values.productId) errors.productId = 'Choose a product';
+  if (creating && !MODE.test(values.operatingMode)) errors.operatingMode = 'Use 1–64 letters, digits, _ . or -';
+  if (!values.quantityUom.trim()) errors.quantityUom = 'Enter the quantity unit';
+  if (!values.rateTimebase) errors.rateTimebase = 'Choose the rate timebase';
   return errors;
 }
 
@@ -97,7 +97,7 @@ export interface RateFormValues {
 
 export function validateRateForm(values: RateFormValues, timezone: string): FieldErrors {
   const errors = validityErrors(values.effectiveFrom, values.effectiveTo, timezone);
-  if (!values.rate) errors.rate = 'rate is required';
+  if (!values.rate) errors.rate = 'Enter the rate';
   return errors;
 }
 
@@ -121,8 +121,8 @@ export interface ValuationFormValues {
 
 export function validateValuationForm(values: ValuationFormValues, timezone: string): FieldErrors {
   const errors = validityErrors(values.effectiveFrom, values.effectiveTo, timezone);
-  if (!values.value) errors.value = 'value is required';
-  if (!CURRENCY.test(values.currency)) errors.currency = 'currency must be an ISO 4217 code';
+  if (!values.value) errors.value = 'Enter the value';
+  if (!CURRENCY.test(values.currency)) errors.currency = 'Use a three-letter currency code, e.g. USD';
   return errors;
 }
 

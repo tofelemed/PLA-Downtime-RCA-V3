@@ -3,6 +3,7 @@ import { useWaterfall } from '@/api/v2/queries/period-overview';
 import type { LedgerKind, RevisionSelector } from '@/api/v2/types/period-overview';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { humanize } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { WaterfallChart } from './waterfall-chart';
 
@@ -28,7 +29,7 @@ export function WaterfallPanel({ periodId, ledger, view }: WaterfallPanelProps) 
         {data && <Badge variant={data.closes ? 'default' : 'destructive'}>{data.closes ? 'Closes to actual' : 'Does not close — check the excluded slices'}</Badge>}
         {data && <Badge variant="outline">Unit: {data.uom ?? 'unknown'}</Badge>}
       </div>
-      <DataState state={state} error={waterfall.error} detail={state === 'empty' ? 'No computable slice for this ledger (see the flags above).' : undefined}>
+      <DataState state={state} error={waterfall.error} detail={state === 'empty' ? 'No computable slice for this ledger (see the status above).' : undefined}>
         {data && (
           <>
             <WaterfallChart bars={data.bars} uom={data.uom} />
@@ -52,7 +53,7 @@ export function WaterfallPanel({ periodId, ledger, view }: WaterfallPanelProps) 
                 ))}
               </tbody>
             </table>
-            {data.excluded.length > 0 && <p className="text-xs text-muted-foreground">Excluded: {data.excluded.map((e) => e.reason).join(', ')}</p>}
+            {data.excluded.length > 0 && <p className="text-xs text-muted-foreground">Excluded: {data.excluded.map((e) => humanize(e.reason)).join(', ')}</p>}
           </>
         )}
       </DataState>

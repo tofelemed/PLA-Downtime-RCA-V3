@@ -81,7 +81,29 @@ export interface PlanV2View {
   recurrence: string | null;
   dataEntryFrequency: string | null;
   status: string | null;
+  /** review of the open version: who submitted it, and who returned it to its author and why */
+  review: PlanReviewV2View;
   version: PlanVersionV2View;
+}
+
+export interface PlanReviewV2View {
+  submittedBy: string | null;
+  submittedAt: string | null;
+  returnedBy: string | null;
+  returnedAt: string | null;
+  returnReason: string | null;
+}
+
+/** The plan header's review columns (written from the identity by the review commands). */
+function reviewOf(plan: ProductionPlan): PlanReviewV2View {
+  const returned = Boolean(plan.rejectionReason);
+  return {
+    submittedBy: plan.submittedBy ?? null,
+    submittedAt: iso(plan.submittedAt),
+    returnedBy: returned ? (plan.reviewedBy ?? null) : null,
+    returnedAt: returned ? iso(plan.reviewedAt) : null,
+    returnReason: plan.rejectionReason ?? null,
+  };
 }
 
 export interface PlanPeriodV2View {
@@ -203,6 +225,7 @@ export function toPlanView(
     recurrence: plan.recurrence ?? null,
     dataEntryFrequency: plan.dataEntryFrequency ?? null,
     status: plan.status ?? null,
+    review: reviewOf(plan),
     version: toVersionView(version, slices),
   };
 }

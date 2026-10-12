@@ -103,7 +103,9 @@ describe('plan dashboard editor and workflow (plan 3.5)', () => {
     reply = () => json(422, refusal('ALLOCATION_EXCEEDED', { issues: [{ code: 'ALLOCATION_EXCEEDED', message: 'line 0: over budget', sliceId: 's1', line: 0, expectedRemainingAllocation: '60' }] }));
     wrap(<LossLineEditor view={VIEW} timezone="UTC" />);
     acceptAndSave();
-    await waitFor(() => expect(screen.getByTestId('line-issue').textContent).toContain('remaining allocation (server)'));
+    await waitFor(() => expect(screen.getByTestId('line-issue').textContent).toContain('still available to allocate'));
+    expect(screen.getByTestId('line-issue').getAttribute('data-code')).toBe('ALLOCATION_EXCEEDED');
+    expect(screen.getByTestId('line-issue').textContent).not.toContain('ALLOCATION_EXCEEDED');
     expect(screen.getByTestId('line-issue').textContent).toContain('60');
   });
 
@@ -119,7 +121,8 @@ describe('plan dashboard editor and workflow (plan 3.5)', () => {
     reply = () => json(422, refusal('RESIDUAL_UNEXPLAINED', { issues: [{ code: 'RESIDUAL_UNEXPLAINED', message: 'residual 60', sliceId: 's1' }] }));
     wrap(<WorkflowBar view={VIEW} shown="current" onShowCurrent={() => undefined} />);
     fireEvent.click(screen.getByTestId('wf-submit'));
-    await waitFor(() => expect(screen.getByTestId('gate-issues').textContent).toContain('RESIDUAL_UNEXPLAINED'));
+    await waitFor(() => expect(screen.getByTestId('gate-issues').querySelector('[data-code="RESIDUAL_UNEXPLAINED"]')).not.toBeNull());
+    expect(screen.getByTestId('gate-issues').textContent).not.toContain('RESIDUAL_UNEXPLAINED');
     const post = calls.find((c) => c.method === 'POST');
     expect(post?.body).toEqual({ revision: 1, runId: 'run-1', contentHash: 'a'.repeat(64) });
     expect(post?.headers.get('Idempotency-Key')).toBeTruthy();

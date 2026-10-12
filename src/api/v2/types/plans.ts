@@ -78,7 +78,17 @@ export interface PlanView {
   recurrence: string | null;
   dataEntryFrequency: string | null;
   status: string | null;
+  /** review of the open version: who submitted it, who returned it to its author and why */
+  review?: PlanReviewView | null;
   version: PlanVersionView;
+}
+
+export interface PlanReviewView {
+  submittedBy: string | null;
+  submittedAt: string | null;
+  returnedBy: string | null;
+  returnedAt: string | null;
+  returnReason: string | null;
 }
 
 export interface PlanPeriodView {

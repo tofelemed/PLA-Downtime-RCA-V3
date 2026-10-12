@@ -1,6 +1,8 @@
 import type { AnalyticsResponse } from '@/api/v2/types/envelopes';
 import type { LedgerKind, LedgerTotalsView, PeriodAccountingView } from '@/api/v2/types/period-overview';
+import { labelOf } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { FLAG_LABELS } from '../model/display';
 
 export interface LedgerComparisonProps {
   accounting: AnalyticsResponse<PeriodAccountingView> | null;
@@ -55,9 +57,9 @@ export function LedgerComparison({ accounting, ledger }: LedgerComparisonProps) 
                 </tr>
               ))}
               <tr className="border-t text-xs text-muted-foreground">
-                <td>Flags</td>
-                <td>{plan?.flags.join(', ') || '—'}</td>
-                <td>{capacity?.flags.join(', ') || '—'}</td>
+                <td>Status</td>
+                <td>{plan?.flags.map((f) => labelOf(FLAG_LABELS, f)).join(', ') || '—'}</td>
+                <td>{capacity?.flags.map((f) => labelOf(FLAG_LABELS, f)).join(', ') || '—'}</td>
               </tr>
             </tbody>
           </table>

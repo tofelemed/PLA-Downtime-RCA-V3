@@ -8,6 +8,7 @@ import { entriesInCurrency } from '@/features/display-currency/money-format';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { labelOf, VALUATION_STATUS_LABELS } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { formatMoney, valuationReasonLabel } from '../model/display';
 
@@ -19,7 +20,7 @@ export interface ValuationTilesProps {
 
 /**
  * Loss value of the period from the 2.6 valuation (replaces the flat `lossValuePerUnit`): the tile of the
- * user's display currency (USD by default, IRR on request; the server reports both, D08) with its status and
+ * user's display currency (USD by default, IRR on request; the server reports both) with its status and
  * reasons — an unapproved policy or a missing FX rate is shown, never a zero; unpriced quantities are listed
  * with their unit.
  */
@@ -44,7 +45,7 @@ export function ValuationTiles({ period, ledger, approvedOnly }: ValuationTilesP
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 <p className="text-lg font-semibold">{formatMoney(c)}</p>
-                <Badge variant={c.status === 'valued' ? 'default' : 'secondary'}>{c.status}</Badge>
+                <Badge variant={c.status === 'valued' ? 'default' : 'secondary'}>{labelOf(VALUATION_STATUS_LABELS, c.status)}</Badge>
                 {c.reasons.map((r) => (
                   <p key={r} className="text-xs text-amber-700" data-testid="value-reason" data-reason={r}>
                     {valuationReasonLabel(r)}

@@ -1,36 +1,32 @@
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { PlanView } from '@/api/v2/types/plans';
-import { PlantTime } from '@/features/ux-kit/plant-time';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
+import { BASIS_SHORT_LABELS, labelOf, VERSION_STATE_LABELS } from '@/features/ux-kit/labels';
+import { Section } from '@/features/ux-kit/page-layout';
+import { PlantTime } from '@/features/ux-kit/plant-time';
 
 export interface PlanSummaryProps {
   plan: PlanView;
   timezone: string;
 }
 
-/** The plan behind the periods: version, window, basis and header target (edited under /planning). */
+/** The plan behind the periods: version, window, basis and header target (changed on the plan's page). */
 export function PlanSummary({ plan, timezone }: PlanSummaryProps) {
   const version = plan.version;
   return (
-    <Card data-testid="plan-summary">
-      <CardHeader>
-        <CardTitle className="text-base">
-          {plan.name} · version {version.version} ({version.approvalState})
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm">
+    <Section title={`Version ${version.version} · ${labelOf(VERSION_STATE_LABELS, version.approvalState)}`}>
+      <div className="space-y-2 text-sm" data-testid="plan-summary">
         <p>
           Window <PlantTime iso={version.validFrom} tz={timezone} withDate /> → <PlantTime iso={version.validTo} tz={timezone} withDate />
         </p>
         <p>
-          Basis {version.basis}; header target {formatDecimal(version.headerTarget)} (in the unit of each slice’s profile)
+          {labelOf(BASIS_SHORT_LABELS, version.basis)}; header target {formatDecimal(version.headerTarget)} (in the unit of each slice’s profile)
         </p>
         <p>{version.periodsGeneratedAt ? 'Plan periods generated.' : 'Plan periods not generated yet.'}</p>
-        <Link className="underline" to="/planning?tab=plans">
-          Edit plans, profiles and calendars
+        <Link className="underline" to={`/planning/plans/${plan.id}`}>
+          Open the plan (versions, preview, approval)
         </Link>
-      </CardContent>
-    </Card>
+      </div>
+    </Section>
   );
 }

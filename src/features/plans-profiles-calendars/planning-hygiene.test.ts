@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
  * template screen offers or derives the old "100 units per hour" default rate.
  */
 const FEATURE = join(process.cwd(), 'src', 'features', 'plans-profiles-calendars');
-const PLAN_SCREENS = [join(process.cwd(), 'src', 'components', 'production-plans'), join(process.cwd(), 'src', 'pages', 'ProductionPlans.tsx')];
+const PLAN_DASHBOARD = join(process.cwd(), 'src', 'features', 'plan-dashboard');
 
 const FORBIDDEN: ReadonlyArray<[label: string, pattern: RegExp]> = [
   ['Math.random', /Math\.random/],
@@ -45,8 +45,8 @@ describe('Plans, profiles, calendars hygiene (plan 3.4)', () => {
     expect(offences(sourceFiles(FEATURE), FORBIDDEN)).toEqual([]);
   });
 
-  it('no plan, template or v2 screen offers or derives a 100 units / h default', () => {
-    const files = [...sourceFiles(FEATURE), ...PLAN_SCREENS.flatMap(sourceFiles)];
+  it('no plan screen offers or derives a 100 units / h default', () => {
+    const files = [...sourceFiles(FEATURE), ...sourceFiles(PLAN_DASHBOARD)];
     expect(offences(files, DEFAULT_RATE)).toEqual([]);
   });
 

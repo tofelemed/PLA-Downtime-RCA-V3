@@ -1,80 +1,102 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
-import { useProfiles } from '@/api/v2/queries/profiles';
 import type { ProfileView } from '@/api/v2/types/profiles';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { DataState } from '@/features/ux-kit/data-state';
-import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { CAPACITY_MODEL_LABELS, labelOf } from '@/features/ux-kit/labels';
+import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
+import { ActionIcon } from '@/lib/icons';
 import { FormField } from '../components/form-field';
-import { LoadMore } from '../components/load-more';
 import { NativeSelect } from '../components/native-select';
-import { usePlanningRefs } from '../hooks/use-planning-refs';
-import { ProfileDetail } from './profile-detail';
-import { ProfileEditorDialog } from './profile-editor-dialog';
-import { ProfileList } from './profile-list';
-import { RateImportDialog } from './rate-import-dialog';
+import { VersionStateBadge } from '../components/version-state-badge';
+import { usePagedProfiles } from '../hooks/use-profile-reads';
+import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
+
+function columnsOf(refs: PlanningRefs): DataTableColumn<ProfileView>[] {
+  return [
+    {
+      id: 'key',
+      header: 'Unit × product',
+      cell: (p) => (
+        <span className="font-medium" data-testid="profile-row" data-profile-id={p.id}>
+          {refs.unitName(p.unitId)} × {refs.productName(p.productId)}
+        </span>
+      ),
+    },
+    { id: 'mode', header: 'Operating mode', cell: (p) => p.operatingMode },
+    { id: 'version', header: 'Version', nowrap: true, cell: (p) => `Version ${p.version}` },
+    { id: 'capacity', header: 'Capacity model', cell: (p) => labelOf(CAPACITY_MODEL_LABELS, p.capacityModel) },
+    {
+      id: 'effective',
+      header: 'Effective',
+      nowrap: true,
+      cell: (p) => (
+        <span className="text-xs">
+          <PlantTime iso={p.effectiveFrom} tz={refs.timezone} withDate /> → {p.effectiveTo ? <PlantTime iso={p.effectiveTo} tz={refs.timezone} withDate /> : 'open-ended'}
+        </span>
+      ),
+    },
+    { id: 'state', header: 'State', cell: (p) => <VersionStateBadge state={p.state} /> },
+  ];
+}
 
 /**
- * Production profiles (plan 3.4 step 1, PLAN01/06): what a unit can make of a product, with effective-dated
- * rates and valuation rates, drafts, approvals and imports — everything validated and decided by the API.
+ * Production profiles: what a unit can make of a product, with effective-dated rates and valuation rates.
+ * 20 per page; a row opens the profile at `/planning/profiles/:profileId`.
  */
 export function ProfilesTab() {
   const { canWriteProfiles, canApproveProfiles } = useCapabilities();
   const refs = usePlanningRefs();
+  const navigate = useNavigate();
   const [unitId, setUnitId] = useState('');
   const [productId, setProductId] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editor, setEditor] = useState<{ profile?: ProfileView } | null>(null);
-  const [importing, setImporting] = useState(false);
-  const profiles = useProfiles({ unitId: unitId || undefined, productId: productId || undefined });
-  const items = flattenPages(profiles.data?.pages);
-  const selected = items.find((profile) => profile.id === selectedId) ?? null;
+  const profiles = usePagedProfiles({ unitId, productId });
   return (
-    <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]" data-testid="profiles-tab">
-      <section className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          {canWriteProfiles && (
-            <Button size="sm" onClick={() => setEditor({})} data-testid="profile-new">
-              New profile
-            </Button>
-          )}
-          {canApproveProfiles && (
-            <Button size="sm" variant="outline" onClick={() => setImporting(true)} data-testid="rate-import">
-              Import rates
-            </Button>
-          )}
-          <ReadOnlyHint />
+    <div className="space-y-4" data-testid="profiles-tab">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-64">
+          <FormField id="profileUnitFilter" label="Unit">
+            <NativeSelect id="profileUnitFilter" value={unitId} options={refs.unitOptions} placeholder="All units" onChange={setUnitId} />
+          </FormField>
         </div>
-        <FormField id="profileUnitFilter" label="Unit">
-          <NativeSelect id="profileUnitFilter" value={unitId} options={refs.unitOptions} placeholder="All units" onChange={setUnitId} />
-        </FormField>
-        <FormField id="profileProductFilter" label="Product">
-          <NativeSelect id="profileProductFilter" value={productId} options={refs.productOptions} placeholder="All products" onChange={setProductId} />
-        </FormField>
-        <DataState state={dataStateOf(profiles, { isEmpty: items.length === 0 })} error={profiles.error} detail="No profiles for this filter.">
-          <ProfileList profiles={items} selectedId={selectedId} refs={refs} onSelect={setSelectedId} />
-          <LoadMore hasNextPage={profiles.hasNextPage} isFetchingNextPage={profiles.isFetchingNextPage} fetchNextPage={profiles.fetchNextPage} />
-        </DataState>
-      </section>
-      <section>
-        {selected ? (
-          <ProfileDetail profile={selected} refs={refs} onEdit={() => setEditor({ profile: selected })} />
-        ) : (
-          <p className="text-sm text-muted-foreground">Select a profile to see its rates, valuation rates and approvals.</p>
-        )}
-      </section>
-      <ProfileEditorDialog
-        open={editor}
-        refs={refs}
-        onClose={() => setEditor(null)}
-        onSaved={(saved) => {
-          setEditor(null);
-          setSelectedId(saved.id);
-        }}
+        <div className="w-64">
+          <FormField id="profileProductFilter" label="Product">
+            <NativeSelect id="profileProductFilter" value={productId} options={refs.productOptions} placeholder="All products" onChange={setProductId} />
+          </FormField>
+        </div>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <ReadOnlyHint />
+          {canApproveProfiles && (
+            <Button asChild size="sm" variant="outline" data-testid="rate-import">
+              <Link to="/planning/profiles/import">
+                <ActionIcon.import className="h-4 w-4" aria-hidden="true" />
+                Import rates
+              </Link>
+            </Button>
+          )}
+          {canWriteProfiles && (
+            <Button asChild size="sm" data-testid="profile-new">
+              <Link to="/planning/profiles/new">
+                <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
+                New profile
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
+      <DataTable
+        caption="Production profiles"
+        columns={columnsOf(refs)}
+        rows={profiles.rows}
+        getRowKey={(p) => p.id}
+        pager={profiles.pager}
+        status={profiles.status}
+        empty={{ title: 'No profiles', text: 'No profiles match these filters.' }}
+        onRowClick={(p) => navigate(`/planning/profiles/${p.id}`)}
+        rowLabel={(p) => `Open profile ${refs.unitName(p.unitId)} × ${refs.productName(p.productId)}`}
       />
-      <RateImportDialog open={importing} timezone={refs.timezone} onClose={() => setImporting(false)} />
     </div>
   );
 }

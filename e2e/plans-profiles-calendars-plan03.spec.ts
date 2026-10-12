@@ -4,7 +4,7 @@ import { expectHidden, expectRefused } from './personas/support/hidden-controls'
 import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
 import { call } from './test-utils/downtime-world';
-import { plantLocal, seedPlanningWorld, type PlanningWorld } from './test-utils/planning-world';
+import { fillPlantDateTime, plantLocal, seedPlanningWorld, type PlanningWorld } from './test-utils/planning-world';
 import { secondApproverPage } from './test-utils/second-approver';
 
 /**
@@ -60,10 +60,11 @@ async function approverOnProfile(browser: Browser): Promise<Page> {
 
 async function editWindow(page: Page, from: string, to: string): Promise<void> {
   await page.getByTestId('plan-edit').click();
-  await page.fill('#planFrom', local(from));
-  await page.fill('#planTo', local(to));
+  await fillPlantDateTime(page, 'Window start', local(from));
+  await fillPlantDateTime(page, 'Window end (exclusive)', local(to));
   await page.getByTestId('plan-save').click();
   await expect(page.getByTestId('plan-form')).toBeHidden();
+  await expect(page.getByTestId('plan-detail')).toBeVisible();
 }
 
 test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)', () => {
@@ -86,7 +87,7 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await loginViaUI(page, MANAGER.email, MANAGER.password);
     await openTab(page, 'calendars');
     await expect(page.locator('nav a[href="/planning"]')).toBeVisible();
-    await expect(page.getByTestId('decision-banner')).toHaveAttribute('data-decision', 'D03');
+    await expect(page.getByTestId('decision-banner')).toHaveAttribute('data-decision', 'calendar');
     await page.selectOption('#calendarScope', { label: world.calUnitName });
     await page.getByTestId('calendar-new').click();
     await page.fill('#calTimezone', 'Europe/Berlin');
@@ -102,7 +103,7 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     const dstRow = page.locator('[data-testid="preview-instance"][data-dst="true"]');
     await expect(dstRow).toHaveCount(1);
     await expect(dstRow).toHaveAttribute('data-duration', '32400');
-    await expect(dstRow).toContainText('+02:00 → +01:00');
+    await expect(page.locator('tr', { has: dstRow })).toContainText('+02:00 → +01:00');
 
     await page.getByTestId('calendar-save').click();
     await expect(page.getByTestId('calendar-editor')).toHaveAttribute('data-state', 'draft');
@@ -117,7 +118,7 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
   test('rates: the author cannot approve; an overlapping sustained version is refused with the conflicting version; supersede closes it', async ({ page, browser }) => {
     await loginViaUI(page, MANAGER.email, MANAGER.password);
     await openTab(page, 'profiles');
-    await expect(page.getByTestId('decision-banner')).toHaveAttribute('data-decision', 'D08');
+    await expect(page.getByTestId('decision-banner')).toHaveAttribute('data-decision', 'valuation');
     await page.selectOption('#profileUnitFilter', { label: world.planUnitName });
     await page.locator(`[data-testid="profile-row"][data-profile-id="${world.profileId}"]`).click();
     await expect(page.getByTestId('rate-row')).toHaveCount(2);
@@ -125,7 +126,7 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await page.selectOption('#rateKind', 'sustained');
     await page.fill('#rate', '70');
     const from = new Date(Date.parse(`${world.planDay}T00:00:00Z`) + 30 * 86_400_000).toISOString();
-    await page.fill('#rateEffectiveFrom', local(from));
+    await fillPlantDateTime(page, 'Effective from', local(from));
     await page.getByTestId('rate-save').click();
     const authored = page.locator('[data-testid="rate-row"][data-kind="sustained"][data-version="2"]');
     await expect(authored).toHaveAttribute('data-state', 'draft');
@@ -142,7 +143,7 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await expect(draft).toHaveAttribute('data-state', 'approved');
     const first = approver.locator('[data-testid="rate-row"][data-kind="sustained"][data-version="1"]');
     await expect(first).toHaveAttribute('data-state', 'approved');
-    await expect(first).not.toContainText('open');
+    await expect(approver.locator('tr', { has: first })).not.toContainText('open-ended');
     await approver.context().close();
   });
 
@@ -171,8 +172,8 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await page.getByTestId('plan-new').click();
     await page.fill('#planName', `E2E PLAN ${world.suffix}`);
     await page.selectOption('#planUnit', { label: world.planUnitName });
-    await page.fill('#planFrom', local(dayStart));
-    await page.fill('#planTo', local(nextDay));
+    await fillPlantDateTime(page, 'Window start', local(dayStart));
+    await fillPlantDateTime(page, 'Window end (exclusive)', local(nextDay));
     await page.fill('#headerTarget', '1000');
     await page.selectOption('#slice-0-product', { label: `${world.productName} (E2E-PP-${world.suffix})` });
     await page.getByTestId('plan-save').click();
@@ -188,8 +189,8 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await page.getByTestId('calendar-new-from').click();
     await page.fill('#calFrom', world.planDay);
     await page.getByRole('button', { name: 'Add exclusion' }).click();
-    await page.getByLabel('Start of exclusion 1').fill(`${world.planDay}T12:00`);
-    await page.getByLabel('End of exclusion 1').fill(`${world.planDay}T18:00`);
+    await fillPlantDateTime(page, 'Start of exclusion 1', `${world.planDay}T12:00`);
+    await fillPlantDateTime(page, 'End of exclusion 1', `${world.planDay}T18:00`);
     await page.getByLabel('Reason of exclusion 1').fill('E2E no demand');
     await page.selectOption('#exclusion-0-kind', 'no_demand');
     await page.getByTestId('calendar-save').click();
@@ -218,10 +219,8 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await approver.getByTestId('approve-plan-submit').click();
     await expect(approver.getByTestId('frozen-version')).toBeVisible({ timeout: 15_000 });
     await approver.context().close();
-    // the selected plan is page state, not part of the URL: after a reload the author re-opens it
+    // the plan has its own URL: a reload shows the approved version
     await page.reload();
-    await expect(page.getByTestId('planning-page')).toBeVisible({ timeout: 60_000 });
-    await openPlan(page);
     await expect(page.getByTestId('frozen-version')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('plan-detail').getByTestId('version-state').first()).toHaveAttribute('data-state', 'approved');
     await expect(page.getByTestId('plan-edit')).toHaveCount(0);

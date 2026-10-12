@@ -3,8 +3,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { invalidateForChange } from '@/api/v2/queries/invalidation';
 import { usePlanGenerationJob } from '@/api/v2/queries/plans';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
+import { refusalTitle } from '@/features/ux-kit/errors';
 
 const TERMINAL = new Set(['completed', 'failed']);
+const STATE_LABELS: Record<string, string> = { queued: 'waiting', running: 'running', completed: 'completed', failed: 'failed' };
 
 /**
  * A 202 generation job followed until it completes or fails (API04); the server's result and error as is.
@@ -22,9 +24,9 @@ export function GenerationProgress({ jobId }: { jobId: string }) {
   if (!view) return <p className="text-sm" role="status">Generation accepted — waiting for the worker…</p>;
   return (
     <p className="text-sm" role="status" data-testid="generation-status" data-state={view.state}>
-      Generation of version {view.version}: <strong>{view.state}</strong>
+      Generation of version {view.version}: <strong>{STATE_LABELS[view.state] ?? 'running'}</strong>
       {view.result?.periods !== undefined ? ` · ${String(view.result.periods)} periods stored` : ''}
-      {view.errorCode ? ` · ${view.errorCode}: ${view.errorMessage ?? ''}` : ''}
+      {view.errorCode ? ` · ${refusalTitle(view.errorCode, null)}` : ''}
     </p>
   );
 }

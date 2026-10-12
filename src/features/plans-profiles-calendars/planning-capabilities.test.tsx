@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
 import type { PlanVersionView } from '@/api/v2/types/plans';
@@ -21,9 +22,14 @@ const VERSION = {
 
 describe('planning screens show only the controls the role can use (owner decision 2026-10-12)', () => {
   let client: QueryClient;
-  const wrap = (node: ReactNode) => render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
+  const wrap = (node: ReactNode) =>
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{node}</MemoryRouter>
+      </QueryClientProvider>,
+    );
   const openVersion = (version: PlanVersionView = VERSION) =>
-    wrap(<OpenVersionActions version={version} timezone="UTC" productName={() => 'P'} onEdit={() => undefined} onGenerated={() => undefined} />);
+    wrap(<OpenVersionActions version={version} timezone="UTC" productName={() => 'P'} onGenerated={() => undefined} />);
 
   beforeEach(() => {
     client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

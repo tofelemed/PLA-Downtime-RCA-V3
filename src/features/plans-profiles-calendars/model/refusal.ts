@@ -56,13 +56,31 @@ function kindOf(error: V2ApiError): RefusalKind {
 
 const text = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
+const TOKEN = /\b[a-z]+[A-Z]\w*\b|\b[a-z]+_[a-z_]+\b/;
+
+/**
+ * A server field message in plain words, placed under its input: `rate must be a decimal` → "Must be a
+ * decimal"; a message that still names internal fields becomes "Is not valid" (the label says which).
+ */
+export function plainFieldMessage(field: string, message: string): string {
+  const name = field.split('.').pop() ?? field;
+  const trimmed = message.trim();
+  const prefix = [field, name].find((candidate) => trimmed.startsWith(`${candidate} `));
+  const rest = prefix ? trimmed.slice(prefix.length + 1) : trimmed;
+  if (!rest || TOKEN.test(rest)) return 'Is not valid';
+  return rest.charAt(0).toUpperCase() + rest.slice(1);
+}
+
+const plainFieldErrors = (map: Record<string, string>): Record<string, string> =>
+  Object.fromEntries(Object.entries(map).map(([field, message]) => [field, plainFieldMessage(field, message)]));
+
 /** `details.conflicts` of VERSION_OVERLAP (`version`, `effectiveFrom/To`) or PLAN_OVERLAP (`planId`, `activeFrom/To`). */
 export function conflictsOf(error: V2ApiError): ConflictLine[] {
   const raw = error.details?.conflicts;
   if (!Array.isArray(raw)) return [];
   return raw.filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null).map((entry) => {
     const plan = text(entry.planId);
-    const label = plan ? `Plan ${plan.slice(0, 8)} v${String(entry.version)}` : `Version ${String(entry.version)}`;
+    const label = plan ? `Another approved plan (version ${String(entry.version)})` : `Version ${String(entry.version)}`;
     return {
       id: text(entry.id) ?? plan,
       label,
@@ -85,7 +103,7 @@ export function refusalOf(error: unknown): Refusal | null {
     code: error.code,
     message: error.message,
     status: error.status,
-    fieldErrors: error.fieldErrorMap(),
+    fieldErrors: plainFieldErrors(error.fieldErrorMap()),
     conflicts: conflictsOf(error),
     correlationId: error.correlationId,
   };

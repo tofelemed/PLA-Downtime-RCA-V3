@@ -18,7 +18,8 @@ export interface PlanningRefs {
   loading: boolean;
 }
 
-const nameOf = (map: Map<string, string>) => (id: string | null | undefined) => (id ? (map.get(id) ?? id.slice(0, 8)) : '—');
+/** a name, never the id: an id outside the loaded lists reads "Unknown unit" / "Unknown product" */
+const nameOf = (map: Map<string, string>, unknown: string) => (id: string | null | undefined) => (id ? (map.get(id) ?? unknown) : '—');
 
 /** Units, products and sites of the caller's scope with display names, plus the plant timezone (D03). */
 export function usePlanningRefs(): PlanningRefs {
@@ -39,8 +40,8 @@ export function usePlanningRefs(): PlanningRefs {
       productOptions,
       siteOptions: siteList.map((site) => ({ value: site.id, label: `${site.name} · ${site.timezone}` })),
       defaultSiteId: (siteList.find((site) => site.isDefault) ?? siteList[0])?.id ?? null,
-      unitName: nameOf(new Map(unitOptions.map((o) => [o.value, o.label]))),
-      productName: nameOf(new Map(productList.map((p) => [p.id, p.name]))),
+      unitName: nameOf(new Map(unitOptions.map((o) => [o.value, o.label])), 'Unknown unit'),
+      productName: nameOf(new Map(productList.map((p) => [p.id, p.name])), 'Unknown product'),
       loading: units.isLoading || products.isLoading || sites.isLoading || zone.loading,
     };
   }, [units.data, products.data, sites.data, zone.timezone, zone.source, zone.loading, units.isLoading, products.isLoading, sites.isLoading]);

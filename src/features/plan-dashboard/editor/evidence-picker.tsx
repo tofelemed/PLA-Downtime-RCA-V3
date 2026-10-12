@@ -1,9 +1,10 @@
 import { Checkbox } from '@/components/ui/checkbox';
-import { useProductionEvents } from '@/api/v2/queries/production-events';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
+import type { QueryParams } from '@/api/v2/request-url';
+import { usePagedQuery } from '@/api/v2/queries/use-paged-query';
+import type { ProductionEventView } from '@/api/v2/types/events';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
-import { DataState } from '@/features/ux-kit/data-state';
-import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { humanize } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 
 export interface EvidencePickerProps {
@@ -13,30 +14,40 @@ export interface EvidencePickerProps {
   onChange: (eventIds: string[]) => void;
 }
 
-/** Events of the period's unit overlapping the period (server filter); the server checks the slice overlap on save. */
+/** Events of the period's unit overlapping the period (server filter, 20 per page); the server checks the overlap on save. */
 export function EvidencePicker({ view, timezone, selected, onChange }: EvidencePickerProps) {
-  const events = useProductionEvents({ unitIds: [view.unitId], from: view.utcStart, to: view.utcEnd, limit: 50 }, timezone);
-  const items = flattenPages(events.data?.pages);
+  const events = usePagedQuery<ProductionEventView>({
+    resource: 'production-events',
+    path: '/production-events',
+    query: { unitIds: [view.unitId], from: view.utcStart, to: view.utcEnd } as unknown as QueryParams,
+    key: { scope: { unitIds: [view.unitId] }, window: { from: view.utcStart, to: view.utcEnd }, filters: { kind: 'evidence' } },
+  });
   const toggle = (id: string, on: boolean) => onChange(on ? [...selected, id] : selected.filter((e) => e !== id));
-  const state = dataStateOf(events, { isEmpty: items.length === 0 });
+  const columns: DataTableColumn<ProductionEventView>[] = [
+    {
+      id: 'pick',
+      header: '',
+      headerLabel: 'Link as evidence',
+      width: '3rem',
+      cell: (e) => <Checkbox aria-label="Link this event as evidence" data-testid="evidence-event" data-event-id={e.id} checked={selected.includes(e.id)} onCheckedChange={(v) => toggle(e.id, v === true)} />,
+    },
+    { id: 'when', header: 'When', nowrap: true, cell: (e) => <span className="text-xs"><PlantTime iso={e.startTime} tz={timezone} /> → {e.endTime ? <PlantTime iso={e.endTime} tz={timezone} /> : 'open'}</span> },
+    { id: 'what', header: 'Event', cell: (e) => humanize(e.classification?.physicalType ?? e.eventType ?? 'event') },
+    { id: 'description', header: 'Description', cell: (e) => e.description ?? '—' },
+  ];
   return (
     <fieldset className="space-y-1" data-testid="evidence-picker">
       <legend className="text-xs font-medium">Evidence events overlapping the period</legend>
-      <DataState state={state} error={events.error} detail={state === 'empty' ? 'No events overlap this period; mark the cause as “no event” instead.' : undefined}>
-        <ul className="max-h-40 space-y-1 overflow-y-auto">
-          {items.map((event) => (
-            <li key={event.id}>
-              <label className="flex items-center gap-2">
-                <Checkbox data-testid="evidence-event" data-event-id={event.id} checked={selected.includes(event.id)} onCheckedChange={(v) => toggle(event.id, v === true)} />
-                <span>
-                  <PlantTime iso={event.startTime} tz={timezone} /> → {event.endTime ? <PlantTime iso={event.endTime} tz={timezone} /> : 'open'} · {event.classification?.physicalType ?? event.eventType ?? 'event'}
-                  {event.description ? ` · ${event.description}` : ''}
-                </span>
-              </label>
-            </li>
-          ))}
-        </ul>
-      </DataState>
+      <DataTable
+        caption="Events overlapping the period"
+        columns={columns}
+        rows={events.rows}
+        getRowKey={(e) => e.id}
+        pager={events.pager}
+        status={events.status}
+        density="compact"
+        empty={{ text: 'No events overlap this period; mark the cause as “no event” instead.' }}
+      />
     </fieldset>
   );
 }

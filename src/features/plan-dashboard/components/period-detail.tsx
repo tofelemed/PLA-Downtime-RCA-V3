@@ -6,6 +6,7 @@ import type { LedgerKind, RevisionSelector } from '@/api/v2/types/period-overvie
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { AdjustmentsSection } from '../adjustments/adjustments-section';
 import { LossLineEditor } from '../editor/loss-line-editor';
 import { WorkflowBar } from '../workflow/workflow-bar';
 import { ActualsProvenance } from './actuals-provenance';
@@ -19,6 +20,7 @@ const WaterfallPanel = lazy(() => import('./waterfall-panel').then((m) => ({ def
 const PeriodHistory = lazy(() => import('../workflow/period-history').then((m) => ({ default: m.PeriodHistory })));
 
 export interface PeriodDetailProps {
+  planId: string;
   periodId: string;
   unitName: string;
   planLabel: string;
@@ -26,11 +28,11 @@ export interface PeriodDetailProps {
 }
 
 /**
- * One period's accounting workspace (plan 3.5): header with versions and run, the shown revision
- * (current or approved, `view=`), both ledgers side by side with the ledger toggle (D04: plan by
- * default), actuals provenance, the loss-line editor (drafts only), workflow, waterfall, value and history.
+ * One period's accounting workspace: header, the shown revision (current or approved), both ledgers with
+ * the ledger toggle (plan by default), actuals provenance and adjustments, the loss-line editor (drafts
+ * only), workflow, waterfall, value and history.
  */
-export function PeriodDetail({ periodId, unitName, planLabel, timezone }: PeriodDetailProps) {
+export function PeriodDetail({ planId, periodId, unitName, planLabel, timezone }: PeriodDetailProps) {
   const { canWritePeriods } = useCapabilities();
   const [view, setView] = useState<RevisionSelector>('current');
   const [ledger, setLedger] = useState<LedgerKind>('plan');
@@ -50,12 +52,13 @@ export function PeriodDetail({ periodId, unitName, planLabel, timezone }: Period
   const data = reconciliation.data;
   const editable = canWritePeriods && view === 'current' && data.revision.lifecycle === 'draft';
   return (
-    <section data-testid="period-detail" data-lifecycle={data.revision.lifecycle} className="space-y-4 rounded-md border p-3">
+    <section data-testid="period-detail" data-lifecycle={data.revision.lifecycle} className="space-y-6">
       <PeriodHeader view={data} accounting={accounting.data ?? null} unitName={unitName} planLabel={planLabel} timezone={timezone} />
       <DetailToolbar view={view} onView={setView} ledger={ledger} onLedger={setLedger} canShowApproved={data.publishedRevision !== null} />
       <ReconciliationSummary view={data} />
       <LedgerComparison accounting={accounting.data ?? null} ledger={ledger} />
       <ActualsProvenance periodId={periodId} timezone={timezone} />
+      <AdjustmentsSection planId={planId} periodId={periodId} />
       <LossLineEditor key={data.revision.id} view={data} timezone={timezone} readOnly={!editable} />
       <WorkflowBar view={data} shown={view} onShowCurrent={() => setView('current')} />
       <Suspense fallback={<Skeleton className="h-48 w-full" />}>

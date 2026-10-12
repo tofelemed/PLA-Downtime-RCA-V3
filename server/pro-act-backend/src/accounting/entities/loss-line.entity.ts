@@ -37,6 +37,7 @@ export type LineState = (typeof LINE_STATES)[number];
 @Index('IDX_loss_lines_rate_version', ['rateVersionId'])
 @Index('IDX_loss_lines_tenant_cause_event', ['tenantId', 'causeEventId'])
 @Index('IDX_loss_lines_tenant_period', ['tenantId', 'periodId'])
+@Index('IDX_loss_lines_run_ledger_kind', ['runId', 'ledger', 'kind'])
 export class LossLine extends TenantScopedEntity {
   @Column({ name: 'run_id', type: 'uuid' })
   runId: string;

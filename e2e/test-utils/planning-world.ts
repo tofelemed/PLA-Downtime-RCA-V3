@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { call, command } from './downtime-world';
 import { secondApproverToken } from './second-approver';
@@ -102,4 +103,11 @@ export function plantLocal(iso: string, timezone: string): string {
   }).formatToParts(new Date(iso));
   const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
   return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
+}
+
+/** The date + time fields the planning forms use (`DateTimeInput`, Gregorian plant): fills a plant-local `YYYY-MM-DDTHH:mm`. */
+export async function fillPlantDateTime(page: Page, label: string, local: string): Promise<void> {
+  const [date, time] = local.split('T');
+  await page.getByLabel(`${label} date`, { exact: true }).fill(date);
+  await page.getByLabel(`${label} time`, { exact: true }).fill(time);
 }

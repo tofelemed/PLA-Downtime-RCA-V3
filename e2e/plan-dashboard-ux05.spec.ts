@@ -22,7 +22,15 @@ let world: DashboardWorld;
 
 test.describe.configure({ mode: 'serial', timeout: 120_000 });
 
-const row = (page: Page, periodId: string) => page.locator(`[data-testid="period-row"][data-period-id="${periodId}"]`);
+/** The period's marker in the grid (`data-residual-state`, `data-workflow`) and its whole table row. */
+const marker = (page: Page, periodId: string) => page.locator(`[data-testid="period-row"][data-period-id="${periodId}"]`);
+const row = (page: Page, periodId: string) => page.locator('tr', { has: marker(page, periodId) });
+
+/** The plan's period grid (`/plans/:planId`); a period opens on its own page. */
+async function openGrid(page: Page): Promise<void> {
+  await page.goto(`/plans/${world.planId}`);
+  await expect(page.getByTestId('period-grid')).toBeVisible({ timeout: 60_000 });
+}
 const figure = (page: Page, key: string) => page.getByTestId('reconciliation-summary').getByTestId(`figure-${key}`);
 
 async function openPeriod(page: Page, periodId: string): Promise<void> {
@@ -64,10 +72,12 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     page.on('request', (request) => {
       if (request.url().includes('/api/') && request.method() !== 'GET') writes.push(`${request.method()} ${request.url()}`);
     });
-    await openPeriod(page, world.periods.a);
-    await expect(row(page, world.periods.a)).toHaveAttribute('data-residual-state', 'unaccounted');
+    await openGrid(page);
+    await expect(marker(page, world.periods.a)).toHaveAttribute('data-residual-state', 'unaccounted');
     await expect(row(page, world.periods.a).getByTestId('cell-gap')).toHaveText('150.00 t');
     await expect(row(page, world.periods.a).getByTestId('cell-attributed')).toHaveText('140.00 t');
+    await row(page, world.periods.a).click();
+    await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', /.+/, { timeout: 60_000 });
     await expect(figure(page, 'residual')).toHaveAttribute('data-value', '10');
     await expect(page.getByTestId('waterfall')).toHaveAttribute('data-closes', 'true');
     const bars = page.getByTestId('waterfall').getByTestId('waterfall-bar');
@@ -89,11 +99,12 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await page.getByTestId('manual-line-add').click();
     await page.getByTestId('save-lines').click();
     await expect(figure(page, 'residual')).toHaveAttribute('data-value', '0');
-    await expect(row(page, world.periods.a)).toHaveAttribute('data-residual-state', 'balanced');
     await page.getByTestId('wf-submit').click();
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
-    await expect(row(page, world.periods.a)).toHaveAttribute('data-workflow', 'in_review');
     await page.screenshot({ path: test.info().outputPath('plan-dashboard-engineer.png') });
+    await page.goBack();
+    await expect(marker(page, world.periods.a)).toHaveAttribute('data-residual-state', 'balanced', { timeout: 60_000 });
+    await expect(marker(page, world.periods.a)).toHaveAttribute('data-workflow', 'in_review');
   });
 
   test('UX05 manager: a different user approves the snapshot and exports it; the download hash is shown', async ({ page }) => {
@@ -106,11 +117,12 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await expect(page.getByTestId('revision-history').locator('[data-action="approve"]')).toBeVisible();
     await page.getByTestId('export-start').click();
     await expect(page.getByTestId('export-job')).toHaveAttribute('data-state', 'completed', { timeout: 60_000 });
-    await expect(page.getByTestId('export-hash')).toHaveText(/sha256 [0-9a-f]{64}/);
+    await expect(page.getByTestId('export-hash')).toHaveText(/SHA-256\): [0-9a-f]{64}/);
     const download = page.waitForEvent('download');
     await page.getByTestId('export-download').click();
     expect((await download).suggestedFilename()).toMatch(/^proact-loss-lines-.+\.csv$/);
-    await expect(row(page, world.periods.a)).toHaveAttribute('data-workflow', 'approved');
+    await openGrid(page);
+    await expect(marker(page, world.periods.a)).toHaveAttribute('data-workflow', 'approved');
   });
 
   test('T36: the submitter cannot approve (SEPARATION_OF_DUTIES); another manager approver can', async ({ browser }) => {
@@ -137,8 +149,9 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await page.routeWebSocket(/socket\.io/, () => undefined);
     await page.route(/socket\.io/, (route) => route.abort());
     await loginViaUI(page, ENGINEER.email, ENGINEER.password);
-    await openPeriod(page, world.periods.c);
+    await openGrid(page);
     await expect(row(page, world.periods.c).getByTestId('cell-attributed')).toHaveText('0.00 t');
+    await openPeriod(page, world.periods.c);
     await page.getByTestId('add-manual-line').click();
     await page.fill('#manualQuantity', '20');
     await page.locator('#manualNoEvent').click();
@@ -151,7 +164,7 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     expect((await reconciliation(manager, world.periods.c)).candidates).toHaveLength(0);
     const saved = await call<{ lines: unknown[] }>(manager, 'GET', `/v2/production-periods/${world.periods.c}/reconciliation`);
     expect(saved.body.lines).toEqual([]); // nothing applied partially
-    await expect(row(page, world.periods.c).getByTestId('cell-attributed')).toHaveText('0.00 t');
+    await expect(figure(page, 'attributed')).toHaveAttribute('data-value', '0');
     await page.unroute('**/draft-lines');
 
     // another session changes an input and recomputes: the run the editor read is no longer current
@@ -161,7 +174,7 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await expect.poll(async () => (await reconciliation(manager, world.periods.c)).candidates.length, { timeout: 60_000 }).toBe(1);
     await page.getByTestId('save-lines').click();
     await expect(page.getByTestId('conflict-dialog')).toHaveAttribute('data-code', 'RUN_CHANGED');
-    await expect(page.getByTestId('candidate-diff')).toContainText('Added candidates');
+    await expect(page.getByTestId('candidate-diff')).toContainText('new automatic candidate');
     await page.getByTestId('rebase').click();
     await expect(page.getByTestId('candidate-row')).toHaveCount(1);
     await page.getByTestId('save-lines').click();

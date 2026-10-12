@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useProfileRates } from '@/api/v2/queries/profiles';
 import { RATE_KINDS, type ProfileView, type RateView } from '@/api/v2/types/profiles';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { DataState } from '@/features/ux-kit/data-state';
-import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { labelOf, RATE_KIND_LABELS } from '@/features/ux-kit/labels';
+import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { ActionIcon } from '@/lib/icons';
 import { VersionStateBadge } from '../components/version-state-badge';
 import { RateForm } from './rate-form';
 import { VersionActions } from './version-actions';
@@ -18,71 +19,75 @@ export interface RateTableProps {
   timezone: string;
 }
 
-/** Rows in kind order (§3.1: nameplate … forecast are separate values), versions in server order within a kind. */
+/** Rows in kind order (nameplate … forecast are separate values), versions in order within a kind. */
 function byKind(rates: readonly RateView[]): RateView[] {
   const order = new Map<string, number>(RATE_KINDS.map((kind, index) => [kind, index]));
   return [...rates].sort((a, b) => (order.get(a.rateKind) ?? 99) - (order.get(b.rateKind) ?? 99) || a.version - b.version);
 }
 
+function columnsOf(profile: ProfileView, timezone: string): DataTableColumn<RateView>[] {
+  const uom = profile.quantityUom;
+  return [
+    { id: 'kind', header: 'Kind', cell: (r) => labelOf(RATE_KIND_LABELS, r.rateKind) },
+    { id: 'version', header: 'Version', nowrap: true, cell: (r) => `Version ${r.version}${r.source === 'import' ? ' · imported' : ''}` },
+    { id: 'rate', header: 'Rate', align: 'right', nowrap: true, cell: (r) => <Quantity value={r.rate} uom={uom ? `${uom}/${r.timebase}` : null} /> },
+    { id: 'perSecond', header: 'Per second', align: 'right', nowrap: true, cell: (r) => <Quantity value={r.ratePerSecond} uom={uom ? `${uom}/s` : null} fractionDigits={8} /> },
+    {
+      id: 'effective',
+      header: 'Effective',
+      nowrap: true,
+      cell: (r) => (
+        <span className="text-xs">
+          <PlantTime iso={r.effectiveFrom} tz={timezone} withDate /> → {r.effectiveTo ? <PlantTime iso={r.effectiveTo} tz={timezone} withDate /> : 'open-ended'}
+        </span>
+      ),
+    },
+    { id: 'state', header: 'State', cell: (r) => <VersionStateBadge state={r.state} /> },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: (r) => (
+        <div data-testid="rate-row" data-kind={r.rateKind} data-version={r.version} data-state={r.state}>
+          <VersionActions resource="rates" id={r.id} state={r.state} timezone={timezone} testId="rate-actions" authorId={r.createdBy} />
+        </div>
+      ),
+    },
+  ];
+}
+
 /**
- * Effective-dated rate versions of a profile (PLAN01, PLAN06): kind × version with the server's per-second
- * conversion; add a draft, approve (overlaps refused by the API with the conflicting version shown inline),
- * supersede, retire.
+ * Effective-dated rate versions of a profile (20 per page): kind × version with the server's per-second
+ * conversion; add a draft, approve (overlaps refused by the server with the conflicting version), retire.
  */
 export function RateTable({ profile, timezone }: RateTableProps) {
   const { canWriteProfiles } = useCapabilities();
   const rates = useProfileRates(profile.id);
   const [adding, setAdding] = useState(false);
   const items = byKind(flattenPages(rates.data?.pages));
+  const add = !adding && canWriteProfiles && (
+    <Button size="sm" variant="outline" onClick={() => setAdding(true)} data-testid="rate-add">
+      <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
+      Add rate version
+    </Button>
+  );
   return (
-    <section className="space-y-2" data-testid="rate-table">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium">Rates</h3>
-        {!adding && canWriteProfiles && (
-          <Button size="sm" variant="outline" onClick={() => setAdding(true)} data-testid="rate-add">
-            Add rate version
+    <Section title="Rates" actions={add || undefined}>
+      <div className="space-y-3" data-testid="rate-table">
+        {adding && <RateForm profileId={profile.id} timebase={profile.rateTimebase} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />}
+        <DataTable
+          caption="Rate versions"
+          columns={columnsOf(profile, timezone)}
+          rows={items}
+          getRowKey={(r) => r.id}
+          status={{ isLoading: rates.isLoading, isError: rates.isError, error: rates.error, onRetry: () => void rates.refetch() }}
+          empty={{ text: 'No rate versions yet. Plans need approved planning and sustained rates.' }}
+        />
+        {rates.hasNextPage && (
+          <Button size="sm" variant="ghost" onClick={() => void rates.fetchNextPage()} disabled={rates.isFetchingNextPage}>
+            Load older rate versions
           </Button>
         )}
       </div>
-      {adding && <RateForm profileId={profile.id} timebase={profile.rateTimebase} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />}
-      <DataState state={dataStateOf(rates, { isEmpty: items.length === 0 })} error={rates.error} detail="No rate versions yet. Plans need approved planning and sustained rates.">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Kind</TableHead>
-              <TableHead>Version</TableHead>
-              <TableHead>Rate</TableHead>
-              <TableHead>Per second (server)</TableHead>
-              <TableHead>Effective</TableHead>
-              <TableHead>State</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((rate) => (
-              <TableRow key={rate.id} data-testid="rate-row" data-kind={rate.rateKind} data-version={rate.version} data-state={rate.state}>
-                <TableCell>{rate.rateKind}</TableCell>
-                <TableCell>v{rate.version}{rate.source === 'import' ? ` · import ${rate.externalId ?? ''}` : ''}</TableCell>
-                <TableCell>
-                  <Quantity value={rate.rate} uom={profile.quantityUom ? `${profile.quantityUom}/${rate.timebase}` : null} />
-                </TableCell>
-                <TableCell>
-                  <Quantity value={rate.ratePerSecond} uom={profile.quantityUom ? `${profile.quantityUom}/s` : null} fractionDigits={8} />
-                </TableCell>
-                <TableCell className="text-xs">
-                  <PlantTime iso={rate.effectiveFrom} tz={timezone} withDate /> → {rate.effectiveTo ? <PlantTime iso={rate.effectiveTo} tz={timezone} withDate /> : 'open'}
-                </TableCell>
-                <TableCell>
-                  <VersionStateBadge state={rate.state} />
-                </TableCell>
-                <TableCell className="min-w-[16rem]">
-                  <VersionActions resource="rates" id={rate.id} state={rate.state} timezone={timezone} testId="rate-actions" authorId={rate.createdBy} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </DataState>
-    </section>
+    </Section>
   );
 }

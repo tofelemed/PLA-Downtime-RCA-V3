@@ -8,6 +8,7 @@ import { approvalAccess } from '@/features/auth/approval-gate';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { ApproveButton } from '@/features/ux-kit/approve-button';
+import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { RefusalNotice } from '../components/refusal-notice';
 
 export interface VersionActionsProps {
@@ -22,11 +23,39 @@ export interface VersionActionsProps {
   authorId?: string | null;
 }
 
+const NOUN: Record<VersionResource, string> = { profiles: 'profile version', rates: 'rate version', 'valuation-rates': 'valuation rate' };
+
+interface RetireButtonProps {
+  resource: VersionResource;
+  disabled: boolean;
+  error: unknown;
+  timezone: string;
+  onConfirm: () => Promise<unknown>;
+}
+
+function RetireButton({ resource, disabled, error, timezone, onConfirm }: RetireButtonProps) {
+  return (
+    <ConfirmDialog
+      trigger={
+        <Button size="sm" variant="ghost" disabled={disabled}>
+          Retire
+        </Button>
+      }
+      title={`Retire this ${NOUN[resource]}?`}
+      description="It stays in the history and in the figures already calculated with it, but new plans and calculations cannot use it. This cannot be undone."
+      confirmLabel={`Retire ${NOUN[resource]}`}
+      destructive
+      onConfirm={onConfirm}
+    >
+      <RefusalNotice error={error} timezone={timezone} />
+    </ConfirmDialog>
+  );
+}
+
 /**
- * Approve / retire of one version. The server decides who may (403 shown as is) and whether it overlaps
- * an approved version (409 VERSION_OVERLAP with the conflicting versions listed inline); "supersede"
- * asks the server to close the one approved predecessor at this version's start. Controls the role can
- * never use are not shown (profile writers edit; manager approvers approve and retire).
+ * Approve / retire of one version. The server decides who may and whether it overlaps an approved
+ * version (the conflicting versions are listed inline); "supersede" asks the server to close the one
+ * approved predecessor at this version's start. Retiring asks for confirmation first.
  */
 export function VersionActions({ resource, id, state, timezone, onEdit, testId, authorId }: VersionActionsProps) {
   const { canWriteProfiles, canApproveProfiles } = useCapabilities();
@@ -36,18 +65,18 @@ export function VersionActions({ resource, id, state, timezone, onEdit, testId, 
   const supersedeId = useId();
   if (state === 'retired') return <span className="text-xs text-muted-foreground">Retired — kept as history</span>;
   if (!canApproveProfiles && !(canWriteProfiles && state === 'draft' && onEdit)) return null;
-  const run = (action: 'approve' | 'retire') => transition.submit({ resource, id, action, supersede }).catch(() => undefined);
+  const run = (action: 'approve' | 'retire') => transition.submit({ resource, id, action, supersede });
   return (
     <div className="space-y-2" data-testid={testId ?? 'version-actions'}>
       <div className="flex flex-wrap items-center gap-2">
         {state === 'draft' && onEdit && canWriteProfiles && (
-          <Button size="sm" variant="outline" onClick={onEdit}>
+          <Button size="sm" variant="outline" onClick={onEdit} data-testid="profile-edit">
             Edit draft
           </Button>
         )}
         {state === 'draft' && canApproveProfiles && (
           <>
-            <ApproveButton access={access} size="sm" onClick={() => run('approve')} disabled={transition.isPending} data-testid="approve-version">
+            <ApproveButton access={access} size="sm" onClick={() => void run('approve').catch(() => undefined)} disabled={transition.isPending} data-testid="approve-version">
               Approve
             </ApproveButton>
             <div className="flex items-center gap-1">
@@ -58,11 +87,7 @@ export function VersionActions({ resource, id, state, timezone, onEdit, testId, 
             </div>
           </>
         )}
-        {canApproveProfiles && (
-          <Button size="sm" variant="ghost" onClick={() => run('retire')} disabled={transition.isPending}>
-            Retire
-          </Button>
-        )}
+        {canApproveProfiles && <RetireButton resource={resource} disabled={transition.isPending} error={transition.error} timezone={timezone} onConfirm={() => run('retire')} />}
       </div>
       <RefusalNotice error={transition.error} timezone={timezone} />
     </div>

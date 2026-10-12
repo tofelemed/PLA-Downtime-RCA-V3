@@ -1,5 +1,7 @@
-import { AlertTriangle, Lock } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { SupportReference } from '@/features/ux-kit/errors';
+import { StatusIcon } from '@/lib/icons';
+import { issueText, problemText } from '../model/problem-text';
 import type { WorkflowProblem } from '../model/workflow-errors';
 
 const TITLES: Record<WorkflowProblem['kind'], string> = {
@@ -15,27 +17,26 @@ const TITLES: Record<WorkflowProblem['kind'], string> = {
   other: 'Refused — nothing was changed',
 };
 
-/** A refused workflow command with the server's code, message, issue list and correlation id. */
+/** A refused workflow command in plain words, with its issue list; the code is only in `data-code` and the support reference. */
 export function EditorProblem({ problem }: { problem: WorkflowProblem }) {
-  const Icon = problem.kind === 'duties' || problem.kind === 'role' ? Lock : AlertTriangle;
+  const Icon = problem.kind === 'duties' || problem.kind === 'role' ? StatusIcon.locked : StatusIcon.warning;
+  const reference = problem.status === null && !problem.correlationId ? null : { code: problem.code, status: problem.status, correlationId: problem.correlationId };
   return (
     <Alert variant="destructive" role="alert" data-testid="workflow-problem" data-kind={problem.kind} data-code={problem.code}>
-      <Icon className="h-4 w-4" />
-      <AlertTitle>
-        {TITLES[problem.kind]} ({problem.code})
-      </AlertTitle>
+      <Icon className="h-4 w-4" aria-hidden="true" />
+      <AlertTitle>{TITLES[problem.kind]}</AlertTitle>
       <AlertDescription className="space-y-1">
-        <p>{problem.message}</p>
+        <p>{problemText(problem)}</p>
         {problem.kind !== 'line_issues' && problem.issues.length > 0 && (
           <ul className="list-disc pl-5 text-sm" data-testid="gate-issues">
             {problem.issues.map((issue) => (
               <li key={`${issue.code}-${issue.message}`} data-code={issue.code}>
-                {issue.code}: {issue.message}
+                {issueText(issue)}
               </li>
             ))}
           </ul>
         )}
-        {problem.correlationId && <p className="text-xs">Reference: {problem.correlationId}</p>}
+        <SupportReference reference={reference} />
       </AlertDescription>
     </Alert>
   );

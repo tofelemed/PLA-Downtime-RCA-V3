@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import type { CandidateView, ManualKind, ReconciliationLineView } from '@/api/v2/types/reconciliation';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
+import { DRAFT_ACTION_LABELS, humanize } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { CANDIDATE_STATE_LABELS, KIND_LABELS } from '../model/display';
 import { CandidateDecision, DecisionAction, decisionProblems, DraftState, setDecision } from '../model/draft-lines';
@@ -33,17 +34,17 @@ export function CandidateRow({ candidate, uom, saved, decision, setDraft, issues
         <Badge variant="outline">{KIND_LABELS[candidate.kind] ?? candidate.kind}</Badge>
         <Quantity value={candidate.quantity} uom={uom} />
         <span className="text-xs text-muted-foreground">
-          auto · {candidate.basis}
-          {candidate.causeEventId ? ` · event ${candidate.causeEventId.slice(0, 8)}` : ' · no cause event'}
+          Automatic ({humanize(candidate.basis).toLowerCase()})
+          {candidate.causeEventId ? ' · from a recorded event' : ' · no cause event'}
         </span>
         <Badge variant="secondary">{CANDIDATE_STATE_LABELS[candidate.state]}</Badge>
-        {saved?.flags.includes('baseline_changed') && <Badge variant="destructive">Candidate changed since the decision (baseline_changed) — save again</Badge>}
+        {saved?.flags.includes('baseline_changed') && <Badge variant="destructive">Candidate changed since the decision — save again</Badge>}
         {!readOnly && (
           <select aria-label="Decision" data-testid="candidate-decision" className="ml-auto h-8 rounded-md border border-input bg-background px-2" value={decision?.action ?? ''} onChange={(e) => update(e.target.value ? { action: e.target.value as DecisionAction } : null)}>
             <option value="">Proposed (no decision)</option>
             {ACTIONS.map((a) => (
               <option key={a} value={a}>
-                {a}
+                {DRAFT_ACTION_LABELS[a]}
               </option>
             ))}
           </select>

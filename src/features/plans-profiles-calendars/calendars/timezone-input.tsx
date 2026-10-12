@@ -14,13 +14,13 @@ function knownZones(): string[] {
   return intl.supportedValuesOf ? intl.supportedValuesOf('timeZone') : [];
 }
 
-/** Free text with IANA suggestions, e.g. "Asia/Tehran" (D03). */
+/** Free text with the time-zone names the browser knows as suggestions; the server validates it. */
 export function TimezoneInput({ id, value, disabled, onChange }: TimezoneInputProps) {
   const listId = useId();
   const zones = useMemo(knownZones, []);
   return (
     <>
-      <Input id={id} list={listId} value={value} disabled={disabled} placeholder="Asia/Tehran" onChange={(event) => onChange(event.target.value)} />
+      <Input id={id} list={listId} value={value} disabled={disabled} placeholder="Region/City" onChange={(event) => onChange(event.target.value)} />
       <datalist id={listId}>
         {zones.map((zone) => (
           <option key={zone} value={zone} />

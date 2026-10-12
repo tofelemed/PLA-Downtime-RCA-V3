@@ -19,8 +19,8 @@ export interface ManualLinesProps {
 }
 
 function evidenceText(line: ManualDraft): string {
-  if (line.eventIds.length) return `${line.eventIds.length} linked event(s): ${line.eventIds.map((id) => id.slice(0, 8)).join(', ')}`;
-  if (line.missingEvent) return line.missingCode ? 'no event · code missing' : 'no event (cause without event)';
+  if (line.eventIds.length) return `${line.eventIds.length} linked event(s)`;
+  if (line.missingEvent) return line.missingCode ? 'no event · reason code missing' : 'no event (cause without an event)';
   return 'no evidence';
 }
 

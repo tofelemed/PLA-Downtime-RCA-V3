@@ -126,6 +126,18 @@ export class AccountingPoliciesService {
     };
   }
 
+  /**
+   * The `rca_policy` row in force at the instant (plan 3.9 API): the unit's own version, else the
+   * tenant-wide one; `unitId: null` reads the tenant-wide version only. Seeded on first use.
+   */
+  rcaPolicyInForce(
+    manager: EntityManager,
+    scope: { tenantId: string; unitId: string | null },
+    at: Date,
+  ): Promise<AccountingPolicy> {
+    return this.inForce(manager, scope, 'rca_policy', at);
+  }
+
   /** The source_authority policy id in force for a unit (slice `actuals_policy_id`). */
   async sourceAuthorityId(
     manager: EntityManager,
@@ -137,7 +149,7 @@ export class AccountingPoliciesService {
 
   private async inForce(
     manager: EntityManager,
-    scope: { tenantId: string; unitId: string },
+    scope: { tenantId: string; unitId: string | null },
     kind: EngineKind,
     at: Date,
   ): Promise<AccountingPolicy> {
@@ -152,7 +164,7 @@ export class AccountingPoliciesService {
 
   private find(
     manager: EntityManager,
-    scope: { tenantId: string; unitId: string },
+    scope: { tenantId: string; unitId: string | null },
     kind: PolicyKind,
     at: Date,
   ): Promise<AccountingPolicy | null> {

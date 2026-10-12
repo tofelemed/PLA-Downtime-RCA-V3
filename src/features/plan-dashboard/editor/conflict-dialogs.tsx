@@ -9,7 +9,6 @@ export interface ConflictDialogsProps {
   onClose: () => void;
 }
 
-const short = (key: string) => (key.length > 24 ? `${key.slice(0, 24)}…` : key);
 
 /**
  * Save conflicts (§15.3): RUN_CHANGED shows the candidate diff of the new run (added / removed / changed
@@ -21,19 +20,19 @@ export function ConflictDialogs({ problem, onRebase, onClose }: ConflictDialogsP
   const diff = problem?.diff;
   return (
     <Dialog open={problem !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent data-testid="conflict-dialog" data-code={problem?.code}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto" data-testid="conflict-dialog" data-code={problem?.code}>
         <DialogHeader>
-          <DialogTitle>{runChanged ? 'The calculation run changed (RUN_CHANGED)' : 'Someone else saved this revision (STALE_REVISION)'}</DialogTitle>
+          <DialogTitle>{runChanged ? 'The calculation was rerun' : 'Someone else saved this revision'}</DialogTitle>
           <DialogDescription>Your save was not applied. Rebase to load the latest revision and keep your lines, then save again.</DialogDescription>
         </DialogHeader>
         {runChanged && diff && (
           <div className="space-y-1 text-sm" data-testid="candidate-diff">
-            <p>New run: {diff.currentRunId ? diff.currentRunId.slice(0, 8) : '—'}</p>
-            {diff.added.length > 0 && <p>Added candidates: {diff.added.map(short).join(', ')}</p>}
-            {diff.removed.length > 0 && <p>Removed candidates: {diff.removed.map(short).join(', ')}</p>}
-            {diff.changed.map((c) => (
+            <p>A newer calculation exists for this period.</p>
+            {diff.added.length > 0 && <p>{diff.added.length} new automatic candidate(s).</p>}
+            {diff.removed.length > 0 && <p>{diff.removed.length} automatic candidate(s) no longer found.</p>}
+            {diff.changed.map((c, index) => (
               <p key={c.autoKey}>
-                Changed {short(c.autoKey)}: {c.before} → {c.after}
+                Candidate {index + 1} changed: {c.before} → {c.after}
               </p>
             ))}
             {!diff.added.length && !diff.removed.length && !diff.changed.length && <p>The candidates are unchanged; only the run is new.</p>}

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
 import type { PlanPreviewView, PlanVersionView } from '@/api/v2/types/plans';
@@ -8,7 +9,7 @@ import type { PlanPreviewView, PlanVersionView } from '@/api/v2/types/plans';
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
-const { ProfileEditorDialog } = await import('./profiles/profile-editor-dialog');
+const { ProfileEditor } = await import('./profiles/profile-editor');
 const { VersionActions } = await import('./profiles/version-actions');
 const { OpenVersionActions } = await import('./plans/open-version-actions');
 
@@ -51,7 +52,12 @@ describe('plans, profiles, calendars — forms and commands (plan 3.4)', () => {
   let calls: Call[];
   let reply: (call: Call) => Response;
   let client: QueryClient;
-  const wrap = (node: ReactNode) => render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
+  const wrap = (node: ReactNode) =>
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{node}</MemoryRouter>
+      </QueryClientProvider>,
+    );
 
   beforeEach(() => {
     calls = [];
@@ -67,12 +73,13 @@ describe('plans, profiles, calendars — forms and commands (plan 3.4)', () => {
 
   it('a 422 field error from the API lands on the profile input it names', async () => {
     reply = () => json(422, refusal('VALIDATION_FAILED', { fieldErrors: [{ field: 'quantityUom', message: 'quantityUom must be shorter than or equal to 50 characters' }] }));
-    wrap(<ProfileEditorDialog open={{}} refs={REFS} onClose={() => undefined} onSaved={() => undefined} />);
+    wrap(<ProfileEditor profile={null} refs={REFS} cancelTo="/planning" onSaved={() => undefined} />);
     fireEvent.change(screen.getByLabelText('Unit'), { target: { value: 'u1' } });
     fireEvent.change(screen.getByLabelText('Product'), { target: { value: 'p1' } });
     fireEvent.change(screen.getByLabelText(/Quantity unit/), { target: { value: 'x'.repeat(60) } });
     fireEvent.change(screen.getByLabelText('Rate timebase'), { target: { value: 'h' } });
-    fireEvent.change(screen.getByLabelText(/Effective from/), { target: { value: '2026-10-10T06:00' } });
+    fireEvent.change(screen.getByLabelText('Effective from date'), { target: { value: '2026-10-10' } });
+    fireEvent.change(screen.getByLabelText('Effective from time'), { target: { value: '06:00' } });
     fireEvent.click(screen.getByTestId('profile-save'));
     await waitFor(() => expect(screen.getByTestId('field-error-quantityUom').textContent).toMatch(/50 characters/));
     const [post] = calls;
@@ -98,7 +105,7 @@ describe('plans, profiles, calendars — forms and commands (plan 3.4)', () => {
       periods: [period('A', '300'), period('B', '300'), period('C', '400')], warnings: [],
     };
     reply = (call) => (call.url.pathname.endsWith('/approve') ? json(403, refusal('FORBIDDEN_ROLE')) : json(200, preview));
-    wrap(<OpenVersionActions version={VERSION} timezone="Asia/Tehran" productName={() => 'HDPE'} onEdit={() => undefined} onGenerated={() => undefined} />);
+    wrap(<OpenVersionActions version={VERSION} timezone="Asia/Tehran" productName={() => 'HDPE'} onGenerated={() => undefined} />);
     fireEvent.click(screen.getByTestId('plan-preview'));
     await waitFor(() => expect(screen.getByTestId('sum-badge').getAttribute('data-match')).toBe('true'));
     expect(calls[0].body).toEqual({ version: 1, preview: true });
@@ -115,7 +122,7 @@ describe('plans, profiles, calendars — forms and commands (plan 3.4)', () => {
       oeePolicyId: null, valuationPolicyId: null, productMixConstraints: null, legacy: null, version: 1, state: 'draft', effectiveFrom: '2026-10-10T02:30:00.000Z',
       effectiveTo: null, approvedBy: null, approvedAt: null, rowVersion: 4, createdAt: '', updatedAt: '',
     } as const;
-    wrap(<ProfileEditorDialog open={{ profile }} refs={REFS} onClose={() => undefined} onSaved={() => undefined} />);
+    wrap(<ProfileEditor profile={profile} refs={REFS} cancelTo="/planning" onSaved={() => undefined} />);
     fireEvent.click(screen.getByTestId('profile-save'));
     await waitFor(() => expect(screen.getByTestId('refusal').getAttribute('data-kind')).toBe('stale'));
     expect(calls[0].method).toBe('PATCH');

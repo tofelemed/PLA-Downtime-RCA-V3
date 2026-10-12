@@ -1,4 +1,4 @@
-import { plantLocalToUtc, utcToPlantLocal } from '@/features/event-hub/model/plant-local-time';
+import { plantLocalToUtc, utcToPlantLocal } from '@/lib/dates';
 import type { PlanCreateBody, PlanVersionChangeBody } from '@/api/v2/queries/plans';
 import type { Distribution, PlanBasis, PlanVersionView, PlanView } from '@/api/v2/types/plans';
 import type { FieldErrors } from './profile-form';
@@ -66,27 +66,43 @@ export function planFormOf(plan: Pick<PlanView, 'name' | 'scenarioId'>, version:
   };
 }
 
+/**
+ * What "Start from an existing plan" copies into a new plan (the v2 replacement of v1 plan templates):
+ * unit, basis, header target, distribution and the product slices with their weights and targets. The
+ * window, campaign dates, name and scenario are entered for the new plan; nothing is derived.
+ */
+export function copiedPlanValues(version: PlanVersionView): Partial<PlanFormValues> {
+  const slices = (version.slices ?? []).map((slice) => ({ productId: slice.productId, campaignFrom: '', campaignTo: '', weight: slice.weight, target: slice.target }));
+  return {
+    unitId: version.unitId,
+    basis: version.basis,
+    headerTarget: version.headerTarget,
+    distribution: version.distribution,
+    slices: slices.length > 0 ? slices : [emptySlice()],
+  };
+}
+
 function windowErrors(values: PlanFormValues, timezone: string): FieldErrors {
   const errors: FieldErrors = {};
   const from = plantLocalToUtc(values.validFrom, timezone);
   const to = plantLocalToUtc(values.validTo, timezone);
-  if (!from) errors.validFrom = 'validFrom is required';
-  if (!to) errors.validTo = 'validTo is required';
-  if (from && to && to <= from) errors.validTo = 'validTo must be after validFrom';
+  if (!from) errors.validFrom = 'Enter the window start';
+  if (!to) errors.validTo = 'Enter the window end';
+  if (from && to && to <= from) errors.validTo = 'The window end must be after the start';
   return errors;
 }
 
 export function validatePlanForm(values: PlanFormValues, timezone: string, creating: boolean): FieldErrors {
   const errors = windowErrors(values, timezone);
-  if (creating && !values.name.trim()) errors.name = 'name is required';
-  if (!values.unitId) errors.unitId = 'unitId is required';
-  if (values.slices.length === 0) errors.slices = 'slices must contain at least 1 element';
+  if (creating && !values.name.trim()) errors.name = 'Enter a name';
+  if (!values.unitId) errors.unitId = 'Choose a unit';
+  if (values.slices.length === 0) errors.slices = 'Add at least one product slice';
   values.slices.forEach((slice, index) => {
-    if (!slice.productId) errors[`slices.${index}.productId`] = 'productId is required';
+    if (!slice.productId) errors[`slices.${index}.productId`] = 'Choose a product';
   });
   const sliceTargets = values.slices.length > 0 && values.slices.every((slice) => slice.target);
   if (values.basis === 'quantity' && !values.headerTarget && !sliceTargets) {
-    errors.headerTarget = 'a quantity plan needs a header target (or a target on every slice)';
+    errors.headerTarget = 'A quantity plan needs a header target (or a target on every slice)';
   }
   return errors;
 }

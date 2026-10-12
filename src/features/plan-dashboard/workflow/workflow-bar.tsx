@@ -1,6 +1,4 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import type { RevisionSelector } from '@/api/v2/types/period-overview';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { approvalAccess } from '@/features/auth/approval-gate';
@@ -11,6 +9,7 @@ import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { EditorProblem } from '../editor/editor-problem';
 import { useWorkflowActions } from '../hooks/use-workflow-actions';
 import { reviewGate } from '../model/display';
+import { ReasonConfirm } from './reason-confirm';
 
 export interface WorkflowBarProps {
   view: ReconciliationView;
@@ -18,25 +17,50 @@ export interface WorkflowBarProps {
   onShowCurrent: () => void;
 }
 
-const RECOMPUTE_LABELS: Record<string, string> = { queued: 'Recompute queued…', running: 'Recomputing…', completed: 'Recompute finished', failed: 'Recompute failed' };
+const RECOMPUTE_LABELS: Record<string, string> = { queued: 'Recompute queued…', running: 'Recomputing…', completed: 'Recompute finished', failed: 'Recompute failed — try again' };
+
+/** a refused command keeps its dialog open (the problem is shown in it) */
+const orKeepOpen = (done: Promise<boolean>) => done.then((ok) => (ok ? undefined : Promise.reject(new Error('refused'))));
+
+type Actions = ReturnType<typeof useWorkflowActions>;
+
+function ReviewButtons({ view, actions, busy }: { view: ReconciliationView; actions: Actions; busy: boolean }) {
+  const userId = useCurrentUserId();
+  const gate = reviewGate(view, userId);
+  const access = approvalAccess(true, view.revision.submittedBy, userId);
+  return (
+    <>
+      <ApproveButton access={access} size="sm" data-testid="wf-approve" disabled={busy || !gate.allowed} onClick={() => void actions.approve()} aria-describedby={gate.reason ? 'approve-gate' : undefined}>
+        Approve
+      </ApproveButton>
+      <ReasonConfirm
+        trigger="Reject…"
+        triggerTestId="wf-reject"
+        disabled={busy || !gate.allowed}
+        title="Return this revision to its author?"
+        description="The revision goes back to draft; the author sees your reason, fixes the lines and submits again."
+        confirmLabel="Return revision"
+        destructive
+        onConfirm={(reason) => orKeepOpen(actions.reject(reason))}
+      >
+        {actions.problem && <EditorProblem problem={actions.problem} />}
+      </ReasonConfirm>
+    </>
+  );
+}
 
 /**
- * Workflow bar (plan 3.5 step 3): the actions of the shown revision's lifecycle — draft: recompute, submit,
- * cancel; in review: approve / reject (not for the submitter: separation of duties, D06) and recompute
- * when stale; approved: revise ("Unlock", WF04). Period writers see the draft actions, manager approvers
- * the review and revise actions; the server decides and its refusals are shown as given.
+ * Workflow of the shown revision: draft — recompute, submit, cancel; in review — approve / reject (not
+ * the submitter: separation of duties) and recompute when stale; approved — reopen for revision. Reasons
+ * are required fields of the confirmation dialogs; the server decides and its refusals are shown.
  */
 export function WorkflowBar({ view, shown, onShowCurrent }: WorkflowBarProps) {
   const { canWritePeriods: write, canApprovePeriods: decide } = useCapabilities();
   const userId = useCurrentUserId();
   const actions = useWorkflowActions(view);
-  const [reason, setReason] = useState('');
   const lifecycle = view.revision.lifecycle;
   const gate = reviewGate(view, userId);
-  const access = approvalAccess(decide, view.revision.submittedBy, userId);
-  const reasoned = (lifecycle === 'in_review' && decide) || (lifecycle === 'draft' && write) || (lifecycle === 'approved' && decide);
   const busy = actions.pending !== null;
-  const needReason = (go: (r: string) => Promise<void>) => () => reason.trim() && void go(reason.trim()).then(() => setReason(''));
   return (
     <section className="space-y-2 rounded-md border bg-muted/20 p-2" data-testid="workflow-bar" data-lifecycle={lifecycle}>
       <div className="flex flex-wrap items-center gap-2">
@@ -51,37 +75,29 @@ export function WorkflowBar({ view, shown, onShowCurrent }: WorkflowBarProps) {
             Submit for approval
           </Button>
         )}
-        {decide && lifecycle === 'in_review' && (
-          <>
-            <ApproveButton access={access} size="sm" data-testid="wf-approve" disabled={busy || !gate.allowed} onClick={() => void actions.approve()} aria-describedby={gate.reason ? 'approve-gate' : undefined}>
-              Approve
-            </ApproveButton>
-            <Button variant="outline" size="sm" data-testid="wf-reject" disabled={busy || !gate.allowed || !reason.trim()} onClick={needReason(actions.reject)}>
-              Reject
-            </Button>
-          </>
-        )}
+        {decide && lifecycle === 'in_review' && <ReviewButtons view={view} actions={actions} busy={busy} />}
         {write && lifecycle === 'draft' && (
-          <Button variant="ghost" size="sm" data-testid="wf-cancel" disabled={busy || !reason.trim()} onClick={needReason(actions.cancel)}>
-            Cancel draft
-          </Button>
+          <ReasonConfirm trigger="Cancel draft…" triggerTestId="wf-cancel" triggerVariant="ghost" disabled={busy} title="Cancel this draft revision?" description="Its lines are discarded; the period goes back to its last approved figures (or to not reconciled)." confirmLabel="Cancel draft" destructive onConfirm={(reason) => orKeepOpen(actions.cancel(reason))}>
+            {actions.problem && <EditorProblem problem={actions.problem} />}
+          </ReasonConfirm>
         )}
         {decide && lifecycle === 'approved' && (
-          <Button variant="outline" size="sm" data-testid="wf-revise" disabled={busy || !reason.trim()} onClick={() => reason.trim() && void actions.revise(reason.trim()).then(onShowCurrent)}>
-            Unlock (revise)
-          </Button>
+          <ReasonConfirm trigger="Unlock (revise)…" triggerTestId="wf-revise" disabled={busy} title="Reopen this approved period?" description="A new draft revision is created for the engineer; the approved figures stay in force until the new revision is approved." confirmLabel="Reopen for revision" onConfirm={(reason) => orKeepOpen(actions.revise(reason)).then(onShowCurrent)}>
+            {actions.problem && <EditorProblem problem={actions.problem} />}
+          </ReasonConfirm>
         )}
-        {reasoned && (
-          <Input className="h-8 max-w-xs" aria-label="Reason" data-testid="wf-reason" placeholder={lifecycle === 'approved' ? 'Reason for the revision' : 'Reason (reject / cancel)'} value={reason} onChange={(e) => setReason(e.target.value)} />
+        {actions.recomputeState && (
+          <span className="text-xs" role="status" data-testid="recompute-state" data-state={actions.recomputeState}>
+            {RECOMPUTE_LABELS[actions.recomputeState] ?? 'Recomputing…'}
+          </span>
         )}
-        {actions.recomputeState && <span className="text-xs" data-testid="recompute-state" data-state={actions.recomputeState}>{RECOMPUTE_LABELS[actions.recomputeState] ?? actions.recomputeState}{actions.recomputeError ? `: ${actions.recomputeError}` : ''}</span>}
       </div>
       {decide && lifecycle === 'in_review' && gate.reason && (
         <p id="approve-gate" className="text-sm" data-testid="approve-gate" data-code={gate.code ?? ''}>
-          {gate.reason} {gate.code ? `(${gate.code})` : ''}
+          {gate.reason}
         </p>
       )}
-      {write && lifecycle === 'draft' && <p className="text-xs text-muted-foreground">Submission checks codes, residual, tolerance and coverage on the server; unsaved line changes are not submitted.</p>}
+      {write && lifecycle === 'draft' && <p className="text-xs text-muted-foreground">Submitting checks codes, residual, tolerance and coverage on the server; unsaved line changes are not submitted.</p>}
       {actions.problem && <EditorProblem problem={actions.problem} />}
     </section>
   );

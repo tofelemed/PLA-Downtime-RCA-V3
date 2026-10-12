@@ -255,6 +255,32 @@ export class PlanApproveDto {
   reason?: string;
 }
 
+export class PlanSubmitDto {
+  @ApiProperty({
+    minimum: 1,
+    description: 'Number of the open (draft) version being submitted',
+  })
+  @IsInt()
+  @Min(1)
+  expectedVersion: number;
+}
+
+export class PlanReturnDto {
+  @ApiProperty({
+    minimum: 1,
+    description: 'Number of the submitted version being returned',
+  })
+  @IsInt()
+  @Min(1)
+  expectedVersion: number;
+
+  @ApiProperty({ description: 'Why the version goes back to its author' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2000)
+  reason: string;
+}
+
 export class PlanListQueryDto extends ListQueryDto {
   @ApiPropertyOptional({ enum: ['createdAt'] })
   @IsOptional()

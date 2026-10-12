@@ -1,13 +1,14 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { CalendarVersionView } from '@/api/v2/types/calendars';
 import { useCapabilities } from '@/features/auth/use-capabilities';
+import { DateInput } from '@/features/ux-kit/date-inputs';
+import { Section } from '@/features/ux-kit/page-layout';
 import { FormField } from '../components/form-field';
 import { RefusalNotice } from '../components/refusal-notice';
 import { VersionStateBadge } from '../components/version-state-badge';
 import { useCalendarEditor, type CalendarScope, type PreviewCandidate } from '../hooks/use-calendar-editor';
-import { draftOf, type CalendarDraft } from '../model/calendar-draft';
+import type { CalendarDraft } from '../model/calendar-draft';
 import { ExclusionsEditor } from './exclusions-editor';
 import { HolidaysEditor } from './holidays-editor';
 import { ShiftTemplatesEditor } from './shift-templates-editor';
@@ -19,19 +20,32 @@ export interface CalendarEditorProps {
   scope: CalendarScope;
   displayTimezone: string;
   onSaved: (version: CalendarVersionView) => void;
-  onNewFrom: (seed: CalendarDraft) => void;
+  /** "New version from this" on a published version */
+  onNewFrom: (version: CalendarVersionView) => void;
   onPreview: (candidate: PreviewCandidate) => void;
 }
 
-/** CAL01 editor: IANA zone, operational day start, effective dates, shift templates, holidays, exclusions. */
-export function CalendarEditor(props: CalendarEditorProps) {
-  const { version, displayTimezone } = props;
-  const editor = useCalendarEditor(version, props.seed, props.scope);
-  const { canWriteCalendars } = useCapabilities();
+type Editor = ReturnType<typeof useCalendarEditor>;
+
+function BasicsFields({ editor, readOnly }: { editor: Editor; readOnly: boolean }) {
   const { draft, errors } = editor;
-  /** published versions are immutable; users who are not calendar writers only view and preview */
-  const readOnly = editor.readOnly || !canWriteCalendars;
   const set = <K extends keyof CalendarDraft>(key: K, value: CalendarDraft[K]) => editor.setDraft({ ...draft, [key]: value });
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <FormField id="calTimezone" label="Time zone" error={errors.timezone}>
+        <TimezoneInput id="calTimezone" value={draft.timezone} disabled={readOnly} onChange={(v) => set('timezone', v)} />
+      </FormField>
+      <FormField id="calDayStart" label="Operational day starts at" error={errors.operationalDayStart}>
+        <Input id="calDayStart" value={draft.operationalDayStart} placeholder="06:00" disabled={readOnly} onChange={(e) => set('operationalDayStart', e.target.value)} />
+      </FormField>
+      <DateInput id="calFrom" label="Effective from (operational date)" value={draft.effectiveFrom} disabled={readOnly} error={errors.effectiveFrom} onChange={(v) => set('effectiveFrom', v)} />
+      <DateInput id="calTo" label="Effective to (exclusive, optional)" value={draft.effectiveTo} disabled={readOnly} error={errors.effectiveTo} onChange={(v) => set('effectiveTo', v)} />
+    </div>
+  );
+}
+
+function EditorButtons({ editor, version, readOnly, props }: { editor: Editor; version: CalendarVersionView | null; readOnly: boolean; props: CalendarEditorProps }) {
+  const { canWriteCalendars } = useCapabilities();
   const save = async () => {
     const saved = await editor.save();
     if (saved) props.onSaved(saved);
@@ -41,63 +55,66 @@ export function CalendarEditor(props: CalendarEditorProps) {
     if (candidate) props.onPreview(candidate);
   };
   return (
-    <Card data-testid="calendar-editor" data-state={version?.state ?? 'new'}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          {version ? `Calendar version ${version.version}` : 'New calendar version'}
-          {version && <VersionStateBadge state={version.state} />}
-        </CardTitle>
-        {editor.readOnly && (
-          <p className="text-sm text-muted-foreground" data-testid="calendar-immutable">
-            Published versions are immutable; changes are a new version.
-          </p>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-4">
-          <FormField id="calTimezone" label="Timezone (IANA)" error={errors.timezone}>
-            <TimezoneInput id="calTimezone" value={draft.timezone} disabled={readOnly} onChange={(v) => set('timezone', v)} />
-          </FormField>
-          <FormField id="calDayStart" label="Operational day start" error={errors.operationalDayStart}>
-            <Input id="calDayStart" value={draft.operationalDayStart} placeholder="HH:mm" disabled={readOnly} onChange={(e) => set('operationalDayStart', e.target.value)} />
-          </FormField>
-          <FormField id="calFrom" label="Effective from (operational date)" error={errors.effectiveFrom}>
-            <Input id="calFrom" type="date" value={draft.effectiveFrom} disabled={readOnly} onChange={(e) => set('effectiveFrom', e.target.value)} />
-          </FormField>
-          <FormField id="calTo" label="Effective to (exclusive, optional)" error={errors.effectiveTo}>
-            <Input id="calTo" type="date" value={draft.effectiveTo} disabled={readOnly} onChange={(e) => set('effectiveTo', e.target.value)} />
-          </FormField>
+    <div className="flex flex-wrap gap-2">
+      <Button variant="outline" onClick={preview} data-testid="calendar-preview-run">
+        Preview
+      </Button>
+      {!readOnly && (
+        <Button onClick={save} disabled={editor.saving || !editor.dirty} data-testid="calendar-save">
+          Save draft
+        </Button>
+      )}
+      {version?.state === 'draft' && canWriteCalendars && (
+        <Button onClick={editor.publishStored} disabled={editor.publishing || editor.dirty} data-testid="calendar-publish" title={editor.dirty ? 'Save the draft first' : undefined}>
+          Publish
+        </Button>
+      )}
+      {editor.readOnly && canWriteCalendars && version && (
+        <Button variant="outline" onClick={() => props.onNewFrom(version)} data-testid="calendar-new-from">
+          New version from this
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** Calendar editor: time zone, operational day start, effective dates, shift templates, holidays, exclusions. */
+export function CalendarEditor(props: CalendarEditorProps) {
+  const { version, displayTimezone } = props;
+  const editor = useCalendarEditor(version, props.seed, props.scope);
+  const { canWriteCalendars } = useCapabilities();
+  const { draft, errors } = editor;
+  /** published versions are immutable; users who are not calendar writers only view and preview */
+  const readOnly = editor.readOnly || !canWriteCalendars;
+  const set = <K extends keyof CalendarDraft>(key: K, value: CalendarDraft[K]) => editor.setDraft({ ...draft, [key]: value });
+  return (
+    <div className="space-y-6" data-testid="calendar-editor" data-state={version?.state ?? 'new'}>
+      <Section title="Calendar" actions={version ? <VersionStateBadge state={version.state} /> : undefined}>
+        <div className="space-y-3">
+          {editor.readOnly && (
+            <p className="text-sm text-muted-foreground" data-testid="calendar-immutable">
+              Published versions cannot be changed; changes are a new version.
+            </p>
+          )}
+          <BasicsFields editor={editor} readOnly={readOnly} />
         </div>
+      </Section>
+      <Section title="Shifts">
         <ShiftTemplatesEditor rows={draft.templates} errors={errors} readOnly={readOnly} onChange={(rows) => set('templates', rows)} />
-        <HolidaysEditor rows={draft.holidays} errors={errors} readOnly={readOnly} onChange={(rows) => set('holidays', rows)} />
-        <ExclusionsEditor rows={draft.exclusions} timezone={draft.timezone} errors={errors} readOnly={readOnly} onChange={(rows) => set('exclusions', rows)} />
-        <RefusalNotice error={editor.saveError ?? editor.publishError} timezone={displayTimezone} />
-        {editor.published && (
-          <p className="text-sm" data-testid="calendar-published">
-            Published: {editor.published.materialization.map((m) => `${m.insertedInstances} instances generated`).join(' · ') || 'no unit instances'}.
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={preview} data-testid="calendar-preview-run">
-            Preview
-          </Button>
-          {!readOnly && (
-            <Button onClick={save} disabled={editor.saving || !editor.dirty} data-testid="calendar-save">
-              Save draft
-            </Button>
-          )}
-          {version?.state === 'draft' && canWriteCalendars && (
-            <Button onClick={editor.publishStored} disabled={editor.publishing || editor.dirty} data-testid="calendar-publish" title={editor.dirty ? 'Save the draft first' : undefined}>
-              Publish
-            </Button>
-          )}
-          {editor.readOnly && canWriteCalendars && version && (
-            <Button variant="outline" onClick={() => props.onNewFrom({ ...draftOf(version), effectiveFrom: '' })} data-testid="calendar-new-from">
-              New version from this
-            </Button>
-          )}
+      </Section>
+      <Section title="Holidays and exclusions" collapsible>
+        <div className="space-y-4">
+          <HolidaysEditor rows={draft.holidays} errors={errors} readOnly={readOnly} onChange={(rows) => set('holidays', rows)} />
+          <ExclusionsEditor rows={draft.exclusions} timezone={draft.timezone} errors={errors} readOnly={readOnly} onChange={(rows) => set('exclusions', rows)} />
         </div>
-      </CardContent>
-    </Card>
+      </Section>
+      <RefusalNotice error={editor.saveError ?? editor.publishError} timezone={displayTimezone} />
+      {editor.published && (
+        <p className="text-sm" role="status" data-testid="calendar-published">
+          Published: {editor.published.materialization.map((m) => `${m.insertedInstances} shifts generated`).join(' · ') || 'no unit shifts generated'}.
+        </p>
+      )}
+      <EditorButtons editor={editor} version={version} readOnly={readOnly} props={props} />
+    </div>
   );
 }

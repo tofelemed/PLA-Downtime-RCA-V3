@@ -1,5 +1,6 @@
 import { Quantity } from '@/features/ux-kit/quantity';
 import type { WorkflowIssue } from '../model/workflow-errors';
+import { issueText } from '../model/problem-text';
 
 export interface LineIssuesProps {
   /** missing fields found before sending */
@@ -19,11 +20,11 @@ export function LineIssues({ problems, issues, uom }: LineIssuesProps) {
       ))}
       {issues.map((issue) => (
         <li key={`${issue.code}-${issue.message}`} data-testid="line-issue" data-code={issue.code}>
-          {issue.code}: {issue.message}
+          {issueText(issue)}
           {issue.expectedRemainingAllocation !== undefined && (
             <>
               {' '}
-              — remaining allocation (server): <Quantity value={issue.expectedRemainingAllocation} uom={uom} />
+              — still available to allocate: <Quantity value={issue.expectedRemainingAllocation} uom={uom} />
             </>
           )}
         </li>

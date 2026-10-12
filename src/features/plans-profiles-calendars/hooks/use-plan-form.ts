@@ -42,6 +42,8 @@ export function usePlanForm(mode: PlanFormMode, timezone: string) {
   return {
     values,
     set: <K extends keyof PlanFormValues>(key: K, value: PlanFormValues[K]) => setValues((prev) => ({ ...prev, [key]: value })),
+    /** several fields at once, e.g. the content copied from another plan */
+    merge: (patch: Partial<PlanFormValues>) => setValues((prev) => ({ ...prev, ...patch })),
     errors: { ...(refusalOf(command.error)?.fieldErrors ?? {}), ...errors },
     error: command.error,
     pending: command.isPending,
