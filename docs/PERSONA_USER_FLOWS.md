@@ -464,7 +464,7 @@ Routes are in `code font`. Buttons are in **bold**. Field labels are in "quotes"
    6. Click **Submit for approval** and **hand over** to a manager for **Approve version 1** (4.4, flow 4). Your own **Approve version** is hidden, or refused with `FORBIDDEN_ROLE`.
    7. If the manager returns it, the plan shows "Returned by …" with the reason. Click **Edit draft** (`/planning/plans/:planId/versions/:version/edit`), fix it, save, and submit again.
 2. **Code yesterday's stops** (if the operators did not).
-   1. Go to **Event Hub** (`/events`). Set "Units" to Extruder Line 1 and "Window" to **Last 7 days**. The default "Last 24 h" may hide yesterday.
+   1. Go to **Event Hub** (`/events`). Set "Units" to Extruder Line 1; "Window" opens on **Last 7 days** (or the preset you chose last time in this plant, remembered per browser).
    2. Click a row's start time to open the event's page (`/events/:eventId`), then click **Edit / code** (`/events/:eventId/edit`).
    3. Set "Reason code" (for example Mechanical › Bearing failure) and "Schedule class" (unplanned), then click **Save**. The badge reads "Coding state: Coded".
    4. To code many at once: tick each row's box ("Select event starting …") until the toolbar reads "2 selected", then click **Bulk code**.
@@ -1039,8 +1039,7 @@ stateDiagram-v2
 
 These are real limits of the current build, not mistakes in this guide.
 
-1. **Event Hub defaults to "Last 24 h".** Widen "Window" before accounting a day further back.
-2. **Event drafts survive only in the same browser tab.** They are not true offline storage.
-3. **A plant administrator cannot see users whose home plant is another plant.** Members who reach this plant through a scope grant appear as "Unknown user" and cannot be listed, granted to or assigned tasks by a plant administrator. Fixing it needs an owner decision (a row-level-security exception).
-4. **Branding changes need a page reload** before the header shows them.
-5. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.
+1. **Event drafts survive only in the same browser tab.** They are not true offline storage.
+2. **A plant administrator cannot see users whose home plant is another plant.** Members who reach this plant through a scope grant appear as "Unknown user" and cannot be listed, granted to or assigned tasks by a plant administrator. Fixing it needs an owner decision (a row-level-security exception).
+3. **Branding changes need a page reload** before the header shows them.
+4. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.

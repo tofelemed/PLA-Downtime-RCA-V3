@@ -7,11 +7,11 @@ const NOW = Date.parse('2026-10-12T10:00:30.000Z');
 const UUID = '5c0b12aa-1111-4222-8333-944445555666';
 
 describe('Event Hub filters in the URL', () => {
-  it('a missing window is the last 24 h, minute-stable, ending one hour after now', () => {
+  it('a missing window is the last 7 days, minute-stable, ending one hour after now', () => {
     const filters = parseEventFilters(new URLSearchParams(), NOW);
-    expect(filters.windowLabel).toBe('Last 24 h');
+    expect(filters.windowLabel).toBe('Last 7 days');
     expect(filters.to).toBe('2026-10-12T11:01:00.000Z');
-    expect(filters.from).toBe('2026-10-11T10:01:00.000Z');
+    expect(filters.from).toBe('2026-10-05T10:01:00.000Z');
     expect(filters.physicalStates).toEqual(['open', 'closed']);
   });
 

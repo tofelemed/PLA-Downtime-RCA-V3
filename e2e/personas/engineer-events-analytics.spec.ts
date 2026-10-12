@@ -32,7 +32,7 @@ async function openHub(page: Page): Promise<void> {
   await page.getByTestId('filter-units').click();
   await page.getByRole('checkbox', { name: world.unitName }).click();
   await page.keyboard.press('Escape');
-  // the day under analysis is three days back: the default "Last 24 h" window does not show it
+  // the day under analysis is three days back: pick "Last 7 days" explicitly (the remembered window may differ)
   await page.getByTestId('event-window').selectOption('preset:168');
   await expect(row(page, world.stops.a)).toBeVisible({ timeout: 30_000 });
 }

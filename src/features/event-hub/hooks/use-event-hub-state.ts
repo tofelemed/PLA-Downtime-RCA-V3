@@ -1,21 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import type { ProductionEventView } from '@/api/v2/types/events';
+import { useAuth } from '@/contexts/AuthContext';
 import type { EventFilterState } from '../model/event-filters';
 import { parseEventFilters, toEventSearchParams } from '../model/event-url';
+import { readWindowPreference, rememberWindow } from '../model/window-preference';
 
 /** Dialogs of the list page; detail, create and edit are routes (`/events/:id`, `/events/new`, …/edit). */
 export type EventHubDialog = { kind: 'close'; event: ProductionEventView } | { kind: 'merge' } | { kind: 'bulk' } | null;
 
 /**
  * Filters live in the URL (shareable, Back restores them); the default window is anchored to the
- * instant the page was opened and written to the URL once. Selection (merge / bulk coding) and the
+ * instant the page was opened and written to the URL once; it is the preset this user last chose in this
+ * plant (remembered per browser), else the last 7 days. Selection (merge / bulk coding) and the
  * open dialog stay in memory.
  */
 export function useEventHubState() {
   const [params, setParams] = useSearchParams();
+  const userId = useAuth().session?.user.id ?? null;
+  const tenantId = useV2TenantId();
   const [openedAt] = useState(() => Date.now());
-  const filters = useMemo(() => parseEventFilters(params, openedAt), [params, openedAt]);
+  const preset = useMemo(() => readWindowPreference(userId, tenantId), [userId, tenantId]);
+  const filters = useMemo(() => parseEventFilters(params, openedAt, preset), [params, openedAt, preset]);
   const [selected, setSelected] = useState<ReadonlyMap<string, ProductionEventView>>(new Map());
   const [dialog, setDialog] = useState<EventHubDialog>(null);
 
@@ -36,10 +43,11 @@ export function useEventHubState() {
 
   const changeFilters = useCallback(
     (next: EventFilterState) => {
+      if (next.windowLabel !== filters.windowLabel) rememberWindow(userId, tenantId, next.windowLabel);
       setParams(toEventSearchParams(next));
       setSelected(new Map());
     },
-    [setParams],
+    [setParams, filters.windowLabel, userId, tenantId],
   );
 
   const resetFilters = useCallback(() => {
