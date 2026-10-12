@@ -647,6 +647,7 @@ Routes are in `code font`. Buttons are in **bold**. Field labels are in "quotes"
    4. Fill "Why this link (optional)" and read the "Evidence package", which includes "Approved impact". "Similar past RCAs" lists knowledge entries for the same asset or reason.
    5. Click **Create case and link**.
    - The event shows "Linked to …" and "RCA state: RCA linked". The recommendation disappears.
+   - No RCA needed? Next to the badge on the event page, **Dismiss** asks for a reason (required) → **Dismiss recommendation**. The reason is kept and the badge disappears.
    - A case without an event starts from **RCA Analysis** → **New case** (`/rca/new`).
 3. **Work the case.**
    1. Open the case (`/rca/:caseId`). Its sections are **Overview**, **Evidence**, **Analysis**, **Recommendations & actions** and **Links & outcome**.
@@ -675,7 +676,7 @@ Routes are in `code font`. Buttons are in **bold**. Field labels are in "quotes"
    - "Claimed avoided loss": what action owners claim.
    - "Realized difference": measured after the action.
 8. **Close the case.**
-   - **Overview**, section "Definition": set "Status" to **Closed** and click **Save case**.
+   - **Overview**: click **Close case** and confirm (**Close case**). A refusal (for example someone saved the case in between) shows in the dialog.
    - Every linked event becomes "RCA state: RCA completed".
    - One **unpublished knowledge-base entry** is created automatically.
 9. **Publish to the knowledge base.**
@@ -907,7 +908,7 @@ sequenceDiagram
 9. **Reliability again.**
    - The case's **Evidence** shows "Approved impact" from the approved period.
    - Add actions (4.8, flow 5) and verify after the window (flow 6).
-   - Set Status **Closed** → the event becomes "RCA completed", and an unpublished knowledge entry appears.
+   - **Close case** on the Overview → the event becomes "RCA completed", and an unpublished knowledge entry appears.
    - Publish it (flow 9). The next bearing stop on Extruder 1 lists it under similar past RCAs.
 
 ### 5.B Month setup: master data → calendars → profiles and rates → plan → approval
@@ -1021,7 +1022,7 @@ stateDiagram-v2
 | automate classification | Master-data admin (draft), Manager (activate) | `/codes-admin/rules/new`, then `/codes-admin/rules/:ruleId` | **Create draft** → **Activate draft…** |
 | set RCA triggers | Manager approver | `/events/rca-triggers` | save a new policy version |
 | open an RCA | Reliability engineer, Manager | event page → `/rca/new?eventId=…` | **Create / link RCA** |
-| close an RCA | Reliability engineer, Manager | case Overview `/rca/:caseId` | Status Closed → **Save case** |
+| close an RCA | Reliability engineer, Manager | case Overview `/rca/:caseId` | **Close case** → confirm |
 | learn from past RCAs | anyone (publish: RCA writers) | Knowledge Base `/rca-knowledge-base` → `/rca-knowledge-base/:entryId` | search → open → **Publish** / vote |
 | connect PI or MQTT | Integration admin, Manager | `/connectivity/connections/new` | **New connection** |
 | map a source to a unit | Integration admin, Manager | `/connectivity/mappings/new` | **New mapping** |
@@ -1038,10 +1039,9 @@ stateDiagram-v2
 
 These are real limits of the current build, not mistakes in this guide.
 
-1. **RCA cases close by setting Status "Closed" on the case Overview and saving.** There is no separate close button. Recommendations have no dismiss button in the UI.
-2. **Enhanced Historian is listed only for integration roles** (SuperAdmin, OrgAdmin, TenantAdmin, integration admin). Every plant member may read signal samples, and `/enhanced-historian` opens for them by URL.
-3. **Event Hub defaults to "Last 24 h".** Widen "Window" before accounting a day further back.
-4. **Event drafts survive only in the same browser tab.** They are not true offline storage.
-5. **A plant administrator cannot see users whose home plant is another plant.** Members who reach this plant through a scope grant appear as "Unknown user" and cannot be listed, granted to or assigned tasks by a plant administrator. Fixing it needs an owner decision (a row-level-security exception).
-6. **Branding changes need a page reload** before the header shows them.
-7. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.
+1. **Enhanced Historian is listed only for integration roles** (SuperAdmin, OrgAdmin, TenantAdmin, integration admin). Every plant member may read signal samples, and `/enhanced-historian` opens for them by URL.
+2. **Event Hub defaults to "Last 24 h".** Widen "Window" before accounting a day further back.
+3. **Event drafts survive only in the same browser tab.** They are not true offline storage.
+4. **A plant administrator cannot see users whose home plant is another plant.** Members who reach this plant through a scope grant appear as "Unknown user" and cannot be listed, granted to or assigned tasks by a plant administrator. Fixing it needs an owner decision (a row-level-security exception).
+5. **Branding changes need a page reload** before the header shows them.
+6. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.

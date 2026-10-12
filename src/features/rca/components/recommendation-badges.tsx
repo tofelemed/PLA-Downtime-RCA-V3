@@ -2,18 +2,28 @@ import type { RcaRecommendationView } from '@/api/v2/types/rca';
 import { Badge } from '@/components/ui/badge';
 import { StatusIcon } from '@/lib/icons';
 import { recommendationText, ruleNameOf } from '../model/rca-labels';
+import { DismissRecommendation } from './dismiss-recommendation';
+
+export interface RecommendationBadgesProps {
+  items: readonly RcaRecommendationView[];
+  /** RCA writers get a "Dismiss" (with reason) next to each open recommendation */
+  canDismiss?: boolean;
+}
 
 /** `RCARecommended` badges: what fired and with which version; a person links, creates or dismisses. */
-export function RecommendationBadges({ items }: { items: readonly RcaRecommendationView[] }) {
+export function RecommendationBadges({ items, canDismiss = false }: RecommendationBadgesProps) {
   if (items.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-1" data-testid="rca-recommendations">
+    <ul className="flex flex-wrap gap-2" data-testid="rca-recommendations">
       {items.map((rec) => (
-        <Badge key={rec.id} variant="outline" className="gap-1 border-amber-500 text-amber-700" title={ruleNameOf(rec) ?? undefined}>
-          <StatusIcon.info className="h-3 w-3" aria-hidden />
-          RCA recommended: {recommendationText(rec)}
-        </Badge>
+        <li key={rec.id} className="flex items-center gap-1">
+          <Badge variant="outline" className="gap-1 border-amber-500 text-amber-700" title={ruleNameOf(rec) ?? undefined}>
+            <StatusIcon.info className="h-3 w-3" aria-hidden />
+            RCA recommended: {recommendationText(rec)}
+          </Badge>
+          {canDismiss && rec.state === 'open' && <DismissRecommendation recommendation={rec} />}
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

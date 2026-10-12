@@ -15,6 +15,7 @@ const { EventCaseSection } = await import('./pages/event-case-section');
 const { OutcomePanel } = await import('./outcome-panel');
 const { OverviewPage } = await import('./case/overview/overview-page');
 const { FiveWhyTool } = await import('./case/analysis/tools/five-why/five-why-tool');
+const { RecommendationBadges } = await import('./components/recommendation-badges');
 
 interface Call {
   method: string;
@@ -130,6 +131,53 @@ describe('RCA flows (v2 case workspace)', () => {
     expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({ rootCause: 'Seal' });
   });
 
+  it('closes the case through "Close case" after confirmation, with If-Match and status Closed only', async () => {
+    reply = (call) => (call.method === 'PATCH' ? json(200, { ...CASE, status: 'Closed', rowVersion: 5 }) : json(200, call.url.pathname.endsWith('/analyses') ? NO_ANALYSES : list([])));
+    wrap(<OverviewPage />);
+    fireEvent.click(screen.getByTestId('close-case'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Close case' }));
+    await waitFor(() => expect(calls.some((call) => call.method === 'PATCH')).toBe(true));
+    const patch = calls.find((call) => call.method === 'PATCH');
+    expect(patch?.headers.get('If-Match')).toBe('"4"');
+    expect(patch?.body).toEqual({ status: 'Closed' });
+    await waitFor(() => expect(screen.queryByTestId('close-case')).toBeNull());
+  });
+
+  it('shows the refusal of a close in the dialog and keeps the case open', async () => {
+    reply = (call) =>
+      call.method === 'PATCH'
+        ? json(412, { code: 'STALE_REVISION', message: 'Changed by someone else', correlationId: 'x', retryable: false })
+        : json(200, call.url.pathname.endsWith('/analyses') ? NO_ANALYSES : list([]));
+    wrap(<OverviewPage />);
+    fireEvent.click(screen.getByTestId('close-case'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Close case' }));
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByTestId('close-case')).toBeTruthy();
+  });
+
+  it('dismisses an open recommendation with the required reason', async () => {
+    const rec = { id: 'r1', eventId: 'e1', occurrenceId: null, unitId: 'u-1', trigger: 'downtime_threshold', source: { kind: 'rule', id: 'p', version: 1 }, firedOn: 'event', provisional: false, outcome: 'recommended', state: 'open', rcaId: null, detail: {}, firedAt: '2026-10-10T00:00:00Z', confirmedAt: null, resolvedAt: null };
+    reply = () => json(200, { ...rec, state: 'dismissed' });
+    wrap(<RecommendationBadges items={[rec]} canDismiss />);
+    fireEvent.click(screen.getByTestId('dismiss-recommendation'));
+    const confirm = await screen.findByRole('button', { name: 'Dismiss recommendation' });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'Planned stop' } });
+    fireEvent.click(confirm);
+    await waitFor(() => expect(calls.some((call) => call.method === 'POST')).toBe(true));
+    const post = calls.find((call) => call.method === 'POST');
+    expect(post?.url.pathname).toBe('/api/v2/rca-recommendations/r1/dismiss');
+    expect(post?.body).toEqual({ reason: 'Planned stop' });
+    expect(post?.headers.get('Idempotency-Key')).toBeTruthy();
+  });
+
+  it('offers no dismiss without the RCA writer capability', () => {
+    reply = () => json(200, {});
+    const rec = { id: 'r1', eventId: 'e1', occurrenceId: null, unitId: 'u-1', trigger: 't', source: { kind: 'rule', id: 'p', version: 1 }, firedOn: 'event', provisional: false, outcome: 'recommended', state: 'open', rcaId: null, detail: {}, firedAt: '2026-10-10T00:00:00Z', confirmedAt: null, resolvedAt: null };
+    wrap(<RecommendationBadges items={[rec]} />);
+    expect(screen.queryByTestId('dismiss-recommendation')).toBeNull();
+  });
+
   describe('controls follow RCA_WRITERS', () => {
     afterEach(() => actAs('SuperAdmin'));
 
@@ -138,6 +186,7 @@ describe('RCA flows (v2 case workspace)', () => {
       actAs('Engineer');
       wrap(<OverviewPage />, true);
       expect(screen.queryByTestId('save-case')).toBeNull();
+      expect(screen.queryByTestId('close-case')).toBeNull();
       expect(screen.getByLabelText('Title')).toBeDisabled();
     });
   });

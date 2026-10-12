@@ -9,6 +9,7 @@ import { progressSteps } from '../../model/case-progress';
 import { buildDefinitionPatch, formFromCase, type RcaCaseForm } from '../../model/rca-form';
 import { useCaseWorkspace } from '../case-context';
 import { useCasePatch } from '../use-case-patch';
+import { CloseCaseButton } from './close-case-button';
 import { DefinitionFields } from './definition-fields';
 import { TeamEditor } from './team-editor';
 
@@ -44,6 +45,10 @@ export function OverviewPage() {
     setSaved(false);
     setForm((current) => ({ ...current, ...next }));
   };
+  const closed = (result: RcaCaseView) => {
+    setForm(formFromCase(result));
+    setSaved(false);
+  };
   const save = async () => {
     const result = await patch.save(buildDefinitionPatch(form)).catch(() => null);
     if (!result) return;
@@ -55,7 +60,7 @@ export function OverviewPage() {
       <Section title="Progress" description="A guide through the investigation; nothing here blocks a step.">
         <Progress rca={rca} />
       </Section>
-      <Section title="Definition" description={rca.status === 'Closed' ? undefined : 'Setting the status to Closed writes an unpublished knowledge-base entry and completes the linked events.'}>
+      <Section title="Definition" description={rca.status === 'Closed' ? undefined : 'Close the case with "Close case" below: it writes an unpublished knowledge-base entry and completes the linked events.'}>
         <DefinitionFields form={form} onChange={change} readOnly={readOnly} />
       </Section>
       <Section title="Team">
@@ -67,6 +72,7 @@ export function OverviewPage() {
           <Button disabled={form.title.trim() === '' || patch.isPending} onClick={() => void save()} data-testid="save-case">
             Save case
           </Button>
+          {form.status !== 'Closed' && <CloseCaseButton onClosed={closed} disabled={patch.isPending} />}
           {saved && (
             <span role="status" className="text-sm text-muted-foreground">
               Saved.

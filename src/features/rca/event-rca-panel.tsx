@@ -23,7 +23,7 @@ export function EventRcaPanel({ event }: EventRcaPanelProps) {
   const recommendations = useRcaRecommendations([event.id]);
   return (
     <section className="space-y-2 rounded border p-2" aria-label="Root cause analysis" data-testid="event-rca-panel">
-      <RecommendationBadges items={recommendations.data ?? []} />
+      <RecommendationBadges items={recommendations.data ?? []} canDismiss={canWriteRca} />
       <div className="flex flex-wrap items-center gap-2">
         {canWriteRca && (
           <Button asChild size="sm" variant="outline" data-testid="open-link-rca">
