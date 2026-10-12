@@ -1,0 +1,31 @@
+# Override: run the backend and worker containers against the local development database
+# (container `proact-postgres` published on the host's 5432, database "proact" with the demo
+# personas and showcase data) instead of the bundled postgres service.
+#
+# Secrets are not stored here: export them from server/pro-act-backend/.env before `up`, e.g.
+#   DEV_DB_PASSWORD=... DEV_JWT_SECRET=... DEV_CREDENTIAL_ENCRYPTION_KEY=... \
+#   docker compose -f docker-compose.yml -f docker-compose.devdb.yml up -d --build
+# DEV_JWT_SECRET / DEV_CREDENTIAL_ENCRYPTION_KEY must match the values the dev backend used, so
+# connection secrets stored in that database (MQTT / PI passwords) can be decrypted.
+x-devdb-env: &devdb-env
+  DB_HOST: host.docker.internal
+  DB_PORT: "5432"
+  DB_PASSWORD: ${DEV_DB_PASSWORD:?Set DEV_DB_PASSWORD (DB_PASSWORD of server/pro-act-backend/.env)}
+  JWT_SECRET: ${DEV_JWT_SECRET:?Set DEV_JWT_SECRET (JWT_SECRET of server/pro-act-backend/.env)}
+  CREDENTIAL_ENCRYPTION_KEY: ${DEV_CREDENTIAL_ENCRYPTION_KEY:-}
+
+services:
+  postgres:
+    # Parked behind a profile so it is neither built nor started
+    profiles: ["bundled-db"]
+
+  backend:
+    depends_on: !reset []
+    environment: *devdb-env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  worker:
+    environment: *devdb-env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -247,3 +247,20 @@ to narrow a run.
 * Schema changes are versioned migrations (`npm run migration:generate|run|revert|show` in the backend, see
   `server/pro-act-backend/src/database/MIGRATIONS.md`). Entity auto-synchronisation is disabled everywhere.
 * Generate unique `POSTGRES_PASSWORD`, `JWT_SECRET` and `CREDENTIAL_ENCRYPTION_KEY` values per environment.
+
+## Run the containers against the development database (demo data)
+
+`docker-compose.devdb.yml` points the backend and worker at the local development database
+(`proact-postgres` on the host's 5432, with the demo personas and showcase data) and parks the
+bundled postgres. Secrets come from `server/pro-act-backend/.env` at start-up (nothing is stored
+in the file). From Git Bash at the repo root:
+
+```bash
+export DEV_DB_PASSWORD=... DEV_JWT_SECRET=... DEV_CREDENTIAL_ENCRYPTION_KEY=...   # values of DB_PASSWORD, JWT_SECRET, CREDENTIAL_ENCRYPTION_KEY in server/pro-act-backend/.env
+docker compose -f docker-compose.yml -f docker-compose.devdb.yml up -d --build
+```
+
+Stop any local `npm run dev` / `npm run start:dev` first (they hold 8070 / 4004). The app is then
+http://localhost:8070 (nginx) with the API at http://localhost:4004/api. MQTT connections stored in
+that database must use `mqtt://host.docker.internal:1884` (reachable from containers and the host),
+not `localhost`.
