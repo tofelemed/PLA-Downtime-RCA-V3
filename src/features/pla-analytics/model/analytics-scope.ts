@@ -9,10 +9,26 @@ import type { DowntimeReportQuery, ExportRequest, OeeReportQuery, ReportQueryBas
 import type { QueryOf } from '@/api/v2/schema-types';
 import type { LedgerKind } from '@/api/v2/types/period-overview';
 import type { LossTreeGroupBy, LossTreeMetric, TrendGroup } from '@/api/v2/types/pla-analytics';
-import { DEFAULT_PRESET, presetWindow } from '@/features/downtime-analysis/model/downtime-filters';
+import { HOUR_MS, rollingWindow } from '@/api/v2/queries/time-window';
+import { DEFAULT_PRESET } from '@/features/downtime-analysis/model/downtime-filters';
 
-export const PLA_TABS = ['waterfall', 'loss-tree', 'trends', 'reconciliation', 'quality', 'repeat-causes', 'opportunities', 'oee'] as const;
+/** Five views (UI guidelines §2: at most 5 tabs); the former eight are sections inside them. */
+export const PLA_TABS = ['waterfall', 'losses', 'trends', 'reconciliation', 'oee'] as const;
 export type PlaTab = (typeof PLA_TABS)[number];
+
+/** Links written before the regrouping (`?tab=loss-tree`, `quality`, …) open the view that now holds them. */
+const LEGACY_TABS: Readonly<Record<string, PlaTab>> = {
+  'loss-tree': 'losses',
+  opportunities: 'losses',
+  'repeat-causes': 'losses',
+  quality: 'reconciliation',
+};
+
+export const LOSS_EVENT_TYPES = ['all', 'downtime', 'slowdown', 'quality_loss'] as const;
+export type LossEventType = (typeof LOSS_EVENT_TYPES)[number];
+
+/** A preset window ending now, with minute-stable bounds (cache keys repeat within the minute). */
+export const presetWindowOf = (hours: number, now: number = Date.now()) => rollingWindow(hours * HOUR_MS, now);
 
 export const TREND_GROUPS: readonly TrendGroup[] = ['shift', 'day', 'week', 'month'];
 export const LOSS_GROUPS: readonly LossTreeGroupBy[] = ['reason', 'impact', 'oee', 'kind', 'unit'];
@@ -38,6 +54,8 @@ export interface AnalyticsScope {
   lossGroupBy: LossTreeGroupBy;
   lossMetric: LossTreeMetric;
   valueMetric: LossTreeMetric;
+  /** physical type of the loss events listed under Losses */
+  eventType: LossEventType;
 }
 
 const oneOf = <T extends string>(values: readonly T[], value: string | null, fallback: T): T =>
@@ -52,16 +70,17 @@ export function parseScope(params: URLSearchParams, now: number): AnalyticsScope
   const hasWindow = isInstant(from) && isInstant(to) && Date.parse(from) < Date.parse(to);
   return {
     unitIds: (params.get('units') ?? '').split(',').filter(Boolean).sort(),
-    ...(hasWindow ? { from, to } : presetWindow(DEFAULT_PRESET.hours, now)),
+    ...(hasWindow ? { from, to } : presetWindowOf(DEFAULT_PRESET.hours, now)),
     windowLabel: hasWindow ? params.get('window') ?? 'Custom window' : DEFAULT_PRESET.label,
     approvedOnly: params.get('approved') === '1',
     ledger: oneOf(['plan', 'capacity'] as const, params.get('ledger'), 'plan'),
     policy: oneOf(['operational', 'reconciled'] as const, params.get('policy'), 'operational'),
-    tab: oneOf(PLA_TABS, params.get('tab'), 'waterfall'),
+    tab: oneOf(PLA_TABS, LEGACY_TABS[params.get('tab') ?? ''] ?? params.get('tab'), 'waterfall'),
     trendBy: oneOf(TREND_GROUPS, params.get('trend'), 'day'),
     lossGroupBy: oneOf(LOSS_GROUPS, params.get('lossBy'), 'reason'),
     lossMetric: oneOf(LOSS_METRICS, params.get('metric'), 'qty'),
     valueMetric: oneOf(VALUE_METRICS, params.get('value'), 'margin'),
+    eventType: oneOf(LOSS_EVENT_TYPES, params.get('events'), 'all'),
   };
 }
 
@@ -73,6 +92,7 @@ const DEFAULTS: Partial<Record<keyof AnalyticsScope, string>> = {
   lossGroupBy: 'reason',
   lossMetric: 'qty',
   valueMetric: 'margin',
+  eventType: 'all',
 };
 const PARAM: Partial<Record<keyof AnalyticsScope, string>> = {
   ledger: 'ledger',
@@ -82,7 +102,11 @@ const PARAM: Partial<Record<keyof AnalyticsScope, string>> = {
   lossGroupBy: 'lossBy',
   lossMetric: 'metric',
   valueMetric: 'value',
+  eventType: 'events',
 };
+
+/** Every URL parameter the scope owns; other parameters of the page (e.g. the Reports view) are kept. */
+export const SCOPE_PARAMS: ReadonlySet<string> = new Set(['from', 'to', 'window', 'units', 'approved', ...Object.values(PARAM).filter((name): name is string => name !== undefined)]);
 
 /** URL form of the scope (defaults left out, so equal scopes give equal URLs). */
 export function scopeToParams(scope: AnalyticsScope): URLSearchParams {
@@ -144,4 +168,22 @@ export function exportRequestOf(scope: AnalyticsScope, reportType: ExportRequest
   const request: ExportRequest = { reportType, format: 'csv', revisionSelector: 'published', from: scope.from, to: scope.to };
   if (scope.unitIds.length > 0) request.unitIds = [...scope.unitIds].sort();
   return request;
+}
+
+const LOSS_PHYSICAL_TYPES = ['downtime', 'slowdown', 'quality_loss'] as const;
+
+/**
+ * The loss events of the scope (Losses → Events): stops, slowdowns and quality losses overlapping the
+ * window on the scope's units, newest first, never superseded or retracted rows — a server keyset list.
+ */
+export function lossEventsQuery(scope: AnalyticsScope): QueryOf<'/api/v2/production-events', 'get'> {
+  const query: QueryOf<'/api/v2/production-events', 'get'> = {
+    from: scope.from,
+    to: scope.to,
+    sort: '-startTime',
+    physicalTypes: scope.eventType === 'all' ? [...LOSS_PHYSICAL_TYPES] : [scope.eventType],
+    physicalStates: ['open', 'closed'],
+  };
+  if (scope.unitIds.length > 0) query.unitIds = [...scope.unitIds].sort();
+  return query;
 }

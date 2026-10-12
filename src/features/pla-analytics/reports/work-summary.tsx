@@ -1,0 +1,101 @@
+import { lazy, Suspense, type ReactNode } from 'react';
+import { useActivitySummary } from '@/api/v2/queries/activity-summary';
+import type { ActivityCountView, ActivityDayView, AuditActivitySummaryView, WorkItemSummaryView } from '@/api/v2/types/activity-summary';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { DataState } from '@/features/ux-kit/data-state';
+import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { humanize } from '@/features/ux-kit/labels';
+import type { AnalyticsScope } from '../model/analytics-scope';
+
+const SeriesChart = lazy(() => import('../charts/series-chart').then((m) => ({ default: m.SeriesChart })));
+
+function DayChart({ days, label }: { days: readonly ActivityDayView[]; label: string }) {
+  const pref = useCalendarPreference();
+  if (days.length === 0) return null;
+  const rows = days.map((d) => ({ label: formatOperationalDate(d.day, pref), values: { count: String(d.count) } }));
+  return (
+    <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+      <SeriesChart rows={rows} series={[{ key: 'count', label }]} kind="bar" />
+    </Suspense>
+  );
+}
+
+function Counts({ title, items }: { title: string; items: readonly ActivityCountView[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="w-24 text-muted-foreground">{title}</span>
+      {items.length === 0 ? '—' : items.map((item) => <Badge key={item.key} variant="outline">{humanize(item.key)}: {item.count}</Badge>)}
+    </div>
+  );
+}
+
+function SummaryCard({ title, testId, children }: { title: string; testId: string; children: ReactNode }) {
+  return (
+    <Card data-testid={testId}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">{children}</CardContent>
+    </Card>
+  );
+}
+
+function WorkItems({ title, testId, summary, overdueLabel }: { title: string; testId: string; summary: WorkItemSummaryView; overdueLabel: string }) {
+  return (
+    <SummaryCard title={title} testId={testId}>
+      <p className="text-sm" data-total={summary.total}>
+        <strong>{summary.total}</strong> created · <strong>{summary.open}</strong> still open · <strong>{summary.overdue}</strong> {overdueLabel}
+      </p>
+      <Counts title="Status" items={summary.byStatus} />
+      <Counts title="Priority" items={summary.byPriority} />
+      <DayChart days={summary.createdByDay} label="Created" />
+    </SummaryCard>
+  );
+}
+
+const COUNT_COLUMNS = (title: string): Array<DataTableColumn<ActivityCountView>> => [
+  { id: 'key', header: title, cell: (row) => humanize(row.key) },
+  { id: 'count', header: 'Entries', align: 'right', cell: (row) => row.count },
+];
+
+function AuditActivity({ audit }: { audit: AuditActivitySummaryView }) {
+  return (
+    <SummaryCard title={`Audit activity (${audit.total} entries)`} testId="report-audit-activity">
+      <DayChart days={audit.byDay} label="Entries" />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DataTable caption="Audit entries by action" columns={COUNT_COLUMNS('Action')} rows={audit.byAction} getRowKey={(row) => row.key} density="compact" />
+        <DataTable caption="Audit entries by record type" columns={COUNT_COLUMNS('Record type')} rows={audit.byEntityType} getRowKey={(row) => row.key} density="compact" />
+      </div>
+    </SummaryCard>
+  );
+}
+
+/**
+ * Work summary (the v1 Reports RCA, task and audit summaries): RCA cases and tasks created in the chosen
+ * dates by status and priority with open and overdue counts, and — for those who may read the audit log —
+ * audit activity; all counted on the server, days in the plant calendar.
+ */
+export function WorkSummary({ scope }: { scope: AnalyticsScope }) {
+  const query = useActivitySummary({ from: scope.from, to: scope.to });
+  const data = query.data?.data;
+  return (
+    <div className="space-y-4" data-testid="report-work-summary">
+      <p className="text-sm text-muted-foreground">Records created on the chosen dates, for every unit you can see; the unit filter does not apply here.</p>
+      <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>
+        {data && (
+          <>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <WorkItems title="RCA cases" testId="report-rca-summary" summary={data.rcaCases} overdueLabel="past their target date" />
+              <WorkItems title="Tasks" testId="report-task-summary" summary={data.tasks} overdueLabel="overdue" />
+            </div>
+            {data.audit && <AuditActivity audit={data.audit} />}
+          </>
+        )}
+      </DataState>
+    </div>
+  );
+}

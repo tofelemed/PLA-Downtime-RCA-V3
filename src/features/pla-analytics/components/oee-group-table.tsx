@@ -1,45 +1,60 @@
-import type { OeeReportView } from '@/api/v2/types/reports';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { findKpi, kpiText } from '../model/display';
+import type { OeeReportView, ReportGroupView } from '@/api/v2/types/reports';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { findKpi, kpiText, OEE_METRIC_LABELS } from '../model/display';
 
 export interface OeeGroupTableProps {
   report: OeeReportView;
   groupTitle: string;
-  /** display name of a group key (unit / product names from the reference lists, never a UUID) */
+  /** display name of a group key (unit / product names, a formatted date — never a UUID) */
   labelOf: (key: string | null) => string;
   testId: string;
 }
 
-/** OEE components per server group, each "Not available: <reason>" when the server has no value (T41). */
-export function OeeGroupTable({ report, groupTitle, labelOf, testId }: OeeGroupTableProps) {
+const metricLabel = (metric: string) => OEE_METRIC_LABELS[metric.replace('reconciled_', '')] ?? metric;
+
+type OeeGroup = ReportGroupView;
+
+function columnsOf(report: OeeReportView, groupTitle: string, labelOf: OeeGroupTableProps['labelOf']): Array<DataTableColumn<OeeGroup>> {
   const metrics = report.total.map((t) => t.metric);
+  return [
+    {
+      id: 'group',
+      header: groupTitle,
+      nowrap: true,
+      cell: (group) => (
+        <span data-testid="oee-group" data-key={group.key ?? ''}>
+          {labelOf(group.key)}
+        </span>
+      ),
+    },
+    ...metrics.map<DataTableColumn<OeeGroup>>((metric) => ({
+      id: metric,
+      header: metricLabel(metric),
+      align: 'right',
+      cell: (group) => {
+        const view = findKpi(group.metrics, metric);
+        return (
+          <span data-metric={metric} data-value={view?.value ?? ''}>
+            {kpiText(view)}
+          </span>
+        );
+      },
+    })),
+  ];
+}
+
+/** OEE components per server group (20 per page), each "Not available: <reason>" when the server has no value (T41). */
+export function OeeGroupTable({ report, groupTitle, labelOf, testId }: OeeGroupTableProps) {
   return (
-    <Table data-testid={testId} aria-label={`${report.label} by ${groupTitle}`}>
-      <TableHeader>
-        <TableRow>
-          <TableHead>{groupTitle}</TableHead>
-          {metrics.map((metric) => (
-            <TableHead key={metric} className="text-right">
-              {metric.replace('reconciled_', '').replace(/^\w/, (c) => c.toUpperCase())}
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {report.groups.map((group) => (
-          <TableRow key={group.key ?? '-'} data-testid="oee-group" data-key={group.key ?? ''}>
-            <TableCell>{labelOf(group.key)}</TableCell>
-            {metrics.map((metric) => {
-              const view = findKpi(group.metrics, metric);
-              return (
-                <TableCell key={metric} className="text-right" data-metric={metric} data-value={view?.value ?? ''}>
-                  {kpiText(view)}
-                </TableCell>
-              );
-            })}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <div data-testid={testId}>
+      <DataTable
+        caption={`${report.label} by ${groupTitle.toLowerCase()}`}
+        columns={columnsOf(report, groupTitle, labelOf)}
+        rows={report.groups}
+        getRowKey={(group) => group.key ?? '-'}
+        empty={{ text: 'No groups in this scope.' }}
+        density="compact"
+      />
+    </div>
   );
 }

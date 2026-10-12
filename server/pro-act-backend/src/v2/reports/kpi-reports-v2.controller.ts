@@ -5,12 +5,14 @@ import { RequestContext } from '../../common/context/request-context';
 import { AnalyticsResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import {
+  DowntimeBundleQueryDto,
   DowntimeReportQueryDto,
   OeeReportQueryDto,
   ReliabilityReportQueryDto,
 } from './kpi-reports-v2.dto';
 import { KpiReportsV2Service } from './kpi-reports-v2.service';
 import {
+  DowntimeBundleView,
   DowntimeReportView,
   OeeReportView,
   ReliabilityReportView,
@@ -53,6 +55,22 @@ export class KpiReportsV2Controller {
     @Query() query: DowntimeReportQueryDto,
   ): Promise<AnalyticsResponse<DowntimeReportView>> {
     return this.reports.downtime(ctx, query);
+  }
+
+  @Get('downtime-bundle')
+  @ApiOperation({
+    summary:
+      'Several downtime breakdowns (views) from one run selection, window and unit set (T24)',
+    description:
+      `${SCOPE_NOTE} Each views token is <groupBy>[:duration|frequency][:<scheduleClass>]; every view ` +
+      'equals `/reports/downtime` with that groupBy, metric and scheduleClass (no reason drill: use ' +
+      '`/reports/downtime` with parentReasonId). The period summary and calculationRunIds are shared.',
+  })
+  downtimeBundle(
+    @Ctx() ctx: RequestContext,
+    @Query() query: DowntimeBundleQueryDto,
+  ): Promise<AnalyticsResponse<DowntimeBundleView>> {
+    return this.reports.downtimeBundle(ctx, query);
   }
 
   @Get('reliability')

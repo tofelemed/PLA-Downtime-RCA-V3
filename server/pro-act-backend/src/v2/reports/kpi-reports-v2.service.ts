@@ -4,13 +4,16 @@ import { Repository } from 'typeorm';
 import { RequestContext } from '../../common/context/request-context';
 import { ProductionPeriod } from '../../periods/entities/production-period.entity';
 import { AnalyticsResponse } from '../common/response';
+import { downtimeBundleReport } from './downtime-bundle-report';
 import { downtimeReport } from './downtime-report';
 import {
+  DowntimeBundleQueryDto,
   DowntimeReportQueryDto,
   OeeReportQueryDto,
   ReliabilityReportQueryDto,
 } from './kpi-reports-v2.dto';
 import {
+  DowntimeBundleView,
   DowntimeReportView,
   OeeReportView,
   ReliabilityReportView,
@@ -49,6 +52,18 @@ export class KpiReportsV2Service {
   ): Promise<AnalyticsResponse<DowntimeReportView>> {
     const manager = this.periods.manager;
     return downtimeReport(
+      manager,
+      await resolveReportScope(manager, context, query),
+      query,
+    );
+  }
+
+  async downtimeBundle(
+    context: RequestContext,
+    query: DowntimeBundleQueryDto,
+  ): Promise<AnalyticsResponse<DowntimeBundleView>> {
+    const manager = this.periods.manager;
+    return downtimeBundleReport(
       manager,
       await resolveReportScope(manager, context, query),
       query,

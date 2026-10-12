@@ -16,6 +16,9 @@ import {
 } from './model/analytics-scope';
 import { ageText, amountText, kpiText, notValuedReason } from './model/display';
 import { oeeRows, residualRows, trendUnits } from './model/series';
+import { bucketLabel } from './model/buckets';
+import { dashboardScope, presetKeyOf } from './model/dashboard-scope';
+import { lossEventsQuery, SCOPE_PARAMS } from './model/analytics-scope';
 
 const URL_TEXT = 'from=2026-10-01T00:00:00.000Z&to=2026-10-08T00:00:00.000Z&window=W&units=u2,u1&approved=1&ledger=capacity&tab=trends&trend=week';
 const scope = () => parseScope(new URLSearchParams(URL_TEXT), 0);
@@ -82,5 +85,40 @@ describe('PLA analytics display (plan 3.6, T41)', () => {
     const trend = { groupBy: 'day' as const, ledger: 'plan' as const, calculationRunIds: [], buckets: [{ key: 'd', uom: 't', unaccounted: '10', overAccounted: '0', overproduction: '0', periods: 1, excludedSlices: 0 }] };
     expect(trendUnits(trend)).toEqual(['t']);
     expect(residualRows(trend, 't')[0].values.unaccounted).toBe('10');
+  });
+});
+
+describe('PLA analytics views and dashboard window (UI guidelines §2, §8)', () => {
+  it('opens links to the former eight tabs on the view that now holds them', () => {
+    const tabOf = (tab: string) => parseScope(new URLSearchParams(`${URL_TEXT.replace('tab=trends', `tab=${tab}`)}`), 0).tab;
+    expect(['loss-tree', 'opportunities', 'repeat-causes'].map(tabOf)).toEqual(['losses', 'losses', 'losses']);
+    expect(tabOf('quality')).toBe('reconciliation');
+    expect(tabOf('nonsense')).toBe('waterfall');
+  });
+
+  it('the dashboard window rolls with the clock but is minute-stable (one cache entry per minute)', () => {
+    const a = dashboardScope('7d', Date.parse('2026-10-12T10:00:05Z'));
+    const b = dashboardScope('7d', Date.parse('2026-10-12T10:00:50Z'));
+    const later = dashboardScope('7d', Date.parse('2026-10-13T10:00:05Z'));
+    expect([a.from, a.to]).toEqual([b.from, b.to]);
+    expect(a.to).toBe('2026-10-12T10:01:00.000Z');
+    expect(later.to > a.to).toBe(true);
+    expect(dashboardScope('24h', 0).windowLabel).toBe('Last 24 h');
+    expect(presetKeyOf('90d')).toBe('7d');
+  });
+
+  it('loss events are the loss types of the scope, never superseded or retracted rows', () => {
+    expect(lossEventsQuery({ ...scope(), eventType: 'all' })).toMatchObject({ physicalTypes: ['downtime', 'slowdown', 'quality_loss'], physicalStates: ['open', 'closed'], unitIds: ['u1', 'u2'], sort: '-startTime' });
+    expect(lossEventsQuery({ ...scope(), eventType: 'slowdown' }).physicalTypes).toEqual(['slowdown']);
+    expect(SCOPE_PARAMS.has('events')).toBe(true);
+    expect(SCOPE_PARAMS.has('view')).toBe(false);
+  });
+
+  it('bucket keys read as plant dates, weeks or month ranges, Persian when the plant uses it', () => {
+    expect(bucketLabel('2026-10-12', 'day', {})).toBe('2026-10-12');
+    expect(bucketLabel('2026-10-12', 'day', { calendar: 'persian' })).toBe('1405/07/20');
+    expect(bucketLabel('2026-10-12 A', 'shift', {})).toBe('2026-10-12 A');
+    expect(bucketLabel('2026-W41', 'week', {})).toBe('Week 41 of 2026');
+    expect(bucketLabel('2026-02', 'month', {})).toBe('2026-02-01 – 2026-02-28');
   });
 });

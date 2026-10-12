@@ -1,0 +1,77 @@
+import { Link } from 'react-router-dom';
+import { useDowntimeReport } from '@/api/v2/queries/reports';
+import type { DowntimeReportView } from '@/api/v2/types/reports';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import type { KpiAggregateView } from '@/api/v2/types/reports';
+import { DurationText } from '@/features/ux-kit/duration-text';
+import { findMetric, formatCount, formatRatio, reasonText, SUMMARY_TILES, type TileSpec } from '@/features/downtime-analysis/model/kpi-display';
+import { AnalyticsCard } from '../components/analytics-card';
+import { repeatQuery, scopeToParams, type AnalyticsScope } from '../model/analytics-scope';
+
+const DASHBOARD_TILES = SUMMARY_TILES.filter((tile) => ['downtime_total', 'downtime_unplanned', 'stop_count', 'scheduled_availability'].includes(tile.metric));
+const TOP = 5;
+
+function TileValue({ spec, view }: { spec: TileSpec; view: KpiAggregateView }) {
+  if (spec.kind === 'duration') return <DurationText seconds={view.value} variant="clock" />;
+  return <>{spec.kind === 'ratio' ? formatRatio(view.value) : formatCount(view.value)}</>;
+}
+
+/** One downtime KPI: the server value with its definition, or "—" with the server's reason (no per-tile status). */
+function DowntimeTile({ spec, view }: { spec: TileSpec; view: KpiAggregateView | undefined }) {
+  return (
+    <div className="rounded-md border p-3" data-testid={`kpi-${spec.metric}`} data-value={view?.value ?? ''}>
+      <dt className="text-xs text-muted-foreground">{spec.title}</dt>
+      <dd className="text-xl font-semibold" data-testid="kpi-value">
+        {view && view.value !== null ? <TileValue spec={spec} view={view} /> : '—'}
+      </dd>
+      <dd className="text-[11px] text-muted-foreground">{view && view.value === null ? reasonText(view.reason) ?? 'Not available' : spec.note}</dd>
+    </div>
+  );
+}
+
+/** Downtime of the window: total, unplanned, stops and scheduled availability (server KPIs). */
+export function DashboardDowntime({ scope }: { scope: AnalyticsScope }) {
+  const env = useEventHubEnv();
+  const query = useDowntimeReport(repeatQuery(scope, 'reason'), env.timezone);
+  const summary = query.data?.data.summary;
+  return (
+    <AnalyticsCard title="Downtime" testId="dashboard-downtime" query={query} response={query.data} actions={<Link className="text-sm underline" to="/downtime">Downtime analysis</Link>}>
+      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {DASHBOARD_TILES.map((tile) => (
+          <DowntimeTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />
+        ))}
+      </dl>
+    </AnalyticsCard>
+  );
+}
+
+type Group = DowntimeReportView['groups'][number];
+
+const ASSET_COLUMNS: Array<DataTableColumn<Group>> = [
+  { id: 'asset', header: 'Asset', cell: (group) => group.label ?? (group.key ? 'Unknown asset' : 'No asset recorded') },
+  { id: 'stops', header: 'Stops', align: 'right', cell: (group) => formatCount(group.value) },
+  { id: 'periods', header: 'Shifts', align: 'right', cell: (group) => group.periods },
+];
+
+/** The assets with the most stops in the window (the top 5; the full list is under Losses → Repeat causes). */
+export function DashboardTopAssets({ scope }: { scope: AnalyticsScope }) {
+  const env = useEventHubEnv();
+  const query = useDowntimeReport(repeatQuery(scope, 'asset'), env.timezone);
+  const groups = query.data?.data.groups ?? [];
+  const link = `/pla-analytics?${scopeToParams({ ...scope, tab: 'losses' }).toString()}#repeat-causes`;
+  return (
+    <AnalyticsCard
+      title={`Most stopped assets (top ${TOP})`}
+      testId="dashboard-top-assets"
+      query={query}
+      response={query.data}
+      isEmpty={groups.length === 0}
+      emptyText="No stops on assets in this window."
+      actions={<Link className="text-sm underline" to={link}>All repeat causes</Link>}
+    >
+      <DataTable caption="Most stopped assets" columns={ASSET_COLUMNS} rows={groups.slice(0, TOP)} getRowKey={(group) => group.key ?? '-'} pager="none" density="compact" />
+      {groups.length > TOP && <p className="text-xs text-muted-foreground">{groups.length - TOP} more assets with stops: see all repeat causes.</p>}
+    </AnalyticsCard>
+  );
+}

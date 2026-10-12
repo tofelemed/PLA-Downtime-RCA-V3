@@ -1,12 +1,12 @@
 import { useActualsQuality } from '@/api/v2/queries/pla-analytics';
 import { Badge } from '@/components/ui/badge';
+import { labelOf } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { ReportCard } from '@/features/downtime-analysis/components/report-card';
 import { formatRatio } from '@/features/downtime-analysis/model/kpi-display';
+import { AnalyticsCard } from '../components/analytics-card';
 import { qualityQuery, type AnalyticsScope } from '../model/analytics-scope';
-
-const STATE_LABELS: Record<string, string> = { complete: 'Complete', partial: 'Partial', missing: 'Missing', conflict: 'Conflict' };
+import { QUALITY_STATE_LABELS } from '../model/display';
 
 /**
  * Actuals quality coverage (AN02): per product slice behind the shown runs the actuals quality state and
@@ -18,7 +18,7 @@ export function QualityTab({ scope }: { scope: AnalyticsScope }) {
   const query = useActualsQuality(qualityQuery(scope), env.timezone);
   const data = query.data?.data;
   return (
-    <ReportCard title="Actuals quality coverage" testId="pla-quality" query={query} response={query.data} isEmpty={data?.periods === 0} emptyText="No production periods in this scope.">
+    <AnalyticsCard title="Actuals quality coverage" testId="pla-quality" query={query} response={query.data} isEmpty={data?.periods === 0} emptyText="No production periods in this scope.">
       {data && (
         <div className="space-y-3 text-sm" data-testid="quality-coverage" data-slices={data.slices} data-lowest={data.lowestCoverage ?? ''}>
           <p>
@@ -29,7 +29,7 @@ export function QualityTab({ scope }: { scope: AnalyticsScope }) {
             <span className="w-36 text-muted-foreground">Quality state</span>
             {data.qualityStates.map((s) => (
               <Badge key={s.state} variant={s.slices > 0 && s.state !== 'complete' ? 'secondary' : 'outline'} data-testid="quality-state" data-key={s.state} data-count={s.slices}>
-                {STATE_LABELS[s.state] ?? s.state}: {s.slices}
+                {labelOf(QUALITY_STATE_LABELS, s.state)}: {s.slices}
               </Badge>
             ))}
           </div>
@@ -48,6 +48,6 @@ export function QualityTab({ scope }: { scope: AnalyticsScope }) {
           ))}
         </div>
       )}
-    </ReportCard>
+    </AnalyticsCard>
   );
 }

@@ -2,44 +2,45 @@ import { Link } from 'react-router-dom';
 import { useReconciliationStatus } from '@/api/v2/queries/pla-analytics';
 import type { OverduePeriodView } from '@/api/v2/types/pla-analytics';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { GRID_WORKFLOW_LABELS, RESIDUAL_LABELS } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { ReportCard } from '@/features/downtime-analysis/components/report-card';
-import { RESIDUAL_LABELS, WORKFLOW_LABELS } from '@/features/plan-dashboard/model/display';
+import { AnalyticsCard } from '../components/analytics-card';
 import { statusQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { ageText } from '../model/display';
 
 /**
  * Reconciliation status and age (AN02): periods per workflow and residual state of their current revision,
- * the age of the periods not approved since they ended, and the overdue list with a deep link to the period
- * in the Plan Dashboard (plan 3.5). Counts are the server's.
+ * the age of the periods not approved since they ended, and the overdue list (20 per page) with a link to
+ * the period in the Plan Dashboard (plan 3.5). Counts are the server's.
  */
 export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useReconciliationStatus(statusQuery(scope), env.timezone);
   const data = query.data?.data;
   return (
-    <ReportCard
+    <AnalyticsCard
       title="Reconciliation status and age"
       testId="pla-reconciliation"
       query={query}
       response={query.data}
       isEmpty={data?.periods === 0}
       emptyText="No production periods in this scope."
-      note={data ? `${data.periods} periods · overdue = not approved ${data.overdueAfterHours} h after the period ended (as of the server time).` : undefined}
+      note={data ? `${data.periods} periods · overdue = not approved ${data.overdueAfterHours} h after the period ended.` : undefined}
     >
       {data && (
         <div className="space-y-3" data-testid="reconciliation-status" data-overdue={data.overdueCount}>
-          <CountRow title="Workflow" testId="workflow-count" items={data.workflow.map((w) => ({ key: w.state, label: WORKFLOW_LABELS[w.state], count: w.periods }))} />
+          <CountRow title="Workflow" testId="workflow-count" items={data.workflow.map((w) => ({ key: w.state, label: GRID_WORKFLOW_LABELS[w.state], count: w.periods }))} />
           <CountRow title="Residual" testId="residual-count" items={data.residual.map((r) => ({ key: r.state, label: RESIDUAL_LABELS[r.state], count: r.periods }))} />
           <CountRow title="Age (not approved)" testId="age-count" items={data.ages.map((a) => ({ key: a.key, label: a.label, count: a.periods }))} />
           <h4 className="text-sm font-medium">Overdue ({data.overdueCount})</h4>
           <OverdueTable rows={data.overdue} timezone={env.timezone} />
-          {data.overdueCount > data.overdue.length && <p className="text-xs text-muted-foreground">Showing the {data.overdue.length} oldest.</p>}
+          {data.overdueCount > data.overdue.length && <p className="text-xs text-muted-foreground">Listing the {data.overdue.length} oldest; the count covers all of them.</p>}
         </div>
       )}
-    </ReportCard>
+    </AnalyticsCard>
   );
 }
 
@@ -57,41 +58,34 @@ function CountRow({ title, items, testId }: { title: string; testId: string; ite
 }
 
 function OverdueTable({ rows, timezone }: { rows: readonly OverduePeriodView[]; timezone: string }) {
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nothing overdue.</p>;
-  return (
-    <Table aria-label="Overdue periods">
-      <TableHeader>
-        <TableRow>
-          <TableHead>Unit</TableHead>
-          <TableHead>Period</TableHead>
-          <TableHead>State</TableHead>
-          <TableHead>Residual</TableHead>
-          <TableHead className="text-right">Age</TableHead>
-          <TableHead />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => (
-          <TableRow key={row.periodId} data-testid="overdue-period" data-period-id={row.periodId}>
-            <TableCell>{row.unitName ?? 'Unknown unit'}</TableCell>
-            <TableCell>
-              {row.localDate} {row.shiftName ?? ''} (<PlantTime iso={row.utcStart} tz={timezone} />)
-            </TableCell>
-            <TableCell>{WORKFLOW_LABELS[row.workflowState]}{row.revision !== null ? ` · rev ${row.revision}` : ''}</TableCell>
-            <TableCell>{row.residualState ? RESIDUAL_LABELS[row.residualState] : '—'}</TableCell>
-            <TableCell className="text-right">{ageText(row.ageSeconds)}</TableCell>
-            <TableCell>
-              {row.planId ? (
-                <Link className="underline" to={`/plans/${row.planId}/periods/${row.periodId}`} data-testid="overdue-link">
-                  Open
-                </Link>
-              ) : (
-                <span className="text-xs text-muted-foreground">no plan</span>
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
+  const pref = useCalendarPreference();
+  const columns: Array<DataTableColumn<OverduePeriodView>> = [
+    { id: 'unit', header: 'Unit', cell: (row) => row.unitName ?? 'Unknown unit' },
+    {
+      id: 'period',
+      header: 'Period',
+      nowrap: true,
+      cell: (row) => (
+        <span data-testid="overdue-period" data-period-id={row.periodId}>
+          {formatOperationalDate(row.localDate, pref)} {row.shiftName ?? ''} (<PlantTime iso={row.utcStart} tz={timezone} />)
+        </span>
+      ),
+    },
+    { id: 'state', header: 'State', cell: (row) => `${GRID_WORKFLOW_LABELS[row.workflowState]}${row.revision !== null ? ` · revision ${row.revision}` : ''}` },
+    { id: 'residual', header: 'Residual', cell: (row) => (row.residualState ? RESIDUAL_LABELS[row.residualState] : '—') },
+    { id: 'age', header: 'Age', align: 'right', nowrap: true, cell: (row) => ageText(row.ageSeconds) },
+    {
+      id: 'open',
+      header: 'Plan dashboard',
+      cell: (row) =>
+        row.planId ? (
+          <Link className="underline" to={`/plans/${row.planId}/periods/${row.periodId}`} data-testid="overdue-link" data-period-id={row.periodId}>
+            Open
+          </Link>
+        ) : (
+          <span className="text-xs text-muted-foreground">no plan</span>
+        ),
+    },
+  ];
+  return <DataTable caption="Overdue periods" columns={columns} rows={rows} getRowKey={(row) => row.periodId} empty={{ text: 'Nothing overdue.' }} density="compact" />;
 }

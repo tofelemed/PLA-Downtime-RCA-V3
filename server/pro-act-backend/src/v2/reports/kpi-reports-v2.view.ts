@@ -98,6 +98,29 @@ export interface DowntimeReportView {
   calculationRunIds: string[];
 }
 
+/** One breakdown of a downtime bundle (same groups and total as `/reports/downtime` would answer). */
+export interface DowntimeBundleItemView {
+  /** the token as requested, e.g. `asset:frequency:unplanned` */
+  view: string;
+  groupBy: string;
+  metric: 'duration' | 'frequency';
+  unit: 's' | 'count';
+  /** null = every schedule class */
+  scheduleClass: string | null;
+  groups: DowntimeGroupView[];
+  total: string;
+}
+
+/** `GET /reports/downtime-bundle`: every view reads the same run selection, window and units (T24). */
+export interface DowntimeBundleView {
+  includeMicroStops: boolean;
+  /** period KPIs of the whole scope, as in `/reports/downtime` */
+  summary: KpiAggregateView[];
+  /** in request order, duplicates removed */
+  views: DowntimeBundleItemView[];
+  calculationRunIds: string[];
+}
+
 export interface ReliabilityRowView {
   unitId: string;
   assetId: string | null;

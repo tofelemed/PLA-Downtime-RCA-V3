@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsIn,
@@ -167,4 +168,59 @@ export class ReliabilityReportQueryDto extends ReportWindowQueryDto {
   @ArrayMaxSize(200)
   @IsUUID('all', { each: true })
   assetIds?: string[];
+}
+
+/** Groupings a downtime bundle view may use (no `reasonChild`: the Pareto drill uses `/reports/downtime`). */
+export const BUNDLE_GROUPS = [
+  'reason',
+  'reasonLevel1',
+  'impact',
+  'oee',
+  'asset',
+  'shift',
+  'crew',
+  'day',
+  'week',
+  'month',
+] as const;
+export type BundleGroup = (typeof BUNDLE_GROUPS)[number];
+
+/** `<groupBy>[:<metric>][:<scheduleClass>]` */
+export const BUNDLE_VIEW_PATTERN = new RegExp(
+  `^(${BUNDLE_GROUPS.join('|')})(:(${DOWNTIME_METRICS.join('|')}))?(:(${SCHEDULE_CLASSES.join('|')}))?$`,
+);
+export const MAX_BUNDLE_VIEWS = 12;
+
+/** `GET /reports/downtime-bundle`: several downtime breakdowns read from one run selection (T24). */
+export class DowntimeBundleQueryDto extends ReportWindowQueryDto {
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'Include micro-stops (shorter than the oee_policy threshold) in every view; default availability stops only',
+  })
+  @IsOptional()
+  @Transform(toBooleanParam)
+  @IsBoolean()
+  includeMicroStops?: boolean;
+
+  @ApiProperty({
+    type: [String],
+    minItems: 1,
+    maxItems: MAX_BUNDLE_VIEWS,
+    example: ['reasonLevel1', 'asset:frequency', 'day:duration:unplanned'],
+    description:
+      'Repeat for each view: `<groupBy>[:<metric>][:<scheduleClass>]` with groupBy one of ' +
+      `${BUNDLE_GROUPS.join(', ')}; metric duration (default) or frequency; no class = every class. ` +
+      'Duplicate tokens are answered once (first kept).',
+  })
+  @Transform(toArrayParam)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_BUNDLE_VIEWS)
+  @Matches(BUNDLE_VIEW_PATTERN, {
+    each: true,
+    message:
+      'each view must be <groupBy>[:duration|frequency][:planned|unplanned|external|unknown]',
+  })
+  views: string[] = [];
 }

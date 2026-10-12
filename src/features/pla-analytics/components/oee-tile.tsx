@@ -1,6 +1,7 @@
 import type { KpiAggregateView } from '@/api/v2/types/reports';
 import { Badge } from '@/components/ui/badge';
-import { kpiText } from '../model/display';
+import { labelOf } from '@/features/ux-kit/labels';
+import { kpiText, QUALITY_STATE_LABELS } from '../model/display';
 
 export interface OeeTileProps {
   title: string;
@@ -11,6 +12,9 @@ export interface OeeTileProps {
   denominator: string;
   testId: string;
 }
+
+/** Quality flags said once for the page (provisional) or not worth a flag (ok). */
+const QUIET_QUALITY = new Set(['ok', 'provisional']);
 
 /**
  * One OEE figure with its policy label and denominator (KPI04); without a server value it says "Not
@@ -26,9 +30,9 @@ export function OeeTile({ title, label, view, denominator, testId }: OeeTileProp
       <p className="text-[11px] text-muted-foreground">
         {label} · {denominator}
       </p>
-      {view && view.quality !== 'ok' && view.value !== null && (
+      {view && !QUIET_QUALITY.has(view.quality) && view.value !== null && (
         <Badge variant={view.quality === 'exception' ? 'destructive' : 'secondary'} className="mt-1">
-          {view.quality}
+          {labelOf(QUALITY_STATE_LABELS, view.quality)}
         </Badge>
       )}
     </div>

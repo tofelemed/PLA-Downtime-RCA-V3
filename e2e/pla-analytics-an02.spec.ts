@@ -81,7 +81,7 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     );
 
     const treeRequest = reportRequest(page, 'loss-tree', (url) => url.searchParams.get('ledger') === 'capacity' && url.searchParams.get('groupBy') === 'kind');
-    await page.getByTestId('tab-loss-tree').click();
+    await page.getByTestId('tab-losses').click();
     await page.getByTestId('loss-group-by').selectOption('kind');
     await treeRequest;
     await expect(page.getByTestId('loss-tree')).toHaveAttribute('data-group-by', 'kind');
@@ -109,15 +109,16 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     const status = page.getByTestId('reconciliation-status');
     await expect(status.locator('[data-testid="workflow-count"][data-key="approved"]')).toHaveAttribute('data-count', '1');
     await expect(status.locator('[data-testid="workflow-count"][data-key="draft"]')).toHaveAttribute('data-count', '2');
-    const overdueB = page.locator(`[data-testid="overdue-period"][data-period-id="${world.dashboard.periods.b}"]`);
-    await expect(overdueB.getByTestId('overdue-link')).toHaveAttribute('href', `/plans/${world.dashboard.planId}/periods/${world.dashboard.periods.b}`);
+    const overdueB = page.locator(`[data-testid="overdue-link"][data-period-id="${world.dashboard.periods.b}"]`);
+    await expect(overdueB).toHaveAttribute('href', `/plans/${world.dashboard.planId}/periods/${world.dashboard.periods.b}`);
 
-    await page.getByTestId('tab-quality').click();
+    await page.getByRole('button', { name: 'Actuals quality coverage' }).click(); // a section of Reconciliation
     await expect(page.getByTestId('quality-coverage')).toHaveAttribute('data-slices', '3');
-    await page.getByTestId('tab-repeat-causes').click();
+    await page.getByTestId('tab-losses').click();
+    await page.getByRole('button', { name: 'Repeat causes' }).click(); // sections of Losses
     await expect(page.getByTestId('repeat-reasons').getByTestId('repeat-row').first()).toHaveAttribute('data-periods', '2');
 
-    await page.getByTestId('tab-opportunities').click();
+    await page.getByRole('button', { name: 'Top opportunities' }).click();
     await expect(page.getByTestId('opportunities')).toBeVisible();
     for (const section of await page.getByTestId('opportunity-currency').all()) {
       if ((await section.getAttribute('data-status')) === 'unvalued') await expect(section.getByTestId('loss-total')).toContainText('Not valued');
@@ -127,7 +128,7 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     await expect(page.getByTestId('pla-oee-operational')).toContainText('Operational OEE (ISO 22400)');
     await expect(page.getByTestId('pla-oee-reconciled')).toContainText('Reconciled PLA OEE');
     await expect(page.getByTestId('oee-operational-oee').getByTestId('oee-tile-value')).toHaveText(/%|^Not available: /);
-    await expect(page.getByRole('tab')).toHaveCount(8);
+    await expect(page.getByRole('tab')).toHaveCount(5); // at most 5 views (UI guidelines §2)
   });
 
   test('T41: a unit with no scheduled time shows "Not available: no scheduled time", never 87 % or 100 %', async ({ page }) => {

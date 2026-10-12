@@ -4,13 +4,15 @@ import { useLossTree } from '@/api/v2/queries/pla-analytics';
 import type { LossTreeGroupBy, LossTreeMetric, LossTreeView } from '@/api/v2/types/pla-analytics';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LEDGER_LABELS } from '@/features/ux-kit/labels';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { ReportCard } from '@/features/downtime-analysis/components/report-card';
-import { LOSS_GROUPS, LOSS_METRICS, lossTreeQuery, type AnalyticsScope } from '../model/analytics-scope';
-import { LOSS_GROUP_LABELS, METRIC_LABELS } from '../model/display';
+import { AnalyticsCard } from '../components/analytics-card';
 import { SELECT_CLASS } from '../components/analytics-filters';
 import { LossTable } from '../components/loss-table';
+import { LOSS_GROUPS, LOSS_METRICS, lossTreeQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { LOSS_GROUP_LABELS, METRIC_LABELS } from '../model/display';
+import { downtimeLink, LOSS_LINES_NOTE } from '../model/links';
 
 const LossTreemap = lazy(() => import('../charts/loss-treemap').then((m) => ({ default: m.LossTreemap })));
 
@@ -19,16 +21,8 @@ export interface LossTreeTabProps {
   onChange: (patch: Partial<AnalyticsScope>) => void;
 }
 
-/**
- * Loss tree (AN02): the shown runs' loss lines per reason, impact, OEE component, kind or unit, as lost
- * quantity or one valuation view (margin, standard cost, operational cost — never added together), largest
- * first with the cumulative share; grouping and metric go to the server (`groupBy`, `metric`).
- */
-export function LossTreeTab({ scope, onChange }: LossTreeTabProps) {
-  const env = useEventHubEnv();
-  const query = useLossTree(lossTreeQuery(scope), env.timezone);
-  const data = query.data?.data;
-  const controls = (
+function LossTreeControls({ scope, onChange }: LossTreeTabProps) {
+  return (
     <div className="flex flex-wrap items-center gap-2">
       <Label htmlFor="loss-group">Group by</Label>
       <select id="loss-group" data-testid="loss-group-by" className={SELECT_CLASS} value={scope.lossGroupBy} onChange={(e) => onChange({ lossGroupBy: e.target.value as LossTreeGroupBy })}>
@@ -48,24 +42,35 @@ export function LossTreeTab({ scope, onChange }: LossTreeTabProps) {
       </select>
     </div>
   );
+}
+
+/**
+ * Loss tree (AN02): the shown runs' loss lines per reason, impact, OEE component, kind or unit, as lost
+ * quantity or one valuation view (margin, standard cost, operational cost — never added together), largest
+ * first with the cumulative share; grouping and metric go to the server (`groupBy`, `metric`).
+ */
+export function LossTreeTab({ scope, onChange }: LossTreeTabProps) {
+  const env = useEventHubEnv();
+  const query = useLossTree(lossTreeQuery(scope), env.timezone);
+  const data = query.data?.data;
   return (
-    <ReportCard
-      title={`Loss tree · ${METRIC_LABELS[scope.lossMetric]} by ${LOSS_GROUP_LABELS[scope.lossGroupBy].toLowerCase()} · ${scope.ledger} ledger`}
+    <AnalyticsCard
+      title={`${METRIC_LABELS[scope.lossMetric]} by ${LOSS_GROUP_LABELS[scope.lossGroupBy].toLowerCase()} · ${LEDGER_LABELS[scope.ledger].toLowerCase()}`}
       testId="pla-loss-tree"
       query={query}
       response={query.data}
       isEmpty={data !== undefined && data.groups.length === 0}
       emptyText="No loss lines in this scope."
-      note={data ? `Basis: ${data.basis}.` : undefined}
-      actions={controls}
+      note={LOSS_LINES_NOTE}
+      actions={<LossTreeControls scope={scope} onChange={onChange} />}
     >
       {data && <LossTreeBody data={data} />}
       <p className="text-xs">
-        <Link className="underline" to={`/downtime?from=${encodeURIComponent(scope.from)}&to=${encodeURIComponent(scope.to)}${scope.unitIds.length ? `&units=${scope.unitIds.join(',')}` : ''}`}>
+        <Link className="underline" to={downtimeLink(scope)}>
           Drill into the stops of this scope (Downtime Analysis)
         </Link>
       </p>
-    </ReportCard>
+    </AnalyticsCard>
   );
 }
 

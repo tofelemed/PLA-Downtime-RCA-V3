@@ -1,37 +1,28 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { loginViaAPI } from './test-utils/auth-helpers';
-
-/** Which Reports binding the plant shows: v2 while its `v2.plaAnalytics` flag is on (plan 3.6), else v1 (C4). */
-async function reportsBinding(page: Page): Promise<'v1' | 'v2'> {
-  await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible({ timeout: 15000 });
-  return (await page.getByTestId('reports-v2').count()) > 0 ? 'v2' : 'v1';
-}
 
 test.describe('Reports Module', () => {
   test.beforeEach(async ({ page }) => {
     await loginViaAPI(page);
   });
 
-  test('reports page loads with overview tab and charts', async ({ page }) => {
+  test('reports page loads with the OEE and downtime view', async ({ page }) => {
     await page.goto('/reports');
-    if ((await reportsBinding(page)) === 'v2') {
-      await expect(page.getByTestId('report-oee')).toBeVisible({ timeout: 15000 });
-      return;
-    }
-
-    // Overview tab is default
-    await expect(page.getByRole('tab', { name: /Overview/i })).toBeVisible();
-    await expect(page.getByText('Avg OEE')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('Loss Cost Trend')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Reports', level: 1 })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('reports-v2')).toBeVisible();
+    await expect(page.getByTestId('report-oee')).toBeVisible({ timeout: 15000 });
   });
 
-  test('all report tabs render', async ({ page }) => {
+  test('all report views render and the chosen view is kept in the URL', async ({ page }) => {
     await page.goto('/reports');
-    const tabs = (await reportsBinding(page)) === 'v2' ? ['OEE', 'Downtime', 'Reconciliation', 'Loss value', 'Exports'] : ['OEE', 'Loss', 'RCA', 'Audit', 'Tasks'];
-    for (const tab of tabs) {
-      await page.getByRole('tab', { name: new RegExp(tab, 'i') }).click();
-      await page.waitForTimeout(500);
+    await expect(page.getByTestId('reports-v2')).toBeVisible({ timeout: 15000 });
+    for (const tab of ['Reconciliation', 'Loss value', 'Work summary', 'Exports', 'OEE and downtime']) {
+      await page.getByRole('tab', { name: tab }).click();
+      await expect(page.getByRole('tab', { name: tab })).toHaveAttribute('data-state', 'active');
     }
+    await page.getByRole('tab', { name: 'Work summary' }).click();
+    await expect(page).toHaveURL(/view=activity/);
+    await expect(page.getByTestId('report-work-summary')).toBeVisible();
   });
 
   test('audit page loads as dedicated page', async ({ page }) => {

@@ -2,8 +2,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-select';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { presetWindow, WINDOW_PRESETS } from '@/features/downtime-analysis/model/downtime-filters';
-import type { AnalyticsScope } from '../model/analytics-scope';
+import { WINDOW_PRESETS } from '@/features/downtime-analysis/model/downtime-filters';
+import { presetWindowOf, type AnalyticsScope } from '../model/analytics-scope';
 
 export interface AnalyticsFiltersProps {
   scope: AnalyticsScope;
@@ -12,12 +12,12 @@ export interface AnalyticsFiltersProps {
 
 export const SELECT_CLASS = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
 
-/** Scope filters shared by every tab (server-side): units, window, ledger, approved only. */
+/** Scope filters shared by every view (server-side): units (sent when the list closes), window, ledger, approved only. */
 export function AnalyticsFilters({ scope, onChange }: AnalyticsFiltersProps) {
   const env = useEventHubEnv();
   const choosePreset = (key: string) => {
     const preset = WINDOW_PRESETS.find((entry) => entry.key === key);
-    if (preset) onChange({ ...presetWindow(preset.hours, Date.now()), windowLabel: preset.label });
+    if (preset) onChange({ ...presetWindowOf(preset.hours), windowLabel: preset.label });
   };
   return (
     <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Analytics scope" data-testid="analytics-filters">
@@ -27,6 +27,7 @@ export function AnalyticsFilters({ scope, onChange }: AnalyticsFiltersProps) {
         options={env.units.map((unit) => ({ value: unit.id, label: unit.name }))}
         selected={scope.unitIds}
         onChange={(unitIds) => onChange({ unitIds: [...unitIds].sort() })}
+        commitOnClose
       />
       <div className="flex items-center gap-2">
         <Label htmlFor="pla-window">Window</Label>
@@ -41,8 +42,10 @@ export function AnalyticsFilters({ scope, onChange }: AnalyticsFiltersProps) {
           ))}
         </select>
       </div>
-      <div className="flex items-center gap-2" role="radiogroup" aria-label="Ledger">
-        <Label>Ledger</Label>
+      <div className="flex items-center gap-2" role="radiogroup" aria-labelledby="pla-ledger-label">
+        <span id="pla-ledger-label" className="text-sm font-medium">
+          Ledger
+        </span>
         {(['plan', 'capacity'] as const).map((ledger) => (
           <label key={ledger} className="flex items-center gap-1 text-sm">
             <input type="radio" name="pla-ledger" value={ledger} checked={scope.ledger === ledger} onChange={() => onChange({ ledger })} data-testid={`ledger-${ledger}`} />

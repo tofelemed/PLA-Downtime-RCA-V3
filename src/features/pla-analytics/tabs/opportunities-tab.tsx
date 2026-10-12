@@ -4,11 +4,12 @@ import { Label } from '@/components/ui/label';
 import { entriesInCurrency } from '@/features/display-currency/money-format';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { ReportCard } from '@/features/downtime-analysis/components/report-card';
 import { lossTreeQuery, VALUE_METRICS, type AnalyticsScope } from '../model/analytics-scope';
 import { METRIC_LABELS } from '../model/display';
+import { AnalyticsCard } from '../components/analytics-card';
 import { SELECT_CLASS } from '../components/analytics-filters';
 import { LossTable } from '../components/loss-table';
+import { LOSS_LINES_NOTE } from '../model/links';
 
 const TOP = 10;
 
@@ -39,18 +40,18 @@ export function OpportunitiesTab({ scope, onChange }: OpportunitiesTabProps) {
     </div>
   );
   return (
-    <ReportCard
+    <AnalyticsCard
       title={`Top ${TOP} opportunities · ${METRIC_LABELS[scope.valueMetric]}`}
       testId="pla-opportunities"
       query={query}
       response={query.data}
       isEmpty={data !== undefined && data.groups.length === 0}
       emptyText="No loss lines in this scope."
-      note={data ? `Basis: ${data.basis}. Views are never added to each other.` : undefined}
+      note={`${LOSS_LINES_NOTE} Valuation views are never added to each other.`}
       actions={controls}
     >
       {data && <Currencies data={data} />}
-    </ReportCard>
+    </AnalyticsCard>
   );
 }
 

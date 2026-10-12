@@ -1,36 +1,39 @@
 import { useOeeReport } from '@/api/v2/queries/reports';
 import { Badge } from '@/components/ui/badge';
-import { PlantTime } from '@/features/ux-kit/plant-time';
-import { ScopeHeader } from '@/features/ux-kit/scope-header';
+import { PageHeader } from '@/features/ux-kit/page-layout';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { unitsLabel } from '../model/links';
+import { SnapshotStatus } from '../components/snapshot-status';
 import { oeeQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { useDatesLabel } from '../hooks/use-dates-label';
 
 /**
  * Reports header (§16.2 Reports, AN03): named units, the period dates, the revision selection, and of the
- * shown snapshot the generated time, approval status and calculation runs.
+ * shown snapshot the generated time, approval status and — behind Details — the calculation runs.
  */
-export function ReportsHeader({ scope }: { scope: AnalyticsScope }) {
+export function ReportsHeader({ scope, shownUnitIds }: { scope: AnalyticsScope; shownUnitIds: readonly string[] }) {
   const env = useEventHubEnv();
   const query = useOeeReport(oeeQuery(scope, 'day', 'operational'), env.timezone);
   const response = query.data;
   const runIds = response?.data.calculationRunIds ?? [];
-  const units = scope.unitIds.length === 0 ? 'All units in your scope' : scope.unitIds.map(env.unitName).join(', ');
+  const dates = useDatesLabel(scope, env.timezone);
   return (
-    <header className="space-y-1">
-      <h1 className="text-2xl font-bold">Reports</h1>
-      <ScopeHeader scopeLabel={`${units} · ${scope.windowLabel}`} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback} isProvisional={response?.isProvisional} asOf={response?.asOf ?? null} />
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="report-snapshot" data-run-ids={[...runIds].sort().join(',')} data-unit-ids={scope.unitIds.join(',')}>
-        <Badge variant="outline">{scope.approvedOnly ? 'Approved revisions only' : 'Approved revision, else the latest draft'}</Badge>
-        {response && (
-          <>
-            <span>
-              Generated <PlantTime iso={response.asOf} tz={env.timezone} withDate />
-            </span>
-            <span>{runIds.length} calculation runs</span>
-            <span>{response.dataQuality.provisionalCount} provisional · {response.dataQuality.missingCount} not calculated</span>
-          </>
-        )}
-      </div>
-    </header>
+    <PageHeader
+      title="Reports"
+      description="Approved figures of the chosen units and plant dates, with exports."
+      meta={
+        <div className="space-y-1" data-testid="report-snapshot" data-run-ids={[...runIds].sort().join(',')} data-unit-ids={scope.unitIds.join(',')}>
+          <SnapshotStatus
+            scopeLabel={`${unitsLabel(shownUnitIds, env.unitName)} · ${dates}`}
+            timezone={env.timezone}
+            timezoneIsFallback={env.timezoneIsFallback}
+            response={response}
+            isError={query.isError}
+            testId="report-snapshot-details"
+          />
+          <Badge variant="outline">{scope.approvedOnly ? 'Approved revisions only' : 'Approved revision, else the latest draft'}</Badge>
+        </div>
+      }
+    />
   );
 }

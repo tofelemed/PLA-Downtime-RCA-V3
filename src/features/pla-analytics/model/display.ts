@@ -8,14 +8,40 @@ import { formatDecimal } from '@/features/ux-kit/format/decimal';
 /** Labels and display rules of PLA Analytics (plan 3.6); the browser formats server figures, never derives them. */
 export const TAB_LABELS = {
   waterfall: 'Waterfall',
-  'loss-tree': 'Loss tree',
+  losses: 'Losses',
   trends: 'Trends',
   reconciliation: 'Reconciliation',
-  quality: 'Quality coverage',
-  'repeat-causes': 'Repeat causes',
-  opportunities: 'Top opportunities',
   oee: 'OEE',
 } as const;
+
+export const LOSS_EVENT_TYPE_LABELS = {
+  all: 'All loss events',
+  downtime: 'Stops',
+  slowdown: 'Slowdowns',
+  quality_loss: 'Quality losses',
+} as const;
+
+/** Actuals quality states and KPI quality flags (server tokens → words). */
+export const QUALITY_STATE_LABELS: Readonly<Record<string, string>> = {
+  complete: 'Complete',
+  partial: 'Partial',
+  missing: 'Missing',
+  conflict: 'Conflict',
+  ok: 'OK',
+  estimated: 'Estimated',
+  exception: 'Above 100 %',
+  provisional: 'Provisional',
+  unavailable: 'Not available',
+};
+
+/** Export job states (2.9). */
+export const EXPORT_STATE_LABELS: Readonly<Record<string, string>> = {
+  queued: 'queued',
+  running: 'running',
+  completed: 'ready',
+  failed: 'failed',
+  expired: 'expired',
+};
 
 export const LOSS_GROUP_LABELS: Record<LossTreeGroupBy, string> = {
   reason: 'Reason',
@@ -33,6 +59,13 @@ export const METRIC_LABELS: Record<LossTreeMetric, string> = {
 };
 
 export const TREND_LABELS: Record<TrendGroup, string> = { shift: 'Shift', day: 'Day', week: 'Week', month: 'Month' };
+
+export const OEE_METRIC_LABELS: Readonly<Record<string, string>> = {
+  oee: 'OEE',
+  availability: 'Availability',
+  performance: 'Performance',
+  quality: 'Quality',
+};
 
 export const OEE_COMPONENTS = ['availability', 'performance', 'quality', 'oee'] as const;
 export const RECONCILED_COMPONENTS = ['reconciled_availability', 'reconciled_performance', 'reconciled_quality', 'reconciled_oee'] as const;

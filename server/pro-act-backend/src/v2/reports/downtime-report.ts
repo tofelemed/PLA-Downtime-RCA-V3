@@ -40,7 +40,7 @@ const SUMMARY_METRICS: readonly KpiMetric[] = [
   'onstream_factor',
 ];
 
-interface GroupPlan {
+export interface GroupPlan {
   dimension: string;
   groupSql: string;
   join?: string;
@@ -51,7 +51,7 @@ interface GroupPlan {
 const REASON_LABELS = `SELECT "id"::text AS "id", "code" || ' ' || "name" AS "label" FROM "reason_codes" WHERE "id"::text = ANY($1) AND "tenant_id" = $2`;
 
 /** groupBy → breakdown dimension, SQL key and label source (whitelisted; never user text in SQL). */
-const PLANS: Readonly<Record<DowntimeGroup, GroupPlan>> = {
+export const PLANS: Readonly<Record<DowntimeGroup, GroupPlan>> = {
   reason: { dimension: 'reason', groupSql: CELL_KEY, labels: REASON_LABELS },
   reasonLevel1: {
     dimension: 'reason',
@@ -102,10 +102,10 @@ async function labelsOf(
   return new Map(rows.map((r) => [r.id, r.label]));
 }
 
-type Cell = { key: string | null; amount: Dec; periods: number };
+export type Cell = { key: string | null; amount: Dec; periods: number };
 
 /** Labelled groups with their share and cumulative share of the total (Pareto order kept from SQL). */
-async function groupViews(
+export async function groupViews(
   manager: EntityManager,
   scope: ReportScope,
   plan: GroupPlan,
@@ -134,9 +134,12 @@ async function groupViews(
 }
 
 /** The breakdown query of a grouping, restricted to a reason subtree when a parent is given. */
-function breakdownSpec(
+export function breakdownSpec(
   groupBy: DowntimeGroup,
-  query: DowntimeReportQueryDto,
+  query: Pick<
+    DowntimeReportQueryDto,
+    'metric' | 'scheduleClass' | 'includeMicroStops'
+  >,
   parent: ReasonParent | null,
 ): BreakdownSpec {
   const plan = PLANS[groupBy];
@@ -160,7 +163,7 @@ function breakdownSpec(
   };
 }
 
-async function summaryOf(
+export async function summaryOf(
   manager: EntityManager,
   scope: ReportScope,
 ): Promise<KpiAggregateView[]> {

@@ -6,10 +6,12 @@ import type { TrendGroup } from '@/api/v2/types/pla-analytics';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { ReportCard } from '@/features/downtime-analysis/components/report-card';
+import { useCalendarPreference } from '@/lib/dates';
 import { oeeQuery, TREND_GROUPS, type AnalyticsScope, type OeePolicy } from '../model/analytics-scope';
-import { TREND_LABELS } from '../model/display';
+import { bucketLabel } from '../model/buckets';
+import { OEE_METRIC_LABELS, TREND_LABELS } from '../model/display';
 import { oeeRows } from '../model/series';
+import { AnalyticsCard } from '../components/analytics-card';
 import { SELECT_CLASS } from '../components/analytics-filters';
 import { OeeGroupTable } from '../components/oee-group-table';
 import { ResidualTrendCard } from '../components/residual-trend-card';
@@ -37,6 +39,8 @@ export function TrendsTab({ scope, onChange }: TrendsTabProps) {
   const byUnit = useOeeReport(oeeQuery(scope, 'unit'), env.timezone);
   const byProduct = useOeeReport(oeeQuery(scope, 'product'), env.timezone);
   const report = trend.data?.data;
+  const pref = useCalendarPreference();
+  const label = (key: string | null) => bucketLabel(key, scope.trendBy, pref);
   const controls = (
     <div className="flex flex-wrap items-center gap-2">
       <Label htmlFor="trend-by">Trend by</Label>
@@ -56,23 +60,23 @@ export function TrendsTab({ scope, onChange }: TrendsTabProps) {
   );
   return (
     <div className="space-y-4">
-      <ReportCard title={`${report?.label ?? 'OEE'} by ${TREND_LABELS[scope.trendBy].toLowerCase()}`} testId="pla-oee-trend" query={trend} response={trend.data} isEmpty={report?.groups.length === 0} actions={controls} note="Buckets use the plant's operational date and shift; each value is Σ numerators ÷ Σ denominators on the server.">
+      <AnalyticsCard title={`${report?.label ?? 'OEE'} by ${TREND_LABELS[scope.trendBy].toLowerCase()}`} testId="pla-oee-trend" query={trend} response={trend.data} isEmpty={report?.groups.length === 0} actions={controls} note="Buckets use the plant's operational date and shift; each value is the sum of numerators over the sum of denominators.">
         {report && (
           <div data-testid="oee-trend" data-group-by={report.groupBy} data-policy={report.policy}>
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-              <SeriesChart rows={oeeRows(report)} series={report.total.map((t) => ({ key: t.metric, label: t.metric.replace('reconciled_', '') }))} kind="line" ratio />
+              <SeriesChart rows={oeeRows(report, label)} series={report.total.map((t) => ({ key: t.metric, label: OEE_METRIC_LABELS[t.metric.replace('reconciled_', '')] ?? t.metric }))} kind="line" ratio />
             </Suspense>
           </div>
         )}
-      </ReportCard>
+      </AnalyticsCard>
       <ResidualTrendCard scope={scope} />
       <div className="grid gap-4 xl:grid-cols-2">
-        <ReportCard title={`${byUnit.data?.data.label ?? 'OEE'} by unit`} testId="pla-oee-units" query={byUnit} response={byUnit.data} isEmpty={byUnit.data?.data.groups.length === 0}>
+        <AnalyticsCard title={`${byUnit.data?.data.label ?? 'OEE'} by unit`} testId="pla-oee-units" query={byUnit} response={byUnit.data} isEmpty={byUnit.data?.data.groups.length === 0}>
           {byUnit.data && <OeeGroupTable report={byUnit.data.data} groupTitle="Unit" labelOf={(key) => env.unitName(key)} testId="oee-by-unit" />}
-        </ReportCard>
-        <ReportCard title={`${byProduct.data?.data.label ?? 'OEE'} by product`} testId="pla-oee-products" query={byProduct} response={byProduct.data} isEmpty={byProduct.data?.data.groups.length === 0}>
+        </AnalyticsCard>
+        <AnalyticsCard title={`${byProduct.data?.data.label ?? 'OEE'} by product`} testId="pla-oee-products" query={byProduct} response={byProduct.data} isEmpty={byProduct.data?.data.groups.length === 0}>
           {byProduct.data && <OeeGroupTable report={byProduct.data.data} groupTitle="Product" labelOf={productName} testId="oee-by-product" />}
-        </ReportCard>
+        </AnalyticsCard>
       </div>
     </div>
   );

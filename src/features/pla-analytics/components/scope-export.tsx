@@ -5,7 +5,11 @@ import { downloadExportText } from '@/api/v2/queries/period-workflow';
 import type { ExportRequest } from '@/api/v2/queries/reports';
 import { Button } from '@/components/ui/button';
 import { createLogger } from '@/lib/logger';
+import { ActionIcon } from '@/lib/icons';
+import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { labelOf } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { EXPORT_STATE_LABELS } from '../model/display';
 
 const log = createLogger('plaAnalyticsExport');
 
@@ -26,50 +30,47 @@ export interface ScopeExportProps {
   testId?: string;
 }
 
+const DISABLED_HINT = 'Exports contain approved figures only: tick “Approved only” and wait until the scope is approved';
+
 /**
  * Asynchronous export of the shown scope (2.9 job, AN03): queued with the page's window and units, polled
  * until done, then the CSV (header: generated time, status, revision and run per row) is downloaded. PDF is
- * not offered: the API renders CSV only (decision 2.9).
+ * not offered: the API renders CSV only (decision 2.9). Failures read in plain language.
  */
 export function ScopeExport({ request, label, timezone, testId = 'scope-export' }: ScopeExportProps) {
   const exporter = useCreateExport();
   const [jobId, setJobId] = useState<string | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
+  const [failure, setFailure] = useState<unknown>(null);
   const job = useExportJob(jobId);
   const start = async () => {
     if (!request) return;
-    setFailed(null);
+    setFailure(null);
     try {
       setJobId((await exporter.submit(request)).jobId);
     } catch (error) {
       log.warn('export refused', { reportType: request.reportType });
-      setFailed(error instanceof Error ? error.message : 'Export could not be started');
+      setFailure(error);
     }
   };
   const download = async () => {
     if (!jobId) return;
     try {
-      saveText(await downloadExportText(jobId), `proact-${request?.reportType ?? 'export'}-${jobId}.csv`);
+      saveText(await downloadExportText(jobId), `proact-${request?.reportType ?? 'export'}-${request?.from.slice(0, 10) ?? ''}.csv`);
     } catch (error) {
-      setFailed(error instanceof Error ? error.message : 'Download refused');
+      setFailure(error);
     }
   };
   const data = job.data;
   return (
     <div className="space-y-1 text-sm" data-testid={testId} data-request={request ? JSON.stringify(request) : ''}>
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={!request || exporter.isPending}
-        title={request ? undefined : 'Exports contain approved figures only: tick “Approved only” and wait until the scope is approved'}
-        onClick={() => void start()}
-        data-testid={`${testId}-start`}
-      >
+      <Button size="sm" variant="outline" disabled={!request || exporter.isPending} title={request ? undefined : DISABLED_HINT} onClick={() => void start()} data-testid={`${testId}-start`}>
+        <ActionIcon.export className="mr-1 h-4 w-4" aria-hidden="true" />
         {label} (CSV)
       </Button>
+      {!request && <p className="text-xs text-muted-foreground">Approved figures only.</p>}
       {data && (
-        <p data-testid={`${testId}-job`} data-state={data.state}>
-          Export {data.state}
+        <p data-testid={`${testId}-job`} data-state={data.state} role="status">
+          Export {labelOf(EXPORT_STATE_LABELS, data.state)}
           {data.rowCount !== null ? ` · ${data.rowCount} rows` : ''}
           {data.finishedAt && (
             <>
@@ -84,8 +85,8 @@ export function ScopeExport({ request, label, timezone, testId = 'scope-export' 
           )}
         </p>
       )}
-      {data?.error && <p className="text-destructive">{data.error.code}: {data.error.message}</p>}
-      {failed && <p className="text-destructive">{failed}</p>}
+      {data?.error && <FriendlyErrorAlert error={data.error.message} title="The export failed" />}
+      {failure !== null && <FriendlyErrorAlert error={failure} title="The export could not be started" />}
     </div>
   );
 }
