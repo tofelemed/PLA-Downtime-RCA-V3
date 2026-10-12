@@ -1,4 +1,4 @@
-import { httpClient } from './httpClient';
+import { ApiError, httpClient } from './httpClient';
 
 // DTOs matching backend
 export interface StreamDataSourceDto {
@@ -416,8 +416,13 @@ class StreamingApi {
     return response.data;
   }
 
+  /** Key/value storage semantics (IndexedDB replacement): deleting an absent config (404) is a no-op. */
   async deleteConnectionConfig(id: string): Promise<void> {
-    await httpClient.delete(`${this.basePath}/connection-configs/${id}`);
+    try {
+      await httpClient.delete(`${this.basePath}/connection-configs/${id}`);
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 404)) throw error;
+    }
   }
 
   // Bulk operations

@@ -16,6 +16,11 @@ export interface PIConnectionDto {
   updatedAt: string;
 }
 
+/** Body of POST / PATCH `/pi-connections`: id, timestamps and `lastSyncTime` are server-managed. */
+export type PIConnectionWritePayload = Partial<
+  Omit<PIConnectionDto, 'id' | 'lastSyncTime' | 'createdAt' | 'updatedAt'>
+>;
+
 export interface PIAfElementDto {
   id: string;
   tenantId?: string;
@@ -133,11 +138,11 @@ export const piIntegrationApi = {
     const response = await httpClient.get<PIConnectionDto[]>('/pi-connections', { params });
     return response.data;
   },
-  async createConnection(payload: Partial<PIConnectionDto>) {
+  async createConnection(payload: PIConnectionWritePayload) {
     const response = await httpClient.post<PIConnectionDto>('/pi-connections', payload);
     return response.data;
   },
-  async updateConnection(id: string, payload: Partial<PIConnectionDto>) {
+  async updateConnection(id: string, payload: PIConnectionWritePayload) {
     const response = await httpClient.patch<PIConnectionDto>(`/pi-connections/${id}`, payload);
     return response.data;
   },
