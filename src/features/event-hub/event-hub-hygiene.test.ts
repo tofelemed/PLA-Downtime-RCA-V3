@@ -6,9 +6,10 @@ import { describe, expect, it } from 'vitest';
  * Plan 3.2 static check: the v2 Event Hub bundle (this feature and the v2 client it uses) has no
  * fabricated data (`Math.random`), no browser-side rules (`localStorage`), no IndexedDB / legacy
  * StorageService and no `console.log` (B15, B16, UX03). `localStorage` holds per-user conveniences only
- * (the remembered list window), never rules or business data: that module is the allowed user.
+ * (the remembered list window and unsaved form drafts), never rules or business data: those two modules
+ * are the allowed users.
  */
-const LOCAL_STORAGE_ALLOWED = ['window-preference.ts'];
+const LOCAL_STORAGE_ALLOWED = ['window-preference.ts', 'event-draft.ts'];
 const ROOTS = [join(process.cwd(), 'src', 'features', 'event-hub'), join(process.cwd(), 'src', 'api', 'v2')];
 const FORBIDDEN: ReadonlyArray<[label: string, pattern: RegExp]> = [
   ['Math.random', /Math\.random/],

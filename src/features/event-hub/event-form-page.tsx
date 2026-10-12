@@ -1,6 +1,7 @@
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useProductionEvent } from '@/api/v2/queries/production-events';
 import type { ProductionEventView } from '@/api/v2/types/events';
+import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
@@ -64,7 +65,8 @@ function EventFormBody({ event, defaultUnitId = '', backTo }: EventFormBodyProps
   // the edit replaced the event page in the history: leaving replaces it back, so Back still reaches the list
   const { state } = useLocation();
   const leave = (to: string) => navigate(to, { replace: true, state });
-  const form = useEventForm({ tenantId: env.tenantId, event, timezone: env.timezone, defaults: { unitId: defaultUnitId } });
+  const userId = useAuth().session?.user.id ?? 'anonymous';
+  const form = useEventForm({ userId, tenantId: env.tenantId, event, timezone: env.timezone, defaults: { unitId: defaultUnitId } });
   const save = useEventFormSubmit({ form, event, timezone: env.timezone, onSaved: (saved) => leave(`/events/${saved.id}`) });
   // the preview query follows the typed interval once it stops changing
   const startLocal = useDebouncedValue(form.values.startLocal, 400);
@@ -78,7 +80,7 @@ function EventFormBody({ event, defaultUnitId = '', backTo }: EventFormBodyProps
   };
   return (
     <form onSubmit={(e) => { e.preventDefault(); void save.submit(); }} className="space-y-6" noValidate>
-      {form.restored && <Alert data-testid="draft-restored"><AlertDescription>Unsaved changes restored from this tab.</AlertDescription></Alert>}
+      {form.restored && <Alert data-testid="draft-restored"><AlertDescription>Unsaved changes restored from your last visit.</AlertDescription></Alert>}
       {form.serverChanged && (
         <Alert data-testid="server-changed"><AlertDescription>The event changed on the server since you started; saving asks you to review the differences.</AlertDescription></Alert>
       )}
@@ -89,7 +91,7 @@ function EventFormBody({ event, defaultUnitId = '', backTo }: EventFormBodyProps
         <ConfirmDialog
           trigger={<Button type="button" variant="outline">Discard</Button>}
           title="Discard your changes?"
-          description="The unsaved changes of this form are removed from this tab."
+          description="The unsaved changes of this form are removed from this browser."
           confirmLabel="Discard changes"
           destructive
           onConfirm={discard}

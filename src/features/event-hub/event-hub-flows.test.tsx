@@ -58,7 +58,7 @@ describe('Event Hub v2 flows (plan 3.2)', () => {
     responses = [];
     client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     etagCache.clear();
-    window.sessionStorage.clear();
+    window.localStorage.clear();
     vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
       calls.push({ url, init });
       return responses.shift() ?? json(500, { code: 'NO_RESPONSE', message: 'none queued' });
@@ -85,7 +85,7 @@ describe('Event Hub v2 flows (plan 3.2)', () => {
   it('412 opens the conflict review; "apply mine" re-sends the same change with the latest If-Match', async () => {
     const onSaved = vi.fn();
     const { result } = renderHook(() => {
-      const form = useEventForm({ tenantId: 'tenant-a', event: event(3), timezone: TZ });
+      const form = useEventForm({ userId: 'user-1', tenantId: 'tenant-a', event: event(3), timezone: TZ });
       return { form, save: useEventFormSubmit({ form, event: event(3), timezone: TZ, onSaved }) };
     }, { wrapper });
     act(() => result.current.form.setField('reasonCodeId', 'r1'));
@@ -99,12 +99,12 @@ describe('Event Hub v2 flows (plan 3.2)', () => {
     expect(header(1, 'If-Match')).toBe('"5"');
     expect(body(1)).toEqual({ reasonCodeId: 'r1' });
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ rowVersion: 6 }));
-    expect(window.sessionStorage.getItem(draftKey('tenant-a', 'e1'))).toBeNull();
+    expect(window.localStorage.getItem(draftKey('user-1', 'tenant-a', 'e1'))).toBeNull();
   });
 
   it('422 DURATION_CONFLICT lands on the duration input; create sends an Idempotency-Key', async () => {
     const { result } = renderHook(() => {
-      const form = useEventForm({ tenantId: 'tenant-a', event: null, timezone: TZ, defaults: { unitId: 'u1' } });
+      const form = useEventForm({ userId: 'user-1', tenantId: 'tenant-a', event: null, timezone: TZ, defaults: { unitId: 'u1' } });
       return { form, save: useEventFormSubmit({ form, event: null, timezone: TZ, onSaved: vi.fn() }) };
     }, { wrapper });
     act(() => {
@@ -120,10 +120,10 @@ describe('Event Hub v2 flows (plan 3.2)', () => {
   });
 
   it('restores an unsaved draft after a reload and flags a server revision change', () => {
-    const first = renderHook(() => useEventForm({ tenantId: 'tenant-a', event: event(3), timezone: TZ }), { wrapper });
+    const first = renderHook(() => useEventForm({ userId: 'user-1', tenantId: 'tenant-a', event: event(3), timezone: TZ }), { wrapper });
     act(() => first.result.current.setField('description', 'belt slipped'));
     first.unmount();
-    const again = renderHook(() => useEventForm({ tenantId: 'tenant-a', event: event(4), timezone: TZ }), { wrapper });
+    const again = renderHook(() => useEventForm({ userId: 'user-1', tenantId: 'tenant-a', event: event(4), timezone: TZ }), { wrapper });
     expect(again.result.current.restored).toBe(true);
     expect(again.result.current.values.description).toBe('belt slipped');
     expect(again.result.current.serverChanged).toBe(true);

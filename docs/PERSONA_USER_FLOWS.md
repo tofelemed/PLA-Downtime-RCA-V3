@@ -572,8 +572,8 @@ Routes are in `code font`. Buttons are in **bold**. Field labels are in "quotes"
 6. **Merge two fragments of one stop.**
    - Tick both rows and click **Merge**. Fill "Largest gap to bridge (minutes, 0 = touching only)" and "Why", then click **Merge**.
 7. **Interrupted edit.**
-   - If you click **Keep draft and close**, or the browser loses its connection, the text is kept in this browser tab.
-   - Open **Edit / code** again in the same tab and you see "Unsaved changes restored from this tab."
+   - If you click **Keep draft and close**, or the browser loses its connection, the text is kept for you in this browser (other tabs and reloads too) until you save or discard it.
+   - Open **Edit / code** again (also after a reload or in another tab) and you see "Unsaved changes restored from your last visit."
 8. **Someone else saved first.**
    - The dialog "Someone changed this event" shows Server now vs Mine. Click **Apply my changes to the latest** or **Discard my changes**.
 9. **RCA hint.**
@@ -1039,7 +1039,6 @@ stateDiagram-v2
 
 These are real limits of the current build, not mistakes in this guide.
 
-1. **Event drafts survive only in the same browser tab.** They are not true offline storage.
-2. **A plant administrator cannot see users whose home plant is another plant.** Members who reach this plant through a scope grant appear as "Unknown user" and cannot be listed, granted to or assigned tasks by a plant administrator. Fixing it needs an owner decision (a row-level-security exception).
-3. **Branding changes need a page reload** before the header shows them.
-4. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.
+1. **A plant administrator cannot see users whose home plant is another plant.** Members who reach this plant through a scope grant appear as "Unknown user" and cannot be listed, granted to or assigned tasks by a plant administrator. Fixing it needs an owner decision (a row-level-security exception).
+2. **Branding changes need a page reload** before the header shows them.
+3. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.

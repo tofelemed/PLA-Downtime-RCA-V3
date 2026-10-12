@@ -156,7 +156,7 @@ test.describe('Operator — Event Hub v2', () => {
     const mine = `${label} belt slipped (typed before reconnect)`;
     await form.locator('#description').fill(mine);
 
-    // the tab reconnects (reload) mid-edit: the draft comes back from this tab's storage
+    // the tab reconnects (reload) mid-edit: the draft comes back from the browser's storage (per user and plant)
     await form.getByRole('button', { name: 'Keep draft and close' }).click();
     await expect(form).toBeHidden();
     await page.reload();

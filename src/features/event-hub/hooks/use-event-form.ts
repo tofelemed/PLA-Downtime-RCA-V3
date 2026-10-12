@@ -4,6 +4,8 @@ import { draftKey, draftStore, type EventDraft } from '../model/event-draft';
 import { EMPTY_FORM, formValuesOf, type EventFormValues, type FieldErrors } from '../model/event-form';
 
 export interface UseEventFormOptions {
+  /** the signed-in user: drafts are per user, plant and event */
+  userId: string;
   tenantId: string;
   /** null = create */
   event: ProductionEventView | null;
@@ -13,7 +15,7 @@ export interface UseEventFormOptions {
 }
 
 function startDraft(options: UseEventFormOptions): EventDraft {
-  const stored = draftStore.read(draftKey(options.tenantId, options.event?.id ?? null));
+  const stored = draftStore.read(draftKey(options.userId, options.tenantId, options.event?.id ?? null));
   if (stored) return stored;
   const initial = options.event ? formValuesOf(options.event, options.timezone) : { ...EMPTY_FORM, ...options.defaults };
   return { baseRevision: options.event?.rowVersion ?? null, initial, values: initial };
@@ -24,7 +26,7 @@ function startDraft(options: UseEventFormOptions): EventDraft {
  * reports when the server's revision moved past the one the edit started from (conflict review needed).
  */
 export function useEventForm(options: UseEventFormOptions) {
-  const key = draftKey(options.tenantId, options.event?.id ?? null);
+  const key = draftKey(options.userId, options.tenantId, options.event?.id ?? null);
   const [draft, setDraft] = useState<EventDraft>(() => startDraft(options));
   const [restored] = useState(() => draftStore.read(key) !== null);
   const [errors, setErrors] = useState<FieldErrors>({});

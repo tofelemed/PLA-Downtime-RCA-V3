@@ -5,8 +5,10 @@ const log = createLogger('eventDraft');
 
 /**
  * Unsaved form state of one event (UX04 "reconnect preserves unsaved form"): in memory while the form is
- * open and in `sessionStorage` (this tab only, gone with the tab), keyed by tenant and event. The
- * revision the user started from is kept so a changed server revision forces a conflict review.
+ * open and in `localStorage` (survives reloads and is shared by the user's tabs in this browser), keyed
+ * by user, plant and event; cleared when the event is saved or the draft discarded. It holds only the
+ * form's values (no tokens or other secrets). The revision the user started from is kept so a changed
+ * server revision forces a conflict review.
  */
 export interface EventDraft {
   /** row version the edit started from; null for a new event */
@@ -16,8 +18,8 @@ export interface EventDraft {
   values: EventFormValues;
 }
 
-export function draftKey(tenantId: string, eventId: string | null): string {
-  return `eventHub.draft.${tenantId}.${eventId ?? 'new'}`;
+export function draftKey(userId: string, tenantId: string, eventId: string | null): string {
+  return `proact.eventHub.draft.${userId}.${tenantId}.${eventId ?? 'new'}`;
 }
 
 function isDraft(value: unknown): value is EventDraft {
@@ -30,7 +32,7 @@ function isDraft(value: unknown): value is EventDraft {
 export const draftStore = {
   read(key: string): EventDraft | null {
     try {
-      const raw = window.sessionStorage.getItem(key);
+      const raw = window.localStorage.getItem(key);
       if (!raw) return null;
       const parsed: unknown = JSON.parse(raw);
       return isDraft(parsed) ? parsed : null;
@@ -41,14 +43,14 @@ export const draftStore = {
   },
   write(key: string, draft: EventDraft): void {
     try {
-      window.sessionStorage.setItem(key, JSON.stringify(draft));
+      window.localStorage.setItem(key, JSON.stringify(draft));
     } catch (error) {
       log.warn('draft not stored', { key, error: String(error) });
     }
   },
   clear(key: string): void {
     try {
-      window.sessionStorage.removeItem(key);
+      window.localStorage.removeItem(key);
     } catch {
       // nothing stored, nothing to clear
     }
