@@ -46,7 +46,8 @@
     "db:seed-demo-mqtt": "ts-node scripts/demo-mqtt/seed-demo-mqtt.ts",
     "db:seed-demo-showcase": "ts-node scripts/demo-showcase/seed-demo-showcase.ts",
     "db:bootstrap-admin": "ts-node scripts/bootstrap-admin.ts",
-    "mqtt:sim": "ts-node scripts/mqtt/publish-sim.ts"
+    "mqtt:sim": "ts-node scripts/mqtt/publish-sim.ts",
+    "api:audit": "ts-node --transpile-only scripts/api-audit/run-audit.ts"
   },
   "dependencies": {
     "@bacnet-js/client": "^3.0.0",
