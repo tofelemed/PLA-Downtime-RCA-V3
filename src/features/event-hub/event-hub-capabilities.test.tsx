@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
 import type { EventReviewItemView } from '@/api/v2/types/events';
 import { actAs } from '@/test/acting-user';
-import { defaultFilters } from './model/event-filters';
 import { EventHubEnvContext, type EventHubEnv } from './use-event-hub-env';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
@@ -18,7 +18,6 @@ const ENV: EventHubEnv = {
   tenantId: 'tenant-a', timezone: 'UTC', timezoneIsFallback: false, units: [], unitsLoading: false, reasonCodes: [],
   unitName: () => 'Unit 1', reasonName: () => '—',
 };
-const WINDOW = { from: '2026-10-09T00:00:00.000Z', to: '2026-10-10T00:00:00.000Z', label: 'Test window' };
 const EVENT = { id: 'e1', rowVersion: 1, startTime: '2026-10-09T06:00:00.000Z', endTime: null };
 const ITEM: EventReviewItemView = { id: 'ri1', eventId: 'e1', kind: 'source_conflict', field: 'reasonCodeId', state: 'open', resolvedBy: null, resolvedAt: null, createdAt: '2026-10-09T07:00:00.000Z' };
 const STOP = {
@@ -30,9 +29,11 @@ describe('Event Hub v2: event commands for every non-viewer member (canWriteEven
   let client: QueryClient;
   const wrap = (node: ReactNode) =>
     render(
-      <QueryClientProvider client={client}>
-        <EventHubEnvContext.Provider value={ENV}>{node}</EventHubEnvContext.Provider>
-      </QueryClientProvider>,
+      <MemoryRouter>
+        <QueryClientProvider client={client}>
+          <EventHubEnvContext.Provider value={ENV}>{node}</EventHubEnvContext.Provider>
+        </QueryClientProvider>
+      </MemoryRouter>,
     );
 
   beforeEach(() => {
@@ -59,11 +60,11 @@ describe('Event Hub v2: event commands for every non-viewer member (canWriteEven
 
   it('an engineer can close a running stop; a viewer only opens it', async () => {
     actAs('Engineer');
-    const engineer = wrap(<CurrentStopsPanel filters={defaultFilters(WINDOW)} onOpen={() => undefined} onClose={() => undefined} />);
+    const engineer = wrap(<CurrentStopsPanel unitIds={[]} onClose={() => undefined} />);
     await waitFor(() => expect(screen.getByTestId('current-stop-close')).toBeTruthy());
     engineer.unmount();
     actAs('viewer');
-    wrap(<CurrentStopsPanel filters={defaultFilters(WINDOW)} onOpen={() => undefined} onClose={() => undefined} />);
+    wrap(<CurrentStopsPanel unitIds={[]} onClose={() => undefined} />);
     await waitFor(() => expect(screen.getByTestId('current-stop')).toBeTruthy());
     expect(screen.queryByTestId('current-stop-close')).toBeNull();
   });

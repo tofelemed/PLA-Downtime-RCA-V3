@@ -1,5 +1,6 @@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
 import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-select';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import {
@@ -18,7 +19,8 @@ export interface DowntimeFiltersBarProps {
 }
 
 const SELECT = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
-const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+const label = (value: string) => labelOf(SCHEDULE_CLASS_LABELS, value);
+const trendLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
 /** Server-side filters of every widget (plan 3.3): units, window, schedule class, micro-stops, approval. */
 export function DowntimeFiltersBar({ filters, onChange }: DowntimeFiltersBarProps) {
@@ -35,6 +37,7 @@ export function DowntimeFiltersBar({ filters, onChange }: DowntimeFiltersBarProp
         options={env.units.map((unit) => ({ value: unit.id, label: unit.name }))}
         selected={filters.unitIds}
         onChange={(unitIds) => onChange({ unitIds: [...unitIds].sort() })}
+        commitOnClose
       />
       <div className="flex items-center gap-2">
         <Label htmlFor="downtime-window">Window</Label>
@@ -69,7 +72,7 @@ export function DowntimeFiltersBar({ filters, onChange }: DowntimeFiltersBarProp
         <select id="downtime-trend" className={SELECT} value={filters.trendBy} onChange={(event) => onChange({ trendBy: event.target.value as TrendGroup })}>
           {TREND_GROUPS.map((value) => (
             <option key={value} value={value}>
-              {label(value)}
+              {trendLabel(value)}
             </option>
           ))}
         </select>

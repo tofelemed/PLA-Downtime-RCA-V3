@@ -3,7 +3,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { humanize } from '../model/event-states';
+import { ERROR_MESSAGES } from '@/features/ux-kit/errors';
+import { BULK_JOB_STATE_LABELS, labelOf } from '@/features/ux-kit/labels';
+
+/** Plain text of a failed batch's refusal (the code itself is never shown). */
+const batchError = (code: string | null | undefined) => (code ? ERROR_MESSAGES[code]?.title : undefined) ?? 'Not applied';
 
 /** API04 job progress of a large bulk coding: processed / total, and a partial result made explicit. */
 export function BulkJobProgress({ jobId }: { jobId: string }) {
@@ -17,7 +21,7 @@ export function BulkJobProgress({ jobId }: { jobId: string }) {
         {data && (
           <>
             <p className="text-sm" aria-live="polite">
-              Job {humanize(data.state)}: {data.processed} of {data.total} processed{data.failed > 0 ? `, ${data.failed} failed` : ''}
+              {labelOf(BULK_JOB_STATE_LABELS, data.state)}: {data.processed} of {data.total} processed{data.failed > 0 ? `, ${data.failed} failed` : ''}
             </p>
             <Progress value={percent} aria-label="Bulk coding progress" />
             {isTerminalJob(data) && data.state !== 'completed' && (
@@ -26,7 +30,7 @@ export function BulkJobProgress({ jobId }: { jobId: string }) {
                 <AlertDescription>
                   {failedChunks.map((chunk) => (
                     <p key={chunk.index} className="text-xs">
-                      Chunk {chunk.index + 1} ({chunk.size} events): {chunk.errorCode ?? 'failed'}
+                      Batch {chunk.index + 1} ({chunk.size} events): {batchError(chunk.errorCode)}
                     </p>
                   ))}
                 </AlertDescription>

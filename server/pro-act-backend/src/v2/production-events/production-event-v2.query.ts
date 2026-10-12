@@ -22,6 +22,8 @@ type ArrayFilter = Extract<
   | 'physicalStates'
   | 'codingStates'
   | 'rcaStates'
+  | 'sourceKinds'
+  | 'severities'
 >;
 
 /** query parameter → entity property; OR within a parameter (IN), AND across parameters. */
@@ -37,11 +39,24 @@ const ARRAY_FILTERS: ReadonlyArray<[ArrayFilter, string]> = [
   ['physicalStates', 'physicalState'],
   ['codingStates', 'codingState'],
   ['rcaStates', 'rcaState'],
+  ['sourceKinds', 'sourceKind'],
+  ['severities', 'severity'],
 ];
+
+/** `%text%` for ILIKE with the LIKE wildcards and the escape character of the text taken literally. */
+export function containsPattern(text: string): string {
+  return `%${text.replace(/[\\%_]/g, '\\$&')}%`;
+}
+
+/** The filters of the list (shared by the CSV export): everything but paging and sort. */
+export type ProductionEventFilters = Omit<
+  ProductionEventListQueryDto,
+  'cursor' | 'limit' | 'sort'
+>;
 
 export function applyProductionEventV2Filters(
   qb: SelectQueryBuilder<ProductionEvent>,
-  query: ProductionEventListQueryDto,
+  query: ProductionEventFilters,
   alias = 'event',
 ): SelectQueryBuilder<ProductionEvent> {
   for (const [param, property] of ARRAY_FILTERS) {
@@ -59,6 +74,12 @@ export function applyProductionEventV2Filters(
     query.to,
   );
   applyIsOpenFilter(qb, query.isOpen, alias);
+  if (query.q) {
+    qb.andWhere(
+      `(${alias}.description ILIKE :textQuery OR ${alias}.eventId ILIKE :textQuery)`,
+      { textQuery: containsPattern(query.q) },
+    );
+  }
   return qb;
 }
 

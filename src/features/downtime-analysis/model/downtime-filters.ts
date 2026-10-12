@@ -1,3 +1,4 @@
+import { HOUR_MS, rollingWindow } from '@/api/v2/queries/time-window';
 import type { DowntimeReportQuery } from '@/api/v2/queries/reports';
 
 /** Schedule class filter of the report (`all` = parameter left out). */
@@ -13,7 +14,6 @@ export type TrendGroup = (typeof TREND_GROUPS)[number];
 export type DowntimeMetric = 'duration' | 'frequency';
 export type DowntimeGroupBy = NonNullable<DowntimeReportQuery['groupBy']>;
 
-const HOUR_MS = 3_600_000;
 
 /** Window presets ending now; the instant is taken when a preset is chosen, never during render. */
 export const WINDOW_PRESETS = [
@@ -40,8 +40,9 @@ export interface DowntimeFilters {
   reasonPath: string[];
 }
 
+/** A preset window ending `now`, with minute-stable bounds so a revisit hits the cached reports. */
 export function presetWindow(hours: number, now: number): { from: string; to: string } {
-  return { from: new Date(now - hours * HOUR_MS).toISOString(), to: new Date(now).toISOString() };
+  return rollingWindow(hours * HOUR_MS, now);
 }
 
 const oneOf = <T extends string>(values: readonly T[], value: string | null, fallback: T): T =>

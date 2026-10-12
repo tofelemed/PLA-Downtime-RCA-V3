@@ -1,3 +1,4 @@
+import { HOUR_MS, rollingWindow } from '@/api/v2/queries/time-window';
 import type { ProductionEventFilters } from '@/api/v2/queries/production-events';
 
 /** Enum values of the v2 list filters (backend `event-classification.ts`). */
@@ -7,6 +8,10 @@ export const OEE_COMPONENTS = ['availability', 'performance', 'quality', 'idle',
 export const PHYSICAL_STATES = ['open', 'closed', 'superseded', 'retracted'] as const;
 export const CODING_STATES = ['uncoded', 'coded', 'reviewed'] as const;
 export const RCA_STATES = ['none', 'required', 'linked', 'completed'] as const;
+/** v1 event families (the v1 Event Hub tabs), filtered with the v2 `eventTypes` parameter. */
+export const EVENT_TYPES = ['ProductionLoss', 'IOW', 'SOL', 'APM', 'FailureWO', 'ProductionOutput'] as const;
+export const SOURCE_KINDS = ['manual', 'source', 'derived', 'imported'] as const;
+export const SEVERITIES = ['Critical', 'High', 'Medium', 'Low'] as const;
 
 export type OpenFilter = 'any' | 'open' | 'closed';
 
@@ -20,6 +25,11 @@ export interface EventFilterState {
   physicalStates: string[];
   codingStates: string[];
   rcaStates: string[];
+  eventTypes: string[];
+  sourceKinds: string[];
+  severities: string[];
+  /** free text over description and source event id (server side, 2+ characters) */
+  q: string;
   /** UTC window [from, to) */
   from: string | null;
   to: string | null;
@@ -43,6 +53,10 @@ export function defaultFilters(window: { from: string; to: string; label: string
     physicalStates: [...DEFAULT_PHYSICAL_STATES],
     codingStates: [],
     rcaStates: [],
+    eventTypes: [],
+    sourceKinds: [],
+    severities: [],
+    q: '',
     from: window.from,
     to: window.to,
     isOpen: 'any',
@@ -50,7 +64,7 @@ export function defaultFilters(window: { from: string; to: string; label: string
   };
 }
 
-const ARRAY_PARAMS = [
+export const ARRAY_PARAMS = [
   'unitIds',
   'assetIds',
   'reasonIds',
@@ -59,7 +73,11 @@ const ARRAY_PARAMS = [
   'physicalStates',
   'codingStates',
   'rcaStates',
+  'eventTypes',
+  'sourceKinds',
+  'severities',
 ] as const;
+export type ArrayFilter = (typeof ARRAY_PARAMS)[number];
 
 /**
  * The v2 list query of a filter state: empty arrays and unset bounds are left out (no filter), arrays
@@ -70,11 +88,15 @@ export function toEventQuery(state: EventFilterState, limit = PAGE_SIZE): Produc
   for (const name of ARRAY_PARAMS) {
     if (state[name].length > 0) query[name] = [...state[name]].sort();
   }
+  if (state.q.trim().length >= MIN_SEARCH) query.q = state.q.trim();
   if (state.from) query.from = state.from;
   if (state.to) query.to = state.to;
   if (state.isOpen !== 'any') query.isOpen = state.isOpen === 'open';
   return query as ProductionEventFilters;
 }
+
+/** Shortest free-text search the server accepts. */
+export const MIN_SEARCH = 2;
 
 /** Current stops (§16.2): open events of the same units, regardless of the list window. */
 export function currentStopsQuery(state: EventFilterState): ProductionEventFilters {
@@ -82,8 +104,6 @@ export function currentStopsQuery(state: EventFilterState): ProductionEventFilte
   if (state.unitIds.length > 0) query.unitIds = [...state.unitIds].sort();
   return query as ProductionEventFilters;
 }
-
-const HOUR_MS = 3_600_000;
 
 /** Preset windows ending now; the instant is taken when the user picks one, never on render. */
 export const WINDOW_PRESETS = [
@@ -93,6 +113,11 @@ export const WINDOW_PRESETS = [
   { label: 'Last 30 days', hours: 24 * 30 },
 ] as const;
 
+/**
+ * A preset window: `hours` back from `now`, ending one hour after it (stops starting in the next hour
+ * stay listed), with minute-stable bounds so a revisit hits the cache.
+ */
 export function presetWindow(hours: number, label: string, now: number): { from: string; to: string; label: string } {
-  return { from: new Date(now - hours * HOUR_MS).toISOString(), to: new Date(now + HOUR_MS).toISOString(), label };
+  const window = rollingWindow((hours + 1) * HOUR_MS, now + HOUR_MS);
+  return { ...window, label };
 }

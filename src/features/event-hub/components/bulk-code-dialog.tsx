@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { OEE_COMPONENTS, SCHEDULE_CLASSES } from '../model/event-filters';
-import { humanize } from '../model/event-states';
+import { labelOf, OEE_COMPONENT_LABELS, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
 import { useBulkCodeFlow } from '../hooks/use-bulk-code-flow';
 import { BulkJobProgress } from './bulk-job-progress';
 import { BulkPreviewTable } from './bulk-preview-table';
@@ -21,13 +21,22 @@ const ATOMIC_BULK_LIMIT = 500;
 
 const SELECT_CLASS = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 
-function EnumSelect({ id, label, values, value, onChange }: { id: string; label: string; values: readonly string[]; value: string; onChange: (v: string) => void }) {
+interface EnumSelectProps {
+  id: string;
+  label: string;
+  values: readonly string[];
+  labels: Readonly<Record<string, string>>;
+  value: string;
+  onChange: (v: string) => void;
+}
+
+function EnumSelect({ id, label, values, labels, value, onChange }: EnumSelectProps) {
   return (
     <div className="space-y-1">
       <Label htmlFor={id}>{label}</Label>
       <select id={id} className={SELECT_CLASS} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">— unchanged —</option>
-        {values.map((entry) => <option key={entry} value={entry}>{humanize(entry)}</option>)}
+        {values.map((entry) => <option key={entry} value={entry}>{labelOf(labels, entry)}</option>)}
       </select>
     </div>
   );
@@ -50,15 +59,15 @@ export function BulkCodeDialog({ events, onClose }: BulkCodeDialogProps) {
             <div className="sm:col-span-2">
               <ReasonCodeSelect id="bulk-reason-code" value={flow.codes.reasonCodeId} onChange={(v) => flow.edit('reasonCodeId', v)} />
             </div>
-            <EnumSelect id="bulk-schedule" label="Schedule class" values={SCHEDULE_CLASSES} value={flow.codes.scheduleClass} onChange={(v) => flow.edit('scheduleClass', v)} />
-            <EnumSelect id="bulk-oee" label="OEE component" values={OEE_COMPONENTS} value={flow.codes.oeeComponent} onChange={(v) => flow.edit('oeeComponent', v)} />
+            <EnumSelect id="bulk-schedule" label="Schedule class" values={SCHEDULE_CLASSES} labels={SCHEDULE_CLASS_LABELS} value={flow.codes.scheduleClass} onChange={(v) => flow.edit('scheduleClass', v)} />
+            <EnumSelect id="bulk-oee" label="OEE component" values={OEE_COMPONENTS} labels={OEE_COMPONENT_LABELS} value={flow.codes.oeeComponent} onChange={(v) => flow.edit('oeeComponent', v)} />
             <div className="space-y-1 sm:col-span-2">
               <Label htmlFor="bulk-why">Why (kept in the history)</Label>
               <Textarea id="bulk-why" value={flow.reason} onChange={(e) => flow.setReason(e.target.value)} maxLength={1000} />
             </div>
           </div>
         )}
-        {step.kind === 'preview' && <BulkPreviewTable preview={step.preview} />}
+        {step.kind === 'preview' && <BulkPreviewTable preview={step.preview} events={events} />}
         {step.kind === 'applied' && <p className="text-sm" data-testid="bulk-applied">{step.applied.applied} events coded.</p>}
         {step.kind === 'job' && <BulkJobProgress jobId={step.jobId} />}
         <CommandError error={flow.error} />

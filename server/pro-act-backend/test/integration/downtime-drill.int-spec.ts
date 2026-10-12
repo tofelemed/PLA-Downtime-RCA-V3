@@ -29,6 +29,20 @@ interface DowntimeBody {
   };
 }
 
+interface BundleBody {
+  data: {
+    summary: SummaryBody[];
+    views: Array<{
+      view: string;
+      metric: string;
+      scheduleClass: string | null;
+      groups: GroupBody[];
+      total: string;
+    }>;
+    calculationRunIds: string[];
+  };
+}
+
 /**
  * Plan 3.3 additions to `GET /v2/reports/downtime` on real Postgres: the cumulative share of the Pareto,
  * the reason drill-down (`groupBy=reasonChild` + `parentReasonId`, subtree restriction of the reason
@@ -189,6 +203,42 @@ describe('Downtime report drill-down and summary (plan 3.3)', () => {
       'scheduled_availability',
       'onstream_factor',
     ]);
+  });
+
+  it('bundle (T24): each view equals the single report with the same filters, runs shared', async () => {
+    const tokens = [
+      'reasonLevel1',
+      'asset:frequency',
+      'day:duration:unplanned',
+      'reasonLevel1',
+    ];
+    const views = tokens.map((t) => `views=${encodeURIComponent(t)}`).join('&');
+    const bundle = (
+      await env
+        .get(
+          `reports/downtime-bundle?${window}&unitIds=${env.world.unitA3}&${views}`,
+        )
+        .expect(200)
+    ).body as BundleBody;
+    expect(bundle.data.views.map((v) => v.view)).toEqual(tokens.slice(0, 3));
+    const singles = [
+      'groupBy=reasonLevel1',
+      'groupBy=asset&metric=frequency',
+      'groupBy=day&scheduleClass=unplanned',
+    ];
+    for (const [index, query] of singles.entries()) {
+      const single = await report(query);
+      expect(bundle.data.views[index].groups).toEqual(single.data.groups);
+      expect(bundle.data.views[index].total).toBe(single.data.total);
+      expect(bundle.data.calculationRunIds).toEqual(
+        single.data.calculationRunIds,
+      );
+      expect(bundle.data.summary).toEqual(single.data.summary);
+    }
+    expect(bundle.data.views[2].scheduleClass).toBe('unplanned');
+    await env
+      .get(`reports/downtime-bundle?${window}&unitIds=${env.world.unitA3}`)
+      .expect(422);
   });
 
   it('422: reasonChild without a parent, a parent with a non-reason grouping, a foreign parent', async () => {

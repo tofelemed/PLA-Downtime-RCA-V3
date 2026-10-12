@@ -1,3 +1,4 @@
+import { humanize as humanizeToken } from '@/features/ux-kit/labels';
 import type { EventStatesView } from '@/api/v2/types/events';
 
 /**
@@ -34,11 +35,11 @@ const RCA: Readonly<Record<string, [string, StateTone]>> = {
 };
 
 function chip(dimension: StateChip['dimension'], table: typeof PHYSICAL, value: string): StateChip {
-  const [label, tone] = table[value] ?? [value, 'neutral'];
+  const [label, tone] = table[value] ?? [humanizeToken(value), 'neutral'];
   return { dimension, value, label, tone };
 }
 
-/** The three chips, in fixed order; an unknown value is shown as sent (never hidden or guessed). */
+/** The three chips, in fixed order; an unknown value is shown humanized (never hidden or guessed). */
 export function stateChips(states: EventStatesView): StateChip[] {
   return [
     chip('physical', PHYSICAL, states.physical),
@@ -57,9 +58,7 @@ export function dimensionLabel(dimension: StateChip['dimension']): string {
   return DIMENSION_LABEL[dimension];
 }
 
-/** Human label of an enum value (`quality_loss` → "Quality loss"). */
+/** Human label of an enum value (`quality_loss` → "Quality loss"); "—" when absent. */
 export function humanize(value: string | null | undefined): string {
-  if (!value) return '—';
-  const text = value.replace(/_/g, ' ');
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  return value ? humanizeToken(value) : '—';
 }

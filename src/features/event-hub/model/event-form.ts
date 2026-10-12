@@ -1,3 +1,4 @@
+import { describeError } from '@/features/ux-kit/errors';
 import type { CreateEventBody } from '@/api/v2/queries/event-commands';
 import type { PatchEventInput } from '@/api/v2/queries/production-events';
 import { StaleRevisionError, V2ApiError } from '@/api/v2/errors';
@@ -129,7 +130,7 @@ const SERVER_FIELDS: Readonly<Record<string, EventFormField>> = {
 
 export interface ServerFormErrors {
   fields: FieldErrors;
-  /** errors without a matching input (codes such as SOURCE_OWNED, or unknown failures) */
+  /** plain-language errors without a matching input (refusals such as a source-owned value, unknown failures) */
   form: string | null;
 }
 
@@ -145,6 +146,7 @@ export function serverFormErrors(error: unknown): ServerFormErrors {
     else if (!field) unmatched.push(entry.message);
   }
   const hasFields = Object.keys(fields).length > 0;
-  const form = hasFields && unmatched.length === 0 ? null : [`${error.message} (${error.code})`, ...unmatched].join(' · ');
+  const friendly = describeError(error);
+  const form = hasFields && unmatched.length === 0 ? null : [`${friendly.title}. ${friendly.message}`, ...unmatched].join(' · ');
   return { fields, form };
 }

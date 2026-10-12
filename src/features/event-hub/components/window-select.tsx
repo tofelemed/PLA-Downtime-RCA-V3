@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useShiftInstances } from '@/api/v2/queries/units';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { Label } from '@/components/ui/label';
-import { formatPlantTime } from '@/features/ux-kit/format/plant-time';
+import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { presetWindow, WINDOW_PRESETS } from '../model/event-filters';
-import { useEventHubEnv } from '../use-event-hub-env';
+import { usePlantFormat } from '../hooks/use-plant-format';
 
 export interface ChosenWindow {
   from: string;
@@ -26,7 +26,8 @@ const DAY_MS = 86_400_000;
  * shift"). Instants are taken when the user picks, never during render.
  */
 export function WindowSelect({ unitId, label, onChange }: WindowSelectProps) {
-  const { timezone } = useEventHubEnv();
+  const { dateTime } = usePlantFormat();
+  const preference = useCalendarPreference();
   const [range] = useState(() => {
     const now = Date.now();
     return { from: new Date(now - 3 * DAY_MS).toISOString(), to: new Date(now + DAY_MS).toISOString() };
@@ -38,7 +39,7 @@ export function WindowSelect({ unitId, label, onChange }: WindowSelectProps) {
     const preset = WINDOW_PRESETS.find((entry) => `preset:${entry.hours}` === value);
     if (preset) return onChange(presetWindow(preset.hours, preset.label, Date.now()));
     const shift = instances.find((entry) => `shift:${entry.utcStart}` === value);
-    if (shift) onChange({ from: shift.utcStart, to: shift.utcEnd, label: `${shift.localDate} ${shift.shiftName}` });
+    if (shift) onChange({ from: shift.utcStart, to: shift.utcEnd, label: `${formatOperationalDate(shift.localDate, preference)} ${shift.shiftName}` });
   };
 
   return (
@@ -65,7 +66,7 @@ export function WindowSelect({ unitId, label, onChange }: WindowSelectProps) {
           <optgroup label="Shifts">
             {instances.map((shift) => (
               <option key={shift.utcStart} value={`shift:${shift.utcStart}`}>
-                {`${shift.localDate} ${shift.shiftName} · ${formatPlantTime(shift.utcStart, timezone)}`}
+                {`${formatOperationalDate(shift.localDate, preference)} ${shift.shiftName} · ${dateTime(shift.utcStart)}`}
               </option>
             ))}
           </optgroup>

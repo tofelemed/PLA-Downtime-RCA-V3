@@ -19,6 +19,7 @@ import {
   BulkCodeV2Dto,
   CloseEventV2Dto,
   MergeEventsV2Dto,
+  RetractEventV2Dto,
   SplitEventV2Dto,
 } from './event-operations-v2.dto';
 import {
@@ -80,6 +81,19 @@ export class ProductionEventOperationsV2Service {
   ): Promise<EventOperationView> {
     const outcome = await this.commands.close(context, eventId, {
       endTime: new Date(dto.endTime),
+      reason: dto.reason,
+      expectedVersion,
+    });
+    return this.view(context, outcome);
+  }
+
+  async retract(
+    context: RequestContext,
+    eventId: string,
+    expectedVersion: number,
+    dto: RetractEventV2Dto,
+  ): Promise<EventOperationView> {
+    const outcome = await this.commands.retract(context, eventId, {
       reason: dto.reason,
       expectedVersion,
     });

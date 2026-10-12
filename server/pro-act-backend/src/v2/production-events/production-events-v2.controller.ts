@@ -7,6 +7,8 @@ import {
   Post,
   ParseUUIDPipe,
   Query,
+  Res,
+  StreamableFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -14,9 +16,11 @@ import {
   ApiBearerAuth,
   ApiHeader,
   ApiOperation,
+  ApiProduces,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Response } from 'express';
 import { ScopeParam } from '../../auth/decorators/scope-param.decorator';
 import { IfMatch } from '../../common/concurrency/revision';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
@@ -25,6 +29,7 @@ import { Ctx } from '../../common/context/ctx.decorator';
 import { RequestContext } from '../../common/context/request-context';
 import { ListResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
+import { ProductionEventExportQueryDto } from './production-event-export-query.dto';
 import { ProductionEventListQueryDto } from './production-event-list-query.dto';
 import { ProductionEventV2View } from './production-event-v2.view';
 import { ProductionEventsV2Service } from './production-events-v2.service';
@@ -65,6 +70,32 @@ export class ProductionEventsV2Controller {
     @Query() query: ProductionEventListQueryDto,
   ): Promise<ListResponse<ProductionEventV2View>> {
     return this.service.list(ctx, query);
+  }
+
+  // declared before ':id' so `export` is never taken for an event id
+  @Get('export')
+  @ApiProduces('text/csv')
+  @ApiOperation({
+    summary: 'Export the filtered production events as CSV (newest first)',
+    description:
+      'Same filters as the list; from and to are required (≤ 400 days, 422 INVALID_RANGE / WINDOW_TOO_LARGE). ' +
+      'At most 50,000 rows (422 EXPORT_TOO_LARGE). Columns: start_utc, end_utc, duration_seconds, unit, asset, ' +
+      'event_type, physical_type, schedule_class, oee_component, reason_code, reason, physical_state, ' +
+      'coding_state, rca_state, severity, source_kind, description, quantity, quantity_uom, cost.',
+  })
+  async exportCsv(
+    @Ctx() ctx: RequestContext,
+    @Query() query: ProductionEventExportQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const csv = await this.service.exportCsv(ctx, query);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return new StreamableFile(csv.content, {
+      type: 'text/csv; charset=utf-8',
+      disposition: `attachment; filename="${csv.filename}"`,
+      length: csv.content.length,
+    });
   }
 
   @Get(':id')

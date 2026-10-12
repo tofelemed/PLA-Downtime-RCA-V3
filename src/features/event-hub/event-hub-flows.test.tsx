@@ -147,7 +147,7 @@ describe('Event Hub v2 flows (plan 3.2)', () => {
   });
 
   it('state badges carry text labels for every dimension', () => {
-    render(<StateBadges states={{ physical: 'open', coding: 'coded', rca: 'required' }} legacyStatus="RCA Required" />, { wrapper });
+    render(<StateBadges states={{ physical: 'open', coding: 'coded', rca: 'required' }} />, { wrapper });
     expect(screen.getByLabelText('Physical state: Running')).toBeTruthy();
     expect(screen.getByLabelText('Coding state: Coded')).toBeTruthy();
     expect(screen.getByLabelText('RCA state: RCA required')).toBeTruthy();

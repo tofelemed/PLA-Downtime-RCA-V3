@@ -40,7 +40,7 @@ export function SplitDialog({ event, onClose, onDone }: SplitDialogProps) {
   };
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent data-testid="split-dialog">
+      <DialogContent className="max-h-[90vh] overflow-y-auto" data-testid="split-dialog">
         <DialogHeader>
           <DialogTitle>Split event</DialogTitle>
           <DialogDescription>Both parts keep the coding and the stop occurrence; the original becomes superseded.</DialogDescription>

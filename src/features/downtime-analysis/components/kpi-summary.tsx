@@ -1,23 +1,27 @@
-import { useDowntimeReport } from '@/api/v2/queries/reports';
 import type { KpiAggregateView } from '@/api/v2/types/reports';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { DurationText } from '@/features/ux-kit/duration-text';
-import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { downtimeQuery, type DowntimeFilters } from '../model/downtime-filters';
+import { labelOf } from '@/features/ux-kit/labels';
+import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
 import { findMetric, formatCount, formatRatio, hasUnknownTime, reasonText, SUMMARY_TILES, type TileSpec } from '../model/kpi-display';
 import { ReportCard } from './report-card';
+
+const QUALITY_LABELS: Readonly<Record<string, string>> = {
+  ok: 'OK',
+  provisional: 'Provisional',
+  unavailable: 'Not available',
+  exception: 'Above 100 %',
+};
 
 /**
  * KPI summary (KPI05 / KPI06, DT04): the period KPIs of the scope from `GET /reports/downtime` — the
  * server's summed terms, shown with their labels, cohorts and null reasons; nothing is added up here.
  */
-export function KpiSummary({ filters }: { filters: DowntimeFilters }) {
-  const env = useEventHubEnv();
-  const query = useDowntimeReport(downtimeQuery(filters, 'oee', { metric: 'duration', scheduleClass: 'all' }), env.timezone);
-  const summary = query.data?.data.summary;
+export function KpiSummary({ bundle }: { bundle: DowntimeBundleResult }) {
+  const summary = bundle.data?.data.summary;
   return (
-    <ReportCard title="Downtime summary" testId="kpi-summary" query={query} response={query.data}>
+    <ReportCard title="Downtime summary" testId="kpi-summary" query={bundle} response={bundle.data} showMeta={false}>
       {hasUnknownTime(summary) && (
         <Alert className="mb-2" data-testid="unknown-lower-bound">
           <AlertDescription>Unknown time is above zero: known downtime is a lower bound.</AlertDescription>
@@ -52,7 +56,7 @@ export function KpiTile({ spec, view }: { spec: TileSpec; view: KpiAggregateView
       <dd className="text-[11px] text-muted-foreground">{spec.note}</dd>
       {view && view.quality !== 'ok' && (
         <dd className="mt-1 flex flex-wrap items-center gap-1 text-[11px]">
-          <Badge variant={view.quality === 'exception' ? 'destructive' : 'secondary'}>{view.quality}</Badge>
+          <Badge variant={view.quality === 'exception' ? 'destructive' : 'secondary'}>{labelOf(QUALITY_LABELS, view.quality)}</Badge>
           {reason && <span>{reason}</span>}
         </dd>
       )}

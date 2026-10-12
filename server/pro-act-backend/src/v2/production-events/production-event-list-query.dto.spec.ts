@@ -86,6 +86,31 @@ describe('ProductionEventListQueryDto (v2 list query)', () => {
     expect(await rejectedFields({ from: 'yesterday' })).toContain('from');
   });
 
+  it('filters by source kind (enum) and severity labels', async () => {
+    const parsed = await parse({
+      sourceKinds: ['manual', 'source'],
+      severities: 'Critical',
+    });
+    expect(parsed.sourceKinds).toEqual(['manual', 'source']);
+    expect(parsed.severities).toEqual(['Critical']);
+    expect(await rejectedFields({ sourceKinds: 'pi' })).toContain(
+      'sourceKinds',
+    );
+    expect(
+      await rejectedFields({ severities: Array(11).fill('High') }),
+    ).toContain('severities');
+    expect(await rejectedFields({ severities: 'x'.repeat(31) })).toContain(
+      'severities',
+    );
+  });
+
+  it('trims the text search and bounds it to 2..100 characters', async () => {
+    expect((await parse({ q: '  pump trip ' })).q).toBe('pump trip');
+    expect(await rejectedFields({ q: ' a ' })).toContain('q');
+    expect(await rejectedFields({ q: 'x'.repeat(101) })).toContain('q');
+    expect(await rejectedFields({ q: ['ab', 'cd'] })).toContain('q');
+  });
+
   it('rejects undeclared parameters such as tenantId', async () => {
     expect(await rejectedFields({ tenantId: UNIT_A })).toContain('tenantId');
     expect(await rejectedFields({ page: '2' })).toContain('page');

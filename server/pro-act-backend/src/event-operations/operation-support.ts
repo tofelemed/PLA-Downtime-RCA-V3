@@ -14,7 +14,7 @@ import { hasRevisionTenant } from '../production-event/revisions/revision-store'
 
 /** What an event operation did (the v2 response body). */
 export interface OperationOutcome {
-  operation: 'split' | 'merge' | 'close';
+  operation: 'split' | 'merge' | 'close' | 'retract';
   createdEventIds: string[];
   supersededEventIds: string[];
   updatedEventIds: string[];

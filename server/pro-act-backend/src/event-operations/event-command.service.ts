@@ -11,6 +11,7 @@ import {
   OperationResult,
   withViolations,
 } from './operation-support';
+import { retractEventIn } from './retract-command';
 import { splitIn } from './split-command';
 
 export interface SplitInput {
@@ -28,6 +29,11 @@ export interface MergeInput {
 
 export interface CloseInput {
   endTime: Date;
+  reason: string;
+  expectedVersion: number;
+}
+
+export interface RetractInput {
   reason: string;
   expectedVersion: number;
 }
@@ -67,6 +73,17 @@ export class EventCommandService {
   ): Promise<OperationOutcome> {
     return this.run((manager) =>
       closeIn(manager, { ...input, context, eventId, now: new Date() }),
+    );
+  }
+
+  /** Tombstones a manual event (409 SOURCE_OWNED for source-delivered events). */
+  retract(
+    context: RequestContext,
+    eventId: string,
+    input: RetractInput,
+  ): Promise<OperationOutcome> {
+    return this.run((manager) =>
+      retractEventIn(manager, { ...input, context, eventId }),
     );
   }
 

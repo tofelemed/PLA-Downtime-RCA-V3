@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Length,
   MaxLength,
 } from 'class-validator';
 import {
@@ -21,6 +22,7 @@ import {
   PHYSICAL_TYPES,
   RCA_STATES,
   SCHEDULE_CLASSES,
+  SOURCE_KINDS,
 } from '../../domain/events/event-classification';
 import { ListQueryDto } from '../common/list-query.dto';
 
@@ -116,6 +118,37 @@ export class ProductionEventListQueryDto extends ListQueryDto {
 
   @EnumArrayParam(RCA_STATES)
   rcaStates?: string[];
+
+  @EnumArrayParam(SOURCE_KINDS)
+  sourceKinds?: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Severity labels as stored (e.g. Critical, High, Medium, Low); repeat for several',
+  })
+  @IsOptional()
+  @Transform(toArrayParam)
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  @MaxLength(30, { each: true })
+  severities?: string[];
+
+  @ApiPropertyOptional({
+    minLength: 2,
+    maxLength: 100,
+    description:
+      'Case-insensitive text contained in the description or the business event id. Meant to be combined ' +
+      'with a from/to window (an unbounded text search scans every event of the scope).',
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @Length(2, 100)
+  q?: string;
 
   @ApiPropertyOptional({
     type: Boolean,

@@ -46,7 +46,7 @@ export function ConflictDialog({ open, eventId, draft, onApplyMine, onDiscardMin
   const show = (field: keyof EventFormValues, value: string) => (field === 'reasonCodeId' ? env.reasonName(value || null) : value || '—');
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
-      <DialogContent className="max-w-2xl" data-testid="conflict-dialog">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto" data-testid="conflict-dialog">
         <DialogHeader>
           <DialogTitle>Someone changed this event</DialogTitle>
           <DialogDescription>

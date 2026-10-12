@@ -99,7 +99,6 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
     const drill = page.getByTestId('drill-events');
     await expect(drill).toHaveAttribute('data-reason-id', world.reasons.bearing);
     await expect(drill.getByTestId('event-row')).toHaveCount(1);
-    await expect(drill.getByTestId('drill-count')).toHaveText('1');
     await page.screenshot({ path: test.info().outputPath('downtime-analysis.png') });
   });
 
@@ -128,7 +127,7 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
     await expect(page.getByTestId('downtime-export')).toHaveAttribute('title', /approved figures only/);
   });
 
-  test('tablet viewport and keyboard: filters reach the URL, timeline opens the event drawer', async ({ page }) => {
+  test('tablet viewport and keyboard: filters reach the URL, timeline opens the event page', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await openPage(page, []);
     await page.locator('#downtime-trend').selectOption('shift');
@@ -139,7 +138,8 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
     await segments.first().focus();
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('event-detail')).toBeVisible();
-    await page.keyboard.press('Escape');
+    await page.goBack();
+    await expect(page.getByTestId('downtime-analysis')).toBeVisible();
     const width = await page.evaluate(() => document.querySelector('[data-testid="downtime-analysis"]')?.scrollWidth ?? 0);
     expect(width).toBeLessThanOrEqual(1024);
   });

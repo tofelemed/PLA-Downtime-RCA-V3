@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { humanize } from '../model/event-states';
+import { labelOf, PHYSICAL_TYPE_LABELS } from '@/features/ux-kit/labels';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { CommandError } from './command-error';
 
@@ -38,7 +38,7 @@ export function MergeDialog({ events, onClose, onDone }: MergeDialogProps) {
   };
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent data-testid="merge-dialog">
+      <DialogContent className="max-h-[90vh] overflow-y-auto" data-testid="merge-dialog">
         <DialogHeader>
           <DialogTitle>Merge {events.length} events</DialogTitle>
           <DialogDescription>One event spans the union; the merged events become superseded. One unit only.</DialogDescription>
@@ -46,7 +46,7 @@ export function MergeDialog({ events, onClose, onDone }: MergeDialogProps) {
         <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
           {ordered.map((event) => (
             <li key={event.id}>
-              <PlantTime iso={event.startTime} tz={env.timezone} withDate /> · {env.unitName(event.unitId)} · {humanize(event.classification.physicalType)}
+              <PlantTime iso={event.startTime} tz={env.timezone} withDate /> · {env.unitName(event.unitId)} · {labelOf(PHYSICAL_TYPE_LABELS, event.classification.physicalType)}
             </li>
           ))}
         </ul>

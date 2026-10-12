@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -58,6 +58,21 @@ export class CloseEventV2Dto extends OperationReasonDto {
   })
   @IsISO8601({ strict: true })
   endTime!: string;
+}
+
+/** `POST /api/v2/production-events/{id}/retract` (with `If-Match`). */
+export class RetractEventV2Dto {
+  @ApiProperty({
+    maxLength: 500,
+    description: 'Why the event is retracted (kept in the retraction revision)',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  reason!: string;
 }
 
 /** An event and the `rowVersion` (ETag) the caller read. */

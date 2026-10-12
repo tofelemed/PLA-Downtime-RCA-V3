@@ -131,7 +131,7 @@ describe('event form (plan 3.2 step 3)', () => {
     });
     expect(serverFormErrors(conflict)).toEqual({ fields: { durationMinutes: 'Duration does not match the end' }, form: null });
     const owned = new V2ApiError(409, { code: 'SOURCE_OWNED', message: 'owned by source', correlationId: null, retryable: false });
-    expect(serverFormErrors(owned).form).toBe('owned by source (SOURCE_OWNED)');
+    expect(serverFormErrors(owned).form).toBe('This value comes from the connected source. It is updated by the source system and cannot be edited here.');
     const listed = toV2Error(422, { code: 'END_BEFORE_START', message: ['endTime must be after startTime'] }, null, 'c2');
     expect(listed.message).toBe('endTime must be after startTime');
     const stale = new StaleRevisionError({ code: 'STALE_REVISION', message: 'stale', correlationId: null, retryable: false }, 4);
@@ -140,9 +140,9 @@ describe('event form (plan 3.2 step 3)', () => {
 });
 
 describe('state chips (DT11)', () => {
-  it('shows the three server states with text labels; unknown values as sent', () => {
-    const chips = stateChips({ physical: 'open', coding: 'uncoded', rca: 'mystery' });
-    expect(chips.map((chip) => chip.label)).toEqual(['Running', 'Uncoded', 'mystery']);
+  it('shows the three server states with text labels; unknown values humanized, never hidden', () => {
+    const chips = stateChips({ physical: 'open', coding: 'uncoded', rca: 'mystery_state' });
+    expect(chips.map((chip) => chip.label)).toEqual(['Running', 'Uncoded', 'Mystery state']);
     expect(chips.map((chip) => chip.dimension)).toEqual(['physical', 'coding', 'rca']);
   });
 });

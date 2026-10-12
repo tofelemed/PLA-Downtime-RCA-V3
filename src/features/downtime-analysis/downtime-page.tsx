@@ -1,12 +1,11 @@
-import { lazy, Suspense, useState } from 'react';
-import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
+import { lazy, Suspense, useMemo, useState } from 'react';
+import type { ProductionEventView } from '@/api/v2/types/events';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DataState } from '@/features/ux-kit/data-state';
+import { CloseStopDialog } from '@/features/event-hub/components/close-stop-dialog';
 import { CurrentStopsPanel } from '@/features/event-hub/components/current-stops-panel';
-import { EventDetailDrawer } from '@/features/event-hub/components/event-detail-drawer';
-import { EventHubDialogs } from '@/features/event-hub/components/event-hub-dialogs';
-import { EventHubEnvProvider } from '@/features/event-hub/event-hub-env';
-import { defaultFilters } from '@/features/event-hub/model/event-filters';
+import { EventHubFrame } from '@/features/event-hub/event-hub-frame';
+import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { Page } from '@/features/ux-kit/page-layout';
 import { BadActors } from './components/bad-actors';
 import { CalendarComparison } from './components/calendar-comparison';
 import { CrewComparison } from './components/crew-comparison';
@@ -17,68 +16,62 @@ import { KpiSummary } from './components/kpi-summary';
 import { ReasonPareto } from './components/reason-pareto';
 import { ReliabilityCard } from './components/reliability-card';
 import { TrendPanel } from './components/trend-panel';
+import { useDowntimeBundle } from './hooks/use-downtime-bundle';
 import { useDowntimeFilters } from './hooks/use-downtime-filters';
-import { useEventActions, type EventActions } from './hooks/use-event-actions';
-import { toSearchParams, type DowntimeFilters } from './model/downtime-filters';
+import { bundleQuery, pageViews } from './model/bundle-views';
+import { toSearchParams } from './model/downtime-filters';
 import type { DrillSelection } from './model/reason-drill';
 
 const StateTimeline = lazy(() => import('./components/state-timeline').then((module) => ({ default: module.StateTimeline })));
 
 /**
- * Downtime Analysis (plan 3.3, AN01) behind the `v2.downtimeAnalysis` flag: what is down, why, how
- * often, where and whether it is improving — every figure from the v2 report read models, filters in
- * the URL, drill-through to the events of the same scope.
+ * Downtime Analysis (plan 3.3, AN01): what is down, why, how often, where and whether it is improving.
+ * The summary, bad actors, crews and trend share one bundle response (T24, one request); the Pareto,
+ * reliability and the previous-window column are their own reads. Filters live in the URL; events open
+ * as their own page and Back returns here.
  */
 export function DowntimeAnalysisPage() {
-  const tenantId = useV2TenantId();
-  if (!tenantId) return <DataState state="no-permission" detail="Choose a plant (tenant) to analyse its downtime." />;
   return (
-    <EventHubEnvProvider tenantId={tenantId}>
+    <EventHubFrame noTenantText="Choose a plant to analyse its downtime.">
       <DowntimeScreen />
-    </EventHubEnvProvider>
+    </EventHubFrame>
   );
 }
 
 function DowntimeScreen() {
+  const env = useEventHubEnv();
   const { filters, change } = useDowntimeFilters();
-  const actions = useEventActions();
   const filterKey = toSearchParams(filters).toString();
+  const views = useMemo(() => pageViews(filters), [filters]);
+  const bundle = useDowntimeBundle(useMemo(() => bundleQuery(filters), [filters]), env.timezone);
   const [drill, setDrill] = useState<{ key: string; selection: DrillSelection } | null>(null);
+  const [closing, setClosing] = useState<ProductionEventView | null>(null);
   const selection = drill && drill.key === filterKey ? drill.selection : null;
   return (
-    <div className="space-y-4" data-testid="downtime-analysis">
-      <DowntimeHeader filters={filters} />
-      <DowntimeFiltersBar filters={filters} onChange={change} />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="space-y-4">
-          <KpiSummary filters={filters} />
-          <ReliabilityCard filters={filters} />
+    <Page width="wide">
+      <div className="space-y-6" data-testid="downtime-analysis">
+        <DowntimeHeader filters={filters} bundle={bundle} />
+        <DowntimeFiltersBar filters={filters} onChange={change} />
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="min-w-0 space-y-6">
+            <KpiSummary bundle={bundle} />
+            <ReliabilityCard filters={filters} />
+          </div>
+          <CurrentStopsPanel unitIds={filters.unitIds} onClose={setClosing} />
         </div>
-        <CurrentlyDown filters={filters} actions={actions} />
+        <ReasonPareto filters={filters} onChange={change} onEvents={(next) => setDrill({ key: filterKey, selection: next })} />
+        {selection && <DrillEvents filters={filters} selection={selection} onDismiss={() => setDrill(null)} />}
+        <TrendPanel filters={filters} bundle={bundle} views={views} />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <BadActors bundle={bundle} views={views} />
+          <CrewComparison bundle={bundle} views={views} />
+        </div>
+        <CalendarComparison filters={filters} bundle={bundle} />
+        <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+          <StateTimeline filters={filters} />
+        </Suspense>
+        {closing && <CloseStopDialog event={closing} onClose={() => setClosing(null)} onDone={() => setClosing(null)} />}
       </div>
-      <ReasonPareto filters={filters} onChange={change} onEvents={(next) => setDrill({ key: filterKey, selection: next })} />
-      {selection && <DrillEvents filters={filters} selection={selection} onOpen={actions.openDetail} onDismiss={() => setDrill(null)} />}
-      <TrendPanel filters={filters} />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <BadActors filters={filters} />
-        <CrewComparison filters={filters} />
-      </div>
-      <CalendarComparison filters={filters} />
-      <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-        <StateTimeline filters={filters} onOpen={actions.openDetail} />
-      </Suspense>
-      <EventDetailDrawer
-        eventId={actions.detailId}
-        onOpenChange={(open) => !open && actions.openDetail(null)}
-        onAction={(action, event) => actions.openDialog(action === 'edit' ? { kind: 'form', eventId: event.id } : { kind: action, event })}
-      />
-      <EventHubDialogs dialog={actions.dialog} selectedEvents={[]} defaultUnitId="" onClose={actions.closeDialog} onSettled={actions.settle} />
-    </div>
+    </Page>
   );
-}
-
-/** Currently down (AN01): the 3.2 current-stops panel for the same units — elapsed as of the server. */
-function CurrentlyDown({ filters, actions }: { filters: DowntimeFilters; actions: EventActions }) {
-  const stopsFilter = { ...defaultFilters({ from: filters.from, to: filters.to, label: filters.windowLabel }), unitIds: filters.unitIds };
-  return <CurrentStopsPanel filters={stopsFilter} onOpen={actions.openDetail} onClose={(event) => actions.openDialog({ kind: 'close', event })} />;
 }

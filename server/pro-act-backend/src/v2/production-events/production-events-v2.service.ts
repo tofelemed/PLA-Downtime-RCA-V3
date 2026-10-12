@@ -28,6 +28,8 @@ import {
   ProductionEventV2View,
   toProductionEventV2View,
 } from './production-event-v2.view';
+import { ProductionEventExportQueryDto } from './production-event-export-query.dto';
+import { EventCsv, exportEventsCsv } from './production-events-export';
 
 const DEFAULT_SORT: SortSpec<ProductionEventSortField> = {
   field: 'startTime',
@@ -89,6 +91,14 @@ export class ProductionEventsV2Service {
       },
       asOf,
     );
+  }
+
+  /** CSV of the filtered list (same scoped query and filters; window required, ≤ 50,000 rows). */
+  exportCsv(
+    context: RequestContext,
+    query: ProductionEventExportQueryDto,
+  ): Promise<EventCsv> {
+    return exportEventsCsv(this.events, context, query);
   }
 
   /**

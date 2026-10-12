@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
+import { backToList, eventRowOf, fillPlantTime, openEventRow } from './personas/support/event-hub-ui';
 
 /**
  * Plan 3.2 exit test — UX04 operator journey on the v2 Event Hub (flag `v2.eventHub` switched on through
@@ -63,7 +64,7 @@ async function openHub(page: Page, unitName: string): Promise<void> {
   await page.keyboard.press('Escape');
 }
 
-const row = (page: Page, id: string) => page.locator(`[data-testid="event-row"][data-event-id="${id}"]`);
+const row = (page: Page, id: string) => eventRowOf(page, id);
 const stop = (page: Page, id: string) => page.locator(`[data-testid="current-stop"][data-event-id="${id}"]`);
 
 async function codeReason(page: Page, reasonId: string): Promise<void> {
@@ -116,7 +117,7 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     await expect(stop(page, stopId).getByTestId('current-stop-elapsed')).toHaveText(/\d+:\d{2}/);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath('event-hub-v2.png'), fullPage: true });
-    await stop(page, stopId).getByRole('button', { name: 'Open' }).click();
+    await stop(page, stopId).getByRole('link', { name: 'Open' }).click();
     await codeReason(page, world.reasonA);
     await expect(page.getByTestId('event-detail').getByLabel('Coding state: Coded')).toBeVisible();
 
@@ -131,22 +132,21 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     const running = result.events.find((event) => event.isOpen);
     const ended = result.events.find((event) => !event.isOpen);
     expect(running && ended).toBeTruthy();
+    await backToList(page);
     await expect(row(page, running!.id)).toBeVisible();
     await expect(row(page, ended!.id)).toBeVisible();
     await expect(row(page, stopId)).toHaveCount(0);
 
-    await page.keyboard.press('Escape');
-    await row(page, running!.id).getByRole('button').first().click();
+    await openEventRow(page, running!.id);
     await codeReason(page, world.reasonB);
+    await backToList(page);
     await expect(row(page, running!.id).getByTestId('event-reason')).toContainText('Motor trip');
 
-    await page.keyboard.press('Escape');
     await stop(page, running!.id).getByRole('button', { name: 'Close stop' }).click();
     const close = page.getByTestId('close-dialog');
     await close.locator('#close-reason').fill('motor reset');
     await close.getByRole('button', { name: 'Close stop' }).click();
     await expect(stop(page, running!.id)).toHaveCount(0);
-    await page.keyboard.press('Escape');
     await expect(row(page, running!.id).getByTestId('event-duration')).not.toContainText('Running');
 
     // realtime: an event written elsewhere appears without a manual refresh
@@ -163,7 +163,7 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     const eventId = created.body.id;
     await loginViaUI(page, OPERATOR.email, OPERATOR.password);
     await openHub(page, world.unitName);
-    await row(page, eventId).getByRole('button').first().click();
+    await openEventRow(page, eventId);
     await page.getByTestId('event-detail').getByRole('button', { name: 'Edit / code' }).click();
     await page.getByTestId('event-form').locator('#description').fill('mine: belt slipped');
 
@@ -172,7 +172,7 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     expect(theirs.status).toBe(200);
     await page.reload();
     await openHub(page, world.unitName);
-    await row(page, eventId).getByRole('button').first().click();
+    await openEventRow(page, eventId);
     await page.getByTestId('event-detail').getByRole('button', { name: 'Edit / code' }).click();
     const form = page.getByTestId('event-form');
     await expect(form.getByTestId('draft-restored')).toBeVisible();
@@ -194,16 +194,16 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await loginViaUI(page, OPERATOR.email, OPERATOR.password);
     await openHub(page, world.unitName);
-    await page.getByRole('button', { name: 'New event' }).click();
+    await page.getByRole('link', { name: 'New event' }).click();
     const form = page.getByTestId('event-form');
     await expect(form.locator('#unitId')).toHaveValue(world.unitId);
-    await form.locator('#startLocal').fill('2026-10-01T08:00');
-    await form.locator('#endLocal').fill('2026-10-01T09:00');
+    await fillPlantTime(form, 'Start', '2026-10-01T08:00');
+    await fillPlantTime(form, 'End (empty = still running)', '2026-10-01T09:00');
     await form.locator('#durationMinutes').fill('30');
     await form.getByRole('button', { name: 'Save' }).click();
     await expect(form.getByTestId('error-durationMinutes')).toBeVisible();
-    // keyboard: the dialog closes with Escape and focus returns to the page
-    await page.keyboard.press('Escape');
+    // the form is a page: "Keep draft and close" returns to the list
+    await form.getByRole('button', { name: 'Keep draft and close' }).click();
     await expect(form).toBeHidden();
   });
 });

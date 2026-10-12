@@ -26,6 +26,7 @@ import {
   BulkCodeV2Dto,
   CloseEventV2Dto,
   MergeEventsV2Dto,
+  RetractEventV2Dto,
   SplitEventV2Dto,
 } from './event-operations-v2.dto';
 import { EventOperationView } from './event-operation.view';
@@ -132,5 +133,27 @@ export class ProductionEventOperationsV2Controller {
     @Body() body: CloseEventV2Dto,
   ): Promise<EventOperationView> {
     return this.operations.close(ctx, id, expectedVersion, body);
+  }
+
+  @Post(':id/retract')
+  @Idempotent()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Retract a manual event (v2 equivalent of the v1 delete)',
+    description:
+      'Events are append-only: the event is tombstoned (physical state `retracted`, a `retraction` revision) ' +
+      'and its window is recalculated; nothing is deleted. 409 SOURCE_OWNED for events delivered by a ' +
+      'connected source (their source retracts them); 409 INVALID_STATE when already superseded or retracted; ' +
+      '412 STALE_REVISION; 404 for foreign or unknown ids.',
+  })
+  @ApiHeader(IDEMPOTENCY_HEADER)
+  @ApiHeader(IF_MATCH_HEADER)
+  retract(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @IfMatch() expectedVersion: number,
+    @Body() body: RetractEventV2Dto,
+  ): Promise<EventOperationView> {
+    return this.operations.retract(ctx, id, expectedVersion, body);
   }
 }

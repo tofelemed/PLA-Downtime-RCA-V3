@@ -1,7 +1,8 @@
-import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { UiIcon } from '@/lib/icons';
 
 export interface CheckOption {
   value: string;
@@ -16,22 +17,36 @@ export interface MultiCheckSelectProps {
   selected: readonly string[];
   onChange: (next: string[]) => void;
   testId?: string;
+  /**
+   * true: ticks are collected while the list is open and sent once when it closes (one request per
+   * choice instead of one per tick); default false sends every tick.
+   */
+  commitOnClose?: boolean;
 }
 
+const sameSelection = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((value) => b.includes(value));
+
 /** Multi-value filter (OR within one dimension, server-side); keyboard reachable checkboxes. */
-export function MultiCheckSelect({ label, options, selected, onChange, testId }: MultiCheckSelectProps) {
-  const toggle = (value: string, checked: boolean) =>
-    onChange(checked ? [...selected, value] : selected.filter((entry) => entry !== value));
-  const summary = selected.length === 0 ? 'All' : `${selected.length} selected`;
+export function MultiCheckSelect({ label, options, selected, onChange, testId, commitOnClose = false }: MultiCheckSelectProps) {
+  const [draft, setDraft] = useState<readonly string[] | null>(null);
+  const current = draft ?? selected;
+  const emit = (next: string[]) => (commitOnClose ? setDraft(next) : onChange(next));
+  const toggle = (value: string, checked: boolean) => emit(checked ? [...current, value] : current.filter((entry) => entry !== value));
+  const onOpenChange = (open: boolean) => {
+    if (open || draft === null) return;
+    if (!sameSelection(draft, selected)) onChange([...draft]);
+    setDraft(null);
+  };
+  const summary = current.length === 0 ? 'All' : `${current.length} selected`;
   return (
-    <Popover>
+    <Popover onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" data-testid={testId} aria-label={`${label}: ${summary}`}>
           {label}: {summary}
-          <ChevronDown className="ml-1 h-3 w-3" aria-hidden />
+          <UiIcon.expand className="ml-1 h-3 w-3" aria-hidden />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 max-h-80 overflow-y-auto p-2" align="start">
+      <PopoverContent className="max-h-80 w-72 overflow-y-auto p-2" align="start">
         <fieldset>
           <legend className="sr-only">{label}</legend>
           {options.length === 0 && <p className="p-2 text-sm text-muted-foreground">Nothing to choose</p>}
@@ -44,17 +59,13 @@ export function MultiCheckSelect({ label, options, selected, onChange, testId }:
                 className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted"
                 style={{ paddingLeft: `${0.5 + (option.level ?? 0) * 0.75}rem` }}
               >
-                <Checkbox
-                  id={id}
-                  checked={selected.includes(option.value)}
-                  onCheckedChange={(checked) => toggle(option.value, checked === true)}
-                />
+                <Checkbox id={id} checked={current.includes(option.value)} onCheckedChange={(checked) => toggle(option.value, checked === true)} />
                 {option.label}
               </label>
             );
           })}
-          {selected.length > 0 && (
-            <Button variant="ghost" size="sm" className="mt-1 w-full" onClick={() => onChange([])}>
+          {current.length > 0 && (
+            <Button variant="ghost" size="sm" className="mt-1 w-full" onClick={() => emit([])}>
               Clear
             </Button>
           )}
