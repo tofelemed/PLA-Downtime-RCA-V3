@@ -29,10 +29,13 @@ async function openUsers(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Users', level: 1 })).toBeVisible({ timeout: 60_000 });
 }
 
+/** The Name field; required fields add a screen-reader " (required)" to the label. */
+const nameField = (page: Page) => page.getByRole('textbox', { name: /^Name( \(required\))?$/ });
+
 async function fillUserDialog(page: Page, user: { name: string; email: string; password: string }): Promise<void> {
   await page.getByRole('link', { name: 'Add user' }).click();
   await expect(page.getByRole('heading', { name: 'Add user', level: 1 })).toBeVisible({ timeout: 60_000 });
-  await page.getByLabel('Name', { exact: true }).fill(user.name);
+  await nameField(page).fill(user.name);
   await page.getByLabel('E-mail').fill(user.email);
   await page.getByLabel('Password').fill(user.password);
 }
@@ -82,7 +85,7 @@ test.describe('Manager persona — users and the MQTT demo connection', () => {
 
   test('J8b the new operator signs in through the login form and sees the operator menu', async ({ page }) => {
     await loginViaUI(page, operator.email, operator.password);
-    await expect(page.locator('header')).toBeVisible();
+    await expect(page.getByRole('banner')).toBeVisible(); // the app header (the dashboard has its own <header>)
     await expect(page.locator('nav a[href="/events"]')).toBeVisible();
     await expect(page.locator('nav a[href="/users"]')).toHaveCount(0);
     await expect(page.locator('nav a[href="/planning"]')).toHaveCount(0);
@@ -126,7 +129,7 @@ test.describe('Manager persona — users and the MQTT demo connection', () => {
     await expect(page.locator('nav a[href="/connectivity"]')).toHaveCount(0);
     await expect(page.locator('nav a[href="/users"]')).toHaveCount(0);
     await page.goto('/connectivity');
-    await expect(page.locator('header')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole('banner')).toBeVisible({ timeout: 60_000 }); // the app header (pages have their own <header>)
     const console = page.getByTestId('integration-console');
     const opened = await console.isVisible().catch(() => false);
     test.info().annotations.push({ type: 'observation', description: opened ? 'Manager can open /connectivity directly (menu hides it)' : 'Manager is refused on /connectivity' });
@@ -149,12 +152,13 @@ test.describe('Manager persona — users and the MQTT demo connection', () => {
     await loginViaUI(page, ADMINS.anna.email, ADMINS.anna.password);
     await openUsers(page);
     await page.getByLabel('Search users by name or e-mail').fill('grace');
-    const row = page.getByRole('row', { name: new RegExp(graceEmail, 'i') });
+    // rows are labelled "Open <name>"; the e-mail is in the name cell
+    const row = page.getByRole('row').filter({ hasText: new RegExp(graceEmail, 'i') });
     await expect(row).toBeVisible({ timeout: 30_000 });
     await expect(row.getByText('From Demo Plant 2')).toBeVisible();
     await row.click();
     await expect(page.getByText(/Home plant: Demo Plant 2/)).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByLabel('Name', { exact: true })).toBeDisabled();
+    await expect(nameField(page)).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Grant access' })).toBeVisible();
   });
 

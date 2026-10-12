@@ -17,13 +17,15 @@ interface UserRecord {
 }
 
 const TARGET_EMAIL = 'kenji.nakamura@demo.acme.com'; // viewer persona, home plant Demo Plant 2
-/** A row of the users / permissions tables (v2 DataTable rows carry the user's name and e-mail). */
-const userRow = (page: Page, text: string) => page.getByRole('row', { name: new RegExp(text, 'i') });
+/** A row of the users table holding this text (rows are labelled "Open <name>"; the e-mail is in the cell). */
+const userRow = (page: Page, text: string) => page.getByRole('row').filter({ hasText: new RegExp(text, 'i') });
+/** The Name field; required fields add a screen-reader " (required)" to the label. */
+const nameField = (page: Page) => page.getByRole('textbox', { name: /^Name( \(required\))?$/ });
 
 /** The user's own page (`/users/:userId`, was the "Edit User" dialog): rename and save. */
 async function renameViaUi(page: Page, userId: string, name: string): Promise<void> {
   await page.goto(`/users/${userId}`);
-  const field = page.getByLabel('Name', { exact: true });
+  const field = nameField(page);
   await expect(field).toBeVisible({ timeout: 60_000 });
   await field.fill(name);
   await page.getByRole('button', { name: 'Save changes' }).click();
@@ -89,7 +91,7 @@ test.describe('ADM-04 users and permissions', () => {
   test('ADM-04c validation: a new user needs a valid e-mail', async ({ page }) => {
     await signIn(page, USERS.sofia);
     await page.goto('/users/new');
-    await page.getByLabel('Name', { exact: true }).fill('P-ADM should not be created');
+    await nameField(page).fill('P-ADM should not be created');
     await page.getByLabel('E-mail').fill('not-an-email');
     await page.getByLabel('Password').fill('x');
     await page.getByRole('button', { name: 'Create user' }).click();
