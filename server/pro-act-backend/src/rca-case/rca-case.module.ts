@@ -9,6 +9,9 @@ import { RcaCaseLink } from '../rca/entities/rca-case-link.entity';
 import { RcaTriggerEvaluation } from '../rca/entities/rca-trigger-evaluation.entity';
 import { RCA } from '../rca/rca.entity';
 import { RcaActionsService } from './rca-actions.service';
+import { RcaAnalysesService } from './rca-analyses.service';
+import { RcaAttachmentsService } from './rca-attachments.service';
+import { RcaCaseCommandsService } from './rca-case-commands.service';
 import { RcaCasesService } from './rca-cases.service';
 import { RcaLinksService } from './rca-links.service';
 import { RcaRecommendationsService } from './rca-recommendations.service';
@@ -37,6 +40,9 @@ import { RcaTriggerService } from './triggers/rca-trigger.service';
   ],
   providers: [
     RcaCasesService,
+    RcaCaseCommandsService,
+    RcaAnalysesService,
+    RcaAttachmentsService,
     RcaLinksService,
     RcaRecommendationsService,
     RcaActionsService,
@@ -47,6 +53,9 @@ import { RcaTriggerService } from './triggers/rca-trigger.service';
   ],
   exports: [
     RcaCasesService,
+    RcaCaseCommandsService,
+    RcaAnalysesService,
+    RcaAttachmentsService,
     RcaLinksService,
     RcaRecommendationsService,
     RcaActionsService,

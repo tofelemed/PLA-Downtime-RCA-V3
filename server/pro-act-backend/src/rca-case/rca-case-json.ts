@@ -3,6 +3,17 @@
  * v1 stored them as JSON text in `rcas`; v2 keeps the same columns and reads both shapes, picking only
  * the known fields (never inventing values: a missing field stays null).
  */
+import {
+  bool,
+  parseArray,
+  Raw,
+  strings,
+  text,
+  decimalText,
+} from './rca-json-read';
+
+export { parseArray, parseObject, readIds } from './rca-json-read';
+
 export interface RcaRecommendationItem {
   id: string;
   title: string;
@@ -11,6 +22,25 @@ export interface RcaRecommendationItem {
   ownerId: string | null;
   dueDate: string | null;
   status: string | null;
+  estimatedCost: string | null;
+}
+
+export interface RcaEvidenceSeries {
+  provider: string | null;
+  streams: string | null;
+  mode: string | null;
+  start: string | null;
+  end: string | null;
+  interval: string | null;
+  intervals: number | null;
+  summaryTypes: string | null;
+}
+
+export interface RcaEvidenceAttachment {
+  fileName: string;
+  name: string;
+  contentType: string | null;
+  size: number | null;
 }
 
 export interface RcaEvidenceItem {
@@ -21,6 +51,20 @@ export interface RcaEvidenceItem {
   source: string | null;
   collectedAt: string | null;
   collectedBy: string | null;
+  category: string | null;
+  location: string | null;
+  occurredAt: string | null;
+  assetId: string | null;
+  severity: string | null;
+  tags: string[];
+  verified: boolean | null;
+  fiveP: string | null;
+  task: string | null;
+  taskDueDate: string | null;
+  taskStatus: string | null;
+  nodeIds: string[];
+  timeSeries: RcaEvidenceSeries | null;
+  attachments: RcaEvidenceAttachment[];
 }
 
 export interface RcaLogicNode {
@@ -30,31 +74,9 @@ export interface RcaLogicNode {
   kind: string | null;
   status: string | null;
   notes: string | null;
-}
-
-type Raw = Record<string, unknown>;
-
-const text = (value: unknown): string | null =>
-  typeof value === 'string' && value.length > 0
-    ? value
-    : typeof value === 'number'
-      ? String(value)
-      : null;
-
-function parseArray(stored: unknown): Raw[] {
-  let value = stored;
-  if (typeof stored === 'string') {
-    try {
-      value = JSON.parse(stored) as unknown;
-    } catch {
-      return [];
-    }
-  }
-  if (!Array.isArray(value)) return [];
-  return value.filter(
-    (entry): entry is Raw =>
-      typeof entry === 'object' && entry !== null && !Array.isArray(entry),
-  );
+  code: string | null;
+  description: string | null;
+  verified: boolean | null;
 }
 
 export function readRecommendations(stored: unknown): RcaRecommendationItem[] {
@@ -66,7 +88,49 @@ export function readRecommendations(stored: unknown): RcaRecommendationItem[] {
     ownerId: text(raw.ownerId) ?? text(raw.assigneeId),
     dueDate: text(raw.dueDate),
     status: text(raw.status),
+    estimatedCost: decimalText(raw.estimatedCost),
   }));
+}
+
+/** v2 `timeSeries` object, or the flat `ts*` fields of the v1 evidence form. */
+function readSeries(raw: Raw): RcaEvidenceSeries | null {
+  const nested = raw.timeSeries;
+  const source: Raw =
+    typeof nested === 'object' && nested !== null && !Array.isArray(nested)
+      ? (nested as Raw)
+      : {
+          provider: raw.tsProvider,
+          streams: raw.tsStreamsNote,
+          mode: raw.tsMode,
+          start: raw.tsStart,
+          end: raw.tsEnd,
+          interval: raw.tsInterval,
+          intervals: raw.tsIntervals,
+          summaryTypes: raw.tsSummaryTypes,
+        };
+  const series: RcaEvidenceSeries = {
+    provider: text(source.provider),
+    streams: text(source.streams),
+    mode: text(source.mode),
+    start: text(source.start),
+    end: text(source.end),
+    interval: text(source.interval),
+    intervals: typeof source.intervals === 'number' ? source.intervals : null,
+    summaryTypes: text(source.summaryTypes),
+  };
+  return series.start || series.end || series.streams ? series : null;
+}
+
+/** Stored attachments (upload references); inline v1 data URLs are not carried. */
+function readAttachments(stored: unknown): RcaEvidenceAttachment[] {
+  return parseArray(stored)
+    .filter((raw) => text(raw.fileName) !== null)
+    .map((raw) => ({
+      fileName: text(raw.fileName) as string,
+      name: text(raw.name) ?? (text(raw.fileName) as string),
+      contentType: text(raw.contentType) ?? text(raw.type),
+      size: typeof raw.size === 'number' ? raw.size : null,
+    }));
 }
 
 export function readEvidence(stored: unknown): RcaEvidenceItem[] {
@@ -78,32 +142,41 @@ export function readEvidence(stored: unknown): RcaEvidenceItem[] {
     source: text(raw.source),
     collectedAt: text(raw.collectedAt),
     collectedBy: text(raw.collectedBy),
+    category: text(raw.category),
+    location: text(raw.location),
+    occurredAt: text(raw.occurredAt) ?? text(raw.timestamp),
+    assetId: text(raw.assetId) ?? text(raw.relatedAssetId),
+    severity: text(raw.severity),
+    tags: strings(raw.tags),
+    verified: bool(raw.verified),
+    fiveP: text(raw.fiveP),
+    task: text(raw.task),
+    taskDueDate: text(raw.taskDueDate) ?? text(raw.dueDate),
+    taskStatus: text(raw.taskStatus) ?? text(raw.status),
+    nodeIds: strings(raw.nodeIds),
+    timeSeries: readSeries(raw),
+    attachments: readAttachments(raw.attachments),
   }));
 }
 
+/** v2 nodes, and the v1 screen's flat nodes (`question`, `answer`, `type`, `note`, `finding`). */
 export function readLogicTree(stored: unknown): RcaLogicNode[] {
   return parseArray(stored).map((raw, index) => ({
     id: text(raw.id) ?? `node-${index + 1}`,
     parentId: text(raw.parentId),
-    label: text(raw.label) ?? text(raw.title) ?? text(raw.description) ?? '',
-    kind: text(raw.kind) ?? text(raw.type),
+    label:
+      text(raw.label) ??
+      text(raw.title) ??
+      text(raw.question) ??
+      text(raw.name) ??
+      '',
+    kind: text(raw.kind) ?? text(raw.type) ?? text(raw.category),
     status: text(raw.status),
-    notes: text(raw.notes),
+    notes: text(raw.notes) ?? text(raw.note),
+    code: text(raw.code),
+    description: text(raw.description) ?? text(raw.answer),
+    verified: bool(raw.verified) ?? bool(raw.finding),
   }));
-}
-
-export function readIds(stored: unknown): string[] {
-  if (Array.isArray(stored))
-    return stored.filter((id): id is string => typeof id === 'string');
-  if (typeof stored !== 'string') return [];
-  try {
-    const parsed = JSON.parse(stored) as unknown;
-    return Array.isArray(parsed)
-      ? parsed.filter((id): id is string => typeof id === 'string')
-      : [];
-  } catch {
-    return [];
-  }
 }
 
 /** Items without undefined members, as stored JSON text. */

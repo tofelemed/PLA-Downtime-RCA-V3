@@ -37,14 +37,13 @@ async function openStop(page: Page): Promise<void> {
   await page.getByTestId('filter-units').click();
   await page.getByRole('checkbox', { name: world.unitName }).click();
   await page.keyboard.press('Escape');
-  await page.locator(`[data-testid="current-stop"][data-event-id="${world.stopId}"]`).getByRole('button', { name: 'Open' }).click();
+  await page.locator(`[data-testid="current-stop"][data-event-id="${world.stopId}"]`).getByRole('link', { name: 'Open' }).click();
   await expect(page.getByTestId('event-detail')).toBeVisible();
 }
 
 async function openCase(page: Page, tab?: string): Promise<void> {
-  await page.goto(`/rca?case=${caseId}`);
-  await expect(page.getByTestId('rca-v2')).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByTestId('case-title')).toBeVisible();
+  await page.goto(`/rca/${caseId}`);
+  await expect(page.getByTestId('case-detail')).toBeVisible({ timeout: 60_000 });
   if (tab) await page.getByTestId(`tab-${tab}`).click();
 }
 
@@ -79,13 +78,13 @@ test.describe('RCA integration — RCA01–03 (plan 3.9)', () => {
     await expect(panel.getByTestId('rca-recommendations')).toContainText('Long unplanned stop · RCA policy v');
     await expect(panel.getByTestId('rca-recommendations')).toContainText('provisional');
     await panel.getByTestId('open-link-rca').click();
-    const dialog = page.getByTestId('link-rca-dialog');
-    await expect(dialog.getByTestId('evidence-package')).toBeVisible();
-    await dialog.getByRole('tab', { name: 'New case' }).click();
-    await dialog.locator('#new-case-title').fill(`E2E RCA case ${world.suffix}`);
-    await dialog.getByTestId('link-rca-submit').click();
-    await expect(panel.getByRole('status')).toContainText(`Linked to E2E RCA case ${world.suffix}`);
-    await expect(panel.getByTestId('rca-recommendations')).toHaveCount(0); // accepted by the link
+    await expect(page).toHaveURL(/\/rca\/new\?eventId=/);
+    await expect(page.getByTestId('evidence-package')).toBeVisible({ timeout: 60_000 });
+    await page.locator('#case-title').fill(`E2E RCA case ${world.suffix}`);
+    await page.getByTestId('link-rca-submit').click();
+    await expect(page.getByRole('heading', { name: `E2E RCA case ${world.suffix}`, level: 1 })).toBeVisible({ timeout: 60_000 });
+    await openStop(page);
+    await expect(page.getByTestId('event-rca-panel').getByTestId('rca-recommendations')).toHaveCount(0); // accepted by the link
     await page.screenshot({ path: test.info().outputPath('event-rca-linked.png'), fullPage: true });
 
     const found = await call<{ items: Array<{ id: string }> }>(manager, 'GET', `/v2/rcas?q=${encodeURIComponent(world.suffix)}`);
@@ -99,26 +98,31 @@ test.describe('RCA integration — RCA01–03 (plan 3.9)', () => {
     await page.setViewportSize({ width: 1024, height: 768 }); // tablet (UX07)
     await loginViaUI(page, MANAGER.email, MANAGER.password);
     await openCase(page);
-    const recs = page.getByTestId('rec');
-    await recs.getByLabel('Recommendations title').fill('Realign the coupling');
-    await recs.getByRole('button', { name: 'Add' }).click();
-    const evidence = page.getByTestId('ev');
-    await evidence.getByLabel('Evidence title').fill('Vibration trend');
-    await evidence.getByLabel('Evidence Source (tag, document, photo)').fill('P101.VIB');
-    await evidence.getByRole('button', { name: 'Add' }).click();
-    await page.getByLabel('Logic tree node').fill('Pump trips');
-    await page.getByRole('button', { name: 'Add node' }).click();
     await page.locator('#edit-root-cause').fill('Coupling misalignment');
     await page.getByTestId('save-case').click();
     await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
-
-    await openCase(page);
+    await page.goto(`/rca/${caseId}/actions/recommendations/new`);
+    await page.locator('#rec-title').fill('Realign the coupling');
+    await page.getByTestId('save-recommendation').click();
     await expect(page.getByTestId('rec')).toContainText('Realign the coupling');
-    await expect(page.getByTestId('ev')).toContainText('P101.VIB');
+    await page.goto(`/rca/${caseId}/evidence/new`);
+    await page.locator('#ev-title').fill('Vibration trend');
+    await page.locator('#ev-source').fill('P101.VIB');
+    await page.getByTestId('save-evidence').click();
+    await expect(page.getByTestId('evidence-detail')).toContainText('P101.VIB');
+    await page.goto(`/rca/${caseId}/analysis/logic-tree`);
+    await page.getByTestId('add-root-node').click();
+    await page.locator('#node-label').fill('Pump trips');
+    await page.getByTestId('save-node').click();
+
+    await openCase(page, 'actions');
+    await expect(page.getByTestId('rec')).toContainText('Realign the coupling');
+    await page.getByTestId('tab-evidence').click();
+    await expect(page.getByTestId('evidence-list')).toContainText('Vibration trend');
+    await page.goto(`/rca/${caseId}/analysis/logic-tree`);
     await expect(page.getByTestId('logic-tree')).toContainText('Pump trips');
     await page.getByTestId('tab-links').click();
-    const link = page.getByTestId('link-row').first();
-    await expect(link).toContainText(world.stopId);
+    const link = page.locator(`[data-testid="link-row"][data-target-id="${world.stopId}"]`);
     await link.getByRole('button', { name: 'Evidence' }).click();
     await expect(link.getByTestId('evidence-package')).toContainText('Approved impact');
   });
@@ -141,12 +145,12 @@ test.describe('RCA integration — RCA01–03 (plan 3.9)', () => {
     await action.getByTestId('verify-action').click();
     await expect(action.getByTestId('realized')).toContainText('difference 3');
 
-    await page.getByTestId('tab-outcome').click();
+    await page.getByTestId('tab-links').click(); // the outcome sits under "Links & outcome"
     await expect(page.getByTestId('outcome-claimed')).toContainText('1,000.00');
     await expect(page.getByTestId('outcome-realized')).toContainText('Realign coupling: 3');
     await expect(page.getByTestId('outcome-panel')).toContainText('Approved historical loss');
 
-    await page.getByRole('tab', { name: 'Analysis' }).click();
+    await page.getByTestId('tab-overview').click();
     // open the Radix select from the keyboard: a pointer-opened select can swallow an option click made
     // within the same gesture window, leaving the status unchanged (seen once in a repeated run)
     await page.locator('#edit-status').focus();

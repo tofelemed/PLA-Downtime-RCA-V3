@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Column, Index, ManyToOne, JoinColumn, VersionColumn } from 'typeorm';
 import { RCA } from '../../rca/rca.entity';
 
 @Entity('rca_fault_tree_analyses')
@@ -18,6 +18,10 @@ export class RcaFaultTreeAnalysis {
   @ApiProperty({ description: 'Last update timestamp' })
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
+
+  /** v2 ETag / If-Match (`PUT /v2/rcas/{id}/analyses/{tool}`); v1 saves bump it too */
+  @VersionColumn({ name: 'row_version', default: 1 })
+  rowVersion: number;
 
   @ApiProperty({ description: 'Tenant ID', required: false })
   @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })

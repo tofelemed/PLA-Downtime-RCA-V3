@@ -1,48 +1,78 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
+import { Button } from '@/components/ui/button';
+import { downloadText } from '@/features/rca/model/case-export';
 import { DataState } from '@/features/ux-kit/data-state';
-import { useDebouncedValue } from '@/features/ux-kit/use-debounced-value';
-import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
-import { KnowledgeDetail } from './components/knowledge-detail';
+import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { ActionIcon } from '@/lib/icons';
 import { KnowledgeFiltersBar } from './components/knowledge-filters-bar';
-import { KnowledgeList } from './components/knowledge-list';
-import { EMPTY_FILTERS, toKnowledgeQuery } from './model/knowledge-filters';
+import { KnowledgeTable } from './components/knowledge-table';
+import { fetchKnowledgeForExport, knowledgeCsv } from './model/knowledge-export';
+import { filtersFromParams, paramsFromFilters, toKnowledgeQuery, type KnowledgeFilterState } from './model/knowledge-filters';
 
-/**
- * RCA knowledge base on v2 (owner decision 2026-10-12, `v2.rca`): entries written when cases close,
- * searched and paged by the server, with the server's quality score, votes and publish control.
- */
-export function RcaKnowledgePage() {
-  const tenantId = useV2TenantId();
-  if (!tenantId) return <DataState state="no-permission" detail="Choose a plant (tenant) to see its RCA knowledge base." />;
-  return <KnowledgeScreen />;
+function ExportButton({ filters }: { filters: KnowledgeFilterState }) {
+  const [state, setState] = useState<{ busy: boolean; error: unknown; note: string | null }>({ busy: false, error: null, note: null });
+  const run = async () => {
+    setState({ busy: true, error: null, note: null });
+    try {
+      const { entries, truncated } = await fetchKnowledgeForExport(toKnowledgeQuery(filters, filters.text));
+      downloadText(knowledgeCsv(entries), 'rca-knowledge-base.csv', 'text/csv');
+      setState({ busy: false, error: null, note: truncated ? `Exported the first ${entries.length} entries; narrow the filters for the rest.` : null });
+    } catch (error) {
+      setState({ busy: false, error, note: null });
+    }
+  };
+  return (
+    <div className="space-y-2">
+      <Button variant="outline" disabled={state.busy} onClick={() => void run()}>
+        <ActionIcon.export aria-hidden="true" className="mr-1 h-4 w-4" />
+        {state.busy ? 'Exporting…' : 'Export CSV'}
+      </Button>
+      {state.note && <p role="status" className="text-xs text-muted-foreground">{state.note}</p>}
+      {state.error ? <FriendlyErrorAlert error={state.error} /> : null}
+    </div>
+  );
 }
 
 function KnowledgeScreen() {
-  const { timezone } = usePlantTimezone();
   const [params, setParams] = useSearchParams();
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
-  const q = useDebouncedValue(filters.text, 300);
-  const selected = params.get('entry');
+  const legacy = params.get('entry');
+  const filters = filtersFromParams(params);
+  if (legacy) return <Navigate to={`/rca-knowledge-base/${encodeURIComponent(legacy)}`} replace />;
+  const setFilters = (next: KnowledgeFilterState) => setParams(paramsFromFilters(next), { replace: true });
   return (
-    <div className="space-y-4" data-testid="rca-knowledge-v2">
-      <header>
-        <h1 className="text-2xl font-bold">RCA Knowledge Base</h1>
-        <p className="text-sm text-muted-foreground">
-          Learning from closed RCA cases of this plant. Entries are written when a case closes; a reliability engineer or
-          manager publishes them.
-        </p>
-      </header>
-      <KnowledgeFiltersBar value={filters} onChange={setFilters} />
-      <div className="grid gap-4 lg:grid-cols-[24rem_1fr]">
-        <KnowledgeList filters={toKnowledgeQuery(filters, q)} selectedId={selected} onSelect={(id) => setParams({ entry: id })} />
-        {selected ? (
-          <KnowledgeDetail key={selected} id={selected} timezone={timezone} />
-        ) : (
-          <p className="text-sm text-muted-foreground">Select an entry to read its root cause and recommendations.</p>
-        )}
-      </div>
-    </div>
+    <Page width="wide">
+      <PageHeader
+        title="RCA knowledge base"
+        description="Learning from closed RCA cases of this plant. Entries are written when a case closes; a reliability engineer or manager publishes them."
+        actions={<ExportButton filters={filters} />}
+      />
+      <Section title="Entries">
+        <div className="space-y-3" data-testid="rca-knowledge-v2">
+          <KnowledgeFiltersBar value={filters} onChange={setFilters} />
+          <KnowledgeTable
+            filters={toKnowledgeQuery(filters, filters.text)}
+            empty={{
+              title: 'No entries',
+              text: 'No entry matches these filters. Entries appear when RCA cases close.',
+              action: (
+                <Button variant="outline" size="sm" onClick={() => setParams({}, { replace: true })}>
+                  Clear filters
+                </Button>
+              ),
+            }}
+          />
+        </div>
+      </Section>
+    </Page>
   );
+}
+
+/** `/rca-knowledge-base`: entries searched and paged by the server (20 per page), filters in the URL. */
+export function RcaKnowledgePage() {
+  const tenantId = useV2TenantId();
+  if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to see its RCA knowledge base." />;
+  return <KnowledgeScreen />;
 }

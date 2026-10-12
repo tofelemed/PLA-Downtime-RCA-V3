@@ -1,0 +1,138 @@
+import type { RcaEvidenceAttachment, RcaEvidenceItem, RcaEvidenceSeries } from '@/api/v2/types/rca';
+
+export const EVIDENCE_TYPES = ['Photo', 'Document', 'Video', 'Note', 'Time Series'] as const;
+export const FIVE_P = ['Parts', 'Paper', 'People', 'Place', 'Process'] as const;
+export const SEVERITIES = ['Low', 'Medium', 'High', 'Critical'] as const;
+export const SERIES_MODES = ['recorded', 'interpolated', 'summary', 'plot'] as const;
+
+/** What the evidence page edits; text fields hold '' for "not stated". */
+export interface EvidenceForm {
+  title: string;
+  description: string;
+  type: string;
+  source: string;
+  category: string;
+  location: string;
+  /** ISO instant or null */
+  occurredAt: string | null;
+  assetId: string;
+  severity: string;
+  /** comma separated */
+  tags: string;
+  verified: boolean;
+  fiveP: string;
+  task: string;
+  /** ISO calendar date or '' */
+  taskDueDate: string;
+  taskStatus: 'pending' | 'completed';
+  series: SeriesForm;
+  attachments: RcaEvidenceAttachment[];
+}
+
+export interface SeriesForm {
+  streams: string;
+  mode: string;
+  start: string | null;
+  end: string | null;
+  interval: string;
+  intervals: string;
+  summaryTypes: string;
+}
+
+const EMPTY_SERIES: SeriesForm = { streams: '', mode: 'interpolated', start: null, end: null, interval: '', intervals: '100', summaryTypes: '' };
+
+export const EMPTY_EVIDENCE_FORM: EvidenceForm = {
+  title: '',
+  description: '',
+  type: 'Note',
+  source: '',
+  category: '',
+  location: '',
+  occurredAt: null,
+  assetId: '',
+  severity: 'Medium',
+  tags: '',
+  verified: false,
+  fiveP: 'Parts',
+  task: '',
+  taskDueDate: '',
+  taskStatus: 'pending',
+  series: EMPTY_SERIES,
+  attachments: [],
+};
+
+function seriesForm(series: RcaEvidenceSeries | null): SeriesForm {
+  if (!series) return EMPTY_SERIES;
+  return {
+    streams: series.streams ?? '',
+    mode: series.mode ?? 'interpolated',
+    start: series.start,
+    end: series.end,
+    interval: series.interval ?? '',
+    intervals: series.intervals === null ? '' : String(series.intervals),
+    summaryTypes: series.summaryTypes ?? '',
+  };
+}
+
+export function evidenceFormOf(item: RcaEvidenceItem): EvidenceForm {
+  return {
+    title: item.title,
+    description: item.description ?? '',
+    type: item.type ?? 'Note',
+    source: item.source ?? '',
+    category: item.category ?? '',
+    location: item.location ?? '',
+    occurredAt: item.occurredAt,
+    assetId: item.assetId ?? '',
+    severity: item.severity ?? 'Medium',
+    tags: item.tags.join(', '),
+    verified: item.verified === true,
+    fiveP: item.fiveP ?? 'Parts',
+    task: item.task ?? '',
+    taskDueDate: item.taskDueDate ? item.taskDueDate.slice(0, 10) : '',
+    taskStatus: item.taskStatus === 'completed' ? 'completed' : 'pending',
+    series: seriesForm(item.timeSeries),
+    attachments: item.attachments,
+  };
+}
+
+const orNull = (value: string) => (value.trim() === '' ? null : value.trim());
+
+function seriesOf(form: EvidenceForm): RcaEvidenceSeries | null {
+  if (form.type !== 'Time Series') return null;
+  const intervals = Number.parseInt(form.series.intervals, 10);
+  return {
+    provider: 'pi',
+    streams: orNull(form.series.streams),
+    mode: form.series.mode,
+    start: form.series.start,
+    end: form.series.end,
+    interval: orNull(form.series.interval),
+    intervals: Number.isFinite(intervals) && intervals > 0 ? intervals : null,
+    summaryTypes: orNull(form.series.summaryTypes),
+  };
+}
+
+/** The stored item: the previous item's links (node ids) and provenance are kept as they were. */
+export function evidenceItemOf(form: EvidenceForm, base: Pick<RcaEvidenceItem, 'id' | 'collectedAt' | 'collectedBy' | 'nodeIds'>): RcaEvidenceItem {
+  return {
+    ...base,
+    title: form.title.trim(),
+    description: orNull(form.description),
+    type: form.type,
+    source: orNull(form.source),
+    category: orNull(form.category),
+    location: orNull(form.location),
+    occurredAt: form.occurredAt,
+    assetId: orNull(form.assetId),
+    severity: form.severity,
+    tags: form.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+    verified: form.verified,
+    fiveP: form.fiveP,
+    task: orNull(form.task),
+    taskDueDate: form.taskDueDate || null,
+    taskStatus: form.taskStatus,
+    timeSeries: seriesOf(form),
+    attachments: form.attachments,
+  };
+}

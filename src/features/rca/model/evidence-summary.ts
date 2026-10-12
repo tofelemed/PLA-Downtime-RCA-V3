@@ -20,7 +20,7 @@ const str = (value: unknown): string | null => (typeof value === 'string' ? valu
 function codeText(value: unknown): string | null {
   const code = bag(value);
   if (!code) return null;
-  return [str(code.code), str(code.name)].filter(Boolean).join(' ') || str(code.id);
+  return [str(code.code), str(code.name)].filter(Boolean).join(' ') || null;
 }
 
 function impactOf(value: unknown): ApprovedImpactView | null {

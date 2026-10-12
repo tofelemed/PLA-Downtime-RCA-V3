@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useRcaCases, type RcaCaseFilters } from '@/api/v2/queries/rca-cases';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { useDebouncedValue } from '@/features/ux-kit/use-debounced-value';
+import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
 
 export interface SearchContext {
   assetId: string | null;
@@ -29,8 +29,7 @@ export function CaseSearch({ context, selectedId, onSelect }: CaseSearchProps) {
   const [byAsset, setByAsset] = useState(Boolean(context.assetId));
   const [byReason, setByReason] = useState(false);
   const [byWindow, setByWindow] = useState(false);
-  const [text, setText] = useState('');
-  const q = useDebouncedValue(text.trim(), 300);
+  const [q, setQ] = useState('');
   const filters: RcaCaseFilters = {
     assetId: byAsset ? (context.assetId ?? undefined) : undefined,
     reasonCodeId: byReason ? (context.reasonCodeId ?? undefined) : undefined,
@@ -46,9 +45,9 @@ export function CaseSearch({ context, selectedId, onSelect }: CaseSearchProps) {
         <Toggle id="by-reason" label="Same reason" checked={byReason} disabled={!context.reasonCodeId} onChange={setByReason} />
         <Toggle id="by-window" label="Within ±7 days" checked={byWindow} onChange={setByWindow} />
       </div>
-      <Input placeholder="Search case titles" value={text} onChange={(e) => setText(e.target.value)} aria-label="Search case titles" />
-      <DataState state={dataStateOf(cases, { isEmpty: cases.items.length === 0 })} error={cases.error}>
-        <ul className="max-h-56 overflow-y-auto rounded border" role="listbox" aria-label="Existing cases">
+      <DebouncedSearchInput label="Search case titles" value={q} onChange={(text) => setQ(text.trim())} />
+      <DataState state={dataStateOf(cases, { isEmpty: cases.items.length === 0 })} error={cases.error} detail="No case matches.">
+        <ul className="divide-y rounded border" role="listbox" aria-label="Existing cases">
           {cases.items.map((item) => (
             <li key={item.id}>
               <button
@@ -58,11 +57,16 @@ export function CaseSearch({ context, selectedId, onSelect }: CaseSearchProps) {
                 className={`w-full px-2 py-1 text-left text-sm hover:bg-muted ${item.id === selectedId ? 'bg-muted font-medium' : ''}`}
                 onClick={() => onSelect(item.id)}
               >
-                {item.title} <span className="text-xs text-muted-foreground">· {item.status ?? '—'} · {item.priority ?? '—'}</span>
+                {item.title} <span className="text-xs text-muted-foreground">· {item.status ?? 'Draft'} · {item.priority ?? 'Medium'}</span>
               </button>
             </li>
           ))}
         </ul>
+        {cases.hasNextPage && (
+          <Button variant="outline" size="sm" className="mt-2" disabled={cases.isFetchingNextPage} onClick={() => void cases.fetchNextPage()}>
+            Show more cases
+          </Button>
+        )}
       </DataState>
     </div>
   );

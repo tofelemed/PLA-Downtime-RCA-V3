@@ -1,6 +1,7 @@
 import type { ApprovedImpactView } from '@/api/v2/types/rca';
 import { currencyDigits, entriesInCurrency } from '@/features/display-currency/money-format';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
+import { humanize } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
 
 /**
@@ -18,7 +19,7 @@ export function ApprovedImpact({ impact }: { impact: ApprovedImpactView }) {
       <ul>
         {impact.quantities.map((row) => (
           <li key={`${row.kind}:${row.uom ?? '-'}`}>
-            {row.kind.replace(/_/g, ' ')}: <Quantity value={row.quantity} uom={row.uom} />
+            {humanize(row.kind)}: <Quantity value={row.quantity} uom={row.uom} />
           </li>
         ))}
       </ul>

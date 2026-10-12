@@ -20,7 +20,7 @@ export function SimilarKnowledgePanel({ eventId }: { eventId: string }) {
         <ul className="space-y-1 text-sm">
           {items.map((item) => (
             <li key={item.id} className="flex flex-wrap items-center gap-1">
-              <Link className="underline" to={`/rca-knowledge-base?entry=${item.id}`}>
+              <Link className="underline" to={`/rca-knowledge-base/${item.id}`}>
                 {item.title}
               </Link>
               {item.matchedOn.map((match) => (

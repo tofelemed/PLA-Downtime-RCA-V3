@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -26,9 +29,14 @@ import {
   RcaActionsService,
   RcaOutcomeV2View,
 } from '../../rca-case/rca-actions.service';
-import { RcaCasesService } from '../../rca-case/rca-cases.service';
 import {
+  RcaCaseCommandsService,
   RcaCaseSummaryV2View,
+} from '../../rca-case/rca-case-commands.service';
+import { RcaCasesService } from '../../rca-case/rca-cases.service';
+import { RcaEvidenceOptionsV2View } from '../../rca-case/rca-evidence-options';
+import {
+  RcaCaseSummaryV2View as RcaCaseListItemV2View,
   RcaCaseV2View,
 } from '../../rca-case/rca-case.view';
 import { RCA_WRITERS } from '../../rca-case/rca-scope';
@@ -57,6 +65,7 @@ export class RcaCasesV2Controller {
   constructor(
     private readonly cases: RcaCasesService,
     private readonly actions: RcaActionsService,
+    private readonly commands: RcaCaseCommandsService,
   ) {}
 
   @Get()
@@ -68,8 +77,28 @@ export class RcaCasesV2Controller {
   list(
     @Ctx() ctx: RequestContext,
     @Query() query: RcaCaseV2ListQueryDto,
-  ): Promise<ListResponse<RcaCaseSummaryV2View>> {
+  ): Promise<ListResponse<RcaCaseListItemV2View>> {
     return this.cases.list(ctx, query);
+  }
+
+  @Get('summary')
+  @ApiOperation({
+    summary:
+      'Counts of the cases of your scope by status, overdue and open critical',
+  })
+  summary(@Ctx() ctx: RequestContext): Promise<RcaCaseSummaryV2View> {
+    return this.commands.summary(ctx);
+  }
+
+  @Get('evidence-options')
+  @ApiOperation({
+    summary:
+      'Evidence categories and locations of the tenant (pick lists of the evidence form)',
+  })
+  evidenceOptions(
+    @Ctx() ctx: RequestContext,
+  ): Promise<RcaEvidenceOptionsV2View> {
+    return this.commands.evidenceOptions(ctx);
   }
 
   @Get(':id')
@@ -118,6 +147,40 @@ export class RcaCasesV2Controller {
     @Body() body: RcaCaseV2UpdateDto,
   ): Promise<RcaCaseV2View> {
     return this.cases.update(ctx, { id, expectedRowVersion }, body);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(...RCA_WRITERS)
+  @ApiOperation({
+    summary: 'Delete an open case nothing refers to yet',
+    description:
+      `Requires \`If-Match\` (428/412). ${SCOPE} 409 RCA_CASE_IN_USE once the case is closed, linked, has ` +
+      'actions or a recommendation or knowledge entry points at it. Analysis records go with the case.',
+  })
+  @ApiHeader({ name: 'If-Match', required: true })
+  remove(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @IfMatch() expectedRowVersion: number,
+  ): Promise<void> {
+    return this.commands.remove(ctx, { id, expectedRowVersion });
+  }
+
+  @Post(':id/logic-tree/reset')
+  @Roles(...RCA_WRITERS)
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary: "Replace the logic tree with a fresh copy of the case's template",
+    description: `Requires \`If-Match\` (428/412). ${SCOPE} 422 NO_TEMPLATE for a case opened without a template.`,
+  })
+  @ApiHeader({ name: 'If-Match', required: true })
+  resetLogicTree(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @IfMatch() expectedRowVersion: number,
+  ): Promise<RcaCaseV2View> {
+    return this.commands.resetLogicTree(ctx, { id, expectedRowVersion });
   }
 
   @Get(':id/outcome')

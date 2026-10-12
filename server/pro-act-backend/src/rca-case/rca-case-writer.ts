@@ -5,7 +5,9 @@ import {
   RcaCaseV2CreateDto,
   RcaCaseV2UpdateDto,
 } from '../v2/rca/rca-cases-v2.dto';
+import { writeDiagram } from './rca-case-diagram';
 import { writeJson } from './rca-case-json';
+import { templateLogicTree } from './rca-case-template';
 import { assertCaseUnit, invalidReference, RcaScope } from './rca-scope';
 
 const date = (value: string | null | undefined) =>
@@ -29,6 +31,8 @@ export function caseColumns(body: RcaCaseV2UpdateDto): Partial<RCA> {
     recommendations: writeJson(body.recommendations),
     evidence: writeJson(body.evidence),
     logicTree: writeJson(body.logicTree),
+    teamCharter: body.teamCharter,
+    eventDiagram: writeDiagram(body.eventDiagram),
   };
   return Object.fromEntries(
     Object.entries(columns).filter(([, value]) => value !== undefined),
@@ -92,7 +96,10 @@ export async function assertCaseReferences(
   }
 }
 
-/** Inserts a validated case of the caller's tenant (Draft / Medium unless the body says otherwise). */
+/**
+ * Inserts a validated case of the caller's tenant (Draft / Medium unless the body says otherwise). A case
+ * opened from a template without its own logic tree starts with a copy of the template's tree.
+ */
 export async function insertCase(
   manager: EntityManager,
   scope: RcaScope,
@@ -101,8 +108,12 @@ export async function insertCase(
   const unitId = body.unitId ?? null;
   await assertCaseReferences(manager, scope, body, unitId);
   const repository = manager.getRepository(RCA);
+  const fromTemplate =
+    body.templateId && !body.logicTree?.length
+      ? await templateLogicTree(manager, scope.tenantId, body.templateId)
+      : null;
   const entity = repository.create({
-    ...caseColumns(body),
+    ...caseColumns(fromTemplate ? { ...body, logicTree: fromTemplate } : body),
     id: randomUUID(),
     status: body.status ?? 'Draft',
     priority: body.priority ?? 'Medium',

@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
 import type { RcaKnowledgeSimilarView, RcaKnowledgeView } from '@/api/v2/types/rca-knowledge';
 import { actAs } from '@/test/acting-user';
-import { canPublishKnowledge, EMPTY_FILTERS, toKnowledgeQuery } from './model/knowledge-filters';
+import { canPublishKnowledge, EMPTY_FILTERS, filtersFromParams, paramsFromFilters, toKnowledgeQuery } from './model/knowledge-filters';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
@@ -80,12 +80,18 @@ describe('RCA knowledge base v2 screen', () => {
 
   const knowledgeCalls = () => calls.filter((call) => call.url.pathname === '/api/v2/rca-knowledge');
 
+  it('maps the URL filters both ways (Back and links keep them)', () => {
+    const state = filtersFromParams(new URLSearchParams('q=seal&published=published&unitId=all'));
+    expect(state).toEqual({ text: 'seal', unitId: 'all', reasonCodeId: 'all', published: 'published' });
+    expect(paramsFromFilters(state)).toEqual({ q: 'seal', published: 'published' });
+  });
+
   it('lists server pages and sends the search text to the server (no browser filtering)', async () => {
     reply = (call) => json(200, list(call.url.pathname === '/api/v2/rca-knowledge' ? [ENTRY] : []));
     wrap(<RcaKnowledgePage />);
     expect(await screen.findByText('Extruder coupling failures')).toBeTruthy();
     expect(screen.getByTestId('quality-score').textContent).toBe('Quality 77');
-    expect(knowledgeCalls()[0].url.searchParams.get('limit')).toBe('25');
+    expect(knowledgeCalls()[0].url.searchParams.get('limit')).toBe('20');
     fireEvent.change(screen.getByLabelText('Search knowledge entries'), { target: { value: 'coupling' } });
     await waitFor(() => expect(knowledgeCalls().some((call) => call.url.searchParams.get('q') === 'coupling')).toBe(true));
   });
@@ -96,7 +102,8 @@ describe('RCA knowledge base v2 screen', () => {
       return json(200, ENTRY);
     };
     actAs('reliability_engineer');
-    wrap(<KnowledgeDetail id="k1" timezone="UTC" />);
+    wrap(<KnowledgeDetail id="k1" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Quality' }));
     expect((await screen.findByTestId('quality-breakdown')).textContent).toContain('30 / 30');
     fireEvent.click(screen.getByRole('button', { name: /^Helpful/ }));
     await waitFor(() => expect(calls.some((call) => call.url.pathname.endsWith('/votes'))).toBe(true));
@@ -112,13 +119,13 @@ describe('RCA knowledge base v2 screen', () => {
   it('hides publish for an engineer and every write for a viewer', async () => {
     reply = () => json(200, ENTRY);
     actAs('Engineer');
-    const first = wrap(<KnowledgeDetail id="k1" timezone="UTC" />);
+    const first = wrap(<KnowledgeDetail id="k1" />);
     expect(await screen.findByTestId('knowledge-detail')).toBeTruthy();
     expect(screen.queryByTestId('knowledge-publish')).toBeNull();
     expect(screen.getByRole('button', { name: /^Helpful/ })).toBeTruthy();
     first.unmount();
     actAs('viewer');
-    wrap(<KnowledgeDetail id="k1" timezone="UTC" />);
+    wrap(<KnowledgeDetail id="k1" />);
     expect(await screen.findByTestId('knowledge-detail')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^Helpful/ })).toBeNull();
     expect(screen.queryByTestId('knowledge-publish')).toBeNull();
@@ -129,7 +136,7 @@ describe('RCA knowledge base v2 screen', () => {
     reply = () => json(200, [similar]);
     wrap(<SimilarKnowledgePanel eventId="e1" />);
     const link = await screen.findByRole('link', { name: 'Extruder coupling failures' });
-    expect(link.getAttribute('href')).toBe('/rca-knowledge-base?entry=k1');
+    expect(link.getAttribute('href')).toBe('/rca-knowledge-base/k1');
     expect(screen.getByText('same asset')).toBeTruthy();
     expect(calls[0].url.pathname).toBe('/api/v2/rca-knowledge/similar');
     expect(calls[0].url.searchParams.get('eventId')).toBe('e1');

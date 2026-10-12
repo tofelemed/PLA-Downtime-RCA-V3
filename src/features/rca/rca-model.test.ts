@@ -4,10 +4,10 @@ import type { RcaRecommendationView } from '@/api/v2/types/rca';
 import { buildActionBody, EMPTY_ACTION_FORM } from './model/action-form';
 import { summarizeEvidence } from './model/evidence-summary';
 import { recommendationText } from './model/rca-labels';
-import { buildRcaCaseBody, emptyCaseForm, newItemId, type RcaCaseForm } from './model/rca-form';
+import { buildCreateBody, buildDefinitionPatch, emptyCaseForm, newItemId, type RcaCaseForm } from './model/rca-form';
 
-describe('RCA case body (plan 3.9 step 1, the verified save bug)', () => {
-  it('builds exactly the shared v2 contract example from the form', () => {
+describe('RCA case bodies (v2 contract, the verified v1 save bug)', () => {
+  it('builds the definition PATCH from the form: declared fields only, empty text as null, days as UTC midnight', () => {
     const form: RcaCaseForm = {
       ...emptyCaseForm(example.unitId),
       title: ` ${example.title} `,
@@ -16,20 +16,29 @@ describe('RCA case body (plan 3.9 step 1, the verified save bug)', () => {
       priority: 'High',
       teamLeadId: example.teamLeadId,
       teamMemberIds: example.teamMemberIds,
-      targetCloseDate: example.targetCloseDate,
-      rootCause: '',
-      recommendations: example.recommendations,
-      evidence: example.evidence,
-      logicTree: example.logicTree,
+      targetCloseDate: '2026-11-30',
+      teamCharter: '  ',
     };
-    expect(buildRcaCaseBody(form)).toEqual(example);
+    expect(buildDefinitionPatch(form)).toEqual({
+      title: example.title,
+      description: example.description,
+      status: 'In Progress',
+      priority: 'High',
+      unitId: example.unitId,
+      targetCloseDate: example.targetCloseDate,
+      rootCause: null,
+      teamCharter: null,
+      teamLeadId: example.teamLeadId,
+      teamMemberIds: example.teamMemberIds,
+    });
   });
 
   it('never sends the v1 keys the server refused (tenant, organization, teamMembers, legacy dates)', () => {
-    const body = buildRcaCaseBody({ ...emptyCaseForm(null), title: 'x' });
+    const body = buildCreateBody({ ...emptyCaseForm(null), title: 'x' });
     for (const key of ['tenantId', 'organizationId', 'teamMembers', 'targetCompletionDate', 'additionalData', 'startDate']) {
       expect(body).not.toHaveProperty(key);
     }
+    expect(body).toMatchObject({ title: 'x', templateId: null, status: 'Draft' });
   });
 
   it('new item ids do not collide', () => {

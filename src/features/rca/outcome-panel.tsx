@@ -3,6 +3,8 @@ import { currencyDigits } from '@/features/display-currency/money-format';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { labelOf } from '@/features/ux-kit/labels';
+import { RCA_BASELINE_METRIC_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { ApprovedImpact } from './components/approved-impact';
 
 /**
@@ -42,7 +44,7 @@ export function OutcomePanel({ rcaId }: { rcaId: string }) {
               <ul className="text-sm">
                 {data.realized.map((row) => (
                   <li key={row.actionId}>
-                    {row.title}: {row.difference} {row.metric.replace('_', ' ')} (expected {row.expected}, observed {row.observed})
+                    {row.title}: {row.difference} {labelOf(RCA_BASELINE_METRIC_LABELS, row.metric).toLowerCase()} (expected {row.expected}, observed {row.observed})
                   </li>
                 ))}
               </ul>

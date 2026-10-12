@@ -1,67 +1,41 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useFlag } from '@/api/v2/queries/feature-flags';
 import { useRcaRecommendations } from '@/api/v2/queries/rca-cases';
 import type { ProductionEventView } from '@/api/v2/types/events';
-import type { RcaLinkResultView } from '@/api/v2/types/rca';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { RecommendationBadges } from './components/recommendation-badges';
-import { LinkRcaDialog } from './link-dialog/link-rca-dialog';
 import { SimilarKnowledgePanel } from '@/features/rca-knowledge/similar-knowledge-panel';
+import { RecommendationBadges } from './components/recommendation-badges';
 
 export interface EventRcaPanelProps {
   event: ProductionEventView;
-  timezone: string;
+  /** kept for the event page's call; times are shown on the RCA pages */
+  timezone?: string;
 }
 
 /**
- * RCA part of the v2 event detail (plan 3.9, `v2.rca`): the event's open recommendations and the
- * "Create / link RCA" action (RCA writers only). Hidden while the flag is off (the v1 RCA module stays in
- * charge, C4).
+ * RCA part of the event detail: the event's open recommendations, "Create / link RCA" (RCA writers;
+ * opens `/rca/new?eventId=`), the case the event is linked to, and similar past RCAs. RCA has one
+ * version (v2), so the panel no longer depends on the `v2.rca` flag (the flag still selects the server's
+ * trigger behaviour).
  */
-export function EventRcaPanel({ event, timezone }: EventRcaPanelProps) {
+export function EventRcaPanel({ event }: EventRcaPanelProps) {
   const { canWriteRca } = useCapabilities();
-  const flag = useFlag('v2.rca');
-  const recommendations = useRcaRecommendations([event.id], flag.enabled);
-  const [open, setOpen] = useState(false);
-  const [result, setResult] = useState<RcaLinkResultView | null>(null);
-  if (!flag.enabled) return null;
+  const recommendations = useRcaRecommendations([event.id]);
   return (
     <section className="space-y-2 rounded border p-2" aria-label="Root cause analysis" data-testid="event-rca-panel">
       <RecommendationBadges items={recommendations.data ?? []} />
       <div className="flex flex-wrap items-center gap-2">
         {canWriteRca && (
-          <Button size="sm" variant="outline" onClick={() => setOpen(true)} data-testid="open-link-rca">
-            Create / link RCA
+          <Button asChild size="sm" variant="outline" data-testid="open-link-rca">
+            <Link to={`/rca/new?eventId=${encodeURIComponent(event.id)}`}>Create / link RCA</Link>
           </Button>
         )}
-        {result && (
-          <span className="text-sm" role="status">
-            {result.created ? 'Linked to' : 'Already linked to'}{' '}
-            <Link className="underline" to={`/rca?case=${result.rca.id}`}>
-              {result.rca.title}
-            </Link>
-          </span>
+        {event.rcaId && (
+          <Link className="text-sm underline" to={`/rca/${event.rcaId}`} data-testid="event-rca-case">
+            Open the linked RCA case
+          </Link>
         )}
       </div>
-      {open && (
-        <LinkRcaDialog
-          eventId={event.id}
-          timezone={timezone}
-          context={{
-            assetId: event.assetId,
-            reasonCodeId: event.reasonCodeId,
-            from: event.startTime,
-            to: event.endTime ?? event.asOf,
-          }}
-          onClose={() => setOpen(false)}
-          onDone={(linked) => {
-            setResult(linked);
-            setOpen(false);
-          }}
-        />
-      )}
       <SimilarKnowledgePanel eventId={event.id} />
     </section>
   );

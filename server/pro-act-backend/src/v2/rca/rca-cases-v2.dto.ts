@@ -1,8 +1,9 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsISO8601,
   IsNotEmpty,
@@ -13,7 +14,21 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { toBooleanParam } from '../../common/dto/query-param.transformers';
 import { ListQueryDto } from '../common/list-query.dto';
+import {
+  RcaEventDiagramDto,
+  RcaEvidenceItemDto,
+  RcaLogicNodeDto,
+  RcaRecommendationItemDto,
+} from './rca-case-items-v2.dto';
+import { OptionalText } from './rca-dto-helpers';
+
+export {
+  RcaEvidenceItemDto,
+  RcaLogicNodeDto,
+  RcaRecommendationItemDto,
+} from './rca-case-items-v2.dto';
 
 export const RCA_STATUSES = [
   'Draft',
@@ -24,100 +39,6 @@ export const RCA_STATUSES = [
 ] as const;
 export type RcaStatus = (typeof RCA_STATUSES)[number];
 export const RCA_PRIORITIES = ['Low', 'Medium', 'High', 'Critical'] as const;
-
-const optionalText = (max: number) => [
-  IsOptional(),
-  ValidateIf((_: unknown, value: unknown) => value !== null),
-  IsString(),
-  MaxLength(max),
-];
-
-function OptionalText(max: number): PropertyDecorator {
-  return (target, key) => {
-    for (const decorator of optionalText(max)) decorator(target, key);
-    ApiPropertyOptional({ nullable: true, maxLength: max })(target, key);
-  };
-}
-
-export class RcaRecommendationItemDto {
-  @ApiPropertyOptional({ maxLength: 64 })
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  id?: string;
-
-  @ApiProperty({ maxLength: 255 })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(255)
-  title: string;
-
-  @OptionalText(4000) description?: string | null;
-  @OptionalText(20) priority?: string | null;
-
-  @ApiPropertyOptional({ nullable: true })
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @IsUUID()
-  ownerId?: string | null;
-
-  @ApiPropertyOptional({ nullable: true })
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @IsISO8601()
-  dueDate?: string | null;
-
-  @OptionalText(30) status?: string | null;
-}
-
-export class RcaEvidenceItemDto {
-  @ApiPropertyOptional({ maxLength: 64 })
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  id?: string;
-
-  @ApiProperty({ maxLength: 255 })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(255)
-  title: string;
-
-  @OptionalText(4000) description?: string | null;
-  @OptionalText(50) type?: string | null;
-  @OptionalText(500) source?: string | null;
-
-  @ApiPropertyOptional({ nullable: true })
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @IsISO8601()
-  collectedAt?: string | null;
-
-  @ApiPropertyOptional({ nullable: true })
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @IsUUID()
-  collectedBy?: string | null;
-}
-
-export class RcaLogicNodeDto {
-  @ApiProperty({ maxLength: 64 })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(64)
-  id: string;
-
-  @OptionalText(64) parentId?: string | null;
-
-  @ApiProperty({ maxLength: 500 })
-  @IsString()
-  @MaxLength(500)
-  label: string;
-
-  @OptionalText(50) kind?: string | null;
-  @OptionalText(50) status?: string | null;
-  @OptionalText(4000) notes?: string | null;
-}
 
 /**
  * v2 RCA case body (plan 3.9 step 1, the redesigned contract that closes the v1 save bug): the frontend
@@ -220,6 +141,16 @@ export class RcaCaseV2CreateDto {
   @ValidateNested({ each: true })
   @Type(() => RcaLogicNodeDto)
   logicTree?: RcaLogicNodeDto[];
+
+  /** mission, scope and goals of the investigation team */
+  @OptionalText(8000) teamCharter?: string | null;
+
+  @ApiPropertyOptional({ type: RcaEventDiagramDto, nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @ValidateNested()
+  @Type(() => RcaEventDiagramDto)
+  eventDiagram?: RcaEventDiagramDto | null;
 }
 
 export class RcaCaseV2UpdateDto extends PartialType(RcaCaseV2CreateDto) {}
@@ -257,6 +188,20 @@ export class RcaCaseV2ListQueryDto extends ListQueryDto {
   @IsString()
   @MaxLength(100)
   q?: string;
+
+  @ApiPropertyOptional({ enum: RCA_PRIORITIES })
+  @IsOptional()
+  @IsIn(RCA_PRIORITIES)
+  priority?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'true = target close date passed and not Closed; false = the others',
+  })
+  @IsOptional()
+  @Transform(toBooleanParam)
+  @IsBoolean()
+  overdue?: boolean;
 
   @ApiPropertyOptional({ enum: ['-createdAt', 'createdAt'] })
   @IsOptional()

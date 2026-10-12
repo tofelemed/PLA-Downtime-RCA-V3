@@ -1,0 +1,99 @@
+import { useState } from 'react';
+import { useRcaLinks } from '@/api/v2/queries/rca-cases';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
+import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { IconButton } from '@/features/ux-kit/icon-button';
+import { ActionIcon } from '@/lib/icons';
+import { toggleEvidenceLink } from '../../../../model/logic-tree';
+import { timelineOf, type TimelineEntry } from '../../../../model/timeline';
+import { useRcaFormat } from '../../../../use-rca-format';
+import { useCaseWorkspace } from '../../../case-context';
+import { useCasePatch } from '../../../use-case-patch';
+import { addEvent, removeEvent, updateEvent } from '../event-diagram/diagram-model';
+import { EventDialog, type EventFields } from '../event-diagram/event-dialog';
+import { EvidenceLinkPopover } from '../evidence-link-popover';
+
+type Editing = { mode: 'add' } | { mode: 'edit'; id: string } | null;
+
+function EntryActions({ entry, onEdit }: { entry: TimelineEntry; onEdit: () => void }) {
+  const { rca } = useCaseWorkspace();
+  const patch = useCasePatch();
+  return (
+    <span className="flex items-center gap-1">
+      <EvidenceLinkPopover
+        targetId={entry.id}
+        targetName={entry.title}
+        evidence={rca.evidence}
+        disabled={patch.isPending}
+        onToggle={(evidenceId, linked) => void patch.save({ evidence: toggleEvidenceLink(rca.evidence, evidenceId, entry.id, linked) }).catch(() => null)}
+      />
+      {entry.source === 'diagram' && (
+        <>
+          <IconButton icon={ActionIcon.edit} label={`Edit ${entry.title}`} onClick={onEdit} />
+          <ConfirmDialog
+            trigger={<IconButton icon={ActionIcon.delete} label={`Delete ${entry.title}`} tooltip={false} />}
+            title={`Delete "${entry.title}"?`}
+            description="The event is removed from the timeline and the event diagram."
+            confirmLabel="Delete event"
+            destructive
+            onConfirm={() => patch.save({ eventDiagram: removeEvent(rca.eventDiagram, entry.id) })}
+          />
+        </>
+      )}
+    </span>
+  );
+}
+
+/** Event timeline: diagram events and the production events linked to the case, in time order. */
+export function TimelineTool() {
+  const { rca, readOnly } = useCaseWorkspace();
+  const links = useRcaLinks(rca.id);
+  const patch = useCasePatch();
+  const { dateTime } = useRcaFormat();
+  const [editing, setEditing] = useState<Editing>(null);
+  const entries = timelineOf(rca.eventDiagram.nodes, links.data ?? [], rca.evidence);
+  const save = async (fields: EventFields) => {
+    const diagram = editing?.mode === 'edit' ? updateEvent(rca.eventDiagram, editing.id, fields) : { ...rca.eventDiagram, nodes: [...rca.eventDiagram.nodes, addEvent(rca.eventDiagram.nodes, fields)] };
+    if (await patch.save({ eventDiagram: diagram }).catch(() => null)) setEditing(null);
+  };
+  return (
+    <div className="space-y-3" data-testid="event-timeline">
+      {!readOnly && (
+        <Button size="sm" onClick={() => setEditing({ mode: 'add' })}>
+          Add event
+        </Button>
+      )}
+      {patch.error ? <FriendlyErrorAlert error={patch.error} /> : null}
+      {entries.length === 0 && <p className="text-sm text-muted-foreground">No events yet: add one here or on the event diagram, or link production events to the case.</p>}
+      <ol className="space-y-2">
+        {entries.map((entry) => (
+          <li key={entry.id} className="flex flex-wrap items-start justify-between gap-2 rounded border p-3" data-testid="timeline-entry">
+            <div className="space-y-1 text-sm">
+              <p className="font-medium">
+                {entry.at ? dateTime(entry.at) : 'No time'} · {entry.title}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="secondary">{entry.type ?? 'Event'}</Badge>
+                {entry.severity && <Badge variant="outline">{entry.severity}</Badge>}
+                {entry.asset && <Badge variant="outline">{entry.asset}</Badge>}
+                <Badge variant="outline">{entry.evidence} evidence</Badge>
+              </div>
+              {entry.description && <p className="text-muted-foreground">{entry.description}</p>}
+            </div>
+            {!readOnly && <EntryActions entry={entry} onEdit={() => setEditing({ mode: 'edit', id: entry.id })} />}
+          </li>
+        ))}
+      </ol>
+      {editing && (
+        <EventDialog
+          title={editing.mode === 'edit' ? 'Edit event' : 'Add event'}
+          initial={editing.mode === 'edit' ? rca.eventDiagram.nodes.find((node) => node.id === editing.id) : undefined}
+          onSave={(fields) => void save(fields)}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </div>
+  );
+}

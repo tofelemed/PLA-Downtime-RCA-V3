@@ -25,6 +25,29 @@ export function toKnowledgeQuery(state: KnowledgeFilterState, q: string): RcaKno
   };
 }
 
+const choice = (value: string | null) => (value && value !== ALL ? value : ALL);
+
+/** Filters kept in the URL (`?q=&unitId=&reasonCodeId=&published=`), so Back and links keep them. */
+export function filtersFromParams(params: URLSearchParams): KnowledgeFilterState {
+  const published = params.get('published');
+  return {
+    text: params.get('q') ?? '',
+    unitId: choice(params.get('unitId')),
+    reasonCodeId: choice(params.get('reasonCodeId')),
+    published: published === 'published' || published === 'unpublished' ? published : ALL,
+  };
+}
+
+export function paramsFromFilters(state: KnowledgeFilterState): Record<string, string> {
+  const entries: Array<[string, string]> = [
+    ['q', state.text.trim()],
+    ['unitId', state.unitId],
+    ['reasonCodeId', state.reasonCodeId],
+    ['published', state.published],
+  ];
+  return Object.fromEntries(entries.filter(([, value]) => value !== '' && value !== ALL));
+}
+
 /** Labels of the server's quality factors (`src/domain/rca/knowledge-quality.ts`). */
 export const QUALITY_FACTOR_LABELS: Readonly<Record<string, string>> = {
   rootCause: 'Root cause written',

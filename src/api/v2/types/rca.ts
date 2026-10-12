@@ -17,6 +17,28 @@ export interface RcaRecommendationItem {
   ownerId: string | null;
   dueDate: string | null;
   status: string | null;
+  /** decimal string, no currency */
+  estimatedCost: string | null;
+}
+
+/** Historian query recorded with a time-series evidence item (parameters, not samples). */
+export interface RcaEvidenceSeries {
+  provider: string | null;
+  streams: string | null;
+  mode: string | null;
+  start: string | null;
+  end: string | null;
+  interval: string | null;
+  intervals: number | null;
+  summaryTypes: string | null;
+}
+
+export interface RcaEvidenceAttachment {
+  /** stored name returned by `POST /v2/rcas/{id}/attachments` */
+  fileName: string;
+  name: string;
+  contentType: string | null;
+  size: number | null;
 }
 
 export interface RcaEvidenceItem {
@@ -27,6 +49,21 @@ export interface RcaEvidenceItem {
   source: string | null;
   collectedAt: string | null;
   collectedBy: string | null;
+  category: string | null;
+  location: string | null;
+  occurredAt: string | null;
+  assetId: string | null;
+  severity: string | null;
+  tags: string[];
+  verified: boolean | null;
+  fiveP: string | null;
+  task: string | null;
+  taskDueDate: string | null;
+  taskStatus: string | null;
+  /** logic-tree nodes and diagram events this item supports */
+  nodeIds: string[];
+  timeSeries: RcaEvidenceSeries | null;
+  attachments: RcaEvidenceAttachment[];
 }
 
 export interface RcaLogicNode {
@@ -36,6 +73,31 @@ export interface RcaLogicNode {
   kind: string | null;
   status: string | null;
   notes: string | null;
+  code: string | null;
+  description: string | null;
+  verified: boolean | null;
+}
+
+export interface RcaDiagramNode {
+  id: string;
+  label: string;
+  type: string | null;
+  timestamp: string | null;
+  description: string | null;
+  asset: string | null;
+  severity: string | null;
+  position: { x: number; y: number };
+}
+
+export interface RcaDiagramEdge {
+  id: string;
+  source: string;
+  target: string;
+}
+
+export interface RcaEventDiagram {
+  nodes: RcaDiagramNode[];
+  edges: RcaDiagramEdge[];
 }
 
 export interface RcaCaseSummaryView {
@@ -61,7 +123,25 @@ export interface RcaCaseView extends RcaCaseSummaryView {
   recommendations: RcaRecommendationItem[];
   evidence: RcaEvidenceItem[];
   logicTree: RcaLogicNode[];
+  teamCharter: string | null;
+  eventDiagram: RcaEventDiagram;
 }
+
+/** Counts of the cases in scope (`GET /v2/rcas/summary`). */
+export interface RcaCaseSummaryCounts {
+  total: number;
+  overdue: number;
+  critical: number;
+  byStatus: Array<{ status: string | null; count: number }>;
+  asOf: string;
+}
+
+export interface RcaEvidenceOptions {
+  categories: string[];
+  locations: string[];
+}
+
+export type RcaAttachmentView = RcaEvidenceAttachment & { size: number };
 
 export interface ApprovedImpactView {
   lines: number;

@@ -3,6 +3,7 @@ import { ProductionEvent } from '../production-event/production-event.entity';
 import { User } from '../users/user.entity';
 import { RCATemplate } from '../rca-template/rca-template.entity';
 
+@Index('IDX_rcas_tenant_created', ['tenantId', 'createdAt'])
 @Entity('rcas')
 export class RCA {
   @PrimaryGeneratedColumn('uuid')

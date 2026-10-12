@@ -1,4 +1,6 @@
+import { v2Request } from '../client';
 import { ifMatchOf } from '../etag-cache';
+import type { RcaAnalysesView, RcaAnalysisBodies, RcaRecordTool } from '../types/rca-analyses';
 import type { BodyOf } from '../schema-types';
 import type { RcaActionView, RcaCaseView, RcaLinkResultView, RcaRecommendationView } from '../types/rca';
 import { v2 } from '../v2';
@@ -103,5 +105,52 @@ export function useDismissRcaRecommendation() {
       '/api/v2/rca-recommendations/{id}/dismiss',
       { path: { id: input.id }, body: { reason: input.reason }, idempotencyKey },
     )).data,
+  );
+}
+
+/** Deletes an open case nothing refers to yet (409 RCA_CASE_IN_USE otherwise). */
+export function useDeleteRcaCase() {
+  return useRcaCommand<Pick<RcaCaseView, 'id' | 'rowVersion'>, void>(async (rca) => {
+    await v2Request<void>({ method: 'DELETE', path: `/rcas/${encodeURIComponent(rca.id)}`, ifMatch: ifMatchOf(rca.rowVersion) });
+  });
+}
+
+/** Replaces the logic tree with a fresh copy of the case's template. */
+export function useResetRcaLogicTree() {
+  return useRcaCommand<Pick<RcaCaseView, 'id' | 'rowVersion'>, RcaCaseView>(async (rca, idempotencyKey) =>
+    (await v2.post<RcaCaseView, '/api/v2/rcas/{id}/logic-tree/reset'>('/api/v2/rcas/{id}/logic-tree/reset', {
+      path: { id: rca.id },
+      idempotencyKey,
+      ifMatch: ifMatchOf(rca.rowVersion),
+    })).data,
+  );
+}
+
+const TOOL_PATHS: Readonly<Record<RcaRecordTool, string>> = {
+  fiveWhy: 'five-why',
+  fishbone: 'fishbone',
+  fmea: 'fmea',
+  faultTree: 'fault-tree',
+  barrier: 'barrier',
+  change: 'change',
+};
+
+export interface SaveRcaAnalysisInput<K extends RcaRecordTool> {
+  rcaId: string;
+  tool: K;
+  body: RcaAnalysisBodies[K];
+  /** row version of the record read; null for the first save of the tool */
+  rowVersion: number | null;
+}
+
+/** Saves one analysis tool record (first save without If-Match; later saves with the version read). */
+export function useSaveRcaAnalysis<K extends RcaRecordTool>() {
+  return useRcaCommand<SaveRcaAnalysisInput<K>, NonNullable<RcaAnalysesView[K]>>(async (input) =>
+    (await v2Request<NonNullable<RcaAnalysesView[K]>>({
+      method: 'PUT',
+      path: `/rcas/${encodeURIComponent(input.rcaId)}/analyses/${TOOL_PATHS[input.tool]}`,
+      body: input.body,
+      ifMatch: input.rowVersion === null ? undefined : ifMatchOf(input.rowVersion),
+    })).data,
   );
 }

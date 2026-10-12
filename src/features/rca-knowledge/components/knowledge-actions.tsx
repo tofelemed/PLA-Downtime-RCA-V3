@@ -1,8 +1,8 @@
-import { ThumbsDown, ThumbsUp } from 'lucide-react';
 import { usePublishKnowledge, useVoteKnowledge } from '@/api/v2/queries/rca-knowledge';
 import type { RcaKnowledgeView } from '@/api/v2/types/rca-knowledge';
 import { Button } from '@/components/ui/button';
-import { CommandError } from '@/features/event-hub/components/command-error';
+import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { ActionIcon } from '@/lib/icons';
 
 /** Helpful / not helpful: one vote per user (the server replaces an earlier vote). */
 export function VoteButtons({ entry }: { entry: RcaKnowledgeView }) {
@@ -18,7 +18,7 @@ export function VoteButtons({ entry }: { entry: RcaKnowledgeView }) {
           disabled={vote.isPending}
           onClick={() => cast(true)}
         >
-          <ThumbsUp className="mr-1 h-4 w-4" aria-hidden /> Helpful ({entry.helpfulCount})
+          <ActionIcon.voteUp className="mr-1 h-4 w-4" aria-hidden /> Helpful ({entry.helpfulCount})
         </Button>
         <Button
           size="sm"
@@ -27,10 +27,10 @@ export function VoteButtons({ entry }: { entry: RcaKnowledgeView }) {
           disabled={vote.isPending}
           onClick={() => cast(false)}
         >
-          <ThumbsDown className="mr-1 h-4 w-4" aria-hidden /> Not helpful ({entry.notHelpfulCount})
+          <ActionIcon.voteDown className="mr-1 h-4 w-4" aria-hidden /> Not helpful ({entry.notHelpfulCount})
         </Button>
       </div>
-      <CommandError error={vote.error} />
+      {vote.error ? <FriendlyErrorAlert error={vote.error} /> : null}
     </div>
   );
 }
@@ -44,7 +44,7 @@ export function PublishControl({ entry }: { entry: RcaKnowledgeView }) {
       <Button size="sm" variant={entry.isPublished ? 'outline' : 'default'} disabled={publish.isPending} onClick={toggle} data-testid="knowledge-publish">
         {entry.isPublished ? 'Unpublish' : 'Publish'}
       </Button>
-      <CommandError error={publish.error} />
+      {publish.error ? <FriendlyErrorAlert error={publish.error} /> : null}
     </div>
   );
 }

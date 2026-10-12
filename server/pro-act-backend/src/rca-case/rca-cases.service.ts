@@ -27,6 +27,9 @@ import {
 import { upsertKnowledgeEntry } from './rca-knowledge';
 import { findCase, RcaScope, scopeOf } from './rca-scope';
 
+/** target close date passed while the case is not closed */
+export const OVERDUE = `(rca.target_completion_date IS NOT NULL AND rca.target_completion_date < now() AND rca.status IS DISTINCT FROM 'Closed')`;
+
 const LINKED_EVENT = (condition: string) =>
   `EXISTS (SELECT 1 FROM "rca_case_links" k JOIN "production_events" e ON e."id"::text = k."target_id"
      WHERE k."rca_id" = rca.id AND k."tenant_id"::text = rca.tenant_id AND k."link_type" = 'event' AND ${condition})`;
@@ -55,6 +58,10 @@ export class RcaCasesService {
       qb.andWhere('rca.status = :status', { status: query.status });
     if (query.unitId)
       qb.andWhere('rca.unitId = :unitId', { unitId: query.unitId });
+    if (query.priority)
+      qb.andWhere('rca.priority = :priority', { priority: query.priority });
+    if (query.overdue !== undefined)
+      qb.andWhere(query.overdue ? OVERDUE : `NOT (${OVERDUE})`);
     if (query.q)
       qb.andWhere('rca.title ILIKE :q', { q: `%${escapeLike(query.q)}%` });
     if (query.assetId)

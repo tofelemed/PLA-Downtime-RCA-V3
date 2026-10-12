@@ -1,4 +1,5 @@
 import { RCA } from '../rca/rca.entity';
+import { RcaEventDiagram, readEventDiagram } from './rca-case-diagram';
 import {
   RcaEvidenceItem,
   RcaLogicNode,
@@ -34,6 +35,8 @@ export interface RcaCaseV2View extends RcaCaseSummaryV2View {
   recommendations: RcaRecommendationItem[];
   evidence: RcaEvidenceItem[];
   logicTree: RcaLogicNode[];
+  teamCharter: string | null;
+  eventDiagram: RcaEventDiagram;
 }
 
 const iso = (value: Date | string | null | undefined) =>
@@ -66,5 +69,7 @@ export function toRcaCaseView(rca: RCA): RcaCaseV2View {
     recommendations: readRecommendations(rca.recommendations),
     evidence: readEvidence(rca.evidence),
     logicTree: readLogicTree(rca.logicTree),
+    teamCharter: rca.teamCharter ?? null,
+    eventDiagram: readEventDiagram(rca.eventDiagram),
   };
 }

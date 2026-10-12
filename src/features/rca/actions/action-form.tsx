@@ -1,21 +1,39 @@
-import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useCreateRcaAction } from '@/api/v2/queries/rca-commands';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { CommandError } from '@/features/event-hub/components/command-error';
+import { DateInput } from '@/features/ux-kit/date-inputs';
+import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { buildActionBody, EMPTY_ACTION_FORM, type ActionForm as Form } from '../model/action-form';
 
-function Field({ id, label, children }: { id: string; label: string; children: ReactNode }) {
+function NativeChoice(props: { id: string; label: string; value: string; options: Array<[string, string]>; onChange: (value: string) => void }) {
   return (
     <div className="space-y-1">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
+      <Label htmlFor={props.id}>{props.label}</Label>
+      <select id={props.id} className="h-10 w-full rounded border bg-background px-2 text-sm" value={props.value} onChange={(e) => props.onChange(e.target.value)}>
+        {props.options.map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
+
+function TextInput(props: { id: string; label: string; value: string; onChange: (value: string) => void; inputMode?: 'numeric' | 'decimal' }) {
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={props.id}>{props.label}</Label>
+      <Input id={props.id} inputMode={props.inputMode} value={props.value} maxLength={255} onChange={(e) => props.onChange(e.target.value)} />
+    </div>
+  );
+}
+
+const asMetric = (value: string): Form['baselineMetric'] => (value === 'recurrences' || value === 'downtime_seconds' ? value : '');
+const asCurrency = (value: string): Form['claimedCurrency'] => (value === 'IRR' || value === 'USD' ? value : '');
 
 /** New action with owner (you), due date, verification window, baseline and an optional claim. */
 export function ActionForm({ rcaId }: { rcaId: string }) {
@@ -28,46 +46,34 @@ export function ActionForm({ rcaId }: { rcaId: string }) {
     if (created) setForm(EMPTY_ACTION_FORM);
   };
   return (
-    <fieldset className="grid gap-2 rounded border p-2 md:grid-cols-3" data-testid="action-form">
+    <fieldset className="grid gap-3 rounded border p-3 md:grid-cols-3" data-testid="action-form">
       <legend className="px-1 text-sm font-medium">New action (owner: you)</legend>
-      <Field id="action-title" label="Action">
-        <Input id="action-title" value={form.title} maxLength={255} onChange={(e) => set({ title: e.target.value })} />
-      </Field>
-      <Field id="action-due" label="Due">
-        <Input id="action-due" type="date" value={form.dueDate} onChange={(e) => set({ dueDate: e.target.value })} />
-      </Field>
-      <Field id="action-window-start" label="Verify from">
-        <Input id="action-window-start" type="date" value={form.windowStart} onChange={(e) => set({ windowStart: e.target.value })} />
-      </Field>
-      <Field id="action-window-end" label="Verify until">
-        <Input id="action-window-end" type="date" value={form.windowEnd} onChange={(e) => set({ windowEnd: e.target.value })} />
-      </Field>
-      <Field id="action-baseline" label="Baseline metric">
-        <select id="action-baseline" className="h-10 w-full rounded border px-2 text-sm" value={form.baselineMetric} onChange={(e) => set({ baselineMetric: e.target.value === 'recurrences' || e.target.value === 'downtime_seconds' ? e.target.value : '' })}>
-          <option value="">None</option>
-          <option value="recurrences">Recurrences</option>
-          <option value="downtime_seconds">Downtime (s)</option>
-        </select>
-      </Field>
-      <Field id="action-baseline-days" label="Baseline days">
-        <Input id="action-baseline-days" inputMode="numeric" value={form.baselineDays} onChange={(e) => set({ baselineDays: e.target.value })} />
-      </Field>
-      <Field id="action-baseline-value" label="Declared baseline (empty = count history)">
-        <Input id="action-baseline-value" inputMode="decimal" value={form.baselineValue} onChange={(e) => set({ baselineValue: e.target.value })} />
-      </Field>
-      <Field id="action-claim" label="Claimed avoided loss">
-        <Input id="action-claim" inputMode="decimal" value={form.claimed} onChange={(e) => set({ claimed: e.target.value })} />
-      </Field>
-      <Field id="action-claim-currency" label="Claim currency">
-        <select id="action-claim-currency" className="h-10 w-full rounded border px-2 text-sm" value={form.claimedCurrency} onChange={(e) => set({ claimedCurrency: e.target.value === 'IRR' || e.target.value === 'USD' ? e.target.value : '' })}>
-          <option value="">—</option>
-          <option value="IRR">IRR</option>
-          <option value="USD">USD</option>
-        </select>
-      </Field>
-      <div className="md:col-span-3">
-        <CommandError error={create.error} />
-        <Button size="sm" disabled={form.title.trim() === '' || create.isPending} onClick={() => void submit()} data-testid="add-action">Add action</Button>
+      <TextInput id="action-title" label="Action" value={form.title} onChange={(title) => set({ title })} />
+      <DateInput id="action-due" label="Due" value={form.dueDate} onChange={(dueDate) => set({ dueDate })} />
+      <DateInput id="action-window-start" label="Verify from" value={form.windowStart} onChange={(windowStart) => set({ windowStart })} />
+      <DateInput id="action-window-end" label="Verify until" value={form.windowEnd} onChange={(windowEnd) => set({ windowEnd })} />
+      <NativeChoice
+        id="action-baseline"
+        label="Baseline metric"
+        value={form.baselineMetric}
+        options={[['', 'None'], ['recurrences', 'Recurrences'], ['downtime_seconds', 'Downtime']]}
+        onChange={(value) => set({ baselineMetric: asMetric(value) })}
+      />
+      <TextInput id="action-baseline-days" label="Baseline days" inputMode="numeric" value={form.baselineDays} onChange={(baselineDays) => set({ baselineDays })} />
+      <TextInput id="action-baseline-value" label="Declared baseline (empty = count history)" inputMode="decimal" value={form.baselineValue} onChange={(baselineValue) => set({ baselineValue })} />
+      <TextInput id="action-claim" label="Claimed avoided loss" inputMode="decimal" value={form.claimed} onChange={(claimed) => set({ claimed })} />
+      <NativeChoice
+        id="action-claim-currency"
+        label="Claim currency"
+        value={form.claimedCurrency}
+        options={[['', 'No currency'], ['IRR', 'IRR'], ['USD', 'USD']]}
+        onChange={(value) => set({ claimedCurrency: asCurrency(value) })}
+      />
+      <div className="space-y-2 md:col-span-3">
+        {create.error ? <FriendlyErrorAlert error={create.error} /> : null}
+        <Button size="sm" disabled={form.title.trim() === '' || create.isPending} onClick={() => void submit()} data-testid="add-action">
+          Add action
+        </Button>
       </div>
     </fieldset>
   );

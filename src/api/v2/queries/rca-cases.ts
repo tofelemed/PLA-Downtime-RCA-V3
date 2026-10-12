@@ -1,9 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import type { RcaAnalysesView } from '../types/rca-analyses';
 import type {
   EventEvidencePackageView,
   RcaActionView,
+  RcaCaseSummaryCounts,
   RcaCaseSummaryView,
   RcaCaseView,
+  RcaEvidenceOptions,
   RcaLinkView,
   RcaOutcomeView,
   RcaRecommendationView,
@@ -12,12 +16,16 @@ import type { ListResponse } from '../types/envelopes';
 import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
+import { usePagedQuery } from './use-paged-query';
 import { flattenPages, useV2InfiniteList } from './use-v2-list';
 import { useV2TenantId } from './use-v2-tenant';
 
 /** Server-side case search (plan 3.9 §16.2): status, unit, asset / reason / window of linked events, title. */
 export interface RcaCaseFilters {
   status?: string;
+  priority?: string;
+  /** true = target date passed and not Closed */
+  overdue?: boolean;
   unitId?: string;
   assetId?: string;
   reasonCodeId?: string;
@@ -31,11 +39,41 @@ export function useRcaCases(filters: RcaCaseFilters, enabled = true) {
   const list = useV2InfiniteList<RcaCaseSummaryView>({
     resource: 'rca-cases',
     path: '/rcas',
-    query: { limit: 50, ...query },
+    query: { limit: 20, ...query },
     key: { filters: query },
     enabled,
   });
   return { ...list, items: flattenPages(list.data?.pages) };
+}
+
+/** The case list as server pages of 20 (keyset), for the `/rca` table. */
+export function useRcaCasePage(filters: RcaCaseFilters) {
+  const query = Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== undefined && value !== ''));
+  return usePagedQuery<RcaCaseSummaryView>({ resource: 'rca-cases', path: '/rcas', query, key: { filters: query } });
+}
+
+/** Counts of the cases in scope (status, overdue, open critical) for the list header. */
+export function useRcaSummary() {
+  const tenantId = useV2TenantId();
+  return useQuery({
+    queryKey: v2Keys.detail(tenantId ?? '-', 'rca-cases', 'summary', 'counts'),
+    enabled: Boolean(tenantId),
+    staleTime: STALE_TIME['rca-cases'],
+    queryFn: async ({ signal }) =>
+      (await v2.get<RcaCaseSummaryCounts, '/api/v2/rcas/summary'>('/api/v2/rcas/summary', { signal })).data,
+  });
+}
+
+/** Evidence categories and locations of the tenant (pick lists of the evidence form). */
+export function useRcaEvidenceOptions() {
+  const tenantId = useV2TenantId();
+  return useQuery({
+    queryKey: v2Keys.detail(tenantId ?? '-', 'rca-cases', 'evidence-options', 'lists'),
+    enabled: Boolean(tenantId),
+    staleTime: STALE_TIME['rca-settings'],
+    queryFn: async ({ signal }) =>
+      (await v2.get<RcaEvidenceOptions, '/api/v2/rcas/evidence-options'>('/api/v2/rcas/evidence-options', { signal })).data,
+  });
 }
 
 function useRcaDetail<T>(id: string | null, variant: string | undefined, load: (id: string, signal: AbortSignal) => Promise<T>) {
@@ -51,6 +89,31 @@ function useRcaDetail<T>(id: string | null, variant: string | undefined, load: (
 export function useRcaCase(id: string | null) {
   return useRcaDetail(id, undefined, async (rcaId, signal) =>
     (await v2.get<RcaCaseView, '/api/v2/rcas/{id}'>('/api/v2/rcas/{id}', { path: { id: rcaId }, signal })).data,
+  );
+}
+
+/** Loads a case ahead of navigation (row hover in the case list). */
+export function usePrefetchRcaCase() {
+  const client = useQueryClient();
+  const tenantId = useV2TenantId();
+  return useCallback(
+    (id: string) => {
+      if (!tenantId) return;
+      void client.prefetchQuery({
+        queryKey: v2Keys.detail(tenantId, 'rca-cases', id, undefined),
+        staleTime: STALE_TIME['rca-cases'],
+        queryFn: async ({ signal }) =>
+          (await v2.get<RcaCaseView, '/api/v2/rcas/{id}'>('/api/v2/rcas/{id}', { path: { id }, signal })).data,
+      });
+    },
+    [client, tenantId],
+  );
+}
+
+/** The analysis tool records of a case (five-why … change; null = not saved yet). */
+export function useRcaAnalyses(id: string | null) {
+  return useRcaDetail(id, 'analyses', async (rcaId, signal) =>
+    (await v2.get<RcaAnalysesView, '/api/v2/rcas/{id}/analyses'>('/api/v2/rcas/{id}/analyses', { path: { id: rcaId }, signal })).data,
   );
 }
 

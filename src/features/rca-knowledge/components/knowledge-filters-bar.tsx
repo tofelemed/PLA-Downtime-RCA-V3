@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useCodeLibrary } from '@/api/v2/queries/reference-data';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUnitNames } from '@/features/rca/use-unit-names';
+import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
 import { ALL, type KnowledgeFilterState, type PublishedChoice } from '../model/knowledge-filters';
 
 export interface KnowledgeFiltersBarProps {
@@ -37,7 +37,7 @@ const PUBLISHED_OPTIONS: Option[] = [
   { value: 'unpublished', label: 'Unpublished only' },
 ];
 
-/** Search text, unit, reason (failure) code and published state; every filter is applied by the server. */
+/** Search text (debounced), unit, reason (failure) code and published state; every filter is applied by the server. */
 export function KnowledgeFiltersBar({ value, onChange }: KnowledgeFiltersBarProps) {
   const { units } = useUnitNames();
   const reasons = useCodeLibrary('reason-codes');
@@ -48,12 +48,12 @@ export function KnowledgeFiltersBar({ value, onChange }: KnowledgeFiltersBarProp
   const unitOptions = [{ value: ALL, label: 'All units' }, ...units.map((unit) => ({ value: unit.id, label: unit.name }))];
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap" data-testid="knowledge-filters">
-      <Input
+      <DebouncedSearchInput
         className="sm:w-72"
+        label="Search knowledge entries"
         placeholder="Search title, root cause or problem"
-        aria-label="Search knowledge entries"
         value={value.text}
-        onChange={(event) => onChange({ ...value, text: event.target.value })}
+        onChange={(text) => onChange({ ...value, text })}
       />
       <FilterSelect label="Unit filter" value={value.unitId} options={unitOptions} onChange={(unitId) => onChange({ ...value, unitId })} />
       <FilterSelect label="Reason code filter" value={value.reasonCodeId} options={reasonOptions} onChange={(reasonCodeId) => onChange({ ...value, reasonCodeId })} />
