@@ -79,7 +79,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { name: 'Tasks', href: '/tasks', icon: EntityIcon.task, section: 'reliability', capability: 'canViewOperations', description: 'Assign and track action items' },
   { name: 'Connectivity', href: '/connectivity', icon: EntityIcon.connection, section: 'integration', capability: 'canUseIntegrationConsole', description: 'Connections, ingestion jobs and mappings' },
   // listed for integration roles; the page reads signals and their samples, which every plant member may read
-  { name: 'Enhanced Historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canUseIntegrationConsole', description: 'Time series of plant signals' },
+  { name: 'Enhanced Historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canViewAnalysis', description: 'Time series of plant signals' },
   { name: 'Master Data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canManageMasterData', description: 'Plant hierarchy, units, assets and products' },
   {
     name: 'Codes & Rules',

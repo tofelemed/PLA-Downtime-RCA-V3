@@ -233,7 +233,7 @@ flowchart LR
 | Admin Panel (`/admin`) | ✓ | · | ✓ | · | · | · | · | · | · | · |
 | Permissions (`/permissions`) | ✓ | ✓ | ✓ | · | · | · | · | · | · | · |
 | Connectivity (`/connectivity`) | ✓ | ✓ | ✓ | · | · | · | · | · | ✓ | · |
-| Enhanced Historian (`/enhanced-historian`) | ✓ | ✓ | ✓ | · | · | · | · | · | ✓ | · |
+| Enhanced Historian (`/enhanced-historian`) | ✓ | ✓ | ✓ | ✓ | ✓ | · | ✓ | ✓ | ✓ | ✓ |
 | Tasks (`/tasks`) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Audit Logs (`/audit`) | ✓ | ✓ | ✓ | ✓ | · | · | · | · | · | · |
 | Settings (`/settings`) | ✓ | ✓ | ✓ | ✓ | · | · | · | · | · | · |
@@ -336,7 +336,7 @@ Routes are in `code font`. Buttons are in **bold**. Field labels are in "quotes"
 
 **Log in as:** `anna.keller@demo.acme.com`. For Demo Plant 2, use `chloe.dubois@demo.acme.com`.
 
-**Menu:** the Manager menu (4.4) plus **Master Data**, **User Management**, **Permissions**, **Connectivity**, **Enhanced Historian** and **Admin Panel**.
+**Menu:** the Manager menu (4.4) plus **Master Data**, **User Management**, **Permissions**, **Connectivity** and **Admin Panel**.
 - The Admin Panel shows the plant-level sections (Plants & organizations, Custom attributes, Dashboard settings, Status automation). Branding is SuperAdmin only.
 
 **Day in the life:** everything in 4.4 (Manager approver), plus:
@@ -366,7 +366,7 @@ Routes are in `code font`. Buttons are in **bold**. Field labels are in "quotes"
 - Approver: `fatima.haddad@demo.acme.com` or `laura.rossi@demo.acme.com`.
 - Author: `jonas.weber@demo.acme.com` or `erik.johansson@demo.acme.com`. Use a second manager to show separation of duties.
 
-**Menu:** Dashboard, Reports, Event Hub, Downtime Analysis, Production Loss Analysis, Plans Profiles & Calendars, RCA Analysis, Knowledge Base, Tasks, Codes & Rules, Finance, Audit Logs, Settings.
+**Menu:** Dashboard, Reports, Event Hub, Downtime Analysis, Production Loss Analysis, Plans Profiles & Calendars, RCA Analysis, Knowledge Base, Tasks, Enhanced Historian, Codes & Rules, Finance, Audit Logs, Settings.
 
 **Day in the life**
 
@@ -705,7 +705,7 @@ Routes are in `code font`. Buttons are in **bold**. Field labels are in "quotes"
 
 **Log in as:** `elena.marchetti@demo.acme.com` or `omar.siddiqui@demo.acme.com`. `diego.herrera` also works in Demo Plant 2.
 
-**Menu:** the Manager menu without Audit Logs and Settings, plus **Connectivity** and **Enhanced Historian**.
+**Menu:** the Manager menu without Audit Logs and Settings, plus **Connectivity**.
 
 **Day in the life**
 
@@ -757,7 +757,7 @@ Routes are in `code font`. Buttons are in **bold**. Field labels are in "quotes"
 8. **Replay a window** after fixing a mapping.
    - Jobs and replay → "Backfill from retained data (replay)": choose "From" / "To", run **Dry run (counts only)**, then **Replay this window**.
 9. **Import an external daily production report** (Maximo-style, API only): `POST /api/v2/external-production-reports`.
-10. **Signals and trends.** On a connection's tab **Signals**, define a signal (`/connectivity/connections/:connectionId/signals/new`). **Enhanced Historian** (`/enhanced-historian`) trends up to 5 signals from their stored samples.
+10. **Signals and trends.** On a connection's tab **Signals**, define a signal (`/connectivity/connections/:connectionId/signals/new`). **Enhanced Historian** (`/enhanced-historian`) trends up to 5 signals from their stored samples; every plant reader except operators may open it (read-only).
 
 **Hand-overs**
 - Events and samples flow automatically to operators (coding) and engineers (accounting).
@@ -1039,9 +1039,8 @@ stateDiagram-v2
 
 These are real limits of the current build, not mistakes in this guide.
 
-1. **Enhanced Historian is listed only for integration roles** (SuperAdmin, OrgAdmin, TenantAdmin, integration admin). Every plant member may read signal samples, and `/enhanced-historian` opens for them by URL.
-2. **Event Hub defaults to "Last 24 h".** Widen "Window" before accounting a day further back.
-3. **Event drafts survive only in the same browser tab.** They are not true offline storage.
-4. **A plant administrator cannot see users whose home plant is another plant.** Members who reach this plant through a scope grant appear as "Unknown user" and cannot be listed, granted to or assigned tasks by a plant administrator. Fixing it needs an owner decision (a row-level-security exception).
-5. **Branding changes need a page reload** before the header shows them.
-6. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.
+1. **Event Hub defaults to "Last 24 h".** Widen "Window" before accounting a day further back.
+2. **Event drafts survive only in the same browser tab.** They are not true offline storage.
+3. **A plant administrator cannot see users whose home plant is another plant.** Members who reach this plant through a scope grant appear as "Unknown user" and cannot be listed, granted to or assigned tasks by a plant administrator. Fixing it needs an owner decision (a row-level-security exception).
+4. **Branding changes need a page reload** before the header shows them.
+5. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.

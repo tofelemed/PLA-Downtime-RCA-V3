@@ -26,12 +26,12 @@ export { call, command, plantTrigger, selectPlant, type ApiErrorBody };
 
 /** The menus the two plants must offer (navigation-items.ts): operator at home, every read screen as viewer. */
 export const OPERATOR_MENU = ['/dashboard', '/pla-analytics', '/events', '/downtime', '/tasks'];
-export const OPERATOR_HIDDEN = ['/reports', '/planning', '/production-plans', '/rca', '/codes-admin', '/finance', '/users', '/master-data'];
+export const OPERATOR_HIDDEN = ['/enhanced-historian', '/reports', '/planning', '/production-plans', '/rca', '/codes-admin', '/finance', '/users', '/master-data'];
 export const VIEWER_MENU = [
   '/dashboard', '/reports', '/pla-analytics', '/planning', '/events', '/downtime', '/rca',
-  '/rca-knowledge-base', '/codes-admin', '/finance', '/tasks',
+  '/rca-knowledge-base', '/codes-admin', '/finance', '/tasks', '/enhanced-historian',
 ];
-export const VIEWER_HIDDEN = ['/master-data', '/users', '/permissions', '/admin', '/connectivity', '/enhanced-historian', '/audit', '/settings'];
+export const VIEWER_HIDDEN = ['/master-data', '/users', '/permissions', '/admin', '/connectivity', '/audit', '/settings'];
 
 export interface ViewerSession {
   email: string;

@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo } from 'react';
 import { useSignalCatalog, useSignalSamples } from '@/api/v2/queries/signals';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { Button } from '@/components/ui/button';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { DateRangeInput } from '@/features/ux-kit/date-inputs';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
@@ -28,8 +29,22 @@ function download(csv: string) {
  * Enhanced Historian: trends of the plant's typed signals (stored samples, plant time, the plant
  * calendar), up to five signals over at most 31 days, with the samples table and a CSV export (UTC).
  * The trend is in the URL, so it can be bookmarked. Read-only: signals are defined under Connectivity.
+ * Open to the plant's readers of the analysis screens (the menu's `canViewAnalysis`); operators get a refusal.
  */
 export function HistorianPage() {
+  const { canViewAnalysis } = useCapabilities();
+  if (!canViewAnalysis) {
+    return (
+      <Page width="wide">
+        <PageHeader title="Enhanced Historian" />
+        <DataState state="no-permission" />
+      </Page>
+    );
+  }
+  return <HistorianContent />;
+}
+
+function HistorianContent() {
   const tenantId = useV2TenantId();
   const { timezone } = usePlantTimezone();
   const { signalIds, range, setSignalIds, setRange } = useHistorianParams();

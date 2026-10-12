@@ -27,7 +27,7 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   Tasks: ALL,
   // Integration
   Connectivity: ADMINS,
-  'Enhanced Historian': ADMINS,
+  'Enhanced Historian': NOT_OPERATOR,
   // Administration
   'Master Data': ADMINS,
   'Codes & Rules': NOT_OPERATOR,
@@ -81,13 +81,13 @@ describe('navigation items by capability', () => {
     expect(menuFor(charlotte)).toEqual([...menuFor(legacyUser('Analyst')), 'Master Data'].sort(byMenuOrder));
   });
 
-  it('an integration_admin (legacy Engineer) gains Connectivity and Enhanced Historian and nothing else', () => {
+  it('an integration_admin (legacy Engineer) gains Connectivity and nothing else (the historian is a read screen)', () => {
     const elena: RoleSubject = { ...legacyUser('Engineer'), scopes: [{ tenantId: HOME, role: 'production_engineer' }, { tenantId: HOME, role: 'integration_admin' }] };
-    expect(menuFor(elena)).toEqual([...menuFor(legacyUser('Engineer')), 'Connectivity', 'Enhanced Historian'].sort(byMenuOrder));
+    expect(menuFor(elena)).toEqual([...menuFor(legacyUser('Engineer')), 'Connectivity'].sort(byMenuOrder));
   });
 
   it.each([
-    ['Enhanced Historian', 'canUseIntegrationConsole'],
+    ['Enhanced Historian', 'canViewAnalysis'],
     ['Admin Panel', 'canUseAdminPanel'],
     ['Audit Logs', 'canViewAuditLogs'],
   ] as const)('%s is listed exactly when its page gate (%s) admits the user', (name, gate) => {
@@ -105,10 +105,10 @@ describe('navigation items by capability', () => {
     }
   });
 
-  it('a reliability engineer sees neither the audit trail nor the historian (server: FORBIDDEN_ROLE)', () => {
+  it('a reliability engineer sees the historian (a read screen) but not the audit trail (server: FORBIDDEN_ROLE)', () => {
     const amara: RoleSubject = { ...legacyUser('Engineer'), scopes: [{ tenantId: HOME, role: 'reliability_engineer' }] };
     expect(menuFor(amara)).not.toContain('Audit Logs');
-    expect(menuFor(amara)).not.toContain('Enhanced Historian');
+    expect(menuFor(amara)).toContain('Enhanced Historian');
   });
 
   it('a viewer in another plant sees the read screens only', () => {
@@ -145,8 +145,8 @@ describe('navigation sections', () => {
   it.each([
     ['SuperAdmin', ['overview', 'production', 'reliability', 'integration', 'administration']],
     ['TenantAdmin', ['overview', 'production', 'reliability', 'integration', 'administration']],
-    ['Manager', ['overview', 'production', 'reliability', 'administration']],
-    ['Engineer', ['overview', 'production', 'reliability', 'administration']],
+    ['Manager', ['overview', 'production', 'reliability', 'integration', 'administration']],
+    ['Engineer', ['overview', 'production', 'reliability', 'integration', 'administration']],
     ['Operator', ['overview', 'production', 'reliability']],
   ])('a %s sees only the sections that hold one of its items', (role, sections) => {
     expect(sectionsOf(role)).toEqual(sections);
