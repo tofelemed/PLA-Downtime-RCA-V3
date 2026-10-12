@@ -18,6 +18,7 @@ export type UserScopeKind = (typeof SCOPE_KINDS)[number];
   'role',
 ])
 @Index('IDX_user_scopes_tenant_user', ['tenantId', 'userId'])
+@Index('IDX_user_scopes_user', ['userId'])
 export class UserScope extends TenantScopedEntity {
   @Column({ name: 'user_id', type: 'uuid' })
   userId: string;

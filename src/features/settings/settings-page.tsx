@@ -34,11 +34,18 @@ export function SettingsPage() {
           <CalendarSettingsForm saved={saved} timeZone={zone.timezone} canEdit={canManagePlantSettings} />
         </DataState>
       </Section>
-      <Section title="Time zone">
-        <p className="text-sm" data-testid="plant-timezone">
-          <span className="font-medium">{zone.timezone}</span>{' '}
-          <span className="text-muted-foreground">({ZONE_SOURCE[zone.source]})</span>
-        </p>
+      <Section title="Plant">
+        <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[10rem_1fr]">
+          <dt className="text-muted-foreground">Organization</dt>
+          <dd>{tenant.data?.organizationName ?? '—'}</dd>
+          <dt className="text-muted-foreground">Code</dt>
+          <dd>{tenant.data?.code ?? '—'}</dd>
+          <dt className="text-muted-foreground">Time zone</dt>
+          <dd data-testid="plant-timezone">
+            <span className="font-medium">{zone.timezone}</span>{' '}
+            <span className="text-muted-foreground">({ZONE_SOURCE[zone.source]})</span>
+          </dd>
+        </dl>
       </Section>
     </Page>
   );

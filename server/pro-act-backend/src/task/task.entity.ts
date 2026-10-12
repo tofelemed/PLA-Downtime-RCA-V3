@@ -1,5 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
+@Index('IDX_tasks_tenant_created', ['tenantId', 'createdAt'])
+@Index('IDX_tasks_tenant_due', ['tenantId', 'dueDate', 'id'])
+@Index('IDX_tasks_tenant_assignee', ['tenantId', 'assignedTo'])
 @Entity('tasks')
 export class Task {
   @PrimaryGeneratedColumn('uuid')

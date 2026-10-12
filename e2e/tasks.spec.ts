@@ -8,8 +8,8 @@ test.describe('Tasks Module', () => {
 
   test('tasks page loads', async ({ page }) => {
     await page.goto('/tasks');
-    await expect(page.getByRole('heading', { name: 'Task Management' })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('button', { name: /New Task/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tasks', level: 1 })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('link', { name: 'New task' })).toBeVisible();
   });
 
   test('task API CRUD', async ({ request }) => {

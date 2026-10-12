@@ -42,6 +42,9 @@ export const AUDIT_ENTITY_ROUTE_MAP: Record<string, string> = {
   connectivity: 'Connectivity',
   'custom-attribute-definitions': 'CustomAttributeDefinition',
   'custom-attribute-values': 'CustomAttributeValue',
+  'user-scopes': 'UserScope',
+  'dashboard-configuration': 'DashboardConfiguration',
+  branding: 'Branding',
 };
 
 export function methodToAuditAction(method: string): string {

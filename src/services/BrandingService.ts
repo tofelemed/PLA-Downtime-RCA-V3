@@ -3,7 +3,8 @@
  * Uses backend API for persistence
  */
 
-import { appSettingsApi } from './api/appSettingsApi';
+import { v2Request } from '@/api/v2/client';
+import type { BrandingView } from '@/api/v2/types/administration';
 
 export interface BrandingSettings {
   id: string;
@@ -43,62 +44,29 @@ const DEFAULT_BRANDING: BrandingSettings = {
   updatedAt: new Date().toISOString(),
 };
 
-class BrandingService {
-  private settingsKey = 'branding';
-  private cache: BrandingSettings | null = null;
+/** The stored branding over the defaults (absent or null fields keep the default). */
+function toSettings(view: BrandingView): BrandingSettings {
+  const stored = Object.fromEntries(Object.entries(view).filter(([, value]) => value !== null && value !== undefined));
+  return {
+    ...DEFAULT_BRANDING,
+    ...stored,
+    id: 'default',
+    logoObjectFit: (view.logoObjectFit as BrandingSettings['logoObjectFit']) ?? DEFAULT_BRANDING.logoObjectFit,
+    updatedAt: view.updatedAt ?? DEFAULT_BRANDING.updatedAt,
+  };
+}
 
+class BrandingService {
   /**
-   * Get current branding settings
+   * Current branding from `GET /v2/branding` (caching is left to TanStack Query in `useBranding`);
+   * the defaults when the request fails, so the shell always renders.
    */
   async getBranding(): Promise<BrandingSettings> {
-    if (this.cache) {
-      return this.cache;
-    }
-
-    try {
-      const remote = await appSettingsApi.getValue<BrandingSettings>(this.settingsKey);
-      if (remote) {
-        const merged = { ...DEFAULT_BRANDING, ...remote };
-        this.cache = merged;
-        this.applyBrandingToDocument(merged);
-        return merged;
-      }
-    } catch (error) {
-      console.error('Failed to load branding from API:', error);
-    }
-
-    // Return default if API fails
-    const defaultBranding = DEFAULT_BRANDING;
-    this.cache = defaultBranding;
-    this.applyBrandingToDocument(defaultBranding);
-    return defaultBranding;
-  }
-
-  /**
-   * Save branding settings
-   */
-  async saveBranding(settings: Partial<BrandingSettings>, updatedBy?: string): Promise<BrandingSettings> {
-    const currentSettings = await this.getBranding();
-
-    const updatedSettings: BrandingSettings = {
-      ...currentSettings,
-      ...settings,
-      id: 'default',
-      updatedAt: new Date().toISOString(),
-      updatedBy,
-    };
-
-    await appSettingsApi.setValue(this.settingsKey, updatedSettings);
-    this.cache = updatedSettings;
-    this.applyBrandingToDocument(updatedSettings);
-    return updatedSettings;
-  }
-
-  /**
-   * Reset to default branding
-   */
-  async resetBranding(): Promise<BrandingSettings> {
-    return this.saveBranding(DEFAULT_BRANDING);
+    const settings = await v2Request<BrandingView>({ method: 'GET', path: '/branding' })
+      .then((response) => toSettings(response.data))
+      .catch(() => ({ ...DEFAULT_BRANDING }));
+    this.applyBrandingToDocument(settings);
+    return settings;
   }
 
   /**
@@ -161,13 +129,6 @@ class BrandingService {
       }
       appleTouchIcon.href = settings.faviconUrl;
     }
-  }
-
-  /**
-   * Clear cache (useful for testing or forcing refresh)
-   */
-  clearCache(): void {
-    this.cache = null;
   }
 
   /**

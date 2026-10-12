@@ -1,5 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
+@Index('IDX_users_tenant_name', ['tenantId', 'name', 'id'])
+@Index('IDX_users_organization', ['organizationId'])
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')

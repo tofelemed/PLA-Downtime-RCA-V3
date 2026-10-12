@@ -1,5 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
+@Index('IDX_audit_logs_tenant_created', ['tenantId', 'createdAt'])
+@Index('IDX_audit_logs_tenant_time', ['tenantId', 'timestamp', 'id'])
+@Index('IDX_audit_logs_tenant_user', ['tenantId', 'userId'])
 @Entity('audit_logs')
 export class AuditLog {
   @PrimaryGeneratedColumn('uuid')

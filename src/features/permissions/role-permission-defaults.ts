@@ -1,4 +1,4 @@
-import type { UserRole } from '@/services/api/userApi';
+import type { LegacyRole } from '@/api/v2/types/administration';
 
 /** The screens a legacy role reaches, as the permissions screen displays them. */
 export interface ModulePermissions {
@@ -49,7 +49,7 @@ const NONE: ModulePermissions = {
  * What each legacy role reaches by default (display only: the server decides from the effective roles,
  * see `features/auth/capabilities.ts`). Manager has no entry: it starts from an empty set.
  */
-const DEFAULT_ROLE_PERMISSIONS: Partial<Record<UserRole, ModulePermissions>> = {
+const DEFAULT_ROLE_PERMISSIONS: Partial<Record<LegacyRole, ModulePermissions>> = {
   SuperAdmin: ALL,
   OrgAdmin: ALL,
   TenantAdmin: { ...ALL, audit: false },
@@ -58,6 +58,6 @@ const DEFAULT_ROLE_PERMISSIONS: Partial<Record<UserRole, ModulePermissions>> = {
   Operator: { ...NONE, dashboard: true, events: true },
 };
 
-export function defaultPermissionsFor(role: UserRole): ModulePermissions {
-  return { ...(DEFAULT_ROLE_PERMISSIONS[role] ?? NONE) };
+export function defaultPermissionsFor(role: string): ModulePermissions {
+  return { ...(DEFAULT_ROLE_PERMISSIONS[role as LegacyRole] ?? NONE) };
 }
