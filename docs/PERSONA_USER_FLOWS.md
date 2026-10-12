@@ -275,7 +275,7 @@ Routes are in `code font`. Buttons are in **bold**. Field labels are in "quotes"
    - Units, assets and products are created in **Master Data** (`/master-data/units/new`, `/master-data/assets/new`, `/master-data/products/new`), as in 4.10.
 3. **Set branding.**
    - Admin Panel, section **Branding** (`/admin?tab=branding`, SuperAdmin only). Change "Subtitle" and click **Save changes**. The message "Branding saved" appears.
-   - The header shows the new text after a reload.
+   - The header shows the new text at once (other open browsers pick it up on their next page load).
    - Only a SuperAdmin may write application-wide settings. Anyone else gets `SETTING_NOT_WRITABLE`.
 4. **Create users of any role.**
    - Go to **User Management** (`/users`) and click **Add user** (`/users/new`).
@@ -1040,5 +1040,4 @@ stateDiagram-v2
 These are real limits of the current build, not mistakes in this guide.
 
 1. **A plant administrator cannot see users whose home plant is another plant.** Members who reach this plant through a scope grant appear as "Unknown user" and cannot be listed, granted to or assigned tasks by a plant administrator. Fixing it needs an owner decision (a row-level-security exception).
-2. **Branding changes need a page reload** before the header shows them.
-3. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.
+2. **Kafka is "Not available yet"** in the connection picker. MQTT "Run state" messages are quarantined as `no_handler` until the state engine (plan 1.10) exists.
