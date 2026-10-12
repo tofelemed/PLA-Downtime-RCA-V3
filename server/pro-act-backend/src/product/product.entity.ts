@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique, Index, VersionColumn } from 'typeorm';
 
 @Entity('products')
 @Unique('UQ_products_tenant_code', ['tenantId', 'code'])
+@Index('IDX_products_organization', ['organizationId'])
 export class Product {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -32,6 +33,10 @@ export class Product {
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
+
+  /** Optimistic concurrency version (If-Match on v2 master-data changes) */
+  @VersionColumn({ name: 'row_version', default: 1 })
+  rowVersion: number;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

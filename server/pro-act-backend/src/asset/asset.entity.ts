@@ -1,6 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, VersionColumn } from 'typeorm';
 
 @Entity('assets')
+@Index('IDX_assets_tenant_unit', ['tenantId', 'unitId'])
+@Index('IDX_assets_tenant_code', ['tenantId', 'code'])
 export class Asset {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -52,6 +54,14 @@ export class Asset {
 
   @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
   organizationId?: string;
+
+  /** When the asset was retired (v2 master data); null = active. Retired assets keep their history. */
+  @Column({ name: 'retired_at', type: 'timestamptz', nullable: true })
+  retiredAt?: Date | null;
+
+  /** Optimistic concurrency version (If-Match on v2 master-data changes) */
+  @VersionColumn({ name: 'row_version', default: 1 })
+  rowVersion: number;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

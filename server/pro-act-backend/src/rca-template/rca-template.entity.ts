@@ -1,8 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, VersionColumn } from 'typeorm';
 import { Organization } from '../organization/organization.entity';
 import { Tenant } from '../tenant/tenant.entity';
 
 @Entity('rca_templates')
+@Index('IDX_rca_templates_tenant_name', ['tenantId', 'name'])
 export class RCATemplate {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -61,6 +62,10 @@ export class RCATemplate {
   // @ManyToOne(() => Tenant)
   // @JoinColumn({ name: 'tenantId' })
   // tenant: Tenant;
+
+  /** Optimistic concurrency version (If-Match on v2 master-data changes) */
+  @VersionColumn({ name: 'row_version', default: 1 })
+  rowVersion: number;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

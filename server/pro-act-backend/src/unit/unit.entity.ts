@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique, Index, ManyToOne, JoinColumn, VersionColumn } from 'typeorm';
 import { Site } from '../calendar/entities/site.entity';
 
 @Entity('units')
@@ -39,6 +39,14 @@ export class Unit {
   @ManyToOne(() => Site, { onDelete: 'RESTRICT', nullable: true })
   @JoinColumn({ name: 'site_id' })
   site?: Site | null;
+
+  /** When the unit was retired (v2 master data); null = active. Retired units keep their history. */
+  @Column({ name: 'retired_at', type: 'timestamptz', nullable: true })
+  retiredAt?: Date | null;
+
+  /** Optimistic concurrency version (If-Match on v2 master-data changes) */
+  @VersionColumn({ name: 'row_version', default: 1 })
+  rowVersion: number;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

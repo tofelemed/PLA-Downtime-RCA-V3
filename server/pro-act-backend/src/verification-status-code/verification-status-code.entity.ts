@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, VersionColumn } from 'typeorm';
 
 @Entity('verification_status_codes')
+@Index('IDX_verification_status_codes_tenant_code', ['tenantId', 'code'])
 export class VerificationStatusCode {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -30,6 +31,10 @@ export class VerificationStatusCode {
 
   @Column({ name: 'organization_id', type: 'uuid', nullable: true })
   organizationId?: string;
+
+  /** Optimistic concurrency version (If-Match on v2 master-data changes) */
+  @VersionColumn({ name: 'row_version', default: 1 })
+  rowVersion: number;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
