@@ -28,6 +28,14 @@ describe('describeError', () => {
     expectNothingInternal(`${friendly.title} ${friendly.message}`);
   });
 
+  it('a start or end in the future asks for a time up to now (DT-09)', () => {
+    const friendly = describeError(
+      v2(422, 'IN_FUTURE', 'endTime must not be in the future', [{ field: 'endTime', message: 'endTime must not be in the future' }]),
+    );
+    expect(friendly.title).toBe('The time is in the future');
+    expectNothingInternal(`${friendly.title} ${friendly.message}`);
+  });
+
   it('an RCA case that cannot close yet says what is missing (RCA-01)', () => {
     const friendly = describeError(
       v2(422, 'CLOSE_BLOCKED', 'finish every action before closing the case', [

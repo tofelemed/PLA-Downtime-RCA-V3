@@ -3,6 +3,9 @@ import { PhysicalType } from './event-classification';
 /** Tolerance when both `end` and `durationSeconds` are given (DT08). */
 const DURATION_TOLERANCE_SECONDS = 1;
 
+/** Clock difference between the browser and the server tolerated before a time counts as future (DT-09). */
+const FUTURE_ALLOWANCE_SECONDS = 120;
+
 export interface IntervalInput {
   start: Date;
   end?: Date | null;
@@ -15,7 +18,8 @@ export type IntervalViolationCode =
   | 'END_BEFORE_START'
   | 'DURATION_CONFLICT'
   | 'ZERO_DURATION_DOWNTIME'
-  | 'NEGATIVE_DURATION';
+  | 'NEGATIVE_DURATION'
+  | 'IN_FUTURE';
 
 /** A create/update that breaks the interval rules; the API maps it to 422 with this code. */
 export class IntervalViolation extends Error {
@@ -87,4 +91,29 @@ function effectiveEnd(input: IntervalInput, startMs: number): Date | null {
     return end;
   }
   return end ?? fromDuration;
+}
+
+/**
+ * DT-09: a manual start or end may not lie in the future beyond the clock allowance; an event that has
+ * not happened yet would count as stopped or running time that nobody measured.
+ */
+export function assertNotInFuture(
+  interval: { start: Date; end: Date | null },
+  now: Date,
+): void {
+  const latest = now.getTime() + FUTURE_ALLOWANCE_SECONDS * 1000;
+  if (interval.start.getTime() > latest) {
+    throw new IntervalViolation(
+      'IN_FUTURE',
+      'startTime must not be in the future',
+      'startTime',
+    );
+  }
+  if (interval.end && interval.end.getTime() > latest) {
+    throw new IntervalViolation(
+      'IN_FUTURE',
+      'endTime must not be in the future',
+      'endTime',
+    );
+  }
 }

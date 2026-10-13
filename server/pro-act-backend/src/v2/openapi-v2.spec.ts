@@ -10,7 +10,8 @@ import { RcaCaseCommandsService } from '../rca-case/rca-case-commands.service';
 import { RcaCasesService } from '../rca-case/rca-cases.service';
 import { RcaLinksService } from '../rca-case/rca-links.service';
 import { RcaRecommendationsService } from '../rca-case/rca-recommendations.service';
-import { INestApplication, Module } from '@nestjs/common';
+import { Global, INestApplication, Module } from '@nestjs/common';
+import { Clock, SystemClock } from '../common/clock/clock';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
@@ -127,6 +128,14 @@ import { RulesService } from '../rules/rules.service';
 import { withMasterDataStubs } from './master-data/master-data-v2.stubs';
 import { withAdministrationStubs } from './administration/administration-v2.stubs';
 import { ActivitySummaryV2Service } from './activity-summary/activity-summary-v2.service';
+
+/** Stands in for the global common module: the clock the event writes read (DT-09). */
+@Global()
+@Module({
+  providers: [{ provide: Clock, useClass: SystemClock }],
+  exports: [Clock],
+})
+class ClockModuleStub {}
 
 /** Stands in for the v1 event module (and its RCA/realtime graph): only the document is needed. */
 @Module({
@@ -393,7 +402,7 @@ class RcaKnowledgeModuleStub {}
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
 async function generate(): Promise<string> {
-  const moduleRef = await withAdministrationStubs(withMasterDataStubs(Test.createTestingModule({ imports: [V2Module] })))
+  const moduleRef = await withAdministrationStubs(withMasterDataStubs(Test.createTestingModule({ imports: [V2Module, ClockModuleStub] })))
     .overrideProvider(getRepositoryToken(ProductionEvent))
     .useValue({})
     .overrideProvider(getRepositoryToken(Unit))

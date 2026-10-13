@@ -135,6 +135,21 @@ These findings are correctness, security, performance or cleanup. Each has eithe
 
 ## Area 2 — Downtime & reliability KPIs (~60%)
 
+### 2.0 Work that does not wait for the SME (part B, started 13 Oct 2026)
+
+SME questions D1–D17 were sent on 13 Oct 2026; the phases below need none of the answers (labels are factual, thresholds stay policy settings without a guessed default).
+
+| Phase | Findings | Scope | Status |
+|---|---|---|---|
+| P1 | DT-09 | Manual start/end not in the future (422 `IN_FUTURE`), injectable server clock | ✅ |
+| P2 | DT-02 (label part) | "Unknown" in downtime screens renamed to what it is (stop time of an uncoded class); event coverage measure waits for D1/D2 | ⬜ |
+| P3 | DT-04 | Overlapping stops on one asset flagged on write (warning + review item); merge window waits for D5 | ⬜ |
+| P4 | DT-07 | Downtime totals within scheduled time, so they reconcile with Availability; `downtime_external` measure | ⬜ |
+| P5 | FE-08 | Pareto by lost quantity and value from the approved ledger | ⬜ |
+| P6 | FE-06, FE-07 | Reason code in the close dialog, inline "Code"; select all matching, "to code this shift" preset | ⬜ |
+| P7 | DT-10 (maths part) | Multi-period A·P·Q = OEE on the same period set; week start as a plant setting (default ISO Monday until D16) | ⬜ |
+| P8 | FE-09 | Event and RCA screens on paged `/v2/assets` | ⬜ |
+
 | ID | Sev | Finding | Evidence | Status |
 |---|---|---|---|---|
 | DT-01 | High | **Asset-level / no-impact stops reduce unit Availability and MTBF exposure** (same root as LA-05). | `domain/accounting/segmentation.ts:35-64`; `v2/production-events/production-events-v2-commands.service.ts:327-345` | ⬜ |
@@ -145,7 +160,7 @@ These findings are correctness, security, performance or cleanup. Each has eithe
 | DT-06 | Medium | Overlapping stops split time equally in the Pareto and bad actors; no first-out option; asset bad-actor time is allocated, not the asset's own outage time. | `domain/kpi/downtime-allocation.ts:37-58` | ⬜ |
 | DT-07 | Medium | Pareto/downtime totals use the calendar window while Availability uses scheduled time, so they don't reconcile; no `downtime_external` measure. | `domain/kpi/period-kpis.ts:208-216` | ⬜ |
 | DT-08 | Medium | A stop still open when the period was computed can stay under-measured after the period ends (partly inferred). | `accounting/accounting-inputs.loader.ts:226-229`; `periods/period-sweep.job.ts:84-95` | ✅ 13 Oct |
-| DT-09 | Low | No future-time check on create/patch; merging across a gap turns run time into downtime; micro-stop test uses only the window part of the occurrence. | `v2/.../production-event-v2-write.dto.ts:129,158`; `segmentation.ts:36-47` | 🔄 micro-stop part ✅ 13 Oct; future-time check needs an injectable clock |
+| DT-09 | Low | No future-time check on create/patch; merging across a gap turns run time into downtime; micro-stop test uses only the window part of the occurrence. | `v2/.../production-event-v2-write.dto.ts:129,158`; `segmentation.ts:36-47` | ✅ 13 Oct (micro-stop on the full occurrence; 422 `IN_FUTURE` beyond now + 120 s via the injectable `Clock`); merge-gap rule waits for D5 |
 | DT-10 | Low | Multi-period A·P·Q ≠ OEE (A over all periods, P/Q/OEE over complete ones); ISO weeks start Monday (Iranian week starts Saturday); standby asset MTBF uses unit run time. | `domain/kpi/aggregate.ts`; `v2/reports/report-sql.ts:28,117` | ⬜ |
 
 ## Area 3 — Reconciliation workflow (~80%)

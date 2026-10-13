@@ -6,10 +6,17 @@ import { UnitDowntimeService } from '../../src/production-event/unit-downtime.se
 import { V2Module } from '../../src/v2/v2.module';
 import { IntegrationHarness } from './harness';
 import { at, EventWorld, seedEventWorld } from './support/seed-event-world';
-import { bearer, createIntegrationApp, signToken } from './support/test-app';
+import {
+  bearer,
+  createIntegrationApp,
+  signToken,
+  TEST_NOW,
+} from './support/test-app';
 
 const DAY = '2026-09-08'; // fixed past date: never today, never the seed world's day
 const t = (time: string) => at(time, DAY).toISOString();
+/** An instant one hour after the test app's clock (DT-09). */
+const FUTURE = new Date(TEST_NOW.getTime() + 3_600_000).toISOString();
 
 /** Plan 1.1: T01, T02 (open events), T03, T42, DT08 validation, DT11 adapter, If-Match on PATCH. */
 describe('event interval model (plan 1.1)', () => {
@@ -68,6 +75,28 @@ describe('event interval model (plan 1.1)', () => {
         .set(bearer(token))
         .expect(200);
       expect(Number(v1.body.duration)).toBe(90);
+    });
+
+    it('DT-09: a start or an end in the future is 422 IN_FUTURE, naming the field', async () => {
+      const start = await create({
+        unitId: world.unitA1,
+        eventType: 'ProductionLoss',
+        startTime: FUTURE,
+      }).expect(422);
+      expect(start.body).toMatchObject({
+        code: 'IN_FUTURE',
+        fieldErrors: [expect.objectContaining({ field: 'startTime' })],
+      });
+      const end = await create({
+        unitId: world.unitA1,
+        eventType: 'ProductionLoss',
+        startTime: t('09:00'),
+        endTime: FUTURE,
+      }).expect(422);
+      expect(end.body).toMatchObject({
+        code: 'IN_FUTURE',
+        fieldErrors: [expect.objectContaining({ field: 'endTime' })],
+      });
     });
 
     it('computes the end from durationSeconds', async () => {
@@ -261,6 +290,12 @@ describe('event interval model (plan 1.1)', () => {
         rowVersion: 2,
       });
       expect(response.headers.etag).toBe('"2"');
+    });
+
+    it('DT-09: an end moved into the future is 422 IN_FUTURE; other edits are untouched', async () => {
+      const response = await patch({ endTime: FUTURE }, '"2"').expect(422);
+      expect(response.body.code).toBe('IN_FUTURE');
+      await patch({ description: 'still editable' }, '"2"').expect(200);
     });
 
     it('keeps the interval of source events (409 SOURCE_OWNED)', async () => {

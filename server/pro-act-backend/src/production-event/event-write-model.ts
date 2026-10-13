@@ -6,6 +6,7 @@ import {
   sourceKindOf,
 } from '../domain/events/event-classification';
 import {
+  assertNotInFuture,
   IntervalViolation,
   resolveInterval,
 } from '../domain/events/event-interval.validation';
@@ -160,6 +161,18 @@ export function toUnprocessable(
     message: [violation.message],
     fieldErrors: [{ field: violation.field, message: violation.message }],
   });
+}
+
+/** DT-09: 422 IN_FUTURE when a manual start or end lies beyond the clock allowance. */
+export function assertWrittenNotInFuture(
+  fields: Pick<IntervalModelFields, 'startTime' | 'endTime'>,
+  now: Date,
+): void {
+  try {
+    assertNotInFuture({ start: fields.startTime, end: fields.endTime }, now);
+  } catch (error) {
+    throw error instanceof IntervalViolation ? toUnprocessable(error) : error;
+  }
 }
 
 function resolve(

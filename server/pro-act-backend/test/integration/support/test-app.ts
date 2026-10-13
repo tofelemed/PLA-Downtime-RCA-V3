@@ -22,6 +22,7 @@ import { ScopeGuard } from '../../../src/auth/guards/scope.guard';
 import { TenantBindingGuard } from '../../../src/auth/guards/tenant-binding.guard';
 import { WriteAccessGuard } from '../../../src/auth/guards/write-access.guard';
 import { JwtAuthGuard } from '../../../src/auth/jwt-auth.guard';
+import { Clock } from '../../../src/common/clock/clock';
 import { CommonModule } from '../../../src/common/common.module';
 import { RequestContextMiddleware } from '../../../src/common/context/request-context.middleware';
 import { configureHttpApp } from '../../../src/common/http/configure-http-app';
@@ -61,6 +62,16 @@ class HttpConventionsModule implements NestModule {
       .apply(CorrelationIdMiddleware, RequestContextMiddleware)
       .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
+}
+
+/**
+ * "Now" of the test app: after every fixture date (the worlds use 2027), so manual events are never in
+ * the future (DT-09); a test of the future-time check writes after this instant.
+ */
+export const TEST_NOW = new Date('2030-01-01T00:00:00.000Z');
+
+function fixedClock(now: Date): Clock {
+  return { now: () => new Date(now) };
 }
 
 /**
@@ -107,7 +118,10 @@ export async function createIntegrationApp(
       { provide: APP_GUARD, useClass: TenantBindingGuard },
       { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     ],
-  }).compile();
+  })
+    .overrideProvider(Clock)
+    .useValue(fixedClock(TEST_NOW))
+    .compile();
 
   const app = configureHttpApp(
     moduleRef.createNestApplication({ logger: false }),

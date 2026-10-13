@@ -1,5 +1,6 @@
 import { classifyLegacyEventType, sourceKindOf } from './event-classification';
 import {
+  assertNotInFuture,
   IntervalViolation,
   resolveInterval,
 } from './event-interval.validation';
@@ -198,5 +199,41 @@ describe('resolveInterval (DT08)', () => {
     expect(violation({ ...base, start: new Date('nope') })).toBe(
       'INVALID_START',
     );
+  });
+});
+
+describe('assertNotInFuture (DT-09)', () => {
+  const now = at('12:00');
+
+  function violation(interval: {
+    start: Date;
+    end: Date | null;
+  }): { code: string; field: string } | undefined {
+    try {
+      assertNotInFuture(interval, now);
+      return undefined;
+    } catch (error) {
+      return error instanceof IntervalViolation
+        ? { code: error.code, field: error.field }
+        : { code: 'unexpected', field: '' };
+    }
+  }
+
+  it('accepts past and open events and a start or end within the 2 min clock allowance', () => {
+    expect(violation({ start: at('06:00'), end: at('11:59') })).toBeUndefined();
+    expect(violation({ start: at('06:00'), end: null })).toBeUndefined();
+    expect(violation({ start: at('12:02'), end: null })).toBeUndefined();
+    expect(violation({ start: at('11:00'), end: at('12:02') })).toBeUndefined();
+  });
+
+  it('rejects a start or an end beyond the allowance, naming the field', () => {
+    expect(violation({ start: at('12:03'), end: null })).toEqual({
+      code: 'IN_FUTURE',
+      field: 'startTime',
+    });
+    expect(violation({ start: at('11:00'), end: at('13:00') })).toEqual({
+      code: 'IN_FUTURE',
+      field: 'endTime',
+    });
   });
 });

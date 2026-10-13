@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { Repository } from 'typeorm';
+import { Clock } from '../../common/clock/clock';
 import { assertRevision } from '../../common/concurrency/revision';
 import {
   RequestContext,
@@ -24,6 +25,7 @@ import {
 } from '../../code-library/classification-basis';
 import { CodeDefaultsService } from '../../code-library/code-defaults.service';
 import {
+  assertWrittenNotInFuture,
   EventWriteInput,
   IntervalModelFields,
   prepareCreate,
@@ -55,6 +57,7 @@ export class ProductionEventsV2CommandService {
     private readonly revisions: EventRevisionService,
     private readonly codeDefaults: CodeDefaultsService,
     private readonly ruleDefaults: RuleClassificationService,
+    private readonly clock: Clock,
   ) {}
 
   /** Creates a manual event in the caller's tenant; returns its id. */
@@ -76,6 +79,7 @@ export class ProductionEventsV2CommandService {
       source: MANUAL_SOURCE,
     });
     assertImpact(fields, dto.impactFraction);
+    assertWrittenNotInFuture(fields, this.clock.now());
     const id = randomUUID();
     const event = this.events.create({
       ...editableColumns(dto),
@@ -128,13 +132,14 @@ export class ProductionEventsV2CommandService {
       dto,
       existing.startTime,
     );
+    const now = this.clock.now();
     const updated = await this.revisions.applyUserChange({
       actor: actorFromContext(context),
       eventId: id,
       tenantId,
       expectedRowVersion: expectedRevision,
       patch: (locked) => ({
-        ...patchColumns(locked, coded.dto),
+        ...patchColumns(locked, coded.dto, now),
         ...withoutKeptImpactCode(locked, coded.columns),
       }),
     });
@@ -269,12 +274,18 @@ function withoutKeptImpactCode(
   return rest;
 }
 
-/** Columns of a PATCH against the locked row; 422 INVALID_IMPACT on an inconsistent impact. */
+/**
+ * Columns of a PATCH against the locked row; 422 INVALID_IMPACT on an inconsistent impact, 422 IN_FUTURE
+ * when a changed interval reaches into the future.
+ */
 function patchColumns(
   locked: ProductionEvent,
   dto: PatchProductionEventV2Dto,
+  now: Date,
 ): Partial<ProductionEvent> {
   const fields = prepareUpdate(locked, writeInput(dto));
+  if (INTERVAL_FIELDS.some((field) => dto[field] !== undefined))
+    assertWrittenNotInFuture(fields, now);
   assertImpact(
     fields,
     dto.impactFraction === undefined

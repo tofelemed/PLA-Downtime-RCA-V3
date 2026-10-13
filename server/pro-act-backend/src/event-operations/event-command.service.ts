@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { Clock } from '../common/clock/clock';
 import { RequestContext } from '../common/context/request-context';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { EventChangeNotifier } from '../production-event/revisions/event-change.notifier';
@@ -50,6 +51,7 @@ export class EventCommandService {
     @InjectRepository(ProductionEvent)
     private readonly events: Repository<ProductionEvent>,
     private readonly notifier: EventChangeNotifier,
+    private readonly clock: Clock,
   ) {}
 
   split(
@@ -58,7 +60,12 @@ export class EventCommandService {
     input: SplitInput,
   ): Promise<OperationOutcome> {
     return this.run((manager) =>
-      splitIn(manager, { ...input, context, eventId, now: new Date() }),
+      splitIn(manager, {
+        ...input,
+        context,
+        eventId,
+        now: this.clock.now(),
+      }),
     );
   }
 
@@ -72,7 +79,12 @@ export class EventCommandService {
     input: CloseInput,
   ): Promise<OperationOutcome> {
     return this.run((manager) =>
-      closeIn(manager, { ...input, context, eventId, now: new Date() }),
+      closeIn(manager, {
+        ...input,
+        context,
+        eventId,
+        now: this.clock.now(),
+      }),
     );
   }
 
