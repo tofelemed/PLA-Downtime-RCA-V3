@@ -5,7 +5,7 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { labelOf, useProductNames } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
-import { ACTUALS_METHOD_LABELS, ACTUALS_QUALITY_LABELS, ACTUALS_SOURCE_LABELS, FINDING_LABELS, SEGMENT_QUALITY_LABELS } from '../model/actuals-labels';
+import { ACTUALS_METHOD_LABELS, ACTUALS_QUALITY_LABELS, ACTUALS_SOURCE_LABELS, findingText, SEGMENT_QUALITY_LABELS } from '../model/actuals-labels';
 import { formatRatioPercent } from '../model/display';
 
 export interface ActualsProvenanceProps {
@@ -36,7 +36,7 @@ function SliceProvenance({ slice, timezone, productName }: { slice: DetailSlice;
             {actuals.exceptions.map((e) => (
               <li key={`${e.code}-${e.from ?? ''}`} className={e.severity === 'problem' ? 'text-destructive' : undefined} data-code={e.code}>
                 {e.severity === 'problem' ? 'Problem: ' : 'Note: '}
-                {labelOf(FINDING_LABELS, e.code)}
+                {findingText(e)}
               </li>
             ))}
           </ul>

@@ -46,6 +46,18 @@ export const FINDING_LABELS: Readonly<Record<string, string>> = {
   coverage_gap: 'Part of the period has no data',
 };
 
+const SPLIT_METHODS: Readonly<Record<string, string>> = {
+  running_time: 'by running time',
+  elapsed_time: 'by elapsed time',
+};
+
+/** A finding in words, with how an estimate was made when the server says so (SME Q18). */
+export function findingText(finding: { code: string; detail?: Record<string, unknown> }): string {
+  const label = FINDING_LABELS[finding.code] ?? finding.code;
+  const method = typeof finding.detail?.method === 'string' ? SPLIT_METHODS[finding.detail.method] : undefined;
+  return method ? `${label} (${method})` : label;
+}
+
 export const ADJUSTMENT_KIND_LABELS: Readonly<Record<string, string>> = {
   gross: 'Gross output',
   good: 'Good output',

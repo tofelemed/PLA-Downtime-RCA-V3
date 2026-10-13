@@ -3,6 +3,7 @@ import { StaleRevisionError, V2ApiError } from '@/api/v2/errors';
 import { v2Keys } from '@/api/v2/queries/query-keys';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { reconciliationKey, serverKeyOf } from './hooks/use-draft-editor';
+import { findingText } from './model/actuals-labels';
 import { approveGate, formatMoney, formatRatioPercent, reviewGate } from './model/display';
 import { addManual, decisionProblems, draftFromView, manualProblems, rebaseDraft, removeManual, setDecision, toPayload } from './model/draft-lines';
 import { issuesByRow, workflowProblemOf } from './model/workflow-errors';
@@ -152,5 +153,13 @@ describe('query keys', () => {
     expect(reconciliationKey('t1', 'p1')).not.toEqual(reconciliationKey('t2', 'p1'));
     expect(serverKeyOf(view())).not.toEqual(serverKeyOf(view({ rowVersion: 5 })));
     expect(serverKeyOf(view())).not.toEqual(serverKeyOf(view({ baseRunId: 'run-2' })));
+  });
+});
+
+describe('actuals finding text (SME Q18)', () => {
+  it('names how a spanning output record was split', () => {
+    expect(findingText({ code: 'proportional_estimate', detail: { method: 'running_time' } })).toBe('Output estimated proportionally (by running time)');
+    expect(findingText({ code: 'proportional_estimate', detail: { method: 'elapsed_time' } })).toBe('Output estimated proportionally (by elapsed time)');
+    expect(findingText({ code: 'coverage_gap' })).toBe('Part of the period has no data');
   });
 });
