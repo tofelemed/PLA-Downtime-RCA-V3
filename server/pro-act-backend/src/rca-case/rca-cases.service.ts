@@ -12,6 +12,7 @@ import {
   RcaCaseV2ListQueryDto,
   RcaCaseV2UpdateDto,
 } from '../v2/rca/rca-cases-v2.dto';
+import { assertClosable } from './close-check';
 import { moveEventRcaState } from './event-rca-pointer';
 import {
   assertCaseReferences,
@@ -125,6 +126,11 @@ export class RcaCasesService {
         body.unitId === undefined ? (rca.unitId ?? null) : body.unitId;
       await assertCaseReferences(manager, scope, body, unitId);
       const closing = body.status === 'Closed' && rca.status !== 'Closed';
+      if (closing) {
+        const rootCause =
+          body.rootCause === undefined ? rca.rootCause : body.rootCause;
+        await assertClosable(manager, rca, rootCause ?? null);
+      }
       const columns = caseColumns(body);
       if (closing && !body.actualCloseDate)
         columns.actualCloseDate = new Date();

@@ -144,6 +144,22 @@ describe('RCA01 trigger evaluation (D13 policy)', () => {
     );
   });
 
+  it('RCA-07: no repeat trigger while the asset already has an open case', () => {
+    const failure = stop({
+      physicalState: 'closed',
+      end: after(600),
+      failureMode: 'BRG-01',
+    });
+    const fired = evaluateTriggers(
+      failure,
+      context(policy, 700, {
+        recentFailures: inputs.failuresOfAssetIn30Days as number,
+        openCaseOnAsset: true,
+      }),
+    );
+    expect(fired.map((c) => c.trigger)).not.toContain('repeat');
+  });
+
   it('policy autoCreate=create opens a case; planned and retracted stops never fire', () => {
     const create: RcaPolicy = { ...policy, autoCreate: 'create' };
     expect(decideTrigger(open()[0], create, null).outcome).toBe(

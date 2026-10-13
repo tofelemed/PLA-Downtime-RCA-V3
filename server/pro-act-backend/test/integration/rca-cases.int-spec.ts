@@ -290,6 +290,31 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
       expect((open.body as ApiError).code).toBe('VERIFICATION_WINDOW_OPEN');
     });
 
+    it('RCA-01: closing is refused while actions are open; finishing them lets it close', async () => {
+      const before = (await env.get(`rcas/${caseId}`).expect(200))
+        .body as CaseBody;
+      const blocked = await env
+        .patch(`rcas/${caseId}`, { status: 'Closed' }, `"${before.rowVersion}"`)
+        .expect(422);
+      expect((blocked.body as ApiError).code).toBe('CLOSE_BLOCKED');
+      expect(
+        (blocked.body as { fieldErrors: Array<{ field: string }> }).fieldErrors,
+      ).toEqual([expect.objectContaining({ field: 'actions' })]);
+      const actions = await env.rows<{ id: string; row_version: number }>(
+        `SELECT id, row_version FROM rca_actions WHERE rca_id = $1 AND status NOT IN ('done', 'cancelled')`,
+        [caseId],
+      );
+      for (const action of actions) {
+        await env
+          .patch(
+            `rca-actions/${action.id}`,
+            { status: 'cancelled' },
+            `"${action.row_version}"`,
+          )
+          .expect(200);
+      }
+    });
+
     it('closing feeds the knowledge base and completes the linked events', async () => {
       const current = (await env.get(`rcas/${caseId}`).expect(200))
         .body as CaseBody;

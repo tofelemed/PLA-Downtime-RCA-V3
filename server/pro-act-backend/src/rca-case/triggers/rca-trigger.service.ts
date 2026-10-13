@@ -16,6 +16,7 @@ import { RcaTriggerEvaluation } from '../../rca/entities/rca-trigger-evaluation.
 import { openTriggeredCase } from './triggered-case';
 import {
   activeHintRules,
+  openCaseOnAssetOf,
   recentFailuresOf,
   triggerEventOf,
 } from './trigger-inputs';
@@ -85,6 +86,10 @@ export class RcaTriggerService {
         tenantId: input.tenantId,
         event,
         policy: resolved.policy,
+      }),
+      openCaseOnAsset: await openCaseOnAssetOf(manager, {
+        tenantId: input.tenantId,
+        assetId: event.assetId,
       }),
     });
     const results: TriggerResult[] = [];

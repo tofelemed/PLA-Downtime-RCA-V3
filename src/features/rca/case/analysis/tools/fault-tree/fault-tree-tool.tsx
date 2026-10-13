@@ -10,6 +10,7 @@ import { FAULT_TREE_TYPES, rowId } from '../../../../model/analysis-settings';
 import { useCaseWorkspace } from '../../../case-context';
 import { ChoiceField } from '../../../evidence/form-controls';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
+import { TopEventProbability } from './top-event-probability';
 
 const TYPE_OPTIONS = FAULT_TREE_TYPES.map((type) => ({ value: type, label: RCA_FAULT_TREE_NODE_LABELS[type] }));
 
@@ -65,6 +66,7 @@ function Editor({ record, save }: { record: ToolRecord<'faultTree'>; save: (body
           Add event or gate
         </Button>
       )}
+      <TopEventProbability record={record} />
       <SaveBar onSave={() => save(content)} disabled={content.topEvent.trim() === '' || content.nodes.length === 0} hint="Name the top event and add at least one node." label="Save fault tree" updatedAt={record?.updatedAt} />
     </div>
   );

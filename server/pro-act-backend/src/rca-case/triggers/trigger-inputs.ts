@@ -68,3 +68,17 @@ export async function recentFailuresOf(
     to: new Date(event.start.getTime() + 1000),
   });
 }
+
+/** RCA-07: whether the event's asset already has an RCA case that is not closed. */
+export async function openCaseOnAssetOf(
+  manager: EntityManager,
+  input: { tenantId: string; assetId: string | null },
+): Promise<boolean> {
+  if (!input.assetId) return false;
+  const rows: unknown[] = await manager.query(
+    `SELECT 1 FROM "rcas" WHERE "tenant_id" = $1 AND "asset_id" = $2
+        AND COALESCE("status", 'Draft') <> 'Closed' LIMIT 1`,
+    [input.tenantId, input.assetId],
+  );
+  return rows.length > 0;
+}

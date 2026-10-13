@@ -5,6 +5,7 @@ import { RcaFishboneDiagram } from '../rca-analysis-methodology/entities/fishbon
 import { RcaFiveWhyAnalysis } from '../rca-analysis-methodology/entities/five-why-analysis.entity';
 import { RcaFmeaAnalysis } from '../rca-analysis-methodology/entities/fmea-analysis.entity';
 import { bool, parseArray, Raw, strings, text } from './rca-json-read';
+import { FaultTreeReason, topEventProbability } from '../domain/rca/fault-tree';
 
 /** Common part of a stored analysis record (ETag = rowVersion). */
 export interface RcaAnalysisMeta {
@@ -66,6 +67,9 @@ export interface FaultTreeView extends RcaAnalysisMeta {
     parentId: string | null;
     probability: number | null;
   }>;
+  /** RCA-06: computed on the server (independent basic events); null with the reason otherwise */
+  topEventProbability: number | null;
+  topEventProbabilityReason: FaultTreeReason | null;
 }
 
 export interface BarrierView extends RcaAnalysisMeta {
@@ -174,16 +178,20 @@ export function fmeaView(row: RcaFmeaAnalysis): FmeaView {
 }
 
 export function faultTreeView(row: RcaFaultTreeAnalysis): FaultTreeView {
+  const nodes = parseArray(row.nodes).map((raw, index) => ({
+    id: itemId(raw, 'node', index),
+    type: text(raw.type) ?? 'BasicEvent',
+    description: str(raw.description),
+    parentId: text(raw.parentId),
+    probability: typeof raw.probability === 'number' ? raw.probability : null,
+  }));
+  const top = topEventProbability(nodes);
   return {
     ...meta(row),
     topEvent: row.topEvent,
-    nodes: parseArray(row.nodes).map((raw, index) => ({
-      id: itemId(raw, 'node', index),
-      type: text(raw.type) ?? 'BasicEvent',
-      description: str(raw.description),
-      parentId: text(raw.parentId),
-      probability: typeof raw.probability === 'number' ? raw.probability : null,
-    })),
+    nodes,
+    topEventProbability: top.probability,
+    topEventProbabilityReason: top.reason,
   };
 }
 

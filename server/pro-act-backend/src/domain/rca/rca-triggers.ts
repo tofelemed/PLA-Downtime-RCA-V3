@@ -41,6 +41,8 @@ export interface TriggerContext {
   rules: readonly HintRule[];
   /** functional failures of the event's asset in the repeat window, this one included */
   recentFailures: number;
+  /** RCA-07: the asset already has a case that is not closed (a repeat adds evidence to it, not a case) */
+  openCaseOnAsset?: boolean;
 }
 
 export interface TriggerCandidate {
@@ -106,6 +108,7 @@ function repeatCandidate(
   context: TriggerContext,
 ): TriggerCandidate | null {
   if (!event.assetId || !isFunctionalFailure(event)) return null;
+  if (context.openCaseOnAsset) return null;
   const { repeatCount, repeatWindowDays } = context.policy;
   if (context.recentFailures < repeatCount) return null;
   const ref = context.policyRef;

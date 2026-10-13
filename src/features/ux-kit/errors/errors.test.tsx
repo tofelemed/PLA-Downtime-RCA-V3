@@ -28,6 +28,16 @@ describe('describeError', () => {
     expectNothingInternal(`${friendly.title} ${friendly.message}`);
   });
 
+  it('an RCA case that cannot close yet says what is missing (RCA-01)', () => {
+    const friendly = describeError(
+      v2(422, 'CLOSE_BLOCKED', 'finish every action before closing the case', [
+        { field: 'actions', message: 'finish every action (done, or cancelled with a reason) before closing the case' },
+      ]),
+    );
+    expect(friendly.title).toBe('This case cannot be closed yet');
+    expectNothingInternal(`${friendly.title} ${friendly.message}`);
+  });
+
   it('an unknown code with a sentence: status-class title and the server sentence', () => {
     const friendly = describeError(v2(409, 'BRAND_NEW_RULE', 'the shift is already closed'));
     expect(friendly.title).toBe('This was changed by someone else');

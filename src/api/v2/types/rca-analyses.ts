@@ -78,6 +78,12 @@ export interface FaultTreeContent {
   nodes: FaultTreeNode[];
 }
 
+/** Saved fault tree: the top-event probability the server computed (null with the reason, RCA-06). */
+export interface FaultTreeRecord extends FaultTreeContent {
+  topEventProbability: number | null;
+  topEventProbabilityReason: string | null;
+}
+
 export interface Barrier {
   id: string;
   type: string;
@@ -110,7 +116,7 @@ export interface RcaAnalysesView {
   fiveWhy: (FiveWhyContent & RcaAnalysisMeta) | null;
   fishbone: (FishboneContent & RcaAnalysisMeta) | null;
   fmea: (FmeaRecord & RcaAnalysisMeta) | null;
-  faultTree: (FaultTreeContent & RcaAnalysisMeta) | null;
+  faultTree: (FaultTreeRecord & RcaAnalysisMeta) | null;
   barrier: (BarrierContent & RcaAnalysisMeta) | null;
   change: (ChangeContent & RcaAnalysisMeta) | null;
 }
