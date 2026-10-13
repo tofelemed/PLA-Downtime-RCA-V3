@@ -20,10 +20,12 @@ const CURRENT_STOPS_REFRESH_MS = 30_000;
 export interface CurrentStopsPanelProps {
   unitIds: readonly string[];
   onClose: (event: ProductionEventView) => void;
+  /** FE-06 inline "Code" (absent: no Code button) */
+  onCode?: (event: ProductionEventView) => void;
 }
 
 /** Running events of the chosen units (§16.2 current stops), independent of the list window. */
-export function CurrentStopsPanel({ unitIds, onClose }: CurrentStopsPanelProps) {
+export function CurrentStopsPanel({ unitIds, onClose, onCode }: CurrentStopsPanelProps) {
   const env = useEventHubEnv();
   const filters = { ...defaultFilters({ from: '', to: '', label: '' }), unitIds: [...unitIds] };
   const query = useProductionEvents(currentStopsQuery(filters), env.timezone, { refetchInterval: CURRENT_STOPS_REFRESH_MS });
@@ -36,7 +38,7 @@ export function CurrentStopsPanel({ unitIds, onClose }: CurrentStopsPanelProps) 
         <DataState state={state} error={query.error} onRetry={() => query.refetch()} detail={state === 'empty' ? 'Nothing is running.' : undefined}>
           <ul className="space-y-2">
             {stops.map((stop) => (
-              <CurrentStop key={stop.id} stop={stop} onClose={onClose} />
+              <CurrentStop key={stop.id} stop={stop} onClose={onClose} onCode={onCode} />
             ))}
           </ul>
         </DataState>
@@ -50,7 +52,13 @@ export function CurrentStopsPanel({ unitIds, onClose }: CurrentStopsPanelProps) 
   );
 }
 
-function CurrentStop({ stop, onClose }: { stop: ProductionEventView; onClose: CurrentStopsPanelProps['onClose'] }) {
+interface CurrentStopProps {
+  stop: ProductionEventView;
+  onClose: CurrentStopsPanelProps['onClose'];
+  onCode?: CurrentStopsPanelProps['onCode'];
+}
+
+function CurrentStop({ stop, onClose, onCode }: CurrentStopProps) {
   const { canWriteEvents } = useCapabilities();
   const env = useEventHubEnv();
   const { dateTime } = usePlantFormat();
@@ -77,6 +85,11 @@ function CurrentStop({ stop, onClose }: { stop: ProductionEventView; onClose: Cu
         {canWriteEvents && (
           <Button size="sm" variant="outline" onClick={() => onClose(stop)} data-testid="current-stop-close">
             Close stop
+          </Button>
+        )}
+        {canWriteEvents && onCode && (
+          <Button size="sm" variant="outline" onClick={() => onCode(stop)} data-testid="current-stop-code">
+            Code
           </Button>
         )}
       </div>

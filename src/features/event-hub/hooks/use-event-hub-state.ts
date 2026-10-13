@@ -8,7 +8,12 @@ import { parseEventFilters, toEventSearchParams } from '../model/event-url';
 import { readWindowPreference, rememberWindow } from '../model/window-preference';
 
 /** Dialogs of the list page; detail, create and edit are routes (`/events/:id`, `/events/new`, …/edit). */
-export type EventHubDialog = { kind: 'close'; event: ProductionEventView } | { kind: 'merge' } | { kind: 'bulk' } | null;
+export type EventHubDialog =
+  | { kind: 'close'; event: ProductionEventView }
+  | { kind: 'code'; event: ProductionEventView }
+  | { kind: 'merge' }
+  | { kind: 'bulk' }
+  | null;
 
 /**
  * Filters live in the URL (shareable, Back restores them); the default window is anchored to the
@@ -41,6 +46,18 @@ export function useEventHubState() {
 
   const clearSelection = useCallback(() => setSelected(new Map()), []);
 
+  /** FE-07: tick or untick every listed row at once (the rows loaded so far). */
+  const toggleMany = useCallback((events: readonly ProductionEventView[], checked: boolean) => {
+    setSelected((current) => {
+      const next = new Map(current);
+      for (const event of events) {
+        if (checked) next.set(event.id, event);
+        else next.delete(event.id);
+      }
+      return next;
+    });
+  }, []);
+
   const changeFilters = useCallback(
     (next: EventFilterState) => {
       if (next.windowLabel !== filters.windowLabel) rememberWindow(userId, tenantId, next.windowLabel);
@@ -67,6 +84,7 @@ export function useEventHubState() {
     selectedEvents,
     canMerge: sameUnit,
     toggle,
+    toggleMany,
     clearSelection,
     dialog,
     openDialog: setDialog,

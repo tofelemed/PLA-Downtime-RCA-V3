@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import type { ProductionEventView } from '@/api/v2/types/events';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCapabilities } from '@/features/auth/use-capabilities';
@@ -70,9 +71,11 @@ function EventHubScreen() {
   const { filters } = hub;
   const query = useMemo(() => toEventQuery(filters), [filters]);
   const selection = useMemo(
-    () => (canWriteEvents ? { selectedIds: hub.selectedIds, toggle: hub.toggle } : undefined),
-    [canWriteEvents, hub.selectedIds, hub.toggle],
+    () => (canWriteEvents ? { selectedIds: hub.selectedIds, toggle: hub.toggle, toggleMany: hub.toggleMany } : undefined),
+    [canWriteEvents, hub.selectedIds, hub.toggle, hub.toggleMany],
   );
+  const { openDialog } = hub;
+  const openCode = useCallback((event: ProductionEventView) => openDialog({ kind: 'code', event }), [openDialog]);
   return (
     <Page width="wide">
       <div data-testid="event-hub-v2" className="space-y-6">
@@ -87,9 +90,9 @@ function EventHubScreen() {
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="min-w-0 space-y-2">
             {canWriteEvents && <SelectionToolbar hub={hub} />}
-            <EventTable caption="Production events" query={query} selection={selection} />
+            <EventTable caption="Production events" query={query} selection={selection} onCode={canWriteEvents ? openCode : undefined} />
           </div>
-          <CurrentStopsPanel unitIds={filters.unitIds} onClose={(event) => hub.openDialog({ kind: 'close', event })} />
+          <CurrentStopsPanel unitIds={filters.unitIds} onClose={(event) => hub.openDialog({ kind: 'close', event })} onCode={openCode} />
         </div>
         <EventListDialogs dialog={hub.dialog} selectedEvents={hub.selectedEvents} onClose={hub.closeDialog} onSettled={hub.clearSelection} />
       </div>

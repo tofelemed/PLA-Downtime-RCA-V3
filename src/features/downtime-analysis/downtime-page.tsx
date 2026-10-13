@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CloseStopDialog } from '@/features/event-hub/components/close-stop-dialog';
+import { CodeEventDialog } from '@/features/event-hub/components/code-event-dialog';
 import { CurrentStopsPanel } from '@/features/event-hub/components/current-stops-panel';
 import { EventHubFrame } from '@/features/event-hub/event-hub-frame';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
@@ -47,6 +48,7 @@ function DowntimeScreen() {
   const bundle = useDowntimeBundle(useMemo(() => bundleQuery(filters), [filters]), env.timezone);
   const [drill, setDrill] = useState<{ key: string; selection: DrillSelection } | null>(null);
   const [closing, setClosing] = useState<ProductionEventView | null>(null);
+  const [coding, setCoding] = useState<ProductionEventView | null>(null);
   const selection = drill && drill.key === filterKey ? drill.selection : null;
   return (
     <Page width="wide">
@@ -58,7 +60,7 @@ function DowntimeScreen() {
             <KpiSummary bundle={bundle} />
             <ReliabilityCard filters={filters} />
           </div>
-          <CurrentStopsPanel unitIds={filters.unitIds} onClose={setClosing} />
+          <CurrentStopsPanel unitIds={filters.unitIds} onClose={setClosing} onCode={setCoding} />
         </div>
         <ReasonPareto filters={filters} onChange={change} onEvents={(next) => setDrill({ key: filterKey, selection: next })} />
         {selection && <DrillEvents filters={filters} selection={selection} onDismiss={() => setDrill(null)} />}
@@ -73,6 +75,7 @@ function DowntimeScreen() {
           <StateTimeline filters={filters} />
         </Suspense>
         {closing && <CloseStopDialog event={closing} onClose={() => setClosing(null)} onDone={() => setClosing(null)} />}
+        {coding && <CodeEventDialog event={coding} onClose={() => setCoding(null)} onDone={() => setCoding(null)} />}
       </div>
     </Page>
   );

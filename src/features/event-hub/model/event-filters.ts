@@ -99,6 +99,22 @@ export function toEventQuery(state: EventFilterState, limit = PAGE_SIZE): Produc
   return query as ProductionEventFilters;
 }
 
+/**
+ * FE-07 "To code": the stops of the same units and window that still need a reason (open or ended,
+ * uncoded); every other narrowing is dropped so nothing uncoded hides behind an old filter.
+ */
+export function toCodeFilters(state: EventFilterState): EventFilterState {
+  const window = { from: state.from ?? '', to: state.to ?? '', label: state.windowLabel };
+  return {
+    ...defaultFilters(window),
+    from: state.from,
+    to: state.to,
+    unitIds: [...state.unitIds],
+    physicalTypes: ['downtime'],
+    codingStates: ['uncoded'],
+  };
+}
+
 /** Shortest free-text search the server accepts. */
 export const MIN_SEARCH = 2;
 

@@ -15,12 +15,13 @@ export interface EventTableProps {
   /** server filters of the list (the pager sets `limit`) */
   query: ProductionEventFilters;
   selection?: EventColumnContext['selection'];
+  onCode?: EventColumnContext['onCode'];
   empty?: DataTableEmpty;
   testId?: string;
 }
 
 /** Production events as a server-paged table: 20 per page, keyset pages, rows open `/events/:id`. */
-export function EventTable({ caption, query, selection, empty, testId = 'event-list' }: EventTableProps) {
+export function EventTable({ caption, query, selection, onCode, empty, testId = 'event-list' }: EventTableProps) {
   const env = useEventHubEnv();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,8 +36,8 @@ export function EventTable({ caption, query, selection, empty, testId = 'event-l
   });
   const listSearch = `${location.pathname}${location.search}`;
   const context = useMemo<EventColumnContext>(
-    () => ({ unitName: env.unitName, reasonName: env.reasonName, dateTime, listSearch, prefetch, selection }),
-    [env.unitName, env.reasonName, dateTime, listSearch, prefetch, selection],
+    () => ({ unitName: env.unitName, reasonName: env.reasonName, dateTime, listSearch, prefetch, selection, rows: paged.rows, onCode }),
+    [env.unitName, env.reasonName, dateTime, listSearch, prefetch, selection, paged.rows, onCode],
   );
   const columns = useMemo(() => eventColumns(context), [context]);
   const open = (event: ProductionEventView) => {

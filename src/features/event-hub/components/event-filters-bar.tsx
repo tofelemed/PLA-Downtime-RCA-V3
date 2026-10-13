@@ -20,6 +20,7 @@ import {
   SCHEDULE_CLASSES,
   SEVERITIES,
   SOURCE_KINDS,
+  toCodeFilters,
   type ArrayFilter,
   type EventFilterState,
   type OpenFilter,
@@ -90,6 +91,9 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
         <OpenSelect value={filters.isOpen} onChange={(value) => set('isOpen', value)} />
         <Button variant="outline" size="sm" aria-expanded={showMore} onClick={() => setShowMore((open) => !open)} data-testid="more-filters">
           More filters{moreActive > 0 ? ` (${moreActive})` : ''}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => onChange(toCodeFilters(filters))} data-testid="filter-to-code" title="Stops in this window that still need a reason">
+          To code
         </Button>
         <Button variant="ghost" size="sm" onClick={onReset}>Reset filters</Button>
       </div>

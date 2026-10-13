@@ -15,6 +15,7 @@ const { StateBadges } = await import('./components/state-badges');
 const { useEventForm } = await import('./hooks/use-event-form');
 const { useEventFormSubmit } = await import('./hooks/use-event-form-submit');
 const { useBulkCodeFlow } = await import('./hooks/use-bulk-code-flow');
+const { useCloseStop, useCodeEvent } = await import('./hooks/use-code-and-close');
 const { draftKey } = await import('./model/event-draft');
 const { defaultFilters, toEventQuery } = await import('./model/event-filters');
 
@@ -127,6 +128,38 @@ describe('Event Hub v2 flows (plan 3.2)', () => {
     expect(again.result.current.restored).toBe(true);
     expect(again.result.current.values.description).toBe('belt slipped');
     expect(again.result.current.serverChanged).toBe(true);
+  });
+
+  it('FE-06: closing with a new reason codes first, then closes with the coded row version', async () => {
+    const open = event(3, { isOpen: true, endTime: null, states: { physical: 'open', coding: 'uncoded', rca: 'none' } });
+    const { result } = renderHook(() => useCloseStop(open), { wrapper });
+    responses.push(json(200, { ...open, reasonCodeId: 'r1', rowVersion: 4 }));
+    responses.push(json(200, { operation: 'close', createdEventIds: [], supersededEventIds: [], updatedEventIds: ['e1'], occurrenceId: 'e1' }));
+    await act(async () => expect(await result.current.submit({ endTime: '2026-10-09T07:00:00.000Z', reason: 'belt fixed', reasonCodeId: 'r1' })).toBe(true));
+    expect(calls[0].init.method).toBe('PATCH');
+    expect(header(0, 'If-Match')).toBe('"3"');
+    expect(body(0)).toEqual({ reasonCodeId: 'r1' });
+    expect(calls[1].url).toMatch(/\/production-events\/e1\/close$/);
+    expect(header(1, 'If-Match')).toBe('"4"');
+    expect(body(1)).toEqual({ endTime: '2026-10-09T07:00:00.000Z', reason: 'belt fixed' });
+  });
+
+  it('FE-06: closing without a new reason is one request', async () => {
+    const open = event(3, { isOpen: true, endTime: null, reasonCodeId: 'r1' });
+    const { result } = renderHook(() => useCloseStop(open), { wrapper });
+    responses.push(json(200, { operation: 'close', createdEventIds: [], supersededEventIds: [], updatedEventIds: ['e1'], occurrenceId: 'e1' }));
+    await act(async () => expect(await result.current.submit({ endTime: '2026-10-09T07:00:00.000Z', reason: 'ok', reasonCodeId: 'r1' })).toBe(true));
+    expect(calls).toHaveLength(1);
+    expect(header(0, 'If-Match')).toBe('"3"');
+  });
+
+  it('FE-06: the inline Code action sends only the reason code with If-Match', async () => {
+    const { result } = renderHook(() => useCodeEvent(event(2)), { wrapper });
+    responses.push(json(200, event(3, { reasonCodeId: 'r2' })));
+    await act(async () => expect(await result.current.submit('r2')).toBe(true));
+    expect(calls[0].init.method).toBe('PATCH');
+    expect(header(0, 'If-Match')).toBe('"2"');
+    expect(body(0)).toEqual({ reasonCodeId: 'r2' });
   });
 
   it('bulk coding: preview first, then apply; above the atomic limit the job is followed', async () => {

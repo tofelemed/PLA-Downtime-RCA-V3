@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ProductionEventView } from '@/api/v2/types/events';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
@@ -17,7 +18,13 @@ export interface EventColumnContext {
   selection?: {
     selectedIds: ReadonlySet<string>;
     toggle: (event: ProductionEventView, checked: boolean) => void;
+    /** FE-07: tick every listed row (absent: no "select all" box) */
+    toggleMany?: (events: readonly ProductionEventView[], checked: boolean) => void;
   };
+  /** the rows listed so far ("select all listed") */
+  rows?: readonly ProductionEventView[];
+  /** FE-06 inline "Code" on uncoded rows (absent: no button) */
+  onCode?: (event: ProductionEventView) => void;
 }
 
 /** Accessible name of a row: kind, unit and start on the plant clock (never an id). */
@@ -31,7 +38,7 @@ function selectColumn(context: EventColumnContext): DataTableColumn<ProductionEv
   return [
     {
       id: 'select',
-      header: <span className="sr-only">Select</span>,
+      header: selectAllHeader(context),
       headerLabel: 'Select',
       width: '2.5rem',
       cell: (event) => (
@@ -43,6 +50,44 @@ function selectColumn(context: EventColumnContext): DataTableColumn<ProductionEv
       ),
     },
   ];
+}
+
+function selectAllHeader(context: EventColumnContext) {
+  const { selection, rows = [] } = context;
+  if (!selection?.toggleMany || rows.length === 0) return <span className="sr-only">Select</span>;
+  const all = rows.every((event) => selection.selectedIds.has(event.id));
+  return (
+    <Checkbox
+      checked={all}
+      onCheckedChange={(checked) => selection.toggleMany?.(rows, checked === true)}
+      aria-label={`Select all ${rows.length} listed events`}
+      data-testid="select-all-listed"
+    />
+  );
+}
+
+function reasonCell(event: ProductionEventView, context: EventColumnContext) {
+  const uncoded = event.states.coding === 'uncoded';
+  return (
+    <span className="flex items-center gap-2">
+      <span data-testid="event-reason">{context.reasonName(event.reasonCodeId)}</span>
+      {uncoded && context.onCode && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 px-2"
+          data-testid="event-code"
+          aria-label={`Code ${eventRowLabel(event, context)}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            context.onCode?.(event);
+          }}
+        >
+          Code
+        </Button>
+      )}
+    </span>
+  );
 }
 
 function startCell(event: ProductionEventView, context: EventColumnContext) {
@@ -92,7 +137,7 @@ export function eventColumns(context: EventColumnContext): DataTableColumn<Produ
         </span>
       ),
     },
-    { id: 'reason', header: 'Reason', cell: (event) => <span data-testid="event-reason">{context.reasonName(event.reasonCodeId)}</span> },
+    { id: 'reason', header: 'Reason', cell: (event) => reasonCell(event, context) },
     { id: 'states', header: 'States', cell: (event) => <StateBadges states={event.states} /> },
   ];
 }
