@@ -34,6 +34,7 @@ export const FLAG_LABELS: Readonly<Record<string, string>> = {
   not_computable: 'Not computable',
   no_target: 'No target',
   no_actuals: 'No actuals',
+  claim_exceeds_component: 'Causes claim more than measured loss',
 };
 
 /** Residual states that block submission (ACC10) and are shown in red. */

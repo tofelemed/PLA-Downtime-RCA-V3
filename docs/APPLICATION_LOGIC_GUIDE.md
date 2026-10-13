@@ -648,7 +648,7 @@ Inside a segment the state is constant.
 - A `fractional` slowdown is a **derate**, which counts as performance.
 - **Attribution:** each stop occurrence has one cause, its earliest active event. If several occurrences overlap a segment, they **share it equally** (`shares.ts`). Shares are truncated to 8 decimals and the remainder goes to the last share, so Σ = 1 exactly.
 - **Declared quantities** on events are prorated by the fraction of the event inside the window (`claims.ts: quantityInside`).
-- **Product runs** (`claim-pooling.ts`, engine 2.5.1): when a period is cut into several slices of the same product only by plan periods (two month plans meeting inside a shift), the slices' actuals are apportioned by time while causes are located in time. Performance and quality causes are therefore pooled over the run and allocated to its slices in proportion to each slice's component total (lines flagged `product_run_share`). Slice totals do not change; a claim beyond the whole run still fails.
+- **Product runs** (`claim-pooling.ts`, engine 2.5.1): when a period is cut into several slices of the same product only by plan periods (two month plans meeting inside a shift), the slices' actuals are apportioned by time while causes are located in time. Performance and quality causes are therefore pooled over the run and allocated to its slices in proportion to each slice's component total (lines flagged `product_run_share`). Slice totals do not change; a claim beyond the whole run is flagged like any other over-claim (below).
 
 ### 10.3 Capacity ledger (`capacity-ledger.ts`)
 
@@ -665,9 +665,9 @@ residual   = capacity − exclusion − A − P − Q − good + gain   (signed,
 
 **Identity:** `capacity = exclusion + A + P + Q + good − gain + residual`.
 
-When gross and good are known, the residual is 0 by construction. A non-zero residual means a data problem.
+When gross and good are known, the residual is 0 by construction unless causes over-claim. A non-zero residual means a data problem.
 
-A claim larger than its component fails the run (`IMPOSSIBLE_CLAIM`). It is never scaled down.
+A claim larger than its component is never scaled down and no longer fails the run (LA-02, 13 Oct 2026). The claim lines keep their full quantity, the excess lands in the signed residual (negative), and the capacity totals are flagged `claim_exceeds_component`. The plan ledger flags the same claim `bridge_required`, so approval waits until reconciliation resolves it. Impossible actuals (negative gross, good > gross) still fail the run.
 
 ### 10.4 Plan ledger (`plan-ledger.ts`, `plan-totals.ts`)
 

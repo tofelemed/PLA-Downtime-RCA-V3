@@ -188,7 +188,7 @@ describe('loss accounting calculation runs (plan 2.5)', () => {
     expect(categories).toHaveLength(planLines.length);
   });
 
-  it('an impossible claim fails validation and keeps the previous run current', async () => {
+  it('a claim beyond its component completes the run, flagged for reconciliation (LA-02)', async () => {
     const current = (await env.accounting(periodA1)).data.run!.id;
     await env.lossEvent(env.world.unitA1, plus(A, 3 * HOUR), 0.25, {
       physicalType: 'quality_loss',
@@ -197,9 +197,13 @@ describe('loss accounting calculation runs (plan 2.5)', () => {
     });
     await env.settle();
     const runs = await env.runs(periodA1);
-    expect(runs[0]).toMatchObject({ status: 'failed' });
-    expect(runs[0].error?.map((e) => e.code)).toContain('IMPOSSIBLE_CLAIM');
-    expect((await env.accounting(periodA1)).data.run!.id).toBe(current);
+    expect(runs[0]).toMatchObject({ status: 'validated' });
+    const body = await env.accounting(periodA1);
+    expect(body.data.run!.id).not.toBe(current);
+    const capacity = env.totals(body, 'capacity');
+    expect(capacity.flags).toContain('claim_exceeds_component');
+    expect(capacity.residual).toBe('-10');
+    expect(env.totals(body, 'plan').flags).toContain('bridge_required');
   });
 
   it('an excluded period is schedule exclusion only; missing actuals leave the residual null', async () => {

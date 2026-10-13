@@ -11,10 +11,10 @@ import { ReportScope } from './report-scope';
  */
 export const SHOWN = `WITH shown AS (
   SELECT p."id" AS "period_id", p."unit_id", p."local_date", p."shift_name", si."crew_id",
-         cur."current_run_id" AS "run_id", cur."lifecycle"::text AS "lifecycle"
+         cur."current_run_id" AS "run_id", cur."lifecycle"::text AS "lifecycle", cur."id" AS "revision_id"
     FROM "production_periods" p
     LEFT JOIN "shift_instances" si ON si."id" = p."shift_instance_id"
-    LEFT JOIN LATERAL (SELECT ar."current_run_id", ar."lifecycle" FROM "accounting_revisions" ar
+    LEFT JOIN LATERAL (SELECT ar."id", ar."current_run_id", ar."lifecycle" FROM "accounting_revisions" ar
                         WHERE ar."period_id" = p."id" AND ar."current_run_id" IS NOT NULL
                           AND (ar."lifecycle" = 'approved' OR (NOT $5 AND ar."lifecycle" IN ('draft', 'in_review')))
                         ORDER BY (ar."lifecycle" = 'approved') DESC, ar."revision" DESC LIMIT 1) cur ON true

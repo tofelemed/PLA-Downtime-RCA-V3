@@ -6,6 +6,7 @@ import { RequestContext } from '../common/context/request-context';
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { invalidTransition } from '../profiles/profile-errors';
+import { writeApprovedValuation } from '../valuation/approved-valuation';
 import { ApprovalSnapshot } from './entities/approval-snapshot.entity';
 import { publishApproval } from './period-approval-event';
 import {
@@ -16,6 +17,7 @@ import {
 } from './revision-access';
 import { loadRevisionState, RevisionState } from './revision-state';
 import { contentHashOf, reviewedContent, sha256 } from './reviewed-content';
+import { approvedValueTotals } from './reviewed-valuation';
 import { separationOfDuties, staleSubmission } from './workflow-errors';
 import {
   actorOf,
@@ -154,6 +156,16 @@ async function markApproved(
   const { period, revision } = state;
   const approver = context.userId as string;
   const snapshot = await storeSnapshot(manager, state, approver, command);
+  await writeApprovedValuation(
+    manager,
+    {
+      tenantId: revision.tenantId,
+      revisionId: revision.id,
+      periodId: revision.periodId,
+      approver,
+    },
+    approvedValueTotals(state),
+  );
   await manager.update(AccountingRevision, revision.id, {
     lifecycle: 'approved',
     approvedBy: approver,

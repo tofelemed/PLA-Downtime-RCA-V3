@@ -354,5 +354,15 @@ describe('valuation (plan 2.6, VAL01–VAL03)', () => {
       (s) => s.view === 'contribution_margin' && s.currency === 'USD',
     )!;
     expect(str(usd.amount)).toBe('0.0046');
+    const byKind = (kind: string) =>
+      result.totals.find(
+        (t) =>
+          t.kind === kind &&
+          t.view === 'contribution_margin' &&
+          t.currency === 'IRR',
+      );
+    expect(result.totals.every((t) => t.ledger === 'plan')).toBe(true);
+    expect(str(byKind('availability')!.amount)).toBe('2000');
+    expect(str(byKind('quality')!.amount)).toBe('300');
   });
 });

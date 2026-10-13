@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { reportTzdataProblems } from './common/startup/report-tzdata';
 import { WorkerModule } from './worker.module';
 
 /**
@@ -9,6 +10,7 @@ import { WorkerModule } from './worker.module';
  * in-flight jobs finish (bounded by SHUTDOWN_DRAIN_TIMEOUT_MS) before TypeORM disconnects.
  */
 export async function bootstrapWorker(): Promise<void> {
+  reportTzdataProblems();
   const app = await NestFactory.createApplicationContext(WorkerModule);
   app.enableShutdownHooks();
   new Logger('Worker').log(

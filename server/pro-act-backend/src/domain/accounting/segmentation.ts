@@ -31,11 +31,24 @@ export function boundedEvent(
   return end > event.start ? { start: event.start, end } : null;
 }
 
-/** Splits the eligible events by kind; occurrence length decides stop vs micro-stop. */
+/** Seconds of the occurrences whose full extent is known (DT-09), measured to `asOf` while open. */
+function knownOccurrenceSeconds(
+  input: PeriodAccountingInput,
+): Map<string, number> {
+  return new Map(
+    (input.occurrences ?? []).map((o) => {
+      const end = (o.end ?? input.asOf).getTime();
+      return [o.occurrenceId, Math.max(0, end - o.start.getTime()) / 1000];
+    }),
+  );
+}
+
+/** Splits the eligible events by kind; the occurrence's full length decides stop vs micro-stop. */
 export function classifyEvents(input: PeriodAccountingInput): ClassifiedEvents {
   const downtime = input.events.filter((e) => e.physicalType === 'downtime');
-  const occurrenceSeconds = new Map<string, number>();
+  const occurrenceSeconds = knownOccurrenceSeconds(input);
   for (const id of new Set(downtime.map((e) => e.occurrenceId))) {
+    if (occurrenceSeconds.has(id)) continue;
     const parts = downtime
       .filter((e) => e.occurrenceId === id)
       .flatMap((e) => boundedEvent(e, input.asOf) ?? []);

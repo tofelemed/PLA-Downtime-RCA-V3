@@ -67,7 +67,24 @@ const GROUPS: Readonly<Record<LossValueGroup, string>> = {
 };
 
 const BASIS =
-  'calculation-run valuation of the shown run (approved revision, else the open draft); reconciliation edits are valued in the approval snapshot';
+  'plan ledger of an approved revision: the reconciled valuation stored at approval; otherwise the calculation-run valuation of the shown run (open draft, or capacity ledger)';
+
+/** Valuation columns of one shown period: the approved reconciled totals (plan ledger), else the run's (VA-01). */
+const VALUATION_SOURCE = `JOIN LATERAL (
+         SELECT a."kind", a."view", a."currency", a."uom", a."amount", a."native_amount", a."valued_lines",
+                a."unvalued_lines", a."fx_missing_lines", a."unvalued_quantity", a."unvalued_seconds", a."reasons"
+           FROM "approved_valuation_totals" a
+          WHERE $7::text = 'plan' AND s."lifecycle" = 'approved' AND a."revision_id" = s."revision_id"
+            AND a."tenant_id" = $1
+         UNION ALL
+         SELECT r."kind", r."view", r."currency", r."uom", r."amount", r."native_amount", r."valued_lines",
+                r."unvalued_lines", r."fx_missing_lines", r."unvalued_quantity", r."unvalued_seconds", r."reasons"
+           FROM "period_valuation_totals" r
+          WHERE r."run_id" = s."run_id" AND r."tenant_id" = $1 AND r."ledger" = $7::loss_ledger
+            AND NOT ($7::text = 'plan' AND s."lifecycle" = 'approved' AND EXISTS (
+                  SELECT 1 FROM "approved_valuation_totals" x
+                   WHERE x."revision_id" = s."revision_id" AND x."tenant_id" = $1))
+       ) t ON true`;
 
 async function cells(
   manager: EntityManager,
@@ -87,8 +104,8 @@ async function cells(
             sum(t."unvalued_quantity")::text AS "unvalued_quantity", sum(t."unvalued_seconds")::text AS "unvalued_seconds",
             jsonb_agg(t."reasons") AS "reasons"
        FROM shown s
-       JOIN "period_valuation_totals" t ON t."run_id" = s."run_id" AND t."tenant_id" = $1
-        AND t."view" = $6::valuation_totals_view AND t."ledger" = $7::loss_ledger
+       ${VALUATION_SOURCE}
+      WHERE t."view" = $6::valuation_totals_view
         AND ($8::text[] IS NULL OR t."kind"::text = ANY($8::text[]))
       GROUP BY 1, t."currency", t."uom" ORDER BY 1, t."currency", t."uom"`,
     [...params(scope), spec.view, spec.ledger, spec.kinds],

@@ -221,7 +221,12 @@ export class AccountingRunService implements OnModuleInit {
  */
 async function writeValuedResults(
   manager: EntityManager,
-  scope: { tenantId: string; periodId: string; runId: string; revisionId: string },
+  scope: {
+    tenantId: string;
+    periodId: string;
+    runId: string;
+    revisionId: string;
+  },
   accounting: PeriodAccounting,
   draft: RunDraft,
 ): Promise<{ lines: number; evidence: number; valuedViews: number }> {
@@ -338,6 +343,7 @@ function engineInput(
     events: inputs.events,
     slices: inputs.slices,
     asOf: inputs.asOf,
+    occurrences: inputs.kpi.occurrences,
     policy: {
       microStopSeconds: engine.oee.microStopSeconds,
       derateComponent: engine.oee.derateComponent,

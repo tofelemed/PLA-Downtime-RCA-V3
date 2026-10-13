@@ -63,6 +63,8 @@ export interface ReconciledValuation {
   lines: ReconciledLine[];
   /** per slice, view and currency over the loss-value kinds */
   slices: ValuationTotal[];
+  /** per slice, kind, view and currency of the plan ledger — what reports read once approved (VA-01) */
+  totals: ValuationTotal[];
 }
 
 function scaleView(view: LineViewValuation, ratio: Dec): LineViewValuation {
@@ -199,10 +201,6 @@ export function reconciledValuation(input: {
     impactCodeId: impact.get(l.id) ?? null,
     valuation: l.valuation,
   }));
-  return {
-    lines,
-    slices: sliceValueTotals(
-      valuationTotals(totalsLines, input.context.policy),
-    ),
-  };
+  const totals = valuationTotals(totalsLines, input.context.policy);
+  return { lines, slices: sliceValueTotals(totals), totals };
 }

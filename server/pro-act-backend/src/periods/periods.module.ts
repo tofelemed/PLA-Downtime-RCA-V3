@@ -17,6 +17,7 @@ import { ActualsRun } from './entities/actuals-run.entity';
 import { ExternalProductionReport } from './entities/external-production-report.entity';
 import { PeriodProductSlice } from './entities/period-product-slice.entity';
 import { ProductionPeriod } from './entities/production-period.entity';
+import { BaselineRecalcConsumer } from './baseline-recalc.consumer';
 import { ExternalReportsService } from './external-reports.service';
 import { PeriodMaterializerService } from './period-materializer.service';
 import { PeriodRecalcConsumer } from './period-recalc.consumer';
@@ -58,6 +59,7 @@ import { SliceResolverService } from './slice-resolver.service';
     ActualsAdjustmentsService,
     PeriodsService,
     PeriodRecalcConsumer,
+    BaselineRecalcConsumer,
     ActualsProcessor,
     PeriodSweepJob,
     PeriodRecomputePort,

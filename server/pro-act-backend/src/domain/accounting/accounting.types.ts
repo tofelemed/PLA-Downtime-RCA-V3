@@ -119,6 +119,15 @@ export interface PeriodAccountingInput {
   /** running events are measured to here (≤ period end) */
   asOf: Date;
   policy: EnginePolicy;
+  /**
+   * full extent of each stop occurrence over all its events, also those outside the window (DT-09):
+   * a split child inside the window is a micro-stop only if the whole occurrence is short
+   */
+  occurrences?: ReadonlyArray<{
+    occurrenceId: string;
+    start: Date;
+    end: Date | null;
+  }>;
 }
 
 /** One cause of a segment with its share (Σ shares of a segment = 1). */

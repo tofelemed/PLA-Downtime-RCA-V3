@@ -1,4 +1,5 @@
 import { EntityManager } from 'typeorm';
+import { LOSS_VALUE_KINDS } from '../domain/valuation/reconciled-valuation';
 
 /** Approved historical loss of a set of events or loss lines (RCA02 / RCA03), from the ledger only. */
 export interface ApprovedImpact {
@@ -22,15 +23,11 @@ export const APPROVED_IMPACT_BASIS =
   'loss lines of the latest approved revision of each period (current run, active, loss kinds only); ' +
   'contribution margin view; draft and in-review figures are never included';
 
-/** Loss kinds that lower output (the loss tree's kinds; gains and residuals stay apart). */
-const LOSS_KINDS = [
-  'schedule_exclusion',
-  'availability',
-  'performance',
-  'quality',
-  'bridge',
-  'unaccounted_classified',
-];
+/**
+ * Loss kinds that lower output — the same set as the loss-value report (VA-01): schedule exclusions are
+ * time taken out of the schedule, not a loss; gains and residuals stay apart.
+ */
+const LOSS_KINDS = [...LOSS_VALUE_KINDS];
 
 /** Lines of the latest approved revision per period, filtered by `$2` (event ids or line ids). */
 const APPROVED_LINES = (filter: 'event' | 'line') => `

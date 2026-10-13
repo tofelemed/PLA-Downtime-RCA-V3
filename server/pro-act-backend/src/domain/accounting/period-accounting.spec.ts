@@ -178,6 +178,19 @@ describe('computePeriodAccounting (plan 2.5)', () => {
     ).toBe('0.83333333');
   });
 
+  it('a short piece of a long occurrence (split before the window) is a stop, not a micro-stop (DT-09)', () => {
+    const piece = event('P', 0, 0.5, { occurrenceId: 'OCC' });
+    const i = {
+      ...input([piece], { actuals: { gross: '700', good: '700', uom: 't' } }),
+      occurrences: [{ occurrenceId: 'OCC', start: at(-120), end: at(0.5) }],
+    };
+    const stop = lines(i, 'capacity', 'availability');
+    expect(stop.map((l) => l.cause?.eventId)).toEqual(['P']);
+    expect(
+      lines(i, 'capacity', 'performance').some((l) => l.cause?.eventId === 'P'),
+    ).toBe(false);
+  });
+
   it('a derate claims capacity × fraction inside performance, the rest has no cause', () => {
     const derate = event('D', 0, 60, {
       physicalType: 'slowdown',
@@ -197,7 +210,7 @@ describe('computePeriodAccounting (plan 2.5)', () => {
     ]);
   });
 
-  it('claims beyond the computed component fail validation (IMPOSSIBLE_CLAIM)', () => {
+  it('a derate claiming more than the performance loss is flagged, kept unscaled and conserved (LA-02)', () => {
     const derate = event('D', 0, 480, {
       physicalType: 'slowdown',
       impactMode: 'fractional',
@@ -206,7 +219,32 @@ describe('computePeriodAccounting (plan 2.5)', () => {
     const result = computePeriodAccounting(
       input([derate], { actuals: { gross: '700', good: '700', uom: 't' } }),
     );
-    expect(result.issues.map((i) => i.code)).toContain('IMPOSSIBLE_CLAIM');
+    expect(result.issues).toEqual([]);
+    const capacity = result.totals.find((t) => t.ledger === 'capacity')!;
+    expect(capacity.flags).toContain('claim_exceeds_component');
+    expect(formatDec(capacity.performance!)).toBe('100');
+    expect(formatDec(capacity.residual!)).toBe('-300');
+    const claim = result.lines.find(
+      (l) => l.ledger === 'capacity' && l.kind === 'performance',
+    )!;
+    expect(formatDec(claim.quantity)).toBe('400');
+  });
+
+  it('a quality claim beyond gross − good is flagged instead of failing the run (LA-02)', () => {
+    const offSpec = event('Q', 60, 120, {
+      physicalType: 'quality_loss',
+      oeeComponent: 'quality',
+      impactMode: 'none',
+      quantity: '30',
+    });
+    const result = computePeriodAccounting(input([offSpec]));
+    expect(result.issues).toEqual([]);
+    const capacity = result.totals.find((t) => t.ledger === 'capacity')!;
+    expect(capacity.flags).toContain('claim_exceeds_component');
+    expect(formatDec(capacity.quality!)).toBe('20');
+    expect(formatDec(capacity.residual!)).toBe('-10');
+    const plan = result.totals.find((t) => t.ledger === 'plan')!;
+    expect(plan.flags).toContain('bridge_required');
   });
 
   it('quality above gross or below zero fails validation', () => {

@@ -8,9 +8,11 @@ import { buildV2Document } from './v2/openapi-v2';
 import { getProcessRole } from './common/scheduling/process-role';
 import { bootstrapWorker } from './worker';
 import { runMigrationsOnBoot } from './database/run-migrations-on-boot';
+import { reportTzdataProblems } from './common/startup/report-tzdata';
 
 
 async function bootstrap() {
+  reportTzdataProblems();
   await runMigrationsOnBoot();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   // SIGTERM/SIGINT run the shutdown hooks (ShutdownCoordinator drains in-flight jobs in role "all")

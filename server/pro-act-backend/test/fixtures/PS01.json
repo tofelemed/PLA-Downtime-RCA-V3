@@ -28,7 +28,7 @@
       "capacity": { "capacity": "600", "availability": "0", "performance": "120", "gain": "0", "quality": "6", "good": "474", "residual": "0", "qualityEventShare": "6", "microStopClaim": "0.83333333" },
       "plan": { "availability": "0", "performance": "60", "quality": "6", "residual": "20", "microStopClaim": "0.75" }
     },
-    "overClaimedRun": { "qualityEventQuantity": "9", "issue": "IMPOSSIBLE_CLAIM" }
+    "overClaimedRun": { "qualityEventQuantity": "9", "flag": "claim_exceeds_component", "residualSum": "-1" }
   },
   "notes": "Before engine 2.5.1 each plan slice was checked alone: the quality event (8) exceeded S2's gross - good (6) and the micro-stop claimed performance in S1, whose performance is 0 (the stop lowered S1's effective capacity below its time-apportioned gross), so the run failed with IMPOSSIBLE_CLAIM.",
   "status": "authored"

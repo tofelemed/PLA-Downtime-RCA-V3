@@ -289,6 +289,24 @@ describe('valuation (plan 2.6)', () => {
       ['IRR', '150000000'],
       ['USD', '300'],
     ]);
+    const reported = await env
+      .get(
+        `reports/loss-value?from=2027-03-01T00:00:00Z&to=2027-03-02T00:00:00Z&metric=margin&ledger=plan&unitIds=${env.world.unitA1}`,
+      )
+      .expect(200);
+    const totals = (
+      reported.body as {
+        data: {
+          total: {
+            currencies: Array<{ currency: string; amount: string | null }>;
+          };
+        };
+      }
+    ).data.total.currencies;
+    expect(totals.map((c) => [c.currency, c.amount])).toEqual([
+      ['IRR', '150000000'],
+      ['USD', '300'],
+    ]);
     const [message] = await env.rows<{ payload: Record<string, unknown> }>(
       `SELECT payload FROM outbox WHERE aggregate_id = $1 AND type = 'PeriodApproved'`,
       [env.periodA1],

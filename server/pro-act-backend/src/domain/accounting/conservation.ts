@@ -13,6 +13,9 @@ function stored(line: LossLineDraft): Dec {
   return new Dec(formatDec(line.quantity));
 }
 
+/** Largest error storing one quantity adds: half a unit of the 8th decimal place. */
+const STORED_HALF_UNIT = new Dec('0.000000005');
+
 /** ACC05: the shares of every segment's causes add up to exactly 1. */
 export function checkShares(
   sliceId: string,
@@ -30,7 +33,10 @@ export function checkShares(
   );
 }
 
-/** Capacity identity on the stored lines: Σ exclusion + A + P + Q + good − gain + residual = capacity. */
+/**
+ * Capacity identity on the stored lines: Σ exclusion + A + P + Q + good − gain + residual = capacity,
+ * within epsilon plus the rounding the stored lines may carry (half a unit of the 8th place each, LA-12).
+ */
 function checkCapacity(
   totals: LedgerTotals,
   lines: readonly LossLineDraft[],
@@ -44,7 +50,8 @@ function checkCapacity(
     l.kind === 'gain' ? stored(l).neg() : stored(l),
   );
   const explained = sumOf(signed).plus(totals.good);
-  if (explained.minus(totals.capacity).abs().lte(epsilon)) return [];
+  const allowed = epsilon.plus(STORED_HALF_UNIT.times(mine.length));
+  if (explained.minus(totals.capacity).abs().lte(allowed)) return [];
   return [
     {
       code: 'CAPACITY_NOT_CONSERVED',

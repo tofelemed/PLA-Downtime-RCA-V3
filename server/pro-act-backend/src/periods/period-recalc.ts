@@ -4,6 +4,12 @@ import { enqueueOutbox } from '../common/outbox/outbox-writer';
 /** Message type: the actuals of periods overlapping a window must be recalculated (plan 2.4 step 5). */
 export const PERIOD_RECALCULATE_REQUESTED = 'PeriodRecalculateRequested';
 
+/**
+ * Upper bound covering every materialized period after `from`, future ones included (a baseline or
+ * calendar change applies to them too); `to: null` means "up to now" (an open event).
+ */
+export const OPEN_ENDED = new Date('9999-12-31T00:00:00.000Z');
+
 export interface RecalculationRequest {
   tenantId: string;
   /** null = every unit the requester may affect (`scopeUnitIds`, null = tenant-wide) */

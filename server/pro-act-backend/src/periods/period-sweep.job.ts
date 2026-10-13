@@ -13,8 +13,10 @@ const HOUR_MS = 3_600_000;
  * have started in the last `PERIOD_MATERIALIZE_LOOKBACK_HOURS` (default 48) for every tenant with an
  * approved profile, then queues a recompute for each period that ended at least
  * `ACTUALS_SETTLE_SECONDS` (default 900 = the default max gap) and at most
- * `ACTUALS_RECHECK_DAYS` (default 7) ago and either has no actuals run yet or received samples after its
- * current run (late or corrected archive values). Output-event changes arrive through the outbox instead.
+ * `ACTUALS_RECHECK_DAYS` (default 7) ago and either has no actuals run yet, received samples after its
+ * current run (late or corrected archive values), or whose current calculation run measured an open
+ * event up to the run instant while the period was running (DT-08: once settled, the stop is measured
+ * to the period end). Output-event changes arrive through the outbox instead.
  */
 @Injectable()
 export class PeriodSweepJob {
@@ -92,7 +94,12 @@ export class PeriodSweepJob {
                    AND s."tenant_id" = p."tenant_id"
                    AND s."observed_at" >= p."utc_start" - make_interval(secs => g."max_gap_seconds")
                    AND s."observed_at" < p."utc_end" + make_interval(secs => g."max_gap_seconds")
-                   AND s."inserted_at" > r."computed_at"))
+                   AND s."inserted_at" > r."computed_at")
+               OR EXISTS (
+                SELECT 1 FROM "accounting_revisions" ar
+                  JOIN "calculation_runs" cr ON cr."id" = ar."current_run_id"
+                 WHERE ar."period_id" = p."id" AND ar."lifecycle" IN ('draft', 'in_review')
+                   AND cr."input_fingerprint"->>'asOf' IS NOT NULL))
        ON CONFLICT ("period_id") WHERE "state" = 'queued' AND "kind" = 'recompute' DO NOTHING
        RETURNING "id"`,
       [tenantId, now, settle, recheck],

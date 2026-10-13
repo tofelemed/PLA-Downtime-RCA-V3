@@ -156,6 +156,16 @@ function reconcile(
 }
 
 /**
+ * VA-01: the reconciled plan-ledger valuation per slice, kind, view and currency, persisted at approval
+ * (`approved_valuation_totals`) for the reports. Not part of the reviewed content, so submitted hashes
+ * are unchanged; empty for runs calculated before plan 2.6 (no frozen context).
+ */
+export function approvedValueTotals(state: RevisionState): ValuationTotal[] {
+  const context = state.run?.valuationContext;
+  return context ? reconcile(state, context).totals : [];
+}
+
+/**
  * Valuation of the reviewed plan-ledger content (plan 2.6 × 2.8): candidates with their decided quantity
  * and manual lines, valued from the run's frozen context — so the approved figures are reproducible and
  * part of the content hash. null for runs calculated before plan 2.6 (no context): their content (and

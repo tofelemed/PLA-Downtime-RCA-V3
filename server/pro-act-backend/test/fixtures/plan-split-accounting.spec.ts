@@ -166,11 +166,17 @@ describe('PS01 period split across plan versions (engine 2.5.1)', () => {
     ).toBeUndefined();
   });
 
-  it('a claim beyond the whole run still fails (never scaled down)', () => {
-    const { qualityEventQuantity, issue } = expected.overClaimedRun;
-    const failed = computePeriodAccounting(input(qualityEventQuantity));
-    const codes = failed.issues.map((i) => i.code);
-    expect(codes).toContain(issue);
+  it('a claim beyond the whole run is flagged, never scaled down, and the run completes (LA-02)', () => {
+    const { qualityEventQuantity, flag, residualSum } = expected.overClaimedRun;
+    const flagged = computePeriodAccounting(input(qualityEventQuantity));
+    expect(flagged.issues).toEqual([]);
+    const capacity = flagged.totals.filter((t) => t.ledger === 'capacity');
+    expect(capacity.some((t) => t.flags.includes(flag))).toBe(true);
+    const residual = capacity.reduce(
+      (sum, t) => sum.plus(t.residual ?? 0),
+      new Dec(0),
+    );
+    expect(formatDec(residual)).toBe(residualSum);
   });
 
   it('is deterministic', () => {

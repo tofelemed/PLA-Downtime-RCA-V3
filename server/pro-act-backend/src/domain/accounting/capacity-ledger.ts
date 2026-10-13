@@ -32,6 +32,8 @@ import { LineContext, timeLines } from './time-lines';
 interface Part {
   lines: LossLineDraft[];
   issues: ValidationIssue[];
+  /** quantity the causes claim beyond the computed component (kept unscaled, flagged) */
+  overClaim: Dec;
 }
 
 interface Running extends Part {
@@ -73,17 +75,17 @@ function productionIssues(
   return issues;
 }
 
-/** Quality = gross − good, allocated to quality events; a claim beyond it fails validation. */
+/** Quality = gross − good, allocated to quality events; a claim beyond it is kept and flagged (LA-02). */
 function qualityPart(
   ctx: SliceContext,
   production: Production,
 ): Part & { total: Dec | null } {
   const { gross, good } = production;
   const issues = productionIssues(production, ctx.slice);
-  if (gross === null || good === null)
-    return { lines: [], issues, total: null };
+  const none = { lines: [], issues, overClaim: ZERO };
+  if (gross === null || good === null) return { ...none, total: null };
   const total = gross.minus(good);
-  if (total.lt(ZERO)) return { lines: [], issues, total };
+  if (total.lt(ZERO)) return { ...none, total };
   const result = allocate(ctx, {
     kind: 'quality',
     total,
@@ -91,20 +93,10 @@ function qualityPart(
     remainderRateId: null,
     remainderBasis: 'measured',
   });
-  if (result.overClaim.gt(ZERO)) {
-    const claimed = result.overClaim.toFixed();
-    issues.push(
-      issue(
-        'IMPOSSIBLE_CLAIM',
-        `quality events claim ${claimed} more than gross − good`,
-        ctx.slice,
-      ),
-    );
-  }
-  return { lines: result.lines, issues, total };
+  return { lines: result.lines, issues, overClaim: result.overClaim, total };
 }
 
-/** Running time: performance = max(0, capacity − gross) allocated to micro-stops and derates; above → gain. */
+/** Running time: performance = max(0, capacity − gross) allocated to micro-stops and derates; above → gain; over-claims kept and flagged. */
 function runningPart(
   ctx: SliceContext,
   effective: { capacity: Dec; claims: ReturnType<typeof splitDerates> },
@@ -115,6 +107,7 @@ function runningPart(
     return {
       lines: [],
       issues: quality.issues,
+      overClaim: quality.overClaim,
       performance: null,
       quality: null,
       gain: ZERO,
@@ -129,20 +122,16 @@ function runningPart(
     remainderRateId: runningRateId(ctx.segments, 'sustained'),
     remainderBasis: 'sustained_rate',
   });
-  const issues = [...quality.issues];
-  if (result.overClaim.gt(ZERO)) {
-    const claimed = result.overClaim.toFixed();
-    issues.push(
-      issue(
-        'IMPOSSIBLE_CLAIM',
-        `slowdowns and micro-stops claim ${claimed} more than the performance loss`,
-        ctx.slice,
-      ),
-    );
-  }
   const lines = [...result.lines, ...quality.lines];
   if (gain.gt(ZERO)) lines.push(sliceLine('gain', gain, ctx.slice, ctx.line));
-  return { lines, issues, performance, quality: quality.total, gain };
+  return {
+    lines,
+    issues: quality.issues,
+    overClaim: result.overClaim.plus(quality.overClaim),
+    performance,
+    quality: quality.total,
+    gain,
+  };
 }
 
 function capacityTotals(
@@ -154,11 +143,13 @@ function capacityTotals(
   const flags = [...production.flags];
   if (slice.concurrent) flags.push('concurrent_products');
   if (running.gain.gt(ZERO)) flags.push('above_reference');
+  if (running.overClaim.gt(ZERO)) flags.push('claim_exceeds_component');
   const good = production.good;
   const losses = time.exclusion
     .plus(time.availability)
     .plus(running.performance ?? ZERO)
-    .plus(running.quality ?? ZERO);
+    .plus(running.quality ?? ZERO)
+    .plus(running.overClaim);
   const residual =
     good === null
       ? null
@@ -191,7 +182,9 @@ function unavailable(slice: SliceInput): SliceLedgerResult {
  * Capacity ledger of one slice (ACC01/ACC02): capacity at the sustained rate per segment, schedule
  * exclusion, availability from full stops (shares per occurrence), performance and quality computed
  * once and allocated to causes, gains above reference, and the signed residual
- * `capacity − exclusion − A − P − Q − good + gain`, never clamped.
+ * `capacity − exclusion − A − P − Q − overClaim − good + gain`, never clamped. Causes claiming more
+ * than their component keep their full quantity: the excess is flagged `claim_exceeds_component` and
+ * lands in the residual, so the run completes and the conflict goes to reconciliation (LA-02).
  */
 export function capacityLedger(
   input: PeriodAccountingInput,

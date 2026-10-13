@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { RequestContext } from '../common/context/request-context';
 import { addDays, isLocalDate } from '../domain/calendar/wall-clock';
+import { requestRecalculation } from '../periods/period-recalc';
 import { conflict, invalid } from './calendar-errors';
 import {
   CalendarMaterializerService,
@@ -12,6 +13,7 @@ import {
   assertValid,
   CalendarVersionsService,
 } from './calendar-versions.service';
+import { calendarRecalcRequest } from './calendar-recalc';
 import { definitionOf } from './calendar-resolution';
 import { CalendarVersion } from './entities/calendar-version.entity';
 import { Site } from './entities/site.entity';
@@ -39,7 +41,8 @@ export interface PublishResult {
  * governs are generated from `max(effectiveFrom, today − 366 d)` to `today + 90 d`. Future dates are
  * regenerated; past dates are only filled where missing. Re-publishing an already published version
  * needs a reason and may regenerate past dates from `regenerateFrom` (the global audit interceptor
- * logs the request; the reason is kept on the version).
+ * logs the request; the reason is kept on the version); regenerated past dates recalculate the units'
+ * periods in the same transaction (LA-03).
  */
 @Injectable()
 export class CalendarPublishService {
@@ -83,6 +86,13 @@ export class CalendarPublishService {
             manager,
           )
         : [];
+      const recalc = calendarRecalcRequest({
+        tenantId: version.tenantId,
+        unitIds,
+        regenerateFrom: command.regenerateFrom,
+        actorId: context.userId,
+      });
+      if (recalc) await requestRecalculation(manager, recalc);
       return { version, materialization };
     });
     this.logger.log(
