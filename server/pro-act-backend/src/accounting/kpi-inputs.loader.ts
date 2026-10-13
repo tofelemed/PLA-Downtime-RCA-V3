@@ -20,7 +20,7 @@ const OCCURRENCES_SQL = `SELECT e."occurrence_id", min(e."start_time") AS "start
        CASE WHEN bool_or(e."end_time" IS NULL) THEN NULL ELSE max(e."end_time") END AS "end_time"
   FROM "production_events" e
  WHERE e."tenant_id" = $1 AND e."occurrence_id" = ANY($2::uuid[]) AND e."physical_type" = 'downtime'
-   AND e."physical_state" IN ('open', 'closed')
+   AND e."physical_state" IN ('open', 'closed') AND e."impact_mode" NOT IN ('none', 'fractional')
  GROUP BY e."occurrence_id" ORDER BY e."occurrence_id"`;
 
 /** D13 failure candidates (`failure_events_v`); the occurrence filter is pushed into the view's grouping. */

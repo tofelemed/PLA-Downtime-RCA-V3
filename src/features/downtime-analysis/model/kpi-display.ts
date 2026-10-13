@@ -17,8 +17,9 @@ export const SUMMARY_TILES: readonly TileSpec[] = [
   { metric: 'downtime_total', title: 'Total downtime', kind: 'duration', note: 'Union of stop time in the window' },
   { metric: 'downtime_planned', title: 'Planned', kind: 'duration', note: 'Stops classed planned' },
   { metric: 'downtime_unplanned', title: 'Unplanned', kind: 'duration', note: 'Stops classed unplanned' },
+  { metric: 'downtime_equivalent', title: 'Equivalent downtime', kind: 'duration', note: 'Partial-impact events: lost rate as time at the reference rate (not stopped time)' },
   { metric: 'microstop_time', title: 'Micro-stops', kind: 'duration', note: 'Below the OEE-policy threshold; stay in run time' },
-  { metric: 'unknown_time', title: 'Unknown', kind: 'duration', note: 'Stop time with schedule class unknown' },
+  { metric: 'unknown_time', title: 'Stops not classed planned/unplanned', kind: 'duration', note: 'Stop time whose schedule class is not set yet (not unrecorded time)' },
   { metric: 'stop_count', title: 'Stops', kind: 'count', note: 'Stop occurrences starting in the window' },
   { metric: 'carry_in_count', title: 'Carry-in stops', kind: 'count', note: 'Started before the window, still counted separately' },
   { metric: 'mean_stop_duration', title: 'Mean completed stop', kind: 'duration', note: 'Cohort: completed stops ending in the window (open stops censored)' },
@@ -70,7 +71,7 @@ export function findMetric(views: readonly KpiAggregateView[] | undefined, metri
   return views?.find((view) => view.metric === metric);
 }
 
-/** True when the unknown tile is above zero: known downtime is then a lower bound (DT04). */
+/** True when some stop time has no planned / unplanned class yet: that split is then incomplete (DT-02). */
 export function hasUnknownTime(views: readonly KpiAggregateView[] | undefined): boolean {
   const value = findMetric(views, 'unknown_time')?.value;
   return value !== null && value !== undefined && /[1-9]/.test(value);

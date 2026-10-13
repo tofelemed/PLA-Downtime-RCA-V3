@@ -78,7 +78,7 @@ describe('KPI labels and formatting (KPI05–KPI08)', () => {
     expect(formatCount('3.0000000000')).toBe('3');
   });
 
-  it('server reasons become text; unknown time above zero flags a lower bound', () => {
+  it('server reasons become text; unclassified stop time above zero flags an incomplete planned / unplanned split', () => {
     expect(reasonText('no_failures')).toBe('No failures in the window');
     expect(reasonText('custom_reason')).toBe('custom reason');
     expect(hasUnknownTime([kpi('unknown_time', '0')])).toBe(false);

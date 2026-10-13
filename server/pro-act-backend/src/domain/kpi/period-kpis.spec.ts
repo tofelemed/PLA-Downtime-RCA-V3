@@ -127,6 +127,27 @@ const period = (all: KpiDraft[], metric: KpiMetric) =>
   all.find((k) => k.metric === metric && k.scope.level === 'period')!;
 const str = (value: Dec | null) => (value === null ? null : value.toFixed());
 
+describe('SME Q5: stopped time versus equivalent downtime', () => {
+  it('only full stops are stopped time; partial impact is equivalent downtime; no impact is neither', () => {
+    const kpis = run(
+      input({
+        events: [
+          event('s', 600, 600 + HOUR),
+          event('f', 2 * HOUR, 4 * HOUR, {
+            impactMode: 'fractional',
+            impactFraction: '0.5',
+          }),
+          event('n', 5 * HOUR, 6 * HOUR, { impactMode: 'none' }),
+        ],
+      }),
+    );
+    expect(str(period(kpis, 'stop_count').value)).toBe('1');
+    expect(str(period(kpis, 'downtime_total').value)).toBe(String(HOUR));
+    expect(str(period(kpis, 'downtime_equivalent').value)).toBe(String(HOUR));
+    expect(str(period(kpis, 'availability').numerator)).toBe(String(7 * HOUR));
+  });
+});
+
 describe('KPI02 time model', () => {
   it('a 45 s micro-stop stays in R (performance), a 90 s stop is availability time', () => {
     const micro = run(input({ events: [event('m', 600, 645)] }));

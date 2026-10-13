@@ -1,12 +1,12 @@
 import { A, HOUR } from './support/actuals-world';
 import { plus } from './support/accounting-world';
-import { ApiError } from './support/plan-world';
 import {
   ReconciliationBody,
   ReconciliationWorld,
 } from './support/reconciliation-world';
 
-interface IssuesError extends ApiError {
+interface IssuesError {
+  code: string;
   details?: { issues?: Array<{ code: string }> };
 }
 

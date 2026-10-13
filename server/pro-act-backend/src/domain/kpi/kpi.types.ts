@@ -13,6 +13,7 @@ export const KPI_METRICS = [
   'downtime_total',
   'downtime_planned',
   'downtime_unplanned',
+  'downtime_equivalent',
   'microstop_time',
   'unknown_time',
   'stop_count',

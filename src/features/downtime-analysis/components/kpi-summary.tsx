@@ -24,7 +24,7 @@ export function KpiSummary({ bundle }: { bundle: DowntimeBundleResult }) {
     <ReportCard title="Downtime summary" testId="kpi-summary" query={bundle} response={bundle.data} showMeta={false}>
       {hasUnknownTime(summary) && (
         <Alert className="mb-2" data-testid="unknown-lower-bound">
-          <AlertDescription>Unknown time is above zero: known downtime is a lower bound.</AlertDescription>
+          <AlertDescription>Some stop time is not classed planned or unplanned yet: the planned / unplanned split is incomplete.</AlertDescription>
         </Alert>
       )}
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

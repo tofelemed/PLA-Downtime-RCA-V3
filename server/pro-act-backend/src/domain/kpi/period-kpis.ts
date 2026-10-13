@@ -4,10 +4,19 @@ import {
   PeriodAccountingInput,
   SliceInput,
 } from '../accounting/accounting.types';
-import { classifyEvents, segmentSlice } from '../accounting/segmentation';
+import {
+  classifyEvents,
+  isPartialImpact,
+  isStoppingDowntime,
+  segmentSlice,
+} from '../accounting/segmentation';
 import { BoundedInterval } from '../time/interval-algebra';
 import { downtimeBreakdown } from './downtime-breakdown';
-import { downtimeMeasures, OccurrenceSpan } from './downtime-measures';
+import {
+  downtimeMeasures,
+  equivalentDowntimeKpi,
+  OccurrenceSpan,
+} from './downtime-measures';
 import { idealTimes, IdealTimes, timeTerms, TimeTerms } from './ideal-time';
 import { KpiDraft, KpiScope } from './kpi.types';
 import { unavailable } from './kpi-values';
@@ -193,6 +202,23 @@ function scheduledTerms(
   return timeTerms(segmentSlice(everyStop, periodSlice(window)));
 }
 
+/** Occurrences of stops only: those seen in the window only through no-impact or partial events drop out (SME Q5). */
+function stoppingOccurrences(input: PeriodKpiInput): OccurrenceSpan[] {
+  const downtime = input.accounting.events.filter(
+    (e) => e.physicalType === 'downtime',
+  );
+  const stopping = new Set(
+    downtime.filter(isStoppingDowntime).map((e) => e.occurrenceId),
+  );
+  const notStopping = new Set(
+    downtime
+      .filter((e) => !isStoppingDowntime(e))
+      .map((e) => e.occurrenceId)
+      .filter((id) => !stopping.has(id)),
+  );
+  return input.occurrences.filter((o) => !notStopping.has(o.occurrenceId));
+}
+
 /**
  * All KPIs of one period and calculation run (plan 2.7; pure, decimal): operational OEE for the period and
  * each product slice, the reconciled PLA OEE from the capacity ledger, downtime measures and breakdowns,
@@ -208,9 +234,9 @@ export function computePeriodKpis(input: PeriodKpiInput): KpiDraft[] {
   const downtimeInput = {
     window,
     asOf: accounting.asOf,
-    events: accounting.events.filter((e) => e.physicalType === 'downtime'),
+    events: accounting.events.filter(isStoppingDowntime),
     microOccurrences: new Set(classified.microStops.map((e) => e.occurrenceId)),
-    occurrences: input.occurrences,
+    occurrences: stoppingOccurrences(input),
     scheduled: scheduledTerms(accounting, window),
   };
   const downtime = downtimeMeasures(downtimeInput);
@@ -218,6 +244,11 @@ export function computePeriodKpis(input: PeriodKpiInput): KpiDraft[] {
     ...oeeKpis(time, slices),
     ...reconciledKpis(input),
     ...downtime.kpis,
+    equivalentDowntimeKpi(
+      window,
+      accounting.asOf,
+      accounting.events.filter(isPartialImpact),
+    ),
     ...downtimeBreakdown(downtimeInput, downtime.allocated),
     ...reliability({
       window,

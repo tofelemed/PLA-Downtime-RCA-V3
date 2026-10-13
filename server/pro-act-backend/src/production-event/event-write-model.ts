@@ -45,12 +45,29 @@ export interface EventWriteInput {
   classification?: Partial<EventClassification>;
 }
 
+/**
+ * A downtime event whose impact the caller did not state stops the unit (SME Q5): `none` and `fractional`
+ * must be chosen explicitly, so an event entered as downtime is never silently a no-loss event.
+ */
+function withStopDefault(
+  classification: EventClassification,
+  input: EventWriteInput,
+): EventClassification {
+  const stated = input.classification?.impactMode !== undefined;
+  return classification.physicalType === 'downtime' && !stated
+    ? { ...classification, impactMode: 'full_stop' }
+    : classification;
+}
+
 /** Interval-model fields for a new event. */
 export function prepareCreate(input: EventWriteInput): IntervalModelFields {
-  const classification = {
-    ...classifyLegacyEventType(input.eventType),
-    ...definedOnly(input.classification ?? {}),
-  };
+  const classification = withStopDefault(
+    {
+      ...classifyLegacyEventType(input.eventType),
+      ...definedOnly(input.classification ?? {}),
+    },
+    input,
+  );
   const interval = resolve(
     input.startTime,
     input.endTime,
@@ -87,6 +104,11 @@ export function prepareUpdate(
         }),
     ...definedOnly(input.classification ?? {}),
   };
+  const becameDowntime =
+    classification.physicalType === 'downtime' &&
+    existing.physicalType !== 'downtime';
+  if (becameDowntime)
+    Object.assign(classification, withStopDefault(classification, input));
   const end =
     input.endTime !== undefined || input.durationSeconds !== undefined
       ? input.endTime

@@ -210,6 +210,27 @@ describe('computePeriodAccounting (plan 2.5)', () => {
     expect(remainder.flags).toContain('unexplained');
   });
 
+  it('equipment downtime without production impact is no loss; partial impact is a rate loss, not stopped time (SME Q5)', () => {
+    const standby = event('N', 60, 120, { impactMode: 'none' });
+    const none = computePeriodAccounting(
+      input([standby], { actuals: { gross: '800', good: '800', uom: 't' } }),
+    );
+    expect(none.lines.some((l) => l.cause?.eventId === 'N')).toBe(false);
+    const partial = event('F', 60, 180, {
+      impactMode: 'fractional',
+      impactFraction: '0.5',
+    });
+    const result = computePeriodAccounting(
+      input([partial], { actuals: { gross: '700', good: '700', uom: 't' } }),
+    );
+    const own = result.lines.filter(
+      (l) => l.ledger === 'capacity' && l.cause?.eventId === 'F',
+    );
+    expect(own.map((l) => [l.kind, formatDec(l.quantity)])).toEqual([
+      ['performance', '100'],
+    ]);
+  });
+
   it('a micro-stop (< 60 s) is a performance claim, not availability', () => {
     const i = input([event('M', 60, 60.5)], {
       actuals: { gross: '700', good: '700', uom: 't' },

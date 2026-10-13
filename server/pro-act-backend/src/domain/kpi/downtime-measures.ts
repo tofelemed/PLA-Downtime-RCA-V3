@@ -167,3 +167,28 @@ export function downtimeMeasures(input: DowntimeInput): {
     allocated,
   };
 }
+
+/**
+ * SME Q5: equivalent downtime — rate lost by partial-impact events expressed as time at the reference
+ * rate (fraction × duration inside the window). Kept apart from stopped time (`downtime_total`).
+ */
+export function equivalentDowntimeKpi(
+  window: BoundedInterval,
+  asOf: Date,
+  partial: readonly LossEvent[],
+): KpiDraft {
+  const seconds = sum(
+    partial.map((e) => {
+      const start = Math.max(e.start.getTime(), window.start.getTime());
+      const end = Math.min((e.end ?? asOf).getTime(), window.end.getTime());
+      if (end <= start) return ZERO;
+      return secondsBetween(start, end).mul(new Dec(e.impactFraction ?? 0));
+    }),
+  );
+  return amountKpi({ metric: 'downtime_equivalent', scope: PERIOD }, seconds, {
+    cohort: {
+      meaning:
+        'lost rate of partial-impact events as time at the reference rate',
+    },
+  });
+}

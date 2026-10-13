@@ -43,9 +43,30 @@ function knownOccurrenceSeconds(
   );
 }
 
+/**
+ * Downtime that does not stop the unit (SME Q5): `none` = the equipment failed but output held (standby),
+ * no production loss; `fractional` = throughput reduced, a rate loss at its fraction (a derate), never
+ * stopped time.
+ */
+const NOT_STOPPING = new Set(['none', 'fractional']);
+
+/** A downtime event that stops the unit (counts as stopped time). */
+export function isStoppingDowntime(e: LossEvent): boolean {
+  return e.physicalType === 'downtime' && !NOT_STOPPING.has(e.impactMode);
+}
+
+/** A downtime or slowdown event that reduces the rate by a fraction (a derate). */
+export function isPartialImpact(e: LossEvent): boolean {
+  return (
+    (e.physicalType === 'slowdown' || e.physicalType === 'downtime') &&
+    e.impactMode === 'fractional' &&
+    e.impactFraction !== null
+  );
+}
+
 /** Splits the eligible events by kind; the occurrence's full length decides stop vs micro-stop. */
 export function classifyEvents(input: PeriodAccountingInput): ClassifiedEvents {
-  const downtime = input.events.filter((e) => e.physicalType === 'downtime');
+  const downtime = input.events.filter(isStoppingDowntime);
   const occurrenceSeconds = knownOccurrenceSeconds(input);
   for (const id of new Set(downtime.map((e) => e.occurrenceId))) {
     if (occurrenceSeconds.has(id)) continue;
@@ -68,12 +89,7 @@ export function classifyEvents(input: PeriodAccountingInput): ClassifiedEvents {
     stops: downtime.filter((e) => !isMicro(e) && !excludePlanned(e)),
     microStops: downtime.filter((e) => isMicro(e) && !excludePlanned(e)),
     excludedStops: downtime.filter(excludePlanned),
-    derates: input.events.filter(
-      (e) =>
-        e.physicalType === 'slowdown' &&
-        e.impactMode === 'fractional' &&
-        e.impactFraction !== null,
-    ),
+    derates: input.events.filter(isPartialImpact),
   };
 }
 
