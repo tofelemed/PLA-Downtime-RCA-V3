@@ -73,6 +73,7 @@ function candidatesOf(
         inputs.events,
         window,
         context.policies.coverageGate.allowProportionalEstimate,
+        inputs.stops,
       );
   const bySource = new Map<ActualsSource, SignalInput[]>();
   for (const input of inputs.signals) {

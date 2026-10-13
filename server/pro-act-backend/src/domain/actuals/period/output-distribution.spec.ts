@@ -57,6 +57,23 @@ describe('distributeOutputEvents (ACT02)', () => {
     expect(a.findings.map((f) => f.code)).toEqual(['proportional_estimate']);
   });
 
+  it('splits by running time when the unit stopped inside the event (SME Q8)', () => {
+    const spanning = event({
+      start: at('12:00'),
+      end: at('16:00'),
+      quantity: '80',
+    });
+    const stopped = [{ start: at('12:00'), end: at('13:00') }];
+    const a = distributeOutputEvents([spanning], shiftA, true, stopped);
+    const b = distributeOutputEvents([spanning], shiftB, true, stopped);
+    expect(formatDec(a.quantity ?? ZERO)).toBe('26.66666667');
+    expect(formatDec(b.quantity ?? ZERO)).toBe('53.33333333');
+    expect(a.findings[0]).toMatchObject({
+      code: 'proportional_estimate',
+      detail: { method: 'running_time' },
+    });
+  });
+
   it('books a spanning event whole at its end when estimates are not allowed, flagging both periods', () => {
     const spanning = event({
       start: at('12:00'),

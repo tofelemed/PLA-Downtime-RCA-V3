@@ -3,12 +3,22 @@ import { EntityManager } from 'typeorm';
 import { EngineSample } from '../domain/actuals/actuals.types';
 import { ExternalLineInput } from '../domain/actuals/period/external-line-candidate';
 import { ExternalReportLine } from '../domain/actuals/period/external-report';
-import { PeriodOutputEvent } from '../domain/actuals/period/output-distribution';
+import {
+  PeriodOutputEvent,
+  StoppedSpan,
+} from '../domain/actuals/period/output-distribution';
 import { ActualsSource } from '../domain/actuals/period/period-actuals.types';
 import { Signal } from '../signals/entities/signal.entity';
 import { SampleStore } from '../signals/sample-store';
 import { ActualsAdjustment } from './entities/actuals-adjustment.entity';
 import { ProductionPeriod } from './entities/production-period.entity';
+
+/** Stops of a unit (downtime that halts production, SME Q5) overlapping ($3, $4). */
+const STOPS_SQL = `SELECT "start_time", "end_time" FROM "production_events"
+ WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "physical_type" = 'downtime'
+   AND "physical_state" IN ('open', 'closed') AND "impact_mode" NOT IN ('none', 'fractional')
+   AND tstzrange("start_time", "end_time", '[)') && tstzrange($3, $4, '[)')
+ ORDER BY "start_time", "id"`;
 
 /** Production output events overlapping the period ($3, $4) of a unit. */
 export const OUTPUT_EVENTS_SQL = `SELECT "id", "canonical_id", "current_source_revision", "row_version", "start_time", "end_time",
@@ -34,6 +44,8 @@ export interface SignalInput {
 
 export interface PeriodInputs {
   events: PeriodOutputEvent[];
+  /** stops of the unit under output events that cross the period boundary (LA-06: running-time split) */
+  stops: StoppedSpan[];
   signals: SignalInput[];
   adjustments: ActualsAdjustment[];
   reportLines: Array<ExternalLineInput & { unitId: string; productId: string }>;
@@ -63,7 +75,36 @@ export class ActualsInputsLoader {
       }),
       this.reportLines(manager, period),
     ]);
-    return { events, signals, adjustments, reportLines };
+    const stops = await this.stopsUnder(manager, period, events);
+    return { events, stops, signals, adjustments, reportLines };
+  }
+
+  /** Stops of the unit overlapping the output events that cross the period boundary (none when none do). */
+  private async stopsUnder(
+    manager: EntityManager,
+    period: ProductionPeriod,
+    events: readonly PeriodOutputEvent[],
+  ): Promise<StoppedSpan[]> {
+    const spanning = events.filter(
+      (e) =>
+        e.end !== null && (e.start < period.utcStart || e.end > period.utcEnd),
+    );
+    if (spanning.length === 0) return [];
+    const from = new Date(Math.min(...spanning.map((e) => e.start.getTime())));
+    const to = new Date(
+      Math.max(...spanning.map((e) => (e.end as Date).getTime())),
+    );
+    const rows: Array<{ start_time: Date; end_time: Date | null }> =
+      await manager.query(STOPS_SQL, [
+        period.tenantId,
+        period.unitId,
+        from,
+        to,
+      ]);
+    return rows.map((r) => ({
+      start: new Date(r.start_time),
+      end: r.end_time ? new Date(r.end_time) : to,
+    }));
   }
 
   private async events(

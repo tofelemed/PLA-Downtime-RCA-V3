@@ -37,6 +37,17 @@ interface Share {
 
 const SCALE = 8;
 
+/** A stop of the unit (production halted), used to split spanning output by running time. */
+export interface StoppedSpan {
+  start: Date;
+  end: Date;
+}
+
+interface SplitOptions {
+  allowProportional: boolean;
+  stopped: readonly StoppedSpan[];
+}
+
 /**
  * Σ output booked in `[from, to)` (ACT02, PI09): every source identity counts once (latest revision); an
  * event inside the window counts whole and measured; an event spanning a boundary is split by its
@@ -50,13 +61,18 @@ export function distributeOutputEvents(
   events: readonly PeriodOutputEvent[],
   window: Window,
   allowProportionalEstimate: boolean,
+  stopped: readonly StoppedSpan[] = [],
 ): SourceCandidate {
+  const split: SplitOptions = {
+    allowProportional: allowProportionalEstimate,
+    stopped,
+  };
   const acc = emptyAccumulator();
   const latest = [...latestVersions(events).values()].filter((event) =>
     touches(event, window),
   );
   for (const event of latest) {
-    for (const share of sharesOf(event, window, allowProportionalEstimate)) {
+    for (const share of sharesOf(event, window, split)) {
       add(acc, event, share);
     }
   }
@@ -122,7 +138,7 @@ function add(acc: Accumulator, event: PeriodOutputEvent, share: Share): void {
 function sharesOf(
   event: PeriodOutputEvent,
   window: Window,
-  allowProportional: boolean,
+  split: SplitOptions,
 ): Share[] {
   if (!event.end) return [openShare(event)];
   const quantity = toDec(event.quantity);
@@ -134,7 +150,7 @@ function sharesOf(
     return event.distribution
       .map((piece, index) => pieceEvent(event, piece, index, quantity.isZero()))
       .filter((piece) => touches(piece, window))
-      .flatMap((piece) => sharesOf(piece, window, allowProportional));
+      .flatMap((piece) => sharesOf(piece, window, split));
   }
   const bounded = { start: event.start, end: event.end };
   if (inside(bounded, window)) {
@@ -142,30 +158,61 @@ function sharesOf(
       { quantity, rejects, rejectsKnown, basis: 'measured', observed: bounded },
     ];
   }
-  const share = allowProportional
-    ? proportionalShare(bounded, window, quantity, rejects)
+  const share = split.allowProportional
+    ? proportionalShare(bounded, window, { quantity, rejects }, split.stopped)
     : bookedWhole(event, bounded, window, { quantity, rejects });
   return [{ ...share, rejectsKnown }];
 }
 
-/** Cumulative rounding: share = R(q × a) − R(q × b) over the event's elapsed fraction. */
+/** Milliseconds of `[from, to)` the unit was not stopped (stops may overlap each other). */
+function runningMs(
+  from: number,
+  to: number,
+  stopped: readonly StoppedSpan[],
+): number {
+  const cuts = stopped
+    .map((s) => [
+      Math.max(from, s.start.getTime()),
+      Math.min(to, s.end.getTime()),
+    ])
+    .filter(([a, b]) => b > a)
+    .sort((x, y) => x[0] - y[0]);
+  let idle = 0;
+  let reached = from;
+  for (const [a, b] of cuts) {
+    const start = Math.max(a, reached);
+    if (b > start) idle += b - start;
+    reached = Math.max(reached, b);
+  }
+  return to - from - idle;
+}
+
+/**
+ * Estimate of a spanning event's share of a window (SME Q8: an estimate only — counters and measured
+ * splits come first): by running time when the unit's stops are known and some running time remains,
+ * else by elapsed time; cumulative rounding R(q × a) − R(q × b), so adjacent windows add up exactly.
+ */
 function proportionalShare(
   event: { start: Date; end: Date },
   window: Window,
-  quantity: Dec,
-  rejects: Dec,
+  amounts: { quantity: Dec; rejects: Dec },
+  stopped: readonly StoppedSpan[],
 ): Share {
   const start = event.start.getTime();
-  const duration = new Dec(event.end.getTime() - start);
+  const end = event.end.getTime();
+  const byRunning = stopped.length > 0 && runningMs(start, end, stopped) > 0;
+  const elapsed = (at: number) =>
+    byRunning ? runningMs(start, at, stopped) : at - start;
+  const duration = new Dec(elapsed(end));
   const from = Math.max(window.from.getTime(), start);
-  const to = Math.min(window.to.getTime(), event.end.getTime());
+  const to = Math.min(window.to.getTime(), end);
   const part = (total: Dec) =>
-    cumulative(total, to - start, duration).minus(
-      cumulative(total, from - start, duration),
+    cumulative(total, elapsed(to), duration).minus(
+      cumulative(total, elapsed(from), duration),
     );
   return {
-    quantity: part(quantity),
-    rejects: part(rejects),
+    quantity: part(amounts.quantity),
+    rejects: part(amounts.rejects),
     basis: 'estimated',
     observed: { start: new Date(from), end: new Date(to) },
     finding: {
@@ -173,6 +220,7 @@ function proportionalShare(
       severity: 'info',
       from: new Date(from).toISOString(),
       to: new Date(to).toISOString(),
+      detail: { method: byRunning ? 'running_time' : 'elapsed_time' },
     },
   };
 }

@@ -21,7 +21,7 @@ import {
 import { computePeriodActuals } from './period-actuals.compute';
 
 /** Bumped when the period engine's rules change (recorded on every run). */
-export const ACTUALS_ENGINE_VERSION = '2.4.0';
+export const ACTUALS_ENGINE_VERSION = '2.4.1';
 
 /** Message type: a period has a new actuals run (2.5 / realtime consumers). */
 export const PERIOD_ACTUALS_COMPUTED = 'PeriodActualsComputed';
@@ -259,6 +259,7 @@ function hashOf(
       s.signal.isAuthority,
       s.samples.map((x) => [x.at.getTime(), x.value, x.quality]),
     ]),
+    stops: inputs.stops.map((s) => [s.start, s.end]),
     adjustments: inputs.adjustments.map((a) => a.id),
     reports: inputs.reportLines.map((l) => [l.reportId, l.productId]),
   };
