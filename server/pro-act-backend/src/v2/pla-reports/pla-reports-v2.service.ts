@@ -87,6 +87,7 @@ export class PlaReportsV2Service {
       groupBy: query.groupBy ?? 'reason',
       metric: query.metric ?? 'qty',
       ledger: query.ledger ?? 'plan',
+      kinds: query.kinds,
     };
     const [cells, stats] = await Promise.all([
       lossTreeCells(manager, scope, request),

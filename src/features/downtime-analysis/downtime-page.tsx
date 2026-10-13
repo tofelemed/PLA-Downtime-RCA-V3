@@ -13,6 +13,7 @@ import { DowntimeFiltersBar } from './components/downtime-filters-bar';
 import { DowntimeHeader } from './components/downtime-header';
 import { DrillEvents } from './components/drill-events';
 import { KpiSummary } from './components/kpi-summary';
+import { LostProductionPareto } from './components/lost-production-pareto';
 import { ReasonPareto } from './components/reason-pareto';
 import { ReliabilityCard } from './components/reliability-card';
 import { TrendPanel } from './components/trend-panel';
@@ -61,6 +62,7 @@ function DowntimeScreen() {
         </div>
         <ReasonPareto filters={filters} onChange={change} onEvents={(next) => setDrill({ key: filterKey, selection: next })} />
         {selection && <DrillEvents filters={filters} selection={selection} onDismiss={() => setDrill(null)} />}
+        <LostProductionPareto filters={filters} />
         <TrendPanel filters={filters} bundle={bundle} views={views} />
         <div className="grid gap-6 lg:grid-cols-2">
           <BadActors bundle={bundle} views={views} />

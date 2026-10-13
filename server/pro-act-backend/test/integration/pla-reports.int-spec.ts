@@ -223,6 +223,19 @@ describe('PLA analytics reads (plan 3.6)', () => {
     expect(top.data.totals).toEqual(all.data.totals);
   });
 
+  it('loss tree kinds filter (FE-08): only the chosen loss kinds, totals over them; an unknown kind is 422', async () => {
+    const all = await read<LossTreeBody>(`loss-tree?${scope}&groupBy=kind`);
+    const stops = await read<LossTreeBody>(
+      `loss-tree?${scope}&groupBy=kind&kinds=availability`,
+    );
+    expect(stops.data.groups.map((g) => g.key)).toEqual(['availability']);
+    expect(stops.data.groups[0].amount).toBe(
+      all.data.groups.find((g) => g.key === 'availability')?.amount,
+    );
+    expect(stops.data.totals[0].amount).toBe(stops.data.groups[0].amount);
+    await env.get(`reports/loss-tree?${scope}&kinds=gain`).expect(422);
+  });
+
   it('reconciliation trend by shift adds up to the waterfall unaccounted bar; weeks use the ISO key', async () => {
     const trend = await read<TrendBody>(
       `reconciliation-trend?${scope}&groupBy=shift`,

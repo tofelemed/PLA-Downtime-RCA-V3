@@ -24,19 +24,8 @@ import {
   SCHEDULE_CLASSES,
   SOURCE_KINDS,
 } from '../../domain/events/event-classification';
+import { EnumArrayParam } from '../common/enum-array-param';
 import { ListQueryDto } from '../common/list-query.dto';
-
-/** Repeated enum filter: `?physicalTypes=downtime&physicalTypes=slowdown` (OR within). */
-function EnumArrayParam(values: readonly string[]): PropertyDecorator {
-  return (target, key) => {
-    ApiPropertyOptional({ type: [String], enum: values })(target, key);
-    IsOptional()(target, key);
-    Transform(toArrayParam)(target, key);
-    IsArray()(target, key);
-    ArrayMaxSize(values.length)(target, key);
-    IsIn(values, { each: true })(target, key);
-  };
-}
 
 export const PRODUCTION_EVENT_SORT_FIELDS = ['startTime'] as const;
 export type ProductionEventSortField =

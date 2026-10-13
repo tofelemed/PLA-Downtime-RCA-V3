@@ -3,21 +3,13 @@ import { Dec, toDec, ZERO } from '../../domain/actuals/decimal';
 import { ReportScope } from '../reports/report-scope';
 import { params, SHOWN } from '../reports/report-sql';
 import {
+  LOSS_TREE_KINDS,
   LOSS_TREE_METRICS,
+  LossTreeKind,
   LossTreeGroup,
   LossTreeMetric,
   Ledger,
 } from './pla-reports.dto';
-
-/** Loss kinds of the tree: what lowers output (gains, residuals and tolerance adjustments stay apart). */
-export const LOSS_TREE_KINDS = [
-  'schedule_exclusion',
-  'availability',
-  'performance',
-  'quality',
-  'bridge',
-  'unaccounted_classified',
-];
 
 export interface LossTreeGroupView {
   /** reason / impact code id, OEE component, kind or unit id; null = not coded */
@@ -120,22 +112,26 @@ const LINES = `FROM shown s
 async function quantityCells(
   manager: EntityManager,
   scope: ReportScope,
-  groupSql: string,
-  ledger: Ledger,
+  spec: { groupSql: string; ledger: Ledger; kinds: readonly LossTreeKind[] },
 ): Promise<CellRow[]> {
   return manager.query<CellRow[]>(
-    `${SHOWN} SELECT ${groupSql} AS "group_key", l."uom" AS "unit", sum(l."quantity")::text AS "amount",
+    `${SHOWN} SELECT ${spec.groupSql} AS "group_key", l."uom" AS "unit", sum(l."quantity")::text AS "amount",
             count(*)::int AS "lines", 0 AS "valued", 0 AS "unvalued", 0 AS "fx_missing", NULL AS "reasons"
        ${LINES}
       GROUP BY 1, 2`,
-    [...params(scope), ledger, LOSS_TREE_KINDS],
+    [...params(scope), spec.ledger, spec.kinds],
   );
 }
 
 async function valueCells(
   manager: EntityManager,
   scope: ReportScope,
-  spec: { groupSql: string; ledger: Ledger; view: string },
+  spec: {
+    groupSql: string;
+    ledger: Ledger;
+    view: string;
+    kinds: readonly LossTreeKind[];
+  },
 ): Promise<CellRow[]> {
   return manager.query<CellRow[]>(
     `${SHOWN} SELECT ${spec.groupSql} AS "group_key", v."currency" AS "unit",
@@ -155,7 +151,7 @@ async function valueCells(
           WHERE l."origin" = 'approved' AND av."approved_line_id" = l."line_id" AND av."view" = $8::valuation_view
        ) v ON true
       GROUP BY 1, 2`,
-    [...params(scope), spec.ledger, LOSS_TREE_KINDS, spec.view],
+    [...params(scope), spec.ledger, spec.kinds, spec.view],
   );
 }
 
@@ -195,6 +191,8 @@ export interface LossTreeRequest {
   groupBy: LossTreeGroup;
   metric: LossTreeMetric;
   ledger: Ledger;
+  /** loss kinds to include; every kind of the tree when absent */
+  kinds?: readonly LossTreeKind[];
 }
 
 /** The cells of the request (quantity per uom, or one valuation view per currency) from SQL. */
@@ -205,13 +203,11 @@ export async function lossTreeCells(
 ): Promise<{ rows: CellRow[]; labels: Map<string, string> }> {
   const groupSql = GROUP_SQL[request.groupBy];
   const view = LOSS_TREE_METRICS[request.metric];
+  const kinds = request.kinds?.length ? request.kinds : LOSS_TREE_KINDS;
+  const spec = { groupSql, ledger: request.ledger, kinds };
   const rows = view
-    ? await valueCells(manager, scope, {
-        groupSql,
-        ledger: request.ledger,
-        view,
-      })
-    : await quantityCells(manager, scope, groupSql, request.ledger);
+    ? await valueCells(manager, scope, { ...spec, view })
+    : await quantityCells(manager, scope, spec);
   const keys = [
     ...new Set(rows.flatMap((r) => (r.group_key ? [r.group_key] : []))),
   ];

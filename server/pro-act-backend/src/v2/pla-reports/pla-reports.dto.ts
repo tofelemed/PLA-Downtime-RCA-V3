@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
 import { INSTANT, INSTANT_MESSAGE } from '../profiles/profile-v2.dto';
+import { EnumArrayParam } from '../common/enum-array-param';
 import { ReportWindowQueryDto } from '../reports/kpi-reports-v2.dto';
 
 export const LEDGERS = ['plan', 'capacity'] as const;
@@ -24,6 +25,17 @@ export const LOSS_TREE_METRICS = {
   operational_cost: 'cost_per_hour',
 } as const;
 export type LossTreeMetric = keyof typeof LOSS_TREE_METRICS;
+
+/** Loss kinds of the tree: what lowers output (gains, residuals and tolerance adjustments stay apart). */
+export const LOSS_TREE_KINDS = [
+  'schedule_exclusion',
+  'availability',
+  'performance',
+  'quality',
+  'bridge',
+  'unaccounted_classified',
+] as const;
+export type LossTreeKind = (typeof LOSS_TREE_KINDS)[number];
 
 export const TREND_GROUPS = ['shift', 'day', 'week', 'month'] as const;
 export type TrendGroup = (typeof TREND_GROUPS)[number];
@@ -71,6 +83,10 @@ export class LossTreeQueryDto extends ReportWindowQueryDto {
   @Min(1)
   @Max(100)
   limit?: number;
+
+  /** only these loss kinds (FE-08: availability = losses of stops); every kind of the tree when absent */
+  @EnumArrayParam(LOSS_TREE_KINDS)
+  kinds?: LossTreeKind[];
 }
 
 /** `GET /reports/reconciliation-trend`: unaccounted / over-accounted / overproduction per site-local bucket. */

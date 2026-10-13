@@ -12528,6 +12528,7 @@ export interface operations {
                 ledger?: "plan" | "capacity";
                 /** @description Largest groups per unit / currency only (top opportunities); totals always cover every group */
                 limit?: number;
+                kinds?: ("schedule_exclusion" | "availability" | "performance" | "quality" | "bridge" | "unaccounted_classified")[];
             };
             header?: never;
             path?: never;

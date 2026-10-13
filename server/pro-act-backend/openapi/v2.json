@@ -12148,6 +12148,25 @@
               "maximum": 100,
               "type": "number"
             }
+          },
+          {
+            "name": "kinds",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "schedule_exclusion",
+                  "availability",
+                  "performance",
+                  "quality",
+                  "bridge",
+                  "unaccounted_classified"
+                ]
+              }
+            }
           }
         ],
         "responses": {

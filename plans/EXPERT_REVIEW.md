@@ -145,7 +145,7 @@ SME questions D1–D17 were sent on 13 Oct 2026; the phases below need none of t
 | P2 | DT-02 (label part) | "Unknown" in downtime screens renamed to what it is (stop time of an uncoded class); event coverage measure waits for D1/D2 | ✅ (already in `8171b43`: "Stops not classed planned/unplanned" + incomplete-split notice) |
 | P3 | DT-04 | Overlapping stops of one asset found on read: `possibleDuplicate` list/export filter, Event Hub "Possible duplicate stops only"; the user merges or retracts. Merge window and automatic de-duplication wait for D5 | ✅ |
 | P4 | DT-07 | New KPIs `downtime_in_schedule` (reconciles with scheduled availability) and `downtime_external`; the calendar total is labelled as calendar. Moving the Pareto to scheduled time waits for D14 | ✅ |
-| P5 | FE-08 | Pareto by lost quantity and value from the approved ledger | ⬜ |
+| P5 | FE-08 | Downtime Analysis "Lost production by stop reason": availability losses per reason as quantity or margin, from `loss-tree` with the new `kinds` filter (approved lines, else the shown run) | ✅ |
 | P6 | FE-06, FE-07 | Reason code in the close dialog, inline "Code"; select all matching, "to code this shift" preset | ⬜ |
 | P7 | DT-10 (maths part) | Multi-period A·P·Q = OEE on the same period set; week start as a plant setting (default ISO Monday until D16) | ⬜ |
 | P8 | FE-09 | Event and RCA screens on paged `/v2/assets` | ⬜ |
@@ -222,7 +222,7 @@ SME questions D1–D17 were sent on 13 Oct 2026; the phases below need none of t
 | FE-05 | High | Events with retired codes show "Unknown". | FE: `features/event-hub/event-hub-env.tsx:19` | ⬜ |
 | FE-06 | Medium | Coding a stop takes 5–6 actions; the close dialog asks for a free-text "Why" but no reason code; no inline "Code" action. | FE: `features/event-hub/.../close-stop-dialog.tsx:41-48`; `current-stops-panel.tsx:75-86` | ⬜ |
 | FE-07 | Medium | Shift-end bulk coding: no select-all-matching, no "to code this shift" preset, mandatory "Why". | FE: `event-columns.tsx:33-35`; `use-bulk-code-flow.ts:65` | ⬜ |
-| FE-08 | Medium | Downtime Pareto offers duration and count only, no lost quantity or value (needs a server metric). | FE: `features/downtime-analysis/.../downtime-filters.ts:14` | ⬜ |
+| FE-08 | Medium | Downtime Pareto offers duration and count only, no lost quantity or value (needs a server metric). | FE: `features/downtime-analysis/.../downtime-filters.ts:14` | ✅ 13 Oct: lost-production card (loss tree, `kinds=availability`) |
 | FE-09 | Medium | Event/RCA screens use the v1 unpaginated `getAssets()` although `/v2/assets` exists. | FE: `features/event-hub/hooks/use-asset-options.ts:3` and 3 others | ⬜ |
 | FE-10 | Medium | RCA change tool defaults dates in UTC, not plant time. | FE: `features/rca/case/analysis/tools/change/change-tool.tsx:36` | ⬜ |
 | FE-11 | Low | Stale docstring (20 vs 100 per page); 58 lines > 220 chars; unused `PlanDashboardOff`. | FE: `event-filters.ts:44`; `plan-dashboard-off.tsx` | ⬜ |

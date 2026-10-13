@@ -3,6 +3,7 @@ import { render, renderHook, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
+import { useLossTree } from '@/api/v2/queries/pla-analytics';
 import { reportSnapshot, useDowntimeReport } from '@/api/v2/queries/reports';
 import type { AnalyticsResponse } from '@/api/v2/types/envelopes';
 import type { DowntimeReportView } from '@/api/v2/types/reports';
@@ -12,6 +13,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 
 const { downtimeQuery, parseFilters, reportBase } = await import('./model/downtime-filters');
 const { paretoQuery } = await import('./model/reason-drill');
+const { lostProductionQuery } = await import('./model/lost-production');
 const { KpiTile } = await import('./components/kpi-summary');
 const { SUMMARY_TILES } = await import('./model/kpi-display');
 
@@ -50,6 +52,17 @@ describe('Downtime Analysis data flows (plan 3.3)', () => {
     const snapshot = reportSnapshot(result.current[0].data!, reportBase(FILTERS));
     expect(snapshot.calculationRunIds).toEqual(result.current[1].data!.data.calculationRunIds);
     expect(snapshot.exportRequest).toMatchObject({ from: FILTERS.from, to: FILTERS.to, unitIds: ['u1'], revisionSelector: 'published' });
+  });
+
+  it('FE-08: lost production reads the loss tree of the page scope, availability lines only', async () => {
+    renderHook(() => useLossTree(lostProductionQuery(FILTERS, 'qty'), 'UTC'), { wrapper });
+    await waitFor(() => expect(urls).toHaveLength(1));
+    const [url] = urls;
+    expect(url.pathname).toMatch(/\/v2\/reports\/loss-tree$/);
+    expect(url.searchParams.getAll('kinds')).toEqual(['availability']);
+    expect(url.searchParams.get('groupBy')).toBe('reason');
+    expect(url.searchParams.getAll('unitIds')).toEqual(['u1']);
+    expect(url.searchParams.has('tenantId')).toBe(false);
   });
 
   it('the Pareto drill reaches the server as groupBy=reasonChild + parentReasonId; never a tenantId', async () => {
