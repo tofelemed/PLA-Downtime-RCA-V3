@@ -51,7 +51,11 @@ function secondsWhere(
   );
 }
 
-/** KPI05 durations: every stop second is charged once (shares), split by schedule class and stop kind. */
+/**
+ * KPI05 durations: every stop second is charged once (shares), split by schedule class and stop kind, over
+ * the calendar window; `downtime_in_schedule` is the stop time inside the schedule, so scheduled time minus
+ * it is the run time of scheduled availability (DT-07).
+ */
 function durationKpis(
   input: DowntimeInput,
   allocated: CauseSeconds[],
@@ -73,6 +77,16 @@ function durationKpis(
     }),
     amountKpi(at('downtime_planned'), stops('planned')),
     amountKpi(at('downtime_unplanned'), stops('unplanned')),
+    amountKpi(at('downtime_external'), stops('external'), {
+      cohort: { within: 'period_window' },
+    }),
+    amountKpi(at('downtime_in_schedule'), input.scheduled.stopped, {
+      cohort: {
+        within: 'scheduled_time',
+        meaning:
+          'stop time inside the schedule; reconciles with scheduled availability',
+      },
+    }),
     amountKpi(at('unknown_time'), stops('unknown'), {
       cohort: { meaning: 'stop time with schedule class unknown' },
     }),

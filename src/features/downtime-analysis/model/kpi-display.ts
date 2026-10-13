@@ -14,9 +14,11 @@ export interface TileSpec {
 
 /** Summary tiles in display order; titles and notes follow KPI05–KPI06 and the 2.7 decisions. */
 export const SUMMARY_TILES: readonly TileSpec[] = [
-  { metric: 'downtime_total', title: 'Total downtime', kind: 'duration', note: 'Union of stop time in the window' },
+  { metric: 'downtime_total', title: 'Total downtime', kind: 'duration', note: 'Union of stop time in the calendar window, including time outside the schedule' },
+  { metric: 'downtime_in_schedule', title: 'Downtime in schedule', kind: 'duration', note: 'Stop time inside the schedule: scheduled time minus this is the run time of scheduled availability' },
   { metric: 'downtime_planned', title: 'Planned', kind: 'duration', note: 'Stops classed planned' },
   { metric: 'downtime_unplanned', title: 'Unplanned', kind: 'duration', note: 'Stops classed unplanned' },
+  { metric: 'downtime_external', title: 'External', kind: 'duration', note: 'Stops classed external (outside the plant’s control, e.g. grid power)' },
   { metric: 'downtime_equivalent', title: 'Equivalent downtime', kind: 'duration', note: 'Partial-impact events: lost rate as time at the reference rate (not stopped time)' },
   { metric: 'microstop_time', title: 'Micro-stops', kind: 'duration', note: 'Below the OEE-policy threshold; stay in run time' },
   { metric: 'unknown_time', title: 'Stops not classed planned/unplanned', kind: 'duration', note: 'Stop time whose schedule class is not set yet (not unrecorded time)' },

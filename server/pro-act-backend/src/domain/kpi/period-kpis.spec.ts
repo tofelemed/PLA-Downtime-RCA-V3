@@ -148,6 +148,49 @@ describe('SME Q5: stopped time versus equivalent downtime', () => {
   });
 });
 
+describe('DT-07: downtime within the schedule and external downtime', () => {
+  it('in-schedule downtime reconciles with scheduled availability; calendar total and external stay apart', () => {
+    const all = run(
+      input({
+        schedule: [
+          {
+            start: at(0),
+            end: at(6 * HOUR),
+            excluded: false,
+            exclusionKind: null,
+          },
+          {
+            start: at(6 * HOUR),
+            end: at(8 * HOUR),
+            excluded: true,
+            exclusionKind: 'no_demand',
+          },
+        ],
+        events: [
+          event('u', HOUR, 2 * HOUR),
+          event('e', 3 * HOUR, 3.5 * HOUR, { scheduleClass: 'external' }),
+          event('x', 6.5 * HOUR, 7.5 * HOUR),
+        ],
+      }),
+    );
+    expect(str(period(all, 'downtime_total').value)).toBe(String(2.5 * HOUR));
+    expect(str(period(all, 'downtime_in_schedule').value)).toBe(
+      String(1.5 * HOUR),
+    );
+    expect(str(period(all, 'downtime_external').value)).toBe(
+      String(0.5 * HOUR),
+    );
+    const scheduled = period(all, 'scheduled_availability');
+    expect(
+      str(
+        scheduled.denominator!.minus(
+          period(all, 'downtime_in_schedule').value!,
+        ),
+      ),
+    ).toBe(str(scheduled.numerator));
+  });
+});
+
 describe('KPI02 time model', () => {
   it('a 45 s micro-stop stays in R (performance), a 90 s stop is availability time', () => {
     const micro = run(input({ events: [event('m', 600, 645)] }));

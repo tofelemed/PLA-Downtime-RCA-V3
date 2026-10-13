@@ -32,6 +32,8 @@ const SUMMARY_METRICS: readonly KpiMetric[] = [
   'downtime_planned',
   'downtime_unplanned',
   'downtime_equivalent',
+  'downtime_in_schedule',
+  'downtime_external',
   'microstop_time',
   'unknown_time',
   'stop_count',

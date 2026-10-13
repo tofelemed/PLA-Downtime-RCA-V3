@@ -190,6 +190,8 @@ describe('Downtime report drill-down and summary (plan 3.3)', () => {
     expect(metric('downtime_unplanned')?.value).toBe('7200');
     expect(metric('stop_count')?.value).toBe('3');
     expect(metric('downtime_equivalent')?.value).toBe('0');
+    expect(metric('downtime_external')?.value).toBe('0');
+    expect(metric('downtime_in_schedule')?.value).not.toBeNull();
     expect(metric('carry_in_count')?.value).toBe('0');
     expect(metric('scheduled_availability')?.value).not.toBeNull();
     expect(body.data.summary.map((s) => s.metric)).toEqual([
@@ -197,6 +199,8 @@ describe('Downtime report drill-down and summary (plan 3.3)', () => {
       'downtime_planned',
       'downtime_unplanned',
       'downtime_equivalent',
+      'downtime_in_schedule',
+      'downtime_external',
       'microstop_time',
       'unknown_time',
       'stop_count',

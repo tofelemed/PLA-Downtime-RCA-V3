@@ -4,7 +4,7 @@ import type { CodeView } from '@/api/v2/types/flags';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import type { DowntimeGroupView, KpiAggregateView, ReliabilityRowView } from '@/api/v2/types/reports';
 import { downtimeQuery, parseFilters, previousWindow, reportBase, toSearchParams } from './model/downtime-filters';
-import { formatCount, formatRatio, hasUnknownTime, reasonText, restoreColumn, restoreTitle } from './model/kpi-display';
+import { formatCount, formatRatio, hasUnknownTime, reasonText, restoreColumn, restoreTitle, SUMMARY_TILES } from './model/kpi-display';
 import { barAction, drillEventQuery, paretoQuery, subtreeIds } from './model/reason-drill';
 import { timelineRows } from './model/timeline';
 import { trendRows } from './model/trend-rows';
@@ -83,6 +83,13 @@ describe('KPI labels and formatting (KPI05–KPI08)', () => {
     expect(reasonText('custom_reason')).toBe('custom reason');
     expect(hasUnknownTime([kpi('unknown_time', '0')])).toBe(false);
     expect(hasUnknownTime([kpi('unknown_time', '120')])).toBe(true);
+  });
+
+  it('DT-07: calendar total, in-schedule downtime and external downtime are separate tiles', () => {
+    const metrics = SUMMARY_TILES.map((tile) => tile.metric);
+    expect(metrics.slice(0, 2)).toEqual(['downtime_total', 'downtime_in_schedule']);
+    expect(metrics).toContain('downtime_external');
+    expect(SUMMARY_TILES[0].note).toMatch(/calendar/);
   });
 
   it('MTTR only with repair evidence, otherwise "Mean downtime to restore"', () => {
