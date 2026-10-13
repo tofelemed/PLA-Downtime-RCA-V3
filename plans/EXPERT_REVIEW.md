@@ -12,7 +12,7 @@ Status legend: ⬜ open · 🔄 in progress · ✅ fixed (commit) · ❎ won't f
 
 | # | Area | Maturity (13 Oct) | One line | Status |
 |---|---|---|---|---|
-| 1 | Loss accounting engine | ~65% | Decimal maths, signed residuals and immutable runs are strong. But the plan ledger is priced at the wrong rate, so ordinary shifts need a manual bridge line to close. | 🔄 SME answered 13 Oct; fixes in progress |
+| 1 | Loss accounting engine | ~65% → ~90% (13 Oct, after SME fixes) | Decimal maths, signed residuals and immutable runs are strong. But the plan ledger is priced at the wrong rate, so ordinary shifts need a manual bridge line to close. | 🔄 SME answered 13 Oct; fixes in progress |
 | 2 | Downtime & reliability KPIs | ~60% | Interval maths and aggregation are correct. Wrong definition of what counts as a unit stop, and no equipment state engine. | ⬜ |
 | 3 | Reconciliation workflow | ~80% | Hash-bound submit and approve, approved revisions immutable by DB trigger. Separation of duties incomplete. | ⬜ |
 | 4 | Valuation | ~65% | Sound mechanics. The reported value is not the approved, reconciled value. | ⬜ |
@@ -90,21 +90,21 @@ Where the SME corrected the one-line "standard" in 1.2, the SME answer wins. The
 
 | Finding | SME basis | Action | Needs plant data? | Status |
 |---|---|---|---|---|
-| LA-01 | Q1, Q2 | Plan ledger prices time losses at the planned rate of each plan interval (target ÷ eligible planned time); recovery above the planned rate becomes a separate gain line; losses stay gross, net shown in totals | No | ⬜ next |
-| LA-02b (new) | Q3 | Submission/approval blocked while a slice is flagged `claim_exceeds_component`, until the over-claiming candidate is rejected or adjusted, or an authorised adjustment covers it. The run keeps calculating (LA-02 stays). | No | ⬜ next |
-| LA-04 | Q4 | Cause-less capacity remainder labelled `unexplained` (not slow running) unless a rate measurement supports it | No | ⬜ next |
-| LA-05 / DT-01 | Q5 | Only full-stop impact counts as stopped time; `fractional` impact becomes a rate loss with **equivalent downtime** reported separately; `none` = equipment event without production loss | No | ⬜ next |
-| LA-06 | Q8 | Output records spanning periods: counter / totalizer first, then rate integration, then running-time proration (excluding stops) instead of elapsed time; allocation method recorded | No | ⬜ next |
-| LA-09 / DT-06 | Q11 | Overlapping causes: keep "allocate once"; make the allocation rule an explicit, reviewable policy (equal share today; add primary-cause option) | No (policy choice per plant later) | ⬜ |
-| LA-11 / DT-03 | Q6 | **Default kept** (stops inside the schedule reduce availability); only correct the "ISO 22400" label and document the schedule definition | No | ⬜ next |
-| DT (Q12) | Q12 | **No change**: external stops already reduce availability; add an external category breakdown (DT-07) | No | ⬜ with DT-07 |
+| LA-01 | Q1, Q2 | Plan ledger prices time losses at the planned rate of each plan interval (target ÷ eligible planned time); recovery above the planned rate becomes a separate gain line; losses stay gross, net shown in totals | No | ✅ `8391949` (engine 2.5.3) |
+| LA-02b (new) | Q3 | Submission/approval blocked while a slice is flagged `claim_exceeds_component`, until the over-claiming candidate is rejected or adjusted, or an authorised adjustment covers it. The run keeps calculating (LA-02 stays). | No | ✅ `2905bd6` |
+| LA-04 | Q4 | Cause-less capacity remainder labelled `unexplained` (not slow running) unless a rate measurement supports it | No | ✅ `8391949` (plan: stays unaccounted; capacity: flagged `unexplained`) |
+| LA-05 / DT-01 | Q5 | Only full-stop impact counts as stopped time; `fractional` impact becomes a rate loss with **equivalent downtime** reported separately; `none` = equipment event without production loss | No | ✅ `8171b43` + Event Hub impact selector `629505c` |
+| LA-06 | Q8 | Output records spanning periods: counter / totalizer first, then rate integration, then running-time proration (excluding stops) instead of elapsed time; allocation method recorded | No | ✅ `519207b` (actuals 2.4.1) + method shown in UI |
+| LA-09 / DT-06 | Q11 | Overlapping causes: keep "allocate once"; make the allocation rule an explicit, reviewable policy (equal share today; add primary-cause option) | Plant chooses the rule | ✅ `cf2c34a` (`overlapAllocation`: equal_share / first_out) |
+| LA-11 / DT-03 | Q6 | **Default kept** (stops inside the schedule reduce availability); only correct the "ISO 22400" label and document the schedule definition | No | ✅ `cf2c34a` |
+| DT (Q12) | Q12 | **No change**: external stops already reduce availability; add an external category breakdown (DT-07) | No | ✅ behaviour confirmed; breakdown with DT-07 (Area 2) |
 | LA-08 | Q9, Q10 | Grade-transition events with allowance matrix; ramp-up recorded as rate / quality loss linked to the trip | **Yes**: transition matrix per grade pair | ⬜ data |
 | Q13 | Q13 | Origin / impact / consolidated consequence model across units | Plant flow + buffers | ⬜ later |
 | Q14 | Q14 | First-pass good vs off-grade / scrap / recovered; price downgrade as separate valuation | Boundaries, prices | ⬜ later |
 | Q15 | Q15 | Tolerance stays configurable, default zero (current) | **Yes**: justified tolerances | ✅ matches |
 | Q16 | Q16 | Capacity ledger keeps the approved sustained rate per grade/config (current `sustained` kind) | **Yes**: rates per grade | ✅ matches |
 | Q17 | Q17 | Keep sequential per reactor (D14); later: grade by resource / stream / lot | Resource model | ⬜ later |
-| Q18 | Q18 | Matches D05 authority + null-not-zero; add method / approver display on estimates | No | ✅ mostly matches |
+| Q18 | Q18 | Matches D05 authority + null-not-zero; add method / approver display on estimates | No | ✅ method shown; adjustments carry approver (D05/2.4) |
 | LA-03 | Q7 | Matches what was built (open periods recompute, approved get a change proposal); restatement keeps original + reason + approver | No | ✅ |
 
 **Plant values still needed** (SME): grade-specific planned and sustained rates, production calendars, grade transition allowances, measurement boundaries, source hierarchy per unit, justified reconciliation tolerances.
@@ -161,7 +161,7 @@ These findings are correctness, security, performance or cleanup. Each has eithe
 
 | ID | Sev | Finding | Evidence | Status |
 |---|---|---|---|---|
-| VA-01 | High | **Reported value is not the approved value.** Loss-value report and RCA impact read the run's raw candidates, not the approved line set; `schedule_exclusion` counted as loss in RCA impact. | `v2/reports/loss-value-report.ts:69-90`; `rca-case/approved-impact.ts:27,36-46` | 🔄 loss-value report + RCA kinds ✅ 13 Oct; VA-01b open: loss tree and RCA impact still use run candidates |
+| VA-01 | High | **Reported value is not the approved value.** Loss-value report and RCA impact read the run's raw candidates, not the approved line set; `schedule_exclusion` counted as loss in RCA impact. | `v2/reports/loss-value-report.ts:69-90`; `rca-case/approved-impact.ts:27,36-46` | ✅ loss-value report + RCA kinds 13 Oct; VA-01b ✅ `b838da9` (approved ledger lines feed loss tree and RCA impact) |
 | VA-02 | High | **No finance role:** valuation policy and FX sign-off is `manager_approver` (D08 names finance). | `v2/valuation/valuation-policies-v2.controller.ts:39`; `v2/profiles/profile-roles.ts:12` | ⬜ |
 | VA-03 | Medium | Quality loss valued at margin only (scrap should carry material cost); no sold-out/demand-constrained flag; manual lines have no cost-per-hour view; single FX rate type (no official vs market IRR); no period-average option; late FX approval doesn't trigger a recalculation (partly inferred). | `domain/valuation/reconciled-valuation.ts:111-119`; `domain/valuation/value-line.ts:139-143` | ⬜ |
 
