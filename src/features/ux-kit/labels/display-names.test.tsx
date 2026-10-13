@@ -49,12 +49,14 @@ describe('display-name resolvers', () => {
     expect(result.current.nameOf('p2')).toBe('Unknown product');
   });
 
-  it('useAssetNames reads the v1 asset list once per tenant', async () => {
-    fetchMock.mockImplementation(async () => json(200, [{ id: 'a1', code: 'P-3', name: 'Pump 3' }]));
+  it('useAssetNames reads the v2 asset directory (retired assets keep their names)', async () => {
+    fetchMock.mockImplementation(async () =>
+      json(200, page([{ id: 'a1', code: 'P-3', name: 'Pump 3', unitId: UNIT_ID, retiredAt: '2026-01-01T00:00:00.000Z' }])),
+    );
     const { result } = renderHook(() => useAssetNames(), { wrapper });
     await waitFor(() => expect(result.current.nameOf('a1')).toBe('Pump 3'));
     expect(result.current.nameOf('a2')).toBe('Unknown asset');
-    expect(client.getQueryData(['v1', 'tenant-a', 'assets'])).toBeDefined();
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/v2\/assets\?/);
   });
 
   it('useUserNames resolves plant members from the v2 directory, asks for inactive ones by id, and degrades silently', async () => {

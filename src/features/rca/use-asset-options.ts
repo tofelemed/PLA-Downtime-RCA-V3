@@ -1,14 +1,11 @@
 import { useMemo } from 'react';
-import { useV1Directory } from '@/features/ux-kit/labels/directory-query';
-import { masterDataApi } from '@/services/api/masterDataApi';
+import { useAssetDirectory } from '@/api/v2/queries/assets';
 
-const fetchAssets = () => masterDataApi.getAssets();
-
-/** Assets of the plant as select options (the directory the asset name resolver reads; shared cache). */
+/** Active assets of the plant as select options, by name (the v2 asset directory, FE-09; shared cache). */
 export function useAssetOptions(): Array<{ value: string; label: string }> {
-  const query = useV1Directory(['assets'], fetchAssets);
+  const { assets } = useAssetDirectory();
   return useMemo(
-    () => (Array.isArray(query.data) ? query.data : []).filter((asset) => asset.name).map((asset) => ({ value: asset.id, label: asset.name ?? '' })),
-    [query.data],
+    () => assets.filter((asset) => asset.retiredAt === null && asset.name).map((asset) => ({ value: asset.id, label: asset.name })),
+    [assets],
   );
 }

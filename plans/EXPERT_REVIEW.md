@@ -148,7 +148,7 @@ SME questions D1–D17 were sent on 13 Oct 2026; the phases below need none of t
 | P5 | FE-08 | Downtime Analysis "Lost production by stop reason": availability losses per reason as quantity or margin, from `loss-tree` with the new `kinds` filter (approved lines, else the shown run) | ✅ |
 | P6 | FE-06, FE-07 | Reason code in the close dialog ("Code and close"); inline "Code" on uncoded rows and current stops; "To code" quick filter; "select all listed". Selecting every match on the server (bulk by filter) and dropping the mandatory bulk "Why" are not done (API / owner decision) | ✅ |
 | P7 | DT-10 (maths part) | A, P, Q summed over the periods their OEE counts (A × P × Q = OEE across periods); plant `week_start` (Saturday for Iranian plants — owner answer to D16, 13 Oct; Monday ISO otherwise), Saturday weeks keyed by their Saturday | ✅ |
-| P8 | FE-09 | Event and RCA screens on paged `/v2/assets` | ⬜ |
+| P8 | FE-09 | Asset names, Event Hub asset filter, RCA asset options and mapping targets on `GET /v2/assets` (every keyset page of 500, one shared cache); the v1 asset directory helper removed. The plant selector still browses other plants through v1 (see the v2-only plan) | ✅ |
 
 | ID | Sev | Finding | Evidence | Status |
 |---|---|---|---|---|
@@ -223,6 +223,6 @@ SME questions D1–D17 were sent on 13 Oct 2026; the phases below need none of t
 | FE-06 | Medium | Coding a stop takes 5–6 actions; the close dialog asks for a free-text "Why" but no reason code; no inline "Code" action. | FE: `features/event-hub/.../close-stop-dialog.tsx:41-48`; `current-stops-panel.tsx:75-86` | ✅ 13 Oct: Code = 3 actions (Code → pick → Save); close dialog codes too |
 | FE-07 | Medium | Shift-end bulk coding: no select-all-matching, no "to code this shift" preset, mandatory "Why". | FE: `event-columns.tsx:33-35`; `use-bulk-code-flow.ts:65` | 🔄 13 Oct: "To code" filter + "select all listed"; bulk-by-filter (API) and optional "Why" (owner, with D13) open |
 | FE-08 | Medium | Downtime Pareto offers duration and count only, no lost quantity or value (needs a server metric). | FE: `features/downtime-analysis/.../downtime-filters.ts:14` | ✅ 13 Oct: lost-production card (loss tree, `kinds=availability`) |
-| FE-09 | Medium | Event/RCA screens use the v1 unpaginated `getAssets()` although `/v2/assets` exists. | FE: `features/event-hub/hooks/use-asset-options.ts:3` and 3 others | ⬜ |
+| FE-09 | Medium | Event/RCA screens use the v1 unpaginated `getAssets()` although `/v2/assets` exists. | FE: `features/event-hub/hooks/use-asset-options.ts:3` and 3 others | ✅ 13 Oct: `useAssetDirectory` (v2) |
 | FE-10 | Medium | RCA change tool defaults dates in UTC, not plant time. | FE: `features/rca/case/analysis/tools/change/change-tool.tsx:36` | ⬜ |
 | FE-11 | Low | Stale docstring (20 vs 100 per page); 58 lines > 220 chars; unused `PlanDashboardOff`. | FE: `event-filters.ts:44`; `plan-dashboard-off.tsx` | ⬜ |

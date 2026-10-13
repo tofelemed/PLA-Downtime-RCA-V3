@@ -1,21 +1,18 @@
 import { useMemo } from 'react';
-import { useV1Directory } from '@/features/ux-kit/labels/directory-query';
-import { masterDataApi } from '@/services/api/masterDataApi';
+import { useAssetDirectory } from '@/api/v2/queries/assets';
 import type { CheckOption } from '../components/multi-check-select';
 
-const fetchAssets = () => masterDataApi.getAssets();
-
 /**
- * Asset filter choices: the plant's asset directory (the same cached list the asset name resolver
- * reads; v2 has no asset list yet), limited to the chosen units, sorted by name.
+ * Asset filter choices from the v2 asset directory (FE-09), limited to the chosen units, sorted by name;
+ * retired assets stay choosable (their past events are still listed) and are marked.
  */
 export function useAssetOptions(unitIds: readonly string[]): CheckOption[] {
-  const query = useV1Directory(['assets'], fetchAssets);
+  const { assets } = useAssetDirectory();
   return useMemo(() => {
     const units = new Set(unitIds);
-    return (query.data ?? [])
+    return assets
       .filter((asset) => units.size === 0 || units.has(asset.unitId))
-      .map((asset) => ({ value: asset.id, label: asset.name?.trim() || asset.code }))
+      .map((asset) => ({ value: asset.id, label: `${asset.name?.trim() || asset.code}${asset.retiredAt ? ' (retired)' : ''}` }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [query.data, unitIds]);
+  }, [assets, unitIds]);
 }
