@@ -117,6 +117,24 @@ describe('JWT hardening (plan 3.11)', () => {
     await http().post('/api/auth/logout').send({}).expect(200);
   });
 
+  it('the server records login and logout in the audit log (the browser no longer writes them)', async () => {
+    const session = await login();
+    await http()
+      .post('/api/auth/logout')
+      .send({ refreshToken: session.refresh_token })
+      .expect(200);
+    const rows = await harness.dataSource.query<
+      Array<{ action: string; entity_type: string; tenant_id: string | null }>
+    >(
+      `SELECT action, entity_type, tenant_id FROM audit_logs WHERE user_id = $1 ORDER BY timestamp`,
+      [userId],
+    );
+    expect(rows.slice(-2)).toEqual([
+      { action: 'LOGIN', entity_type: 'USER', tenant_id: world.tenantA },
+      { action: 'LOGOUT', entity_type: 'USER', tenant_id: world.tenantA },
+    ]);
+  });
+
   it('refuses expired tokens, tokens from another issuer and pre-3.11 tokens without a type', async () => {
     const jwt = app.get(JwtService);
     const claims = {

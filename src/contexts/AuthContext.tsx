@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { authApi, AuthenticatedUser, LoginRequest, LoginResponse } from '../services/api/authApi';
 import { httpClient } from '../services/api/httpClient';
-import { masterDataApi, Organization, Tenant } from '../services/api/masterDataApi';
-import { auditService } from '../services/AuditService';
+import { v2Request } from '@/api/v2/client';
+import type { DirectoryOrganization as Organization, DirectoryPlant as Tenant } from '@/api/v2/types/plant-directory';
 
 interface AuthTokens {
   accessToken: string;
@@ -58,6 +58,13 @@ const withSessionGrants = async (user: AuthenticatedUser): Promise<Authenticated
     return user;
   }
 };
+
+/** The session's organisation and plant from v2 (`GET /v2/organizations/:id`, `GET /v2/tenants/:id`), read as the home plant. */
+const readOrganization = async (id: string, tenantId: string | undefined): Promise<Organization> =>
+  (await v2Request<Organization>({ method: 'GET', path: `/organizations/${id}`, tenantId })).data;
+
+const readPlant = async (id: string): Promise<Tenant> =>
+  (await v2Request<Tenant>({ method: 'GET', path: `/tenants/${id}`, tenantId: id })).data;
 
 const mapTokens = (response: LoginResponse): AuthTokens => ({
   accessToken: response.access_token,
@@ -206,13 +213,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // organisation and tenant are independent reads: fetched in parallel (cold-load waterfall, UI/UX audit §4)
     const [organization, tenant] = await Promise.all([
       user.organizationId
-        ? masterDataApi.getOrganization(user.organizationId).catch((error: unknown) => {
+        ? readOrganization(user.organizationId, user.tenantId ?? undefined).catch((error: unknown) => {
             console.warn('Unable to load organization details', error);
             return options?.organizationFallback ?? null;
           })
         : Promise.resolve(options?.organizationFallback ?? null),
       user.tenantId
-        ? masterDataApi.getTenant(user.tenantId).catch((error: unknown) => {
+        ? readPlant(user.tenantId).catch((error: unknown) => {
             console.warn('Unable to load tenant details', error);
             return options?.tenantFallback ?? null;
           })
@@ -251,13 +258,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const nextSession = await buildSession(response.user, nextTokens);
       setSession(nextSession);
       persistAuthState(nextSession, nextTokens);
-
-      auditService.logLogin(
-        response.user.id,
-        response.user.name,
-        nextSession.organization?.id || nextSession.tenant?.organizationId || '',
-        nextSession.tenant?.id || response.user.tenantId || '',
-      ).catch(() => {});
+      // the server records the login in the audit log
 
       console.log('[AuthContext] ✅ Login completed successfully');
       return true;
@@ -269,20 +270,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    const current = session;
     try {
       await authApi.logout(tokensRef.current?.refreshToken);
     } catch (error) {
       console.warn('Failed to notify backend about logout', error);
     } finally {
-      if (current?.user) {
-        auditService.logLogout(
-          current.user.id,
-          current.user.name,
-          current.organization?.id || current.tenant?.organizationId || '',
-          current.tenant?.id || current.user.tenantId || '',
-        ).catch(() => {});
-      }
+      // the server records the logout (with the revoked refresh token) in the audit log
       clearAuthState();
     }
   };
@@ -315,7 +308,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const selectTenant = async (tenantId: string) => {
     if (!session) return;
     try {
-      const tenant = await masterDataApi.getTenant(tenantId);
+      const tenant = await readPlant(tenantId);
       const updatedSession: AuthSession = {
       ...session,
       tenant,

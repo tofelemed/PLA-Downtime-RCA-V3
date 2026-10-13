@@ -21,6 +21,7 @@ import {
   toSessionScopes,
 } from './session/session-scopes';
 import { AuthTokenService, IssuedTokens } from './tokens/auth-token.service';
+import { SessionAuditService } from './session-audit.service';
 import { isAccessToken } from './tokens/token-config';
 
 /** The grants the browser needs to derive its effective roles per acting plant (WF05). */
@@ -38,6 +39,7 @@ export class AuthService {
     private tenantService: TenantService,
     private userScopes: UserScopesService,
     private tokens: AuthTokenService,
+    private sessionAudit: SessionAuditService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<User | null> {
@@ -51,6 +53,7 @@ export class AuthService {
   /** Signs a short-lived access token and a new refresh family (plan 3.11). */
   async login(user: User) {
     const tokens = await this.tokens.issue(user);
+    await this.sessionAudit.record(user, 'LOGIN');
     return this.sessionResponse(user, tokens);
   }
 
@@ -66,7 +69,11 @@ export class AuthService {
 
   /** Revokes the refresh family of the presented token, if any (logout). */
   async logout(refreshToken?: string): Promise<void> {
-    if (refreshToken) await this.tokens.revoke(refreshToken);
+    if (!refreshToken) return;
+    const userId = await this.tokens.revoke(refreshToken);
+    if (!userId) return;
+    const user = await this.usersService.findOne(userId);
+    if (user) await this.sessionAudit.record(user, 'LOGOUT');
   }
 
   /**

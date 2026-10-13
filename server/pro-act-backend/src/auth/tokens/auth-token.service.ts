@@ -89,17 +89,23 @@ export class AuthTokenService {
     return this.issue(user, outcome.familyId);
   }
 
-  /** Logout: revokes the family of a valid refresh token; an invalid token is ignored (idempotent). */
-  async revoke(refreshToken: string): Promise<boolean> {
+  /**
+   * Logout: revokes the family of a valid refresh token and returns its user (for the audit log); an
+   * invalid or already revoked token is ignored (idempotent) and returns null.
+   */
+  async revoke(refreshToken: string): Promise<string | null> {
     let claims: RefreshClaims;
     try {
       claims = await this.verify(refreshToken, true);
     } catch {
-      return false;
+      return null;
     }
-    return (
-      (await this.revokeFamily(this.records.manager, claims.fam, 'logout')) > 0
+    const revoked = await this.revokeFamily(
+      this.records.manager,
+      claims.fam,
+      'logout',
     );
+    return revoked > 0 ? claims.sub : null;
   }
 
   /** Deletes records whose token expired more than a day ago; returns the count. */
