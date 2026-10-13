@@ -11,11 +11,30 @@ export interface KeysetOptions {
   limit: number;
 }
 
+/** The stored sort value of the page's last row at full (microsecond) precision, as text. */
+async function exactSortValue<T extends ObjectLiteral>(
+  qb: SelectQueryBuilder<T>,
+  column: string,
+  id: string,
+): Promise<string | null> {
+  const metadata = qb.expressionMap.mainAlias?.metadata;
+  if (!metadata) return null;
+  const rows: Array<{ value: string | null }> = await qb.connection.query(
+    `SELECT "${column}"::text AS "value" FROM ${metadata.tablePath
+      .split('.')
+      .map((part) => `"${part}"`)
+      .join('.')} WHERE "id" = $1`,
+    [id],
+  );
+  return rows[0]?.value ?? null;
+}
+
 /**
- * One keyset page (CONVENTIONS §4) over a timestamp sort column: applies the cursor, orders by
- * `(column, id)` in one direction, fetches `limit + 1` and encodes the next cursor. Columns filled by
- * `now()` carry microseconds while cursors carry milliseconds, so order and comparison both use the
- * column truncated to milliseconds (no row is skipped or repeated across pages).
+ * One keyset page (CONVENTIONS §4) over a timestamp sort column: applies the cursor as a row comparison
+ * `(column, id) < (cursor)`, orders by the raw `(column, id)` in one direction — so a
+ * `(…, column, id)` index serves the page (DB-02 / DB-06) — fetches `limit + 1` and encodes the next
+ * cursor with the stored value at microsecond precision, so rows sharing a millisecond are neither
+ * skipped nor repeated. Cursors written before (milliseconds, ISO) still decode.
  */
 export async function keysetPage<T extends ObjectLiteral & { id: string }>(
   qb: SelectQueryBuilder<T>,
@@ -27,30 +46,28 @@ export async function keysetPage<T extends ObjectLiteral & { id: string }>(
       property,
     )?.databaseName;
   if (!column) throw new Error(`keysetPage: unknown property ${property}`);
-  const sortKey = `date_trunc('milliseconds', "${alias}"."${column}")`;
+  const sortKey = `"${alias}"."${column}"`;
   if (options.cursor) {
     const { sortValue, id } = CursorCodec.decode(options.cursor);
     if (typeof sortValue !== 'string') throw invalidCursor();
     const op = direction === 'ASC' ? '>' : '<';
     qb.andWhere(
-      `(${sortKey} ${op} :keysetAt OR (${sortKey} = :keysetAt AND "${alias}"."id" ${op} :keysetId))`,
-      { keysetAt: new Date(sortValue), keysetId: id },
+      `(${sortKey}, "${alias}"."id") ${op} (CAST(:keysetAt AS timestamptz), :keysetId)`,
+      { keysetAt: sortValue, keysetId: id },
     );
   }
   const rows = await qb
     .orderBy(sortKey, direction)
-    .addOrderBy(`${alias}.id`, direction)
+    .addOrderBy(`"${alias}"."id"`, direction)
     .limit(options.limit + 1)
     .getMany();
   const items = rows.slice(0, options.limit);
   const last = items[items.length - 1];
-  const value = last ? (last[property] as Date | null) : null;
+  const more = rows.length > options.limit && last;
+  const value = more ? await exactSortValue(qb, column, last.id) : null;
   const nextCursor =
-    rows.length > options.limit && last && value
-      ? CursorCodec.encode({
-          sortValue: new Date(value).toISOString(),
-          id: last.id,
-        })
+    more && value
+      ? CursorCodec.encode({ sortValue: value, id: last.id })
       : null;
   return { items, nextCursor };
 }

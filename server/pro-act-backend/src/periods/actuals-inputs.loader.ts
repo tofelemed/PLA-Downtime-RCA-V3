@@ -10,6 +10,15 @@ import { SampleStore } from '../signals/sample-store';
 import { ActualsAdjustment } from './entities/actuals-adjustment.entity';
 import { ProductionPeriod } from './entities/production-period.entity';
 
+/** Production output events overlapping the period ($3, $4) of a unit. */
+export const OUTPUT_EVENTS_SQL = `SELECT "id", "canonical_id", "current_source_revision", "row_version", "start_time", "end_time",
+       "quantity"::text AS "quantity", "defective_quantity"::text AS "rejects", "quantity_uom"
+  FROM "production_events"
+ WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "physical_type" = 'production_output'
+   AND "physical_state" IN ('open', 'closed')
+   AND tstzrange("start_time", "end_time", '[)') && tstzrange($3, $4, '[)')
+ ORDER BY "start_time", "id"`;
+
 /** Samples read per signal for one period at most (more → `too_many_samples`, not quantified). */
 export const PERIOD_SAMPLE_CAP = 50_000;
 
@@ -62,13 +71,7 @@ export class ActualsInputsLoader {
     period: ProductionPeriod,
   ): Promise<PeriodOutputEvent[]> {
     const rows: Array<Record<string, unknown>> = await manager.query(
-      `SELECT "id", "canonical_id", "current_source_revision", "row_version", "start_time", "end_time",
-              "quantity"::text AS "quantity", "defective_quantity"::text AS "rejects", "quantity_uom"
-         FROM "production_events"
-        WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "physical_type" = 'production_output'
-          AND "physical_state" IN ('open', 'closed') AND "start_time" < $4
-          AND ("end_time" IS NULL OR "end_time" > $3)
-        ORDER BY "start_time", "id"`,
+      OUTPUT_EVENTS_SQL,
       [period.tenantId, period.unitId, period.utcStart, period.utcEnd],
     );
     return rows.map((row) => ({

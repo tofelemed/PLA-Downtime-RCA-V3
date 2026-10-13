@@ -10,10 +10,10 @@ export interface KpiInputs {
 }
 
 /** Occurrences with a downtime or FailureWO event touching the window (index tenant + unit + start). */
-const TOUCHING_SQL = `SELECT DISTINCT e."occurrence_id" FROM "production_events" e
+export const TOUCHING_SQL = `SELECT DISTINCT e."occurrence_id" FROM "production_events" e
  WHERE e."tenant_id" = $1 AND e."unit_id" = $2 AND e."physical_state" IN ('open', 'closed')
    AND (e."physical_type" = 'downtime' OR e."event_type" = 'FailureWO')
-   AND e."start_time" < $4 AND (e."end_time" IS NULL OR e."end_time" > $3 OR e."start_time" >= $3)`;
+   AND tstzrange(e."start_time", e."end_time", '[)') && tstzrange($3, $4, '[)')`;
 
 /** Full extent of each stop occurrence over all its events (split children before the window included). */
 const OCCURRENCES_SQL = `SELECT e."occurrence_id", min(e."start_time") AS "start_time",

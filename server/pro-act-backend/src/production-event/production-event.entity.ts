@@ -76,6 +76,22 @@ export const DURATION_SECONDS_EXPRESSION =
 @Index('IDX_production_events_open_by_unit', ['tenantId', 'unitId'], {
   where: '"end_time" IS NULL',
 })
+/** GiST over (unit_id, tstzrange(start, end)) for the period loaders' overlap lookups (DB-01, migration-owned). */
+@Index('IDX_production_events_unit_span', { synchronize: false })
+/** Foreign keys referenced by deletes of plans, codes and RCA cases (DB-10); NULLs are not indexed. */
+
+@Index('IDX_production_events_plan', ['planId'], {
+  where: '"plan_id" IS NOT NULL',
+})
+@Index('IDX_production_events_impact_code', ['impactCodeId'], {
+  where: '"impact_code_id" IS NOT NULL',
+})
+@Index('IDX_production_events_oee_code', ['oeeCodeId'], {
+  where: '"oee_code_id" IS NOT NULL',
+})
+@Index('IDX_production_events_rca', ['rcaId'], {
+  where: '"rca_id" IS NOT NULL',
+})
 export class ProductionEvent {
   @PrimaryGeneratedColumn('uuid')
   id: string;

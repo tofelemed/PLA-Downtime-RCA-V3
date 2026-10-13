@@ -84,8 +84,9 @@ export function applyProductionEventV2Filters(
 }
 
 /**
- * Keyset condition for `ORDER BY <sort> <dir>, id <dir>`: rows strictly after the cursor position.
- * Never OFFSET (API01): inserting or deleting rows elsewhere cannot shift the page boundary.
+ * Keyset condition for `ORDER BY <sort> <dir>, id <dir>`: rows strictly after the cursor position, as a
+ * row comparison so an index on `(…, sort, id)` bounds the scan (DB-06). Never OFFSET (API01): inserting
+ * or deleting rows elsewhere cannot shift the page boundary.
  */
 export function applyKeysetCursor(
   qb: SelectQueryBuilder<ProductionEvent>,
@@ -103,12 +104,9 @@ export function applyKeysetCursor(
   }
   const operator = sort.direction === 'DESC' ? '<' : '>';
   const column = `${alias}.${sort.field}`;
-  qb.andWhere(
-    `(${column} ${operator} :cursorSort OR (${column} = :cursorSort AND ${alias}.id ${operator} :cursorId))`,
-    {
-      cursorSort: boundary,
-      cursorId: id,
-    },
-  );
+  qb.andWhere(`(${column}, ${alias}.id) ${operator} (:cursorSort, :cursorId)`, {
+    cursorSort: boundary,
+    cursorId: id,
+  });
   return qb;
 }

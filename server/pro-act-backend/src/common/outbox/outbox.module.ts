@@ -6,6 +6,8 @@ import { InboxEntry } from './inbox-entry.entity';
 import { InboxService } from './inbox.service';
 import { OutboxMessage } from './outbox-message.entity';
 import { OutboxRelayJob } from './outbox-relay.job';
+import { OutboxRetentionJob } from './outbox-retention.job';
+import { OutboxRetentionService } from './outbox-retention.service';
 import { OutboxRelayService } from './outbox-relay.service';
 import { OUTBOX_TRANSPORT } from './outbox-transport';
 
@@ -22,6 +24,8 @@ import { OUTBOX_TRANSPORT } from './outbox-transport';
     { provide: OUTBOX_TRANSPORT, useExisting: InProcessOutboxTransport },
     OutboxRelayService,
     OutboxRelayJob,
+    OutboxRetentionService,
+    OutboxRetentionJob,
     InboxService,
   ],
   exports: [InProcessEventBus, InboxService, OutboxRelayService],

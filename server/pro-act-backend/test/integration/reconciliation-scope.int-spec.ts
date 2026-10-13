@@ -113,7 +113,10 @@ describe('reconciliation workflow and the unit scope (plan 2.8)', () => {
     const submitted = (await env.submit(view, engineer).expect(200))
       .body as ReconciliationBody;
     await env.approve(submitted, engineer).expect(403);
-    await env.approve(submitted, unitUser).expect(200);
+    // unitUser wrote the line above, so an independent unit approver approves (RC-01)
+    await env.approve(submitted, unitUser).expect(403);
+    const independent = await env.unitUser(env.world.unitA1);
+    await env.approve(submitted, independent).expect(200);
   });
 
   it('the revise job keeps the requester’s unit scope', async () => {

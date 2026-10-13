@@ -64,7 +64,7 @@ interface InstanceRow {
   calendar_version_id: string | null;
 }
 
-const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", e."start_time", e."end_time", e."schedule_class",
+export const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", e."start_time", e."end_time", e."schedule_class",
        e."oee_component", e."impact_mode", e."impact_fraction"::text AS "impact_fraction", e."quantity"::text AS "quantity",
        e."reason_code_id", e."impact_code_id", e."failure_mode", e."asset_id", e."row_version", r."id" AS "revision_id", r."revision"
   FROM "production_events" e
@@ -72,7 +72,7 @@ const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", e."star
                       ORDER BY er."revision" DESC LIMIT 1) r ON true
  WHERE e."tenant_id" = $1 AND e."unit_id" = $2
    AND e."physical_type" IN ('downtime', 'slowdown', 'quality_loss') AND e."physical_state" IN ('open', 'closed')
-   AND e."start_time" < $4 AND (e."end_time" IS NULL OR e."end_time" > $3 OR e."start_time" >= $3)
+   AND tstzrange(e."start_time", e."end_time", '[)') && tstzrange($3, $4, '[)')
  ORDER BY e."start_time", e."id"`;
 
 const RATES_SQL = `SELECT "id", "profile_id", "rate_kind", "rate"::text AS "rate", "timebase", "effective_from", "effective_to"

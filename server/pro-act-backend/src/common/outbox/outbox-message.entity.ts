@@ -15,7 +15,10 @@ export type OutboxState = (typeof OUTBOX_STATES)[number];
  * successful publish). `id` is a bigint sequence so the relay preserves commit order per aggregate.
  */
 @Entity('outbox')
-@Index('IDX_outbox_state_next_attempt', ['state', 'nextAttemptAt'])
+/** the relay's poll: pending rows only, so published history never bloats it (DB-07) */
+@Index('IDX_outbox_pending_next_attempt', ['nextAttemptAt', 'id'], {
+  where: `"state" = 'pending'`,
+})
 @Index('IDX_outbox_tenant_aggregate', [
   'tenantId',
   'aggregateType',
