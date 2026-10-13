@@ -8,24 +8,13 @@ import { describe, expect, it } from 'vitest';
  */
 const ROOT = join(process.cwd(), 'src');
 
-/** Remaining IndexedDB users. Dev-only seeders/scripts never reach production (vite-prod-bundle-guard). */
-const INDEXEDDB_ALLOWLIST = new Set([
-  'services/storage/UniversalConnectorDB.ts', // connector registry → v2 connections (3.7)
-  'services/StorageService.ts', // legacy store itself
-  'services/OilGasDataSeeder.ts', // dev-only seeders and scripts below
-  'services/PLARCADataSeeder.ts',
-  'services/PresentationDataSeeder.ts',
-  'scripts/debugProductionLosses.ts',
-  'scripts/diagnoseCementData.ts',
-  'scripts/seedCementIndustryData.ts',
-  'scripts/seedOilGasData.ts',
-  'scripts/testPlantSelector.ts',
-]);
+/** IndexedDB users: none since the v1 code, StorageService and the browser seeders were removed (13 Oct 2026). */
+const INDEXEDDB_ALLOWLIST = new Set<string>();
 
-/** Files using Math.random today (fabricated data, ids); 3.2–3.9 remove them per screen. */
-const MATH_RANDOM_FILE_LIMIT = 35;
+/** Files using Math.random: only the generated shadcn sidebar skeleton width (`components/ui/sidebar.tsx`). */
+const MATH_RANDOM_FILE_LIMIT = 1;
 
-const NEW_CODE = ['api/', 'app/', 'features/', 'realtime/', 'lib/logger.ts', 'lib/icons.ts', 'lib/lazy-with-preload.ts', 'lib/dates/', 'dev/'];
+const NEW_CODE = ['api/', 'app/', 'features/', 'realtime/', 'lib/logger.ts', 'lib/icons.ts', 'lib/lazy-with-preload.ts', 'lib/dates/'];
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -53,8 +42,7 @@ describe('code hygiene ratchet (plan 3.1)', () => {
     const legacy = [...INDEXEDDB_ALLOWLIST].map((rel) => rel.replace(/\.tsx?$/, '').split('/').pop() as string);
     const importsOf = (text: string) => [...text.matchAll(/from\s+['"]([^'"]+)['"]/g)].map((match) => match[1]);
     const offences = files
-      // dev/ registers the dev-only seeders on purpose (never in production builds)
-      .filter((file) => NEW_CODE.some((prefix) => prefix !== 'dev/' && file.rel.startsWith(prefix)))
+      .filter((file) => NEW_CODE.some((prefix) => file.rel.startsWith(prefix)))
       .flatMap((file) => importsOf(file.text).filter((spec) => legacy.includes(spec.split('/').pop() as string)).map((spec) => `${file.rel} → ${spec}`));
     expect(offences).toEqual([]);
   });

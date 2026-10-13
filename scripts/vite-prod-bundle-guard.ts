@@ -2,15 +2,14 @@ import type { Plugin } from 'vite';
 
 /**
  * Production-build guard (plan 3.1 step 7): fails `vite build` when a chunk contains development or
- * demo modules — console helpers, legacy seeders and scripts, the seeding page, the UX kit playground.
+ * demo modules — console helpers, browser seeders and scripts (all removed with the v1 code on
+ * 13 Oct 2026; demo data comes from the backend seeders), the UX kit playground.
  */
 export const FORBIDDEN_IN_PRODUCTION: readonly RegExp[] = [
   /\/src\/dev\//,
   /\/src\/scripts\//,
-  /\/src\/pages\/DataSeedingPage\.tsx$/,
   /\/src\/features\/ux-kit\/ux-kit-playground\.tsx$/,
-  /\/src\/services\/(CementIndustry|OilGas|PLARCA|Presentation|RCATemplatesAndChecklists)\w*Seeder\.ts$/,
-  /\/src\/services\/storage\/DemoDataSeeder\.ts$/,
+  /\/src\/.*Seeder\.tsx?$/,
 ];
 
 const normalize = (id: string) => id.replace(/\\/g, '/').replace(/\?.*$/, '');

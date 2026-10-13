@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { AuthenticatedUser, SessionScope } from '../services/api/authApi';
-import type { Tenant } from '../services/MasterDataService';
+import type { DirectoryPlant as Tenant } from '@/api/v2/types/plant-directory';
 import {
   defaultTenantFor,
   isSelectionAllowed,

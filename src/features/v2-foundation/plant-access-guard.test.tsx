@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
-import type { Tenant } from '@/services/MasterDataService';
+import type { DirectoryPlant as Tenant } from '@/api/v2/types/plant-directory';
 
 const DEMO = { id: 'plant-demo', name: 'Demo Plant', organizationId: 'org-demo' } as Tenant;
 const PARTNER = { id: 'plant-partner', name: 'Partner Plant', organizationId: 'org-partner' } as Tenant;
