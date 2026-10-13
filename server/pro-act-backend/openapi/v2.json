@@ -14047,6 +14047,78 @@
         ]
       }
     },
+    "/api/v2/custom-attribute-values": {
+      "get": {
+        "description": "404 when the record is not in the acting plant.",
+        "operationId": "CustomAttributeValuesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "entityType",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "Unit",
+                "Asset"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The custom attribute values of one unit or asset",
+        "tags": [
+          "v2 · Custom attributes"
+        ]
+      },
+      "put": {
+        "description": "404 when the record is not in the acting plant or the definition does not apply in it; 422 ATTRIBUTE_TYPE_MISMATCH when the definition is for another record type.",
+        "operationId": "CustomAttributeValuesV2Controller_set_v2",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAttributeValueDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Set one custom attribute value of a unit or asset",
+        "tags": [
+          "v2 · Custom attributes"
+        ]
+      }
+    },
     "/api/v2/dashboard-configuration": {
       "get": {
         "operationId": "DashboardConfigV2Controller_get_v2",
@@ -21155,6 +21227,37 @@
             ]
           }
         }
+      },
+      "SetAttributeValueDto": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "Unit",
+              "Asset"
+            ]
+          },
+          "entityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attributeDefinitionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 4000,
+            "description": "The value as text; empty clears it"
+          }
+        },
+        "required": [
+          "entityType",
+          "entityId",
+          "attributeDefinitionId",
+          "value"
+        ]
       },
       "OeeSettingsDto": {
         "type": "object",

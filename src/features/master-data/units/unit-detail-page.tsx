@@ -53,7 +53,6 @@ export function UnitDetailPage() {
   const { unitId } = useParams<{ unitId: string }>();
   const isNew = !unitId;
   const canWrite = useMasterDataWriter();
-  const { selection } = usePlantSelection();
   const query = useRecordDetail<MasterUnitView>(UNITS, unitId ?? null);
   const unit = query.data ?? null;
   if (isNew) {
@@ -86,7 +85,7 @@ export function UnitDetailPage() {
         <UnitEditor unit={unit} />
       </Section>
       <UnitAssetsSection unitId={unit.id} canAdd={canWrite && unit.retiredAt === null} />
-      <CustomAttributesSection entityType="Unit" entityId={unit.id} organizationId={selection?.organization?.id} canWrite={canWrite} />
+      <CustomAttributesSection entityType="Unit" entityId={unit.id} canWrite={canWrite} />
       <SourceMappingsSection targetId={unit.id} />
     </MasterDataLayout>
   );

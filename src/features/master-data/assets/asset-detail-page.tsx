@@ -1,5 +1,4 @@
 import { useParams, useSearchParams } from 'react-router-dom';
-import { usePlantSelection } from '@/contexts/PlantSelectionContext';
 import { DataState } from '@/features/ux-kit/data-state';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { Section } from '@/features/ux-kit/page-layout';
@@ -49,7 +48,6 @@ export function AssetDetailPage() {
   const { assetId } = useParams<{ assetId: string }>();
   const [params] = useSearchParams();
   const canWrite = useMasterDataWriter();
-  const { selection } = usePlantSelection();
   const query = useRecordDetail<MasterAssetView>(ASSETS, assetId ?? null);
   const asset = query.data ?? null;
   if (!assetId) {
@@ -81,7 +79,7 @@ export function AssetDetailPage() {
       <Section title="Details">
         <AssetEditor asset={asset} />
       </Section>
-      <CustomAttributesSection entityType="Asset" entityId={asset.id} organizationId={selection?.organization?.id} canWrite={canWrite} />
+      <CustomAttributesSection entityType="Asset" entityId={asset.id} canWrite={canWrite} />
       <SourceMappingsSection targetId={asset.id} />
     </MasterDataLayout>
   );

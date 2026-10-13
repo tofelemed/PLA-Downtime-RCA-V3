@@ -6,20 +6,19 @@ import { Section } from '@/features/ux-kit/page-layout';
 import { useToast } from '@/hooks/use-toast';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { ActionIcon } from '@/lib/icons';
-import type { CustomAttributeDefinition, EntityType } from '@/types/CustomAttributes';
-import { useCustomAttributes, useSetCustomAttribute, type AttributeRow } from '../api/use-custom-attributes';
+import type { AttributeDefinitionView } from '@/api/v2/types/administration';
+import { useCustomAttributes, useSetCustomAttribute, type AttributeRecordType, type AttributeRow } from '../api/use-custom-attributes';
 import { AttributeValueDialog } from './attribute-value-dialog';
 
 export interface CustomAttributesSectionProps {
-  entityType: Extract<EntityType, 'Unit' | 'Asset'>;
+  entityType: AttributeRecordType;
   entityId: string;
-  organizationId?: string;
   canWrite: boolean;
 }
 
 function useDisplayValue() {
   const pref = useCalendarPreference();
-  return (definition: CustomAttributeDefinition, value: string): string => {
+  return (definition: AttributeDefinitionView, value: string): string => {
     if (!value) return '—';
     if (definition.dataType === 'boolean') return value === 'true' ? 'Yes' : 'No';
     if (definition.dataType === 'date') return formatOperationalDate(value.slice(0, 10), pref);
@@ -31,9 +30,9 @@ function useDisplayValue() {
  * Plant-defined extra fields of a unit or asset (custom attributes): their values, editable by master-data
  * writers one at a time. Which attributes exist is managed with the attribute definitions.
  */
-export function CustomAttributesSection({ entityType, entityId, organizationId, canWrite }: CustomAttributesSectionProps) {
+export function CustomAttributesSection({ entityType, entityId, canWrite }: CustomAttributesSectionProps) {
   const { toast } = useToast();
-  const attributes = useCustomAttributes(entityType, entityId, organizationId);
+  const attributes = useCustomAttributes(entityType, entityId);
   const setValue = useSetCustomAttribute(entityType, entityId);
   const [editing, setEditing] = useState<AttributeRow | null>(null);
   const display = useDisplayValue();

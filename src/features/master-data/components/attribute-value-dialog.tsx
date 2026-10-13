@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DateInput } from '@/features/ux-kit/date-inputs';
-import type { CustomAttributeDefinition } from '@/types/CustomAttributes';
+import type { AttributeDefinitionView as CustomAttributeDefinition } from '@/api/v2/types/administration';
 
 export interface AttributeValueDialogProps {
   definition: CustomAttributeDefinition;

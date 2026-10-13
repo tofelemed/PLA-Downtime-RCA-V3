@@ -14,6 +14,7 @@ import { Task } from '../../task/task.entity';
 import { Tenant } from '../../tenant/tenant.entity';
 import { TenantModule } from '../../tenant/tenant.module';
 import { Unit } from '../../unit/unit.entity';
+import { Asset } from '../../asset/asset.entity';
 import { User } from '../../users/user.entity';
 import { UsersModule } from '../../users/users.module';
 import { AuditLogsV2Controller } from './audit-logs/audit-logs-v2.controller';
@@ -22,6 +23,8 @@ import { BrandingV2Controller } from './branding/branding-v2.controller';
 import { BrandingV2Service } from './branding/branding-v2.service';
 import { PlaceNamesService } from './common/place-names.service';
 import { CustomAttributesV2Controller } from './custom-attributes/custom-attributes-v2.controller';
+import { CustomAttributeValuesV2Controller } from './custom-attributes/custom-attribute-values-v2.controller';
+import { CustomAttributeValuesV2Service } from './custom-attributes/custom-attribute-values-v2.service';
 import { CustomAttributesV2Service } from './custom-attributes/custom-attributes-v2.service';
 import { DashboardConfigV2Controller } from './dashboard-config/dashboard-config-v2.controller';
 import { DashboardConfigV2Service } from './dashboard-config/dashboard-config-v2.service';
@@ -51,6 +54,7 @@ export const ADMINISTRATION_V2_PROVIDERS = [
   TasksV2CommandsService,
   AuditLogsV2Service,
   CustomAttributesV2Service,
+  CustomAttributeValuesV2Service,
   DashboardConfigV2Service,
   HierarchyV2Service,
   BrandingV2Service,
@@ -67,6 +71,7 @@ export const ADMINISTRATION_V2_CONTROLLERS: Type<unknown>[] = [
   TasksV2Controller,
   AuditLogsV2Controller,
   CustomAttributesV2Controller,
+  CustomAttributeValuesV2Controller,
   DashboardConfigV2Controller,
   OrganizationsV2Controller,
   PlantsV2Controller,
@@ -80,6 +85,7 @@ export const ADMINISTRATION_V2_CONTROLLERS: Type<unknown>[] = [
       User,
       UserScope,
       Unit,
+      Asset,
       Site,
       Tenant,
       Organization,

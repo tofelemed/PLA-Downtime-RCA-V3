@@ -1,4 +1,4 @@
-import type { BrandingSettings } from '@/services/BrandingService';
+import type { BrandingView as BrandingSettings } from '@/api/v2/types/administration';
 import { DisplayCurrencyToggle } from '@/features/display-currency/display-currency-toggle';
 import { PlantSelector } from '@/features/plant-selector/plant-selector';
 import { LiveIndicator } from './live-indicator';

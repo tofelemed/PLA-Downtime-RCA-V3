@@ -4180,6 +4180,30 @@ export interface paths {
         patch: operations["CustomAttributesV2Controller_update_v2"];
         trace?: never;
     };
+    "/api/v2/custom-attribute-values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The custom attribute values of one unit or asset
+         * @description 404 when the record is not in the acting plant.
+         */
+        get: operations["CustomAttributeValuesV2Controller_list_v2"];
+        /**
+         * Set one custom attribute value of a unit or asset
+         * @description 404 when the record is not in the acting plant or the definition does not apply in it; 422 ATTRIBUTE_TYPE_MISMATCH when the definition is for another record type.
+         */
+        put: operations["CustomAttributeValuesV2Controller_set_v2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/dashboard-configuration": {
         parameters: {
             query?: never;
@@ -6610,6 +6634,16 @@ export interface components {
             displayName?: string;
             /** @enum {string} */
             dataType?: "string" | "number" | "boolean" | "date" | "select";
+        };
+        SetAttributeValueDto: {
+            /** @enum {string} */
+            entityType: "Unit" | "Asset";
+            /** Format: uuid */
+            entityId: string;
+            /** Format: uuid */
+            attributeDefinitionId: string;
+            /** @description The value as text; empty clears it */
+            value: string;
         };
         OeeSettingsDto: {
             availabilityWeight: number;
@@ -13316,6 +13350,47 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateAttributeDefinitionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CustomAttributeValuesV2Controller_list_v2: {
+        parameters: {
+            query: {
+                entityType: "Unit" | "Asset";
+                entityId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CustomAttributeValuesV2Controller_set_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAttributeValueDto"];
             };
         };
         responses: {

@@ -326,6 +326,72 @@ describe('v2 administration: attributes, dashboard settings, hierarchy, branding
       .expect(204);
   });
 
+  it('v2 custom attribute values: plant members read, master-data writers set, other plants get 404', async () => {
+    const definition = bodyOf<{ id: string }>(
+      await http()
+        .post('/api/v2/custom-attribute-definitions')
+        .set(bearer(adminA.token))
+        .set(key())
+        .send({
+          entityType: 'Unit',
+          name: 'shelter',
+          displayName: 'Shelter',
+          dataType: 'string',
+        })
+        .expect(201),
+    );
+    const value = {
+      entityType: 'Unit',
+      entityId: world.unitA,
+      attributeDefinitionId: definition.id,
+      value: 'North hall',
+    };
+    await http()
+      .put('/api/v2/custom-attribute-values')
+      .set(bearer(operatorA.token))
+      .send(value)
+      .expect(403);
+    await http()
+      .put('/api/v2/custom-attribute-values')
+      .set(bearer(adminA.token))
+      .send(value)
+      .expect(200);
+    await http()
+      .put('/api/v2/custom-attribute-values')
+      .set(bearer(adminA.token))
+      .send({ ...value, value: 'South hall' })
+      .expect(200);
+    const read = bodyOf<Array<{ attributeDefinitionId: string; value: string }>>(
+      await http()
+        .get(
+          `/api/v2/custom-attribute-values?entityType=Unit&entityId=${world.unitA}`,
+        )
+        .set(bearer(operatorA.token))
+        .expect(200),
+    );
+    expect(read).toEqual([
+      expect.objectContaining({
+        attributeDefinitionId: definition.id,
+        value: 'South hall',
+      }),
+    ]);
+    expect(
+      bodyOf(
+        await http()
+          .put('/api/v2/custom-attribute-values')
+          .set(bearer(adminA.token))
+          .send({ ...value, entityType: 'Asset' })
+          .expect(404),
+      ).code,
+    ).toBe('NOT_FOUND');
+    await http()
+      .get(
+        `/api/v2/custom-attribute-values?entityType=Unit&entityId=${world.unitA}`,
+      )
+      .set(bearer(adminB.token))
+      .expect(404);
+  });
+
   it('changes the plant display settings for plant administrators only', async () => {
     const changed = bodyOf(
       await http()
