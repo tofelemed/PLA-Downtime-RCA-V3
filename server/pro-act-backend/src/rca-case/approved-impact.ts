@@ -20,8 +20,8 @@ export interface ApprovedImpact {
 }
 
 export const APPROVED_IMPACT_BASIS =
-  'loss lines of the latest approved revision of each period (current run, active, loss kinds only); ' +
-  'contribution margin view; draft and in-review figures are never included';
+  'approved plan lines of the latest approved revision of each period (decided quantities, loss kinds ' +
+  'only); contribution margin view; draft and in-review figures are never included';
 
 /**
  * Loss kinds that lower output — the same set as the loss-value report (VA-01): schedule exclusions are
@@ -29,7 +29,18 @@ export const APPROVED_IMPACT_BASIS =
  */
 const LOSS_KINDS = [...LOSS_VALUE_KINDS];
 
-/** Lines of the latest approved revision per period, filtered by `$2` (event ids or line ids). */
+/** Latest approved revision of a period (`$1` tenant). */
+const LATEST = (
+  period: string,
+) => `(SELECT ar."id" FROM "accounting_revisions" ar
+   WHERE ar."tenant_id" = $1 AND ar."period_id" = ${period} AND ar."lifecycle" = 'approved'
+   ORDER BY ar."revision" DESC LIMIT 1)`;
+
+/**
+ * Lines of the latest approved revision per period, filtered by `$2` (event ids or line ids): the approved
+ * plan lines (VA-01b: decided quantities, manual lines with their evidence event), or — for revisions
+ * approved before they were stored — the active loss lines of the approved run.
+ */
 const APPROVED_LINES = (filter: 'event' | 'line') => `
   WITH cand AS (
     SELECT l."id", l."run_id", l."period_id", l."kind"::text AS "kind", l."uom", l."quantity"
@@ -37,10 +48,14 @@ const APPROVED_LINES = (filter: 'event' | 'line') => `
      WHERE l."tenant_id" = $1 AND ${filter === 'event' ? 'l."cause_event_id"' : 'l."id"'} = ANY($2::uuid[])
        AND l."state" = 'active' AND l."source" <> 'candidate_superseded' AND l."kind"::text = ANY($3::text[])),
   approved AS (
-    SELECT c.* FROM cand c
-     WHERE c."run_id" = (SELECT ar."current_run_id" FROM "accounting_revisions" ar
-                          WHERE ar."tenant_id" = $1 AND ar."period_id" = c."period_id" AND ar."lifecycle" = 'approved'
-                          ORDER BY ar."revision" DESC LIMIT 1))`;
+    SELECT a."id", 'approved' AS "origin", a."kind"::text AS "kind", a."uom", a."quantity"
+      FROM "approved_loss_lines" a
+     WHERE a."tenant_id" = $1 AND ${filter === 'event' ? 'a."cause_event_id"' : 'a."source_id"'} = ANY($2::uuid[])
+       AND a."kind"::text = ANY($3::text[]) AND a."revision_id" = ${LATEST('a."period_id"')}
+    UNION ALL
+    SELECT c."id", 'run', c."kind", c."uom", c."quantity" FROM cand c
+     WHERE c."run_id" = (SELECT ar."current_run_id" FROM "accounting_revisions" ar WHERE ar."id" = ${LATEST('c."period_id"')})
+       AND NOT EXISTS (SELECT 1 FROM "approved_loss_lines" x WHERE x."revision_id" = ${LATEST('c."period_id"')}))`;
 
 export async function approvedImpact(
   manager: EntityManager,
@@ -80,8 +95,14 @@ export async function approvedImpact(
               count(*) FILTER (WHERE v."status" = 'valued' AND v."amount" IS NOT NULL)::int AS "valued",
               count(*) FILTER (WHERE NOT (v."status" = 'valued' AND v."amount" IS NOT NULL))::int AS "unvalued"
          FROM approved a
-         JOIN "loss_line_valuations" v ON v."tenant_id" = $1 AND v."run_id" = a."run_id" AND v."loss_line_id" = a."id"
-          AND v."view" = 'contribution_margin'
+         JOIN LATERAL (
+           SELECT lv."currency", lv."amount", lv."status"::text AS "status" FROM "loss_line_valuations" lv
+            WHERE a."origin" = 'run' AND lv."tenant_id" = $1 AND lv."loss_line_id" = a."id" AND lv."view" = 'contribution_margin'
+           UNION ALL
+           SELECT av."currency", av."amount", av."status" FROM "approved_loss_line_valuations" av
+            WHERE a."origin" = 'approved' AND av."tenant_id" = $1 AND av."approved_line_id" = a."id"
+              AND av."view" = 'contribution_margin'
+         ) v ON true
         GROUP BY 1 ORDER BY 1`,
     params,
   );

@@ -18,6 +18,7 @@ import {
 } from './revision-access';
 import { loadRevisionState, RevisionState } from './revision-state';
 import { contentHashOf, reviewedContent, sha256 } from './reviewed-content';
+import { writeApprovedLedger } from './approved-ledger';
 import { approvedValueTotals } from './reviewed-valuation';
 import { separationOfDuties, staleSubmission } from './workflow-errors';
 import {
@@ -177,6 +178,16 @@ async function markApproved(
       approver,
     },
     approvedValueTotals(state),
+  );
+  await writeApprovedLedger(
+    manager,
+    {
+      tenantId: revision.tenantId,
+      revisionId: revision.id,
+      periodId: revision.periodId,
+      approver,
+    },
+    state,
   );
   await manager.update(AccountingRevision, revision.id, {
     lifecycle: 'approved',

@@ -155,6 +155,12 @@ function reconcile(
   });
 }
 
+/** VA-01b: the reconciled plan lines (decided candidates and own-quantity lines) with their valuation. */
+export function approvedLedgerLines(state: RevisionState): ReconciledLine[] {
+  const context = state.run?.valuationContext;
+  return context ? reconcile(state, context).lines : [];
+}
+
 /**
  * VA-01: the reconciled plan-ledger valuation per slice, kind, view and currency, persisted at approval
  * (`approved_valuation_totals`) for the reports. Not part of the reviewed content, so submitted hashes

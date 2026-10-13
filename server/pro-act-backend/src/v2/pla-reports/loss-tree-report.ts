@@ -93,13 +93,29 @@ const WORDS: Readonly<Record<string, string>> = {
 };
 
 export const LOSS_TREE_BASIS =
-  'loss lines of the shown calculation run (approved revision, else the open draft); reconciliation ' +
-  'decisions of an open draft (manual lines, rejections) are in the waterfall, not in this tree';
+  'plan ledger of an approved revision: the approved lines (decided candidates and manual lines); ' +
+  'otherwise the loss lines of the shown calculation run — decisions of an open draft are in the waterfall';
 
+/**
+ * Lines of each shown period (VA-01b): the approved plan lines when the revision is approved and has them,
+ * else the run's active lines of the ledger.
+ */
 const LINES = `FROM shown s
-  JOIN "loss_lines" l ON l."run_id" = s."run_id" AND l."tenant_id" = $1 AND l."period_id" = s."period_id"
-   AND l."ledger" = $6::loss_ledger AND l."state" = 'active' AND l."source" <> 'candidate_superseded'
-   AND l."kind"::text = ANY($7::text[])`;
+  JOIN LATERAL (
+    SELECT a."id" AS "line_id", 'approved' AS "origin", a."reason_code_id", a."impact_code_id",
+           a."oee_component", a."kind", a."uom", a."quantity"
+      FROM "approved_loss_lines" a
+     WHERE $6::text = 'plan' AND s."lifecycle" = 'approved' AND a."revision_id" = s."revision_id"
+       AND a."tenant_id" = $1 AND a."kind"::text = ANY($7::text[])
+    UNION ALL
+    SELECT r."id", 'run', r."reason_code_id", r."impact_code_id", r."oee_component", r."kind", r."uom", r."quantity"
+      FROM "loss_lines" r
+     WHERE r."run_id" = s."run_id" AND r."tenant_id" = $1 AND r."period_id" = s."period_id"
+       AND r."ledger" = $6::loss_ledger AND r."state" = 'active' AND r."source" <> 'candidate_superseded'
+       AND r."kind"::text = ANY($7::text[])
+       AND NOT ($6::text = 'plan' AND s."lifecycle" = 'approved' AND EXISTS (
+             SELECT 1 FROM "approved_loss_lines" x WHERE x."revision_id" = s."revision_id" AND x."tenant_id" = $1))
+  ) l ON true`;
 
 async function quantityCells(
   manager: EntityManager,
@@ -129,7 +145,15 @@ async function valueCells(
             count(*) FILTER (WHERE v."status" = 'valued' AND v."amount" IS NULL)::int AS "fx_missing",
             array_remove(array_agg(DISTINCT COALESCE(v."reason", CASE WHEN v."id" IS NULL THEN 'not_valued' END)), NULL) AS "reasons"
        ${LINES}
-       LEFT JOIN "loss_line_valuations" v ON v."loss_line_id" = l."id" AND v."view" = $8::valuation_view
+       LEFT JOIN LATERAL (
+         SELECT lv."id", lv."currency", lv."amount", lv."status"::text AS "status", lv."reason"
+           FROM "loss_line_valuations" lv
+          WHERE l."origin" = 'run' AND lv."loss_line_id" = l."line_id" AND lv."view" = $8::valuation_view
+         UNION ALL
+         SELECT av."id", av."currency", av."amount", av."status", av."reason"
+           FROM "approved_loss_line_valuations" av
+          WHERE l."origin" = 'approved' AND av."approved_line_id" = l."line_id" AND av."view" = $8::valuation_view
+       ) v ON true
       GROUP BY 1, 2`,
     [...params(scope), spec.ledger, LOSS_TREE_KINDS, spec.view],
   );
