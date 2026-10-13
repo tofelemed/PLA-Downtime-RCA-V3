@@ -4,9 +4,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { LOGIN_COPY } from '@/features/login/login-copy';
+import { LoginHeroPanel } from '@/features/login/login-hero-panel';
+import { DemoAccountsHint } from '@/features/login/demo-accounts-hint';
+import { useLoginDocumentTitle } from '@/features/login/use-login-document-title';
+
+const FIELD_LABEL = 'text-xs font-semibold tracking-[0.15em] text-slate-700';
 
 export const LoginForm: React.FC = () => {
   const { login } = useAuth();
@@ -14,6 +19,7 @@ export const LoginForm: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  useLoginDocumentTitle(LOGIN_COPY.documentTitle);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,47 +27,50 @@ export const LoginForm: React.FC = () => {
     setError('');
 
     const success = await login(email, password);
-    
+
     if (!success) {
-      setError('Invalid email or password');
+      setError(LOGIN_COPY.invalidCredentials);
     }
-    
+
     setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-lg">PA</span>
+    <div className="flex min-h-screen flex-col bg-background md:flex-row">
+      <LoginHeroPanel />
+
+      <main className="flex flex-1 items-center justify-center px-4 py-8 sm:px-8 md:px-10 md:py-12">
+        <div className="w-full max-w-md">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold tracking-[0.2em] text-slate-900">{LOGIN_COPY.appName}</h1>
+            <p className="mt-2 font-mono text-[10px] tracking-[0.1em] text-slate-600 lg:text-xs lg:tracking-[0.2em]">
+              {LOGIN_COPY.appSubtitle}
+            </p>
           </div>
-          <CardTitle className="text-2xl">Welcome to Pro-Act</CardTitle>
-          <CardDescription>
-            Sign in to your account to continue
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent>
+
+          <div className="mb-6 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-700">
+            <strong className="font-semibold text-slate-900">{LOGIN_COPY.noticeLead}</strong> {LOGIN_COPY.noticeBody}
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className={FIELD_LABEL}>{LOGIN_COPY.userIdLabel}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder={LOGIN_COPY.userIdPlaceholder}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className={FIELD_LABEL}>{LOGIN_COPY.passwordLabel}</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder={LOGIN_COPY.passwordPlaceholder}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -76,22 +85,15 @@ export const LoginForm: React.FC = () => {
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              {LOGIN_COPY.submit}
             </Button>
+
+            <p className="text-center text-xs text-slate-600">{LOGIN_COPY.help}</p>
           </form>
 
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</p>
-            <div className="space-y-1 text-xs text-gray-600">
-              <div><span className="font-medium">admin@acme.com</span> / demo123 (SuperAdmin)</div>
-              <div><span className="font-medium">test@example.com</span> / Test123!@# (SuperAdmin)</div>
-              <div>manager@acme.com / demo123 (TenantAdmin)</div>
-              <div>engineer@acme.com / demo123 (Engineer)</div>
-              <div>operator@acme.com / demo123 (Operator)</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <DemoAccountsHint />
+        </div>
+      </main>
     </div>
   );
 };
