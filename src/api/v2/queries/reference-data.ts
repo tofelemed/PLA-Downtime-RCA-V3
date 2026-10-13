@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { v2Request } from '../client';
 import type { QueryParams } from '../request-url';
@@ -26,6 +27,16 @@ export function useCodeLibrary(library: CodeLibrary, filters: CodeLibraryFilters
     query: { limit: 500, ...filters } as QueryParams,
     key: { filters: { library, ...filters } },
   });
+}
+
+/** Every page of a code library (FE-04): further pages load until the library is complete. */
+export function useAllCodes(library: CodeLibrary) {
+  const query = useCodeLibrary(library);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  return query;
 }
 
 /** Sites of the tenant with their IANA timezone (plan 2.1); the default site sets the plant timezone. */

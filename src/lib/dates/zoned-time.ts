@@ -28,6 +28,11 @@ export function utcToPlantLocal(iso: string | null | undefined, timeZone: string
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
+/** Today's date (`YYYY-MM-DD`, Gregorian) on the plant clock (FE-10). */
+export function plantToday(timeZone: string, now: Date = new Date()): string {
+  return utcToPlantLocal(now.toISOString(), timeZone).slice(0, 10);
+}
+
 /** UTC ISO of 00:00 plant time on `isoDate` (`YYYY-MM-DD`): the inclusive start of that plant day. */
 export function startOfPlantDayUtc(isoDate: string, timeZone: string): string | null {
   if (!DATE_PATTERN.test(isoDate)) return null;

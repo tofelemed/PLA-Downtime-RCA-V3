@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextPlantDayUtc, plantLocalToUtc, startOfPlantDayUtc, utcToPlantLocal } from './zoned-time';
+import { nextPlantDayUtc, plantLocalToUtc, plantToday, startOfPlantDayUtc, utcToPlantLocal } from './zoned-time';
 
 describe('zoned-time', () => {
   it('converts the plant wall clock to UTC and back', () => {
@@ -26,5 +26,12 @@ describe('zoned-time', () => {
     expect(nextPlantDayUtc('2026-11-01', 'America/New_York')).toBe('2026-11-02T05:00:00.000Z');
     expect(startOfPlantDayUtc('12/10/2026', 'UTC')).toBeNull();
     expect(nextPlantDayUtc('', 'UTC')).toBeNull();
+  });
+});
+
+describe('plantToday (FE-10)', () => {
+  it('is the date on the plant clock, not in UTC', () => {
+    expect(plantToday('Asia/Tehran', new Date('2027-03-01T21:00:00Z'))).toBe('2027-03-02');
+    expect(plantToday('UTC', new Date('2027-03-01T21:00:00Z'))).toBe('2027-03-01');
   });
 });

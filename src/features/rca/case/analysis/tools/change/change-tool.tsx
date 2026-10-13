@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import { IconButton } from '@/features/ux-kit/icon-button';
+import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
+import { plantToday } from '@/lib/dates/zoned-time';
 import { ActionIcon } from '@/lib/icons';
 import { CHANGE_CATEGORIES, LIKELIHOODS, rowId } from '../../../../model/analysis-settings';
 import { useCaseWorkspace } from '../../../case-context';
@@ -33,14 +35,13 @@ function ChangeRow(props: { change: ChangeRecord; index: number; readOnly: boole
   );
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
-
 function Editor({ record, save }: { record: ToolRecord<'change'>; save: (body: ChangeContent) => Promise<unknown> }) {
   const { readOnly } = useCaseWorkspace();
+  const zone = usePlantTimezone();
   const [content, setContent] = useState<ChangeContent>(() => ({ question: record?.question ?? 'What changed before the incident?', changes: record?.changes ?? [] }));
   const setChanges = (changes: ChangeRecord[]) => setContent({ ...content, changes });
   const related = content.changes.filter((c) => c.relatedToIncident).length;
-  const add = () => setChanges([...content.changes, { id: rowId('change', content.changes), category: 'Process', description: '', changeDate: today(), relatedToIncident: false, impactLevel: 'Medium' }]);
+  const add = () => setChanges([...content.changes, { id: rowId('change', content.changes), category: 'Process', description: '', changeDate: plantToday(zone.timezone), relatedToIncident: false, impactLevel: 'Medium' }]);
   const valid = content.changes.every((c) => /^\d{4}-\d{2}-\d{2}$/.test(c.changeDate));
   return (
     <div className="space-y-4" data-testid="change-tool">

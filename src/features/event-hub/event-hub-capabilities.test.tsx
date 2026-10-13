@@ -16,6 +16,7 @@ const { CurrentStopsPanel } = await import('./components/current-stops-panel');
 
 const ENV: EventHubEnv = {
   tenantId: 'tenant-a', timezone: 'UTC', timezoneIsFallback: false, units: [], unitsLoading: false, reasonCodes: [],
+    allReasonCodes: [],
   unitName: () => 'Unit 1', reasonName: () => '—',
 };
 const EVENT = { id: 'e1', rowVersion: 1, startTime: '2026-10-09T06:00:00.000Z', endTime: null };
