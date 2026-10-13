@@ -167,6 +167,49 @@ describe('computePeriodAccounting (plan 2.5)', () => {
     );
   });
 
+  it('the plan ledger prices a stop at the planned rate when the plan is below planning capacity (SME Q1)', () => {
+    const i = input([event('S', 60, 120)], {
+      target: '360',
+      actuals: { gross: '300', good: '300', uom: 't' },
+    });
+    const result = computePeriodAccounting(i);
+    const stop = result.lines.find(
+      (l) => l.ledger === 'plan' && l.kind === 'availability',
+    )!;
+    expect(formatDec(stop.quantity)).toBe('45');
+    const plan = result.totals.find((t) => t.ledger === 'plan')!;
+    expect(formatDec(plan.gap!)).toBe('60');
+    expect(formatDec(plan.residual!)).toBe('15');
+    expect(plan.flags).toEqual(
+      expect.arrayContaining(['planned_rate_scaled', 'unaccounted']),
+    );
+    const capacityStop = result.lines.find(
+      (l) => l.ledger === 'capacity' && l.kind === 'availability',
+    )!;
+    expect(formatDec(capacityStop.quantity)).toBe('100');
+  });
+
+  it('a shortfall no event explains stays unaccounted in the plan ledger and is marked unexplained in the capacity ledger (SME Q4)', () => {
+    const result = computePeriodAccounting(
+      input([], {
+        target: '720',
+        actuals: { gross: '700', good: '700', uom: 't' },
+      }),
+    );
+    expect(
+      result.lines.some((l) => l.ledger === 'plan' && l.kind === 'performance'),
+    ).toBe(false);
+    const plan = result.totals.find((t) => t.ledger === 'plan')!;
+    expect(formatDec(plan.residual!)).toBe('20');
+    expect(plan.flags).toContain('unaccounted');
+    const remainder = result.lines.find(
+      (l) =>
+        l.ledger === 'capacity' && l.kind === 'performance' && l.cause === null,
+    )!;
+    expect(formatDec(remainder.quantity)).toBe('100');
+    expect(remainder.flags).toContain('unexplained');
+  });
+
   it('a micro-stop (< 60 s) is a performance claim, not availability', () => {
     const i = input([event('M', 60, 60.5)], {
       actuals: { gross: '700', good: '700', uom: 't' },

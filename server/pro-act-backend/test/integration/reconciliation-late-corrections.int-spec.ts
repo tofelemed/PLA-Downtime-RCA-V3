@@ -98,7 +98,7 @@ describe('late corrections and change proposals (plan 2.8)', () => {
       isStale: false,
     });
     expect(draft.candidates).toHaveLength(1);
-    expect(draft.slices[0].overAccounted).toBe('90');
+    expect(draft.slices[0].overAccounted).toBe('125');
     const resubmitted = await submitBalanced(env.periodA1);
     expect(resubmitted.revision.submittedHash).not.toBe(firstHash);
     const approved = (await env.approve(resubmitted).expect(200))
@@ -140,7 +140,7 @@ describe('late corrections and change proposals (plan 2.8)', () => {
     expect(proposal).toMatchObject({ trigger: 'event_change', state: 'open' });
     expect(proposal.before.slices[0].residual).toBe('0');
     expect(proposal.before.calculationRunId).toBe(approved.baseRunId);
-    expect(proposal.after?.slices[0].residual).toBe('-45');
+    expect(proposal.after?.slices[0].residual).toBe('-62.5');
     expect(after.openProposalId).toBe(proposal.id);
   });
 

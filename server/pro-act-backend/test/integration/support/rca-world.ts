@@ -193,14 +193,31 @@ export class RcaWorld extends ReconciliationWorld {
     );
   }
 
-  /** Accepts every candidate, explains any residual manually, submits and approves period A1. */
+  /**
+   * Accepts recovery gains and the loss candidates that fit the gap (largest first), rejects the rest,
+   * explains any residual manually, submits and approves period A1.
+   */
   async approvePeriodA1(reasonCodeId: string): Promise<void> {
     await this.settle();
     const view = await this.view();
-    const lines: Array<Record<string, unknown>> = view.candidates.map((c) => ({
-      action: 'accept',
-      autoKey: c.autoKey,
-    }));
+    const gap = Number(view.slices[0].gap ?? 0);
+    let used = view.candidates
+      .filter((c) => Number(c.quantity) < 0)
+      .reduce((sum, c) => sum + Number(c.quantity), 0);
+    const lines: Array<Record<string, unknown>> = [...view.candidates]
+      .sort((a, b) => Number(b.quantity) - Number(a.quantity))
+      .map((c) => {
+        const quantity = Number(c.quantity);
+        if (quantity < 0) return { action: 'accept', autoKey: c.autoKey };
+        if (used + quantity > gap + 1e-6)
+          return {
+            action: 'reject',
+            autoKey: c.autoKey,
+            reason: 'covered by other causes',
+          };
+        used += quantity;
+        return { action: 'accept', autoKey: c.autoKey };
+      });
     const residual = await this.residualAfter(view, lines);
     if (residual !== '0') {
       lines.push({

@@ -28,13 +28,15 @@
       "targetQty": "630",
       "actualQty": "550",
       "gap": "80",
-      "planningRateStopCandidate": "90",
-      "candidateExceedsGap": true,
-      "flag": "bridge_or_conflict",
+      "plannedRateStopCandidate": "90",
+      "recoveryGain": "-30",
+      "qualityCandidate": "20",
+      "residual": "0",
+      "flags": [],
       "forcedAllocation": false
     }
   },
   "owner_subphase": "2.5",
-  "notes": "",
+  "notes": "Plan ledger per SME 2026-10-13 (EXPERT_REVIEW Q1/Q2): time losses at the planned rate (630 t / 7 eligible h = 90 t/h), recovery above the planned running rate as a separate gain line (signed, -30), losses kept gross: 90 + 20 - 30 = gap 80, residual 0. Before: stop candidate 90 > gap 80 flagged bridge_required.",
   "status": "authored"
 }

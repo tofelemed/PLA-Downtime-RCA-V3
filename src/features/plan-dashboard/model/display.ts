@@ -35,6 +35,8 @@ export const FLAG_LABELS: Readonly<Record<string, string>> = {
   no_target: 'No target',
   no_actuals: 'No actuals',
   claim_exceeds_component: 'Causes claim more than measured loss',
+  planned_rate_scaled: 'Priced at the planned rate (target ÷ eligible time)',
+  unexplained: 'Unexplained (no event or measurement supports it)',
 };
 
 /** Residual states that block submission (ACC10) and are shown in red. */

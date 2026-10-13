@@ -125,7 +125,7 @@ describe('PLA analytics reads (plan 3.6)', () => {
           action: 'manual',
           sliceId: view.slices[0].sliceId,
           kind: 'availability',
-          quantity: '50',
+          quantity: '15',
           missingEvent: true,
           reasonCodeId: reason,
         },
@@ -164,7 +164,11 @@ describe('PLA analytics reads (plan 3.6)', () => {
       `loss-tree?${scope}&groupBy=reason&metric=qty&ledger=plan`,
     );
     const feed = plan.data.groups.find((g) => g.key === reason);
-    expect(feed).toMatchObject({ unit: 't', amount: '90', status: 'quantity' });
+    expect(feed).toMatchObject({
+      unit: 't',
+      amount: '125',
+      status: 'quantity',
+    });
     expect(feed?.label).toContain('FEED');
     const last = plan.data.groups[plan.data.groups.length - 1];
     expect(last.cumulativeShare).toBe('1');

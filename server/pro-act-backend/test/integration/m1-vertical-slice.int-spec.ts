@@ -79,7 +79,7 @@ describe('M1 vertical slice: PI event frame → … → approved revision → ex
     const candidate = draft.candidates.find((c) => c.causeEventId === event.id);
     expect(candidate).toMatchObject({
       kind: 'availability',
-      quantity: '90',
+      quantity: '125',
       state: 'proposed',
     });
 
@@ -91,7 +91,7 @@ describe('M1 vertical slice: PI event frame → … → approved revision → ex
           action: 'manual',
           sliceId: draft.slices[0].sliceId,
           kind: 'performance',
-          quantity: '60',
+          quantity: '25',
           missingEvent: true,
           reasonCodeId: reason,
           reason: 'slow feed',
@@ -122,8 +122,8 @@ describe('M1 vertical slice: PI event frame → … → approved revision → ex
       calculation_run_id: approved.revision.currentRunId,
       line_source: 'candidate',
       state: 'accepted',
-      quantity: '90',
-      effective_quantity: '90',
+      quantity: '125',
+      effective_quantity: '125',
       valuation_status: 'unvalued',
     });
 

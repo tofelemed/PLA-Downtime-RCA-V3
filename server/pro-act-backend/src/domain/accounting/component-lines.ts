@@ -90,7 +90,9 @@ function remainderLine(
     cause: null,
     scheduleClass: null,
     oeeComponent: input.kind,
-    flags: ['no_cause'],
+    // SME Q4: a speed loss no measurement or event supports is unexplained, not proven slow running
+    flags:
+      input.kind === 'performance' ? ['no_cause', 'unexplained'] : ['no_cause'],
     evidence: [],
     autoKey: autoKey(
       { ledger: context.ledger, kind: input.kind, sliceId: context.sliceId },

@@ -181,18 +181,20 @@ describe('T28 capacity ledger versus plan ledger', () => {
     expect(dec(capacity.residual)).toBe(want.residual);
   });
 
-  it('plan gap 80 with a 90 t planning-rate stop candidate: flagged, not forced', () => {
+  it('plan gap 80 = stop 90 at the planned rate + quality 20 − recovery gain 30 (SME Q1 / Q2)', () => {
     const planWant = expected.plan as Json;
     expect(dec(plan.gap)).toBe(planWant.gap);
-    const candidate = result.lines.find(
-      (l) => l.ledger === 'plan' && l.kind === 'availability',
+    const planLine = (kind: string) =>
+      result.lines.find((l) => l.ledger === 'plan' && l.kind === kind);
+    expect(dec(planLine('availability')!.quantity)).toBe(
+      planWant.plannedRateStopCandidate,
     );
-    expect(dec(candidate!.quantity)).toBe(planWant.planningRateStopCandidate);
-    expect(candidate!.basis).toBe('planning_rate');
-    expect(plan.flags).toEqual(
-      expect.arrayContaining(['bridge_required', 'over_accounted']),
-    );
-    expect(dec(plan.residual)).toBe('-30');
+    expect(planLine('availability')!.basis).toBe('planning_rate');
+    expect(dec(planLine('gain')!.quantity)).toBe(planWant.recoveryGain);
+    expect(dec(planLine('quality')!.quantity)).toBe(planWant.qualityCandidate);
+    expect(dec(plan.residual)).toBe(planWant.residual);
+    expect(plan.flags).not.toContain('bridge_required');
+    expect(plan.flags).not.toContain('over_accounted');
   });
 });
 

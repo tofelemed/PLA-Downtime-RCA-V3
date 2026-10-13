@@ -8,8 +8,20 @@
   "inputs": {
     "shift": "22:00-06:00 (8 h), one product",
     "slices": {
-      "S1": { "window": "22:00-00:00", "planVersion": "September", "target": "260", "gross": "160", "good": "158" },
-      "S2": { "window": "00:00-06:00", "planVersion": "October", "target": "560", "gross": "480", "good": "474" }
+      "S1": {
+        "window": "22:00-00:00",
+        "planVersion": "September",
+        "target": "260",
+        "gross": "160",
+        "good": "158"
+      },
+      "S2": {
+        "window": "00:00-06:00",
+        "planVersion": "October",
+        "target": "560",
+        "gross": "480",
+        "good": "474"
+      }
     },
     "outputEvent": "22:00-06:00 gross 640, rejects 8, apportioned by time 25 % / 75 %",
     "sustainedRatePerHour": "100",
@@ -21,15 +33,50 @@
   "expected": {
     "issues": "0",
     "S1": {
-      "capacity": { "capacity": "200", "availability": "100", "performance": "0", "gain": "60", "quality": "2", "good": "158", "residual": "0", "qualityEventShare": "2" },
-      "plan": { "availability": "90", "performance": "0", "quality": "2", "residual": "10" }
+      "capacity": {
+        "capacity": "200",
+        "availability": "100",
+        "performance": "0",
+        "gain": "60",
+        "quality": "2",
+        "good": "158",
+        "residual": "0",
+        "qualityEventShare": "2"
+      },
+      "plan": {
+        "availability": "130",
+        "performance": "0",
+        "quality": "2",
+        "residual": "0",
+        "gain": "-30"
+      }
     },
     "S2": {
-      "capacity": { "capacity": "600", "availability": "0", "performance": "120", "gain": "0", "quality": "6", "good": "474", "residual": "0", "qualityEventShare": "6", "microStopClaim": "0.83333333" },
-      "plan": { "availability": "0", "performance": "60", "quality": "6", "residual": "20", "microStopClaim": "0.75" }
+      "capacity": {
+        "capacity": "600",
+        "availability": "0",
+        "performance": "120",
+        "gain": "0",
+        "quality": "6",
+        "good": "474",
+        "residual": "0",
+        "qualityEventShare": "6",
+        "microStopClaim": "0.83333333"
+      },
+      "plan": {
+        "availability": "0",
+        "performance": "1.08333333",
+        "quality": "6",
+        "residual": "78.91666667",
+        "microStopClaim": "1.08333333"
+      }
     },
-    "overClaimedRun": { "qualityEventQuantity": "9", "flag": "claim_exceeds_component", "residualSum": "-1" }
+    "overClaimedRun": {
+      "qualityEventQuantity": "9",
+      "flag": "claim_exceeds_component",
+      "residualSum": "-1"
+    }
   },
-  "notes": "Before engine 2.5.1 each plan slice was checked alone: the quality event (8) exceeded S2's gross - good (6) and the micro-stop claimed performance in S1, whose performance is 0 (the stop lowered S1's effective capacity below its time-apportioned gross), so the run failed with IMPOSSIBLE_CLAIM.",
+  "notes": "Before engine 2.5.1 each plan slice was checked alone: the quality event (8) exceeded S2's gross - good (6) and the micro-stop claimed performance in S1, whose performance is 0 (the stop lowered S1's effective capacity below its time-apportioned gross), so the run failed with IMPOSSIBLE_CLAIM. Plan ledger per SME 2026-10-13 (Q1/Q2): each slice priced at its planned rate (S1 260 t / 2 h = 130 t/h, S2 560 t / 6 h = 93.33 t/h), S1 recovery above the planned running rate is a separate gain (-30); S1 closes with residual 0; in S2 only the micro-stop claim is a performance candidate and the shortfall no event explains (78.91666667 t) stays unaccounted (SME Q4).",
   "status": "authored"
 }

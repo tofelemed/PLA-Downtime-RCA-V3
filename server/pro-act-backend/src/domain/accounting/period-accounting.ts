@@ -12,7 +12,7 @@ import { planLedger } from './plan-ledger';
 import { segmentSlice } from './segmentation';
 
 /** Bumped whenever a rule of the accounting engine changes (recorded on every calculation run). */
-export const ACCOUNTING_ENGINE_VERSION = '2.5.2';
+export const ACCOUNTING_ENGINE_VERSION = '2.5.3';
 
 function computeSlices(
   input: PeriodAccountingInput,

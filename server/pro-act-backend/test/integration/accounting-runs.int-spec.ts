@@ -66,7 +66,7 @@ describe('loss accounting calculation runs (plan 2.5)', () => {
     expect(stop.evidence[0].eventRevisionId).not.toBeNull();
   });
 
-  it('plan ledger: target from the plan period, candidates at the planning rate, signed residual', async () => {
+  it('plan ledger: target from the plan period, the stop at the planned rate, recovery as a gain (SME Q1 / Q2)', async () => {
     const [{ target }] = await env.rows<{ target: string }>(
       `SELECT pp.target::text AS target FROM plan_periods pp JOIN period_product_slices s ON s.plan_period_id = pp.id
         WHERE s.period_id = $1 AND s.superseded_at IS NULL`,
@@ -75,12 +75,20 @@ describe('loss accounting calculation runs (plan 2.5)', () => {
     const plan = env.totals(await env.accounting(periodA1), 'plan');
     const gap = new Dec(target).minus(300);
     expect(new Dec(plan.gap!).eq(gap)).toBe(true);
-    // availability 1 h × 90 + performance 630 − 300
-    expect(plan.attributed).toBe('420');
-    expect(new Dec(plan.residual!).eq(gap.minus(420))).toBe(true);
-    expect(plan.flags).toEqual(
-      expect.arrayContaining(['over_accounted', 'bridge_required']),
+    // planned rate = target ÷ 8 eligible h; the 1 h stop costs one hour of it
+    const plannedRate = new Dec(target).div(8);
+    expect(
+      new Dec(plan.availability!).minus(plannedRate).abs().lte('0.00000001'),
+    ).toBe(true);
+    // 300 t beat the planned running capacity (target − stop): the excess is a recovery gain
+    const gain = new Dec(300).minus(new Dec(target).minus(plannedRate));
+    expect(new Dec(plan.gain!).minus(gain).abs().lte('0.00000002')).toBe(true);
+    expect(new Dec(plan.attributed!).minus(gap).abs().lte('0.00000002')).toBe(
+      true,
     );
+    expect(plan.residual).toBe('0');
+    expect(plan.flags).toContain('planned_rate_scaled');
+    expect(plan.flags).not.toContain('over_accounted');
   });
 
   it('identical inputs create no run (T44: the actuals run is reused too)', async () => {

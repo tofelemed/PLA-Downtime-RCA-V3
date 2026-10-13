@@ -86,7 +86,7 @@ describe('plan dashboard reads (plan 3.5)', () => {
           action: 'manual',
           sliceId: view.slices[0].sliceId,
           kind: 'availability',
-          quantity: '50',
+          quantity: '15',
           missingEvent: true,
           reasonCodeId: reason,
         },

@@ -46,7 +46,7 @@ describe('reconciliation draft lines (plan 2.8)', () => {
     expect(before.candidates).toEqual([
       expect.objectContaining({
         kind: 'availability',
-        quantity: '90',
+        quantity: '125',
         state: 'proposed',
       }),
     ]);
@@ -54,8 +54,8 @@ describe('reconciliation draft lines (plan 2.8)', () => {
       target: '1000',
       actual: '850',
       gap: '150',
-      attributed: '90',
-      residual: '60',
+      attributed: '125',
+      residual: '25',
     });
     const [results] = await env.rows<{ ids: string[] }>(
       `SELECT array_agg(id ORDER BY id) AS ids FROM actuals_results WHERE period_id = $1`,

@@ -33,8 +33,14 @@ interface Candidates {
 }
 
 const BRIDGE = 'bridge_required';
+const PLANNED_RATE_SCALED = 'planned_rate_scaled';
 
-/** Performance at the planning rate (only a positive gap to plan rate is a candidate; no plan gains). */
+/**
+ * Performance against the planned running rate: claimed slowdowns (micro-stops, derates, measured
+ * slowdowns) are candidates; the shortfall no claim explains is not attributed — it stays in the residual
+ * as unaccounted until someone explains it (SME Q4). Output above the planned running rate is a recovery
+ * gain kept as its own signed line (SME Q2: losses stay gross, gains separate, net in totals).
+ */
 function performanceCandidates(
   ctx: SliceContext,
   running: { capacity: Dec; claims: ReturnType<typeof splitDerates> },
@@ -48,9 +54,44 @@ function performanceCandidates(
     remainderRateId: runningRateId(ctx.segments, 'planning'),
     remainderBasis: 'planning_rate',
   });
+  const claimed = result.lines.filter((line) => line.cause !== null);
+  const gain = maxZero(gross.minus(running.capacity));
+  const lines = gain.gt(ctx.epsilon)
+    ? [...claimed, sliceLine('gain', gain.neg(), ctx.slice, ctx.line)]
+    : claimed;
   return {
-    lines: result.lines,
+    lines,
     flags: result.overClaim.gt(ZERO) ? [BRIDGE] : [],
+  };
+}
+
+/**
+ * The planned rate of each segment (SME Q1): the planning rate scaled so that the eligible time of the
+ * slice produces exactly its target — target ÷ eligible planned time, keeping the planning rate's time
+ * profile. k = 1 when the plan was generated from the approved rates.
+ */
+function plannedSegments(
+  segments: readonly Segment[],
+  target: Dec,
+): { segments: Segment[]; scaled: boolean } {
+  const capacity = capacityOver(segments, 'planning');
+  if (!capacity || capacity.lte(ZERO))
+    return { segments: [...segments], scaled: false };
+  const k = target.div(capacity);
+  if (k.eq(1)) return { segments: [...segments], scaled: false };
+  return {
+    scaled: true,
+    segments: segments.map((segment) =>
+      segment.planning
+        ? {
+            ...segment,
+            planning: {
+              ...segment.planning,
+              rate: new Dec(segment.planning.rate).mul(k).toFixed(),
+            },
+          }
+        : segment,
+    ),
   };
 }
 
@@ -105,6 +146,7 @@ function planLedgerTotals(
     availability: totalOf(found.lines, 'availability'),
     performance: totalOf(found.lines, 'performance'),
     quality: totalOf(found.lines, 'quality'),
+    gain: totalOf(found.lines, 'gain').neg(),
     good: production.good,
     target: plan.target,
     actual: production.good,
@@ -117,8 +159,10 @@ function planLedgerTotals(
 }
 
 /**
- * Plan ledger of one slice (ACC01/ACC04): target from the plan period, actual = good, gap, automatic
- * candidates at the time-phased planning rate, attributed = Σ active lines and the signed residual.
+ * Plan ledger of one slice (ACC01/ACC04, SME Q1/Q2): target from the plan period, actual = good, gap,
+ * automatic candidates at the planned rate (planning rate scaled to the target, flagged
+ * `planned_rate_scaled` when k ≠ 1), recovery above the planned running rate as a signed gain line,
+ * attributed = Σ active lines and the signed residual.
  * Without a planning rate over the scheduled time there are no automatic time lines: residual = gap and
  * `plan_allocation_required` (never distributed by the final gap). Candidates beyond the gap are kept
  * as they are and flagged `bridge_required` (T28: no forced allocation).
@@ -143,12 +187,18 @@ export function planLedger(
     uom: slice.uom,
     basis: 'planning',
   };
-  const scheduled = segments.filter((s) => !s.excluded);
-  const ctx = contextOf(input, slice, scheduled, line, pool);
-  const timePhased = scheduled.every((s) => s.planning !== null);
+  const timePhased = segments
+    .filter((s) => !s.excluded)
+    .every((s) => s.planning !== null);
+  const planned = plannedSegments(
+    segments.filter((s) => !s.excluded),
+    target,
+  );
+  const ctx = contextOf(input, slice, planned.segments, line, pool);
   const found = timePhased
     ? candidates(ctx)
     : { lines: [], flags: ['plan_allocation_required'] };
+  if (timePhased && planned.scaled) found.flags.push(PLANNED_RATE_SCALED);
   const attributed = sumOf(found.lines.map((l) => l.quantity));
   const plan = planTotals({
     target,

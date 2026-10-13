@@ -7,6 +7,7 @@ import {
 } from './support/reconciliation-world';
 
 /**
+ * Plan ledger at the planned rate (SME Q1): 1000 t per 8 h shift = 125 t/h, so a 1 h stop is a 125 t candidate.
  * Plan 2.8 steps 3–4 on real Postgres: submission gates (T15 residual 10 → RESIDUAL_UNEXPLAINED, T16
  * over-accounted 10 → OVER_ACCOUNTED), the tolerance adjustment (T32: target 1000, residual 0.5, policy
  * 0.1 % → explicit `tolerance_adjustment 0.5`, ledger closes), content hashes, separation of duties (T36:
@@ -48,8 +49,8 @@ describe('reconciliation submission and approval (plan 2.8)', () => {
     await env.settle();
     const view = await saved(env.periodA1, (v) => [
       { action: 'accept', autoKey: v.candidates[0].autoKey },
-      manual(v, '40'),
       manual(v, '10'),
+      manual(v, '5'),
     ]);
     expect(view.slices[0]).toMatchObject({
       gap: '150',
@@ -62,7 +63,7 @@ describe('reconciliation submission and approval (plan 2.8)', () => {
   });
 
   it('T16: over-accounted 10 → 422 OVER_ACCOUNTED', async () => {
-    await env.lossEvent(env.world.unitA1, plus(A, 5 * HOUR), 16 / 9);
+    await env.lossEvent(env.world.unitA1, plus(A, 5 * HOUR), 1.28);
     await env.settle();
     const view = await saved(env.periodA1, (v) =>
       v.candidates.map((c) =>
@@ -102,11 +103,11 @@ describe('reconciliation submission and approval (plan 2.8)', () => {
     await env.recompute(env.periodA1);
     const view = await saved(env.periodA1, (v) => [
       ...v.candidates.map((c) =>
-        c.quantity === '90'
+        c.quantity === '125'
           ? { action: 'accept', autoKey: c.autoKey }
           : { action: 'reject', autoKey: c.autoKey, reason: 'other cause' },
       ),
-      manual(v, '59.5'),
+      manual(v, '24.5'),
     ]);
     expect(view.slices[0]).toMatchObject({
       target: '1000',
