@@ -13,6 +13,7 @@
     "maxUnknownShare": 0,
     "reconciledOeeTileEnabled": true,
     "streamCombinationRule": "per_product_and_combined_when_compatible",
-    "defaultLedgerView": "plan"
+    "defaultLedgerView": "plan",
+    "overlapAllocation": "equal_share"
   }
 }

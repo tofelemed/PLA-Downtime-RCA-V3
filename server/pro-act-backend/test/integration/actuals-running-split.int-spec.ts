@@ -32,7 +32,10 @@ describe('spanning output split by running time (LA-06)', () => {
     };
     const a = await grossOf(A);
     const b = await grossOf(B);
-    expect(a).toMatchObject({ gross: '266.66666667', estimatedQty: '266.66666667' });
+    expect(a).toMatchObject({
+      gross: '266.66666667',
+      estimatedQty: '266.66666667',
+    });
     expect(b?.gross).toBe('533.33333333');
   });
 });

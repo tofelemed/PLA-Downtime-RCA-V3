@@ -231,6 +231,37 @@ describe('computePeriodAccounting (plan 2.5)', () => {
     ]);
   });
 
+  it('overlapping stops: equal shares by default, first-out gives the overlap to the earlier cause (SME Q11)', () => {
+    const power = event('P', 60, 180);
+    const pump = event('Q', 120, 240);
+    const stopOf = (
+      policy: Partial<PeriodAccountingInput['policy']>,
+      id: string,
+    ) => {
+      const base = input([power, pump], {
+        actuals: { gross: '500', good: '500', uom: 't' },
+      });
+      const result = computePeriodAccounting({
+        ...base,
+        policy: { ...base.policy, ...policy },
+      });
+      return sum(
+        result.lines.filter(
+          (l) =>
+            l.ledger === 'capacity' &&
+            l.kind === 'availability' &&
+            l.cause?.eventId === id,
+        ),
+      );
+    };
+    expect([stopOf({}, 'P'), stopOf({}, 'Q')]).toEqual(['150', '150']);
+    const firstOut = { overlapAllocation: 'first_out' as const };
+    expect([stopOf(firstOut, 'P'), stopOf(firstOut, 'Q')]).toEqual([
+      '200',
+      '100',
+    ]);
+  });
+
   it('a micro-stop (< 60 s) is a performance claim, not availability', () => {
     const i = input([event('M', 60, 60.5)], {
       actuals: { gross: '700', good: '700', uom: 't' },

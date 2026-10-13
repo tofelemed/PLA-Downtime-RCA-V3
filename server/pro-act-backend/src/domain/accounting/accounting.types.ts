@@ -102,7 +102,15 @@ export interface SliceInput {
 }
 
 /** `oee_policy` (D04) and `reconciliation_tolerance` (D06) values the engine applies. */
+/**
+ * How overlapping stops share a segment (SME Q11: allocate once, by a stated rule): `equal_share` splits
+ * it equally between the causes; `first_out` gives it to the cause that started first.
+ */
+export type OverlapAllocation = 'equal_share' | 'first_out';
+
 export interface EnginePolicy {
+  /** absent = `equal_share` (the rule of every policy version written before the option existed) */
+  overlapAllocation?: OverlapAllocation;
   microStopSeconds: number;
   derateComponent: 'performance' | 'availability';
   plannedStopsInsideScheduleReduceAvailability: boolean;

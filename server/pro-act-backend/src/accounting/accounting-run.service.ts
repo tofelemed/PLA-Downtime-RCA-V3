@@ -347,6 +347,7 @@ function engineInput(
     policy: {
       microStopSeconds: engine.oee.microStopSeconds,
       derateComponent: engine.oee.derateComponent,
+      overlapAllocation: engine.oee.overlapAllocation,
       plannedStopsInsideScheduleReduceAvailability:
         engine.oee.plannedStopsInsideScheduleReduceAvailability,
       epsilon: String(engine.tolerance.epsilon),

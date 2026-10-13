@@ -94,7 +94,7 @@ other thing use by industry standrd
 ### D04 — Baselines and OEE policy *(Owner: production owner · Gate: 2.5 / 2.7 fixture sign-off)*
 Proposed default: compute **both** ledgers; the **plan ledger** is the default view; **planned stops inside scheduled time reduce availability**; schedule exclusions only via the calendar; derates count as **performance** loss; micro-stops < 60 s count as performance, ≥ 60 s as availability.
 1. Default view: [ ] plan ledger [ ] capacity ledger [ ] both side by side
-2. Planned maintenance inside the schedule: [ ] reduces availability (ISO 22400 default) [ ] excluded from scheduled time
+2. Planned maintenance inside the schedule: [ ] reduces availability (default; **SME 2026-10-13 Q6: correct for stops inside planned production time — the earlier "ISO 22400 default" label was imprecise; only time outside the production schedule is excluded, via calendar exclusions**) [ ] excluded from scheduled time
 3. Derate (reduced rate) counts as: [ ] performance [ ] availability (fractional)
 4. Micro-stop threshold: ______ seconds (default 60)
 5. Quantity basis for time losses: [ ] sustained capacity rate for capacity ledger and planning rate for plan ledger (default) [ ] other

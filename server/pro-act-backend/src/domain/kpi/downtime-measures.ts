@@ -1,5 +1,5 @@
 import { Dec, secondsBetween, ZERO } from '../actuals/decimal';
-import { LossEvent } from '../accounting/accounting.types';
+import { LossEvent, OverlapAllocation } from '../accounting/accounting.types';
 import { BoundedInterval } from '../time/interval-algebra';
 import { allocateDowntime, CauseSeconds } from './downtime-allocation';
 import { TimeTerms } from './ideal-time';
@@ -26,6 +26,8 @@ export interface DowntimeInput {
   occurrences: readonly OccurrenceSpan[];
   /** S and D with every stop inside the schedule counted (scheduled availability) */
   scheduled: TimeTerms;
+  /** how overlapping stops share time (SME Q11), as in the ledgers */
+  overlapAllocation?: OverlapAllocation;
 }
 
 const PERIOD: KpiScope = { level: 'period' };
@@ -156,7 +158,12 @@ export function downtimeMeasures(input: DowntimeInput): {
   kpis: KpiDraft[];
   allocated: CauseSeconds[];
 } {
-  const allocated = allocateDowntime(input.events, input.window, input.asOf);
+  const allocated = allocateDowntime(
+    input.events,
+    input.window,
+    input.asOf,
+    input.overlapAllocation,
+  );
   const total = allocated.reduce((s, a) => s.plus(a.seconds), ZERO);
   return {
     kpis: [

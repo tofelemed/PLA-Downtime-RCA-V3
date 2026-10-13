@@ -1,6 +1,6 @@
 import { secondsBetween } from '../actuals/decimal';
 import { Dec } from '../actuals/decimal';
-import { LossEvent } from '../accounting/accounting.types';
+import { LossEvent, OverlapAllocation } from '../accounting/accounting.types';
 import { boundedEvent, causesOf } from '../accounting/segmentation';
 import { BoundedInterval } from '../time/interval-algebra';
 
@@ -38,6 +38,7 @@ export function allocateDowntime(
   events: readonly LossEvent[],
   window: BoundedInterval,
   asOf: Date,
+  rule: OverlapAllocation = 'equal_share',
 ): CauseSeconds[] {
   const points = cutPoints(events, window, asOf);
   const result: CauseSeconds[] = [];
@@ -50,7 +51,7 @@ export function allocateDowntime(
     });
     if (active.length === 0) continue;
     const seconds = secondsBetween(points[i], points[i + 1]);
-    for (const cause of causesOf(active)) {
+    for (const cause of causesOf(active, rule)) {
       result.push({ event: cause.event, seconds: seconds.mul(cause.share) });
     }
   }

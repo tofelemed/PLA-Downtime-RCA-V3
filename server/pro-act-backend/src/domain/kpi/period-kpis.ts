@@ -238,6 +238,7 @@ export function computePeriodKpis(input: PeriodKpiInput): KpiDraft[] {
     microOccurrences: new Set(classified.microStops.map((e) => e.occurrenceId)),
     occurrences: stoppingOccurrences(input),
     scheduled: scheduledTerms(accounting, window),
+    overlapAllocation: accounting.policy.overlapAllocation,
   };
   const downtime = downtimeMeasures(downtimeInput);
   return [

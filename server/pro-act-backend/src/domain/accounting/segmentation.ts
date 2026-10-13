@@ -2,6 +2,7 @@ import { secondsBetween } from '../actuals/decimal';
 import { BoundedInterval, union } from '../time/interval-algebra';
 import {
   LossEvent,
+  OverlapAllocation,
   PeriodAccountingInput,
   RateVersion,
   Segment,
@@ -118,9 +119,13 @@ function activeIn(
 
 /**
  * One cause per occurrence (the earliest active event of it; split children never overlap, so a
- * split or merge leaves the causes of a segment unchanged), ordered by occurrence id, equal shares.
+ * split or merge leaves the causes of a segment unchanged), ordered by occurrence id, equal shares —
+ * or, with `first_out`, the whole segment to the occurrence that started first (SME Q11).
  */
-export function causesOf(active: readonly LossEvent[]): SegmentCause[] {
+export function causesOf(
+  active: readonly LossEvent[],
+  rule: OverlapAllocation = 'equal_share',
+): SegmentCause[] {
   const byOccurrence = new Map<string, LossEvent>();
   const ordered = [...active].sort(
     (a, b) =>
@@ -134,6 +139,14 @@ export function causesOf(active: readonly LossEvent[]): SegmentCause[] {
   const causes = [...byOccurrence.values()].sort((a, b) =>
     a.occurrenceId.localeCompare(b.occurrenceId),
   );
+  if (rule === 'first_out' && causes.length > 1) {
+    const first = [...causes].sort(
+      (a, b) =>
+        a.start.getTime() - b.start.getTime() ||
+        a.occurrenceId.localeCompare(b.occurrenceId),
+    )[0];
+    return [{ event: first, share: equalShares(1)[0] }];
+  }
   const shares = equalShares(causes.length);
   return causes.map((event, i) => ({ event, share: shares[i] }));
 }
@@ -210,10 +223,16 @@ export function segmentSlice(
       sustained: rateAt(slice.sustainedRates, part.start),
       planning: rateAt(slice.planningRates, part.start),
       stops: running
-        ? causesOf(activeIn(classified.stops, part, input.asOf))
+        ? causesOf(
+            activeIn(classified.stops, part, input.asOf),
+            input.policy.overlapAllocation,
+          )
         : [],
       microStops: running
-        ? causesOf(activeIn(classified.microStops, part, input.asOf))
+        ? causesOf(
+            activeIn(classified.microStops, part, input.asOf),
+            input.policy.overlapAllocation,
+          )
         : [],
       derates: running ? activeIn(classified.derates, part, input.asOf) : [],
     };

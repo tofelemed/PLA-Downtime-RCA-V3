@@ -10,6 +10,8 @@ export interface OeePolicy {
   reconciledOeeTileEnabled: boolean;
   streamCombinationRule: string;
   defaultLedgerView: 'plan' | 'capacity';
+  /** SME Q11: how overlapping stops share time; absent in versions written before the option */
+  overlapAllocation: 'equal_share' | 'first_out';
 }
 
 /** `reconciliation_tolerance` body (contracts/policies/reconciliation_tolerance.schema.json, D06). */
@@ -34,6 +36,7 @@ export const OEE_POLICY_DEFAULT: OeePolicy = {
   reconciledOeeTileEnabled: true,
   streamCombinationRule: 'per_product_and_combined_when_compatible',
   defaultLedgerView: 'plan',
+  overlapAllocation: 'equal_share',
 };
 
 export const RECONCILIATION_TOLERANCE_DEFAULT: ReconciliationTolerance = {
@@ -102,6 +105,14 @@ export function parseOeePolicy(body: unknown): OeePolicy {
       ['plan', 'capacity'],
       'defaultLedgerView',
     ),
+    overlapAllocation:
+      value.overlapAllocation === undefined
+        ? 'equal_share'
+        : oneOf(
+            value.overlapAllocation,
+            ['equal_share', 'first_out'],
+            'overlapAllocation',
+          ),
   };
 }
 

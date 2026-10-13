@@ -33,13 +33,19 @@
         "plannedStopsInsideScheduleReduceAvailability": {
           "type": "boolean",
           "default": true,
-          "description": "ISO 22400 default (KPI02): planned maintenance inside scheduled time S is an availability stop (counted in D). False would move such stops out of S, which the spec only allows through explicit calendar exclusions (D04)."
+          "description": "Stops inside planned production time (planned maintenance, changeovers) reduce availability; only time genuinely outside the production schedule is excluded, through calendar exclusions (SME 2026-10-13, EXPERT_REVIEW Q6). Time model: S = scheduled time after calendar exclusions, D = availability stops inside S. False would move planned stops out of S, which D04 only allows through explicit calendar exclusions."
         },
         "derateComponent": {
           "type": "string",
           "enum": ["performance", "availability"],
           "default": "performance",
           "description": "OEE component charged for reduced-rate (derate) running (ACC02). `availability` means a fractional availability loss."
+        },
+        "overlapAllocation": {
+          "type": "string",
+          "enum": ["equal_share", "first_out"],
+          "default": "equal_share",
+          "description": "How overlapping stops share time (SME 2026-10-13, EXPERT_REVIEW Q11: allocate each loss once by a stated rule): equal_share splits each overlapping segment equally between the causes; first_out gives it to the cause that started first. Absent = equal_share."
         },
         "microStopSeconds": {
           "$ref": "policy-envelope.schema.json#/$defs/nonNegativeSeconds",
