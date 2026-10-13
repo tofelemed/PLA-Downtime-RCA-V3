@@ -119,6 +119,9 @@ describe('PLA analytics views and dashboard window (UI guidelines §2, §8)', ()
     expect(bucketLabel('2026-10-12', 'day', { calendar: 'persian' })).toBe('1405/07/20');
     expect(bucketLabel('2026-10-12 A', 'shift', {})).toBe('2026-10-12 A');
     expect(bucketLabel('2026-W41', 'week', {})).toBe('Week 41 of 2026');
+    // DT-10: Saturday weeks (Iranian plants) are keyed by their Saturday and named from it
+    expect(bucketLabel('2026-10-10', 'week', {})).toBe('Week from 2026-10-10');
+    expect(bucketLabel('2026-10-10', 'week', { calendar: 'persian' })).toBe('Week from 1405/07/18');
     expect(bucketLabel('2026-02', 'month', {})).toBe('2026-02-01 – 2026-02-28');
   });
 });

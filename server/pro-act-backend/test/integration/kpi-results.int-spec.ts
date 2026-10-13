@@ -204,6 +204,24 @@ describe('KPI results of calculation runs (plan 2.7)', () => {
       expect(periods).toEqual(expect.arrayContaining([periodA, periodDay3]));
     });
 
+    it('DT-10: A, P and Q add up over the periods OEE counts, so A × P × Q = OEE across periods', async () => {
+      const body = await report(`${window}${env.world.unitA3}&groupBy=unit`);
+      const total = (name: string) =>
+        body.data.total.find((t) => t.metric === name)!;
+      // shifts without actuals have A but no P / Q / OEE: they are left out of A too (and flagged)
+      expect(total('availability').denominator).toBe(total('oee').denominator);
+      expect(total('availability')).toMatchObject({
+        quality: 'provisional',
+        reason: 'incomplete_periods',
+      });
+      const product = new Dec(total('availability').value!)
+        .mul(total('performance').value!)
+        .mul(total('quality').value!);
+      expect(product.minus(total('oee').value!).abs().lt('0.000001')).toBe(
+        true,
+      );
+    });
+
     it('reconciled policy is labelled; approvedOnly shows nothing unapproved', async () => {
       const reconciled = await report(
         `${window}${env.world.unitA3}&policy=reconciled&groupBy=unit`,

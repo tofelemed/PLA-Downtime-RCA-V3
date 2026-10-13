@@ -2,6 +2,7 @@ import { EntityManager } from 'typeorm';
 import { Dec, toDec } from '../../domain/actuals/decimal';
 import { aggregateKindOf, GroupTerms } from '../../domain/kpi/aggregate';
 import { KpiLevel, KpiMetric } from '../../domain/kpi/kpi.types';
+import { weekKeySql } from '../../domain/calendar/week-start';
 import { ReportScope } from './report-scope';
 
 /**
@@ -25,7 +26,11 @@ export const TIME_GROUPS: Readonly<Record<string, string>> = {
   period: `s."period_id"::text`,
   shift: `s."local_date"::text || ' ' || COALESCE(s."shift_name", '')`,
   day: `s."local_date"::text`,
-  week: `to_char(date_trunc('week', s."local_date"), 'IYYY-"W"IW')`,
+  // the plant's week (DT-10): ISO key for Monday weeks, the Saturday's date for Iranian weeks; $1 = tenant
+  week: weekKeySql(
+    `s."local_date"`,
+    `(SELECT t."week_start" FROM "tenants" t WHERE t."id"::text = $1::text)`,
+  ),
   month: `to_char(s."local_date", 'YYYY-MM')`,
   unit: `s."unit_id"::text`,
   crew: `s."crew_id"::text`,
@@ -114,7 +119,25 @@ function toTerms(row: TermsRow): GroupTerms {
 }
 
 /** Terms present: numerator and denominator (amounts: the numerator; coverage: the value). */
-const COMPLETE = `(k."numerator" IS NOT NULL AND (k."denominator" IS NOT NULL OR m."metric" = ANY($8::kpi_metric[])))`;
+/**
+ * OEE components that are summed over the periods their OEE counts (DT-10): a period without output data
+ * has availability but no performance / quality / OEE, so counting it in A alone would break A × P × Q =
+ * OEE over several periods. The reconciled family follows `reconciled_oee` the same way.
+ */
+const OEE_FAMILY: readonly KpiMetric[] = ['availability', 'performance', 'quality'];
+const RECONCILED_FAMILY: readonly KpiMetric[] = [
+  'reconciled_availability',
+  'reconciled_performance',
+  'reconciled_quality',
+];
+
+/** A row counts when its terms are present, and an OEE component only where its OEE is complete too. */
+const COMPLETE = `(k."numerator" IS NOT NULL AND (k."denominator" IS NOT NULL OR m."metric" = ANY($8::kpi_metric[]))
+  AND (NOT (m."metric" = ANY($9::kpi_metric[]) OR m."metric" = ANY($10::kpi_metric[])) OR EXISTS (
+    SELECT 1 FROM "kpi_results" o
+     WHERE o."tenant_id" = $1 AND o."run_id" = k."run_id" AND o."scope" = k."scope"
+       AND o."metric" = CASE WHEN m."metric" = ANY($10::kpi_metric[]) THEN 'reconciled_oee'::kpi_metric ELSE 'oee'::kpi_metric END
+       AND o."numerator" IS NOT NULL AND o."denominator" IS NOT NULL)))`;
 
 export interface KpiGroupSpec {
   /** SQL group key (a `TIME_GROUPS` entry, or the product of the slice rows) */
@@ -148,7 +171,14 @@ export async function kpiGroups(
        ${join} "kpi_results" k ON k."run_id" = s."run_id" AND k."tenant_id" = $1 AND k."metric" = m."metric"
                                AND k."scope"->>'level' = $7
       GROUP BY 1, 2 ORDER BY 1, 2`,
-    [...params(scope), spec.metrics, spec.level, amounts],
+    [
+      ...params(scope),
+      spec.metrics,
+      spec.level,
+      amounts,
+      OEE_FAMILY,
+      RECONCILED_FAMILY,
+    ],
   );
   const grouped: GroupedTerms = new Map();
   for (const row of rows) {

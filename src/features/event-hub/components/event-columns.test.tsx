@@ -32,11 +32,11 @@ describe('event columns (FE-06 / FE-07)', () => {
     const onCode = vi.fn();
     const onRow = vi.fn();
     const reason = columnOf(context({ onCode }), 'reason');
-    show(<div onClick={onRow}>{reason.cell(event('e1', 'uncoded'))}</div>);
+    show(<div onClick={onRow}>{reason.cell(event('e1', 'uncoded'), 0)}</div>);
     fireEvent.click(screen.getByTestId('event-code'));
     expect(onCode).toHaveBeenCalledWith(expect.objectContaining({ id: 'e1' }));
     expect(onRow).not.toHaveBeenCalled();
-    show(<>{reason.cell(event('e2', 'coded'))}</>);
+    show(<>{reason.cell(event('e2', 'coded'), 1)}</>);
     expect(screen.getAllByTestId('event-code')).toHaveLength(1);
   });
 

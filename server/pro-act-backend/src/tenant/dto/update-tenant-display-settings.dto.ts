@@ -6,6 +6,7 @@ import {
   DIGIT_SYSTEMS,
   DigitSystem,
 } from '../tenant-display-settings';
+import { WEEK_STARTS, WeekStart } from '../../domain/calendar/week-start';
 
 /** Body of `PUT /tenants/:id/display-settings`; omitted fields keep their current value. */
 export class UpdateTenantDisplaySettingsDto {
@@ -18,4 +19,9 @@ export class UpdateTenantDisplaySettingsDto {
   @IsOptional()
   @IsIn(DIGIT_SYSTEMS)
   digits?: DigitSystem;
+
+  @ApiProperty({ required: false, enum: WEEK_STARTS })
+  @IsOptional()
+  @IsIn(WEEK_STARTS)
+  weekStart?: WeekStart;
 }

@@ -12,6 +12,7 @@ import {
   DEFAULT_DIGIT_SYSTEM,
   DigitSystem,
 } from './tenant-display-settings';
+import { WeekStart } from '../domain/calendar/week-start';
 
 @Entity('tenants')
 @Check(
@@ -19,6 +20,7 @@ import {
   `"calendar_system" IN ('gregorian', 'persian')`,
 )
 @Check('CHK_tenants_digits', `"digits" IN ('latin', 'persian')`)
+@Check('CHK_tenants_week_start', `"week_start" IN ('monday', 'saturday')`)
 export class Tenant {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -70,6 +72,15 @@ export class Tenant {
     default: DEFAULT_DIGIT_SYSTEM,
   })
   digits: DigitSystem;
+
+  /** First day of the reporting week: 'monday' (ISO) or 'saturday' (Iranian plants), DT-10. */
+  @Column({
+    name: 'week_start',
+    type: 'varchar',
+    length: 16,
+    default: 'monday',
+  })
+  weekStart: WeekStart;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

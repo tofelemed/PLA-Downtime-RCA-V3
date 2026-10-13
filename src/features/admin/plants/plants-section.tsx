@@ -57,6 +57,7 @@ function usePlantColumns(): ReadonlyArray<DataTableColumn<PlantView>> {
     { id: 'org', header: 'Organization', cell: (plant) => plant.organizationName ?? '—' },
     { id: 'zone', header: 'Time zone', cell: (plant) => plant.timezone ?? 'From its sites', nowrap: true },
     { id: 'calendar', header: 'Calendar', cell: (plant) => labelOf(CALENDAR_SYSTEM_LABELS, plant.calendarSystem), nowrap: true },
+    { id: 'week', header: 'Week starts', cell: (plant) => (plant.weekStart === 'saturday' ? 'Saturday' : 'Monday'), nowrap: true },
     {
       id: 'delete',
       header: <span className="sr-only">Delete</span>,

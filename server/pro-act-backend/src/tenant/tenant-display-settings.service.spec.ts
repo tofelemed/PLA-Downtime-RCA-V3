@@ -35,6 +35,7 @@ function tenantRow(id: string): Tenant {
     isActive: true,
     calendarSystem: 'gregorian',
     digits: 'latin',
+    weekStart: 'monday',
     createdAt: new Date(0),
     updatedAt: new Date(0),
   };

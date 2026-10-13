@@ -7,6 +7,7 @@ import {
   assertBodyUnitsInScope,
   periodScopeUnits,
 } from '../../periods/period-scope';
+import { WeekStart } from '../../domain/calendar/week-start';
 import { invalid, invalidReference } from '../../profiles/profile-errors';
 import { ReportWindowQueryDto } from './kpi-reports-v2.dto';
 
@@ -22,6 +23,8 @@ export interface ReportScope {
   from: Date;
   to: Date;
   approvedOnly: boolean;
+  /** the plant's first day of the week (week buckets, DT-10) */
+  weekStart: WeekStart;
 }
 
 /**
@@ -61,7 +64,19 @@ export async function resolveReportScope(
     from,
     to,
     approvedOnly: query.approvedOnly ?? false,
+    weekStart: await tenantWeekStart(manager, tenantId),
   };
+}
+
+async function tenantWeekStart(
+  manager: EntityManager,
+  tenantId: string,
+): Promise<WeekStart> {
+  const [row]: Array<{ week_start: WeekStart }> = await manager.query(
+    `SELECT "week_start" FROM "tenants" WHERE "id"::text = $1::text`,
+    [tenantId],
+  );
+  return row?.week_start ?? 'monday';
 }
 
 async function tenantUnits(

@@ -21594,6 +21594,14 @@
               "persian"
             ],
             "default": "latin"
+          },
+          "weekStart": {
+            "type": "string",
+            "enum": [
+              "monday",
+              "saturday"
+            ],
+            "description": "First day of the reporting week; when omitted on create: saturday for Asia/Tehran or the Persian calendar, else monday (ISO)"
           }
         },
         "required": [
@@ -21619,6 +21627,14 @@
               "latin",
               "persian"
             ]
+          },
+          "weekStart": {
+            "type": "string",
+            "enum": [
+              "monday",
+              "saturday"
+            ],
+            "description": "First day of the reporting week: monday (ISO 8601) or saturday (Iranian week, weekend Thursday–Friday)"
           }
         }
       },

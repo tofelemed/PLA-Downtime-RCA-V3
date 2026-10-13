@@ -36,6 +36,7 @@ import {
   toOrganizationView,
   toPlantView,
 } from './hierarchy-v2.view';
+import { defaultWeekStart } from '../../../domain/calendar/week-start';
 
 const notFound = () =>
   new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
@@ -165,6 +166,8 @@ export class HierarchyV2Service {
     const saved = await this.tenantService.create({
       ...body,
       name: body.name.trim(),
+      weekStart:
+        body.weekStart ?? defaultWeekStart(body.timezone, body.calendarSystem),
       isActive: true,
     });
     return this.getPlant(context, saved.id);

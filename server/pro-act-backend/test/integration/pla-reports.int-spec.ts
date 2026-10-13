@@ -269,6 +269,33 @@ describe('PLA analytics reads (plan 3.6)', () => {
     ]);
   });
 
+  it('DT-10: an Iranian plant (week starts Saturday) keys weeks by their Saturday in trend and SQL reports', async () => {
+    await env.rows(
+      `UPDATE "tenants" SET "week_start" = 'saturday' WHERE "id" = $1`,
+      [env.world.tenantA],
+    );
+    try {
+      // Monday 1 Mar 2027 belongs to the week Saturday 27 Feb – Friday 5 Mar
+      const weeks = await read<TrendBody>(
+        `reconciliation-trend?${scope}&groupBy=week`,
+      );
+      expect(weeks.data.buckets.map((b) => b.key)).toEqual(['2027-02-27']);
+      const downtime = await read<{ groups: Array<{ key: string | null }> }>(
+        `downtime?${scope}&groupBy=week`,
+      );
+      expect(downtime.data.groups.map((g) => g.key)).toEqual(['2027-02-27']);
+    } finally {
+      await env.rows(
+        `UPDATE "tenants" SET "week_start" = 'monday' WHERE "id" = $1`,
+        [env.world.tenantA],
+      );
+    }
+    const iso = await read<{ groups: Array<{ key: string | null }> }>(
+      `downtime?${scope}&groupBy=week`,
+    );
+    expect(iso.data.groups.map((g) => g.key)).toEqual(['2027-W09']);
+  });
+
   it('reconciliation status: workflow, residual state, age and overdue periods at a fixed asOf', async () => {
     const later = encodeURIComponent(plus(NEXT_DAY, 72 * HOUR));
     const status = await read<StatusBody>(

@@ -3,6 +3,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
+import { bucketLabel } from '@/features/pla-analytics/model/buckets';
+import { useCalendarPreference } from '@/lib/dates';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
 import { trendClasses, viewOf, type PageViews } from '../model/bundle-views';
 import type { DowntimeFilters, ScheduleClass } from '../model/downtime-filters';
@@ -26,7 +28,11 @@ export interface TrendPanelProps {
 export function TrendPanel({ filters, bundle, views }: TrendPanelProps) {
   const classes = trendClasses(filters);
   const series = classes.map((scheduleClass) => ({ scheduleClass, view: viewOf(bundle.data?.data, views.trend[scheduleClass]) }));
-  const rows = trendRows(series.map(({ scheduleClass, view }) => ({ scheduleClass, groups: view?.groups ?? [] })));
+  const pref = useCalendarPreference();
+  // server keys without a label (day, week, month) are named in the plant calendar; Saturday weeks by their first day
+  const rows = trendRows(series.map(({ scheduleClass, view }) => ({ scheduleClass, groups: view?.groups ?? [] }))).map((row) =>
+    row.label === row.key ? { ...row, label: bucketLabel(row.key, filters.trendBy, pref) } : row,
+  );
   const unit = series[0]?.view?.unit ?? 's';
   return (
     <ReportCard

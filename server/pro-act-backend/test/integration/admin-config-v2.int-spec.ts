@@ -297,6 +297,8 @@ describe('v2 administration: attributes, dashboard settings, hierarchy, branding
       organizationName: 'New Org',
       timezone: 'Asia/Tehran',
       calendarSystem: 'gregorian',
+      // DT-10: an Iranian plant's week starts on Saturday unless the creator says otherwise
+      weekStart: 'saturday',
     });
     expect(
       bodyOf(
@@ -333,6 +335,22 @@ describe('v2 administration: attributes, dashboard settings, hierarchy, branding
         .expect(200),
     );
     expect(changed.calendarSystem).toBe('persian');
+    const week = bodyOf(
+      await http()
+        .patch(`/api/v2/tenants/${world.plantA}/display-settings`)
+        .set(bearer(adminA.token))
+        .send({ weekStart: 'saturday' })
+        .expect(200),
+    );
+    expect(week).toMatchObject({
+      weekStart: 'saturday',
+      calendarSystem: 'persian',
+    });
+    await http()
+      .patch(`/api/v2/tenants/${world.plantA}/display-settings`)
+      .set(bearer(adminA.token))
+      .send({ weekStart: 'sunday' })
+      .expect(422);
     await http()
       .patch(`/api/v2/tenants/${world.plantA}/display-settings`)
       .set(bearer(operatorA.token))

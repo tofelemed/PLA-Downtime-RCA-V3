@@ -14,7 +14,7 @@ import {
 /** The acting plant's record (`GET /v2/tenants/:id`): shared key, fresh for 5 minutes, set after a save. */
 export const tenantKey = (tenantId: string) => v2Keys.detail(tenantId, 'admin-config', tenantId, 'plant');
 
-type PlantDisplay = Pick<PlantView, 'name' | 'calendarSystem' | 'digits'> & Partial<Pick<PlantView, 'code' | 'organizationName'>>;
+type PlantDisplay = Pick<PlantView, 'name' | 'calendarSystem' | 'digits'> & Partial<Pick<PlantView, 'code' | 'organizationName' | 'weekStart'>>;
 
 /**
  * The acting plant (`plantSelection?.tenant?.id || session?.tenant?.id`) as the server has it now —
@@ -53,6 +53,18 @@ export function useSaveDisplaySettings() {
       adminCall<PlantView>('PATCH', `/tenants/${tenantId}/display-settings`, {
         body: { calendarSystem: preference.calendar, digits: preference.digits },
       }),
+    onSuccess: (plant) => {
+      if (tenantId) queryClient.setQueryData(tenantKey(tenantId), plant);
+    },
+  });
+}
+
+/** Saves the plant's first day of the reporting week (`PATCH /v2/tenants/:id/display-settings`, DT-10). */
+export function useSaveWeekStart() {
+  const queryClient = useQueryClient();
+  const tenantId = useV2TenantId();
+  return useMutation({
+    mutationFn: (weekStart: string) => adminCall<PlantView>('PATCH', `/tenants/${tenantId}/display-settings`, { body: { weekStart } }),
     onSuccess: (plant) => {
       if (tenantId) queryClient.setQueryData(tenantKey(tenantId), plant);
     },

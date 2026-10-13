@@ -5,7 +5,8 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { CalendarSettingsForm } from './calendar-settings-form';
-import { calendarPreferenceOf, useActingTenant } from './use-tenant-display-settings';
+import { calendarPreferenceOf, useActingTenant, useSaveWeekStart } from './use-tenant-display-settings';
+import { WeekStartForm } from './week-start-form';
 
 const ZONE_SOURCE: Record<string, string> = {
   site: 'from the default site',
@@ -15,7 +16,7 @@ const ZONE_SOURCE: Record<string, string> = {
 
 /**
  * Plant settings (replaces the old "coming soon" placeholder): how dates and numbers are shown for the
- * selected plant. The timezone is shown read-only (it is set on the plant's sites and calendars).
+ * selected plant, and its reporting week (DT-10). The timezone is shown read-only (it is set on the plant's sites and calendars).
  */
 export function SettingsPage() {
   const tenant = useActingTenant();
@@ -25,6 +26,7 @@ export function SettingsPage() {
   const digits = tenant.data?.digits;
   const saved = useMemo(() => calendarPreferenceOf({ calendarSystem: calendar, digits }), [calendar, digits]);
   const state = dataStateOf(tenant);
+  const saveWeek = useSaveWeekStart();
 
   return (
     <Page>
@@ -32,6 +34,17 @@ export function SettingsPage() {
       <Section title="Date and number display" description="Applies to every screen of this plant, for every user. Exports stay in ISO format (UTC).">
         <DataState state={state} error={tenant.error} onRetry={() => void tenant.refetch()}>
           <CalendarSettingsForm saved={saved} timeZone={zone.timezone} canEdit={canManagePlantSettings} />
+        </DataState>
+      </Section>
+      <Section title="Reporting week" description="Weekly trends and reports group the plant's days from this weekday on.">
+        <DataState state={state} error={tenant.error} onRetry={() => void tenant.refetch()}>
+          <WeekStartForm
+            saved={tenant.data?.weekStart ?? 'monday'}
+            canEdit={canManagePlantSettings}
+            pending={saveWeek.isPending}
+            error={saveWeek.error}
+            onSave={(weekStart) => saveWeek.mutate(weekStart)}
+          />
         </DataState>
       </Section>
       <Section title="Plant">

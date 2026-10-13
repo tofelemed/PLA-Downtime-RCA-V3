@@ -26,6 +26,8 @@ export interface PlantV2View {
   timezone: string | null;
   calendarSystem: string;
   digits: string;
+  /** first day of the reporting week: monday (ISO) or saturday (Iranian plants) */
+  weekStart: string;
   isActive: boolean;
   /** whether the caller may delete it (super administrators) */
   canDelete: boolean;
@@ -60,6 +62,7 @@ export function toPlantView(
     timezone: plant.timezone ?? null,
     calendarSystem: plant.calendarSystem,
     digits: plant.digits,
+    weekStart: plant.weekStart,
     isActive: plant.isActive,
     canDelete,
   };

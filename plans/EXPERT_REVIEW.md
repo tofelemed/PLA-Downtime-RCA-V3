@@ -147,7 +147,7 @@ SME questions D1–D17 were sent on 13 Oct 2026; the phases below need none of t
 | P4 | DT-07 | New KPIs `downtime_in_schedule` (reconciles with scheduled availability) and `downtime_external`; the calendar total is labelled as calendar. Moving the Pareto to scheduled time waits for D14 | ✅ |
 | P5 | FE-08 | Downtime Analysis "Lost production by stop reason": availability losses per reason as quantity or margin, from `loss-tree` with the new `kinds` filter (approved lines, else the shown run) | ✅ |
 | P6 | FE-06, FE-07 | Reason code in the close dialog ("Code and close"); inline "Code" on uncoded rows and current stops; "To code" quick filter; "select all listed". Selecting every match on the server (bulk by filter) and dropping the mandatory bulk "Why" are not done (API / owner decision) | ✅ |
-| P7 | DT-10 (maths part) | Multi-period A·P·Q = OEE on the same period set; week start as a plant setting (default ISO Monday until D16) | ⬜ |
+| P7 | DT-10 (maths part) | A, P, Q summed over the periods their OEE counts (A × P × Q = OEE across periods); plant `week_start` (Saturday for Iranian plants — owner answer to D16, 13 Oct; Monday ISO otherwise), Saturday weeks keyed by their Saturday | ✅ |
 | P8 | FE-09 | Event and RCA screens on paged `/v2/assets` | ⬜ |
 
 | ID | Sev | Finding | Evidence | Status |
@@ -161,7 +161,7 @@ SME questions D1–D17 were sent on 13 Oct 2026; the phases below need none of t
 | DT-07 | Medium | Pareto/downtime totals use the calendar window while Availability uses scheduled time, so they don't reconcile; no `downtime_external` measure. | `domain/kpi/period-kpis.ts:208-216` | 🔄 13 Oct: `downtime_in_schedule` + `downtime_external` (KPI 2.7.1); Pareto basis waits for D14 |
 | DT-08 | Medium | A stop still open when the period was computed can stay under-measured after the period ends (partly inferred). | `accounting/accounting-inputs.loader.ts:226-229`; `periods/period-sweep.job.ts:84-95` | ✅ 13 Oct |
 | DT-09 | Low | No future-time check on create/patch; merging across a gap turns run time into downtime; micro-stop test uses only the window part of the occurrence. | `v2/.../production-event-v2-write.dto.ts:129,158`; `segmentation.ts:36-47` | ✅ 13 Oct (micro-stop on the full occurrence; 422 `IN_FUTURE` beyond now + 120 s via the injectable `Clock`); merge-gap rule waits for D5 |
-| DT-10 | Low | Multi-period A·P·Q ≠ OEE (A over all periods, P/Q/OEE over complete ones); ISO weeks start Monday (Iranian week starts Saturday); standby asset MTBF uses unit run time. | `domain/kpi/aggregate.ts`; `v2/reports/report-sql.ts:28,117` | ⬜ |
+| DT-10 | Low | Multi-period A·P·Q ≠ OEE (A over all periods, P/Q/OEE over complete ones); ISO weeks start Monday (Iranian week starts Saturday); standby asset MTBF uses unit run time. | `domain/kpi/aggregate.ts`; `v2/reports/report-sql.ts:28,117` | 🔄 13 Oct: A·P·Q = OEE ✅, week start per plant ✅; standby MTBF exposure waits for D9 |
 
 ## Area 3 — Reconciliation workflow (~80%)
 

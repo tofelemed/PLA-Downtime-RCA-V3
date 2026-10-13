@@ -84,7 +84,7 @@ export class TenantService {
   }
 
   /**
-   * Calendar and digit display of one tenant. Same rule as a tenant-owned app setting: SuperAdmin,
+   * Calendar, digit display and week start of one tenant. Same rule as a tenant-owned app setting: SuperAdmin,
    * or a TenantAdmin / manager approver acting in that tenant. Only these two columns change.
    */
   async updateDisplaySettings(
@@ -106,6 +106,7 @@ export class TenantService {
     const changes: Partial<Tenant> = {};
     if (dto.calendarSystem) changes.calendarSystem = dto.calendarSystem;
     if (dto.digits) changes.digits = dto.digits;
+    if (dto.weekStart) changes.weekStart = dto.weekStart;
     if (!Object.keys(changes).length) return tenant;
     await this.tenantRepository.update(tenant.id, changes);
     const updated = (await this.findOne(tenant.id)) ?? {

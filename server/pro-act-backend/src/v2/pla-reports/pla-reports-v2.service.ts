@@ -117,7 +117,7 @@ export class PlaReportsV2Service {
     const groupBy = query.groupBy ?? 'day';
     const acc = trendAccumulator();
     const provisional = await this.fold(context, scope, (states) =>
-      addTrendStates(acc, states, groupBy),
+      addTrendStates(acc, states, { groupBy, weekStart: scope.weekStart }),
     );
     return this.envelope(scope, trendView(acc, groupBy), provisional);
   }

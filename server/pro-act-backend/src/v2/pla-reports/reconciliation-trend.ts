@@ -2,6 +2,7 @@ import { Dec, formatDec, ZERO } from '../../domain/actuals/decimal';
 import { planSteps } from '../../domain/reconciliation/waterfall';
 import { PeriodState } from '../period-overview/period-states';
 import { TrendGroup } from './pla-reports.dto';
+import { WeekStart, weekKey } from '../../domain/calendar/week-start';
 
 /** One site-local bucket and unit of measure of the reconciliation trend (decimal strings, ≥ 0). */
 export interface ReconciliationTrendBucketView {
@@ -39,26 +40,18 @@ interface Bucket {
   excluded: number;
 }
 
-/** ISO 8601 week of an operational date (`YYYY-"W"WW`, the same key as the 2.7 SQL `IYYY-"W"IW`). */
-export function isoWeek(localDate: string): string {
-  const date = new Date(`${localDate}T00:00:00Z`);
-  const weekday = (date.getUTCDay() + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - weekday + 3);
-  const year = date.getUTCFullYear();
-  const firstThursday = new Date(Date.UTC(year, 0, 4));
-  const firstWeekday = (firstThursday.getUTCDay() + 6) % 7;
-  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstWeekday + 3);
-  const week =
-    1 +
-    Math.round((date.getTime() - firstThursday.getTime()) / (7 * 86_400_000));
-  return `${year}-W${String(week).padStart(2, '0')}`;
-}
-
-/** Site-local bucket of a period: its stored operational date and shift label, never UTC (AN03). */
-export function bucketOf(state: PeriodState, groupBy: TrendGroup): string {
+/**
+ * Site-local bucket of a period: its stored operational date and shift label, never UTC (AN03); weeks
+ * start on the plant's week start (DT-10).
+ */
+export function bucketOf(
+  state: PeriodState,
+  groupBy: TrendGroup,
+  weekStart: WeekStart = 'monday',
+): string {
   const date = state.period.localDate;
   if (groupBy === 'shift') return `${date} ${state.period.shiftName ?? ''}`;
-  if (groupBy === 'week') return isoWeek(date);
+  if (groupBy === 'week') return weekKey(date, weekStart);
   if (groupBy === 'month') return date.slice(0, 7);
   return date;
 }
@@ -133,11 +126,11 @@ export const trendAccumulator = (): TrendAccumulator => ({
 export function addTrendStates(
   acc: TrendAccumulator,
   states: readonly PeriodState[],
-  groupBy: TrendGroup,
+  bucket: { groupBy: TrendGroup; weekStart: WeekStart },
 ): void {
   for (const state of states) {
     if (state.run) acc.runIds.add(state.run.id);
-    const key = bucketOf(state, groupBy);
+    const key = bucketOf(state, bucket.groupBy, bucket.weekStart);
     if (!state.run || !state.reconciliation) {
       bucketFor(acc.buckets, key, null).excluded += 1;
       continue;

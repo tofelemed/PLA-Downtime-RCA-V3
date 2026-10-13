@@ -1,6 +1,6 @@
 import { LossTreeCell } from './loss-tree-report';
 import { lossTreeView } from './loss-tree-view';
-import { isoWeek } from './reconciliation-trend';
+import { isoWeek } from '../../domain/calendar/week-start';
 
 const cell = (over: Partial<LossTreeCell>): LossTreeCell => ({
   group_key: null,

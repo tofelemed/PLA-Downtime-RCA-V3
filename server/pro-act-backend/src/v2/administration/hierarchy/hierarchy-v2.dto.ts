@@ -14,6 +14,7 @@ import {
   DIGIT_SYSTEMS,
   type DigitSystem,
 } from '../../../tenant/tenant-display-settings';
+import { WEEK_STARTS, WeekStart } from '../../../domain/calendar/week-start';
 import { ListQueryDto } from '../../common/list-query.dto';
 
 const CODE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
@@ -72,9 +73,18 @@ export class CreatePlantV2Dto extends CreateOrganizationV2Dto {
   @IsOptional()
   @IsIn(DIGIT_SYSTEMS)
   digits?: DigitSystem;
+
+  @ApiPropertyOptional({
+    enum: WEEK_STARTS,
+    description:
+      'First day of the reporting week; when omitted on create: saturday for Asia/Tehran or the Persian calendar, else monday (ISO)',
+  })
+  @IsOptional()
+  @IsIn(WEEK_STARTS)
+  weekStart?: WeekStart;
 }
 
-/** `PATCH /v2/tenants/{id}/display-settings`: how dates and digits show in the plant. */
+/** `PATCH /v2/tenants/{id}/display-settings`: how dates and digits show in the plant, and its week start. */
 export class PlantDisplaySettingsV2Dto {
   @ApiPropertyOptional({ enum: CALENDAR_SYSTEMS })
   @IsOptional()
@@ -85,4 +95,13 @@ export class PlantDisplaySettingsV2Dto {
   @IsOptional()
   @IsIn(DIGIT_SYSTEMS)
   digits?: DigitSystem;
+
+  @ApiPropertyOptional({
+    enum: WEEK_STARTS,
+    description:
+      'First day of the reporting week: monday (ISO 8601) or saturday (Iranian week, weekend Thursday–Friday)',
+  })
+  @IsOptional()
+  @IsIn(WEEK_STARTS)
+  weekStart?: WeekStart;
 }

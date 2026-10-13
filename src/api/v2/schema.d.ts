@@ -6717,12 +6717,22 @@ export interface components {
              * @enum {string}
              */
             digits: "latin" | "persian";
+            /**
+             * @description First day of the reporting week; when omitted on create: saturday for Asia/Tehran or the Persian calendar, else monday (ISO)
+             * @enum {string}
+             */
+            weekStart?: "monday" | "saturday";
         };
         PlantDisplaySettingsV2Dto: {
             /** @enum {string} */
             calendarSystem?: "gregorian" | "persian";
             /** @enum {string} */
             digits?: "latin" | "persian";
+            /**
+             * @description First day of the reporting week: monday (ISO 8601) or saturday (Iranian week, weekend Thursday–Friday)
+             * @enum {string}
+             */
+            weekStart?: "monday" | "saturday";
         };
         BrandingV2View: {
             appName: string;
