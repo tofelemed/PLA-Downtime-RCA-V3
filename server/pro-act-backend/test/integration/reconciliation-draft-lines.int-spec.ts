@@ -196,10 +196,30 @@ describe('reconciliation draft lines (plan 2.8)', () => {
       line: 1,
       expectedRemainingAllocation: '50',
     });
-    await env
+    const unexplained = await env
       .saveLines(
         view,
         [line('100'), line('70'), { ...line('-20'), kind: 'bridge' }],
+        env.admin,
+        env.periodB1,
+      )
+      .expect(422);
+    expect(issues(unexplained.body)[0]).toMatchObject({
+      code: 'REASON_REQUIRED',
+      line: 2,
+    });
+    await env
+      .saveLines(
+        view,
+        [
+          line('100'),
+          line('70'),
+          {
+            ...line('-20'),
+            kind: 'bridge',
+            reason: 'plan rate below the planning rate',
+          },
+        ],
         env.admin,
         env.periodB1,
       )

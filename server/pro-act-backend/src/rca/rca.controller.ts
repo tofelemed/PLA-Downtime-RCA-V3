@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { RCAService } from './rca.service';
 import { RCA } from './rca.entity';
 import { ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
@@ -9,6 +21,8 @@ import { UpdateRcaDto } from './dto/update-rca.dto';
 import { Ctx } from '../common/context/ctx.decorator';
 import { RequestContext } from '../common/context/request-context';
 import { findOrThrow } from '../common/helpers/find-or-throw';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RCA_WRITERS } from '../rca-case/rca-scope';
 
 @ApiTags('RCAs')
 @ApiBearerAuth()
@@ -49,23 +63,32 @@ export class RCAController {
     return findOrThrow(this.rcaService.findOne(id), 'RCA', id);
   }
 
+  @Roles(...RCA_WRITERS)
   @Post()
   @ApiBody({ type: CreateRcaDto })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   create(@Ctx() ctx: RequestContext, @Body() data: CreateRcaDto): Promise<RCA> {
     // the tenant comes from identity (plan 3.9: the v1 screen no longer sends tenantId)
-    return this.rcaService.create({ ...data, tenantId: ctx.tenantId ?? undefined });
+    return this.rcaService.create({
+      ...data,
+      tenantId: ctx.tenantId ?? undefined,
+    });
   }
 
+  @Roles(...RCA_WRITERS)
   @Put(':id')
   @ApiBody({ type: UpdateRcaDto })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  update(@Param('id') id: string, @Body() data: UpdateRcaDto): Promise<RCA | null> {
+  update(
+    @Param('id') id: string,
+    @Body() data: UpdateRcaDto,
+  ): Promise<RCA | null> {
     return this.rcaService.update(id, data);
   }
 
+  @Roles(...RCA_WRITERS)
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
     return this.rcaService.remove(id);
   }
-} 
+}

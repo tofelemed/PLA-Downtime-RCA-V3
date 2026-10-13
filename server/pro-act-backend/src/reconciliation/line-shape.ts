@@ -19,6 +19,15 @@ export interface ShapedLine {
   quantity: Dec | null;
 }
 
+/**
+ * Manual lines that explain a difference away instead of naming a loss (RC-02): a bridge and an
+ * Unaccounted classification carry a written reason, so the approver sees why they close the gap.
+ */
+const EXPLAINING_MANUAL_KINDS: ReadonlySet<LossKind> = new Set([
+  'bridge',
+  'unaccounted_classified',
+]);
+
 function requireReason(input: DraftLineInput, index: number): void {
   if (!input.reason?.trim()) {
     throw lineInvalid(
@@ -140,7 +149,8 @@ function manualShape(
 
 /**
  * Shape rules of a draft save (§15.3, ACC07): decisions name a candidate of the base run once each (with a
- * reason except for accept; replace names the new kind), manual lines name a slice, a kind and their
+ * reason except for accept; replace names the new kind), manual lines name a slice, a kind (a bridge or an
+ * Unaccounted classification with a reason, RC-02) and their
  * evidence (event, approved adjustment, or an explicit cause without event that is coded or explicitly
  * uncoded), quantities are non-negative except bridge / gain, and an Unaccounted classification needs a
  * policy that allows it. Throws 422 with the offending line index.
@@ -178,6 +188,8 @@ export function shapeLines(
         'the tolerance policy does not allow an Unaccounted classification',
       );
     }
+    if (!isDecision && EXPLAINING_MANUAL_KINDS.has(shape.kind))
+      requireReason(input, index);
     const quantity = quantityOf(input, index, shape.kind);
     return { input, index, ...shape, quantity };
   });

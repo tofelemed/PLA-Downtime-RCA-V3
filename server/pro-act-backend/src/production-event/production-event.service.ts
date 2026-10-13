@@ -166,9 +166,17 @@ export class ProductionEventService {
     return updated;
   }
 
+  /**
+   * v1 delete (DB-03): the event is retracted — a tombstone with a retraction revision, as the v2 retract —
+   * never deleted, so its revision history and the ledgers' evidence stay reproducible. v1 lists hide it.
+   */
   async remove(id: string): Promise<void> {
     const event = await findOrThrow(this.findOne(id), 'ProductionEvent', id);
-    await this.eventRepository.delete(id);
+    await this.revisions.retract(
+      id,
+      actorFromContext(getRequestContext()),
+      'deleted through the v1 API',
+    );
     if (event.tenantId) {
       this.realtimeGateway.broadcastEntityEvent(
         'Deleted',
@@ -182,7 +190,9 @@ export class ProductionEventService {
   private buildSearch(
     query: ProductionEventQueryDto,
   ): SelectQueryBuilder<ProductionEvent> {
-    const qb = this.eventRepository.createQueryBuilder('event');
+    const qb = this.eventRepository
+      .createQueryBuilder('event')
+      .where(`event.physicalState <> 'retracted'`);
     for (const relation of EVENT_RELATIONS) {
       qb.leftJoinAndSelect(`event.${relation}`, relation);
     }

@@ -13,6 +13,7 @@ import { usePlantFormat } from '../hooks/use-plant-format';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { useCurrentRcaPolicy, useRcaPolicyVersions, type RcaPolicyVersion } from './rca-policy-api';
 import { RcaPolicyForm } from './rca-policy-form';
+import { RcaPolicyActivity } from './rca-policy-activity';
 
 const AUTO_LABELS: Readonly<Record<RcaPolicyVersion['autoCreate'], string>> = {
   recommend: 'Recommend an RCA',
@@ -51,6 +52,7 @@ function RcaPolicyScreen() {
         back={{ to: '/events', label: 'Event Hub' }}
         description="When a stop or failure calls for a root cause analysis. Extra rule-based triggers are “RCA trigger hint” rules in Codes & rules."
       />
+      <RcaPolicyActivity />
       <div className="flex flex-wrap items-center gap-2">
         <Label htmlFor="rca-policy-scope">Applies to</Label>
         <select

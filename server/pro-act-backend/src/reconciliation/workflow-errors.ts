@@ -10,7 +10,7 @@ export function separationOfDuties(): ForbiddenException {
   return new ForbiddenException({
     code: 'SEPARATION_OF_DUTIES',
     message:
-      'a submitted revision is approved or rejected by someone other than its submitter',
+      'a submitted revision is approved or rejected by someone independent of it: not its submitter and, to approve, not an author of its lines or whoever reopened the period',
   });
 }
 

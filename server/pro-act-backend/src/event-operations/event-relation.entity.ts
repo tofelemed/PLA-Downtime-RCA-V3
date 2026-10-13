@@ -37,14 +37,14 @@ export class EventRelation extends TenantScopedEntity {
   @Column({ name: 'from_event_id', type: 'uuid' })
   fromEventId: string;
 
-  @ManyToOne(() => ProductionEvent, { onDelete: 'CASCADE' })
+  @ManyToOne(() => ProductionEvent, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'from_event_id' })
   fromEvent?: ProductionEvent;
 
   @Column({ name: 'to_event_id', type: 'uuid' })
   toEventId: string;
 
-  @ManyToOne(() => ProductionEvent, { onDelete: 'CASCADE' })
+  @ManyToOne(() => ProductionEvent, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'to_event_id' })
   toEvent?: ProductionEvent;
 

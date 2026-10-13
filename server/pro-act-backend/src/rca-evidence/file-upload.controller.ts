@@ -26,11 +26,14 @@ import {
 } from '../common/http/upload-options';
 import { Ctx } from '../common/context/ctx.decorator';
 import { RequestContext } from '../common/context/request-context';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RCA_WRITERS } from '../rca-case/rca-scope';
 
 @ApiTags('File Upload')
 @ApiBearerAuth()
 @Controller('uploads')
 export class FileUploadController {
+  @Roles(...RCA_WRITERS)
   @Post('evidence')
   @UseInterceptors(FileInterceptor('file', attachmentUploadOptions()))
   @ApiConsumes('multipart/form-data')

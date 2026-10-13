@@ -1,10 +1,24 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { EvidenceCategoryService } from './evidence-category.service';
 import { EvidenceCategory } from './evidence-category.entity';
 import { ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateEvidenceCategoryDto } from './dto/create-evidence-category.dto';
 import { UpdateEvidenceCategoryDto } from './dto/update-evidence-category.dto';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { MASTER_DATA_WRITERS } from '../v2/master-data/common/master-data-writer';
 
 @ApiTags('Evidence Categories')
 @ApiBearerAuth()
@@ -26,6 +40,7 @@ export class EvidenceCategoryController {
     return this.categoryService.findOne(id);
   }
 
+  @Roles(...MASTER_DATA_WRITERS)
   @Post()
   @ApiBody({ type: CreateEvidenceCategoryDto })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
@@ -33,15 +48,20 @@ export class EvidenceCategoryController {
     return this.categoryService.create(data);
   }
 
+  @Roles(...MASTER_DATA_WRITERS)
   @Put(':id')
   @ApiBody({ type: UpdateEvidenceCategoryDto })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  update(@Param('id') id: string, @Body() data: UpdateEvidenceCategoryDto): Promise<EvidenceCategory | null> {
+  update(
+    @Param('id') id: string,
+    @Body() data: UpdateEvidenceCategoryDto,
+  ): Promise<EvidenceCategory | null> {
     return this.categoryService.update(id, data);
   }
 
+  @Roles(...MASTER_DATA_WRITERS)
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
     return this.categoryService.remove(id);
   }
-} 
+}

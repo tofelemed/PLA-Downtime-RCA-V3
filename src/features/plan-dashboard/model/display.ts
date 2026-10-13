@@ -109,6 +109,16 @@ export function reviewGate(view: ReconciliationView, userId: string | null): Act
   return { allowed: true, reason: null, code: null };
 }
 
+/** Approve also needs independence from the content: not an author of any reviewed line (D06, RC-01). */
+export function approveGate(view: ReconciliationView, userId: string | null): ActionGate {
+  const review = reviewGate(view, userId);
+  if (!review.allowed || !userId) return review;
+  if (view.lines.some((line) => line.authorId === userId)) {
+    return { allowed: false, reason: 'You wrote lines in this revision: another manager approver must approve it (separation of duties).', code: 'SEPARATION_OF_DUTIES' };
+  }
+  return review;
+}
+
 const SERVICE_LABELS: Readonly<Record<string, string>> = {
   'accounting-worker': 'the accounting service',
   'actuals-worker': 'the actuals service',

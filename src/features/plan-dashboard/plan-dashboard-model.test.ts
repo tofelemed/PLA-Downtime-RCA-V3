@@ -3,7 +3,7 @@ import { StaleRevisionError, V2ApiError } from '@/api/v2/errors';
 import { v2Keys } from '@/api/v2/queries/query-keys';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { reconciliationKey, serverKeyOf } from './hooks/use-draft-editor';
-import { formatMoney, formatRatioPercent, reviewGate } from './model/display';
+import { approveGate, formatMoney, formatRatioPercent, reviewGate } from './model/display';
 import { addManual, decisionProblems, draftFromView, manualProblems, rebaseDraft, removeManual, setDecision, toPayload } from './model/draft-lines';
 import { issuesByRow, workflowProblemOf } from './model/workflow-errors';
 
@@ -74,6 +74,9 @@ describe('draft lines (editing state)', () => {
     expect(decisionProblems({ action: 'adjust' })).toEqual(['A reason is required.', 'Enter the quantity.']);
     expect(decisionProblems({ action: 'accept' })).toEqual([]);
     expect(manualProblems({ uid: 'x', sliceId: 's1', kind: 'availability', quantity: null, eventIds: [], missingEvent: true, missingCode: false })).toHaveLength(2);
+    const bridge = { uid: 'b', sliceId: 's1', kind: 'bridge' as const, quantity: '-20', eventIds: [], missingEvent: true, missingCode: true };
+    expect(manualProblems(bridge)).toEqual(['A bridge needs a written reason.']);
+    expect(manualProblems({ ...bridge, reason: 'plan rate below planning rate' })).toEqual([]);
   });
 });
 
@@ -129,6 +132,17 @@ describe('display formatting and gates', () => {
     expect(reviewGate(submitted, 'me')).toMatchObject({ allowed: false, code: 'SEPARATION_OF_DUTIES' });
     expect(reviewGate(submitted, 'someone-else')).toMatchObject({ allowed: true });
     expect(reviewGate(view(), 'someone-else').allowed).toBe(false);
+  });
+
+  it('a line author may reject but not approve (separation of duties, RC-01)', () => {
+    const base = view();
+    const submitted = view({
+      revision: { ...base.revision, lifecycle: 'in_review', submittedBy: 'engineer', submittedHash: 'b'.repeat(64) },
+      lines: [{ ...base.lines[0], authorId: 'manager' }],
+    });
+    expect(reviewGate(submitted, 'manager')).toMatchObject({ allowed: true });
+    expect(approveGate(submitted, 'manager')).toMatchObject({ allowed: false, code: 'SEPARATION_OF_DUTIES' });
+    expect(approveGate(submitted, 'other-manager')).toMatchObject({ allowed: true });
   });
 });
 

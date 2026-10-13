@@ -8,7 +8,7 @@ import { ApproveButton } from '@/features/ux-kit/approve-button';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { EditorProblem } from '../editor/editor-problem';
 import { useWorkflowActions } from '../hooks/use-workflow-actions';
-import { reviewGate } from '../model/display';
+import { approveGate, reviewGate } from '../model/display';
 import { ReasonConfirm } from './reason-confirm';
 
 export interface WorkflowBarProps {
@@ -27,10 +27,11 @@ type Actions = ReturnType<typeof useWorkflowActions>;
 function ReviewButtons({ view, actions, busy }: { view: ReconciliationView; actions: Actions; busy: boolean }) {
   const userId = useCurrentUserId();
   const gate = reviewGate(view, userId);
+  const approve = approveGate(view, userId);
   const access = approvalAccess(true, view.revision.submittedBy, userId);
   return (
     <>
-      <ApproveButton access={access} size="sm" data-testid="wf-approve" disabled={busy || !gate.allowed} onClick={() => void actions.approve()} aria-describedby={gate.reason ? 'approve-gate' : undefined}>
+      <ApproveButton access={access} size="sm" data-testid="wf-approve" disabled={busy || !approve.allowed} onClick={() => void actions.approve()} aria-describedby={approve.reason ? 'approve-gate' : undefined}>
         Approve
       </ApproveButton>
       <ReasonConfirm
@@ -59,7 +60,7 @@ export function WorkflowBar({ view, shown, onShowCurrent }: WorkflowBarProps) {
   const userId = useCurrentUserId();
   const actions = useWorkflowActions(view);
   const lifecycle = view.revision.lifecycle;
-  const gate = reviewGate(view, userId);
+  const gate = approveGate(view, userId);
   const busy = actions.pending !== null;
   return (
     <section className="space-y-2 rounded-md border bg-muted/20 p-2" data-testid="workflow-bar" data-lifecycle={lifecycle}>

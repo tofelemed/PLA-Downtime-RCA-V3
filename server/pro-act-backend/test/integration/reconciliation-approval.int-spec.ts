@@ -241,6 +241,23 @@ describe('reconciliation submission and approval (plan 2.8)', () => {
     ).toEqual(['reject', 'submit', 'save_draft']);
   });
 
+  it('RC-01: an author of a reviewed line cannot approve; an independent approver can', async () => {
+    const superAdmin = env.user('SuperAdmin');
+    const view = await saved(
+      env.periodB1,
+      (v) => [manual(v, '150')],
+      env.approver,
+    );
+    await env.submit(view, superAdmin, env.periodB1).expect(200);
+    const submitted = await env.view(env.periodB1);
+    const author = await env
+      .approve(submitted, env.approver, env.periodB1)
+      .expect(403);
+    expect((author.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
+    const independent = env.user('TenantAdmin');
+    await env.approve(submitted, independent, env.periodB1).expect(200);
+  });
+
   it('T36: a user holding both roles cannot approve their own submission; cancel keeps the draft auditable', async () => {
     const dual = await env.dualRoleUser();
     const view = await saved(env.periodC1, (v) => [manual(v, '150')], dual);

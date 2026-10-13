@@ -152,6 +152,7 @@ export function manualProblems(m: ManualDraft): string[] {
   if (!m.quantity) problems.push('Enter a quantity.');
   if (!m.eventIds.length && !m.missingEvent) problems.push('Link an event or mark the cause as "no event".');
   if (m.missingEvent && !m.reasonCodeId && !m.missingCode) problems.push('Without an event, choose a reason code or mark the code as missing.');
+  if (m.kind === 'bridge' && !m.reason?.trim()) problems.push('A bridge needs a written reason.');
   return problems;
 }
 

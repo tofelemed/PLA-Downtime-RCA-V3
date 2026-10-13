@@ -116,6 +116,9 @@ describe('actuals adjustments, recalculation triggers and external reports (plan
 
   it('T44: an approved adjustment needs an independent approver and writes a new, separate actuals run', async () => {
     const before = await env.detail(periodA1);
+    const runsOf = () =>
+      env.rows(`SELECT 1 FROM actuals_runs WHERE period_id = $1`, [periodA1]);
+    const runsBefore = (await runsOf()).length;
     const proposed = await env
       .post('actuals/adjustments', {
         sliceId: sliceA1,
@@ -149,11 +152,7 @@ describe('actuals adjustments, recalculation triggers and external reports (plan
       estimatedQty: '5',
       adjustmentIds: [id],
     });
-    const runs = await env.rows(
-      `SELECT 1 FROM actuals_runs WHERE period_id = $1`,
-      [periodA1],
-    );
-    expect(runs).toHaveLength(2);
+    expect(await runsOf()).toHaveLength(runsBefore + 1);
     const kept = await env.rows(`SELECT 1 FROM actuals_results WHERE id = $1`, [
       before.data.slices[0].actuals?.resultId,
     ]);

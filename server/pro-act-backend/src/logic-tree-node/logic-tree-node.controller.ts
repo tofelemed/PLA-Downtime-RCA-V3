@@ -1,7 +1,28 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UsePipes, ValidationPipe, UploadedFile, UseInterceptors, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+  UploadedFile,
+  UseInterceptors,
+  Req,
+} from '@nestjs/common';
 import { LogicTreeNodeService } from './logic-tree-node.service';
 import { LogicTreeNode } from './logic-tree-node.entity';
-import { ApiTags, ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateLogicTreeNodeDto } from './dto/create-logic-tree-node.dto';
 import { UpdateLogicTreeNodeDto } from './dto/update-logic-tree-node.dto';
@@ -11,6 +32,8 @@ import {
   uploadedFileView,
 } from '../common/http/upload-options';
 import type { Request } from 'express';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RCA_WRITERS } from '../rca-case/rca-scope';
 
 @ApiTags('Logic Tree Nodes')
 @ApiBearerAuth()
@@ -50,6 +73,7 @@ export class LogicTreeNodeController {
     return this.nodeService.findOne(id);
   }
 
+  @Roles(...RCA_WRITERS)
   @Post()
   @ApiBody({ type: CreateLogicTreeNodeDto })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
@@ -57,18 +81,24 @@ export class LogicTreeNodeController {
     return this.nodeService.create(data);
   }
 
+  @Roles(...RCA_WRITERS)
   @Put(':id')
   @ApiBody({ type: UpdateLogicTreeNodeDto })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  update(@Param('id') id: string, @Body() data: UpdateLogicTreeNodeDto): Promise<LogicTreeNode | null> {
+  update(
+    @Param('id') id: string,
+    @Body() data: UpdateLogicTreeNodeDto,
+  ): Promise<LogicTreeNode | null> {
     return this.nodeService.update(id, data);
   }
 
+  @Roles(...RCA_WRITERS)
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
     return this.nodeService.remove(id);
   }
 
+  @Roles(...RCA_WRITERS)
   @Post('upload')
   @ApiOperation({ summary: 'Upload logic tree node evidence file' })
   @ApiConsumes('multipart/form-data')
@@ -90,4 +120,4 @@ export class LogicTreeNodeController {
   ) {
     return uploadedFileView(file, request);
   }
-} 
+}

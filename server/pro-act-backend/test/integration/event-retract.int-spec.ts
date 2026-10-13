@@ -1,10 +1,11 @@
 import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import * as request from 'supertest';
 import { ProductionEventModule } from '../../src/production-event/production-event.module';
 import { V2Module } from '../../src/v2/v2.module';
 import { IntegrationHarness } from './harness';
 import { at, EventWorld, seedEventWorld } from './support/seed-event-world';
-import { createIntegrationApp, signToken } from './support/test-app';
+import { bearer, createIntegrationApp, signToken } from './support/test-app';
 import {
   ErrorBody,
   json,
@@ -21,6 +22,7 @@ describe('event operations: retract', () => {
   let app: INestApplication;
   let world: EventWorld;
   let api: V2EventClient;
+  let token = '';
 
   beforeAll(async () => {
     await harness.start();
@@ -28,10 +30,8 @@ describe('event operations: retract', () => {
     app = await createIntegrationApp(harness, {
       modules: [ProductionEventModule, V2Module],
     });
-    api = new V2EventClient(
-      app,
-      signToken(app, { userId: randomUUID(), tenantId: world.tenantA }),
-    );
+    token = signToken(app, { userId: randomUUID(), tenantId: world.tenantA });
+    api = new V2EventClient(app, token);
   });
 
   afterAll(async () => {
@@ -53,6 +53,33 @@ describe('event operations: retract', () => {
       { reason },
       { ifMatch },
     );
+
+  it('DB-03: the v1 DELETE retracts instead of deleting; history stays, v1 lists hide it', async () => {
+    const id = await manual('09:00', '09:30');
+    await request(app.getHttpServer())
+      .delete(`/api/production-events/${id}`)
+      .set(bearer(token))
+      .expect(200);
+    const [row] = await harness.dataSource.query<
+      Array<{ physical_state: string }>
+    >(`SELECT physical_state FROM production_events WHERE id = $1`, [id]);
+    expect(row.physical_state).toBe('retracted');
+    const revisions = await harness.dataSource.query<Array<{ n: number }>>(
+      `SELECT count(*)::int AS n FROM event_revisions WHERE event_id = $1`,
+      [id],
+    );
+    expect(revisions[0].n).toBeGreaterThanOrEqual(2);
+    const list = await request(app.getHttpServer())
+      .get(`/api/production-events?unitId=${world.unitA3}`)
+      .set(bearer(token))
+      .expect(200);
+    const items = (
+      Array.isArray(list.body)
+        ? list.body
+        : (list.body as { items: unknown[] }).items
+    ) as Array<{ id: string }>;
+    expect(items.map((item) => item.id)).not.toContain(id);
+  });
 
   it('tombstones a manual event with a retraction revision', async () => {
     const id = await manual('08:00', '08:30');

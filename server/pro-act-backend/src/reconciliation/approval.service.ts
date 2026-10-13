@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { AccountingRevision } from '../accounting/entities/accounting-revision.entity';
 import { RequestContext } from '../common/context/request-context';
+import { approvalConflict } from '../domain/reconciliation/separation-of-duties';
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { invalidTransition } from '../profiles/profile-errors';
@@ -80,6 +81,7 @@ export class ApprovalService {
       );
       if (contentHashOf(state) !== revision.submittedHash)
         throw staleSubmission('the reviewed content changed');
+      if (approvalConflictOf(approver, state)) throw separationOfDuties();
       await markApproved(manager, state, context, command);
       return manager.findOneByOrFail(AccountingRevision, { id: revision.id });
     });
@@ -147,6 +149,16 @@ export class ApprovalService {
 }
 
 /** Snapshot, `approved`, reconciled label, history and outbox `PeriodApproved` / `PeriodRestated` — one transaction. */
+/** RC-01: the approver authored none of the reviewed lines and did not reopen the period. */
+function approvalConflictOf(approver: string, state: RevisionState) {
+  const { revision } = state;
+  return approvalConflict(approver, {
+    submittedBy: revision.submittedBy,
+    revisionOpenedBy: revision.supersedesId ? revision.createdBy : null,
+    lineAuthors: state.lines.map((line) => line.authorId),
+  });
+}
+
 async function markApproved(
   manager: EntityManager,
   state: RevisionState,

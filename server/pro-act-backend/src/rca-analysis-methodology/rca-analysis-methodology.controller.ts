@@ -36,6 +36,8 @@ import { RcaBarrierAnalysis } from './entities/barrier-analysis.entity';
 import { CreateChangeAnalysisDto } from './dto/create-change-analysis.dto';
 import { UpdateChangeAnalysisDto } from './dto/update-change-analysis.dto';
 import { RcaChangeAnalysis } from './entities/change-analysis.entity';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RCA_WRITERS } from '../rca-case/rca-scope';
 
 @ApiTags('RCA Analysis Methodology')
 @ApiBearerAuth()
@@ -45,6 +47,7 @@ export class RCAAnalysisMethodologyController {
   constructor(private readonly service: RCAAnalysisMethodologyService) {}
 
   // Five Why
+  @Roles(...RCA_WRITERS)
   @Post('five-why')
   @ApiOperation({ summary: 'Create Five Why analysis' })
   @ApiResponse({ status: 201, type: RcaFiveWhyAnalysis })
@@ -57,17 +60,25 @@ export class RCAAnalysisMethodologyController {
   @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaFiveWhyAnalysis })
-  getFiveWhy(@Query('tenantId') tenantId: string | undefined, @Query('rcaId') rcaId: string) {
+  getFiveWhy(
+    @Query('tenantId') tenantId: string | undefined,
+    @Query('rcaId') rcaId: string,
+  ) {
     return this.service.findFiveWhyByRca(tenantId, rcaId);
   }
 
+  @Roles(...RCA_WRITERS)
   @Put('five-why/:id')
   @ApiOperation({ summary: 'Update Five Why analysis' })
   @ApiResponse({ status: 200, type: RcaFiveWhyAnalysis })
-  updateFiveWhy(@Param('id') id: string, @Body() dto: UpdateFiveWhyAnalysisDto) {
+  updateFiveWhy(
+    @Param('id') id: string,
+    @Body() dto: UpdateFiveWhyAnalysisDto,
+  ) {
     return this.service.updateFiveWhy(id, dto);
   }
 
+  @Roles(...RCA_WRITERS)
   @Delete('five-why/:id')
   @ApiOperation({ summary: 'Delete Five Why analysis' })
   removeFiveWhy(@Param('id') id: string) {
@@ -75,6 +86,7 @@ export class RCAAnalysisMethodologyController {
   }
 
   // Fishbone
+  @Roles(...RCA_WRITERS)
   @Post('fishbone')
   @ApiOperation({ summary: 'Create Fishbone diagram' })
   @ApiResponse({ status: 201, type: RcaFishboneDiagram })
@@ -87,17 +99,25 @@ export class RCAAnalysisMethodologyController {
   @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaFishboneDiagram })
-  getFishbone(@Query('tenantId') tenantId: string | undefined, @Query('rcaId') rcaId: string) {
+  getFishbone(
+    @Query('tenantId') tenantId: string | undefined,
+    @Query('rcaId') rcaId: string,
+  ) {
     return this.service.findFishboneByRca(tenantId, rcaId);
   }
 
+  @Roles(...RCA_WRITERS)
   @Put('fishbone/:id')
   @ApiOperation({ summary: 'Update Fishbone diagram' })
   @ApiResponse({ status: 200, type: RcaFishboneDiagram })
-  updateFishbone(@Param('id') id: string, @Body() dto: UpdateFishboneDiagramDto) {
+  updateFishbone(
+    @Param('id') id: string,
+    @Body() dto: UpdateFishboneDiagramDto,
+  ) {
     return this.service.updateFishbone(id, dto);
   }
 
+  @Roles(...RCA_WRITERS)
   @Delete('fishbone/:id')
   @ApiOperation({ summary: 'Delete Fishbone diagram' })
   removeFishbone(@Param('id') id: string) {
@@ -105,6 +125,7 @@ export class RCAAnalysisMethodologyController {
   }
 
   // FMEA
+  @Roles(...RCA_WRITERS)
   @Post('fmea')
   @ApiOperation({ summary: 'Create FMEA analysis' })
   @ApiResponse({ status: 201, type: RcaFmeaAnalysis })
@@ -117,10 +138,14 @@ export class RCAAnalysisMethodologyController {
   @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaFmeaAnalysis })
-  getFmea(@Query('tenantId') tenantId: string | undefined, @Query('rcaId') rcaId: string) {
+  getFmea(
+    @Query('tenantId') tenantId: string | undefined,
+    @Query('rcaId') rcaId: string,
+  ) {
     return this.service.findFmeaByRca(tenantId, rcaId);
   }
 
+  @Roles(...RCA_WRITERS)
   @Put('fmea/:id')
   @ApiOperation({ summary: 'Update FMEA analysis' })
   @ApiResponse({ status: 200, type: RcaFmeaAnalysis })
@@ -128,6 +153,7 @@ export class RCAAnalysisMethodologyController {
     return this.service.updateFmea(id, dto);
   }
 
+  @Roles(...RCA_WRITERS)
   @Delete('fmea/:id')
   @ApiOperation({ summary: 'Delete FMEA analysis' })
   removeFmea(@Param('id') id: string) {
@@ -135,6 +161,7 @@ export class RCAAnalysisMethodologyController {
   }
 
   // Fault tree
+  @Roles(...RCA_WRITERS)
   @Post('fault-tree')
   @ApiOperation({ summary: 'Create fault tree analysis' })
   @ApiResponse({ status: 201, type: RcaFaultTreeAnalysis })
@@ -147,17 +174,25 @@ export class RCAAnalysisMethodologyController {
   @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaFaultTreeAnalysis })
-  getFaultTree(@Query('tenantId') tenantId: string | undefined, @Query('rcaId') rcaId: string) {
+  getFaultTree(
+    @Query('tenantId') tenantId: string | undefined,
+    @Query('rcaId') rcaId: string,
+  ) {
     return this.service.findFaultTreeByRca(tenantId, rcaId);
   }
 
+  @Roles(...RCA_WRITERS)
   @Put('fault-tree/:id')
   @ApiOperation({ summary: 'Update fault tree analysis' })
   @ApiResponse({ status: 200, type: RcaFaultTreeAnalysis })
-  updateFaultTree(@Param('id') id: string, @Body() dto: UpdateFaultTreeAnalysisDto) {
+  updateFaultTree(
+    @Param('id') id: string,
+    @Body() dto: UpdateFaultTreeAnalysisDto,
+  ) {
     return this.service.updateFaultTree(id, dto);
   }
 
+  @Roles(...RCA_WRITERS)
   @Delete('fault-tree/:id')
   @ApiOperation({ summary: 'Delete fault tree analysis' })
   removeFaultTree(@Param('id') id: string) {
@@ -165,6 +200,7 @@ export class RCAAnalysisMethodologyController {
   }
 
   // Barrier
+  @Roles(...RCA_WRITERS)
   @Post('barrier')
   @ApiOperation({ summary: 'Create barrier analysis' })
   @ApiResponse({ status: 201, type: RcaBarrierAnalysis })
@@ -177,17 +213,25 @@ export class RCAAnalysisMethodologyController {
   @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaBarrierAnalysis })
-  getBarrier(@Query('tenantId') tenantId: string | undefined, @Query('rcaId') rcaId: string) {
+  getBarrier(
+    @Query('tenantId') tenantId: string | undefined,
+    @Query('rcaId') rcaId: string,
+  ) {
     return this.service.findBarrierByRca(tenantId, rcaId);
   }
 
+  @Roles(...RCA_WRITERS)
   @Put('barrier/:id')
   @ApiOperation({ summary: 'Update barrier analysis' })
   @ApiResponse({ status: 200, type: RcaBarrierAnalysis })
-  updateBarrier(@Param('id') id: string, @Body() dto: UpdateBarrierAnalysisDto) {
+  updateBarrier(
+    @Param('id') id: string,
+    @Body() dto: UpdateBarrierAnalysisDto,
+  ) {
     return this.service.updateBarrier(id, dto);
   }
 
+  @Roles(...RCA_WRITERS)
   @Delete('barrier/:id')
   @ApiOperation({ summary: 'Delete barrier analysis' })
   removeBarrier(@Param('id') id: string) {
@@ -195,6 +239,7 @@ export class RCAAnalysisMethodologyController {
   }
 
   // Change analysis
+  @Roles(...RCA_WRITERS)
   @Post('change')
   @ApiOperation({ summary: 'Create change analysis' })
   @ApiResponse({ status: 201, type: RcaChangeAnalysis })
@@ -207,10 +252,14 @@ export class RCAAnalysisMethodologyController {
   @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaChangeAnalysis })
-  getChange(@Query('tenantId') tenantId: string | undefined, @Query('rcaId') rcaId: string) {
+  getChange(
+    @Query('tenantId') tenantId: string | undefined,
+    @Query('rcaId') rcaId: string,
+  ) {
     return this.service.findChangeByRca(tenantId, rcaId);
   }
 
+  @Roles(...RCA_WRITERS)
   @Put('change/:id')
   @ApiOperation({ summary: 'Update change analysis' })
   @ApiResponse({ status: 200, type: RcaChangeAnalysis })
@@ -218,11 +267,10 @@ export class RCAAnalysisMethodologyController {
     return this.service.updateChange(id, dto);
   }
 
+  @Roles(...RCA_WRITERS)
   @Delete('change/:id')
   @ApiOperation({ summary: 'Delete change analysis' })
   removeChange(@Param('id') id: string) {
     return this.service.deleteChange(id);
   }
 }
-
-

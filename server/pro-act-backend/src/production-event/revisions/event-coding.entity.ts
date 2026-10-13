@@ -25,7 +25,7 @@ export class EventCoding extends TenantScopedEntity {
   @Column({ name: 'event_id', type: 'uuid' })
   eventId: string;
 
-  @ManyToOne(() => ProductionEvent, { onDelete: 'CASCADE' })
+  @ManyToOne(() => ProductionEvent, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'event_id' })
   event?: ProductionEvent;
 
