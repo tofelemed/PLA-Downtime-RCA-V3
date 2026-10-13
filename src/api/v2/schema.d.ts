@@ -7132,6 +7132,8 @@ export interface operations {
                 q?: string;
                 /** @description true: still running (no end time, not superseded or retracted); false: ended, superseded or retracted */
                 isOpen?: boolean;
+                /** @description true: live stops (downtime) that overlap another live stop of the same asset, or of the same unit when neither has an asset — usually the same stop entered twice (e.g. manually and from PI); false: every other event (DT-04) */
+                possibleDuplicate?: boolean;
             };
             header?: {
                 /** @description Act on another tenant the caller is a member of (SuperAdmin: any tenant) */
@@ -7197,6 +7199,8 @@ export interface operations {
                 q?: string;
                 /** @description true: still running (no end time, not superseded or retracted); false: ended, superseded or retracted */
                 isOpen?: boolean;
+                /** @description true: live stops (downtime) that overlap another live stop of the same asset, or of the same unit when neither has an asset — usually the same stop entered twice (e.g. manually and from PI); false: every other event (DT-04) */
+                possibleDuplicate?: boolean;
                 /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
                 from: string;
                 /** @description Window end, ISO 8601 (exclusive); at most 400 days after from */

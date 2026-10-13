@@ -41,6 +41,18 @@ describe('Event Hub filters in the URL', () => {
     expect(toEventQuery(parseEventFilters(params, NOW)).physicalStates).toBeUndefined();
   });
 
+  it('possible duplicates (DT-04): only sent and kept in the URL when ticked', () => {
+    const base = parseEventFilters(new URLSearchParams(), NOW);
+    expect(base.possibleDuplicate).toBe(false);
+    expect('possibleDuplicate' in toEventQuery(base)).toBe(false);
+    expect(toEventSearchParams(base).has('duplicates')).toBe(false);
+    const ticked = { ...base, possibleDuplicate: true };
+    expect(toEventQuery(ticked).possibleDuplicate).toBe(true);
+    const params = toEventSearchParams(ticked);
+    expect(params.get('duplicates')).toBe('1');
+    expect(parseEventFilters(params, NOW).possibleDuplicate).toBe(true);
+  });
+
   it('sends the new filters to the server; search only from two characters', () => {
     const base = parseEventFilters(new URLSearchParams(), NOW);
     expect('q' in toEventQuery({ ...base, q: 'x' })).toBe(false);

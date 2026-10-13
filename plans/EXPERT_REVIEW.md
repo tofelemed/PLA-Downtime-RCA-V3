@@ -142,8 +142,8 @@ SME questions D1–D17 were sent on 13 Oct 2026; the phases below need none of t
 | Phase | Findings | Scope | Status |
 |---|---|---|---|
 | P1 | DT-09 | Manual start/end not in the future (422 `IN_FUTURE`), injectable server clock | ✅ |
-| P2 | DT-02 (label part) | "Unknown" in downtime screens renamed to what it is (stop time of an uncoded class); event coverage measure waits for D1/D2 | ⬜ |
-| P3 | DT-04 | Overlapping stops on one asset flagged on write (warning + review item); merge window waits for D5 | ⬜ |
+| P2 | DT-02 (label part) | "Unknown" in downtime screens renamed to what it is (stop time of an uncoded class); event coverage measure waits for D1/D2 | ✅ (already in `8171b43`: "Stops not classed planned/unplanned" + incomplete-split notice) |
+| P3 | DT-04 | Overlapping stops of one asset found on read: `possibleDuplicate` list/export filter, Event Hub "Possible duplicate stops only"; the user merges or retracts. Merge window and automatic de-duplication wait for D5 | ✅ |
 | P4 | DT-07 | Downtime totals within scheduled time, so they reconcile with Availability; `downtime_external` measure | ⬜ |
 | P5 | FE-08 | Pareto by lost quantity and value from the approved ledger | ⬜ |
 | P6 | FE-06, FE-07 | Reason code in the close dialog, inline "Code"; select all matching, "to code this shift" preset | ⬜ |
@@ -155,7 +155,7 @@ SME questions D1–D17 were sent on 13 Oct 2026; the phases below need none of t
 | DT-01 | High | **Asset-level / no-impact stops reduce unit Availability and MTBF exposure** (same root as LA-05). | `domain/accounting/segmentation.ts:35-64`; `v2/production-events/production-events-v2-commands.service.ts:327-345` | ⬜ |
 | DT-02 | High | **No state engine (1.10):** unrecorded time counts as run time; "Unknown" in the UI means uncoded-class stop time, not unaccounted time; no event-coverage measure. | `domain/kpi/ideal-time.ts:336-345`; `domain/kpi/downtime-measures.ts:74-76`; FE: `kpi-display.ts:21` | ⬜ |
 | DT-03 | High | **Default planned-stop policy mislabelled ISO 22400** (same as LA-11). | `periods/engine-policy-bodies.ts:29` | ⬜ |
-| DT-04 | High | **Duplicate/overlapping stops not detected:** manual + PI for the same trip doubles stop count, halves MTBF, splits the Pareto. | `production-event/event-write-model.ts`; `domain/events/event-interval.validation.ts` | ⬜ |
+| DT-04 | High | **Duplicate/overlapping stops not detected:** manual + PI for the same trip doubles stop count, halves MTBF, splits the Pareto. | `production-event/event-write-model.ts`; `domain/events/event-interval.validation.ts` | 🔄 13 Oct: listed via `possibleDuplicate`; automatic handling waits for D5 |
 | DT-05 | Medium | **Weak failure basis for MTBF:** every FailureWO counts; unplanned stop counts only with `failure_mode`; WO↔stop de-duplicated on an exact asset only. | `database/migrations/1792793600000-KpiResults.ts:24-44`; `domain/kpi/reliability.ts:40-57` | ⬜ |
 | DT-06 | Medium | Overlapping stops split time equally in the Pareto and bad actors; no first-out option; asset bad-actor time is allocated, not the asset's own outage time. | `domain/kpi/downtime-allocation.ts:37-58` | ⬜ |
 | DT-07 | Medium | Pareto/downtime totals use the calendar window while Availability uses scheduled time, so they don't reconcile; no `downtime_external` measure. | `domain/kpi/period-kpis.ts:208-216` | ⬜ |

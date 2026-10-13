@@ -525,6 +525,15 @@
             }
           },
           {
+            "name": "possibleDuplicate",
+            "required": false,
+            "in": "query",
+            "description": "true: live stops (downtime) that overlap another live stop of the same asset, or of the same unit when neither has an asset — usually the same stop entered twice (e.g. manually and from PI); false: every other event (DT-04)",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "X-Tenant-Id",
             "in": "header",
             "description": "Act on another tenant the caller is a member of (SuperAdmin: any tenant)",
@@ -801,6 +810,15 @@
             "required": false,
             "in": "query",
             "description": "true: still running (no end time, not superseded or retracted); false: ended, superseded or retracted",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "possibleDuplicate",
+            "required": false,
+            "in": "query",
+            "description": "true: live stops (downtime) that overlap another live stop of the same asset, or of the same unit when neither has an asset — usually the same stop entered twice (e.g. manually and from PI); false: every other event (DT-04)",
             "schema": {
               "type": "boolean"
             }

@@ -159,4 +159,16 @@ export class ProductionEventListQueryDto extends ListQueryDto {
   @Transform(toBooleanParam)
   @IsBoolean()
   isOpen?: boolean;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      'true: live stops (downtime) that overlap another live stop of the same asset, or of the same unit when ' +
+      'neither has an asset — usually the same stop entered twice (e.g. manually and from PI); false: every ' +
+      'other event (DT-04)',
+  })
+  @IsOptional()
+  @Transform(toBooleanParam)
+  @IsBoolean()
+  possibleDuplicate?: boolean;
 }

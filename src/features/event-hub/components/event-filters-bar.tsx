@@ -27,6 +27,7 @@ import {
 import { useAssetOptions } from '../hooks/use-asset-options';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { MultiCheckSelect, type CheckOption } from './multi-check-select';
+import { PossibleDuplicateToggle } from './possible-duplicate-toggle';
 import { WindowSelect } from './window-select';
 
 export interface EventFiltersBarProps {
@@ -50,12 +51,12 @@ interface FilterSpec {
 /**
  * Server filters of the list (§16.2): search, units, window, kind, reason and running / ended up
  * front; event family, schedule class, asset, coding / RCA / physical state, source and severity under
- * "More filters". AND between filters, OR within one; ticks are sent when a list closes.
+ * "More filters" (with possible duplicate stops, DT-04). AND between filters, OR within one; ticks are sent when a list closes.
  */
 export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarProps) {
   const env = useEventHubEnv();
   const assets = useAssetOptions(filters.unitIds);
-  const moreActive = SECONDARY.filter((field) => filters[field].length > 0).length;
+  const moreActive = SECONDARY.filter((field) => filters[field].length > 0).length + (filters.possibleDuplicate ? 1 : 0);
   const [showMore, setShowMore] = useState(moreActive > 0);
   const set = <K extends keyof EventFilterState>(key: K, value: EventFilterState[K]) => onChange({ ...filters, [key]: value });
   const reasonOptions = [...env.reasonCodes]
@@ -92,7 +93,12 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
         </Button>
         <Button variant="ghost" size="sm" onClick={onReset}>Reset filters</Button>
       </div>
-      {showMore && <div className="flex flex-wrap items-center gap-2" data-testid="more-filter-row">{secondary.map(select)}</div>}
+      {showMore && (
+        <div className="flex flex-wrap items-center gap-2" data-testid="more-filter-row">
+          {secondary.map(select)}
+          <PossibleDuplicateToggle checked={filters.possibleDuplicate} onChange={(value) => set('possibleDuplicate', value)} />
+        </div>
+      )}
     </div>
   );
 }

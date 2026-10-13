@@ -4,6 +4,7 @@ import { applyOverlapWindow } from '../../common/query/overlap-window';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { CursorCodec, invalidCursor } from '../common/cursor-codec';
 import { SortSpec } from '../common/sort-spec';
+import { applyPossibleDuplicateFilter } from './possible-duplicate-filter';
 import {
   ProductionEventListQueryDto,
   ProductionEventSortField,
@@ -74,6 +75,7 @@ export function applyProductionEventV2Filters(
     query.to,
   );
   applyIsOpenFilter(qb, query.isOpen, alias);
+  applyPossibleDuplicateFilter(qb, query.possibleDuplicate, alias);
   if (query.q) {
     qb.andWhere(
       `(${alias}.description ILIKE :textQuery OR ${alias}.eventId ILIKE :textQuery)`,
