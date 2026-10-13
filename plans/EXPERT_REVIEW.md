@@ -133,7 +133,7 @@ These findings are correctness, security, performance or cleanup. Each has eithe
 
 ---
 
-## Area 2 — Downtime & reliability KPIs (~60%)
+## Area 2 — Downtime & reliability KPIs (~80%: everything SME-independent done 13 Oct; the rest waits for D1–D17)
 
 ### 2.0 Work that does not wait for the SME (part B, started 13 Oct 2026)
 
@@ -152,12 +152,12 @@ SME questions D1–D17 were sent on 13 Oct 2026; the phases below need none of t
 
 | ID | Sev | Finding | Evidence | Status |
 |---|---|---|---|---|
-| DT-01 | High | **Asset-level / no-impact stops reduce unit Availability and MTBF exposure** (same root as LA-05). | `domain/accounting/segmentation.ts:35-64`; `v2/production-events/production-events-v2-commands.service.ts:327-345` | ⬜ |
+| DT-01 | High | **Asset-level / no-impact stops reduce unit Availability and MTBF exposure** (same root as LA-05). | `domain/accounting/segmentation.ts:35-64`; `v2/production-events/production-events-v2-commands.service.ts:327-345` | ✅ 13 Oct (SME Q5: impact `full_stop` / `fractional` / `none`; only stopping downtime is stopped time, `8171b43`) |
 | DT-02 | High | **No state engine (1.10):** unrecorded time counts as run time; "Unknown" in the UI means uncoded-class stop time, not unaccounted time; no event-coverage measure. | `domain/kpi/ideal-time.ts:336-345`; `domain/kpi/downtime-measures.ts:74-76`; FE: `kpi-display.ts:21` | ⬜ |
-| DT-03 | High | **Default planned-stop policy mislabelled ISO 22400** (same as LA-11). | `periods/engine-policy-bodies.ts:29` | ⬜ |
+| DT-03 | High | **Default planned-stop policy mislabelled ISO 22400** (same as LA-11). | `periods/engine-policy-bodies.ts:29` | ✅ 13 Oct (SME Q6: label corrected with LA-11, `cf2c34a`) |
 | DT-04 | High | **Duplicate/overlapping stops not detected:** manual + PI for the same trip doubles stop count, halves MTBF, splits the Pareto. | `production-event/event-write-model.ts`; `domain/events/event-interval.validation.ts` | 🔄 13 Oct: listed via `possibleDuplicate`; automatic handling waits for D5 |
-| DT-05 | Medium | **Weak failure basis for MTBF:** every FailureWO counts; unplanned stop counts only with `failure_mode`; WO↔stop de-duplicated on an exact asset only. | `database/migrations/1792793600000-KpiResults.ts:24-44`; `domain/kpi/reliability.ts:40-57` | ⬜ |
-| DT-06 | Medium | Overlapping stops split time equally in the Pareto and bad actors; no first-out option; asset bad-actor time is allocated, not the asset's own outage time. | `domain/kpi/downtime-allocation.ts:37-58` | ⬜ |
+| DT-05 | Medium | **Weak failure basis for MTBF:** every FailureWO counts; unplanned stop counts only with `failure_mode`; WO↔stop de-duplicated on an exact asset only. | `database/migrations/1792793600000-KpiResults.ts:24-44`; `domain/kpi/reliability.ts:40-57` | ⬜ waits for SME D8 (failure definition), D9 (exposure), D10 (repair evidence), D11 (ISO 14224 taxonomy) |
+| DT-06 | Medium | Overlapping stops split time equally in the Pareto and bad actors; no first-out option; asset bad-actor time is allocated, not the asset's own outage time. | `domain/kpi/downtime-allocation.ts:37-58` | 🔄 13 Oct: first-out available as policy `overlapAllocation` (`cf2c34a`); default waits for SME D7 |
 | DT-07 | Medium | Pareto/downtime totals use the calendar window while Availability uses scheduled time, so they don't reconcile; no `downtime_external` measure. | `domain/kpi/period-kpis.ts:208-216` | 🔄 13 Oct: `downtime_in_schedule` + `downtime_external` (KPI 2.7.1); Pareto basis waits for D14 |
 | DT-08 | Medium | A stop still open when the period was computed can stay under-measured after the period ends (partly inferred). | `accounting/accounting-inputs.loader.ts:226-229`; `periods/period-sweep.job.ts:84-95` | ✅ 13 Oct |
 | DT-09 | Low | No future-time check on create/patch; merging across a gap turns run time into downtime; micro-stop test uses only the window part of the occurrence. | `v2/.../production-event-v2-write.dto.ts:129,158`; `segmentation.ts:36-47` | ✅ 13 Oct (micro-stop on the full occurrence; 422 `IN_FUTURE` beyond now + 120 s via the injectable `Clock`); merge-gap rule waits for D5 |
