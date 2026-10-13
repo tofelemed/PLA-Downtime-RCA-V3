@@ -9,7 +9,10 @@ import {
   SliceBasis,
   ToleranceRule,
 } from '../../src/domain/reconciliation/reconciliation.types';
-import { submissionIssues } from '../../src/domain/reconciliation/submission-gates';
+import {
+  claimIssues,
+  submissionIssues,
+} from '../../src/domain/reconciliation/submission-gates';
 import {
   toleranceAdjustments,
   toleranceFor,
@@ -249,5 +252,54 @@ describe('reconciliation fixtures (plan 2.8)', () => {
     };
     expect(dec(toleranceFor(percent, new Dec(0)))).toBe('0');
     expect(dec(toleranceFor(absolute, new Dec(0)))).toBe('2');
+  });
+});
+
+describe('LA-02b: claims the measurements cannot support block submission (SME Q3)', () => {
+  const offSpec: Candidate = {
+    autoKey: 'q1',
+    sliceId: 's1',
+    kind: 'quality',
+    quantity: new Dec(30),
+  };
+  const flagged = { ...slice('100', '80'), flags: ['claim_exceeds_component'] };
+  const decided = (action: DecisionLine['action'], quantity: string | null) => [
+    {
+      action,
+      autoKey: 'q1',
+      sliceId: 's1',
+      kind: 'quality' as const,
+      quantity: quantity === null ? null : new Dec(quantity),
+      baseQuantity: null,
+      missingCode: false,
+    },
+  ];
+  const run = (lines: DecisionLine[]) =>
+    reconcile({
+      candidates: [offSpec],
+      lines,
+      slices: [flagged],
+      rule: ZERO_RULE,
+    });
+
+  it('a proposed or accepted over-claim blocks submission', () => {
+    expect(claimIssues(run([]), [offSpec]).map((i) => i.code)).toEqual([
+      'CLAIM_EXCEEDS_MEASUREMENT',
+    ]);
+    expect(
+      claimIssues(run(decided('accept', null)), [offSpec]).map((i) => i.code),
+    ).toEqual(['CLAIM_EXCEEDS_MEASUREMENT']);
+  });
+
+  it('an adjusted or rejected claim clears the gate; unflagged slices are never blocked', () => {
+    expect(claimIssues(run(decided('adjust', '20')), [offSpec])).toEqual([]);
+    expect(claimIssues(run(decided('reject', null)), [offSpec])).toEqual([]);
+    const clean = reconcile({
+      candidates: [offSpec],
+      lines: [],
+      slices: [slice('100', '80')],
+      rule: ZERO_RULE,
+    });
+    expect(claimIssues(clean, [offSpec])).toEqual([]);
   });
 });

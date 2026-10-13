@@ -1,5 +1,6 @@
 import { formatDec } from '../actuals/decimal';
 import {
+  Candidate,
   DecisionLine,
   Reconciliation,
   SliceReconciliation,
@@ -110,4 +111,39 @@ export function submissionIssues(
     .map((slice) => sliceIssue(slice, rule))
     .filter((found): found is WorkflowIssue => found !== null);
   return [...slices, ...lineIssues(reconciliation, lines, rule)];
+}
+
+/** Kinds whose event claims can exceed what the measurements hold (quality events, slowdowns). */
+const CLAIMED_KINDS = new Set(['quality', 'performance']);
+/** Decisions that leave a disputed claim as the system proposed it. */
+const UNRESOLVED = new Set(['proposed', 'accepted']);
+
+/**
+ * LA-02b (SME Q3): a slice whose causes claim more than the measured component
+ * (`claim_exceeds_component`) is calculated and may be saved, but cannot be submitted while any of its
+ * quality or performance claims is still proposed or plainly accepted — the claim has to be corrected
+ * (adjusted, with a reason), replaced or rejected first.
+ */
+export function claimIssues(
+  reconciliation: Reconciliation,
+  candidates: readonly Candidate[],
+): WorkflowIssue[] {
+  const kinds = new Map(candidates.map((c) => [c.autoKey, c.kind]));
+  return reconciliation.slices
+    .filter((slice) => slice.flags.includes('claim_exceeds_component'))
+    .filter((slice) =>
+      reconciliation.candidates.some(
+        (c) =>
+          c.sliceId === slice.sliceId &&
+          UNRESOLVED.has(c.state) &&
+          CLAIMED_KINDS.has(kinds.get(c.autoKey) ?? ''),
+      ),
+    )
+    .map((slice) =>
+      issue(
+        'CLAIM_EXCEEDS_MEASUREMENT',
+        'declared quality or slowdown quantities exceed what the measurements support: adjust or reject them before submitting',
+        slice.sliceId,
+      ),
+    );
 }

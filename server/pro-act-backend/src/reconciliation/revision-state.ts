@@ -78,7 +78,18 @@ export function decisionLinesOf(
   }));
 }
 
+/** Capacity-ledger flags the plan workflow must see (LA-02b: claims beyond the measured component). */
+const CAPACITY_FLAGS_FOR_PLAN = ['claim_exceeds_component'];
+
 export function slicesOf(totals: readonly PeriodLedgerTotal[]): SliceBasis[] {
+  const capacityFlags = new Map(
+    totals
+      .filter((t) => t.ledger === 'capacity')
+      .map((t) => [
+        t.sliceId,
+        t.flags.filter((f) => CAPACITY_FLAGS_FOR_PLAN.includes(f)),
+      ]),
+  );
   return totals
     .filter((t) => t.ledger === 'plan')
     .map((t) => ({
@@ -86,7 +97,7 @@ export function slicesOf(totals: readonly PeriodLedgerTotal[]): SliceBasis[] {
       uom: t.uom,
       target: decOf(t.targetQty),
       actual: decOf(t.actualQty),
-      flags: t.flags,
+      flags: [...t.flags, ...(capacityFlags.get(t.sliceId) ?? [])],
     }));
 }
 

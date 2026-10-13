@@ -4,7 +4,10 @@ import { DataSource, EntityManager } from 'typeorm';
 import { AccountingRevision } from '../accounting/entities/accounting-revision.entity';
 import { RequestContext } from '../common/context/request-context';
 import { formatDec } from '../domain/actuals/decimal';
-import { submissionIssues } from '../domain/reconciliation/submission-gates';
+import {
+  claimIssues,
+  submissionIssues,
+} from '../domain/reconciliation/submission-gates';
 import {
   ToleranceAdjustment,
   toleranceAdjustments,
@@ -19,6 +22,7 @@ import {
   revisionNumbered,
 } from './revision-access';
 import {
+  candidatesOf,
   decisionLinesOf,
   loadRevisionState,
   reconcileWith,
@@ -89,11 +93,17 @@ export class SubmissionService {
       const blocking = await environmentIssues(manager, state, this.policies);
       if (blocking.length > 0) throw workflowIssues(blocking);
       const final = await this.withTolerance(manager, state, submitter);
-      const issues = submissionIssues(
-        final.reconciliation,
-        decisionLinesOf(final.lines),
-        final.tolerance.rule,
-      );
+      const issues = [
+        ...submissionIssues(
+          final.reconciliation,
+          decisionLinesOf(final.lines),
+          final.tolerance.rule,
+        ),
+        ...claimIssues(
+          final.reconciliation,
+          candidatesOf(final.candidateLines),
+        ),
+      ];
       if (issues.length > 0) throw workflowIssues(issues);
       return this.markSubmitted(manager, final, context, command);
     });

@@ -32,6 +32,10 @@ export const ACCOUNTING_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   GATES_FAILED: { title: 'Cannot submit yet', text: 'Resolve the listed items, then submit again.' },
   RESIDUAL_UNACCOUNTED: { title: 'Part of the loss is not explained', text: 'Assign the remaining loss to reasons before submitting.' },
   RESIDUAL_UNEXPLAINED: { title: 'Part of the loss is not explained', text: 'Assign the remaining loss to reasons before submitting.' },
+  CLAIM_EXCEEDS_MEASUREMENT: {
+    title: 'Some declared losses exceed what was measured',
+    text: 'An off-spec or slowdown quantity is larger than the measurements allow. Adjust it (with a reason) or reject it before submitting.',
+  },
   ALLOCATION_EXCEEDED: { title: 'More loss is assigned than is available', text: 'Reduce the quantities so they fit the remaining amount.' },
   IMPOSSIBLE_CLAIM: { title: 'This loss cannot be claimed', text: 'The claimed time or quantity is more than the period allows.' },
   CAPACITY_NOT_CONSERVED: { title: 'The capacity split does not add up', text: 'Make the shares add up to the total.' },
