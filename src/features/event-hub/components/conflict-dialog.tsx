@@ -28,6 +28,8 @@ const FIELD_LABEL: Readonly<Record<keyof EventFormValues, string>> = {
   scheduleClass: 'Schedule class',
   reasonCodeId: 'Reason code',
   description: 'Description',
+  impactMode: 'Impact on production',
+  impactPercent: 'Output lost (%)',
 };
 
 /**

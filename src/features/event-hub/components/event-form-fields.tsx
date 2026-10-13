@@ -10,6 +10,7 @@ import type { EventFormField, EventFormValues } from '../model/event-form';
 import { plantLocalToUtc, utcToPlantLocal } from '../model/plant-local-time';
 import type { EventFormState } from '../hooks/use-event-form';
 import { useEventHubEnv } from '../use-event-hub-env';
+import { ImpactFields } from './impact-fields';
 import { ReasonCodeSelect } from './reason-code-select';
 
 interface FieldProps {
@@ -103,6 +104,7 @@ export function EventFormFields({ form, mode }: { form: EventFormState; mode: 'c
           {SCHEDULE_CLASSES.map((value) => <option key={value} value={value}>{labelOf(SCHEDULE_CLASS_LABELS, value)}</option>)}
         </select>
       </Field>
+      <ImpactFields form={form} />
       <div className="sm:col-span-2">
         <ReasonCodeSelect id="reasonCodeId" value={values.reasonCodeId} onChange={(value) => setField('reasonCodeId', value)} error={errors.reasonCodeId} />
       </div>

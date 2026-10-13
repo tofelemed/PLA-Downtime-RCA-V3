@@ -20,6 +20,10 @@ export interface EventFormValues {
   scheduleClass: string;
   reasonCodeId: string;
   description: string;
+  /** SME Q5, downtime only: '' = not stated (the server treats it as a full stop), full_stop, fractional, none */
+  impactMode: string;
+  /** share of output lost while `fractional`, in percent */
+  impactPercent: string;
 }
 
 export type EventFormField = keyof EventFormValues;
@@ -34,6 +38,8 @@ export const EMPTY_FORM: EventFormValues = {
   scheduleClass: '',
   reasonCodeId: '',
   description: '',
+  impactMode: '',
+  impactPercent: '',
 };
 
 export function formValuesOf(event: ProductionEventView, timezone: string): EventFormValues {
@@ -46,7 +52,14 @@ export function formValuesOf(event: ProductionEventView, timezone: string): Even
     scheduleClass: event.classification.scheduleClass,
     reasonCodeId: event.reasonCodeId ?? '',
     description: event.description ?? '',
+    impactMode: event.classification.impactMode ?? '',
+    impactPercent: event.classification.impactFraction ? String(Number(event.classification.impactFraction) * 100) : '',
   };
+}
+
+/** Percent text → the API's 0..1 fraction (decimal string). */
+function fractionOf(percent: string): string {
+  return String(Number(percent) / 100);
 }
 
 /** Minutes text → seconds with at most 3 decimals (the API's precision); null when empty. */
@@ -66,6 +79,10 @@ export function validateEventForm(values: EventFormValues, mode: 'create' | 'edi
   if (values.endLocal && !plantLocalToUtc(values.endLocal, timezone)) errors.endLocal = 'Not a valid time';
   const seconds = minutesToSeconds(values.durationMinutes);
   if (seconds !== null && (Number.isNaN(seconds) || seconds < 0)) errors.durationMinutes = 'Enter minutes (0 or more)';
+  if (values.physicalType === 'downtime' && values.impactMode === 'fractional') {
+    const percent = Number(values.impactPercent);
+    if (values.impactPercent.trim() === '' || !(percent > 0 && percent <= 100)) errors.impactPercent = 'Enter the share of output lost (above 0, up to 100 %)';
+  }
   return errors;
 }
 
@@ -83,6 +100,9 @@ export function toCreateBody(values: EventFormValues, timezone: string): CreateE
   if (seconds !== null) body.durationSeconds = seconds;
   if (values.scheduleClass) body.scheduleClass = values.scheduleClass as CreateEventBody['scheduleClass'];
   if (values.reasonCodeId) body.reasonCodeId = values.reasonCodeId;
+  const downtime = values.physicalType === 'downtime';
+  if (downtime && values.impactMode) body.impactMode = values.impactMode as CreateEventBody['impactMode'];
+  if (downtime && values.impactMode === 'fractional') body.impactFraction = fractionOf(values.impactPercent);
   const description = optional(values.description.trim());
   if (description) body.description = description;
   return body;
@@ -113,6 +133,11 @@ export function toPatchBody(initial: EventFormValues, values: EventFormValues, t
   }
   if (values.reasonCodeId !== initial.reasonCodeId) changes.reasonCodeId = values.reasonCodeId || null;
   if (values.description !== initial.description) changes.description = values.description.trim() || null;
+  const impactChanged = values.impactMode !== initial.impactMode || (values.impactMode === 'fractional' && values.impactPercent !== initial.impactPercent);
+  if (impactChanged && values.impactMode && values.physicalType === 'downtime') {
+    changes.impactMode = values.impactMode as PatchBody['impactMode'];
+    changes.impactFraction = values.impactMode === 'fractional' ? fractionOf(values.impactPercent) : null;
+  }
   return changes;
 }
 
@@ -126,6 +151,8 @@ const SERVER_FIELDS: Readonly<Record<string, EventFormField>> = {
   scheduleClass: 'scheduleClass',
   reasonCodeId: 'reasonCodeId',
   description: 'description',
+  impactMode: 'impactMode',
+  impactFraction: 'impactPercent',
 };
 
 export interface ServerFormErrors {

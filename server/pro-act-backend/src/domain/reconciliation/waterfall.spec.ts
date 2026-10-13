@@ -58,6 +58,22 @@ describe('ledger waterfall (plan 3.5)', () => {
     ]);
   });
 
+  it('SME Q2: a recovery gain is its own upward bar; losses stay gross (T28)', () => {
+    const w = plan(slice(630, 550, 80), [
+      ['availability', 90],
+      ['quality', 20],
+      ['gain', -30],
+    ]);
+    expect(w.closes).toBe(true);
+    expect(shape(w)).toEqual([
+      ['target', '630'],
+      ['availability', '-90'],
+      ['quality', '-20'],
+      ['gain', '30'],
+      ['actual', '550'],
+    ]);
+  });
+
   it('T16: over-accounted 10 raises the running total back to actual', () => {
     const w = plan(slice(1000, 850, 160), [['availability', 160]]);
     expect(w.closes).toBe(true);

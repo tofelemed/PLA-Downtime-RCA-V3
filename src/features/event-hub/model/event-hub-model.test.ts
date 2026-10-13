@@ -121,6 +121,30 @@ describe('event form (plan 3.2 step 3)', () => {
     expect(changedFields(initial, { ...initial, description: 'x' })).toEqual(['description']);
   });
 
+  it('production impact of a stop: full, partial with a percentage, or none (SME Q5)', () => {
+    expect(toCreateBody(values, TEHRAN)).not.toHaveProperty('impactMode');
+    expect(toCreateBody({ ...values, impactMode: 'fractional', impactPercent: '40' }, TEHRAN)).toMatchObject({
+      impactMode: 'fractional',
+      impactFraction: '0.4',
+    });
+    const none = toCreateBody({ ...values, impactMode: 'none', impactPercent: '40' }, TEHRAN);
+    expect(none).toMatchObject({ impactMode: 'none' });
+    expect(none).not.toHaveProperty('impactFraction');
+    expect(validateEventForm({ ...values, impactMode: 'fractional', impactPercent: '' }, 'create', TEHRAN).impactPercent).toBeDefined();
+    expect(validateEventForm({ ...values, impactMode: 'fractional', impactPercent: '120' }, 'create', TEHRAN).impactPercent).toBeDefined();
+    const partial = {
+      unitId: 'u1',
+      startTime: '2026-10-09T04:30:00.000Z',
+      endTime: '2026-10-09T05:30:00.000Z',
+      classification: { physicalType: 'downtime', scheduleClass: 'unplanned', impactMode: 'fractional', impactFraction: '0.25' },
+      reasonCodeId: null,
+      description: null,
+    } as unknown as ProductionEventView;
+    const initial = formValuesOf(partial, TEHRAN);
+    expect(initial).toMatchObject({ impactMode: 'fractional', impactPercent: '25' });
+    expect(toPatchBody(initial, { ...initial, impactMode: 'full_stop' }, TEHRAN)).toEqual({ impactMode: 'full_stop', impactFraction: null });
+  });
+
   it('maps 422 field errors onto the inputs (DURATION_CONFLICT → duration) and 412 to the conflict flow', () => {
     const conflict = new V2ApiError(422, {
       code: 'DURATION_CONFLICT',
