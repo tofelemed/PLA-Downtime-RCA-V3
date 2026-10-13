@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useV2InfiniteList, flattenPages } from '@/api/v2/queries/use-v2-list';
 import { EntityIcon } from '@/lib/icons';
-import type { Organization, Tenant } from '@/services/api/masterDataApi';
+import type { DirectoryOrganization as Organization, DirectoryPlant as Tenant } from '@/api/v2/types/plant-directory';
 import type { MasterUnitView } from '../api/master-data-types';
 import { HierarchyNode } from './hierarchy-node';
 import { UnitNode } from './unit-node';

@@ -7,7 +7,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
 import { Section } from '@/features/ux-kit/page-layout';
 import { EntityIcon } from '@/lib/icons';
-import type { Organization, Tenant } from '@/services/api/masterDataApi';
+import type { DirectoryOrganization as Organization, DirectoryPlant as Tenant } from '@/api/v2/types/plant-directory';
 import { MasterDataLayout } from '../components/master-data-layout';
 import { useMasterDataWriter } from '../hooks/use-master-data-writer';
 import { HierarchyNode } from './hierarchy-node';

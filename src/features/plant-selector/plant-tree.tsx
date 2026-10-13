@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { PlantSelection } from '@/contexts/PlantSelectionContext';
 import { EntityIcon } from '@/lib/icons';
-import type { Organization, Tenant, Unit } from '@/services/api/masterDataApi';
+import type { DirectoryOrganization as Organization, DirectoryPlant as Tenant, DirectoryUnit as Unit } from '@/api/v2/types/plant-directory';
 import { TreeRow } from './tree-row';
 import { usePlantUnits, useUnitAssets } from './use-plant-directory';
 
@@ -44,7 +44,7 @@ interface NodeProps {
 function UnitNode({ org, tenant, unit, ...tree }: NodeProps & { org: Organization; tenant: Tenant; unit: Unit }) {
   const key = `unit:${unit.id}`;
   const open = tree.isOpen(key);
-  const assets = useUnitAssets(unit, open);
+  const assets = useUnitAssets(tenant.id, unit, open);
   const selected = tree.selection?.unit?.id === unit.id && !tree.selection?.asset;
   return (
     <TreeRow level={2} icon={EntityIcon.unit} label={unit.name} selected={selected} expandable expanded={open}

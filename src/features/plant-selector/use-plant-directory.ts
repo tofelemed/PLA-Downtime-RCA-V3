@@ -1,28 +1,49 @@
 import { useQuery } from '@tanstack/react-query';
+import { v2Request } from '@/api/v2/client';
+import type { QueryParams } from '@/api/v2/request-url';
+import type { ListResponse } from '@/api/v2/types/envelopes';
+import type { DirectoryAsset, DirectoryOrganization, DirectoryPlant, DirectoryUnit } from '@/api/v2/types/plant-directory';
 import { useAuth } from '@/contexts/AuthContext';
 import { selectableTenants } from '@/contexts/plant-selection-store';
-import { masterDataApi, type Asset, type Organization, type Tenant, type Unit } from '@/services/api/masterDataApi';
 
 /** Plant directory lists change rarely (master data): fresh for 10 minutes, shared by every screen. */
 export const DIRECTORY_STALE_MS = 10 * 60_000;
 
 export const plantDirectoryKeys = {
-  organizations: (userId: string) => ['v1', 'directory', userId, 'organizations'] as const,
-  tenants: (userId: string) => ['v1', 'directory', userId, 'tenants'] as const,
-  units: (tenantId: string) => ['v1', 'directory', 'units', tenantId] as const,
-  assets: (unitId: string) => ['v1', 'directory', 'assets', unitId] as const,
+  organizations: (userId: string) => ['v2', 'directory', userId, 'organizations'] as const,
+  tenants: (userId: string) => ['v2', 'directory', userId, 'tenants'] as const,
+  units: (tenantId: string) => ['v2', 'directory', 'units', tenantId] as const,
+  assets: (unitId: string) => ['v2', 'directory', 'assets', unitId] as const,
 };
 
+interface PageOptions {
+  /** read as this plant instead of the acting one */
+  tenantId?: string;
+  signal?: AbortSignal;
+}
+
+/** Every keyset page of a v2 list (directories are small: pages of 500). */
+async function allPages<T>(path: string, query: QueryParams, options: PageOptions = {}): Promise<T[]> {
+  const items: T[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = (await v2Request<ListResponse<T>>({ method: 'GET', path, query: { ...query, limit: 500, cursor }, ...options })).data;
+    items.push(...page.items);
+    cursor = page.nextCursor ?? undefined;
+  } while (cursor);
+  return items;
+}
+
 export interface PlantDirectory {
-  organizations: Organization[];
-  tenants: Tenant[];
+  organizations: DirectoryOrganization[];
+  tenants: DirectoryPlant[];
   isLoading: boolean;
 }
 
 /**
- * Organisations and the plants the user may select — the only lists the header needs on every page
- * (docs/UI_UX_AUDIT.md §4: the selector used to download every unit and asset on every page load).
- * Units and assets load per node, when the user opens it (`usePlantUnits`, `useUnitAssets`).
+ * Organisations and the plants the user may select (`GET /v2/organizations`, `GET /v2/tenants`: the
+ * server lists what the caller may see) — the only lists the header needs on every page. Units and assets
+ * load per node, when the user opens it (`usePlantUnits`, `useUnitAssets`).
  */
 export function usePlantDirectory(): PlantDirectory {
   const { session } = useAuth();
@@ -32,13 +53,13 @@ export function usePlantDirectory(): PlantDirectory {
     queryKey: plantDirectoryKeys.organizations(userId),
     enabled: Boolean(user),
     staleTime: DIRECTORY_STALE_MS,
-    queryFn: () => masterDataApi.getOrganizations(),
+    queryFn: ({ signal }) => allPages<DirectoryOrganization>('/organizations', {}, { signal }),
   });
   const tenants = useQuery({
     queryKey: plantDirectoryKeys.tenants(userId),
     enabled: Boolean(user),
     staleTime: DIRECTORY_STALE_MS,
-    queryFn: () => masterDataApi.getTenants(),
+    queryFn: ({ signal }) => allPages<DirectoryPlant>('/tenants', {}, { signal }),
     select: (rows) => (user ? selectableTenants(user, rows) : []),
   });
   const allowed = tenants.data ?? [];
@@ -49,23 +70,23 @@ export function usePlantDirectory(): PlantDirectory {
   };
 }
 
-/** Units of one plant, fetched when its node is expanded. */
+/** Units of one plant (`GET /v2/units` read as that plant), fetched when its node is expanded. */
 export function usePlantUnits(tenantId: string, enabled: boolean) {
-  return useQuery<Unit[]>({
+  return useQuery<DirectoryUnit[]>({
     queryKey: plantDirectoryKeys.units(tenantId),
     enabled,
     staleTime: DIRECTORY_STALE_MS,
-    queryFn: async () => (await masterDataApi.getUnits({ tenantId })).filter((unit) => unit.tenantId === tenantId),
+    queryFn: ({ signal }) => allPages<DirectoryUnit>('/units', {}, { tenantId, signal }),
   });
 }
 
-/** Assets of one unit, fetched when its node is expanded. */
-export function useUnitAssets(unit: Unit, enabled: boolean) {
-  return useQuery<Asset[]>({
+/** Active assets of one unit (`GET /v2/assets` read as its plant), fetched when its node is expanded. */
+export function useUnitAssets(tenantId: string, unit: DirectoryUnit, enabled: boolean) {
+  return useQuery<DirectoryAsset[]>({
     queryKey: plantDirectoryKeys.assets(unit.id),
     enabled,
     staleTime: DIRECTORY_STALE_MS,
-    queryFn: async () =>
-      (await masterDataApi.getAssets({ tenantId: unit.tenantId, unitId: unit.id })).filter((asset) => asset.unitId === unit.id),
+    queryFn: ({ signal }) =>
+      allPages<DirectoryAsset>('/assets', { unitIds: [unit.id], status: 'active', sort: 'name' }, { tenantId, signal }),
   });
 }

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePlantSelection, type PlantSelection } from '@/contexts/PlantSelectionContext';
 import { defaultTenantFor } from '@/contexts/plant-selection-store';
 import { EntityIcon, UiIcon, type AppIcon } from '@/lib/icons';
-import type { Organization } from '@/services/api/masterDataApi';
+import type { DirectoryOrganization as Organization } from '@/api/v2/types/plant-directory';
 import { PlantTree } from './plant-tree';
 import { usePlantDirectory } from './use-plant-directory';
 

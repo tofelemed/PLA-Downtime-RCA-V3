@@ -1,5 +1,5 @@
 import type { AuthenticatedUser } from '../services/api/authApi';
-import type { Tenant } from '../services/MasterDataService';
+import type { DirectoryPlant as Tenant } from '@/api/v2/types/plant-directory';
 import { createLogger } from '../lib/logger';
 import { homeTenantOf, maySelectTenant, organizationOf } from '../features/auth/effective-roles';
 import type { PlantSelection } from './PlantSelectionContext';

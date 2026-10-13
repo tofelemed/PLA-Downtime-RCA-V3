@@ -20,6 +20,11 @@ export interface V2RequestOptions {
   /** explicit `If-Match`, or `'cached'` for the ETag last read for this path */
   ifMatch?: string | 'cached';
   signal?: AbortSignal;
+  /**
+   * read another plant than the acting one (the plant selector browsing a plant before switching); the
+   * server checks the caller may act on it (403 TENANT_NOT_ALLOWED otherwise)
+   */
+  tenantId?: string;
 }
 
 export interface V2Response<T> {
@@ -48,7 +53,7 @@ function headersFor(options: V2RequestOptions, url: string, correlationId: strin
   const headers = new Headers({ Accept: 'application/json', 'X-Correlation-Id': correlationId });
   const token = session.getAccessToken();
   if (token && isApiUrl(url, v2BaseUrl())) headers.set('Authorization', `Bearer ${token}`);
-  const tenantId = session.getTenantId();
+  const tenantId = options.tenantId ?? session.getTenantId();
   if (tenantId) headers.set('X-Tenant-Id', tenantId);
   if (options.body !== undefined) headers.set('Content-Type', 'application/json');
   if (options.idempotencyKey) headers.set('Idempotency-Key', options.idempotencyKey);

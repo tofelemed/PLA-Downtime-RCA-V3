@@ -1,13 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
-import { Organization, Tenant, Unit, Asset } from '../services/MasterDataService';
+import type { DirectoryAsset, DirectoryOrganization, DirectoryPlant, DirectoryUnit } from '@/api/v2/types/plant-directory';
 import { useAuth } from './AuthContext';
 import { loadPlantSelection, savePlantSelection } from './plant-selection-store';
 
 export interface PlantSelection {
-  organization?: Organization;
-  tenant?: Tenant;
-  unit?: Unit;
-  asset?: Asset;
+  organization?: DirectoryOrganization;
+  tenant?: DirectoryPlant;
+  unit?: DirectoryUnit;
+  asset?: DirectoryAsset;
 }
 
 interface PlantSelectionContextType {
