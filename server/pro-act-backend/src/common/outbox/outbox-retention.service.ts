@@ -52,10 +52,10 @@ export class OutboxRetentionService {
     const batchSize = params[params.length - 1] as number;
     let total = 0;
     for (;;) {
-      const result = (await this.dataSource.query(sql, params)) as [
-        unknown,
-        number,
-      ];
+      const result = await this.dataSource.query<[unknown, number]>(
+        sql,
+        params,
+      );
       const deleted = result[1] ?? 0;
       total += deleted;
       if (deleted < batchSize) return total;
