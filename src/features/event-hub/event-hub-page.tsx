@@ -16,7 +16,7 @@ import { ExportEventsButton } from './components/export-events-button';
 import { QuickStats } from './components/quick-stats';
 import { EventHubFrame } from './event-hub-frame';
 import { useEventHubState, type EventHubState } from './hooks/use-event-hub-state';
-import { toEventQuery } from './model/event-filters';
+import { selectionQuery, toEventQuery } from './model/event-filters';
 import { useEventHubEnv } from './use-event-hub-env';
 
 /**
@@ -94,7 +94,14 @@ function EventHubScreen() {
           </div>
           <CurrentStopsPanel unitIds={filters.unitIds} onClose={(event) => hub.openDialog({ kind: 'close', event })} onCode={openCode} />
         </div>
-        <EventListDialogs dialog={hub.dialog} selectedEvents={hub.selectedEvents} onClose={hub.closeDialog} onSettled={hub.clearSelection} />
+        <EventListDialogs
+          dialog={hub.dialog}
+          selectedEvents={hub.selectedEvents}
+          onClose={hub.closeDialog}
+          onSettled={hub.clearSelection}
+          selection={selectionQuery(filters)}
+          onOpen={hub.openDialog}
+        />
       </div>
     </Page>
   );
@@ -114,6 +121,9 @@ function SelectionToolbar({ hub }: { hub: EventHubState }) {
         {!hub.canMerge && <TooltipContent>Select two or more events of the same unit to merge them.</TooltipContent>}
       </Tooltip>
       <Button size="sm" variant="outline" disabled={count === 0} onClick={() => hub.openDialog({ kind: 'bulk' })}>Bulk code</Button>
+      <Button size="sm" variant="ghost" onClick={() => hub.openDialog({ kind: 'select-all' })} data-testid="code-all-matching">
+        Code all matching…
+      </Button>
       {count > 0 && <Button size="sm" variant="ghost" onClick={hub.clearSelection}>Clear selection</Button>}
     </div>
   );

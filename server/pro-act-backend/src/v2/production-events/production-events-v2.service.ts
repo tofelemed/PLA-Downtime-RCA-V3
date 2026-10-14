@@ -30,6 +30,7 @@ import {
 } from './production-event-v2.view';
 import { ProductionEventExportQueryDto } from './production-event-export-query.dto';
 import { EventCsv, exportEventsCsv } from './production-events-export';
+import { EventSelectionView, selectEvents } from './production-event-selection';
 
 const DEFAULT_SORT: SortSpec<ProductionEventSortField> = {
   field: 'startTime',
@@ -91,6 +92,14 @@ export class ProductionEventsV2Service {
       },
       asOf,
     );
+  }
+
+  /** The filtered events as a versioned snapshot for an "all matching" bulk action (SME D13). */
+  selection(
+    context: RequestContext,
+    query: ProductionEventExportQueryDto,
+  ): Promise<EventSelectionView> {
+    return selectEvents(this.events, context, query);
   }
 
   /** CSV of the filtered list (same scoped query and filters; window required, ≤ 50,000 rows). */

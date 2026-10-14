@@ -1,5 +1,5 @@
 import { HOUR_MS, rollingWindow } from '@/api/v2/queries/time-window';
-import type { ProductionEventFilters } from '@/api/v2/queries/production-events';
+import type { EventSelectionQuery, ProductionEventFilters } from '@/api/v2/queries/production-events';
 
 /** Enum values of the v2 list filters (backend `event-classification.ts`). */
 export const PHYSICAL_TYPES = ['downtime', 'slowdown', 'quality_loss', 'production_output', 'advisory'] as const;
@@ -117,6 +117,16 @@ export function toCodeFilters(state: EventFilterState): EventFilterState {
     physicalTypes: ['downtime'],
     codingStates: ['uncoded'],
   };
+}
+
+/**
+ * SME D13 "all matching": the same server filters as the list, without paging or sort, for the selection
+ * snapshot; null without a window (the snapshot needs one).
+ */
+export function selectionQuery(state: EventFilterState): EventSelectionQuery | null {
+  if (!state.from || !state.to) return null;
+  const { limit: _limit, sort: _sort, ...filters } = toEventQuery(state);
+  return { ...filters, from: state.from, to: state.to } as EventSelectionQuery;
 }
 
 /** Shortest free-text search the server accepts. */

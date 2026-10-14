@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
 import { etagCache } from '@/api/v2/etag-cache';
-import { useProductionEvents } from '@/api/v2/queries/production-events';
+import { useEventSelection, useProductionEvents } from '@/api/v2/queries/production-events';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -160,6 +160,17 @@ describe('Event Hub v2 flows (plan 3.2)', () => {
     expect(calls[0].init.method).toBe('PATCH');
     expect(header(0, 'If-Match')).toBe('"2"');
     expect(body(0)).toEqual({ reasonCodeId: 'r2' });
+  });
+
+  it('SME D13: "all matching" reads a server snapshot with the list filters and the window', async () => {
+    const query = { from: '2026-10-01T00:00:00.000Z', to: '2026-10-08T00:00:00.000Z', unitIds: ['u1'], codingStates: ['uncoded' as const] };
+    responses.push(json(200, { count: 1, firstStart: null, lastEnd: null, unitIds: ['u1'], assetCount: 0, items: [{ id: 'e1', rowVersion: 2 }] }));
+    const { result } = renderHook(() => useEventSelection(query), { wrapper });
+    await waitFor(() => expect(result.current.data?.count).toBe(1));
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toMatch(/\/v2\/production-events\/selection$/);
+    expect(url.searchParams.getAll('codingStates')).toEqual(['uncoded']);
+    expect(url.searchParams.get('from')).toBe(query.from);
   });
 
   it('bulk coding: preview first, then apply; above the atomic limit the job is followed', async () => {

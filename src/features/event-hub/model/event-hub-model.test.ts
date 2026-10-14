@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { StaleRevisionError, toV2Error, V2ApiError } from '@/api/v2/errors';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { changedFields } from './event-draft';
-import { currentStopsQuery, defaultFilters, toCodeFilters, toEventQuery, type EventFilterState } from './event-filters';
+import { currentStopsQuery, defaultFilters, selectionQuery, toCodeFilters, toEventQuery, type EventFilterState } from './event-filters';
 import {
   EMPTY_FORM,
   formValuesOf,
@@ -61,6 +61,14 @@ describe('event filters → v2 query (plan 3.2 step 1)', () => {
   it('FE-07 "To code": uncoded live stops of the same units and window; other narrowing dropped', () => {
     const next = toCodeFilters(filters({ unitIds: ['u1'], reasonIds: ['r1'], physicalTypes: ['slowdown'], physicalStates: [], q: 'belt' }));
     expect(next).toMatchObject({ unitIds: ['u1'], from: window.from, to: window.to, physicalTypes: ['downtime'], codingStates: ['uncoded'], physicalStates: ['open', 'closed'], reasonIds: [], q: '' });
+  });
+
+  it('SME D13 "all matching": the list filters without paging and sort; a window is required', () => {
+    const query = selectionQuery(filters({ unitIds: ['u1'], codingStates: ['uncoded'] }));
+    expect(query).toMatchObject({ unitIds: ['u1'], codingStates: ['uncoded'], from: window.from, to: window.to });
+    expect(query).not.toHaveProperty('limit');
+    expect(query).not.toHaveProperty('sort');
+    expect(selectionQuery(filters({ from: null }))).toBeNull();
   });
 
   it('current stops: open events of the chosen units, independent of the window', () => {

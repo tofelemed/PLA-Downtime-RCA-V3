@@ -1,4 +1,4 @@
-import type { ProductionEventView } from '@/api/v2/types/events';
+import type { BulkTarget } from '@/api/v2/types/events';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { CommandError } from './command-error';
 import { ReasonCodeSelect } from './reason-code-select';
 
 export interface BulkCodeDialogProps {
-  events: ProductionEventView[];
+  events: readonly BulkTarget[];
   onClose: () => void;
 }
 

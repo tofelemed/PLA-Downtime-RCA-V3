@@ -900,6 +900,288 @@
         ]
       }
     },
+    "/api/v2/production-events/selection": {
+      "get": {
+        "description": "Same filters as the list; from and to are required (≤ 400 days, 422 INVALID_RANGE / WINDOW_TOO_LARGE). Returns the count, first start, last end, units and number of assets, and every event with its row version; bulk coding sends those versions, so an event changed since is refused. More than 10,000 matches is 422 SELECTION_TOO_LARGE.",
+        "operationId": "ProductionEventsV2Controller_selection_v2",
+        "parameters": [
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat the parameter for several units",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "reasonIds",
+            "required": false,
+            "in": "query",
+            "description": "Reason code ids",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "eventTypes",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "statuses",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "physicalTypes",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "downtime",
+                  "slowdown",
+                  "quality_loss",
+                  "production_output",
+                  "advisory"
+                ]
+              }
+            }
+          },
+          {
+            "name": "scheduleClasses",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "planned",
+                  "unplanned",
+                  "external",
+                  "unknown"
+                ]
+              }
+            }
+          },
+          {
+            "name": "oeeComponents",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "availability",
+                  "performance",
+                  "quality",
+                  "idle",
+                  "none"
+                ]
+              }
+            }
+          },
+          {
+            "name": "physicalStates",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "closed",
+                  "superseded",
+                  "retracted"
+                ]
+              }
+            }
+          },
+          {
+            "name": "codingStates",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "uncoded",
+                  "coded",
+                  "reviewed"
+                ]
+              }
+            }
+          },
+          {
+            "name": "rcaStates",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "required",
+                  "linked",
+                  "completed"
+                ]
+              }
+            }
+          },
+          {
+            "name": "sourceKinds",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "manual",
+                  "source",
+                  "derived",
+                  "imported"
+                ]
+              }
+            }
+          },
+          {
+            "name": "severities",
+            "required": false,
+            "in": "query",
+            "description": "Severity labels as stored (e.g. Critical, High, Medium, Low); repeat for several",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive text contained in the description or the business event id. Meant to be combined with a from/to window (an unbounded text search scans every event of the scope).",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "isOpen",
+            "required": false,
+            "in": "query",
+            "description": "true: still running (no end time, not superseded or retracted); false: ended, superseded or retracted",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "possibleDuplicate",
+            "required": false,
+            "in": "query",
+            "description": "true: live stops (downtime) that overlap another live stop of the same asset, or of the same unit when neither has an asset — usually the same stop entered twice (e.g. manually and from PI); false: every other event (DT-04)",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "possibleRepeat",
+            "required": false,
+            "in": "query",
+            "description": "true: live stops that began within `repeatWindowSeconds` after a stop of the same asset (or unit) with the same reason ended — a stop-restart-stop that may be one incident (SME D5, flagged only); false: the rest",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "repeatWindowSeconds",
+            "required": false,
+            "in": "query",
+            "description": "Window of `possibleRepeat` in seconds (SME D5 pilot: 120)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 3600,
+              "default": 120,
+              "type": "number"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive); at most 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The events matching the filters as a versioned snapshot, for an explicit \"all matching\" bulk action (SME D13)",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    },
     "/api/v2/production-events/{id}": {
       "get": {
         "description": "Returns `ETag: \"<rowVersion>\"`; a foreign or unknown id is 404. The body is the effective event plus `sourceFacts` (what the source last delivered) and `overriddenFields` (user overrides of source values).",

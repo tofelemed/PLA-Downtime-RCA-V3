@@ -32,6 +32,7 @@ import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import { ProductionEventExportQueryDto } from './production-event-export-query.dto';
 import { ProductionEventListQueryDto } from './production-event-list-query.dto';
 import { ProductionEventV2View } from './production-event-v2.view';
+import { EventSelectionView } from './production-event-selection';
 import { ProductionEventsV2Service } from './production-events-v2.service';
 import { ProductionEventsV2CommandService } from './production-events-v2-commands.service';
 import { ProductionEventHistoryService } from './production-event-history.service';
@@ -96,6 +97,23 @@ export class ProductionEventsV2Controller {
       disposition: `attachment; filename="${csv.filename}"`,
       length: csv.content.length,
     });
+  }
+
+  @Get('selection')
+  @ApiOperation({
+    summary:
+      'The events matching the filters as a versioned snapshot, for an explicit "all matching" bulk action (SME D13)',
+    description:
+      'Same filters as the list; from and to are required (≤ 400 days, 422 INVALID_RANGE / WINDOW_TOO_LARGE). ' +
+      'Returns the count, first start, last end, units and number of assets, and every event with its row version; ' +
+      'bulk coding sends those versions, so an event changed since is refused. More than 10,000 matches is 422 ' +
+      'SELECTION_TOO_LARGE.',
+  })
+  selection(
+    @Ctx() ctx: RequestContext,
+    @Query() query: ProductionEventExportQueryDto,
+  ): Promise<EventSelectionView> {
+    return this.service.selection(ctx, query);
   }
 
   @Get(':id')

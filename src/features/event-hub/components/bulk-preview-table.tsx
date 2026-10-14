@@ -1,5 +1,5 @@
 import type { BulkCodePreviewView, CodingSnapshotView } from '@/api/v2/types/event-operations';
-import type { ProductionEventView } from '@/api/v2/types/events';
+import type { BulkTarget } from '@/api/v2/types/events';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import {
   BULK_EXCLUSION_LABELS,
@@ -22,7 +22,7 @@ function useCodingText() {
 export interface BulkPreviewTableProps {
   preview: BulkCodePreviewView;
   /** the selected events, to name excluded ones by unit and start */
-  events: readonly ProductionEventView[];
+  events: readonly BulkTarget[];
 }
 
 /** DT10 preview: before / after per event (paged), exclusions with reasons, and the windows that will recalculate. */

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ifMatchOf } from '../etag-cache';
 import type { QueryParams } from '../request-url';
 import type { BodyOf, QueryOf } from '../schema-types';
-import type { ProductionEventHistoryView, ProductionEventView } from '../types/events';
+import type { EventSelectionView, ProductionEventHistoryView, ProductionEventView } from '../types/events';
 import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
@@ -37,6 +37,27 @@ export function useProductionEvent(id: string | null) {
     queryFn: async ({ signal }) =>
       (await v2.get<ProductionEventView, '/api/v2/production-events/{id}'>('/api/v2/production-events/{id}', {
         path: { id: id as string },
+        signal,
+      })).data,
+  });
+}
+
+export type EventSelectionQuery = QueryOf<'/api/v2/production-events/selection', 'get'>;
+
+/**
+ * SME D13: the events matching the list filters as a versioned snapshot, read when the user asks to code
+ * "all matching" (never cached: the snapshot must be what the user confirms now).
+ */
+export function useEventSelection(query: EventSelectionQuery | null) {
+  const tenantId = useV2TenantId();
+  return useQuery({
+    queryKey: v2Keys.list(tenantId ?? '-', 'production-events', { filters: { selection: query } }),
+    enabled: Boolean(tenantId && query),
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async ({ signal }) =>
+      (await v2.get<EventSelectionView, '/api/v2/production-events/selection'>('/api/v2/production-events/selection', {
+        query: query as EventSelectionQuery,
         signal,
       })).data,
   });

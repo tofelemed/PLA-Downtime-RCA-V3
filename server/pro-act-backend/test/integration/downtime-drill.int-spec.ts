@@ -138,8 +138,9 @@ describe('Downtime report drill-down and summary (plan 3.3)', () => {
     expect(duration.data.total).toBe('5400');
     expect(duration.data.groups.map((g) => [g.key, g.value]).sort()).toEqual(
       [
-        [reasons.bearing, '2700'],
-        [reasons.seal, '2700'],
+        // SME D7 first-out: Bearing started first and carries the 30 min overlap
+        [reasons.bearing, '3600'],
+        [reasons.seal, '1800'],
       ].sort(),
     );
     expect(duration.data.groups[1].cumulativeShare).toBe('1');
@@ -167,16 +168,16 @@ describe('Downtime report drill-down and summary (plan 3.3)', () => {
     );
     // coded at the parent's own level: the parent's id
     expect(leaf.data.groups).toEqual([
-      expect.objectContaining({ key: reasons.bearing, value: '2700' }),
+      expect.objectContaining({ key: reasons.bearing, value: '3600' }),
     ]);
   });
 
-  it('asset breakdown shares the overlap (allocated, adds up to the unit union)', async () => {
+  it('asset breakdown gives the overlap to the first stop (SME D7 first-out; adds up to the unit union)', async () => {
     const body = await report('groupBy=asset');
     const value = (key: string | null) =>
       body.data.groups.find((g) => g.key === key)?.value;
-    expect(value(assets.pump)).toBe('2700');
-    expect(value(assets.valve)).toBe('2700');
+    expect(value(assets.pump)).toBe('3600');
+    expect(value(assets.valve)).toBe('1800');
     expect(value(null)).toBe('1800');
     expect(body.data.total).toBe('7200');
   });

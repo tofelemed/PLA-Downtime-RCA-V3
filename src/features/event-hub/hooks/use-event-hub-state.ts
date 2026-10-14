@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
-import type { ProductionEventView } from '@/api/v2/types/events';
+import type { BulkTarget, ProductionEventView } from '@/api/v2/types/events';
 import { useAuth } from '@/contexts/AuthContext';
 import type { EventFilterState } from '../model/event-filters';
 import { parseEventFilters, toEventSearchParams } from '../model/event-url';
@@ -12,7 +12,8 @@ export type EventHubDialog =
   | { kind: 'close'; event: ProductionEventView }
   | { kind: 'code'; event: ProductionEventView }
   | { kind: 'merge' }
-  | { kind: 'bulk' }
+  | { kind: 'bulk'; targets?: readonly BulkTarget[] }
+  | { kind: 'select-all' }
   | null;
 
 /**

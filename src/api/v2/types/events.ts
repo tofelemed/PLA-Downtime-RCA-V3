@@ -14,6 +14,19 @@ export interface EventStatesView {
   rca: string;
 }
 
+/** SME D13: an event of a bulk action — what bulk coding sends and its preview names. */
+export type BulkTarget = Pick<ProductionEventView, 'id' | 'rowVersion' | 'unitId' | 'startTime' | 'endTime'>;
+
+/** `GET /v2/production-events/selection`: the matching events as a versioned snapshot (SME D13). */
+export interface EventSelectionView {
+  count: number;
+  firstStart: string | null;
+  lastEnd: string | null;
+  unitIds: string[];
+  assetCount: number;
+  items: Array<BulkTarget & { assetId: string | null }>;
+}
+
 export interface ProductionEventView {
   id: string;
   canonicalId: string;

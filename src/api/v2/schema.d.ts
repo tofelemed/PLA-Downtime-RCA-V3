@@ -148,6 +148,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/production-events/selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The events matching the filters as a versioned snapshot, for an explicit "all matching" bulk action (SME D13)
+         * @description Same filters as the list; from and to are required (≤ 400 days, 422 INVALID_RANGE / WINDOW_TOO_LARGE). Returns the count, first start, last end, units and number of assets, and every event with its row version; bulk coding sends those versions, so an event changed since is refused. More than 10,000 matches is 422 SELECTION_TOO_LARGE.
+         */
+        get: operations["ProductionEventsV2Controller_selection_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/production-events/{id}": {
         parameters: {
             query?: never;
@@ -7285,6 +7305,54 @@ export interface operations {
         };
     };
     ProductionEventsV2Controller_exportCsv_v2: {
+        parameters: {
+            query: {
+                /** @description Repeat the parameter for several units */
+                unitIds?: string[];
+                assetIds?: string[];
+                /** @description Reason code ids */
+                reasonIds?: string[];
+                eventTypes?: string[];
+                statuses?: string[];
+                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory")[];
+                scheduleClasses?: ("planned" | "unplanned" | "external" | "unknown")[];
+                oeeComponents?: ("availability" | "performance" | "quality" | "idle" | "none")[];
+                physicalStates?: ("open" | "closed" | "superseded" | "retracted")[];
+                codingStates?: ("uncoded" | "coded" | "reviewed")[];
+                rcaStates?: ("none" | "required" | "linked" | "completed")[];
+                sourceKinds?: ("manual" | "source" | "derived" | "imported")[];
+                /** @description Severity labels as stored (e.g. Critical, High, Medium, Low); repeat for several */
+                severities?: string[];
+                /** @description Case-insensitive text contained in the description or the business event id. Meant to be combined with a from/to window (an unbounded text search scans every event of the scope). */
+                q?: string;
+                /** @description true: still running (no end time, not superseded or retracted); false: ended, superseded or retracted */
+                isOpen?: boolean;
+                /** @description true: live stops (downtime) that overlap another live stop of the same asset, or of the same unit when neither has an asset — usually the same stop entered twice (e.g. manually and from PI); false: every other event (DT-04) */
+                possibleDuplicate?: boolean;
+                /** @description true: live stops that began within `repeatWindowSeconds` after a stop of the same asset (or unit) with the same reason ended — a stop-restart-stop that may be one incident (SME D5, flagged only); false: the rest */
+                possibleRepeat?: boolean;
+                /** @description Window of `possibleRepeat` in seconds (SME D5 pilot: 120) */
+                repeatWindowSeconds?: number;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from: string;
+                /** @description Window end, ISO 8601 (exclusive); at most 400 days after from */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductionEventsV2Controller_selection_v2: {
         parameters: {
             query: {
                 /** @description Repeat the parameter for several units */

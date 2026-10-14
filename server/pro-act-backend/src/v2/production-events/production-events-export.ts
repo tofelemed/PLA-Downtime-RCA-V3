@@ -92,7 +92,7 @@ function rangeError(code: string, message: string) {
   });
 }
 
-function assertExportWindow(query: ProductionEventExportQueryDto): void {
+export function assertExportWindow(query: ProductionEventExportQueryDto): void {
   const span = new Date(query.to).getTime() - new Date(query.from).getTime();
   if (!(span > 0)) {
     throw rangeError('INVALID_RANGE', 'from must be earlier than to');
