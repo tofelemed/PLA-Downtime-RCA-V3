@@ -41,6 +41,9 @@ export interface ProductionEventV2View {
   tenantId: string | null;
   unitId: string;
   assetId: string | null;
+  /** SME D3: unit / asset whose failure caused this stop; null = the event's own unit */
+  originUnitId: string | null;
+  originAssetId: string | null;
   planId: string | null;
   reasonCodeId: string | null;
   rcaId: string | null;
@@ -97,6 +100,8 @@ export function toProductionEventV2View(
     tenantId: event.tenantId ?? null,
     unitId: event.unitId,
     assetId: event.assetId ?? null,
+    originUnitId: event.originUnitId ?? null,
+    originAssetId: event.originAssetId ?? null,
     planId: event.planId ?? null,
     reasonCodeId: event.reasonCodeId ?? null,
     rcaId: event.rcaId ?? null,

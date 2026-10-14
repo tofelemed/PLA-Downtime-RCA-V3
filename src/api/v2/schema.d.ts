@@ -4978,6 +4978,16 @@ export interface components {
             assetId?: Record<string, never> | null;
             /**
              * Format: uuid
+             * @description SME D3: unit whose failure caused this stop (starved / blocked by another unit); null = this unit
+             */
+            originUnitId?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description SME D3: asset whose failure caused this stop (of the origin unit when one is given)
+             */
+            originAssetId?: Record<string, never> | null;
+            /**
+             * Format: uuid
              * @description Reason (cause) code
              */
             reasonCodeId?: Record<string, never> | null;
@@ -5025,6 +5035,16 @@ export interface components {
             durationSeconds?: number;
             /** Format: uuid */
             assetId?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description SME D3: unit whose failure caused this stop (starved / blocked by another unit); null = this unit
+             */
+            originUnitId?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description SME D3: asset whose failure caused this stop (of the origin unit when one is given)
+             */
+            originAssetId?: Record<string, never> | null;
             /**
              * Format: uuid
              * @description Reason (cause) code

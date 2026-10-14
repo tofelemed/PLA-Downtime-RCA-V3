@@ -12,6 +12,8 @@ import { Unit } from '../../unit/unit.entity';
 
 export interface EventReferences {
   assetId?: string | null;
+  originUnitId?: string | null;
+  originAssetId?: string | null;
   reasonCodeId?: string | null;
   planId?: string | null;
 }
@@ -61,6 +63,27 @@ export class EventReferencesValidator {
     }
     if (refs.reasonCodeId) {
       await this.assertReasonCodeOwned(tenantId, refs.reasonCodeId);
+    }
+    await this.assertOriginOwned(tenantId, refs);
+  }
+
+  /** SME D3: the origin unit and asset are the tenant's; an origin asset belongs to the origin unit when one is named. */
+  private async assertOriginOwned(
+    tenantId: string,
+    refs: EventReferences,
+  ): Promise<void> {
+    if (
+      refs.originUnitId &&
+      (await this.units.countBy({ id: refs.originUnitId, tenantId })) === 0
+    ) {
+      throw invalidReference('originUnitId');
+    }
+    if (!refs.originAssetId) return;
+    const where = refs.originUnitId
+      ? { id: refs.originAssetId, tenantId, unitId: refs.originUnitId }
+      : { id: refs.originAssetId, tenantId };
+    if ((await this.assets.countBy(where)) === 0) {
+      throw invalidReference('originAssetId');
     }
   }
 

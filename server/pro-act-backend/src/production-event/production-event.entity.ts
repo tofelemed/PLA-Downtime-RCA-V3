@@ -120,6 +120,16 @@ export class ProductionEvent {
   @JoinColumn({ name: 'asset_id' })
   asset: Asset;
 
+  /** SME D3: unit whose failure caused this stop (starved / blocked by another unit); null = this unit */
+  @Index('IDX_production_events_origin_unit', { where: '"origin_unit_id" IS NOT NULL' })
+  @Column({ name: 'origin_unit_id', type: 'uuid', nullable: true })
+  originUnitId: string | null;
+
+  /** SME D3: asset whose failure caused this stop, when known */
+  @Index('IDX_production_events_origin_asset', { where: '"origin_asset_id" IS NOT NULL' })
+  @Column({ name: 'origin_asset_id', type: 'uuid', nullable: true })
+  originAssetId: string | null;
+
   @Column({ name: 'impact_code_id', type: 'uuid', nullable: true })
   impactCodeId: string;
 

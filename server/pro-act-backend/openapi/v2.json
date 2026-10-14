@@ -16794,6 +16794,18 @@
             "format": "uuid",
             "nullable": true
           },
+          "originUnitId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "SME D3: unit whose failure caused this stop (starved / blocked by another unit); null = this unit"
+          },
+          "originAssetId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "SME D3: asset whose failure caused this stop (of the origin unit when one is given)"
+          },
           "reasonCodeId": {
             "type": "object",
             "format": "uuid",
@@ -16908,6 +16920,18 @@
             "type": "object",
             "format": "uuid",
             "nullable": true
+          },
+          "originUnitId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "SME D3: unit whose failure caused this stop (starved / blocked by another unit); null = this unit"
+          },
+          "originAssetId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "SME D3: asset whose failure caused this stop (of the origin unit when one is given)"
           },
           "reasonCodeId": {
             "type": "object",

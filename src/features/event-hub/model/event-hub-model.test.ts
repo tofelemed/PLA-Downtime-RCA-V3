@@ -111,6 +111,14 @@ describe('event form (plan 3.2 step 3)', () => {
     });
   });
 
+  it('SME D3: the origin unit / asset is sent when chosen and cleared with null on edit', () => {
+    expect(toCreateBody({ ...values, originUnitId: 'u2', originAssetId: 'a9' }, TEHRAN)).toMatchObject({ originUnitId: 'u2', originAssetId: 'a9' });
+    expect(toCreateBody(values, TEHRAN)).not.toHaveProperty('originUnitId');
+    const initial = { ...values, durationMinutes: '', originUnitId: 'u2', originAssetId: 'a9' };
+    expect(toPatchBody(initial, { ...initial, originUnitId: '', originAssetId: '' }, TEHRAN)).toEqual({ originUnitId: null, originAssetId: null });
+    expect(toPatchBody(initial, { ...initial, originAssetId: 'a7' }, TEHRAN)).toEqual({ originAssetId: 'a7' });
+  });
+
   it('PATCH carries only changed fields; a duration alone re-derives the end', () => {
     const event = {
       unitId: 'u1',

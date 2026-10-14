@@ -323,6 +323,8 @@ function editableColumns(
 ): Partial<ProductionEvent> {
   const columns = {
     assetId: dto.assetId,
+    originUnitId: dto.originUnitId,
+    originAssetId: dto.originAssetId,
     reasonCodeId: dto.reasonCodeId,
     description: dto.description,
     quantity: dto.quantity,

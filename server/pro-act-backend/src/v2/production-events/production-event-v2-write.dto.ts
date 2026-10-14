@@ -54,6 +54,27 @@ export class ProductionEventV2EditableDto {
   @ApiPropertyOptional({
     format: 'uuid',
     nullable: true,
+    description:
+      'SME D3: unit whose failure caused this stop (starved / blocked by another unit); null = this unit',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  originUnitId?: string | null;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description: 'SME D3: asset whose failure caused this stop (of the origin unit when one is given)',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  originAssetId?: string | null;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
     description: 'Reason (cause) code',
   })
   @IsOptional()

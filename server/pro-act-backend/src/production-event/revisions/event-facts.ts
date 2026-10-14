@@ -67,6 +67,8 @@ export const SOURCE_COLUMN_FIELDS: readonly string[] = SOURCE_FIELDS.filter(
 /** Fields a user codes (reason, impact, OEE, classification, comment). */
 export const CODING_FIELDS = [
   'reasonCodeId',
+  'originUnitId',
+  'originAssetId',
   'impactCodeId',
   'oeeCodeId',
   'scheduleClass',

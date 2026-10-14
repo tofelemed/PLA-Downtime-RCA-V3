@@ -24,6 +24,9 @@ export interface EventFormValues {
   impactMode: string;
   /** share of output lost while `fractional`, in percent */
   impactPercent: string;
+  /** SME D3: unit / asset whose failure caused the stop ('' = this unit) */
+  originUnitId: string;
+  originAssetId: string;
 }
 
 export type EventFormField = keyof EventFormValues;
@@ -40,6 +43,8 @@ export const EMPTY_FORM: EventFormValues = {
   description: '',
   impactMode: '',
   impactPercent: '',
+  originUnitId: '',
+  originAssetId: '',
 };
 
 export function formValuesOf(event: ProductionEventView, timezone: string): EventFormValues {
@@ -54,6 +59,8 @@ export function formValuesOf(event: ProductionEventView, timezone: string): Even
     description: event.description ?? '',
     impactMode: event.classification.impactMode ?? '',
     impactPercent: event.classification.impactFraction ? String(Number(event.classification.impactFraction) * 100) : '',
+    originUnitId: event.originUnitId ?? '',
+    originAssetId: event.originAssetId ?? '',
   };
 }
 
@@ -103,6 +110,8 @@ export function toCreateBody(values: EventFormValues, timezone: string): CreateE
   const downtime = values.physicalType === 'downtime';
   if (downtime && values.impactMode) body.impactMode = values.impactMode as CreateEventBody['impactMode'];
   if (downtime && values.impactMode === 'fractional') body.impactFraction = fractionOf(values.impactPercent);
+  if (values.originUnitId) body.originUnitId = values.originUnitId;
+  if (values.originAssetId) body.originAssetId = values.originAssetId;
   const description = optional(values.description.trim());
   if (description) body.description = description;
   return body;
@@ -133,6 +142,8 @@ export function toPatchBody(initial: EventFormValues, values: EventFormValues, t
   }
   if (values.reasonCodeId !== initial.reasonCodeId) changes.reasonCodeId = values.reasonCodeId || null;
   if (values.description !== initial.description) changes.description = values.description.trim() || null;
+  if (values.originUnitId !== initial.originUnitId) changes.originUnitId = values.originUnitId || null;
+  if (values.originAssetId !== initial.originAssetId) changes.originAssetId = values.originAssetId || null;
   const impactChanged = values.impactMode !== initial.impactMode || (values.impactMode === 'fractional' && values.impactPercent !== initial.impactPercent);
   if (impactChanged && values.impactMode && values.physicalType === 'downtime') {
     changes.impactMode = values.impactMode as PatchBody['impactMode'];
@@ -153,6 +164,8 @@ const SERVER_FIELDS: Readonly<Record<string, EventFormField>> = {
   description: 'description',
   impactMode: 'impactMode',
   impactFraction: 'impactPercent',
+  originUnitId: 'originUnitId',
+  originAssetId: 'originAssetId',
 };
 
 export interface ServerFormErrors {
