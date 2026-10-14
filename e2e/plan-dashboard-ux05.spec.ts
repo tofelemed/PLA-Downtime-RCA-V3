@@ -94,6 +94,7 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await page.getByTestId('ledger-plan').click();
 
     await page.getByTestId('add-manual-line').click();
+    await page.selectOption('#manualKind', 'quality'); // restart scrap after the stop: the stop's 90 t downtime loss is already claimed (SME R10)
     await page.fill('#manualQuantity', '10');
     await page.locator(`[data-testid="evidence-event"][data-event-id="${world.stops.a}"]`).click();
     await page.getByTestId('manual-line-add').click();

@@ -157,7 +157,7 @@ export async function seedEngineerWorld(setup: string, engineer: string, tenantI
 export async function submitManualLine(engineer: string, periodId: string, reasonCodeId: string, quantity: string): Promise<void> {
   const attempt = async (): Promise<true | null> => {
     const view = await reconciliation(engineer, periodId);
-    const lines = [{ action: 'manual', sliceId: view.slices[0].sliceId, kind: 'availability', quantity, missingEvent: true, reasonCodeId }];
+    const lines = [{ action: 'manual', sliceId: view.slices[0].sliceId, kind: 'availability', quantity, missingEvent: true, evidenceType: 'log', evidenceRef: 'e2e shift log', reasonCodeId }];
     const saved = await call<{ revision: { revision: number }; baseRunId: string; contentHash: string; code?: string }>(
       engineer, 'PUT', `/v2/production-periods/${periodId}/draft-lines`, { revision: view.revision.revision, baseRunId: view.baseRunId, lines }, { 'If-Match': `"${view.rowVersion}"` },
     );

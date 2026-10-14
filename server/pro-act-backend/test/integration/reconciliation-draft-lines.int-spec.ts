@@ -101,6 +101,44 @@ describe('reconciliation draft lines (plan 2.8)', () => {
     expect(again.ids).toEqual(results.ids);
   });
 
+  it('SME R10: lines citing an event never claim more than its loss in the period (RC-04)', async () => {
+    const view = await env.view();
+    const candidate = view.candidates[0];
+    const [cause] = await env.rows<{ event_id: string }>(
+      `SELECT cause_event_id AS event_id FROM loss_lines WHERE run_id = $1 AND auto_key = $2`,
+      [view.baseRunId, candidate.autoKey],
+    );
+    const claim = (quantity: string) => ({
+      action: 'manual',
+      sliceId: view.slices[0].sliceId,
+      kind: 'availability',
+      quantity,
+      eventIds: [cause.event_id],
+      reason: 'stop split by hand',
+    });
+    // the proposed 125 t already claims the whole stop: 1 t more is a double claim
+    const kept = await env.saveLines(view, [claim('1')]).expect(422);
+    expect(issues(kept.body)[0]).toMatchObject({
+      code: 'EVENT_OVER_ALLOCATED',
+      line: 0,
+      expectedRemainingAllocation: '0',
+    });
+    const reject = {
+      action: 'reject',
+      autoKey: candidate.autoKey,
+      reason: 'split by hand',
+    };
+    const split = await env
+      .saveLines(view, [reject, claim('100'), claim('30')])
+      .expect(422);
+    expect(issues(split.body)[0]).toMatchObject({
+      code: 'EVENT_OVER_ALLOCATED',
+      line: 2,
+      expectedRemainingAllocation: '25',
+    });
+    await env.saveLines(view, [reject, claim('100'), claim('25')]).expect(200);
+  });
+
   it('If-Match is required and must be current (428 / 412)', async () => {
     const view = await env.view();
     await env
@@ -127,7 +165,7 @@ describe('reconciliation draft lines (plan 2.8)', () => {
     expect(body.code).toBe('RUN_CHANGED');
     expect(body.details?.currentRunId).toBe(current.baseRunId);
     expect(body.details?.added).toHaveLength(1);
-    expect(current.lines.map((l) => l.flags)).toEqual([[], []]);
+    expect(current.lines.map((l) => l.flags)).toEqual([[], [], []]);
   });
 
   it('invalid lines are 422 with the offending line index', async () => {

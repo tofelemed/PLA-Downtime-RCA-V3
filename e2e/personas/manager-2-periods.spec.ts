@@ -46,7 +46,7 @@ async function saveLines(token: string, periodId: string, manual: string[], acce
   const view = await reconciliation(token, periodId);
   const lines = [
     ...(acceptCandidate ? [{ action: 'accept', autoKey: view.candidates[0].autoKey }] : []),
-    ...manual.map((quantity) => ({ action: 'manual', sliceId: view.slices[0].sliceId, kind: 'availability', quantity, missingEvent: true, reasonCodeId: world.reasonCodeId })),
+    ...manual.map((quantity) => ({ action: 'manual', sliceId: view.slices[0].sliceId, kind: 'availability', quantity, missingEvent: true, evidenceType: 'log', evidenceRef: 'e2e shift log', reasonCodeId: world.reasonCodeId })),
   ];
   await ok(api(token, 'PUT', `/v2/production-periods/${periodId}/draft-lines`, { revision: view.revision.revision, baseRunId: view.baseRunId, lines }, { 'If-Match': `"${view.rowVersion}"` }), 'draft-lines');
 }

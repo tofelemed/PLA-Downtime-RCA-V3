@@ -149,7 +149,7 @@ export async function saveLines(token: string, periodId: string, reasonCodeId: s
   const view = await reconciliation(token, periodId);
   const lines = [
     { action: 'accept', autoKey: view.candidates[0].autoKey },
-    ...manual.map((quantity) => ({ action: 'manual', sliceId: view.slices[0].sliceId, kind: 'availability', quantity, missingEvent: true, reasonCodeId })),
+    ...manual.map((quantity) => ({ action: 'manual', sliceId: view.slices[0].sliceId, kind: 'availability', quantity, missingEvent: true, evidenceType: 'log', evidenceRef: 'e2e shift log', reasonCodeId })),
   ];
   const saved = await call<ViewBody>(token, 'PUT', `/v2/production-periods/${periodId}/draft-lines`, { revision: view.revision.revision, baseRunId: view.baseRunId, lines }, { 'If-Match': `"${view.rowVersion}"` });
   if (saved.status !== 200) throw new Error(`draft-lines: ${saved.status} ${JSON.stringify(saved.body)}`);

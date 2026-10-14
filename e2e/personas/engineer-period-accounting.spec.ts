@@ -75,6 +75,7 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     expect(writes).toEqual([]); // KPI03: opening the dashboard writes nothing
 
     await page.getByTestId('add-manual-line').click();
+    await page.selectOption('#manualKind', 'quality'); // restart scrap after the stop: the stop's 90 t downtime loss is already claimed (SME R10)
     await page.fill('#manualQuantity', '10');
     await page.locator(`[data-testid="evidence-event"][data-event-id="${world.stops.a}"]`).click();
     await page.getByTestId('manual-line-add').click();

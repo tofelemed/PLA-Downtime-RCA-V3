@@ -7,7 +7,6 @@ import { LossLine } from '../accounting/entities/loss-line.entity';
 import { assertRevision, staleRevision } from '../common/concurrency/revision';
 import { RequestContext } from '../common/context/request-context';
 import { formatDec } from '../domain/actuals/decimal';
-import { allocationIssues } from '../domain/reconciliation/allocation-budget';
 import { DecisionLine } from '../domain/reconciliation/reconciliation.types';
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
 import {
@@ -28,10 +27,10 @@ import {
 import {
   candidatesOf,
   loadRevisionState,
-  reconcileWith,
   RevisionState,
 } from './revision-state';
 import { contentHashOf } from './reviewed-content';
+import { saveIssues } from './save-issues';
 import { runChanged, workflowIssues } from './workflow-errors';
 import { actorOf, recordTransition } from './workflow-recorder';
 import { satisfiesRole } from '../auth/roles/role-model';
@@ -154,14 +153,7 @@ export class DraftLinesService {
     );
     const evidence = await checkReferences(manager, state.period, shaped);
     const decisions = shaped.map(decisionOf);
-    const issues = allocationIssues(
-      reconcileWith(state, decisions),
-      decisions,
-      {
-        candidates: candidatesOf(state.candidateLines),
-        rule: state.tolerance.rule,
-      },
-    );
+    const issues = saveIssues(state, shaped, decisions);
     if (issues.length > 0) throw workflowIssues(issues);
     return shaped.map((line, i) => rowOf(line, evidence[i], actorId));
   }
