@@ -385,7 +385,8 @@
                   "slowdown",
                   "quality_loss",
                   "production_output",
-                  "advisory"
+                  "advisory",
+                  "grade_transition"
                 ]
               }
             }
@@ -696,7 +697,8 @@
                   "slowdown",
                   "quality_loss",
                   "production_output",
-                  "advisory"
+                  "advisory",
+                  "grade_transition"
                 ]
               }
             }
@@ -978,7 +980,8 @@
                   "slowdown",
                   "quality_loss",
                   "production_output",
-                  "advisory"
+                  "advisory",
+                  "grade_transition"
                 ]
               }
             }
@@ -6314,7 +6317,12 @@
               "enum": [
                 "contribution_margin",
                 "standard_cost",
-                "cost_per_hour"
+                "cost_per_hour",
+                "variable_cost",
+                "salvage_value",
+                "disposal_cost",
+                "downgrade_price_difference",
+                "rework_cost"
               ],
               "type": "string"
             }
@@ -6496,6 +6504,266 @@
           }
         ],
         "summary": "Retire a draft or approved valuation rate version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/transition-standards": {
+      "get": {
+        "operationId": "TransitionStandardsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromProductId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "toProductId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "approved",
+                "retired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List transition standard versions (keyset on effectiveFrom, id)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. Unit and products of the tenant (422 INVALID_REFERENCE); from ≠ to (422 SAME_PRODUCT); referenceSeconds > 0 (422 INVALID_REFERENCE_SECONDS); a reference off-grade quantity needs offgradeUom (422 UOM_REQUIRED).",
+        "operationId": "TransitionStandardsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionStandardCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft transition standard version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/transition-standards/{id}": {
+      "get": {
+        "operationId": "TransitionStandardsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one transition standard version; foreign ids are 404",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/transition-standards/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "operationId": "TransitionStandardsV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft transition standard version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/transition-standards/{id}/retire": {
+      "post": {
+        "operationId": "TransitionStandardsV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a draft or approved transition standard version",
         "tags": [
           "v2 · Profiles"
         ]
@@ -9474,6 +9742,19 @@
             }
           },
           {
+            "name": "rateType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "economic",
+                "group_reporting",
+                "budget"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "name": "fromCurrency",
             "required": false,
             "in": "query",
@@ -9590,7 +9871,7 @@
     },
     "/api/v2/fx-rates/{id}/approve": {
       "post": {
-        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite.",
         "operationId": "FxRatesV2Controller_approve_v2",
         "parameters": [
           {
@@ -9638,7 +9919,7 @@
     },
     "/api/v2/fx-rates/{id}/retire": {
       "post": {
-        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). ",
+        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite.",
         "operationId": "FxRatesV2Controller_retire_v2",
         "parameters": [
           {
@@ -9669,6 +9950,249 @@
           }
         ],
         "summary": "Retire a draft or approved FX rate version",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/demand-statuses": {
+      "get": {
+        "operationId": "DemandStatusesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "approved",
+                "retired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List demand status versions (keyset on effectiveFrom, id)",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. A status applies to every unit making the product: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 INVALID_REFERENCE (product of another tenant), EVIDENCE_REQUIRED, INVALID_EFFECTIVE_DATES.",
+        "operationId": "DemandStatusesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandStatusCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft demand status of a product",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/demand-statuses/{id}": {
+      "get": {
+        "operationId": "DemandStatusesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one demand status version; foreign ids are 404",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/demand-statuses/{id}/approve": {
+      "post": {
+        "description": "A status applies to every unit making the product: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) status queues a recalculation of the periods it covers (`revaluation`).",
+        "operationId": "DemandStatusesV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft demand status",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/demand-statuses/{id}/retire": {
+      "post": {
+        "description": "A status applies to every unit making the product: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). SME V7: approving (or retiring an approved) status queues a recalculation of the periods it covers (`revaluation`).",
+        "operationId": "DemandStatusesV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a draft or approved demand status",
         "tags": [
           "v2 · Valuation"
         ]
@@ -9811,7 +10335,7 @@
     },
     "/api/v2/valuation-policies/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 CURRENCY_UNDECIDED for the XXX placeholder. Periods are revalued on their next recalculation.",
+        "description": "Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 CURRENCY_UNDECIDED for the XXX placeholder. SME V7: the periods from its start are queued for revaluation (`revaluation`); approved periods get a change proposal.",
         "operationId": "ValuationPoliciesV2Controller_approve_v2",
         "parameters": [
           {
@@ -9896,14 +10420,14 @@
             "name": "metric",
             "required": false,
             "in": "query",
-            "description": "margin = commercial opportunity (contribution margin), standard_cost = standard cost view, operational_cost = cost per hour of downtime, independent_components = margin + time cost of the impact codes the policy marks independent. Views are never added to each other.",
+            "description": "margin = commercial opportunity (contribution margin), standard_cost = standard cost view, operational_cost = cost per hour of downtime, independent_components = margin + time cost of the impact codes the policy marks independent, economic_impact = lost contribution on unrecovered sales + incremental costs (SME V2 / V3). Views are never added to each other. Absent: the default view of the tenant's newest approved valuation policy (SME V8), margin when none is approved.",
             "schema": {
-              "default": "margin",
               "enum": [
                 "margin",
                 "standard_cost",
                 "operational_cost",
-                "independent_components"
+                "independent_components",
+                "economic_impact"
               ],
               "type": "string"
             }
@@ -12823,6 +13347,8 @@
                   "availability",
                   "performance",
                   "quality",
+                  "transition_allowance",
+                  "transition_excess",
                   "bridge",
                   "unaccounted_classified"
                 ]
@@ -14777,93 +15303,6 @@
         "summary": "Set one custom attribute value of a unit or asset",
         "tags": [
           "v2 · Custom attributes"
-        ]
-      }
-    },
-    "/api/v2/dashboard-configuration": {
-      "get": {
-        "operationId": "DashboardConfigV2Controller_get_v2",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DashboardConfigV2View"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "The plant’s dashboard settings (defaults while none are stored)",
-        "tags": [
-          "v2 · Dashboard configuration"
-        ]
-      },
-      "put": {
-        "operationId": "DashboardConfigV2Controller_save_v2",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DashboardSettingsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DashboardConfigV2View"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Store the plant’s dashboard settings (every section)",
-        "tags": [
-          "v2 · Dashboard configuration"
-        ]
-      },
-      "delete": {
-        "operationId": "DashboardConfigV2Controller_reset_v2",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DashboardConfigV2View"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Reset to the defaults (removes the stored settings)",
-        "tags": [
-          "v2 · Dashboard configuration"
         ]
       }
     },
@@ -17218,7 +17657,7 @@
     }
   },
   "info": {
-    "title": "ProAct API v2",
+    "title": "Traverse Forge API v2",
     "description": "Tenant from identity, AND-combined filters, cursor pagination, standard envelopes (src/v2/CONVENTIONS.md)",
     "version": "2.0",
     "contact": {}
@@ -17438,7 +17877,8 @@
               "slowdown",
               "quality_loss",
               "production_output",
-              "advisory"
+              "advisory",
+              "grade_transition"
             ]
           },
           "scheduleClass": {
@@ -17474,6 +17914,24 @@
             "example": "0.25",
             "nullable": true,
             "description": "0..1, required when impactMode = fractional"
+          },
+          "fromProductId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "LA-08: product before a grade change; required with toProductId on grade_transition events only"
+          },
+          "toProductId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "LA-08: product after a grade change (grade_transition only)"
+          },
+          "recoveryOfEventId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop"
           },
           "plannedEndTime": {
             "type": "object",
@@ -17611,7 +18069,8 @@
               "slowdown",
               "quality_loss",
               "production_output",
-              "advisory"
+              "advisory",
+              "grade_transition"
             ]
           },
           "scheduleClass": {
@@ -17647,6 +18106,24 @@
             "example": "0.25",
             "nullable": true,
             "description": "0..1, required when impactMode = fractional"
+          },
+          "fromProductId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "LA-08: product before a grade change; required with toProductId on grade_transition events only"
+          },
+          "toProductId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "LA-08: product after a grade change (grade_transition only)"
+          },
+          "recoveryOfEventId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop"
           },
           "plannedEndTime": {
             "type": "object",
@@ -19073,7 +19550,12 @@
             "enum": [
               "contribution_margin",
               "standard_cost",
-              "cost_per_hour"
+              "cost_per_hour",
+              "variable_cost",
+              "salvage_value",
+              "disposal_cost",
+              "downgrade_price_difference",
+              "rework_cost"
             ]
           },
           "value": {
@@ -19095,6 +19577,73 @@
           "basis",
           "value",
           "currency"
+        ]
+      },
+      "TransitionStandardCreateDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "example": "2027-01-01T02:30:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = open-ended"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromProductId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Product (grade) before the change"
+          },
+          "toProductId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Product (grade) after the change; B→A is its own entry"
+          },
+          "referenceSeconds": {
+            "type": "string",
+            "example": "7560",
+            "description": "Reference duration of the transition in seconds (> 0)"
+          },
+          "referenceOffgradeQty": {
+            "type": "object",
+            "example": "18",
+            "nullable": true,
+            "description": "Reference off-grade quantity per transition; absent = the time share bounds the off-grade allowance"
+          },
+          "offgradeUom": {
+            "type": "object",
+            "example": "t",
+            "nullable": true
+          },
+          "sampleCount": {
+            "type": "object",
+            "example": 5,
+            "nullable": true,
+            "description": "Comparable transitions the reference was derived from"
+          },
+          "evidence": {
+            "type": "object",
+            "nullable": true,
+            "description": "Derivation: observations, licensor / engineering guidance, boundary"
+          },
+          "notes": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "effectiveFrom",
+          "unitId",
+          "fromProductId",
+          "toProductId",
+          "referenceSeconds"
         ]
       },
       "RateImportRowDto": {
@@ -20035,6 +20584,16 @@
             "nullable": true,
             "description": "Exclusive end; absent or null = open-ended"
           },
+          "rateType": {
+            "type": "string",
+            "enum": [
+              "economic",
+              "group_reporting",
+              "budget"
+            ],
+            "default": "economic",
+            "description": "SME V5: the rate table by purpose — economic (treasury evidenced conversion basis), group_reporting (group translation policy) or budget. Name the market or fixing in `source`, not here."
+          },
           "fromCurrency": {
             "type": "string",
             "example": "USD"
@@ -20061,6 +20620,43 @@
           "rate"
         ]
       },
+      "DemandStatusCreateDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "example": "2027-01-01T02:30:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = open-ended"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "demand_constrained",
+              "not_constrained"
+            ],
+            "description": "demand_constrained = sold out: lost tonnes are lost sales; not_constrained = inventory or catch-up covers demand"
+          },
+          "evidence": {
+            "type": "string",
+            "description": "What substantiates it: unmet orders, inventory cover, ability to catch up, affected market"
+          }
+        },
+        "required": [
+          "effectiveFrom",
+          "productId",
+          "status",
+          "evidence"
+        ]
+      },
       "ValuationPolicyCreateDto": {
         "type": "object",
         "properties": {
@@ -20068,8 +20664,10 @@
             "type": "string",
             "enum": [
               "contribution_margin",
-              "standard_cost"
-            ]
+              "standard_cost",
+              "economic_impact"
+            ],
+            "description": "SME V8: economic_impact (lost contribution on unrecovered sales + incremental costs) needs demandRule"
           },
           "timeBasisRule": {
             "type": "string",
@@ -20101,6 +20699,62 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "fxRateType": {
+            "type": "string",
+            "enum": [
+              "economic",
+              "group_reporting",
+              "budget"
+            ],
+            "description": "SME V5 (version 3): the FX rate table that converts (default economic)"
+          },
+          "fxDateRule": {
+            "type": "string",
+            "enum": [
+              "event_date",
+              "period_average"
+            ],
+            "description": "SME V6: event_date (rate at each loss, summed into the month) or period_average (local-month average)"
+          },
+          "fxAverageMaxDeviation": {
+            "type": "object",
+            "nullable": true,
+            "example": "0.05",
+            "description": "period_average only: refuse the average when a rate of the month deviates more than this ratio"
+          },
+          "demandRule": {
+            "type": "string",
+            "enum": [
+              "demand_constrained_only",
+              "all_lost_output"
+            ],
+            "description": "SME V3: presence enables the economic view; demand_constrained_only charges lost contribution only where an approved demand status says the product was sold out"
+          },
+          "qualityDispositions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "scrap",
+                "downgrade",
+                "rework"
+              ]
+            },
+            "description": "SME V2: impact code id → scrap | downgrade | rework (impact codes of the tenant, 422 INVALID_REFERENCE)"
+          },
+          "defaultQualityDisposition": {
+            "type": "string",
+            "enum": [
+              "scrap",
+              "downgrade",
+              "rework"
+            ],
+            "nullable": true
+          },
+          "manualLineHours": {
+            "type": "boolean",
+            "description": "SME V4: manual downtime lines get a cost-per-hour value from the hours of their evidenced events"
           },
           "effectiveFrom": {
             "type": "string",
@@ -22018,7 +22672,7 @@
         "properties": {
           "day": {
             "type": "string",
-            "description": "UTC day, YYYY-MM-DD"
+            "description": "Plant-local day, YYYY-MM-DD (default site's timezone, else the tenant's, else UTC)"
           },
           "count": {
             "type": "number"
@@ -22234,383 +22888,6 @@
           "entityId",
           "attributeDefinitionId",
           "value"
-        ]
-      },
-      "OeeSettingsDto": {
-        "type": "object",
-        "properties": {
-          "availabilityWeight": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 10
-          },
-          "performanceWeight": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 10
-          },
-          "qualityWeight": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 10
-          },
-          "targetOEE": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "targetAvailability": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "targetPerformance": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "targetQuality": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "required": [
-          "availabilityWeight",
-          "performanceWeight",
-          "qualityWeight",
-          "targetOEE",
-          "targetAvailability",
-          "targetPerformance",
-          "targetQuality"
-        ]
-      },
-      "LossSettingsDto": {
-        "type": "object",
-        "properties": {
-          "lossValuePerUnit": {
-            "type": "number",
-            "minimum": 0
-          },
-          "highLossThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "criticalLossThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "defaultUnaccountedLossPercentage": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "defaultLossCategories": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "lossValuePerUnit",
-          "highLossThreshold",
-          "criticalLossThreshold",
-          "defaultUnaccountedLossPercentage",
-          "defaultLossCategories"
-        ]
-      },
-      "CostSettingsDto": {
-        "type": "object",
-        "properties": {
-          "costCalculationMethod": {
-            "type": "string",
-            "enum": [
-              "perUnit",
-              "perHour",
-              "fixed"
-            ]
-          },
-          "defaultCostPerUnit": {
-            "type": "number",
-            "minimum": 0
-          },
-          "defaultCostPerHour": {
-            "type": "number",
-            "minimum": 0
-          },
-          "highCostThreshold": {
-            "type": "number",
-            "minimum": 0
-          },
-          "criticalCostThreshold": {
-            "type": "number",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "costCalculationMethod",
-          "defaultCostPerUnit",
-          "defaultCostPerHour",
-          "highCostThreshold",
-          "criticalCostThreshold"
-        ]
-      },
-      "BottleneckSettingsDto": {
-        "type": "object",
-        "properties": {
-          "lossWeight": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "costWeight": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "oeeWeight": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "lowRiskThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "mediumRiskThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "highRiskThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          }
-        },
-        "required": [
-          "lossWeight",
-          "costWeight",
-          "oeeWeight",
-          "lowRiskThreshold",
-          "mediumRiskThreshold",
-          "highRiskThreshold"
-        ]
-      },
-      "DisplaySettingsDto": {
-        "type": "object",
-        "properties": {
-          "showOEE": {
-            "type": "boolean"
-          },
-          "showLosses": {
-            "type": "boolean"
-          },
-          "showCosts": {
-            "type": "boolean"
-          },
-          "showCapacity": {
-            "type": "boolean"
-          },
-          "showActions": {
-            "type": "boolean"
-          },
-          "decimalPlaces": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 6
-          },
-          "currencySymbol": {
-            "type": "string",
-            "maxLength": 8
-          },
-          "numberFormat": {
-            "type": "string",
-            "enum": [
-              "en-US",
-              "en-GB",
-              "de-DE",
-              "custom"
-            ]
-          },
-          "theme": {
-            "type": "string",
-            "enum": [
-              "default",
-              "high-contrast",
-              "colorblind-friendly"
-            ]
-          }
-        },
-        "required": [
-          "showOEE",
-          "showLosses",
-          "showCosts",
-          "showCapacity",
-          "showActions",
-          "decimalPlaces",
-          "currencySymbol",
-          "numberFormat",
-          "theme"
-        ]
-      },
-      "PerformanceSettingsDto": {
-        "type": "object",
-        "properties": {
-          "defaultIdealCycleTime": {
-            "type": "number",
-            "minimum": 0,
-            "description": "seconds"
-          },
-          "performanceCalculationMethod": {
-            "type": "string",
-            "enum": [
-              "cycleTime",
-              "outputRate",
-              "efficiency"
-            ]
-          },
-          "lowPerformanceThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "highPerformanceThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "required": [
-          "defaultIdealCycleTime",
-          "performanceCalculationMethod",
-          "lowPerformanceThreshold",
-          "highPerformanceThreshold"
-        ]
-      },
-      "QualitySettingsDto": {
-        "type": "object",
-        "properties": {
-          "qualityCalculationMethod": {
-            "type": "string",
-            "enum": [
-              "defects",
-              "rework",
-              "scrap"
-            ]
-          },
-          "lowQualityThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "highQualityThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "required": [
-          "qualityCalculationMethod",
-          "lowQualityThreshold",
-          "highQualityThreshold"
-        ]
-      },
-      "AvailabilitySettingsDto": {
-        "type": "object",
-        "properties": {
-          "availabilityCalculationMethod": {
-            "type": "string",
-            "enum": [
-              "uptime",
-              "downtime",
-              "scheduled"
-            ]
-          },
-          "lowAvailabilityThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "highAvailabilityThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "required": [
-          "availabilityCalculationMethod",
-          "lowAvailabilityThreshold",
-          "highAvailabilityThreshold"
-        ]
-      },
-      "DashboardSettingsDto": {
-        "type": "object",
-        "properties": {
-          "oee": {
-            "$ref": "#/components/schemas/OeeSettingsDto"
-          },
-          "losses": {
-            "$ref": "#/components/schemas/LossSettingsDto"
-          },
-          "costs": {
-            "$ref": "#/components/schemas/CostSettingsDto"
-          },
-          "bottleneckRisk": {
-            "$ref": "#/components/schemas/BottleneckSettingsDto"
-          },
-          "display": {
-            "$ref": "#/components/schemas/DisplaySettingsDto"
-          },
-          "performance": {
-            "$ref": "#/components/schemas/PerformanceSettingsDto"
-          },
-          "quality": {
-            "$ref": "#/components/schemas/QualitySettingsDto"
-          },
-          "availability": {
-            "$ref": "#/components/schemas/AvailabilitySettingsDto"
-          }
-        },
-        "required": [
-          "oee",
-          "losses",
-          "costs",
-          "bottleneckRisk",
-          "display",
-          "performance",
-          "quality",
-          "availability"
-        ]
-      },
-      "DashboardConfigV2View": {
-        "type": "object",
-        "properties": {
-          "settings": {
-            "$ref": "#/components/schemas/DashboardSettingsDto"
-          },
-          "isStored": {
-            "type": "boolean",
-            "description": "false while the plant uses the defaults"
-          },
-          "updatedAt": {
-            "type": "string",
-            "nullable": true
-          },
-          "updatedByName": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "settings",
-          "isStored",
-          "updatedAt",
-          "updatedByName"
         ]
       },
       "CreateOrganizationV2Dto": {

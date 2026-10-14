@@ -1,5 +1,5 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, Unique } from 'typeorm';
-import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import { Ledger, LEDGERS } from '../../domain/accounting/accounting.types';
 import { PeriodProductSlice } from '../../periods/entities/period-product-slice.entity';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
@@ -28,7 +28,7 @@ const quantity = (name: string) => ({
 ])
 @Index('IDX_period_ledger_totals_slice', ['sliceId'])
 @Index('IDX_period_ledger_totals_tenant_period', ['tenantId', 'periodId'])
-export class PeriodLedgerTotal extends TenantScopedEntity {
+export class PeriodLedgerTotal extends TenantOwnedEntity {
   @Column({ name: 'run_id', type: 'uuid' })
   runId: string;
 

@@ -159,7 +159,7 @@ export class RCAKnowledgeBase {
   effectiveness: number;
 
   @ApiProperty({ description: 'Cost saved', required: false })
-  @Column({ name: 'cost_saved', type: 'float', nullable: true })
+  @Column({ name: 'cost_saved', type: 'numeric', precision: 28, scale: 8, nullable: true })
   costSaved?: number;
 
   @ApiProperty({ description: 'Downtime reduced (minutes)', required: false })

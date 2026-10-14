@@ -12,11 +12,13 @@ import { DecisionBanners } from './components/decision-banners';
 
 const PlansTab = lazy(() => import('./plans/plans-tab').then((m) => ({ default: m.PlansTab })));
 const ProfilesTab = lazy(() => import('./profiles/profiles-tab').then((m) => ({ default: m.ProfilesTab })));
+const TransitionStandardsTab = lazy(() => import('./profiles/transition-standards-tab').then((m) => ({ default: m.TransitionStandardsTab })));
 const CalendarsTab = lazy(() => import('./calendars/calendars-tab').then((m) => ({ default: m.CalendarsTab })));
 
 const TABS = [
   { value: 'plans', label: 'Plans', Component: PlansTab },
   { value: 'profiles', label: 'Profiles & rates', Component: ProfilesTab },
+  { value: 'transitions', label: 'Grade transitions', Component: TransitionStandardsTab },
   { value: 'calendars', label: 'Calendars & crews', Component: CalendarsTab },
 ] as const;
 

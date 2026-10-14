@@ -15,6 +15,7 @@ import { openWindow } from './seed-open-stops';
 import { inParallel, ShowcaseContext } from './showcase-context';
 import { SeededRandom } from './showcase-random';
 import { DAY_MS, iso } from './showcase-window';
+import { plannedTransition } from './seed-transitions';
 
 const CUTOFF_MS = 5 * 60_000;
 
@@ -72,6 +73,10 @@ function periodEvents(
         max: Math.ceil(perShift.max / 3),
       },
       seed: ctx.seed,
+      transition:
+        ctx.scenario.kind === 'full'
+          ? plannedTransition(unit, period.start, period.end, ctx.seed)
+          : null,
     },
     prefix,
   );

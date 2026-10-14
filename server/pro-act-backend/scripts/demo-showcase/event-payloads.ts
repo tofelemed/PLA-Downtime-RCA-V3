@@ -39,6 +39,15 @@ export function v2Payload(
   if (event.kind === 'stop') {
     body.physicalType = 'downtime';
     body.eventType = 'ProductionLoss';
+  } else if (event.kind === 'transition' && event.transition) {
+    body.physicalType = 'grade_transition';
+    body.scheduleClass = 'planned';
+    body.oeeComponent = 'performance';
+    body.fromProductId = ids.products.get(event.transition.fromCode);
+    body.toProductId = ids.products.get(event.transition.toCode);
+    body.quantity = dec(event.quantity ?? 0, 2);
+    body.quantityUom = 't';
+    delete body.reasonCodeId;
   } else if (event.kind === 'slowdown') {
     body.physicalType = 'slowdown';
     body.impactMode = 'fractional';

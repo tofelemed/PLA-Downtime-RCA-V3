@@ -3,19 +3,19 @@ import { randomUUID } from 'node:crypto';
 import { loginViaUI } from '../test-utils/auth-helpers';
 import { findCode } from '../test-utils/codes-world';
 import { policiesOf } from '../test-utils/finance-world';
-import { fillDateTime, openLibrary, openRule } from './support/codes-finance-ui';
+import { openLibrary, openRule } from './support/codes-finance-ui';
 import { api, itemsOf, post } from './support/manager-api';
 import { expectHidden, expectRefused } from './support/hidden-controls';
 import { JONAS, MDA, PREFIX, listMdaUnits, seedPlanWorld, sessionOf, shortId, utcDate, type Session } from './support/masterdata-world';
 
 /**
  * Master data admin persona — journeys 5, 6 and 7:
- * 6. Finance (`/finance`): Zara (PROFILE_WRITERS covers FX drafts) drafts a far-future USD → IRR version
- *    (zero rate refused first); no Approve is offered (server: 403 FORBIDDEN_ROLE); Jonas approves as setup
- *    (supersede when the open-ended live version overlaps); nothing is retired.
+ * 6. Finance (`/finance`, SME V1 14 Oct 2026): FX and valuation rates are finance's now, so Zara sees no
+ *    "Add exchange rate draft" and the server refuses her FX and valuation-rate drafts (403 FORBIDDEN_ROLE);
+ *    nothing is stored. The finance journey itself runs in manager-4-finance-flags.spec.ts.
  * 5. Writes not offered on screen (capability-hidden) and refused by the server (403), never persisted:
- *    plan approval (Charlotte), RCA case (Hiro), valuation policy draft (Felix, POLICY_ROLES = manager
- *    only), a connection on Connectivity; period approval, feature flags through the API (403).
+ *    plan approval (Charlotte), RCA case (Hiro), valuation policy draft (Felix; finance maintainers
+ *    only, SME V1), a connection on Connectivity; period approval, feature flags through the API (403).
  * 7. Persistence: Felix (another master_data_admin) sees the unit, codes, rule and crew of the earlier
  *    specs after a re-login (hierarchy mappings: masterdata-5). Nothing is deleted or retired.
  */
@@ -29,7 +29,6 @@ const policyNotes = `${PREFIX}policy ${suffix}`;
 
 test.describe.configure({ mode: 'serial', timeout: 240_000 });
 
-const fxDetail = (page: Page) => page.getByTestId('fx-detail');
 
 async function openFinance(page: Page, tab: 'fx' | 'policies'): Promise<void> {
   await page.goto(`/finance?tab=${tab}`);
@@ -59,48 +58,20 @@ test.describe('Master data admin — finance drafts, refusals and persistence', 
     [charlotte, zara, felix, jonas] = await Promise.all([sessionOf(MDA.charlotte), sessionOf(MDA.zara), sessionOf(MDA.felix), sessionOf(JONAS)]);
   });
 
-  test('MDA-06 Zara drafts a far-future USD → IRR FX version (zero rate refused); no Approve offered and the server refuses hers; Jonas approves; nothing retired', async ({ page }) => {
+  test('MDA-06 SME V1: Zara (master_data_admin) no longer drafts FX or valuation rates: no button, the server refuses (403 FORBIDDEN_ROLE), nothing stored', async ({ page }) => {
     const before = await fxVersions(zara.token);
-    const fxYear = nextFxYear(before);
     await loginViaUI(page, MDA.zara.email, MDA.zara.password);
-    await expect(page.locator('nav a[href="/finance"]')).toBeVisible();
     await openFinance(page, 'fx');
-    await page.getByTestId('fx-new').click();
-    await page.selectOption('#fromCurrency', 'USD');
-    await page.selectOption('#toCurrency', 'IRR');
-    await page.fill('#rate', '0');
-    await fillDateTime(page, 'Valid from', `${fxYear}-01-01T00:00`);
-    await page.fill('#fxSource', fxSource);
-    await page.getByTestId('fx-save').click();
-    await expect(page.getByTestId('field-error-rate')).toContainText('greater than 0');
-    expect((await fxVersions(zara.token)).find((v) => v.source === fxSource)).toBeUndefined();
-    await page.fill('#rate', '2750000');
-    await page.getByTestId('fx-save').click();
-    // saving opens the version's page
-    await expect(fxDetail(page)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
-    await expect(fxDetail(page).getByTestId('fx-rate')).toHaveText('1 USD = 2750000 IRR');
-
-    // a profile writer is not an approver: no Approve / Retire on the FX page, and the server refuses the approval
-    await expectHidden(page.getByTestId('fx-approve'));
-    await expectHidden(page.getByTestId('fx-retire'));
-    await page.screenshot({ path: test.info().outputPath('mda-06-fx-approve-hidden.png'), fullPage: true });
-    const drafted = (await fxVersions(zara.token)).find((v) => v.source === fxSource);
-    expectRefused(await post(zara.token, `/v2/fx-rates/${drafted?.id}/approve`, {}), 'FORBIDDEN_ROLE');
-    await expect(fxDetail(page)).toHaveAttribute('data-state', 'draft');
-
-    const draft = (await fxVersions(zara.token)).find((v) => v.source === fxSource);
-    expect(draft?.state).toBe('draft');
-    expect(draft?.effectiveFrom.slice(0, 4)).toBe(String(fxYear));
-    let approved = await post<{ code?: string }>(jonas.token, `/v2/fx-rates/${draft?.id}/approve`, {});
-    if (approved.status === 409 && approved.body.code === 'VERSION_OVERLAP') {
-      test.info().annotations.push({ type: 'note', description: 'VERSION_OVERLAP with the open-ended live version; approved with supersede' });
-      approved = await post(jonas.token, `/v2/fx-rates/${draft?.id}/approve`, { supersede: true });
-    }
-    expect(approved.status).toBe(200);
-    await page.reload();
-    await expect(fxDetail(page)).toHaveAttribute('data-state', 'approved', { timeout: 60_000 });
+    await expect(page.getByTestId('fx-rates-tab')).toBeVisible({ timeout: 20_000 });
+    await expectHidden(page.getByTestId('fx-new'));
+    await page.screenshot({ path: test.info().outputPath('mda-06-fx-new-hidden.png'), fullPage: true });
+    const fx = { fromCurrency: 'USD', toCurrency: 'IRR', rate: '2750000', effectiveFrom: `${nextFxYear(before)}-01-01T00:00:00Z`, source: fxSource };
+    expectRefused(await post(zara.token, '/v2/fx-rates', fx), 'FORBIDDEN_ROLE');
+    const rate = { impactCodeId: randomUUID(), basis: 'cost_per_hour', value: '1', currency: 'USD', effectiveFrom: '2099-01-01T00:00:00Z' };
+    expectRefused(await post(zara.token, '/v2/valuation-rates', rate), 'FORBIDDEN_ROLE');
     const after = await fxVersions(zara.token);
-    for (const version of before) expect(after.find((v) => v.id === version.id)?.state).toBe(version.state); // nothing retired
+    expect(after.find((v) => v.source === fxSource)).toBeUndefined();
+    expect(after.length).toBe(before.length);
   });
 
   test('MDA-05a Charlotte: no approve control on a draft plan on /planning (server 403); period approval and feature flags 403 through the API', async ({ page }) => {
@@ -168,7 +139,7 @@ test.describe('Master data admin — finance drafts, refusals and persistence', 
     expect([connection.status, connection.body.code]).toEqual([403, 'FORBIDDEN_ROLE']);
   });
 
-  test('MDA-05c Felix: New policy version is not offered on /finance (POLICY_ROLES = manager only), the server refuses it; nothing stored', async ({ page }) => {
+  test('MDA-05c Felix: New policy version is not offered on /finance (finance maintainers only, SME V1), the server refuses it; nothing stored', async ({ page }) => {
     const before = await policiesOf(felix.token);
     await loginViaUI(page, MDA.felix.email, MDA.felix.password);
     await openFinance(page, 'policies');

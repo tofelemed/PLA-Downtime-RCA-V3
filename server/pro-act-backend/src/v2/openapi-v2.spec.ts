@@ -77,12 +77,14 @@ import { SitesService } from '../calendar/sites.service';
 import { ProductionProfile } from '../profiles/entities/production-profile.entity';
 import { UnitProductRate } from '../profiles/entities/unit-product-rate.entity';
 import { ValuationRate } from '../profiles/entities/valuation-rate.entity';
+import { GradeTransitionStandard } from '../profiles/entities/transition-standard.entity';
 import { ProfileResolutionService } from '../profiles/profile-resolution.service';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ProfilesService } from '../profiles/profiles.service';
 import { RateImportsService } from '../profiles/rate-imports.service';
 import { RatesService } from '../profiles/rates.service';
 import { ValuationRatesService } from '../profiles/valuation-rates.service';
+import { TransitionStandardsService } from '../profiles/transition-standards.service';
 import { PlanPeriod } from '../plans/entities/plan-period.entity';
 import { PlanScenario } from '../plans/entities/plan-scenario.entity';
 import { PlanVersion } from '../plans/entities/plan-version.entity';
@@ -114,6 +116,7 @@ import { DeliveryReconciliationService } from '../exports/delivery-reconciliatio
 import { ExportJobsService } from '../exports/export-jobs.service';
 import { ExportReadsService } from '../exports/export-reads.service';
 import { ExportRequestsService } from '../exports/export-requests.service';
+import { DemandStatusesService } from '../valuation/demand-statuses.service';
 import { FxRatesService } from '../valuation/fx-rates.service';
 import { ValuationPoliciesService } from '../valuation/valuation-policies.service';
 import { ValuationModule } from '../valuation/valuation.module';
@@ -245,6 +248,7 @@ class CalendarModuleStub {}
     { provide: ProfilesService, useValue: {} },
     { provide: RatesService, useValue: {} },
     { provide: ValuationRatesService, useValue: {} },
+    { provide: TransitionStandardsService, useValue: {} },
     { provide: ProfileResolutionService, useValue: {} },
     { provide: RateImportsService, useValue: {} },
   ],
@@ -252,6 +256,7 @@ class CalendarModuleStub {}
     ProfilesService,
     RatesService,
     ValuationRatesService,
+    TransitionStandardsService,
     ProfileResolutionService,
     RateImportsService,
   ],
@@ -348,8 +353,9 @@ class ExportsModuleStub {}
   providers: [
     { provide: FxRatesService, useValue: {} },
     { provide: ValuationPoliciesService, useValue: {} },
+    { provide: DemandStatusesService, useValue: {} },
   ],
-  exports: [FxRatesService, ValuationPoliciesService],
+  exports: [FxRatesService, ValuationPoliciesService, DemandStatusesService],
 })
 class ValuationModuleStub {}
 
@@ -460,6 +466,8 @@ async function generate(): Promise<string> {
     .overrideProvider(getRepositoryToken(UnitProductRate))
     .useValue({})
     .overrideProvider(getRepositoryToken(ValuationRate))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(GradeTransitionStandard))
     .useValue({})
     .overrideProvider(getRepositoryToken(PlanVersion))
     .useValue({})

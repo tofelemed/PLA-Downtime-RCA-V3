@@ -39,7 +39,7 @@ function AddFxRate() {
       <DialogContent className="flex max-h-[90vh] flex-col">
         <DialogHeader>
           <DialogTitle>New exchange rate draft</DialogTitle>
-          <DialogDescription>A manager approver approves the draft before valuation uses it.</DialogDescription>
+          <DialogDescription>A finance approver other than you approves the draft before valuation uses it.</DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto">
           {open && <FxRateForm timezone={timezone} onCancel={() => setOpen(false)} onSaved={(rate) => navigate(`/finance/fx/${rate.id}`)} />}
@@ -55,7 +55,7 @@ function AddFxRate() {
  * whose date no approved rate covers keeps no amount in the other currency — nothing is estimated.
  */
 export function FxRatesTab() {
-  const { canWriteProfiles } = useCapabilities();
+  const { canMaintainValuation } = useCapabilities();
   const [pair, setPair] = useUrlParam('pair', PAIRS, '');
   const [state, setState] = useUrlParam('state', STATES, '');
   const [fromCurrency, toCurrency] = pair ? pair.split('-') : [undefined, undefined];
@@ -73,7 +73,7 @@ export function FxRatesTab() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <ReadOnlyHint />
-          {canWriteProfiles && <AddFxRate />}
+          {canMaintainValuation && <AddFxRate />}
         </div>
       </div>
       <FxRateTable

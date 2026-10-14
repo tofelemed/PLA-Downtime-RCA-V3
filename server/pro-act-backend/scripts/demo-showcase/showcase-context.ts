@@ -103,6 +103,8 @@ export class ShowcaseContext {
       ...cast.engineers,
       ...cast.operators,
       ...cast.reliability,
+      ...cast.finance,
+      ...cast.financeApprovers,
     ]);
     for (const persona of personas) {
       const session = new PersonaSession(
@@ -136,6 +138,16 @@ export class ShowcaseContext {
     if (managers.length === 0)
       throw new Error(`no approver other than ${persona}`);
     return this.session(managers[index % managers.length]);
+  }
+
+  /** SME V1: a finance approver other than `persona` (separation of duties). */
+  financeApproverOtherThan(persona: string, index = 0): PersonaSession {
+    const approvers = this.scenario.cast.financeApprovers.filter(
+      (m) => m !== persona,
+    );
+    if (approvers.length === 0)
+      throw new Error(`no finance approver other than ${persona}`);
+    return this.session(approvers[index % approvers.length]);
   }
 
   session(persona: string): PersonaSession {

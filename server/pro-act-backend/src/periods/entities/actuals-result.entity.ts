@@ -1,5 +1,5 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
-import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import {
   ACTUALS_METHODS,
   ActualsMethod,
@@ -32,7 +32,7 @@ const quantity = (name: string) => ({
 @Index('IDX_actuals_results_run', ['actualsRunId'])
 @Index('IDX_actuals_results_slice', ['sliceId'])
 @Index('IDX_actuals_results_tenant_period', ['tenantId', 'periodId'])
-export class ActualsResult extends TenantScopedEntity {
+export class ActualsResult extends TenantOwnedEntity {
   @Column({ name: 'actuals_run_id', type: 'uuid' })
   actualsRunId: string;
 

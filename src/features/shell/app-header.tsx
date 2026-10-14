@@ -1,13 +1,14 @@
 import type { BrandingView as BrandingSettings } from '@/api/v2/types/administration';
 import { DisplayCurrencyToggle } from '@/features/display-currency/display-currency-toggle';
 import { PlantSelector } from '@/features/plant-selector/plant-selector';
+import { APP_TITLE } from '@/features/ux-kit/page-layout/use-document-title';
 import { LiveIndicator } from './live-indicator';
 import { UserBadge } from './user-badge';
 
-const DEFAULT_NAME = 'Pro-Act';
+const DEFAULT_NAME = APP_TITLE;
 
 function BrandMark({ branding }: { branding: BrandingSettings | undefined }) {
-  const initials = branding?.logoInitials || 'PA';
+  const initials = branding?.logoInitials || 'TF';
   return (
     <span
       className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md text-xs font-bold text-white"

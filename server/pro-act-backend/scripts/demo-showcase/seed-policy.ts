@@ -1,7 +1,7 @@
 /**
  * Valuation policy of a showcase plant that has none approved yet (Demo Plant 2): contribution margin,
- * exclusive time basis, reported in USD only (the plant has no FX rate), authored by one manager and
- * approved by another. A plant with an approved policy (Demo Plant) keeps it untouched.
+ * exclusive time basis, reported in USD only (the plant has no FX rate), authored by a finance
+ * maintainer and approved by a finance approver (SME V1). A plant with an approved policy keeps it.
  */
 import { MASTER_DATA_FROM } from './catalog-plants';
 import { ShowcaseContext } from './showcase-context';
@@ -12,7 +12,7 @@ interface PolicyRow {
 }
 
 export async function seedValuationPolicy(ctx: ShowcaseContext): Promise<void> {
-  const author = ctx.as('managers', 0);
+  const author = ctx.as('finance', 0);
   const policies = await author.listAll<PolicyRow>('/v2/valuation-policies');
   if (policies.some((p) => p.approved)) {
     ctx.tally.kept('valuation policy');
@@ -31,12 +31,12 @@ export async function seedValuationPolicy(ctx: ShowcaseContext): Promise<void> {
         fxPolicy: 'none',
         effectiveFrom: `${MASTER_DATA_FROM}T00:00:00.000Z`,
         notes:
-          'Showcase plant policy: losses valued at contribution margin, reported in USD',
+          'Demo: showcase plant policy, losses valued at contribution margin, reported in USD',
       },
       'valuation policy',
     ));
   await ctx
-    .approverOtherThan(ctx.personaOf(author))
+    .financeApproverOtherThan(ctx.personaOf(author))
     .post(
       `/v2/valuation-policies/${draft.id}/approve`,
       {},

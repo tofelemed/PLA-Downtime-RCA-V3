@@ -40,6 +40,7 @@ import {
 } from '../valuation/valuation-context.loader';
 import {
   storedValuations,
+  SliceOwner,
   valueRunLines,
   writeRunValuations,
 } from '../valuation/run-valuation';
@@ -163,9 +164,15 @@ export class AccountingRunService implements OnModuleInit {
       slices,
       actualsRunId,
     );
-    const profiles = new Map(slices.map((s) => [s.id, s.profileId]));
+    const profiles = new Map(
+      slices.map((s) => [
+        s.id,
+        { profileId: s.profileId, productId: s.productId },
+      ]),
+    );
     const valuation = await loadValuationContext(manager, period, {
       profileIds: slices.flatMap((s) => (s.profileId ? [s.profileId] : [])),
+      productIds: slices.map((s) => s.productId),
       impactCodeIds: inputs.events.flatMap((e) =>
         e.impactCodeId ? [e.impactCodeId] : [],
       ),
@@ -304,7 +311,7 @@ interface Prepared {
   engine: EnginePolicies;
   inputs: AccountingInputs;
   /** slice id → profile id (valuation of quantity bases) */
-  profiles: Map<string, string | null>;
+  profiles: Map<string, SliceOwner>;
   valuation: LoadedValuation;
   inputHash: string;
 }
@@ -343,6 +350,7 @@ function engineInput(
     events: inputs.events,
     slices: inputs.slices,
     asOf: inputs.asOf,
+    transitionStandards: inputs.transitionStandards,
     occurrences: inputs.kpi.occurrences,
     policy: {
       microStopSeconds: engine.oee.microStopSeconds,

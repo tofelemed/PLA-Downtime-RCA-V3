@@ -1,7 +1,7 @@
 
 {
-  "name": "Unified APM - Asset Performance Management",
-  "short_name": "Unified APM",
+  "name": "Traverse Forge",
+  "short_name": "Traverse Forge",
   "description": "Enterprise-grade Asset Performance Management platform for managing production loss and root cause analysis",
   "start_url": "/",
   "display": "standalone",

@@ -21,6 +21,8 @@ export interface ClassifiedEvents {
   excludedStops: LossEvent[];
   /** fractional derates (`slowdown`, impact fraction set) */
   derates: LossEvent[];
+  /** grade transitions (LA-08) */
+  transitions: LossEvent[];
 }
 
 /** An event's interval; a still-open event counts up to `asOf` (the run's instant, ≤ period end). */
@@ -91,6 +93,9 @@ export function classifyEvents(input: PeriodAccountingInput): ClassifiedEvents {
     microStops: downtime.filter((e) => isMicro(e) && !excludePlanned(e)),
     excludedStops: downtime.filter(excludePlanned),
     derates: input.events.filter(isPartialImpact),
+    transitions: input.events.filter(
+      (e) => e.physicalType === 'grade_transition',
+    ),
   };
 }
 
@@ -197,7 +202,8 @@ function isExcluded(
 
 /**
  * Atomic segments of a slice (ACC02): cut at the slice edges, schedule and exclusion edges, stop,
- * micro-stop and derate edges and rate-version changes; each carries its exclusion, rates and causes.
+ * micro-stop, derate and grade-transition edges and rate-version changes; each carries its exclusion,
+ * rates and causes.
  */
 export function segmentSlice(
   input: PeriodAccountingInput,
@@ -209,6 +215,7 @@ export function segmentSlice(
     ...classified.microStops,
     ...classified.excludedStops,
     ...classified.derates,
+    ...classified.transitions,
   ];
   const points = boundaries(input, slice, cutters);
   return points.slice(0, -1).map((from, i) => {
@@ -235,6 +242,12 @@ export function segmentSlice(
           )
         : [],
       derates: running ? activeIn(classified.derates, part, input.asOf) : [],
+      transitions: running
+        ? causesOf(
+            activeIn(classified.transitions, part, input.asOf),
+            input.policy.overlapAllocation,
+          )
+        : [],
     };
   });
 }

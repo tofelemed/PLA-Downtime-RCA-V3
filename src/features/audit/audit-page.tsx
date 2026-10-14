@@ -47,7 +47,7 @@ function AuditScreen() {
   const entities = optionsOf((summary.data?.byEntityType ?? []).map((row) => row.key), entityLabel, 'All records');
   return (
     <Page width="wide">
-      <PageHeader title="Audit log" description="Who changed what, and when, in the selected plant." actions={<ExportAuditButton filters={filters} />} />
+      <PageHeader title="Audit log" description="Who changed what, and when, in the selected plant." actions={<ExportAuditButton filters={filters} timezone={dates.timezone} />} />
       <Section title="Filters">
         <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
           <DateRangeInput

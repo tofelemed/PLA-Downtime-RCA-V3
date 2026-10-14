@@ -37,10 +37,10 @@ export class RCARecommendation {
   @Column({ type: 'varchar', length: 255, nullable: true })
   cmmsWorkOrderId: string;
 
-  @Column({ type: 'float', nullable: true })
+  @Column({ type: 'numeric', precision: 28, scale: 8, nullable: true })
   estimatedCost: number;
 
-  @Column({ type: 'float', nullable: true })
+  @Column({ type: 'numeric', precision: 28, scale: 8, nullable: true })
   actualCost: number;
 
   @CreateDateColumn()

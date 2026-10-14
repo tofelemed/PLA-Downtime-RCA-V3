@@ -1,6 +1,5 @@
 /**
- * Role sets of the administration API (`/v2/users`, `/v2/user-scopes`, `/v2/custom-attribute-definitions`,
- * `/v2/dashboard-configuration`). Same sets as the v1 routes they replace (decision 2026-10-11 "v1 admin
+ * Role sets of the administration API (`/v2/users`, `/v2/user-scopes`, `/v2/custom-attribute-definitions`). Same sets as the v1 routes they replace (decision 2026-10-11 "v1 admin
  * routes: role matrix"); mirrored in the frontend `src/features/auth/server-role-sets.ts` usage.
  */
 export const USER_READERS = [

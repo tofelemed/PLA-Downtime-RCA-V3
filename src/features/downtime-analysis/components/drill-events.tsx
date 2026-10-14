@@ -33,7 +33,7 @@ export function DrillEvents({ filters, selection, onDismiss }: DrillEventsProps)
       }
     >
       <div data-testid="drill-events" data-reason-id={selection.reasonId ?? ''}>
-        <EventTable caption={`Events coded ${selection.label}`} query={drillEventQuery(filters, selection.reasonId, env.reasonCodes)} testId="drill-event-list" />
+        <EventTable caption={`Events coded ${selection.label}`} query={drillEventQuery(filters, selection.reasonId, env.allReasonCodes)} testId="drill-event-list" />
       </div>
     </Section>
   );

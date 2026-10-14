@@ -13,7 +13,16 @@ export type RateTimebase = (typeof RATE_TIMEBASES)[number];
 export const CAPACITY_MODELS = ['single_stream', 'shared_capacity', 'independent_streams'] as const;
 export type CapacityModel = (typeof CAPACITY_MODELS)[number];
 
-export const VALUATION_BASES = ['contribution_margin', 'standard_cost', 'cost_per_hour'] as const;
+export const VALUATION_BASES = [
+  'contribution_margin',
+  'standard_cost',
+  'cost_per_hour',
+  'variable_cost',
+  'salvage_value',
+  'disposal_cost',
+  'downgrade_price_difference',
+  'rework_cost',
+] as const;
 export type ValuationBasis = (typeof VALUATION_BASES)[number];
 
 export interface VersionFields {
@@ -75,6 +84,21 @@ export interface ValuationRateView extends VersionFields {
   value: string;
   currency: string;
   perUom: string;
+}
+
+/** One entry of a unit's grade-transition matrix (LA-08): a directional product change and its reference. */
+export interface TransitionStandardView extends VersionFields {
+  id: string;
+  unitId: string;
+  fromProductId: string;
+  toProductId: string;
+  /** reference duration, seconds (decimal string) */
+  referenceSeconds: string;
+  referenceOffgradeQty: string | null;
+  offgradeUom: string | null;
+  sampleCount: number | null;
+  evidence: string | null;
+  notes: string | null;
 }
 
 export interface ImportRowError {

@@ -12,7 +12,7 @@ export function useFactResolvers(): FactResolvers {
   const assets = useAssetNames();
   const users = useUserNames();
   const impact = useCodeLibrary('impact-codes');
-  const { dateTime } = usePlantFormat();
+  const { dateTime, duration } = usePlantFormat();
   return useMemo(() => {
     const impactNames = new Map(flattenPages(impact.data?.pages).map((code) => [code.id, `${code.code} · ${code.name}`]));
     return {
@@ -22,6 +22,7 @@ export function useFactResolvers(): FactResolvers {
       impactName: (id: string) => impactNames.get(id) ?? 'Unknown impact code',
       userName: users.nameOf,
       dateTime,
+      duration,
     };
-  }, [env.unitName, env.reasonName, assets.nameOf, users.nameOf, impact.data, dateTime]);
+  }, [env.unitName, env.reasonName, assets.nameOf, users.nameOf, impact.data, dateTime, duration]);
 }

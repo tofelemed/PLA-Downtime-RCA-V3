@@ -76,6 +76,9 @@ import { ValuationRate } from '../profiles/entities/valuation-rate.entity';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ProfilesV2Controller } from './profiles/profiles-v2.controller';
 import { ProfilesV2Service } from './profiles/profiles-v2.service';
+import { TransitionStandardsV2Controller } from './profiles/transition-standards-v2.controller';
+import { TransitionStandardsV2Service } from './profiles/transition-standards-v2.service';
+import { GradeTransitionStandard } from '../profiles/entities/transition-standard.entity';
 import { RateImportsV2Controller } from './profiles/rate-imports-v2.controller';
 import { RatesV2Controller } from './profiles/rates-v2.controller';
 import { ValuationRatesV2Controller } from './profiles/valuation-rates-v2.controller';
@@ -109,6 +112,7 @@ import { ExportsV2Controller } from './exports/exports-v2.controller';
 import { KpiReportsV2Controller } from './reports/kpi-reports-v2.controller';
 import { KpiReportsV2Service } from './reports/kpi-reports-v2.service';
 import { ValuationModule } from '../valuation/valuation.module';
+import { DemandStatusesV2Controller } from './valuation/demand-statuses-v2.controller';
 import { FxRatesV2Controller } from './valuation/fx-rates-v2.controller';
 import { ValuationPoliciesV2Controller } from './valuation/valuation-policies-v2.controller';
 import { LossValueReportV2Controller } from './reports/loss-value-v2.controller';
@@ -127,7 +131,10 @@ import { PlaReportsV2Controller } from './pla-reports/pla-reports-v2.controller'
 import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
 import { ActivitySummaryV2Controller } from './activity-summary/activity-summary-v2.controller';
 import { ActivitySummaryV2Service } from './activity-summary/activity-summary-v2.service';
-import { AdministrationV2Module, ADMINISTRATION_V2_CONTROLLERS } from './administration/administration-v2.module';
+import {
+  AdministrationV2Module,
+  ADMINISTRATION_V2_CONTROLLERS,
+} from './administration/administration-v2.module';
 import { RcaPoliciesV2Controller } from './rca-policies/rca-policies-v2.controller';
 import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
 
@@ -164,6 +171,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
       ProductionProfile,
       UnitProductRate,
       ValuationRate,
+      GradeTransitionStandard,
       PlanVersion,
       PlanPeriod,
       PlanScenario,
@@ -216,6 +224,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     ProfilesV2Controller,
     RatesV2Controller,
     ValuationRatesV2Controller,
+    TransitionStandardsV2Controller,
     RateImportsV2Controller,
     ProductionPlansV2Controller,
     ProductionPlanReviewV2Controller,
@@ -232,6 +241,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     DeliveriesV2Controller,
     KpiReportsV2Controller,
     FxRatesV2Controller,
+    DemandStatusesV2Controller,
     ValuationPoliciesV2Controller,
     LossValueReportV2Controller,
     FeatureFlagsV2Controller,
@@ -262,6 +272,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     SignalsV2Service,
     CalendarsV2Service,
     ProfilesV2Service,
+    TransitionStandardsV2Service,
     PlansV2Service,
     PeriodsV2Service,
     PeriodAccountingV2Service,

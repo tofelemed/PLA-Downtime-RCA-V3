@@ -37,7 +37,6 @@ function shadows(a: RouteGuardEntry, b: RouteGuardEntry): boolean {
 const FORMERLY_UNGUARDED = [
   'UnmappedEventController',
   'RCARecommendationController',
-  'DashboardConfigurationController',
   'FileUploadController',
 ];
 

@@ -32,6 +32,8 @@ export const LOSS_TREE_KINDS = [
   'availability',
   'performance',
   'quality',
+  'transition_allowance',
+  'transition_excess',
   'bridge',
   'unaccounted_classified',
 ] as const;

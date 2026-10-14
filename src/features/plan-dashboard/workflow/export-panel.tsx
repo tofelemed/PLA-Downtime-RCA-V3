@@ -6,6 +6,7 @@ import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { createLogger } from '@/lib/logger';
 import { labelOf } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
+import { exportFileName } from '@/features/ux-kit/format/export-file-name';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ActionIcon } from '@/lib/icons';
 import { EditorProblem } from '../editor/editor-problem';
@@ -40,7 +41,7 @@ export function ExportPanel({ view, timezone }: { view: ReconciliationView; time
   const download = async () => {
     if (!exportId) return;
     try {
-      saveText(await downloadExportText(exportId), `proact-loss-lines-${exportId}.csv`);
+      saveText(await downloadExportText(exportId), exportFileName(['loss-lines', exportId]));
     } catch (error) {
       log.warn('export download refused', { exportId });
       setProblem(workflowProblemOf(error));

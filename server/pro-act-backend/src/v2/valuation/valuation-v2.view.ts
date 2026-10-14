@@ -1,12 +1,15 @@
 import { Dec, formatDec, toDec } from '../../domain/actuals/decimal';
 import { AccountingPolicy } from '../../periods/entities/accounting-policy.entity';
 import { FxRate } from '../../valuation/entities/fx-rate.entity';
+import { RevaluationRequested } from '../../valuation/valuation-events';
 import { snapshotOf } from '../../valuation/valuation-policy.store';
 
 const iso = (value: Date | null) => (value ? value.toISOString() : null);
 
 export interface FxRateV2View {
   id: string;
+  /** SME V5: the named rate table (economic, group_reporting, budget) */
+  rateType: string;
   fromCurrency: string;
   toCurrency: string;
   /** decimal string: units of toCurrency per 1 fromCurrency */
@@ -42,10 +45,16 @@ export interface ValuationPolicyV2View {
   createdAt: string;
 }
 
+/** Approve response: the version and the revaluation it queued (SME V7). */
+export interface ValuationPolicyApproveV2View extends ValuationPolicyV2View {
+  revaluation: RevaluationRequested | null;
+}
+
 export function toFxRateView(rate: FxRate): FxRateV2View {
   const value = toDec(rate.rate);
   return {
     id: rate.id,
+    rateType: rate.rateType,
     fromCurrency: rate.fromCurrency,
     toCurrency: rate.toCurrency,
     rate: value ? formatDec(value) : String(rate.rate),
@@ -61,6 +70,18 @@ export function toFxRateView(rate: FxRate): FxRateV2View {
     createdAt: rate.createdAt.toISOString(),
     updatedAt: rate.updatedAt.toISOString(),
   };
+}
+
+/** Approve / retire response: the version and the revaluation it queued (null when none, SME V7). */
+export interface FxRateTransitionV2View extends FxRateV2View {
+  revaluation: RevaluationRequested | null;
+}
+
+export function toFxTransitionView(result: {
+  rate: FxRate;
+  revaluation: RevaluationRequested | null;
+}): FxRateTransitionV2View {
+  return { ...toFxRateView(result.rate), revaluation: result.revaluation };
 }
 
 export function toValuationPolicyView(

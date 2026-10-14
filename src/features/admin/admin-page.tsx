@@ -9,10 +9,9 @@ import { PageGate } from './shared/page-gate';
 
 const PlantsSection = lazy(() => import('./plants/plants-section').then((m) => ({ default: m.PlantsSection })));
 const AttributeDefinitionsPanel = lazy(() => import('./attributes/attribute-definitions-panel').then((m) => ({ default: m.AttributeDefinitionsPanel })));
-const DashboardConfigSection = lazy(() => import('./dashboard/dashboard-config-section').then((m) => ({ default: m.DashboardConfigSection })));
 const BrandingSection = lazy(() => import('./branding/branding-section').then((m) => ({ default: m.BrandingSection })));
 
-type AdminTab = 'plants' | 'attributes' | 'dashboard' | 'branding' | 'automation';
+type AdminTab = 'plants' | 'attributes' | 'branding' | 'automation';
 
 interface TabSpec {
   value: AdminTab;
@@ -24,7 +23,6 @@ interface TabSpec {
 const TABS: readonly TabSpec[] = [
   { value: 'plants', label: 'Plants & organizations' },
   { value: 'attributes', label: 'Custom attributes' },
-  { value: 'dashboard', label: 'Dashboard settings' },
   { value: 'branding', label: 'Branding', superAdminOnly: true },
   { value: 'automation', label: 'Status automation' },
 ];
@@ -32,13 +30,12 @@ const TABS: readonly TabSpec[] = [
 function TabBody({ tab }: { tab: AdminTab }) {
   if (tab === 'plants') return <PlantsSection />;
   if (tab === 'attributes') return <AttributeDefinitionsPanel />;
-  if (tab === 'dashboard') return <DashboardConfigSection />;
   if (tab === 'branding') return <BrandingSection />;
   return <StatusRulesMoved />;
 }
 
 /**
- * Admin panel (owner requirement "v2 only"): five sections, the active one in the URL (`?tab=`). Users moved
+ * Admin panel (owner requirement "v2 only"): four sections, the active one in the URL (`?tab=`). Users moved
  * to Users (`/users`), units and assets to Master data; branding is application-wide (super administrators).
  */
 export function AdminPage() {
@@ -65,7 +62,7 @@ function AdminScreen() {
     });
   return (
     <Page width="wide">
-      <PageHeader title="Admin panel" description="Plants and organizations, custom attributes, dashboard settings and branding." />
+      <PageHeader title="Admin panel" description="Plants and organizations, custom attributes and branding." />
       <Tabs value={active} onValueChange={select}>
         <TabsList className="h-auto flex-wrap justify-start">
           {tabs.map((tab) => (

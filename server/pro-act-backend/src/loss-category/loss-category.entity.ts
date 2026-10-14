@@ -18,7 +18,7 @@ export class LossCategory {
   @Column({ type: 'varchar', length: 255 })
   categoryName: string;
 
-  @Column({ type: 'float' })
+  @Column({ type: 'numeric', precision: 28, scale: 8 })
   lossAmount: number;
 
   @Column({ type: 'uuid' })

@@ -30,6 +30,8 @@ const CLAIMING_KINDS: ReadonlySet<string> = new Set([
   'availability',
   'performance',
   'quality',
+  'transition_allowance',
+  'transition_excess',
 ]);
 
 /** One budget per event and kind: each kind is its own quantity basis (restart scrap is not downtime loss). */

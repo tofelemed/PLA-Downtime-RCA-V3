@@ -2,7 +2,7 @@ import { v2Request } from '../client';
 import { ifMatchOf } from '../etag-cache';
 import type { BodyOf } from '../schema-types';
 import type { JobAccepted } from '../types/envelopes';
-import type { ProfileView, RateView, ValuationRateView } from '../types/profiles';
+import type { ProfileView, RateView, TransitionStandardView, ValuationRateView } from '../types/profiles';
 import { v2 } from '../v2';
 import type { ChangeNotice } from './invalidation';
 import { useV2Command } from './use-v2-command';
@@ -20,6 +20,7 @@ export type ProfilePatchBody = BodyOf<'/api/v2/profiles/{id}', 'patch'>;
 export type RateCreateBody = BodyOf<'/api/v2/profiles/{id}/rates', 'post'>;
 export type ValuationRateCreateBody = BodyOf<'/api/v2/valuation-rates', 'post'>;
 export type RateImportBody = BodyOf<'/api/v2/rate-imports', 'post'>;
+export type TransitionStandardCreateBody = BodyOf<'/api/v2/transition-standards', 'post'>;
 
 export function useCreateProfile() {
   return useBaselineCommand<ProfileCreateBody, ProfileView>(async (body, idempotencyKey) =>
@@ -54,8 +55,15 @@ export function useCreateValuationRate() {
   );
 }
 
-/** Versioned master data with approve / retire commands (plan 2.2). */
-export type VersionResource = 'profiles' | 'rates' | 'valuation-rates';
+/** A draft entry of the grade-transition matrix (LA-08); the open periods of the unit recompute on approval. */
+export function useCreateTransitionStandard() {
+  return useBaselineCommand<TransitionStandardCreateBody, TransitionStandardView>(async (body, idempotencyKey) =>
+    (await v2.post<TransitionStandardView, '/api/v2/transition-standards'>('/api/v2/transition-standards', { body, idempotencyKey })).data,
+  );
+}
+
+/** Versioned master data with approve / retire commands (plan 2.2, LA-08). */
+export type VersionResource = 'profiles' | 'rates' | 'valuation-rates' | 'transition-standards';
 
 export interface VersionTransition {
   resource: VersionResource;
@@ -67,8 +75,8 @@ export interface VersionTransition {
 
 /** Approve (409 VERSION_OVERLAP with `details.conflicts`) or retire a version; the server checks the role. */
 export function useVersionTransition() {
-  return useBaselineCommand<VersionTransition, ProfileView | RateView | ValuationRateView>(async (input, idempotencyKey) =>
-    (await v2Request<ProfileView | RateView | ValuationRateView>({
+  return useBaselineCommand<VersionTransition, ProfileView | RateView | ValuationRateView | TransitionStandardView>(async (input, idempotencyKey) =>
+    (await v2Request<ProfileView | RateView | ValuationRateView | TransitionStandardView>({
       method: 'POST',
       path: `/${input.resource}/${input.id}/${input.action}`,
       body: input.action === 'approve' ? { supersede: input.supersede === true } : {},

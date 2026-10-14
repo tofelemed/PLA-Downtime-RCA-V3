@@ -57,7 +57,7 @@ describe('Valuation migration', () => {
     expect(await harness.pendingSchemaChanges()).toEqual([]);
   });
 
-  it('seeds every existing tenant with v1 (XXX history) and v2 (IRR, USD), both unapproved; down removes everything', async () => {
+  it('seeds every existing tenant with v1 (XXX history), v2 (IRR, USD) and v3 (SME pilot settings), all unapproved; down removes everything', async () => {
     const world = await seedEventWorld(harness.dataSource);
     while (await executed()) {
       await harness.dataSource.undoLastMigration({ transaction: 'all' });
@@ -72,15 +72,23 @@ describe('Valuation migration', () => {
     expect(rows.map((r) => [r.version, r.approved_at])).toEqual([
       [1, null],
       [2, null],
+      // ValuationPolicyV3 (SME V1-V8): unapproved until a finance approver signs it off
+      [3, null],
     ]);
     expect(rows[0].body).toMatchObject({ currency: 'XXX', fxPolicy: 'none' });
     expect(rows[1].body).toMatchObject({
       reportingCurrencies: ['IRR', 'USD'],
       fxPolicy: 'snapshot',
     });
+    expect(rows[2].body).toMatchObject({
+      defaultBasis: 'economic_impact',
+      reportingCurrencies: ['IRR', 'USD'],
+      demandRule: 'demand_constrained_only',
+      fxRateType: 'economic',
+    });
     expect(
       (await policies()).filter((r) => r.tenant_id === world.tenantB),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     expect(await harness.pendingSchemaChanges()).toEqual([]);
   });
 });

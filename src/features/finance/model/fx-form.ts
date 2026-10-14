@@ -1,4 +1,5 @@
 import type { FxRateCreateBody } from '@/api/v2/queries/valuation';
+import type { FxRateType } from '@/api/v2/types/valuation';
 import { validityErrors, type FieldErrors } from './field-errors';
 
 /**
@@ -9,6 +10,8 @@ import { validityErrors, type FieldErrors } from './field-errors';
  * number); the validity is ISO UTC from the date inputs; overlaps and approval are the server's.
  */
 export interface FxFormValues {
+  /** SME V5: the rate table by purpose (economic by default) */
+  rateType: FxRateType;
   fromCurrency: string;
   toCurrency: string;
   rate: string | null;
@@ -26,7 +29,7 @@ const ZERO = /^0+(\.0+)?$/;
 const SOURCE_MAX = 255;
 
 /** D08 Q2: the reporting currencies, USD → IRR first. */
-export const emptyFxForm = (): FxFormValues => ({ fromCurrency: 'USD', toCurrency: 'IRR', rate: null, effectiveFrom: null, effectiveTo: null, source: '' });
+export const emptyFxForm = (): FxFormValues => ({ rateType: 'economic', fromCurrency: 'USD', toCurrency: 'IRR', rate: null, effectiveFrom: null, effectiveTo: null, source: '' });
 
 function rateError(rate: string | null): string | null {
   if (!rate) return 'Enter the rate.';
@@ -48,6 +51,7 @@ export function validateFxForm(values: FxFormValues): FieldErrors {
 
 export function fxCreateBody(values: FxFormValues): FxRateCreateBody {
   return {
+    rateType: values.rateType,
     fromCurrency: values.fromCurrency,
     toCurrency: values.toCurrency,
     rate: values.rate as string,

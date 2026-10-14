@@ -1,6 +1,8 @@
 import { LossKind } from '../accounting/accounting.types';
 import { Dec } from '../actuals/decimal';
 import { CandidateState } from '../reconciliation/reconciliation.types';
+import { unvaluedView } from './currency-amounts';
+import { ManualHours } from './manual-line-hours';
 import { valueLine } from './value-line';
 import {
   LineValuation,
@@ -18,6 +20,8 @@ export const LOSS_VALUE_KINDS: ReadonlySet<LossKind> = new Set([
   'availability',
   'performance',
   'quality',
+  'transition_allowance',
+  'transition_excess',
   'unaccounted_classified',
   'bridge',
 ]);
@@ -41,11 +45,15 @@ export interface ReconciledOwnLine {
   quantity: Dec | null;
   uom: string | null;
   impactCodeId: string | null;
+  /** SME V4 (policy v3): verified hours of a manual downtime line, or why it has none */
+  hours?: ManualHours;
 }
 
 export interface ReconciledSlice {
   sliceId: string;
   profileId: string | null;
+  /** product of the slice (demand status, SME V3) */
+  productId?: string | null;
   start: Date;
   uom: string | null;
 }
@@ -111,6 +119,7 @@ function ownLine(
 ): ReconciledLine | null {
   const slice = slices.get(line.sliceId);
   if (!slice || !line.kind || !line.quantity) return null;
+  const hours = line.hours;
   const valuation = valueLine(
     {
       kind: line.kind,
@@ -118,12 +127,19 @@ function ownLine(
       uom: line.uom ?? slice.uom,
       start: slice.start,
       end: slice.start,
-      seconds: null,
+      seconds: hours && 'seconds' in hours ? hours.seconds : null,
       profileId: slice.profileId,
       impactCodeId: line.impactCodeId,
+      ...(slice.productId === undefined ? {} : { productId: slice.productId }),
     },
     context,
   );
+  if (hours && 'reason' in hours && hours.reason === 'hours_unverified') {
+    const currencies = context.policy.currencies;
+    valuation.views.push(
+      unvaluedView('cost_per_hour', hours.reason, currencies),
+    );
+  }
   return {
     source: 'line',
     id: line.id,

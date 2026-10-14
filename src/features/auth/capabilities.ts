@@ -26,7 +26,7 @@ export interface Capabilities {
   /** v2 write capabilities, one per server `@Roles` set (`server-role-sets.ts`) */
   canWritePlans: boolean;
   canApprovePlans: boolean;
-  /** profiles, rates, valuation rates and FX rates */
+  /** profiles and rates */
   canWriteProfiles: boolean;
   canApproveProfiles: boolean;
   canWriteCalendars: boolean;
@@ -42,8 +42,12 @@ export interface Capabilities {
   canWriteRca: boolean;
   /** intake connections, jobs, signals, replay, quarantine and mappings */
   canWriteIntegration: boolean;
-  /** valuation policies (author and approve) */
-  canManagePolicies: boolean;
+  /** RCA trigger policies (manager approvers) */
+  canManageRcaPolicies: boolean;
+  /** SME V1: draft valuation policies, FX rates, valuation rates and demand statuses (finance maintainers) */
+  canMaintainValuation: boolean;
+  /** SME V1: approve / retire them (finance approvers, never the author) */
+  canApproveValuation: boolean;
   /** v2 production events: any member whose role is not read-only (WriteAccessGuard) */
   canWriteEvents: boolean;
   /**
@@ -81,7 +85,9 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canApproveRules: may(ServerRoles.RULE_APPROVERS),
     canWriteRca: may(ServerRoles.RCA_WRITERS),
     canWriteIntegration: may(ServerRoles.INTEGRATION_WRITERS),
-    canManagePolicies: may(ServerRoles.POLICY_ROLES),
+    canManageRcaPolicies: may(ServerRoles.RCA_POLICY_WRITERS),
+    canMaintainValuation: may(ServerRoles.FINANCE_MAINTAINERS),
+    canApproveValuation: may(ServerRoles.FINANCE_APPROVERS),
     canWriteEvents: !readOnly,
     canManagePlantSettings: may(PLANT_SETTINGS_WRITERS),
   };

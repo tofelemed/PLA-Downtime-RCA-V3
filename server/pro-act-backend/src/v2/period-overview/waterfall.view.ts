@@ -21,6 +21,8 @@ const LABELS: Readonly<Record<string, string>> = {
   availability: 'Availability loss',
   performance: 'Performance loss',
   quality: 'Quality loss',
+  transition_allowance: 'Grade transition (within standard)',
+  transition_excess: 'Grade transition overrun',
   bridge: 'Bridge',
   unaccounted_classified: 'Unaccounted (classified)',
   gain: 'Gain',

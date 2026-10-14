@@ -1,6 +1,6 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, Unique } from 'typeorm';
 import { CalculationRun } from '../../accounting/entities/calculation-run.entity';
-import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import {
   Ledger,
   LEDGERS,
@@ -49,7 +49,7 @@ const quantity = (name: string) => ({
   'currency',
 ])
 @Index('IDX_period_valuation_totals_tenant_period', ['tenantId', 'periodId'])
-export class PeriodValuationTotal extends TenantScopedEntity {
+export class PeriodValuationTotal extends TenantOwnedEntity {
   @Column({ name: 'run_id', type: 'uuid' })
   runId: string;
 

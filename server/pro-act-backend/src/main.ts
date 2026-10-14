@@ -53,8 +53,8 @@ async function bootstrap() {
 
   // Swagger: v1 at /api (everything except /api/v2), v2 at /api/docs/v2 (V2Module only)
   const v1Config = new DocumentBuilder()
-    .setTitle('ProAct API')
-    .setDescription('ProAct Backend API Reference (v1)')
+    .setTitle('Traverse Forge API')
+    .setDescription('Traverse Forge backend API reference (v1)')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

@@ -8,7 +8,7 @@ import {
   Unique,
 } from 'typeorm';
 import { ShiftInstance } from '../../calendar/entities/shift-instance.entity';
-import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import { UnitProductRate } from '../../profiles/entities/unit-product-rate.entity';
 import { Unit } from '../../unit/unit.entity';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
@@ -45,7 +45,7 @@ const quantity = (name: string, nullable: boolean) => ({
 @Index('IDX_plan_periods_sustained_rate', ['sustainedRateVersionId'])
 @Check('CHK_plan_periods_interval', '"utc_end" > "utc_start"')
 @Check('CHK_plan_periods_target', '"target" >= 0')
-export class PlanPeriod extends TenantScopedEntity {
+export class PlanPeriod extends TenantOwnedEntity {
   @Column({ name: 'plan_version_id', type: 'uuid' })
   planVersionId: string;
 

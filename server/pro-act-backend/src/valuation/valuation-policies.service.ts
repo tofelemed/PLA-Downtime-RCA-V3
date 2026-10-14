@@ -20,10 +20,25 @@ import {
 } from '../profiles/profile-errors';
 import { assertTenantWideWriter } from '../profiles/profile-scope';
 import { keysetPage } from '../v2/common/keyset-page';
+import {
+  recordValuationChanges,
+  RevaluationRequested,
+} from './valuation-events';
 import { ensureValuationPolicy, snapshotOf } from './valuation-policy.store';
 
-export interface NewValuationPolicy {
-  defaultBasis: 'contribution_margin' | 'standard_cost';
+type V3Fields = Pick<
+  ValuationPolicyBody,
+  | 'fxRateType'
+  | 'fxDateRule'
+  | 'fxAverageMaxDeviation'
+  | 'demandRule'
+  | 'qualityDispositions'
+  | 'defaultQualityDisposition'
+  | 'manualLineHours'
+>;
+
+export interface NewValuationPolicy extends V3Fields {
+  defaultBasis: ValuationPolicyBody['defaultBasis'];
   timeBasisRule: 'exclusive' | 'independent_components';
   reportingCurrencies: string[];
   fxPolicy: 'none' | 'snapshot';
@@ -31,6 +46,16 @@ export interface NewValuationPolicy {
   effectiveFrom: string;
   notes?: string | null;
 }
+
+const V3_KEYS: ReadonlyArray<keyof V3Fields> = [
+  'fxRateType',
+  'fxDateRule',
+  'fxAverageMaxDeviation',
+  'demandRule',
+  'qualityDispositions',
+  'defaultQualityDisposition',
+  'manualLineHours',
+];
 
 const KIND = 'valuation_basis';
 const WHAT = 'valuation policy';
@@ -84,10 +109,10 @@ export class ValuationPoliciesService {
   ): Promise<AccountingPolicy> {
     const tenantId = requireTenantId(context);
     assertTenantWideWriter(context, tenantId);
-    await this.assertImpactCodes(
-      tenantId,
-      input.independentImpactCodeIds ?? [],
-    );
+    await this.assertImpactCodes(tenantId, [
+      ...(input.independentImpactCodeIds ?? []),
+      ...Object.keys(input.qualityDispositions ?? {}),
+    ]);
     const body = bodyOf(input);
     const effectiveFrom = new Date(input.effectiveFrom);
     return this.policies.manager.transaction(async (manager) => {
@@ -113,40 +138,41 @@ export class ValuationPoliciesService {
     });
   }
 
+  /** Records the finance sign-off; SME V7: the periods it values are queued for revaluation with it. */
   async approve(
     context: RequestContext,
     id: string,
-  ): Promise<AccountingPolicy> {
+  ): Promise<{
+    policy: AccountingPolicy;
+    revaluation: RevaluationRequested | null;
+  }> {
     const policy = await this.get(context, id);
-    assertTenantWideWriter(context, policy.tenantId);
-    if (policy.approvedAt)
-      throw invalidTransition(WHAT, 'approved', 'approved');
-    if (policy.createdBy && policy.createdBy === context.userId) {
-      throw new ForbiddenException({
-        code: 'SEPARATION_OF_DUTIES',
-        message:
-          'a valuation policy version is approved by someone other than its author',
-      });
-    }
-    if (snapshotOf(policy).currencies.length === 0) {
-      throw invalid(
-        'CURRENCY_UNDECIDED',
-        'a version without a reporting currency (XXX) cannot be approved',
-      );
-    }
-    const updated = await this.policies
-      .createQueryBuilder()
-      .update(AccountingPolicy)
-      .set({
-        approvedAt: () => 'now()',
-        approvedBy: context.userId,
-        updatedBy: context.userId,
-      })
-      .where('id = :id AND approved_at IS NULL', { id: policy.id })
-      .execute();
-    if (!updated.affected)
-      throw invalidTransition(WHAT, 'approved', 'approved');
-    return this.get(context, id);
+    assertApprovable(context, policy);
+    const revaluation = await this.policies.manager.transaction(
+      async (manager) => {
+        const updated = await manager
+          .createQueryBuilder()
+          .update(AccountingPolicy)
+          .set({
+            approvedAt: () => 'now()',
+            approvedBy: context.userId,
+            updatedBy: context.userId,
+          })
+          .where('id = :id AND approved_at IS NULL', { id: policy.id })
+          .execute();
+        if (!updated.affected)
+          throw invalidTransition(WHAT, 'approved', 'approved');
+        return recordValuationChanges(manager, [
+          {
+            tenantId: policy.tenantId,
+            subject: 'valuation_policy',
+            change: 'approved',
+            row: policy,
+          },
+        ]);
+      },
+    );
+    return { policy: await this.get(context, id), revaluation };
   }
 
   /** Independent-component impact codes must be impact codes of the tenant (422 INVALID_REFERENCE). */
@@ -161,7 +187,10 @@ export class ValuationPoliciesService {
       [unique, tenantId],
     );
     if (rows.length !== unique.length) {
-      throw invalidReference('independentImpactCodeIds', 'impact code');
+      throw invalidReference(
+        'independentImpactCodeIds / qualityDispositions',
+        'impact code',
+      );
     }
   }
 }
@@ -176,6 +205,7 @@ function bodyOf(input: NewValuationPolicy): ValuationPolicyBody {
     independentImpactCodeIds: [
       ...new Set(input.independentImpactCodeIds ?? []),
     ],
+    ...v3FieldsOf(input),
   };
   try {
     parseValuationPolicy(body, { id: null, version: null, approved: false });
@@ -185,6 +215,37 @@ function bodyOf(input: NewValuationPolicy): ValuationPolicyBody {
     throw error;
   }
   return body;
+}
+
+/** Tenant-wide grant, not yet approved, not the author, a decided currency (403 / 409 / 422). */
+function assertApprovable(
+  context: RequestContext,
+  policy: AccountingPolicy,
+): void {
+  assertTenantWideWriter(context, policy.tenantId);
+  if (policy.approvedAt) throw invalidTransition(WHAT, 'approved', 'approved');
+  if (policy.createdBy && policy.createdBy === context.userId) {
+    throw new ForbiddenException({
+      code: 'SEPARATION_OF_DUTIES',
+      message:
+        'a valuation policy version is approved by someone other than its author',
+    });
+  }
+  if (snapshotOf(policy).currencies.length === 0) {
+    throw invalid(
+      'CURRENCY_UNDECIDED',
+      'a version without a reporting currency (XXX) cannot be approved',
+    );
+  }
+}
+
+/** The v3 fields the author sent (an older-style body stays exactly as before). */
+function v3FieldsOf(input: NewValuationPolicy): V3Fields {
+  const fields: Record<string, unknown> = {};
+  for (const key of V3_KEYS) {
+    if (input[key] !== undefined) fields[key] = input[key];
+  }
+  return fields;
 }
 
 /** Next tenant-wide version number of the kind, under a per-tenant advisory lock. */

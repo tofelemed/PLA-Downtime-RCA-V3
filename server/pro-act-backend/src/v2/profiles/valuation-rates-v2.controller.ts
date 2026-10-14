@@ -23,7 +23,10 @@ import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { ValuationRatesService } from '../../profiles/valuation-rates.service';
 import { ListResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
-import { PROFILE_APPROVERS, PROFILE_WRITERS } from './profile-roles';
+import {
+  FINANCE_APPROVERS,
+  FINANCE_MAINTAINERS,
+} from '../valuation/valuation-roles';
 import { APPROVE_DESCRIPTION, ApproveDto } from './profile-v2.dto';
 import { toValuationRateView, ValuationRateV2View } from './profile-v2.view';
 import { ProfilesV2Service } from './profiles-v2.service';
@@ -67,7 +70,7 @@ export class ValuationRatesV2Controller {
 
   @Post()
   @Idempotent()
-  @Roles(...PROFILE_WRITERS)
+  @Roles(...FINANCE_MAINTAINERS)
   @ApiOperation({
     summary: 'Create a draft valuation rate version',
     description:
@@ -86,7 +89,7 @@ export class ValuationRatesV2Controller {
   @Post(':id/approve')
   @HttpCode(HttpStatus.OK)
   @Idempotent()
-  @Roles(...PROFILE_APPROVERS)
+  @Roles(...FINANCE_APPROVERS)
   @ApiOperation({
     summary: 'Approve a draft valuation rate version',
     description: APPROVE_DESCRIPTION,
@@ -105,7 +108,7 @@ export class ValuationRatesV2Controller {
   @Post(':id/retire')
   @HttpCode(HttpStatus.OK)
   @Idempotent()
-  @Roles(...PROFILE_APPROVERS)
+  @Roles(...FINANCE_APPROVERS)
   @ApiOperation({
     summary: 'Retire a draft or approved valuation rate version',
   })

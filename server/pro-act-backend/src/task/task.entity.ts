@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Tenant } from '../tenant/tenant.entity';
 
 @Index('IDX_tasks_tenant_created', ['tenantId', 'createdAt'])
 @Index('IDX_tasks_tenant_due', ['tenantId', 'dueDate', 'id'])
@@ -41,8 +42,12 @@ export class Task {
   @Column({ name: 'organization_id', type: 'varchar', length: 36 })
   organizationId: string;
 
-  @Column({ name: 'tenant_id', type: 'varchar', length: 36 })
+  @Column({ name: 'tenant_id', type: 'uuid' })
   tenantId: string;
+
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant?: Tenant;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

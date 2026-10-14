@@ -48,6 +48,7 @@ export const PHYSICAL_TYPE_LABELS: Readonly<Record<PhysicalType, string>> = {
   quality_loss: 'Quality loss',
   production_output: 'Production output',
   advisory: 'Advisory',
+  grade_transition: 'Grade transition',
 };
 
 export const SCHEDULE_CLASS_LABELS: Readonly<Record<ScheduleClass, string>> = {

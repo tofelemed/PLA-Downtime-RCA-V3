@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CalendarModule } from './calendar/calendar.module';
 import { CommonModule } from './common/common.module';
 import { IdempotencyModule } from './common/idempotency/idempotency.module';
+import { RetentionModule } from './common/retention/retention.module';
 import { SchedulerModule } from './common/scheduling/scheduler.module';
 import { runtimeDataSourceOptions } from './database/data-source';
 import { EventOperationsModule } from './event-operations/event-operations.module';
@@ -43,6 +44,8 @@ registerPgTypeParsers();
     SchedulerModule.register('worker'),
     PISyncJobModule,
     IdempotencyModule,
+    // audit-table and raw-partition retention (DB-07), disabled until windows are configured
+    RetentionModule,
     // bulk coding jobs above the atomic limit (plan 1.4, API04)
     EventOperationsModule,
     // durable intake (plan 1.5): job runner, replay runner, outbox relay, partition maintenance; the

@@ -1,5 +1,6 @@
 import type { AuditFilters } from '@/api/v2/queries/administration-audit';
 import { ALL } from '@/features/admin/shared/filter-select';
+import { exportFileName, plantFileDay } from '@/features/ux-kit/format/export-file-name';
 
 /** Filters of the audit page as kept in the URL (strings; `from` / `to` are UTC instants). */
 export interface AuditUrlFilters {
@@ -20,8 +21,7 @@ export function toAuditFilters(values: AuditUrlFilters): AuditFilters {
   };
 }
 
-/** `audit-log-<from day>-to-<to day>.csv` (exports stay ISO / UTC). */
-export function exportFileName(filters: AuditFilters): string {
-  const day = (iso?: string) => (iso ? iso.slice(0, 10) : 'all');
-  return `audit-log-${day(filters.from)}-to-${day(filters.to)}.csv`;
+/** `traverse-forge-audit-log-<from day>-to-<to day>.csv`: plant days in the name, ISO / UTC times inside. */
+export function auditExportFileName(filters: AuditFilters, timezone: string): string {
+  return exportFileName(['audit-log', plantFileDay(filters.from, timezone), 'to', plantFileDay(filters.to, timezone)]);
 }

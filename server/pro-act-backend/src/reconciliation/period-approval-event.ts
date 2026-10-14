@@ -19,17 +19,22 @@ function headline(valuation: ReviewedValuation): {
   status: 'valued' | 'unvalued' | 'mixed';
   reason: string | null;
 } {
-  if (!valuation.approved) return { status: 'unvalued', reason: 'policy_unapproved' };
+  if (!valuation.approved)
+    return { status: 'unvalued', reason: 'policy_unapproved' };
   const own = valuation.slices.filter((s) => s.view === valuation.defaultView);
   const reasons = [...new Set(own.flatMap((s) => s.reasons))].sort();
   const reason = reasons.length > 0 ? reasons.join(',') : null;
-  if (own.every((s) => s.status === 'valued')) return { status: 'valued', reason };
-  if (own.every((s) => s.status === 'unvalued')) return { status: 'unvalued', reason };
+  if (own.every((s) => s.status === 'valued'))
+    return { status: 'valued', reason };
+  if (own.every((s) => s.status === 'unvalued'))
+    return { status: 'unvalued', reason };
   return { status: 'mixed', reason };
 }
 
 /** §15.4 valuation of the approved figures (plan 2.6): per slice, view and reporting currency. */
-export function approvalValuation(state: RevisionState): Record<string, unknown> {
+export function approvalValuation(
+  state: RevisionState,
+): Record<string, unknown> {
   const valuation = reviewedValuation(state);
   if (!valuation) return { ...UNVALUED };
   return {

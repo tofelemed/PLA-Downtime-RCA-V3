@@ -40,6 +40,11 @@ import { EventReferencesValidator } from './event-references.validator';
 import { failureColumns } from './failure-detail';
 import { assertPlannedEnd, plannedEndColumn } from './planned-end';
 import {
+  assertGradeChange,
+  effectiveLinks,
+  gradeLinkColumns,
+} from './grade-change';
+import {
   CreateProductionEventV2Dto,
   PatchProductionEventV2Dto,
   ProductionEventV2EditableDto,
@@ -82,6 +87,7 @@ export class ProductionEventsV2CommandService {
     });
     assertImpact(fields, dto.impactFraction);
     assertPlannedEnd(fields.startTime, dto.plannedEndTime);
+    assertGradeChange(fields.physicalType, effectiveLinks(NO_LINKS, dto));
     assertWrittenNotInFuture(fields, this.clock.now());
     const id = randomUUID();
     const event = this.events.create({
@@ -301,8 +307,11 @@ function patchColumns(
       ? locked.plannedEndTime
       : dto.plannedEndTime,
   );
+  assertGradeChange(fields.physicalType, effectiveLinks(locked, dto));
   return { ...editableColumns(dto), ...fields } as Partial<ProductionEvent>;
 }
+
+const NO_LINKS = { fromProductId: null, toProductId: null };
 
 function notFound(): NotFoundException {
   return new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
@@ -343,9 +352,12 @@ function editableColumns(
     plannedEndTime: plannedEndColumn(dto.plannedEndTime),
     ...failureColumns(dto),
   };
-  return Object.fromEntries(
-    Object.entries(columns).filter(([, value]) => value !== undefined),
-  ) as Partial<ProductionEvent>;
+  return {
+    ...(Object.fromEntries(
+      Object.entries(columns).filter(([, value]) => value !== undefined),
+    ) as Partial<ProductionEvent>),
+    ...gradeLinkColumns(dto),
+  };
 }
 
 /** `fractional` needs a 0..1 fraction; every other impact mode must not carry one. */

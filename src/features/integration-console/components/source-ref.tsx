@@ -5,7 +5,7 @@ const SHOWN = 24;
 
 /**
  * A source identifier that integration admins work with (a PI WebId, an element path, a topic): shown
- * shortened, in full on hover, with a copy button. Never used for Pro-Act's own record ids.
+ * shortened, in full on hover, with a copy button. Never used for Traverse Forge's own record ids.
  */
 export function SourceRef({ value }: { value: string }) {
   const short = value.length > SHOWN ? `${value.slice(0, SHOWN)}…` : value;

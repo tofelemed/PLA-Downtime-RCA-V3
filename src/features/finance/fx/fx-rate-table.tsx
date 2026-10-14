@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import type { FxRateView } from '@/api/v2/types/valuation';
 import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { DataTable, type DataTableColumn, type DataTableEmpty, type DataTableStatus, type PagerModel } from '@/features/ux-kit/data-table';
+import { FX_RATE_TYPE_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { VersionStateBadge } from '../components/version-state-badge';
 
 export interface FxRateTableProps {
@@ -26,6 +27,7 @@ export function FxRateTable({ rates, pager, status, empty }: FxRateTableProps) {
         </span>
       ),
     },
+    { id: 'type', header: 'Rate table', cell: (rate) => <span data-testid="fx-type">{labelOf(FX_RATE_TYPE_LABELS, rate.rateType)}</span> },
     { id: 'version', header: 'Version', nowrap: true, cell: (rate) => `Version ${rate.version}` },
     { id: 'rate', header: 'Rate', align: 'right', nowrap: true, cell: (rate) => <span className="font-mono text-xs" data-testid="fx-rate">1 {rate.fromCurrency} = {rate.rate} {rate.toCurrency}</span> },
     { id: 'valid', header: 'Valid', nowrap: true, cell: (rate) => dates.validity(rate.effectiveFrom, rate.effectiveTo) },

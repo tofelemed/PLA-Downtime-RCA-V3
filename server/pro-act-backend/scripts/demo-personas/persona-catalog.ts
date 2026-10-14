@@ -4,6 +4,21 @@
  * effective rights in the plant they act on. Every persona shares `DEMO_PERSONA_PASSWORD`.
  */
 import { LegacyRole, mapLegacyRole } from '../../src/auth/roles/role-model';
+import {
+  approvePolicy,
+  createConnection,
+  createEvent,
+  createPlan,
+  createPolicy,
+  createRca,
+  createRule,
+  editAuditLog,
+  FLAG_PROBE_KEY,
+  listFlags,
+  setFlag,
+} from './persona-probes';
+
+export { FLAG_PROBE_KEY };
 
 export const DEMO_PERSONA_DOMAIN = 'demo.acme.com';
 /** Documented in docs/DEMO_PERSONAS.md; meets the bootstrap rule (>= 12 chars) and the DTO rules (>= 8). */
@@ -130,73 +145,6 @@ function viewerOfDemoPlant(name: string): PersonaUser {
     extraScopes: [tenantScope('demoPlant', 'viewer')],
   });
 }
-
-// --- probes -------------------------------------------------------------------------------------
-
-/** Flag the `PUT flag` probe sets to its current value (read from the database before verifying). */
-export const FLAG_PROBE_KEY = 'v2.rca';
-
-function listFlags(plant: Probe['plant'], expect: ProbeExpectation): Probe {
-  return {
-    label: `GET flags@${plant}`,
-    method: 'GET',
-    path: '/api/v2/feature-flags',
-    plant,
-    expect,
-  };
-}
-
-/** Idempotent set of a flag to its current value: 200 for manager_approver, no data change. */
-function setFlag(plant: PlantKey, expect: ProbeExpectation): Probe {
-  return {
-    label: `PUT flag@${plant}`,
-    method: 'PUT',
-    path: `/api/v2/feature-flags/${FLAG_PROBE_KEY}`,
-    plant,
-    body: 'flag',
-    expect,
-  };
-}
-
-/** `@Roles('SuperAdmin')` route: 403 FORBIDDEN_ROLE for everyone else, before any handler runs. */
-function editAuditLog(plant: PlantKey, expect: ProbeExpectation): Probe {
-  return {
-    label: `PUT audit-log@${plant}`,
-    method: 'PUT',
-    path: '/api/audit-logs/00000000-0000-4000-8000-000000000000',
-    plant,
-    body: 'empty',
-    expect,
-  };
-}
-
-/** A role-guarded create with an empty body: guards pass → 4xx validation, never a write. */
-function create(
-  label: string,
-  path: string,
-  plant: PlantKey,
-  expect: ProbeExpectation,
-): Probe {
-  return {
-    label: `${label}@${plant}`,
-    method: 'POST',
-    path,
-    plant,
-    body: 'empty',
-    expect,
-  };
-}
-
-const createPlan = (plant: PlantKey, expect: ProbeExpectation) =>
-  create('POST plan', '/api/v2/production-plans', plant, expect);
-const createEvent = (plant: PlantKey, expect: ProbeExpectation) =>
-  create('POST event', '/api/v2/production-events', plant, expect);
-const createRca = (plant: PlantKey, expect: ProbeExpectation) =>
-  create('POST rca', '/api/v2/rcas', plant, expect);
-const createConnection = (plant: PlantKey, expect: ProbeExpectation) =>
-  create('POST connection', '/api/v2/connections', plant, expect);
-const createRule = (plant: PlantKey, expect: ProbeExpectation) =>
-  create('POST rule', '/api/v2/rules', plant, expect);
 
 // --- personas -----------------------------------------------------------------------------------
 
@@ -391,6 +339,42 @@ export const DEMO_PERSONAS: Persona[] = [
     probes: [
       createRule('demoPlant', 'allowed'),
       setFlag('demoPlant', 'FORBIDDEN_ROLE'),
+      createPolicy('demoPlant', 'FORBIDDEN_ROLE'),
+    ],
+  },
+  // SME V1 (14 Oct 2026): finance maintains and approves valuation inputs, in both demo plants
+  {
+    key: 'financeMaintainer',
+    label: 'finance_maintainer',
+    actingPlant: 'demoPlant',
+    users: ['Mina Sadeghi', 'Thomas Keller'].map((name) =>
+      user(name, 'Analyst', 'demoPlant', {
+        extraScopes: [
+          tenantScope('demoPlant', 'finance_maintainer'),
+          tenantScope('demoPlant2', 'finance_maintainer'),
+        ],
+      }),
+    ),
+    probes: [
+      createPolicy('demoPlant', 'allowed'),
+      approvePolicy('demoPlant', 'FORBIDDEN_ROLE'),
+    ],
+  },
+  {
+    key: 'financeApprover',
+    label: 'finance_approver',
+    actingPlant: 'demoPlant',
+    users: ['Reza Karimi', 'Sofia Lindqvist'].map((name) =>
+      user(name, 'Analyst', 'demoPlant', {
+        extraScopes: [
+          tenantScope('demoPlant', 'finance_approver'),
+          tenantScope('demoPlant2', 'finance_approver'),
+        ],
+      }),
+    ),
+    probes: [
+      approvePolicy('demoPlant', 'allowed'),
+      createPolicy('demoPlant', 'FORBIDDEN_ROLE'),
     ],
   },
 ];

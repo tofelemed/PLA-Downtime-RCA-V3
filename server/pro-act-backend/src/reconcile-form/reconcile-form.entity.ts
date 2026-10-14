@@ -15,13 +15,13 @@ export class ReconcileForm {
   @JoinColumn({ name: 'lossId' })
   loss: ProductionLoss;
 
-  @Column({ type: 'float' })
+  @Column({ type: 'numeric', precision: 28, scale: 8 })
   totalLossAmount: number;
 
-  @Column({ type: 'float' })
+  @Column({ type: 'numeric', precision: 28, scale: 8 })
   categorizedLossAmount: number;
 
-  @Column({ type: 'float' })
+  @Column({ type: 'numeric', precision: 28, scale: 8 })
   unaccountedLossAmount: number;
 
   @Column({ type: 'varchar', length: 255 })

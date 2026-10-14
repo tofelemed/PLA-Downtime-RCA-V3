@@ -1,4 +1,7 @@
 import { Dec } from '../../src/domain/actuals/decimal';
+import { AccountingPoliciesService } from '../../src/periods/accounting-policies.service';
+import { parseReconciliationTolerance } from '../../src/periods/engine-policy-bodies';
+import { policyBodiesInForce } from '../../src/periods/policy-bodies-in-force';
 import { A, HOUR, NEXT_DAY } from './support/actuals-world';
 import { plus } from './support/accounting-world';
 import { ApiError, DAY1 } from './support/plan-world';
@@ -363,5 +366,76 @@ describe('PLA analytics reads (plan 3.6)', () => {
     expect(other.data.periods).toBe(0);
     const tree = await read<LossTreeBody>(`loss-tree?${window}`, env.adminB);
     expect(tree.data.groups).toEqual([]);
+  });
+
+  it('DB-08: runs without a recorded tolerance (pre-2.5) read the policy in force in one lookup, same figures', async () => {
+    const paths = [
+      `reconciliation-trend?${scope}&groupBy=shift`,
+      `reconciliation-status?${scope}&asOf=${encodeURIComponent(NEXT_DAY)}`,
+    ];
+    const before = await Promise.all(paths.map((p) => read(p)));
+    const saved = await env.rows<{ id: string; policy_versions: unknown }>(
+      `SELECT "id", "policy_versions" FROM "calculation_runs" WHERE "tenant_id" = $1`,
+      [env.world.tenantA],
+    );
+    await env.rows(
+      `UPDATE "calculation_runs" SET "policy_versions" = coalesce((SELECT jsonb_agg(v) FROM
+         jsonb_array_elements("policy_versions") v WHERE v->>'kind' <> 'reconciliation_tolerance'), '[]'::jsonb)
+        WHERE "tenant_id" = $1`,
+      [env.world.tenantA],
+    );
+    try {
+      const after = await Promise.all(paths.map((p) => read(p)));
+      expect(after.map((r) => r.data)).toEqual(before.map((r) => r.data));
+    } finally {
+      for (const run of saved) {
+        await env.rows(
+          `UPDATE "calculation_runs" SET "policy_versions" = $2::jsonb WHERE "id" = $1`,
+          [run.id, JSON.stringify(run.policy_versions)],
+        );
+      }
+    }
+  });
+
+  it('DB-08: the batch lookup resolves like resolveEngine — the unit version over the tenant one, by instant', async () => {
+    const { tenantA, unitA1, unitA2 } = env.world;
+    const unitFrom = plus(A, 2 * HOUR);
+    await env.rows(
+      `INSERT INTO "accounting_policies" ("tenant_id", "row_version", "policy_kind", "unit_id", "scope_key",
+              "version", "body", "effective_from", "approved_at")
+       SELECT $1, 1, 'reconciliation_tolerance', $2::uuid, $4, 1,
+              jsonb_set("body", '{unaccountedTargetOfShortfall}', '0.5'), $3, now()
+         FROM "accounting_policies" WHERE "tenant_id" = $1 AND "policy_kind" = 'reconciliation_tolerance'
+        ORDER BY "version" DESC LIMIT 1`,
+      [tenantA, unitA1, unitFrom, `unit:${unitA1}`],
+    );
+    const at = (unitId: string, instant: string) => ({
+      tenantId: tenantA,
+      unitId,
+      at: new Date(instant),
+    });
+    const lookups = [at(unitA1, A), at(unitA1, unitFrom), at(unitA2, unitFrom)];
+    const manager = env.harness.dataSource.manager;
+    const bodies = await policyBodiesInForce(
+      manager,
+      'reconciliation_tolerance',
+      lookups,
+    );
+    const policies = new AccountingPoliciesService();
+    const targets: number[] = [];
+    for (const [i, lookup] of lookups.entries()) {
+      const engine = await policies.resolveEngine(manager, lookup, lookup.at);
+      const batched = parseReconciliationTolerance(bodies[i]);
+      expect(batched).toEqual(engine.tolerance);
+      targets.push(batched.unaccountedTargetOfShortfall ?? -1);
+    }
+    // only unit A1 from unitFrom on sees its own version
+    expect(targets[1]).toBe(0.5);
+    expect(targets[0]).not.toBe(0.5);
+    expect(targets[2]).toBe(targets[0]);
+    await env.rows(
+      `DELETE FROM "accounting_policies" WHERE "unit_id" = $1 AND "policy_kind" = 'reconciliation_tolerance'`,
+      [unitA1],
+    );
   });
 });

@@ -30,13 +30,12 @@ import {
   ValuationPolicyCreateDto,
   ValuationPolicyListQueryDto,
 } from './valuation-v2.dto';
+import { FINANCE_APPROVERS, FINANCE_MAINTAINERS } from './valuation-roles';
 import {
   toValuationPolicyView,
+  ValuationPolicyApproveV2View,
   ValuationPolicyV2View,
 } from './valuation-v2.view';
-
-/** Finance sign-off of the valuation basis (VAL01) is a manager approver's act (D06 role map). */
-const POLICY_ROLES = ['manager_approver'] as const;
 
 /** `valuation_basis` policy versions of plan 2.6 (VAL01–VAL03, D08). */
 @ApiTags('v2 · Valuation')
@@ -75,7 +74,7 @@ export class ValuationPoliciesV2Controller {
 
   @Post()
   @Idempotent()
-  @Roles(...POLICY_ROLES)
+  @Roles(...FINANCE_MAINTAINERS)
   @ApiOperation({
     summary: 'Create a new (unapproved) valuation policy version',
     description:
@@ -94,19 +93,21 @@ export class ValuationPoliciesV2Controller {
   @Post(':id/approve')
   @HttpCode(HttpStatus.OK)
   @Idempotent()
-  @Roles(...POLICY_ROLES)
+  @Roles(...FINANCE_APPROVERS)
   @ApiOperation({
     summary: 'Record the finance approval of a valuation policy version',
     description:
       'Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author ' +
       'cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 ' +
-      'CURRENCY_UNDECIDED for the XXX placeholder. Periods are revalued on their next recalculation.',
+      'CURRENCY_UNDECIDED for the XXX placeholder. SME V7: the periods from its start are queued for ' +
+      'revaluation (`revaluation`); approved periods get a change proposal.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async approve(
     @Ctx() ctx: RequestContext,
     @Param('id', new ParseUUIDPipe()) id: string,
-  ): Promise<ValuationPolicyV2View> {
-    return toValuationPolicyView(await this.policies.approve(ctx, id));
+  ): Promise<ValuationPolicyApproveV2View> {
+    const { policy, revaluation } = await this.policies.approve(ctx, id);
+    return { ...toValuationPolicyView(policy), revaluation };
   }
 }

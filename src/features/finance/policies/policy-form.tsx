@@ -14,6 +14,7 @@ import { FinanceField } from '../components/finance-field';
 import { FinanceRefusalAlert } from '../components/finance-refusal-alert';
 import { serverFieldErrors, type FieldErrors } from '../model/field-errors';
 import { policyCreateBody, policyFormOf, REPORTING_CURRENCIES, validatePolicyForm, type PolicyFormValues } from '../model/policy-form';
+import { EconomicFields } from './economic-fields';
 import { ImpactCodePicker } from './impact-code-picker';
 
 const options = (labels: Readonly<Record<string, string>>) => Object.entries(labels).map(([value, label]) => ({ value, label }));
@@ -37,7 +38,7 @@ function CurrencyChoice({ values, toggle }: { values: PolicyFormValues; toggle: 
   );
 }
 
-/** A new valuation policy version, not approved yet; another manager approver records the sign-off afterwards. */
+/** A new valuation policy version, not approved yet; a finance approver (not the author) records the sign-off afterwards (SME V1). */
 export function PolicyForm({ source, onSaved, onCancel }: PolicyFormProps) {
   const { timezone } = usePlantDates();
   const calendar = useCalendarPreference().calendar;
@@ -58,7 +59,7 @@ export function PolicyForm({ source, onSaved, onCancel }: PolicyFormProps) {
   return (
     <div className="space-y-4" data-testid="policy-form">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <FinanceField id="defaultBasis" label="Default basis">
+        <FinanceField id="defaultBasis" label="Default management view" error={fieldError('defaultBasis')}>
           <NativeSelect id="defaultBasis" value={values.defaultBasis} options={options(DEFAULT_BASIS_LABELS)} onChange={(v) => set('defaultBasis', v as DefaultBasis)} />
         </FinanceField>
         <FinanceField id="timeBasisRule" label="Time-based costs">
@@ -74,6 +75,7 @@ export function PolicyForm({ source, onSaved, onCancel }: PolicyFormProps) {
       <FinanceField id="reportingCurrencies" label="Reporting currencies" error={fieldError('reportingCurrencies')}>
         <CurrencyChoice values={values} toggle={toggleCurrency} />
       </FinanceField>
+      <EconomicFields values={values.economic} errors={fieldError} onChange={(economic) => set('economic', economic)} />
       {values.timeBasisRule === 'independent_components' && (
         <ImpactCodePicker selected={values.independentImpactCodeIds} onChange={(ids) => set('independentImpactCodeIds', ids)} />
       )}

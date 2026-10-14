@@ -12,9 +12,16 @@ import {
 } from './accounting.types';
 import { autoKey } from './auto-key';
 import { ClaimPool } from './claim-pooling';
-import { Claim, measuredDerateClaims, rateClaims, sumOf } from './claims';
+import {
+  Claim,
+  measuredDerateClaims,
+  qualityClaims,
+  rateClaims,
+  sumOf,
+} from './claims';
 import { ComponentResult, componentLines } from './component-lines';
 import { LineContext, RateBasis, rateOf, segmentCapacity } from './time-lines';
+import { transitionClaims } from './transition-claims';
 
 /** Everything a ledger computation of one slice needs. */
 export interface SliceContext {
@@ -52,19 +59,45 @@ export function contextOf(
   };
 }
 
-/** Rate claims (micro-stops, derates) at the ledger's rate and measured slowdowns, split per policy. */
+/** Grade-transition claims of the slice at the ledger's rate (LA-08). */
+function transitionsOf(ctx: SliceContext): ReturnType<typeof transitionClaims> {
+  const { input, slice, segments, line } = ctx;
+  return transitionClaims(segments, line.basis, {
+    events: input.events,
+    window: slice.window,
+    standards: input.transitionStandards ?? [],
+    asOf: input.asOf,
+  });
+}
+
+/**
+ * Rate claims (micro-stops, derates) at the ledger's rate, measured slowdowns and the rate deficit of
+ * grade transitions, split per policy (transitions always stay performance).
+ */
 export function ledgerClaims(ctx: SliceContext): {
   performance: Claim[];
   availability: Claim[];
 } {
   const { input, slice, segments, line } = ctx;
-  return splitDerates(
+  const split = splitDerates(
     [
       ...rateClaims(segments, line.basis),
       ...measuredDerateClaims(input.events, slice.window),
     ],
     input.policy.derateComponent,
   );
+  return {
+    performance: [...split.performance, ...transitionsOf(ctx).performance],
+    availability: split.availability,
+  };
+}
+
+/** Quality claims of the slice: declared quality events and the off-grade of grade transitions. */
+export function ledgerQualityClaims(ctx: SliceContext): Claim[] {
+  return [
+    ...qualityClaims(ctx.input.events, ctx.slice.window),
+    ...transitionsOf(ctx).quality,
+  ];
 }
 
 /** The claims a component allocates: its own, or its part of the product run's pooled claims. */

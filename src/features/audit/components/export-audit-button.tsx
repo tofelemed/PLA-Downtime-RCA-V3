@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { friendlyToastContent } from '@/features/ux-kit/errors';
 import { ActionIcon, StatusIcon } from '@/lib/icons';
-import { exportFileName } from '../model/audit-filters';
+import { auditExportFileName } from '../model/audit-filters';
 
 function download(text: string, fileName: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
@@ -16,13 +16,13 @@ function download(text: string, fileName: string): void {
 }
 
 /** Downloads the filtered entries as CSV, built by the server (newest first, at most 10 000 rows). */
-export function ExportAuditButton({ filters }: { filters: AuditFilters }) {
+export function ExportAuditButton({ filters, timezone }: { filters: AuditFilters; timezone: string }) {
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const run = async () => {
     setBusy(true);
     try {
-      download(await fetchAuditCsv(filters), exportFileName(filters));
+      download(await fetchAuditCsv(filters), auditExportFileName(filters, timezone));
     } catch (error) {
       toast({ ...friendlyToastContent(error), variant: 'destructive' });
     } finally {
