@@ -1,15 +1,18 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Length,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 import {
   toArrayParam,
@@ -160,4 +163,28 @@ export class ProductionEventListQueryDto extends ListQueryDto {
   @Transform(toBooleanParam)
   @IsBoolean()
   possibleDuplicate?: boolean;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      'true: live stops that began within `repeatWindowSeconds` after a stop of the same asset (or unit) with the ' +
+      'same reason ended — a stop-restart-stop that may be one incident (SME D5, flagged only); false: the rest',
+  })
+  @IsOptional()
+  @Transform(toBooleanParam)
+  @IsBoolean()
+  possibleRepeat?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 3600,
+    default: 120,
+    description: 'Window of `possibleRepeat` in seconds (SME D5 pilot: 120)',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(3600)
+  repeatWindowSeconds?: number;
 }

@@ -57,6 +57,7 @@ export function parseEventFilters(params: URLSearchParams, now: number, preset: 
   }
   state.isOpen = openFilterOf(params.get('open'));
   state.possibleDuplicate = params.get('duplicates') === '1';
+  state.possibleRepeat = params.get('repeats') === '1';
   state.q = params.get('q') ?? '';
   return state;
 }
@@ -82,6 +83,7 @@ export function toEventSearchParams(state: EventFilterState): URLSearchParams {
   setArrays(params, state);
   if (state.isOpen !== 'any') params.set('open', state.isOpen);
   if (state.possibleDuplicate) params.set('duplicates', '1');
+  if (state.possibleRepeat) params.set('repeats', '1');
   if (state.q.trim()) params.set('q', state.q.trim());
   return params;
 }

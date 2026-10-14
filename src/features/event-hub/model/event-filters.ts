@@ -36,6 +36,8 @@ export interface EventFilterState {
   isOpen: OpenFilter;
   /** only stops overlapping another stop of the same asset (DT-04, server rule) */
   possibleDuplicate: boolean;
+  /** only stops restarting soon after a same-asset, same-reason stop (SME D5, server rule) */
+  possibleRepeat: boolean;
   /** label of the chosen window ("Last 24 h", a shift name); display only */
   windowLabel: string;
 }
@@ -63,6 +65,7 @@ export function defaultFilters(window: { from: string; to: string; label: string
     to: window.to,
     isOpen: 'any',
     possibleDuplicate: false,
+    possibleRepeat: false,
     windowLabel: window.label,
   };
 }
@@ -96,6 +99,7 @@ export function toEventQuery(state: EventFilterState, limit = PAGE_SIZE): Produc
   if (state.to) query.to = state.to;
   if (state.isOpen !== 'any') query.isOpen = state.isOpen === 'open';
   if (state.possibleDuplicate) query.possibleDuplicate = true;
+  if (state.possibleRepeat) query.possibleRepeat = true;
   return query as ProductionEventFilters;
 }
 

@@ -28,7 +28,7 @@ import {
 import { useAssetOptions } from '../hooks/use-asset-options';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { MultiCheckSelect, type CheckOption } from './multi-check-select';
-import { PossibleDuplicateToggle } from './possible-duplicate-toggle';
+import { FilterFlagToggle } from './filter-flag-toggle';
 import { WindowSelect } from './window-select';
 
 export interface EventFiltersBarProps {
@@ -57,7 +57,8 @@ interface FilterSpec {
 export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarProps) {
   const env = useEventHubEnv();
   const assets = useAssetOptions(filters.unitIds);
-  const moreActive = SECONDARY.filter((field) => filters[field].length > 0).length + (filters.possibleDuplicate ? 1 : 0);
+  const flags = [filters.possibleDuplicate, filters.possibleRepeat].filter(Boolean).length;
+  const moreActive = SECONDARY.filter((field) => filters[field].length > 0).length + flags;
   const [showMore, setShowMore] = useState(moreActive > 0);
   const set = <K extends keyof EventFilterState>(key: K, value: EventFilterState[K]) => onChange({ ...filters, [key]: value });
   const reasonOptions = [...env.reasonCodes]
@@ -100,7 +101,20 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
       {showMore && (
         <div className="flex flex-wrap items-center gap-2" data-testid="more-filter-row">
           {secondary.map(select)}
-          <PossibleDuplicateToggle checked={filters.possibleDuplicate} onChange={(value) => set('possibleDuplicate', value)} />
+          <FilterFlagToggle
+            id="filter-possible-duplicates"
+            label="Possible duplicate stops only"
+            title="Stops that overlap another stop of the same asset (or of the unit when neither has an asset)"
+            checked={filters.possibleDuplicate}
+            onChange={(value) => set('possibleDuplicate', value)}
+          />
+          <FilterFlagToggle
+            id="filter-possible-repeats"
+            label="Possible repeat stops only"
+            title="Stops that began within 2 minutes after a stop of the same asset and reason ended (one incident?)"
+            checked={filters.possibleRepeat}
+            onChange={(value) => set('possibleRepeat', value)}
+          />
         </div>
       )}
     </div>

@@ -534,6 +534,27 @@
             }
           },
           {
+            "name": "possibleRepeat",
+            "required": false,
+            "in": "query",
+            "description": "true: live stops that began within `repeatWindowSeconds` after a stop of the same asset (or unit) with the same reason ended — a stop-restart-stop that may be one incident (SME D5, flagged only); false: the rest",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "repeatWindowSeconds",
+            "required": false,
+            "in": "query",
+            "description": "Window of `possibleRepeat` in seconds (SME D5 pilot: 120)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 3600,
+              "default": 120,
+              "type": "number"
+            }
+          },
+          {
             "name": "X-Tenant-Id",
             "in": "header",
             "description": "Act on another tenant the caller is a member of (SuperAdmin: any tenant)",
@@ -821,6 +842,27 @@
             "description": "true: live stops (downtime) that overlap another live stop of the same asset, or of the same unit when neither has an asset — usually the same stop entered twice (e.g. manually and from PI); false: every other event (DT-04)",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "possibleRepeat",
+            "required": false,
+            "in": "query",
+            "description": "true: live stops that began within `repeatWindowSeconds` after a stop of the same asset (or unit) with the same reason ended — a stop-restart-stop that may be one incident (SME D5, flagged only); false: the rest",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "repeatWindowSeconds",
+            "required": false,
+            "in": "query",
+            "description": "Window of `possibleRepeat` in seconds (SME D5 pilot: 120)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 3600,
+              "default": 120,
+              "type": "number"
             }
           },
           {

@@ -53,6 +53,17 @@ describe('Event Hub filters in the URL', () => {
     expect(parseEventFilters(params, NOW).possibleDuplicate).toBe(true);
   });
 
+  it('possible repeats (SME D5): only sent and kept in the URL when ticked', () => {
+    const base = parseEventFilters(new URLSearchParams(), NOW);
+    expect(base.possibleRepeat).toBe(false);
+    expect('possibleRepeat' in toEventQuery(base)).toBe(false);
+    const ticked = { ...base, possibleRepeat: true };
+    expect(toEventQuery(ticked).possibleRepeat).toBe(true);
+    const params = toEventSearchParams(ticked);
+    expect(params.get('repeats')).toBe('1');
+    expect(parseEventFilters(params, NOW).possibleRepeat).toBe(true);
+  });
+
   it('sends the new filters to the server; search only from two characters', () => {
     const base = parseEventFilters(new URLSearchParams(), NOW);
     expect('q' in toEventQuery({ ...base, q: 'x' })).toBe(false);
