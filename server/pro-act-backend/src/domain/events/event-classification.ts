@@ -8,6 +8,8 @@ export const PHYSICAL_TYPES = [
   'quality_loss',
   'production_output',
   'advisory',
+  /** LA-08: a grade change on a running unit (from / to product); its own loss kinds */
+  'grade_transition',
 ] as const;
 export type PhysicalType = (typeof PHYSICAL_TYPES)[number];
 

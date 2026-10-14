@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { QueryParams } from '../request-url';
 import type { ProductView } from '../types/plans';
-import type { ProfileView, RateImportView, RateView, ValuationRateView, VersionState } from '../types/profiles';
+import type { ProfileView, RateImportView, RateView, TransitionStandardView, ValuationRateView, VersionState } from '../types/profiles';
 import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
 import { useV2InfiniteList } from './use-v2-list';
@@ -51,6 +51,17 @@ export function useValuationRates(profileId: string | null) {
     query: { profileId: profileId ?? undefined, limit: 500 },
     key: { filters: { kind: 'valuation-rates', profileId } },
     enabled: profileId !== null,
+  });
+}
+
+/** The grade-transition matrix of one unit (every version; the table shows state and validity). */
+export function useTransitionStandards(unitId: string) {
+  return useV2InfiniteList<TransitionStandardView>({
+    resource: 'profiles',
+    path: '/transition-standards',
+    query: { unitId, limit: 200 },
+    key: { scope: { unitIds: [unitId] }, filters: { kind: 'transition-standards', unitId } },
+    enabled: unitId !== '',
   });
 }
 

@@ -74,12 +74,14 @@ import { SitesService } from '../calendar/sites.service';
 import { ProductionProfile } from '../profiles/entities/production-profile.entity';
 import { UnitProductRate } from '../profiles/entities/unit-product-rate.entity';
 import { ValuationRate } from '../profiles/entities/valuation-rate.entity';
+import { GradeTransitionStandard } from '../profiles/entities/transition-standard.entity';
 import { ProfileResolutionService } from '../profiles/profile-resolution.service';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ProfilesService } from '../profiles/profiles.service';
 import { RateImportsService } from '../profiles/rate-imports.service';
 import { RatesService } from '../profiles/rates.service';
 import { ValuationRatesService } from '../profiles/valuation-rates.service';
+import { TransitionStandardsService } from '../profiles/transition-standards.service';
 import { PlanPeriod } from '../plans/entities/plan-period.entity';
 import { PlanScenario } from '../plans/entities/plan-scenario.entity';
 import { PlanVersion } from '../plans/entities/plan-version.entity';
@@ -242,6 +244,7 @@ class CalendarModuleStub {}
     { provide: ProfilesService, useValue: {} },
     { provide: RatesService, useValue: {} },
     { provide: ValuationRatesService, useValue: {} },
+    { provide: TransitionStandardsService, useValue: {} },
     { provide: ProfileResolutionService, useValue: {} },
     { provide: RateImportsService, useValue: {} },
   ],
@@ -249,6 +252,7 @@ class CalendarModuleStub {}
     ProfilesService,
     RatesService,
     ValuationRatesService,
+    TransitionStandardsService,
     ProfileResolutionService,
     RateImportsService,
   ],
@@ -454,6 +458,8 @@ async function generate(): Promise<string> {
     .overrideProvider(getRepositoryToken(UnitProductRate))
     .useValue({})
     .overrideProvider(getRepositoryToken(ValuationRate))
+    .useValue({})
+    .overrideProvider(getRepositoryToken(GradeTransitionStandard))
     .useValue({})
     .overrideProvider(getRepositoryToken(PlanVersion))
     .useValue({})

@@ -6,6 +6,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Asset } from '../../asset/asset.entity';
+import { Product } from '../../product/product.entity';
+import { ProductionEvent } from '../../production-event/production-event.entity';
 import { ProductionPlan } from '../../production-plan/production-plan.entity';
 import { ReasonCode } from '../../reason-code/reason-code.entity';
 import { Unit } from '../../unit/unit.entity';
@@ -16,6 +18,9 @@ export interface EventReferences {
   originAssetId?: string | null;
   reasonCodeId?: string | null;
   planId?: string | null;
+  fromProductId?: string | null;
+  toProductId?: string | null;
+  recoveryOfEventId?: string | null;
 }
 
 /**
@@ -32,6 +37,9 @@ export class EventReferencesValidator {
     @InjectRepository(ProductionPlan)
     private readonly plans: Repository<ProductionPlan>,
     @InjectRepository(Unit) private readonly units: Repository<Unit>,
+    @InjectRepository(Product) private readonly products: Repository<Product>,
+    @InjectRepository(ProductionEvent)
+    private readonly events: Repository<ProductionEvent>,
   ) {}
 
   /** 404 unless the unit belongs to the tenant (no existence leak across tenants). */
@@ -65,6 +73,38 @@ export class EventReferencesValidator {
       await this.assertReasonCodeOwned(tenantId, refs.reasonCodeId);
     }
     await this.assertOriginOwned(tenantId, refs);
+    await this.assertGradeLinksOwned(tenantId, unitId, refs);
+  }
+
+  /**
+   * LA-08 / SME Q10: transition products are the tenant's (v1 products carry the tenant as text); the
+   * stop a ramp-up recovers from is a downtime event of the same unit.
+   */
+  private async assertGradeLinksOwned(
+    tenantId: string,
+    unitId: string,
+    refs: EventReferences,
+  ): Promise<void> {
+    for (const field of ['fromProductId', 'toProductId'] as const) {
+      const id = refs[field];
+      if (!id) continue;
+      const found = await this.products
+        .createQueryBuilder('p')
+        .where('p.id = :id AND lower(p.tenantId) = :tenant', {
+          id,
+          tenant: tenantId.toLowerCase(),
+        })
+        .getCount();
+      if (found === 0) throw invalidReference(field);
+    }
+    if (!refs.recoveryOfEventId) return;
+    const stops = await this.events.countBy({
+      id: refs.recoveryOfEventId,
+      tenantId,
+      unitId,
+      physicalType: 'downtime',
+    });
+    if (stops === 0) throw invalidReference('recoveryOfEventId');
   }
 
   /** SME D3: the origin unit and asset are the tenant's; an origin asset belongs to the origin unit when one is named. */

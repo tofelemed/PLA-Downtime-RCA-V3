@@ -18,6 +18,7 @@ import { ImpactCode } from '../impact-code/impact-code.entity';
 import { OEECode } from '../oee-code/oee-code.entity';
 import { RCA } from '../rca/rca.entity';
 import { ReasonCode } from '../reason-code/reason-code.entity';
+import { Product } from '../product/product.entity';
 import {
   CODING_STATES,
   CodingState,
@@ -53,6 +54,14 @@ export const DURATION_SECONDS_EXPRESSION =
 @Check(
   'CHK_production_events_planned_end',
   '"planned_end_time" IS NULL OR "planned_end_time" > "start_time"',
+)
+@Check(
+  'CHK_production_events_transition_products',
+  '("from_product_id" IS NULL) = ("to_product_id" IS NULL) AND ("from_product_id" IS NULL OR "from_product_id" <> "to_product_id")',
+)
+@Check(
+  'CHK_production_events_recovery_not_self',
+  '"recovery_of_event_id" IS NULL OR "recovery_of_event_id" <> "id"',
 )
 @Check(
   'CHK_production_events_failure_severity',
@@ -139,6 +148,48 @@ export class ProductionEvent {
     foreignKeyConstraintName: 'FK_production_events_origin_unit',
   })
   originUnit?: Unit;
+
+  /** LA-08: product before a grade transition (set with `toProductId` on `grade_transition` events only) */
+  @Index('IDX_production_events_from_product', {
+    where: '"from_product_id" IS NOT NULL',
+  })
+  @Column({ name: 'from_product_id', type: 'uuid', nullable: true })
+  fromProductId: string | null;
+
+  @ManyToOne(() => Product, { onDelete: 'RESTRICT' })
+  @JoinColumn({
+    name: 'from_product_id',
+    foreignKeyConstraintName: 'FK_production_events_from_product',
+  })
+  fromProduct?: Product;
+
+  /** LA-08: product after a grade transition */
+  @Index('IDX_production_events_to_product', {
+    where: '"to_product_id" IS NOT NULL',
+  })
+  @Column({ name: 'to_product_id', type: 'uuid', nullable: true })
+  toProductId: string | null;
+
+  @ManyToOne(() => Product, { onDelete: 'RESTRICT' })
+  @JoinColumn({
+    name: 'to_product_id',
+    foreignKeyConstraintName: 'FK_production_events_to_product',
+  })
+  toProduct?: Product;
+
+  /** SME Q10: the stop a ramp-up / startup-quality event recovers from (its loss is charged to that stop) */
+  @Index('IDX_production_events_recovery_of', {
+    where: '"recovery_of_event_id" IS NOT NULL',
+  })
+  @Column({ name: 'recovery_of_event_id', type: 'uuid', nullable: true })
+  recoveryOfEventId: string | null;
+
+  @ManyToOne(() => ProductionEvent, { onDelete: 'RESTRICT' })
+  @JoinColumn({
+    name: 'recovery_of_event_id',
+    foreignKeyConstraintName: 'FK_production_events_recovery_of',
+  })
+  recoveryOf?: ProductionEvent;
 
   /** SME D4: approved end of a planned stop's window (frozen before the work); time after it is overrun */
   @Column({ name: 'planned_end_time', type: 'timestamptz', nullable: true })

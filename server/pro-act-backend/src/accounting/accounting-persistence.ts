@@ -66,7 +66,9 @@ function lineRow(
     source: 'auto',
     autoKey: line.autoKey,
     state: 'active',
-    causeEventId: cause?.eventId ?? null,
+    // SME Q10 / E1: ramp-up and startup-quality loss is charged to the stop it recovers from (RCA impact);
+    // the line's evidence keeps the recovery event itself
+    causeEventId: cause?.recoveryOfEventId ?? cause?.eventId ?? null,
     occurrenceId: cause?.occurrenceId ?? null,
     flags: line.flags,
     valuation,

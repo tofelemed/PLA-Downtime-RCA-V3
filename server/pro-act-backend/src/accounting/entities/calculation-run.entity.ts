@@ -33,6 +33,8 @@ export interface InputFingerprint {
   planPeriodIds: string[];
   rateVersionIds: string[];
   calendarVersionIds: string[];
+  /** approved grade-transition standards of the unit the run read (LA-08); absent on runs before 2.5.4 */
+  transitionStandardIds?: string[];
   /** set only while the period is running and an open event is measured to it (else null) */
   asOf: string | null;
 }

@@ -114,7 +114,12 @@ export function submissionIssues(
 }
 
 /** Kinds whose event claims can exceed what the measurements hold (quality events, slowdowns). */
-const CLAIMED_KINDS = new Set(['quality', 'performance']);
+const CLAIMED_KINDS = new Set([
+  'quality',
+  'performance',
+  'transition_allowance',
+  'transition_excess',
+]);
 /** Decisions that leave a disputed claim as the system proposed it. */
 const UNRESOLVED = new Set(['proposed', 'accepted']);
 

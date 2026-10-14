@@ -37,6 +37,10 @@ export const FLAG_LABELS: Readonly<Record<string, string>> = {
   claim_exceeds_component: 'Causes claim more than measured loss',
   planned_rate_scaled: 'Priced at the planned rate (target ÷ eligible time)',
   unexplained: 'Unexplained (no event or measurement supports it)',
+  transition_overrun: 'Transition ran past its approved standard',
+  no_transition_standard: 'No approved transition standard for this grade change',
+  trip_recovery: 'Ramp-up / start-up after a trip (charged to the trip)',
+  'quality_class:transition_off_grade': 'Transition off-grade',
 };
 
 /** Residual states that block submission (ACC10) and are shown in red. */
@@ -58,6 +62,8 @@ export const KIND_LABELS: Record<string, string> = {
   gain: 'Gain',
   unaccounted_classified: 'Unaccounted (classified)',
   tolerance_adjustment: 'Tolerance adjustment',
+  transition_allowance: 'Grade transition (within standard)',
+  transition_excess: 'Grade transition overrun',
 };
 
 /** Data quality of a period's actuals (server tokens). */

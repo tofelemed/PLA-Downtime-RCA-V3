@@ -27,6 +27,24 @@ describe('baselineRecalcScope (LA-03)', () => {
     });
   });
 
+  it('a transition standard (LA-08) recalculates its unit over its interval', () => {
+    const scope = baselineRecalcScope(
+      'standard-1',
+      {
+        subject: 'transition_standard',
+        unitId: 'unit-2',
+        effectiveFrom: FROM,
+        effectiveTo: null,
+      },
+      { profileUnits: units, importWindow: null },
+    );
+    expect(scope).toEqual({
+      unitIds: ['unit-2'],
+      from: new Date(FROM),
+      to: OPEN_ENDED,
+    });
+  });
+
   it('a rate change finds the unit through its profile; an open-ended rate covers every later period, future ones included', () => {
     const scope = baselineRecalcScope(
       'profile-2',

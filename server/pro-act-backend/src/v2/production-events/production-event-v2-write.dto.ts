@@ -115,6 +115,38 @@ export class ProductionEventV2EditableDto {
   impactFraction?: string | null;
 
   @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description:
+      'LA-08: product before a grade change; required with toProductId on grade_transition events only',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  fromProductId?: string | null;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description: 'LA-08: product after a grade change (grade_transition only)',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  toProductId?: string | null;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description:
+      'SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  recoveryOfEventId?: string | null;
+
+  @ApiPropertyOptional({
     format: 'date-time',
     nullable: true,
     description:

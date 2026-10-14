@@ -46,6 +46,11 @@ export interface ProductionEventV2View {
   originAssetId: string | null;
   /** SME D4: approved end of a planned stop's window */
   plannedEndTime: string | null;
+  /** LA-08: products of a grade transition (null on every other event) */
+  fromProductId: string | null;
+  toProductId: string | null;
+  /** SME Q10: the stop this ramp-up / startup-quality event recovers from */
+  recoveryOfEventId: string | null;
   /** SME D8 / D11: failure detail (ISO 14224); null = not determined yet */
   failure: {
     mode: string | null;
@@ -116,6 +121,9 @@ export function toProductionEventV2View(
     plannedEndTime: event.plannedEndTime
       ? new Date(event.plannedEndTime).toISOString()
       : null,
+    fromProductId: event.fromProductId ?? null,
+    toProductId: event.toProductId ?? null,
+    recoveryOfEventId: event.recoveryOfEventId ?? null,
     failure: {
       mode: event.failureMode ?? null,
       severity: event.failureSeverity ?? null,

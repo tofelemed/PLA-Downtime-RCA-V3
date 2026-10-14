@@ -17,6 +17,7 @@ import { seedProfiles } from './seed-profiles';
 import { seedRcaCases } from './seed-rca';
 import { seedRules } from './seed-rules';
 import { seedTasks } from './seed-tasks';
+import { seedTransitionMatrix } from './seed-transitions';
 import { ShowcaseContext } from './showcase-context';
 import { verifyShowcase } from './verify-showcase';
 
@@ -44,6 +45,12 @@ const STEPS: readonly Step[] = [
     run: seedValuationPolicy,
   },
   { name: 'plans', always: false, kinds: PLANTS, run: seedPlans },
+  {
+    name: 'transitions',
+    always: false,
+    kinds: ['full'],
+    run: seedTransitionMatrix,
+  },
   { name: 'cleanup', always: false, kinds: ['full'], run: closeStaleStops },
   { name: 'events', always: false, kinds: PLANTS, run: seedEvents },
   { name: 'open-stops', always: false, kinds: PLANTS, run: seedOpenStops },

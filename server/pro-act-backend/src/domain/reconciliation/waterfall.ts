@@ -35,6 +35,8 @@ export const PLAN_STEP_KEYS = [
   'availability',
   'performance',
   'quality',
+  'transition_allowance',
+  'transition_excess',
   'bridge',
   'unaccounted_classified',
   'gain',

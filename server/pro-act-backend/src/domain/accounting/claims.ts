@@ -1,6 +1,7 @@
 import { Dec, secondsBetween, toDec, ZERO } from '../actuals/decimal';
 import { BoundedInterval, clip } from '../time/interval-algebra';
 import { LossEvent, Segment } from './accounting.types';
+import { TransitionSplit } from './transition-split';
 import { segmentCapacity, RateBasis, rateOf } from './time-lines';
 
 /** A cause claiming part of a component total (micro-stop, derate, measured slowdown, quality event). */
@@ -15,6 +16,8 @@ export interface Claim {
   share: Dec;
   /** a share of a claim pooled over a product run (`claim-pooling.ts`) */
   pooled?: boolean;
+  /** LA-08: the claim of a grade transition, split into allowance and excess when it becomes lines */
+  transition?: TransitionSplit;
 }
 
 function addTo(
@@ -42,9 +45,9 @@ function addTo(
 }
 
 /**
- * Rate-based claims inside running time (not excluded, no availability stop): a micro-stop claims the
- * segment's capacity (shared between concurrent micro-stops); a fractional derate claims capacity ×
- * fraction where no micro-stop is active (never twice for the same second).
+ * Rate-based claims inside running time (not excluded, no availability stop, no grade transition): a
+ * micro-stop claims the segment's capacity (shared between concurrent micro-stops); a fractional derate
+ * claims capacity × fraction where no micro-stop is active (never twice for the same second).
  */
 export function rateClaims(
   segments: readonly Segment[],
@@ -57,6 +60,8 @@ export function rateClaims(
     const rate = rateOf(segment, basis);
     if (segment.excluded || segment.stops.length > 0 || !capacity || !rate)
       continue;
+    // a grade transition takes the segment (`transitionClaims`): its time is not claimed twice
+    if (segment.transitions.length > 0) continue;
     const base = { start: segment.start, end: segment.end, rateId: rate.id };
     for (const cause of segment.microStops) {
       addTo(micro, cause.event, {
@@ -79,7 +84,7 @@ export function rateClaims(
 }
 
 /** Part of a declared quantity inside the window: prorated by time, an instant event counts whole. */
-function quantityInside(
+export function quantityInside(
   event: LossEvent,
   window: BoundedInterval,
 ): Claim | null {

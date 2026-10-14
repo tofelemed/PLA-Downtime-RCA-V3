@@ -18,6 +18,8 @@ export const LOSS_VALUE_KINDS: ReadonlySet<LossKind> = new Set([
   'availability',
   'performance',
   'quality',
+  'transition_allowance',
+  'transition_excess',
   'unaccounted_classified',
   'bridge',
 ]);

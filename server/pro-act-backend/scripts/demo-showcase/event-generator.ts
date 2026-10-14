@@ -4,10 +4,13 @@
  * a quality loss and the shift's production report. The output is derived from the shift's plan target
  * so that target − good = the losses the engine attributes + a small unrecorded speed loss, which makes
  * OEE land around 65–85 % and the period waterfall close. Same seed, unit and shift → same events.
+ * A shift that starts a new product campaign begins with its grade transition (`seed-transitions.ts`):
+ * no stop overlaps it, its time yields no prime output and its off-grade counts as rejects.
  */
 import { leavesFor, ReasonLeaf, ReasonUse } from './catalog-codes';
 import { UnitSpec } from './catalog-plants';
 import { SeededRandom } from './showcase-random';
+import { PlannedTransition } from './seed-transitions';
 
 const MINUTE_MS = 60_000;
 
@@ -22,12 +25,14 @@ export interface ShiftInput {
   /** stops per shift */
   stops: { min: number; max: number };
   seed: string;
+  /** the grade transition this shift starts with (demo), if any */
+  transition?: PlannedTransition | null;
 }
 
 export interface GeneratedEvent {
   /** stable id within the plant: `SC-<unit>-<yyyymmddHH>-<kind><n>` */
   eventId: string;
-  kind: 'stop' | 'slowdown' | 'quality';
+  kind: 'stop' | 'slowdown' | 'quality' | 'transition';
   start: number;
   end: number;
   leaf: ReasonLeaf;
@@ -35,6 +40,7 @@ export interface GeneratedEvent {
   description: string;
   impactFraction?: number;
   quantity?: number;
+  transition?: PlannedTransition;
 }
 
 export interface GeneratedShift {
@@ -105,6 +111,12 @@ function placeStops(
   const taken: Array<[number, number]> = [];
   const events: GeneratedEvent[] = [];
   let budget = shiftMinutes * 0.45;
+  if (input.transition) {
+    const from = (input.transition.start - input.start) / MINUTE_MS;
+    const to = (input.transition.end - input.start) / MINUTE_MS;
+    taken.push([from, to]);
+    budget -= to - from;
+  }
   for (let i = 0; i < count; i += 1) {
     const use = random.weighted(STOP_USES).use;
     const { leaf, assetKind } = pickCause(input.unit, use, random);
@@ -177,8 +189,12 @@ export function generateShift(
     input.start,
   ]);
   const events = placeStops(input, random, prefix);
-  const slow = slowdown(input, random, prefix);
+  const slow = input.transition ? null : slowdown(input, random, prefix);
   if (slow) events.push(slow);
+  const change = input.transition;
+  if (change) events.push(transitionEvent(change, input.unit, prefix));
+  const changeHours = change ? (change.end - change.start) / 3_600_000 : 0;
+  const offGrade = change?.offGrade ?? 0;
   const P = input.planningRate;
   const stopped =
     minutesOf(events, ['breakdown', 'planned', 'external', 'minor']) / 60;
@@ -190,7 +206,7 @@ export function generateShift(
   const unrecorded = input.target * random.between(0.004, 0.03);
   const good = Math.max(
     input.target * 0.25,
-    input.target - P * (stopped + derated) - rejects - unrecorded,
+    input.target - P * (stopped + derated + changeHours) - rejects - unrecorded,
   );
   if (rejects > 0) {
     const { leaf } = pickCause(input.unit, 'quality', random);
@@ -209,5 +225,29 @@ export function generateShift(
       quantity: rejects,
     });
   }
-  return { events, gross: Math.round((good + rejects) * 100) / 100, rejects };
+  const allRejects = Math.round((rejects + offGrade) * 100) / 100;
+  return {
+    events,
+    gross: Math.round((good + allRejects) * 100) / 100,
+    rejects: allRejects,
+  };
+}
+
+function transitionEvent(
+  change: PlannedTransition,
+  unit: UnitSpec,
+  prefix: string,
+): GeneratedEvent {
+  const hours = ((change.end - change.start) / 3_600_000).toFixed(1);
+  return {
+    eventId: `${prefix}-GT`,
+    kind: 'transition',
+    start: change.start,
+    end: change.end,
+    leaf: leavesFor('planned')[0],
+    assetKind: null,
+    description: `Demo grade transition ${change.fromCode} → ${change.toCode} on ${unit.name} (${hours} h, ${change.offGrade.toFixed(1)} t transition off-grade)`,
+    quantity: change.offGrade,
+    transition: change,
+  };
 }

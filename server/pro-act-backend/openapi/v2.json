@@ -385,7 +385,8 @@
                   "slowdown",
                   "quality_loss",
                   "production_output",
-                  "advisory"
+                  "advisory",
+                  "grade_transition"
                 ]
               }
             }
@@ -696,7 +697,8 @@
                   "slowdown",
                   "quality_loss",
                   "production_output",
-                  "advisory"
+                  "advisory",
+                  "grade_transition"
                 ]
               }
             }
@@ -978,7 +980,8 @@
                   "slowdown",
                   "quality_loss",
                   "production_output",
-                  "advisory"
+                  "advisory",
+                  "grade_transition"
                 ]
               }
             }
@@ -6496,6 +6499,266 @@
           }
         ],
         "summary": "Retire a draft or approved valuation rate version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/transition-standards": {
+      "get": {
+        "operationId": "TransitionStandardsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromProductId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "toProductId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "approved",
+                "retired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List transition standard versions (keyset on effectiveFrom, id)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. Unit and products of the tenant (422 INVALID_REFERENCE); from ≠ to (422 SAME_PRODUCT); referenceSeconds > 0 (422 INVALID_REFERENCE_SECONDS); a reference off-grade quantity needs offgradeUom (422 UOM_REQUIRED).",
+        "operationId": "TransitionStandardsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionStandardCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft transition standard version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/transition-standards/{id}": {
+      "get": {
+        "operationId": "TransitionStandardsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one transition standard version; foreign ids are 404",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/transition-standards/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "operationId": "TransitionStandardsV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft transition standard version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/transition-standards/{id}/retire": {
+      "post": {
+        "operationId": "TransitionStandardsV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a draft or approved transition standard version",
         "tags": [
           "v2 · Profiles"
         ]
@@ -12486,6 +12749,8 @@
                   "availability",
                   "performance",
                   "quality",
+                  "transition_allowance",
+                  "transition_excess",
                   "bridge",
                   "unaccounted_classified"
                 ]
@@ -17101,7 +17366,8 @@
               "slowdown",
               "quality_loss",
               "production_output",
-              "advisory"
+              "advisory",
+              "grade_transition"
             ]
           },
           "scheduleClass": {
@@ -17137,6 +17403,24 @@
             "example": "0.25",
             "nullable": true,
             "description": "0..1, required when impactMode = fractional"
+          },
+          "fromProductId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "LA-08: product before a grade change; required with toProductId on grade_transition events only"
+          },
+          "toProductId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "LA-08: product after a grade change (grade_transition only)"
+          },
+          "recoveryOfEventId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop"
           },
           "plannedEndTime": {
             "type": "object",
@@ -17274,7 +17558,8 @@
               "slowdown",
               "quality_loss",
               "production_output",
-              "advisory"
+              "advisory",
+              "grade_transition"
             ]
           },
           "scheduleClass": {
@@ -17310,6 +17595,24 @@
             "example": "0.25",
             "nullable": true,
             "description": "0..1, required when impactMode = fractional"
+          },
+          "fromProductId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "LA-08: product before a grade change; required with toProductId on grade_transition events only"
+          },
+          "toProductId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "LA-08: product after a grade change (grade_transition only)"
+          },
+          "recoveryOfEventId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop"
           },
           "plannedEndTime": {
             "type": "object",
@@ -18758,6 +19061,73 @@
           "basis",
           "value",
           "currency"
+        ]
+      },
+      "TransitionStandardCreateDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "example": "2027-01-01T02:30:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = open-ended"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromProductId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Product (grade) before the change"
+          },
+          "toProductId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Product (grade) after the change; B→A is its own entry"
+          },
+          "referenceSeconds": {
+            "type": "string",
+            "example": "7560",
+            "description": "Reference duration of the transition in seconds (> 0)"
+          },
+          "referenceOffgradeQty": {
+            "type": "object",
+            "example": "18",
+            "nullable": true,
+            "description": "Reference off-grade quantity per transition; absent = the time share bounds the off-grade allowance"
+          },
+          "offgradeUom": {
+            "type": "object",
+            "example": "t",
+            "nullable": true
+          },
+          "sampleCount": {
+            "type": "object",
+            "example": 5,
+            "nullable": true,
+            "description": "Comparable transitions the reference was derived from"
+          },
+          "evidence": {
+            "type": "object",
+            "nullable": true,
+            "description": "Derivation: observations, licensor / engineering guidance, boundary"
+          },
+          "notes": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "effectiveFrom",
+          "unitId",
+          "fromProductId",
+          "toProductId",
+          "referenceSeconds"
         ]
       },
       "RateImportRowDto": {

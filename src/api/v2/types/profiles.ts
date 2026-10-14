@@ -77,6 +77,21 @@ export interface ValuationRateView extends VersionFields {
   perUom: string;
 }
 
+/** One entry of a unit's grade-transition matrix (LA-08): a directional product change and its reference. */
+export interface TransitionStandardView extends VersionFields {
+  id: string;
+  unitId: string;
+  fromProductId: string;
+  toProductId: string;
+  /** reference duration, seconds (decimal string) */
+  referenceSeconds: string;
+  referenceOffgradeQty: string | null;
+  offgradeUom: string | null;
+  sampleCount: number | null;
+  evidence: string | null;
+  notes: string | null;
+}
+
 export interface ImportRowError {
   line: number;
   code: string;
