@@ -3,61 +3,149 @@ import { FxRateSnapshot } from './valuation.types';
 
 export interface Conversion {
   amount: Dec | null;
-  fxRateId: string | null;
+  /** the approved rate versions used: one at the event date, every version of the month for an average */
+  fxRateIds: string[];
   reason: string | null;
 }
 
+export interface ConversionContext {
+  fx: readonly FxRateSnapshot[];
+  fxPolicy: 'none' | 'snapshot';
+  /** SME V6 `period_average`: convert at the time-weighted average over this window instead */
+  average?: { from: string; to: string };
+  /** refuse the average when a rate in the window deviates from it by more than this ratio */
+  maxAverageDeviation?: string | null;
+}
+
+type Pair = { from: string; to: string };
+
+const ms = (iso: string | null) => (iso === null ? Infinity : Date.parse(iso));
+
 const covers = (rate: FxRateSnapshot, atMs: number) =>
-  Date.parse(rate.from) <= atMs &&
-  (rate.to === null || Date.parse(rate.to) > atMs);
+  ms(rate.from) <= atMs && ms(rate.to) > atMs;
+
+const ofPair = (fx: readonly FxRateSnapshot[], pair: Pair) =>
+  fx.filter((r) => r.fromCurrency === pair.from && r.toCurrency === pair.to);
 
 /** Latest-starting approved rate of the pair in force at the instant (approved versions never overlap). */
 function rateFor(
   fx: readonly FxRateSnapshot[],
-  pair: { from: string; to: string },
+  pair: Pair,
   atMs: number,
 ): FxRateSnapshot | null {
-  const found = fx
-    .filter(
-      (r) =>
-        r.fromCurrency === pair.from &&
-        r.toCurrency === pair.to &&
-        covers(r, atMs),
-    )
-    .sort((a, b) => Date.parse(b.from) - Date.parse(a.from));
+  const found = ofPair(fx, pair)
+    .filter((r) => covers(r, atMs))
+    .sort((a, b) => ms(b.from) - ms(a.from));
   return found[0] ?? null;
 }
 
+interface Average {
+  rate: Dec;
+  ids: string[];
+  pieces: Dec[];
+}
+
+/** Time-weighted mean of the pair's approved versions over `[from, to)`; null when an instant has none. */
+function averageFor(
+  fx: readonly FxRateSnapshot[],
+  pair: Pair,
+  window: { from: string; to: string },
+): Average | null {
+  const end = ms(window.to);
+  let cursor = ms(window.from);
+  let weighted = new Dec(0);
+  const ids: string[] = [];
+  const pieces: Dec[] = [];
+  while (cursor < end) {
+    const rate = rateFor(fx, pair, cursor);
+    if (!rate) return null;
+    const to = Math.min(end, ms(rate.to));
+    weighted = weighted.plus(new Dec(rate.rate).mul(to - cursor));
+    if (!ids.includes(rate.id)) ids.push(rate.id);
+    pieces.push(new Dec(rate.rate));
+    cursor = to;
+  }
+  const span = end - ms(window.from);
+  if (span <= 0) return null;
+  return { rate: weighted.div(span), ids, pieces };
+}
+
+/** V6: an average that misrepresents a volatile month is refused rather than silently used. */
+function representative(average: Average, limit?: string | null): boolean {
+  if (!limit) return true;
+  return average.pieces.every((rate) =>
+    rate.minus(average.rate).abs().div(average.rate).lte(limit),
+  );
+}
+
+const missing = (reason: string): Conversion => ({
+  amount: null,
+  fxRateIds: [],
+  reason,
+});
+
+/** The direct pair multiplies, the inverse pair divides (exact arithmetic, not an estimate). */
+function applyRate(
+  amount: Dec,
+  pair: Pair,
+  find: (pair: Pair) => { rate: Dec; ids: string[] } | null,
+): Conversion | null {
+  const direct = find(pair);
+  if (direct)
+    return {
+      amount: amount.mul(direct.rate),
+      fxRateIds: direct.ids,
+      reason: null,
+    };
+  const inverse = find({ from: pair.to, to: pair.from });
+  if (inverse && !inverse.rate.isZero())
+    return {
+      amount: amount.div(inverse.rate),
+      fxRateIds: inverse.ids,
+      reason: null,
+    };
+  return null;
+}
+
+function convertAtAverage(
+  amount: Dec,
+  pair: Pair,
+  context: ConversionContext & { average: { from: string; to: string } },
+): Conversion {
+  const seen = { volatile: false };
+  const converted = applyRate(amount, pair, (p) => {
+    const average = averageFor(context.fx, p, context.average);
+    if (!average) return null;
+    if (representative(average, context.maxAverageDeviation)) return average;
+    seen.volatile = true;
+    return null;
+  });
+  if (converted) return converted;
+  return missing(
+    seen.volatile ? 'fx_average_not_representative' : 'fx_rate_missing',
+  );
+}
+
 /**
- * Converts an amount at the valuation date with an approved, dated FX rate (D08, VAL03): the direct pair
- * multiplies, the inverse pair divides (exact arithmetic, not an estimate). No covering rate, or an
+ * Converts an amount with approved, dated FX rates (D08, VAL03): the rate in force at the valuation date,
+ * or — SME V6 `period_average` — the time-weighted average of the month's approved versions (refused with
+ * `fx_average_not_representative` when the month is too volatile for the policy). No covering rate, or an
  * `fxPolicy` of `none`, gives a null amount with reason `fx_rate_missing` — never a guessed rate.
  */
 export function convert(
   amount: Dec,
-  pair: { from: string; to: string },
+  pair: Pair,
   at: Date,
-  context: { fx: readonly FxRateSnapshot[]; fxPolicy: 'none' | 'snapshot' },
+  context: ConversionContext,
 ): Conversion {
-  if (pair.from === pair.to) return { amount, fxRateId: null, reason: null };
-  const missing = { amount: null, fxRateId: null, reason: 'fx_rate_missing' };
-  if (context.fxPolicy !== 'snapshot') return missing;
+  if (pair.from === pair.to) return { amount, fxRateIds: [], reason: null };
+  if (context.fxPolicy !== 'snapshot') return missing('fx_rate_missing');
+  const { average } = context;
+  if (average) return convertAtAverage(amount, pair, { ...context, average });
   const atMs = at.getTime();
-  const direct = rateFor(context.fx, pair, atMs);
-  if (direct) {
-    return {
-      amount: amount.mul(direct.rate),
-      fxRateId: direct.id,
-      reason: null,
-    };
-  }
-  const inverse = rateFor(context.fx, { from: pair.to, to: pair.from }, atMs);
-  if (inverse && !new Dec(inverse.rate).isZero()) {
-    return {
-      amount: amount.div(inverse.rate),
-      fxRateId: inverse.id,
-      reason: null,
-    };
-  }
-  return missing;
+  const converted = applyRate(amount, pair, (p) => {
+    const rate = rateFor(context.fx, p, atMs);
+    return rate ? { rate: new Dec(rate.rate), ids: [rate.id] } : null;
+  });
+  return converted ?? missing('fx_rate_missing');
 }
