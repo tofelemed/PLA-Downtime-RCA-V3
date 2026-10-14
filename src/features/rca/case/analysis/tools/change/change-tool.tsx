@@ -16,12 +16,13 @@ import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function ChangeRow(props: { change: ChangeRecord; index: number; readOnly: boolean; onChange: (next: ChangeRecord) => void; onRemove: () => void }) {
+  const { number } = useNumberFormat();
   const { change, index, readOnly } = props;
   const set = (patch: Partial<ChangeRecord>) => props.onChange({ ...change, ...patch });
   return (
     <li className="grid gap-2 rounded border p-3 md:grid-cols-2" data-testid="change-row">
       <div className="space-y-1 md:col-span-2">
-        <Label htmlFor={`change-${index}`}>Change {index + 1}</Label>
+        <Label htmlFor={`change-${index}`}>Change {number(index + 1)}</Label>
         <Input id={`change-${index}`} value={change.description} maxLength={1000} disabled={readOnly} onChange={(e) => set({ description: e.target.value })} />
       </div>
       <ChoiceField id={`change-category-${index}`} label="Area" value={change.category} options={optionsOf(CHANGE_CATEGORIES)} onChange={(category) => set({ category })} />

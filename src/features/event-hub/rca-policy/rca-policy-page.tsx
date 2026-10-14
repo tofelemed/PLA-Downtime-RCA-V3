@@ -112,7 +112,7 @@ function VersionHistory({ unitId }: { unitId: string | null }) {
   const users = useUserNames();
   const { dateTime, duration, digits } = usePlantFormat();
   const columns: DataTableColumn<RcaPolicyVersion>[] = [
-    { id: 'version', header: 'Version', align: 'right', cell: (row) => row.version },
+    { id: 'version', header: 'Version', align: 'right', cell: (row) => String(row.version) }, // an identifier: stays Latin
     { id: 'triggers', header: 'Triggers', cell: (row) => triggerText(row, duration, digits) },
     { id: 'auto', header: 'When it fires', cell: (row) => AUTO_LABELS[row.autoCreate] },
     { id: 'from', header: 'From', nowrap: true, cell: (row) => dateTime(row.effectiveFrom) },

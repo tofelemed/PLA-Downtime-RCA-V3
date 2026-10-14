@@ -5,12 +5,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { useImportFailureDictionary } from '@/api/v2/queries/failure-dictionary';
 import { describeError } from '@/features/ux-kit/errors';
 import { CSV_HEADER, importErrorsOf, importSummaryOf as summaryOf, type RowError } from './dictionary-import-model';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /**
  * CSV import of the maintenance code export (SME D11): "Check" counts without storing; "Import" stores all
  * rows or none. Changed entries get a new version; entries missing from the file are kept.
  */
 export function DictionaryImportPanel() {
+  const { text } = useNumberFormat();
   const [csv, setCsv] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [errors, setErrors] = useState<RowError[]>([]);
@@ -33,7 +35,7 @@ export function DictionaryImportPanel() {
         <Button type="button" variant="outline" disabled={!csv.trim() || command.isPending} onClick={() => void run(true)}>Check</Button>
         <Button type="button" disabled={!csv.trim() || command.isPending} onClick={() => void run(false)}>Import</Button>
       </div>
-      {result && <p className="text-sm" role="status">{result}</p>}
+      {result && <p className="text-sm" role="status">{text(result)}</p>}
       {errors.length > 0 && (
         <ul className="list-disc pl-5 text-sm text-destructive">
           {errors.map((e) => <li key={`${e.line}-${e.message}`}>Line {e.line}: {e.message}</li>)}

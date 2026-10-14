@@ -14,8 +14,10 @@ import { CopyReportButton } from '../copy-report-button';
 import { ToolChecklist } from '../tool-checklist';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { addLevel, depthGuidance, fiveWhyChecks, fiveWhyReport, firstLevel, removeLevel, setAnswer, setJustification } from './five-why-model';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function Levels({ content, onChange, readOnly }: { content: FiveWhyContent; onChange: (next: FiveWhyContent) => void; readOnly: boolean }) {
+  const { number } = useNumberFormat();
   const levels = content.whyLevels;
   const set = (whyLevels: FiveWhyContent['whyLevels']) => onChange({ ...content, whyLevels });
   return (
@@ -24,7 +26,7 @@ function Levels({ content, onChange, readOnly }: { content: FiveWhyContent; onCh
         <li key={level.level} className="space-y-2 rounded border p-3" data-testid="why-level">
           <div className="flex items-start justify-between gap-2">
             <p className="text-sm font-medium">
-              Why {level.level}: {level.question}
+              Why {number(level.level)}: {level.question}
             </p>
             {!readOnly && levels.length > 1 && <IconButton icon={ActionIcon.delete} label={`Remove why ${level.level}`} onClick={() => set(removeLevel(levels, index))} />}
           </div>
@@ -49,6 +51,7 @@ function Levels({ content, onChange, readOnly }: { content: FiveWhyContent; onCh
 }
 
 function Editor({ record, save }: { record: ToolRecord<'fiveWhy'>; save: (body: FiveWhyContent) => Promise<unknown> }) {
+  const { text } = useNumberFormat();
   const { rca, readOnly } = useCaseWorkspace();
   const guideline = useRcaReadiness(rca.id).data?.rules.fiveWhyGuidelineLevels ?? null;
   const patch = useCasePatch();
@@ -92,7 +95,7 @@ function Editor({ record, save }: { record: ToolRecord<'fiveWhy'>; save: (body: 
       )}
       <ToolChecklist items={fiveWhyChecks(content)} />
       <p className="text-xs text-muted-foreground" data-testid="five-why-guidance">
-        {depthGuidance(content.whyLevels.length, guideline)} A bare "operator error" is not accepted as the root cause.
+        {text(depthGuidance(content.whyLevels.length, guideline))} A bare "operator error" is not accepted as the root cause.
       </p>
       <div className="flex flex-wrap items-start gap-3">
         <SaveBar onSave={onSave} disabled={content.problem.trim() === ''} hint="Write the problem statement first." label="Save 5-Why" updatedAt={record?.updatedAt} />

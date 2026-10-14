@@ -7,6 +7,7 @@ import { LogicTreeRow, type NodeAction } from './logic-tree-row';
 import { addNode, findNode, flatten, moveSibling, moveUnder, newNodeId, removeNode, updateNode, type NodeFields } from './logic-tree-model';
 import { MoveNodeDialog } from './move-node-dialog';
 import { NodeDialog } from './node-dialog';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 type Pending = { kind: 'add'; parent: LogicTreeNode | null } | { kind: 'edit' | 'move' | 'delete'; node: LogicTreeNode };
 
@@ -27,6 +28,7 @@ function parentIdOf(tree: readonly LogicTreeNode[], id: string): string | null {
  * with buttons and menus (keyboard operable), node forms in Radix dialogs. Changes are saved with the template.
  */
 export function LogicTreeEditor({ tree, onChange, editable }: LogicTreeEditorProps) {
+  const { number } = useNumberFormat();
   const [pending, setPending] = useState<Pending | null>(null);
   const close = () => setPending(null);
   const codesExcept = (id: string | null) =>
@@ -87,7 +89,7 @@ export function LogicTreeEditor({ tree, onChange, editable }: LogicTreeEditorPro
           open
           onOpenChange={(open) => !open && close()}
           title={`Delete ${pending.node.name}?`}
-          description={`It is removed with its ${flatten(pending.node.children ?? []).length} sub-node(s) when you save the template.`}
+          description={`It is removed with its ${number(flatten(pending.node.children ?? []).length)} sub-node(s) when you save the template.`}
           confirmLabel="Delete node"
           destructive
           onConfirm={() => onChange(removeNode(tree, pending.node.id))}

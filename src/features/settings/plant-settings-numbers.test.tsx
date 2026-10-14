@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlantView } from '@/api/v2/types/administration';
 import { SeriesChart } from '@/features/pla-analytics/charts/series-chart';
+import { DataTable } from '@/features/ux-kit/data-table';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { ListPager } from '@/features/ux-kit/data-table/data-table-pager';
 import type { PagerModel } from '@/features/ux-kit/data-table/pager-model';
@@ -69,6 +70,7 @@ function Screen() {
         <SeriesChart rows={[{ label: 'W1', values: { a: '1500' } }, { label: 'W2', values: { a: '2500' } }]} series={[{ key: 'a', label: 'A' }]} kind="bar" />
       </div>
       <ListPager pager={pager} />
+      <DataTable caption="Counts" columns={[{ id: 'n', header: 'Stops', cell: (row: { n: number }) => row.n }]} rows={[{ n: 4321 }]} getRowKey={(row) => String(row.n)} pager="none" />
       <DecimalInput value="1234.5" onChange={(value) => typed.values.push(value)} aria-label="Quantity" />
     </CalendarPreferenceProvider>
   );
@@ -86,7 +88,7 @@ describe('the digits setting applies to every displayed number', () => {
     typed.values = [];
   });
 
-  it('re-renders quantities, chart ticks and pager counts in Persian digits; inputs stay Latin', async () => {
+  it('re-renders quantities, chart ticks, table counts and pager counts in Persian digits; inputs stay Latin', async () => {
     render(
       <QueryClientProvider client={client}>
         <Screen />
@@ -95,6 +97,7 @@ describe('the digits setting applies to every displayed number', () => {
     expect(screen.getByTestId('quantity')).toHaveTextContent('12,345.68t');
     expect(tickTexts()).toContain('1,300');
     expect(screen.getByText('21–40 of 1,234')).toBeInTheDocument();
+    expect(screen.getByText('4,321')).toBeInTheDocument();
 
     server.plant = plant('persian');
     await act(() => applyPlantSettings(client, 'tenant-a', server.plant as PlantView));
@@ -103,6 +106,7 @@ describe('the digits setting applies to every displayed number', () => {
     expect(tickTexts()).toContain('۱٬۳۰۰');
     expect(screen.getByText('۲۱–۴۰ of ۱٬۲۳۴')).toBeInTheDocument();
     expect(screen.getByText('Page ۲ of ۶۲')).toBeInTheDocument();
+    expect(screen.getByText('۴٬۳۲۱')).toBeInTheDocument();
 
     const input = screen.getByLabelText('Quantity');
     expect(input).toHaveValue('1234.5');

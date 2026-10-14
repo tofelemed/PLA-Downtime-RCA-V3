@@ -32,7 +32,7 @@ export function BulkJobProgress({ jobId }: { jobId: string }) {
                 <AlertDescription>
                   {failedChunks.map((chunk) => (
                     <p key={chunk.index} className="text-xs">
-                      Batch {chunk.index + 1} ({chunk.size} events): {batchError(chunk.errorCode)}
+                      Batch {number(chunk.index + 1)} ({number(chunk.size)} events): {batchError(chunk.errorCode)}
                     </p>
                   ))}
                 </AlertDescription>

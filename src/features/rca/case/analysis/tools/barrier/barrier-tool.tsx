@@ -12,12 +12,13 @@ import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function BarrierRow(props: { barrier: Barrier; index: number; readOnly: boolean; onChange: (next: Barrier) => void; onRemove: () => void }) {
+  const { number } = useNumberFormat();
   const { barrier, index, readOnly } = props;
   const set = (patch: Partial<Barrier>) => props.onChange({ ...barrier, ...patch });
   return (
     <li className="grid gap-2 rounded border p-3 md:grid-cols-2" data-testid="barrier-row">
       <div className="space-y-1 md:col-span-2">
-        <Label htmlFor={`barrier-${index}`}>Barrier {index + 1}</Label>
+        <Label htmlFor={`barrier-${index}`}>Barrier {number(index + 1)}</Label>
         <Input id={`barrier-${index}`} value={barrier.description} maxLength={1000} disabled={readOnly} onChange={(e) => set({ description: e.target.value })} />
       </div>
       <ChoiceField id={`barrier-type-${index}`} label="Kind" value={barrier.type} options={optionsOf(BARRIER_TYPES)} onChange={(type) => set({ type })} />

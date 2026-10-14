@@ -8,6 +8,7 @@ import { AdvancedStep } from './steps/advanced-step';
 import { BasicsStep } from './steps/basics-step';
 import { ConnectionStep } from './steps/connection-step';
 import { ProfileStep } from './steps/profile-step';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 const STEP_KEYS: readonly WizardStep[] = WIZARD_STEPS.map((step) => step.key);
 
@@ -24,6 +25,7 @@ export interface MqttWizardBodyProps {
  * mirror the server's for instant feedback; a 422 lands on the step that owns the field.
  */
 export function MqttWizardBody({ connection, onClose, onSaved }: MqttWizardBodyProps) {
+  const { number } = useNumberFormat();
   const stepState = useUrlParam<WizardStep>('step', STEP_KEYS, 'profile');
   const wizard = useMqttWizard(connection, onSaved, stepState);
   const last = wizard.step === WIZARD_STEPS[WIZARD_STEPS.length - 1].key;
@@ -42,7 +44,7 @@ export function MqttWizardBody({ connection, onClose, onSaved }: MqttWizardBodyP
               onClick={() => wizard.goTo(step.key)}
               className={`rounded-md border px-2 py-1 text-xs ${wizard.step === step.key ? 'border-primary bg-muted font-medium' : 'text-muted-foreground'} ${stepHasErrors(step.key) ? 'border-destructive' : ''}`}
             >
-              {index + 1}. {step.label}
+              {number(index + 1)}. {step.label}
               {stepHasErrors(step.key) ? ' !' : ''}
             </button>
           </li>

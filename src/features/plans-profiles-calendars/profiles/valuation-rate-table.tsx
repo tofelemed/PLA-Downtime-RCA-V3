@@ -14,6 +14,7 @@ import { ActionIcon } from '@/lib/icons';
 import { VersionStateBadge } from '../components/version-state-badge';
 import { ValuationRateForm } from './valuation-rate-form';
 import { VersionActions } from './version-actions';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ValuationRateTableProps {
   profile: ProfileView;
@@ -22,6 +23,7 @@ export interface ValuationRateTableProps {
 
 /** The old product cost kept on a seeded profile: shown for review, never used until finance confirms it. */
 function LegacyCost({ profile }: { profile: ProfileView }) {
+  const { text } = useNumberFormat();
   const legacy = profile.legacy?.standardRate;
   if (legacy === undefined || legacy === null) return null;
   return (
@@ -29,7 +31,7 @@ function LegacyCost({ profile }: { profile: ProfileView }) {
       <Badge variant="outline" className="mr-2 border-amber-500 text-amber-700">
         Unconfirmed earlier cost
       </Badge>
-      Standard rate {String(legacy)} (no currency) from the old master data — not used for valuation until finance confirms it.
+      Standard rate {text(legacy)} (no currency) from the old master data — not used for valuation until finance confirms it.
     </p>
   );
 }

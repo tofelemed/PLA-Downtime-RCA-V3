@@ -18,7 +18,7 @@ interface ReportLine {
 const problemOf = (r: ReportLine) => ERROR_MESSAGES[r.code]?.text ?? (isHumanMessage(r.message, r.code) ? r.message : 'This line was not accepted.');
 
 const COLUMNS: DataTableColumn<ReportLine>[] = [
-  { id: 'line', header: 'Line', align: 'right', width: '5rem', cell: (r) => String(r.line) },
+  { id: 'line', header: 'Line', align: 'right', width: '5rem', cell: (r) => r.line },
   { id: 'problem', header: 'Problem', cell: problemOf },
 ];
 

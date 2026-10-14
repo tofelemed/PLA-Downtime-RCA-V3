@@ -45,7 +45,7 @@ function columns(date: (iso: string | null) => string, prefetch: (id: string) =>
     { id: 'published', header: 'State', cell: (row) => <Badge variant={row.isPublished ? 'default' : 'outline'}>{row.isPublished ? 'Published' : 'Unpublished'}</Badge>, nowrap: true },
     { id: 'unit', header: 'Unit', cell: (row) => row.unitName ?? (row.unitId ? 'Unknown unit' : 'Tenant-wide') },
     { id: 'asset', header: 'Asset', cell: (row) => row.assetName ?? '—' },
-    { id: 'helpful', header: 'Helpful', cell: (row) => String(row.helpfulCount), align: 'right' },
+    { id: 'helpful', header: 'Helpful', cell: (row) => row.helpfulCount, align: 'right' },
     { id: 'closed', header: 'Closed', cell: (row) => date(row.closedAt ?? row.createdAt), nowrap: true },
   ];
 }

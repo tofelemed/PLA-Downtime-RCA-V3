@@ -78,6 +78,7 @@ function JobDetails({ job }: { job: IngestionJobView }) {
 
 /** One job: state, health badges, ages, last page outcomes, commands, audit trail; technical detail on demand. */
 export function JobRow({ job, timezone, now }: JobRowProps) {
+  const { text } = useNumberFormat();
   const { canWriteIntegration } = useCapabilities();
   const [action, setAction] = useState<JobAction | null>(null);
   const [trail, setTrail] = useState(false);
@@ -92,7 +93,7 @@ export function JobRow({ job, timezone, now }: JobRowProps) {
         </ToneBadge>
         {health.labels.filter((label) => label !== state.label).map((label) => (
           <ToneBadge key={label} tone={health.tone} testId="job-health">
-            {label}
+            {text(label)}
           </ToneBadge>
         ))}
         <span className="font-medium">{purpose ? labelOf(JOB_PURPOSE_LABELS, purpose) : 'Ingestion job'}</span>

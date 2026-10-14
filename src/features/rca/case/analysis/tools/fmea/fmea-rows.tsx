@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { IconButton } from '@/features/ux-kit/icon-button';
 import { ActionIcon } from '@/lib/icons';
 import type { CauseScore } from './fmea-model';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 const SCORES = Array.from({ length: 10 }, (_, i) => String(i + 1));
 
@@ -40,10 +41,11 @@ interface RowProps<T> {
 }
 
 export function EffectRow({ item: effect, index, readOnly, onChange, onRemove }: RowProps<FmeaEffect>) {
+  const { number } = useNumberFormat();
   return (
     <li className="grid gap-2 rounded border p-3 md:grid-cols-[2fr_1fr_2fr_auto]">
       <div className="space-y-1">
-        <Label htmlFor={`effect-${index}`}>Effect {index + 1}</Label>
+        <Label htmlFor={`effect-${index}`}>Effect {number(index + 1)}</Label>
         <Input id={`effect-${index}`} value={effect.description} maxLength={2000} disabled={readOnly} onChange={(e) => onChange({ ...effect, description: e.target.value })} />
       </div>
       <Score id={`effect-severity-${index}`} label="Severity" value={effect.severity} disabled={readOnly} onChange={(severity) => onChange({ ...effect, severity })} />
@@ -59,10 +61,11 @@ export function EffectRow({ item: effect, index, readOnly, onChange, onRemove }:
 const splitActions = (text: string) => text.split(';').map((s) => s.trim()).filter(Boolean);
 
 export function CauseRow({ item: cause, index, readOnly, onChange, onRemove, score }: RowProps<FmeaCause> & { score: CauseScore | null }) {
+  const { number, text } = useNumberFormat();
   return (
     <li className="grid gap-2 rounded border p-3 md:grid-cols-[2fr_1fr_1fr_2fr]" data-testid="fmea-cause">
       <div className="space-y-1">
-        <Label htmlFor={`cause-${index}`}>Cause {index + 1}</Label>
+        <Label htmlFor={`cause-${index}`}>Cause {number(index + 1)}</Label>
         <Input id={`cause-${index}`} value={cause.description} maxLength={2000} disabled={readOnly} onChange={(e) => onChange({ ...cause, description: e.target.value })} />
       </div>
       <Score id={`cause-occurrence-${index}`} label="Occurrence" value={cause.occurrence} disabled={readOnly} onChange={(occurrence) => onChange({ ...cause, occurrence })} />
@@ -83,7 +86,7 @@ export function CauseRow({ item: cause, index, readOnly, onChange, onRemove, sco
       </div>
       <div className="flex items-end justify-between gap-2">
         <Badge variant={score?.alert ? 'destructive' : 'outline'} title="Computed by the server when saved" data-testid="fmea-score">
-          {score ? score.text : 'Scored after save'}
+          {score ? text(score.text) : 'Scored after save'}
         </Badge>
         {!readOnly && <IconButton icon={ActionIcon.delete} label={`Remove cause ${index + 1}`} onClick={onRemove} />}
       </div>

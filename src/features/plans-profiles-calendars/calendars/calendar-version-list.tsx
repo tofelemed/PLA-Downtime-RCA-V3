@@ -18,7 +18,7 @@ export function CalendarVersionList({ versions, status, onOpen }: CalendarVersio
     { id: 'zone', header: 'Time zone', cell: (v) => v.timezone },
     { id: 'from', header: 'Effective from', nowrap: true, cell: (v) => formatOperationalDate(v.effectiveFrom, pref) },
     { id: 'to', header: 'Effective to', nowrap: true, cell: (v) => (v.effectiveTo ? formatOperationalDate(v.effectiveTo, pref) : 'open-ended') },
-    { id: 'shifts', header: 'Shifts', align: 'right', cell: (v) => String(v.shiftTemplates.length) },
+    { id: 'shifts', header: 'Shifts', align: 'right', cell: (v) => v.shiftTemplates.length },
     { id: 'state', header: 'State', cell: (v) => <VersionStateBadge state={v.state} /> },
   ];
   return (

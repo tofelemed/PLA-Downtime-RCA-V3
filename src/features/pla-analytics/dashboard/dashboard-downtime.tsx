@@ -10,6 +10,7 @@ import { useCalendarPreference } from '@/lib/dates';
 import { findMetric, formatCount, formatRatio, reasonText, SUMMARY_TILES, type TileSpec } from '@/features/downtime-analysis/model/kpi-display';
 import { AnalyticsCard } from '../components/analytics-card';
 import { repeatQuery, scopeToParams, type AnalyticsScope } from '../model/analytics-scope';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 const DASHBOARD_TILES = SUMMARY_TILES.filter((tile) => ['downtime_total', 'downtime_unplanned', 'stop_count', 'scheduled_availability'].includes(tile.metric));
 const TOP = 5;
@@ -59,6 +60,7 @@ const ASSET_COLUMNS: Array<DataTableColumn<Group>> = [
 
 /** The assets with the most stops in the window (the top 5; the full list is under Losses → Repeat causes). */
 export function DashboardTopAssets({ scope }: { scope: AnalyticsScope }) {
+  const { number } = useNumberFormat();
   const env = useEventHubEnv();
   const query = useDowntimeReport(repeatQuery(scope, 'asset'), env.timezone);
   const groups = query.data?.data.groups ?? [];
@@ -74,7 +76,7 @@ export function DashboardTopAssets({ scope }: { scope: AnalyticsScope }) {
       actions={<Link className="text-sm underline" to={link}>All repeat causes</Link>}
     >
       <DataTable caption="Most stopped assets" columns={ASSET_COLUMNS} rows={groups.slice(0, TOP)} getRowKey={(group) => group.key ?? '-'} pager="none" density="compact" />
-      {groups.length > TOP && <p className="text-xs text-muted-foreground">{groups.length - TOP} more assets with stops: see all repeat causes.</p>}
+      {groups.length > TOP && <p className="text-xs text-muted-foreground">{number(groups.length - TOP)} more assets with stops: see all repeat causes.</p>}
     </AnalyticsCard>
   );
 }

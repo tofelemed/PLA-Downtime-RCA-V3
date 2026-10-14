@@ -8,7 +8,7 @@ import type { PlanningRefs } from '../hooks/use-planning-refs';
 /** The version's product slices (campaigns) with their active interval, weight and target. */
 export function SlicesTable({ version, refs }: { version: PlanVersionView; refs: PlanningRefs }) {
   const columns: DataTableColumn<PlanSliceView>[] = [
-    { id: 'position', header: '#', align: 'right', width: '3rem', cell: (slice) => String(slice.position + 1) },
+    { id: 'position', header: '#', align: 'right', width: '3rem', cell: (slice) => slice.position + 1 },
     { id: 'product', header: 'Product', cell: (slice) => refs.productName(slice.productId) },
     {
       id: 'active',

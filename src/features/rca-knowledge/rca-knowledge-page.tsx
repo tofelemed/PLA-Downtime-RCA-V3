@@ -12,15 +12,17 @@ import { KnowledgeTable } from './components/knowledge-table';
 import { SharedLessons } from './components/shared-lessons';
 import { fetchKnowledgeForExport, knowledgeCsv } from './model/knowledge-export';
 import { filtersFromParams, paramsFromFilters, toKnowledgeQuery, type KnowledgeFilterState } from './model/knowledge-filters';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function ExportButton({ filters }: { filters: KnowledgeFilterState }) {
+  const { number } = useNumberFormat();
   const [state, setState] = useState<{ busy: boolean; error: unknown; note: string | null }>({ busy: false, error: null, note: null });
   const run = async () => {
     setState({ busy: true, error: null, note: null });
     try {
       const { entries, truncated } = await fetchKnowledgeForExport(toKnowledgeQuery(filters, filters.text));
       downloadText(knowledgeCsv(entries), 'rca-knowledge-base.csv', 'text/csv');
-      setState({ busy: false, error: null, note: truncated ? `Exported the first ${entries.length} entries; narrow the filters for the rest.` : null });
+      setState({ busy: false, error: null, note: truncated ? `Exported the first ${number(entries.length)} entries; narrow the filters for the rest.` : null });
     } catch (error) {
       setState({ busy: false, error, note: null });
     }

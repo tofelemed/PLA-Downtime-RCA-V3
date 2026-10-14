@@ -30,8 +30,8 @@ export function BulkRetireButton({ source, ids, what, onDone }: BulkRetireButton
     }
     await onDone();
     toast({
-      title: `${ids.length - refused} ${what} retired`,
-      description: refused ? `${refused} could not be retired (already retired, or still in use).` : undefined,
+      title: `${number(ids.length - refused)} ${what} retired`,
+      description: refused ? `${number(refused)} could not be retired (already retired, or still in use).` : undefined,
       variant: refused ? 'destructive' : undefined,
     });
   };

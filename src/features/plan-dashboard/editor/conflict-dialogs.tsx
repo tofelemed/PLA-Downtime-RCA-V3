@@ -34,7 +34,7 @@ export function ConflictDialogs({ problem, onRebase, onClose }: ConflictDialogsP
             {diff.removed.length > 0 && <p>{number(diff.removed.length)} automatic candidate(s) no longer found.</p>}
             {diff.changed.map((c, index) => (
               <p key={c.autoKey}>
-                Candidate {index + 1} changed: {c.before} → {c.after}
+                Candidate {number(index + 1)} changed: {c.before} → {c.after}
               </p>
             ))}
             {!diff.added.length && !diff.removed.length && !diff.changed.length && <p>The candidates are unchanged; only the run is new.</p>}

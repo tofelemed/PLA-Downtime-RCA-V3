@@ -21,13 +21,14 @@ export interface PeriodPreviewProps {
 
 /** Σ of the server totals against the header target — "= header" or "≠ header" in words, not colour only. */
 function SumBadge({ preview, headerTarget }: { preview: PlanPreviewView; headerTarget: string | null }) {
+  const { text } = useNumberFormat();
   const matches = sumMatchesHeader(preview.totals, headerTarget);
-  const totals = preview.totals.map((total) => `${total.target} ${total.quantityUom ?? '(unit unknown)'}`).join(' · ');
+  const totals = preview.totals.map((total) => `${text(total.target)} ${total.quantityUom ?? '(unit unknown)'}`).join(' · ');
   if (matches === null) return <Badge variant="outline" data-testid="sum-badge" data-match="n/a">Σ {totals || '—'}</Badge>;
   const Icon = matches ? StatusIcon.success : StatusIcon.error;
   return (
     <Badge className={matches ? 'bg-green-600 text-white' : 'bg-red-600 text-white'} data-testid="sum-badge" data-match={String(matches)}>
-      <Icon className="mr-1 h-3 w-3" aria-hidden="true" />Σ {totals} {matches ? '= header' : `≠ header ${headerTarget}`}
+      <Icon className="mr-1 h-3 w-3" aria-hidden="true" />Σ {totals} {matches ? '= header' : `≠ header ${text(headerTarget ?? '')}`}
     </Badge>
   );
 }

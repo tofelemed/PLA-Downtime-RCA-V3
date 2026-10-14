@@ -3,9 +3,11 @@ import { useRcaAnalyses } from '@/api/v2/queries/rca-cases';
 import { Section } from '@/features/ux-kit/page-layout';
 import { ANALYSIS_TOOLS, toolStatus } from '../../model/analysis-tools';
 import { useCaseWorkspace } from '../case-context';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /** `/rca/:caseId/analysis`: the nine analysis methods of the case; each opens its own page. */
 export function AnalysisIndexPage() {
+  const { text } = useNumberFormat();
   const { rca, basePath } = useCaseWorkspace();
   const analyses = useRcaAnalyses(rca.id);
   return (
@@ -20,7 +22,7 @@ export function AnalysisIndexPage() {
             >
               <span className="block font-medium">{tool.name}</span>
               <span className="block text-sm text-muted-foreground">{tool.description}</span>
-              <span className="mt-2 block text-xs">{toolStatus(tool, rca, analyses.data)}</span>
+              <span className="mt-2 block text-xs">{text(toolStatus(tool, rca, analyses.data))}</span>
             </Link>
           </li>
         ))}
