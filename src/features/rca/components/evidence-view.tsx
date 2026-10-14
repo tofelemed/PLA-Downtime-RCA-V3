@@ -1,6 +1,7 @@
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { summarizeEvidence } from '../model/evidence-summary';
 import { ApprovedImpact } from './approved-impact';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface EvidenceViewProps {
   evidence: Record<string, unknown> | null;
@@ -9,6 +10,7 @@ export interface EvidenceViewProps {
 
 /** RCA02 evidence package: revisions, cause codes, trend window, recurrence and approved impact. */
 export function EvidenceView({ evidence, timezone }: EvidenceViewProps) {
+  const { number } = useNumberFormat();
   if (!evidence) return <p className="text-sm text-muted-foreground">No evidence package.</p>;
   const summary = summarizeEvidence(evidence);
   return (
@@ -32,7 +34,7 @@ export function EvidenceView({ evidence, timezone }: EvidenceViewProps) {
       )}
       {summary.recurrence && (
         <>
-          <dt className="text-muted-foreground">Recurrence ({summary.recurrence.windowDays} d)</dt>
+          <dt className="text-muted-foreground">Recurrence ({number(summary.recurrence.windowDays)} d)</dt>
           <dd data-testid="evidence-recurrence">
             same asset {summary.recurrence.sameAsset ?? '—'} · same reason {summary.recurrence.sameReason ?? '—'}
           </dd>

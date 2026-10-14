@@ -38,7 +38,7 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<TransitionStandardView>[
       nowrap: true,
       cell: (s) => (s.referenceOffgradeQty ? <Quantity value={s.referenceOffgradeQty} uom={s.offgradeUom ?? ''} /> : 'time share'),
     },
-    { id: 'evidence', header: 'Evidence', cell: (s) => <span className="text-xs">{s.sampleCount ? `${s.sampleCount} transitions · ` : ''}{s.evidence ?? '—'}</span> },
+    { id: 'evidence', header: 'Evidence', cell: (s) => <span className="text-xs">{s.sampleCount ? <LocalizedNumber text={`${s.sampleCount} transitions · `} /> : ''}{s.evidence ?? '—'}</span> },
     {
       id: 'effective',
       header: 'Effective',

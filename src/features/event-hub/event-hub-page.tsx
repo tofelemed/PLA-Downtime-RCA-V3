@@ -18,6 +18,7 @@ import { EventHubFrame } from './event-hub-frame';
 import { useEventHubState, type EventHubState } from './hooks/use-event-hub-state';
 import { selectionQuery, toEventQuery } from './model/event-filters';
 import { useEventHubEnv } from './use-event-hub-env';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /**
  * Event Hub (plan 3.2): server filters in the URL, a paged event table (rows open `/events/:id`),
@@ -108,10 +109,11 @@ function EventHubScreen() {
 }
 
 function SelectionToolbar({ hub }: { hub: EventHubState }) {
+  const { number } = useNumberFormat();
   const count = hub.selectedEvents.length;
   return (
     <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Selection actions">
-      <span className="text-sm text-muted-foreground" data-testid="selection-count">{count} selected</span>
+      <span className="text-sm text-muted-foreground" data-testid="selection-count">{number(count)} selected</span>
       <Tooltip>
         <TooltipTrigger asChild>
           <span tabIndex={hub.canMerge ? undefined : 0}>

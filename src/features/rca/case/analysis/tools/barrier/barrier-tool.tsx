@@ -9,6 +9,7 @@ import { BARRIER_EFFECTIVENESS, BARRIER_TYPES, rowId } from '../../../../model/a
 import { useCaseWorkspace } from '../../../case-context';
 import { ChoiceField, optionsOf } from '../../../evidence/form-controls';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function BarrierRow(props: { barrier: Barrier; index: number; readOnly: boolean; onChange: (next: Barrier) => void; onRemove: () => void }) {
   const { barrier, index, readOnly } = props;
@@ -40,6 +41,7 @@ function BarrierRow(props: { barrier: Barrier; index: number; readOnly: boolean;
 }
 
 function Editor({ record, save }: { record: ToolRecord<'barrier'>; save: (body: BarrierContent) => Promise<unknown> }) {
+  const { number } = useNumberFormat();
   const { rca, readOnly } = useCaseWorkspace();
   const [content, setContent] = useState<BarrierContent>(() => ({ hazard: record?.hazard ?? (rca.description ?? rca.title).slice(0, 255), barriers: record?.barriers ?? [] }));
   const setBarriers = (barriers: Barrier[]) => setContent({ ...content, barriers });
@@ -52,7 +54,7 @@ function Editor({ record, save }: { record: ToolRecord<'barrier'>; save: (body: 
         <Input id="barrier-hazard" value={content.hazard} maxLength={255} disabled={readOnly} onChange={(e) => setContent({ ...content, hazard: e.target.value })} />
       </div>
       <p className="text-sm text-muted-foreground">
-        {content.barriers.length} barrier(s), {failed} failed.
+        {number(content.barriers.length)} barrier(s), {number(failed)} failed.
       </p>
       <ul className="space-y-2">
         {content.barriers.map((barrier, index) => (

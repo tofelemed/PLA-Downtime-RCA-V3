@@ -14,6 +14,7 @@ import { useRcaFormat } from '../../use-rca-format';
 import { ChoiceField, optionsOf } from '../evidence/form-controls';
 import { useCaseWorkspace } from '../case-context';
 import { CreateTaskButton, TasksLink } from './create-task-button';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 interface Filters {
   text: string;
@@ -40,6 +41,7 @@ const keep = (row: RcaRecommendationItem, f: Filters) =>
 
 /** Recommendations of the case (stored with it): filters, progress, tasks; a row opens its edit page. */
 export function RecommendationsSection() {
+  const { number } = useNumberFormat();
   const { rca, readOnly, basePath } = useCaseWorkspace();
   const navigate = useNavigate();
   const users = useUserNames();
@@ -62,7 +64,7 @@ export function RecommendationsSection() {
     </>
   );
   return (
-    <Section title="Recommendations" description={`${rca.recommendations.length} recommendation(s), ${closed} closed.`} actions={actions}>
+    <Section title="Recommendations" description={`${number(rca.recommendations.length)} recommendation(s), ${number(closed)} closed.`} actions={actions}>
       <div className="space-y-3" data-testid="rec">
         <div className="flex flex-wrap items-end gap-3">
           <Input className="max-w-xs" aria-label="Search recommendations" placeholder="Search recommendations" value={filters.text} onChange={(e) => setFilters({ ...filters, text: e.target.value })} />

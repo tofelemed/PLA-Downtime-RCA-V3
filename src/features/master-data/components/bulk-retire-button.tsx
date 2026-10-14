@@ -4,6 +4,7 @@ import { v2Request } from '@/api/v2/client';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { RecordResource } from '../api/record-resource';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface BulkRetireButtonProps {
   source: RecordResource;
@@ -15,6 +16,7 @@ export interface BulkRetireButtonProps {
 
 /** "Retire selected (n)" behind a confirmation; reports how many were retired and how many were refused. */
 export function BulkRetireButton({ source, ids, what, onDone }: BulkRetireButtonProps) {
+  const { number } = useNumberFormat();
   const { toast } = useToast();
   if (ids.length === 0) return null;
   const retireAll = async () => {
@@ -35,8 +37,8 @@ export function BulkRetireButton({ source, ids, what, onDone }: BulkRetireButton
   };
   return (
     <ConfirmDialog
-      trigger={<Button variant="outline">Retire selected ({ids.length})</Button>}
-      title={`Retire ${ids.length} ${what}?`}
+      trigger={<Button variant="outline">Retire selected ({number(ids.length)})</Button>}
+      title={`Retire ${number(ids.length)} ${what}?`}
       description="Retired records stay in history and can be restored one by one."
       confirmLabel={`Retire ${what}`}
       destructive

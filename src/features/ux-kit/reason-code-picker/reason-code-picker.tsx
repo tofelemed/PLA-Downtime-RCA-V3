@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { StatusIcon, UiIcon } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { type PickableCode, type ReasonTreeRow, reasonCodeLabel, reasonTreeRows } from './reason-code-options';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /** Rows rendered at once; the search narrows a bigger library (the whole library stays searchable). */
 export const PICKER_ROW_LIMIT = 200;
@@ -34,6 +35,7 @@ interface ReasonTreeListProps {
 
 /** The tree rows of the open picker: groups as indented headings, leaves selectable, the empty choice first. */
 function ReasonTreeList({ listId, rows, value, query, emptyLabel, onPick }: ReasonTreeListProps) {
+  const { number } = useNumberFormat();
   const shown = rows.slice(0, PICKER_ROW_LIMIT);
   return (
     <CommandList id={listId} className="max-h-[min(320px,50vh)]">
@@ -60,7 +62,7 @@ function ReasonTreeList({ listId, rows, value, query, emptyLabel, onPick }: Reas
       ))}
       {rows.length > shown.length && (
         <p className="px-3 py-2 text-xs text-muted-foreground">
-          Showing {shown.length} of {rows.length} rows — type to narrow the list.
+          Showing {number(shown.length)} of {number(rows.length)} rows — type to narrow the list.
         </p>
       )}
     </CommandList>

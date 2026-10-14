@@ -10,6 +10,7 @@ import { ActionIcon, UiIcon } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import type { TreeNode } from '../../../../model/logic-tree';
 import { EvidenceLinkPopover } from '../evidence-link-popover';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface LogicTreeActions {
   readOnly: boolean;
@@ -23,6 +24,7 @@ export interface LogicTreeActions {
 }
 
 function NodeCard({ node, actions, childCount }: { node: RcaLogicNode; actions: LogicTreeActions; childCount: number }) {
+  const { number } = useNumberFormat();
   const isCause = node.kind === 'Cause' || node.kind === 'root_cause';
   const verifyId = `verify-${node.id}`;
   return (
@@ -45,7 +47,7 @@ function NodeCard({ node, actions, childCount }: { node: RcaLogicNode; actions: 
             <ConfirmDialog
               trigger={<IconButton icon={ActionIcon.delete} label={`Delete ${node.label}`} tooltip={false} disabled={actions.busy} />}
               title={`Delete "${node.label}"?`}
-              description={childCount > 0 ? `The ${childCount} node(s) below it are deleted too.` : 'The node is removed from the logic tree.'}
+              description={childCount > 0 ? `The ${number(childCount)} node(s) below it are deleted too.` : 'The node is removed from the logic tree.'}
               confirmLabel="Delete node"
               destructive
               onConfirm={() => actions.onDelete(node)}

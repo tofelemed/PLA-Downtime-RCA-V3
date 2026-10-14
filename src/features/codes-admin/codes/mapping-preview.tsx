@@ -5,6 +5,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { labelOf } from '@/features/ux-kit/labels';
 import { MAPPING_SOURCE_LABELS, OEE_COMPONENT_LABELS, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels/codes-finance-labels';
+import { type NumberFormat, useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 type Axis = 'scheduleClass' | 'oeeComponent';
 
@@ -25,23 +26,23 @@ function proposedText(row: AxisRow, proposed: AxisDefaultView | undefined): stri
   return `${labelOf(row.values, proposed.value)} (${MAPPING_SOURCE_LABELS[proposed.source]}${version})`;
 }
 
-function currentText(row: AxisRow, counts: Record<string, number>): string {
-  const parts = Object.entries(counts).map(([value, count]) => `${labelOf(row.values, value === 'null' ? '' : value, 'Not set')}: ${count}`);
+function currentText(row: AxisRow, counts: Record<string, number>, number: NumberFormat['number']): string {
+  const parts = Object.entries(counts).map(([value, count]) => `${labelOf(row.values, value === 'null' ? '' : value, 'Not set')}: ${number(count)}`);
   return parts.join(', ') || '—';
 }
 
-function columnsOf(data: CodeMappingPreviewView): Array<DataTableColumn<AxisRow>> {
+function columnsOf(data: CodeMappingPreviewView, number: NumberFormat['number']): Array<DataTableColumn<AxisRow>> {
   return [
     { id: 'axis', header: 'Classification', cell: (row) => row.label },
     { id: 'proposed', header: 'Default in force now', cell: (row) => proposedText(row, data.proposed[row.axis]) },
-    { id: 'current', header: "Today's classification", cell: (row) => currentText(row, data.current[row.axis]) },
+    { id: 'current', header: "Today's classification", cell: (row) => currentText(row, data.current[row.axis], number) },
     {
       id: 'differ',
       header: 'Would differ',
       align: 'right',
       cell: (row) => (
         <span data-testid="preview-axis" data-axis={row.axis} data-proposed={data.proposed[row.axis]?.value ?? ''} data-differ={data.wouldDiffer[row.axis]}>
-          {data.proposed[row.axis] ? data.wouldDiffer[row.axis] : '—'}
+          {data.proposed[row.axis] ? number(data.wouldDiffer[row.axis]) : '—'}
         </span>
       ),
     },
@@ -53,6 +54,7 @@ function columnsOf(data: CodeMappingPreviewView): Array<DataTableColumn<AxisRow>
  * the server (`GET /reason-codes/{id}/mapping-preview`), none is computed here.
  */
 export function MappingPreview({ codeId }: { codeId: string }) {
+  const { number } = useNumberFormat();
   const preview = useCodeMappingPreview(codeId, 30);
   const data = preview.data;
   return (
@@ -60,9 +62,9 @@ export function MappingPreview({ codeId }: { codeId: string }) {
       {data && (
         <div className="space-y-2 text-sm" data-testid="mapping-preview" data-events={data.events}>
           <p>
-            <strong>{data.events}</strong> event(s) in your scope were coded with this reason in the last 30 days.
+            <strong>{number(data.events)}</strong> event(s) in your scope were coded with this reason in the last {number(30)} days.
           </p>
-          <DataTable caption="Mapping preview" columns={columnsOf(data)} rows={AXES} getRowKey={(row) => row.axis} pager="none" density="compact" />
+          <DataTable caption="Mapping preview" columns={columnsOf(data, number)} rows={AXES} getRowKey={(row) => row.axis} pager="none" density="compact" />
           <p className="text-muted-foreground">Stored events keep their classification; defaults apply to new codings.</p>
         </div>
       )}

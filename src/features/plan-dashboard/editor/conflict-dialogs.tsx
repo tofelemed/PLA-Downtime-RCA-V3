@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { WorkflowProblem } from '../model/workflow-errors';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ConflictDialogsProps {
   /** a 409 RUN_CHANGED or 412 STALE_REVISION of the last save, else null */
@@ -16,6 +17,7 @@ export interface ConflictDialogsProps {
  * revision and keeps the user's lines on top of it; nothing was applied by the refused save.
  */
 export function ConflictDialogs({ problem, onRebase, onClose }: ConflictDialogsProps) {
+  const { number } = useNumberFormat();
   const runChanged = problem?.kind === 'run_changed';
   const diff = problem?.diff;
   return (
@@ -28,8 +30,8 @@ export function ConflictDialogs({ problem, onRebase, onClose }: ConflictDialogsP
         {runChanged && diff && (
           <div className="space-y-1 text-sm" data-testid="candidate-diff">
             <p>A newer calculation exists for this period.</p>
-            {diff.added.length > 0 && <p>{diff.added.length} new automatic candidate(s).</p>}
-            {diff.removed.length > 0 && <p>{diff.removed.length} automatic candidate(s) no longer found.</p>}
+            {diff.added.length > 0 && <p>{number(diff.added.length)} new automatic candidate(s).</p>}
+            {diff.removed.length > 0 && <p>{number(diff.removed.length)} automatic candidate(s) no longer found.</p>}
             {diff.changed.map((c, index) => (
               <p key={c.autoKey}>
                 Candidate {index + 1} changed: {c.before} → {c.after}

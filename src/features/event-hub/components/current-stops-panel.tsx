@@ -13,6 +13,7 @@ import { defaultFilters, currentStopsQuery } from '../model/event-filters';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { usePrefetchEvent } from '../hooks/use-prefetch-event';
 import { useEventHubEnv } from '../use-event-hub-env';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /** The server computes elapsed time as of `asOf`; refreshed every 30 s and on realtime notices. */
 const CURRENT_STOPS_REFRESH_MS = 30_000;
@@ -26,12 +27,13 @@ export interface CurrentStopsPanelProps {
 
 /** Running events of the chosen units (§16.2 current stops), independent of the list window. */
 export function CurrentStopsPanel({ unitIds, onClose, onCode }: CurrentStopsPanelProps) {
+  const { number } = useNumberFormat();
   const env = useEventHubEnv();
   const filters = { ...defaultFilters({ from: '', to: '', label: '' }), unitIds: [...unitIds] };
   const query = useProductionEvents(currentStopsQuery(filters), env.timezone, { refetchInterval: CURRENT_STOPS_REFRESH_MS });
   const stops = flattenPages(query.data?.pages);
   const state = dataStateOf(query, { isEmpty: stops.length === 0 });
-  const count = query.hasNextPage ? `${stops.length}+` : String(stops.length);
+  const count = query.hasNextPage ? `${number(stops.length)}+` : number(stops.length);
   return (
     <Section title={`Current stops (${count})`} headingLevel={2} className="rounded-md border p-3">
       <div data-testid="current-stops" className="space-y-2">

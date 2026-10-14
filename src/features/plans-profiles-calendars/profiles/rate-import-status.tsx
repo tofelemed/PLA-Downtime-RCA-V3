@@ -3,6 +3,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { ERROR_MESSAGES, isHumanMessage } from '@/features/ux-kit/errors';
 import { humanize } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 const STATE_LABELS: Record<string, string> = { queued: 'Waiting', running: 'Running', completed: 'Completed', failed: 'Failed', partial: 'Completed with refused lines' };
 const KIND_LABELS: Record<string, string> = { budget: 'Budget', forecast: 'Forecast', mpc: 'MPC' };
@@ -23,6 +24,7 @@ const COLUMNS: DataTableColumn<ReportLine>[] = [
 
 /** Live status of an accepted import: state, counts and the server's per-line report (20 lines per page). */
 export function RateImportStatus({ importId }: { importId: string }) {
+  const { number } = useNumberFormat();
   const job = useRateImportJob(importId);
   const view = job.data;
   return (
@@ -36,7 +38,7 @@ export function RateImportStatus({ importId }: { importId: string }) {
           <p role="status">
             {KIND_LABELS[view.kind] ?? humanize(view.kind)} {view.externalId}, revision {view.revision}: <strong>{STATE_LABELS[view.state] ?? humanize(view.state)}</strong>
           </p>
-          {view.counts && <p className="text-xs">{Object.entries(view.counts).map(([key, count]) => `${humanize(key)}: ${count}`).join(' · ')}</p>}
+          {view.counts && <p className="text-xs">{Object.entries(view.counts).map(([key, count]) => `${humanize(key)}: ${number(count)}`).join(' · ')}</p>}
           {view.report.length > 0 && <DataTable caption="Refused lines" columns={COLUMNS} rows={view.report} getRowKey={(r) => `${r.line}-${r.code}`} density="compact" />}
         </div>
       )}

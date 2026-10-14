@@ -66,8 +66,9 @@ const COUNT_COLUMNS = (title: string): Array<DataTableColumn<ActivityCountView>>
 ];
 
 function AuditActivity({ audit }: { audit: AuditActivitySummaryView }) {
+  const { number } = useNumberFormat();
   return (
-    <SummaryCard title={`Audit activity (${audit.total} entries)`} testId="report-audit-activity">
+    <SummaryCard title={`Audit activity (${number(audit.total)} entries)`} testId="report-audit-activity">
       <DayChart days={audit.byDay} label="Entries" />
       <div className="grid gap-4 lg:grid-cols-2">
         <DataTable caption="Audit entries by action" columns={COUNT_COLUMNS('Action')} rows={audit.byAction} getRowKey={(row) => row.key} density="compact" />

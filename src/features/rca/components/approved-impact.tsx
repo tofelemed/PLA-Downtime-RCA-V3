@@ -3,6 +3,7 @@ import { currencyDigits, entriesInCurrency } from '@/features/display-currency/m
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { humanize } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /**
  * Approved historical loss from the ledger (approved revisions only, contribution margin view): one row
@@ -10,6 +11,7 @@ import { Quantity } from '@/features/ux-kit/quantity';
  * currency); a currency without a full valuation says so.
  */
 export function ApprovedImpact({ impact }: { impact: ApprovedImpactView }) {
+  const { number } = useNumberFormat();
   const { currency } = useDisplayCurrency();
   if (impact.lines === 0) {
     return <p className="text-sm text-muted-foreground" data-testid="approved-impact-none">No approved loss yet (no approved period carries a line of this cause).</p>;
@@ -35,7 +37,7 @@ export function ApprovedImpact({ impact }: { impact: ApprovedImpactView }) {
           </li>
         ))}
       </ul>
-      <p className="text-xs text-muted-foreground">{impact.lines} approved line(s). {impact.basis}.</p>
+      <p className="text-xs text-muted-foreground">{number(impact.lines)} approved line(s). {impact.basis}.</p>
     </div>
   );
 }

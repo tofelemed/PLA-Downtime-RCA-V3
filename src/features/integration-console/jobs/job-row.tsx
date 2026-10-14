@@ -9,6 +9,7 @@ import { jobPurpose, scopeSummary } from '../model/job-presets';
 import { ACTION_TEXT, allowedActions, jobAges, jobHealth, JOB_STATE_DISPLAY, pageOutcomes } from '../model/job-states';
 import { JobCommandDialog } from './job-command-dialog';
 import { JobTransitions } from './job-transitions';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface JobRowProps {
   job: IngestionJobView;
@@ -19,6 +20,7 @@ export interface JobRowProps {
 const ago = (seconds: number | null) => (seconds === null ? 'never' : <><DurationText seconds={seconds} variant="compact" /> ago</>);
 
 function JobFacts({ job, now }: { job: IngestionJobView; now: number }) {
+  const { number } = useNumberFormat();
   const ages = jobAges(job, now);
   const outcomes = pageOutcomes(job);
   return (
@@ -33,16 +35,16 @@ function JobFacts({ job, now }: { job: IngestionJobView; now: number }) {
       </div>
       <div>
         <dt className="text-muted-foreground">Cadence</dt>
-        <dd>{job.cadence ? `${job.cadence.intervalSeconds} s, pages of ${job.cadence.pageSize ?? 500}` : '—'}</dd>
+        <dd>{job.cadence ? `${number(job.cadence.intervalSeconds)} s, pages of ${number(job.cadence.pageSize ?? 500)}` : '—'}</dd>
       </div>
       <div>
         <dt className="text-muted-foreground">Retries</dt>
-        <dd>{job.retryCount}</dd>
+        <dd>{number(job.retryCount)}</dd>
       </div>
       {outcomes.length > 0 && (
         <div className="col-span-2 sm:col-span-4">
           <dt className="text-muted-foreground">Last page</dt>
-          <dd>{outcomes.map(([code, count]) => `${labelOf(INTAKE_OUTCOME_LABELS, code)} ${count}`).join(', ')}</dd>
+          <dd>{outcomes.map(([code, count]) => `${labelOf(INTAKE_OUTCOME_LABELS, code)} ${number(count)}`).join(', ')}</dd>
         </div>
       )}
     </dl>

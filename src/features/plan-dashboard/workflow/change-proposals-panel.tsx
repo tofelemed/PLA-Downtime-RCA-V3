@@ -12,6 +12,7 @@ import { periodRefOf } from '../hooks/use-draft-editor';
 import { snapshotFigures } from '../model/snapshot-figures';
 import { workflowProblemOf, WorkflowProblem } from '../model/workflow-errors';
 import { ReasonConfirm } from './reason-confirm';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ChangeProposalsPanelProps {
   view: ReconciliationView;
@@ -39,6 +40,7 @@ function Snapshot({ label, value }: { label: string; value: Record<string, unkno
 }
 
 function Proposal({ p, timezone, decide }: { p: ChangeProposalView; timezone: string; decide: ((p: ChangeProposalView, d: 'accept' | 'dismiss', reason: string) => Promise<unknown>) | null }) {
+  const { number } = useNumberFormat();
   return (
     <div className="space-y-1 rounded-md border p-2" data-testid="change-proposal" data-state={p.state}>
       <p>
@@ -46,7 +48,7 @@ function Proposal({ p, timezone, decide }: { p: ChangeProposalView; timezone: st
       </p>
       <Snapshot label="Before (approved)" value={p.before} />
       <Snapshot label="After (with the approved decisions)" value={p.after} />
-      {p.affectedReports.length > 0 && <p className="text-xs">Affects {p.affectedReports.length} earlier export(s) of the approved figures.</p>}
+      {p.affectedReports.length > 0 && <p className="text-xs">Affects {number(p.affectedReports.length)} earlier export(s) of the approved figures.</p>}
       {p.state === 'open' && decide && (
         <div className="flex flex-wrap gap-2">
           <ReasonConfirm trigger="Accept (new revision)…" triggerTestId="proposal-accept" triggerVariant="default" title="Accept this change?" description="A new draft revision is opened with the new inputs; the approved figures stay until it is approved." confirmLabel="Accept change" onConfirm={(reason) => decide(p, 'accept', reason)} />

@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { mapOfRows, type MapRow } from './model/profile-draft';
 import { STATE_NAME_SUGGESTIONS, type ValueMapKind } from './model/value-map-classify';
 import { ValueMapProbe } from './value-map-probe';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ValueMapEditorProps {
   kind: ValueMapKind;
@@ -20,13 +21,14 @@ const TITLE: Record<ValueMapKind, { label: string; target: string; hint: string 
 
 /** Token → value rows of one value map with the live probe ("what would this token become?"). */
 export function ValueMapEditor({ kind, rows, error, keepUnmapped, onChange }: ValueMapEditorProps) {
+  const { number } = useNumberFormat();
   const text = TITLE[kind];
   const edit = (index: number, patch: Partial<MapRow>) => onChange(rows.map((row, at) => (at === index ? { ...row, ...patch } : row)));
   const remove = (index: number) => onChange(rows.filter((_row, at) => at !== index));
   return (
     <fieldset className="space-y-2 rounded-md border p-3" data-testid={`value-map-${kind}`}>
       <legend className="px-1 text-sm font-medium">
-        {text.label} ({rows.length})
+        {text.label} ({number(rows.length)})
       </legend>
       <p className="text-xs text-muted-foreground">{text.hint}</p>
       {rows.map((row, index) => (

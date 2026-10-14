@@ -9,6 +9,7 @@ import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { StatusIcon } from '@/lib/icons';
 import { PERIOD_EXCLUSION_LABELS, PLAN_WARNING_LABELS } from '../model/plan-labels';
 import { sumMatchesHeader } from '../model/plan-form';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface PeriodPreviewProps {
   preview: PlanPreviewView;
@@ -48,6 +49,7 @@ function useColumns({ timezone, productName }: Pick<PeriodPreviewProps, 'timezon
 
 /** The preview: every period the server would store, its target and capacities, totals and warnings (20 per page). */
 export function PeriodPreview({ preview, headerTarget, timezone, productName }: PeriodPreviewProps) {
+  const { number } = useNumberFormat();
   const columns = useColumns({ timezone, productName });
   return (
     <section className="space-y-2" data-testid="period-preview">
@@ -55,7 +57,7 @@ export function PeriodPreview({ preview, headerTarget, timezone, productName }: 
         <span className="font-medium">Preview of version {preview.version}</span>
         <Badge variant="outline">{labelOf(DISTRIBUTION_LABELS, preview.distribution)}</Badge>
         <SumBadge preview={preview} headerTarget={headerTarget} />
-        <span className="text-muted-foreground">{preview.periods.length} periods · nothing stored</span>
+        <span className="text-muted-foreground">{number(preview.periods.length)} periods · nothing stored</span>
       </div>
       {preview.warnings.length > 0 && (
         <ul className="list-disc pl-5 text-xs text-amber-700" data-testid="preview-warnings">

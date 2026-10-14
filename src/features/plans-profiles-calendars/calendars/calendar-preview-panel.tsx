@@ -13,6 +13,7 @@ import { RefusalNotice } from '../components/refusal-notice';
 import type { PreviewCandidate } from '../hooks/use-calendar-editor';
 import { isDstWarning, warningText } from '../model/calendar-preview';
 import { CalendarPreviewTable } from './calendar-preview-table';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface CalendarPreviewPanelProps {
   candidate: PreviewCandidate | null;
@@ -24,14 +25,15 @@ export interface CalendarPreviewPanelProps {
 }
 
 function PreviewResult({ view }: { view: CalendarPreviewView }) {
+  const { number } = useNumberFormat();
   const pref = useCalendarPreference();
   const dstWarnings = view.warnings.filter(isDstWarning);
   const Icon = StatusIcon.warning;
   return (
     <div className="space-y-2">
       <p className="text-sm" data-testid="preview-scheduled" data-seconds={view.scheduledSeconds}>
-        Scheduled time ({view.timezone}): <DurationText seconds={view.scheduledSeconds} /> · {view.instances.length} shifts · compared with what is stored: {view.diff.added.length} added,{' '}
-        {view.diff.removed.length} removed, {view.diff.changed.length} changed, {view.diff.unchangedCount} unchanged
+        Scheduled time ({view.timezone}): <DurationText seconds={view.scheduledSeconds} /> · {number(view.instances.length)} shifts · compared with what is stored: {number(view.diff.added.length)} added,{' '}
+        {number(view.diff.removed.length)} removed, {number(view.diff.changed.length)} changed, {number(view.diff.unchangedCount)} unchanged
       </p>
       {dstWarnings.length > 0 && (
         <ul className="space-y-1 rounded-md border border-amber-400 bg-amber-50 p-2 text-sm dark:bg-amber-950" data-testid="dst-warnings" role="status">

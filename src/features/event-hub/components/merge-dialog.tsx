@@ -11,6 +11,7 @@ import { PlantTime } from '@/features/ux-kit/plant-time';
 import { labelOf, PHYSICAL_TYPE_LABELS } from '@/features/ux-kit/labels';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { CommandError } from './command-error';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface MergeDialogProps {
   events: ProductionEventView[];
@@ -23,6 +24,7 @@ const MAX_GAP_MINUTES = 1440;
 
 /** DT09 merge of the selected events of one unit; gap policy and classification override are explicit. */
 export function MergeDialog({ events, onClose, onDone }: MergeDialogProps) {
+  const { number } = useNumberFormat();
   const env = useEventHubEnv();
   const merge = useMergeEvents();
   const [gapMinutes, setGapMinutes] = useState('0');
@@ -40,7 +42,7 @@ export function MergeDialog({ events, onClose, onDone }: MergeDialogProps) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto" data-testid="merge-dialog">
         <DialogHeader>
-          <DialogTitle>Merge {events.length} events</DialogTitle>
+          <DialogTitle>Merge {number(events.length)} events</DialogTitle>
           <DialogDescription>One event spans the union; the merged events become superseded. One unit only.</DialogDescription>
         </DialogHeader>
         <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">

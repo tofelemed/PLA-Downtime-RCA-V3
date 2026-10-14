@@ -3,9 +3,11 @@ import type { RcaKnowledgeView } from '@/api/v2/types/rca-knowledge';
 import { Button } from '@/components/ui/button';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { ActionIcon } from '@/lib/icons';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /** Helpful / not helpful: one vote per user (the server replaces an earlier vote). */
 export function VoteButtons({ entry }: { entry: RcaKnowledgeView }) {
+  const { number } = useNumberFormat();
   const vote = useVoteKnowledge();
   const cast = (helpful: boolean) => void vote.submit({ id: entry.id, helpful }).catch(() => undefined);
   return (
@@ -18,7 +20,7 @@ export function VoteButtons({ entry }: { entry: RcaKnowledgeView }) {
           disabled={vote.isPending}
           onClick={() => cast(true)}
         >
-          <ActionIcon.voteUp className="mr-1 h-4 w-4" aria-hidden /> Helpful ({entry.helpfulCount})
+          <ActionIcon.voteUp className="mr-1 h-4 w-4" aria-hidden /> Helpful ({number(entry.helpfulCount)})
         </Button>
         <Button
           size="sm"
@@ -27,7 +29,7 @@ export function VoteButtons({ entry }: { entry: RcaKnowledgeView }) {
           disabled={vote.isPending}
           onClick={() => cast(false)}
         >
-          <ActionIcon.voteDown className="mr-1 h-4 w-4" aria-hidden /> Not helpful ({entry.notHelpfulCount})
+          <ActionIcon.voteDown className="mr-1 h-4 w-4" aria-hidden /> Not helpful ({number(entry.notHelpfulCount)})
         </Button>
       </div>
       {vote.error ? <FriendlyErrorAlert error={vote.error} /> : null}

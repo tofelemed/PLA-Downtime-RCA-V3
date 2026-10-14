@@ -12,6 +12,7 @@ import { ActionIcon } from '@/lib/icons';
 import { EVIDENCE_TYPES } from '../../model/evidence-form';
 import { useRcaFormat } from '../../use-rca-format';
 import { useCaseWorkspace } from '../case-context';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function columns(day: (value: string | null) => string): DataTableColumn<RcaEvidenceItem>[] {
   return [
@@ -35,6 +36,7 @@ function matches(item: RcaEvidenceItem, text: string, collector: string): boolea
 
 /** `/rca/:caseId/evidence`: the evidence of the case with counts per type; rows open the item. */
 export function EvidenceListPage() {
+  const { number } = useNumberFormat();
   const { rca, readOnly, basePath } = useCaseWorkspace();
   const navigate = useNavigate();
   const users = useUserNames();
@@ -58,7 +60,7 @@ export function EvidenceListPage() {
         <div className="flex flex-wrap items-center gap-2" aria-label="Evidence by type">
           {counts.map(({ type, count }) => (
             <Badge key={type} variant="secondary">
-              {type}: {count}
+              {type}: {number(count)}
             </Badge>
           ))}
         </div>

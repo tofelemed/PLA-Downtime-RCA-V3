@@ -10,6 +10,7 @@ import { BulkJobProgress } from './bulk-job-progress';
 import { BulkPreviewTable } from './bulk-preview-table';
 import { CommandError } from './command-error';
 import { ReasonCodeSelect } from './reason-code-select';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface BulkCodeDialogProps {
   events: readonly BulkTarget[];
@@ -44,6 +45,7 @@ function EnumSelect({ id, label, values, labels, value, onChange }: EnumSelectPr
 
 /** DT10 bulk coding: codes + reason → server preview → apply (atomic ≤ 500, job above). */
 export function BulkCodeDialog({ events, onClose }: BulkCodeDialogProps) {
+  const { number } = useNumberFormat();
   const flow = useBulkCodeFlow(events);
   const { step } = flow;
   const done = step.kind === 'applied' || step.kind === 'job';
@@ -51,7 +53,7 @@ export function BulkCodeDialog({ events, onClose }: BulkCodeDialogProps) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto" data-testid="bulk-code-dialog">
         <DialogHeader>
-          <DialogTitle>Code {events.length} events</DialogTitle>
+          <DialogTitle>Code {number(events.length)} events</DialogTitle>
           <DialogDescription>Preview first: nothing changes until you apply. More than 500 events run as a job.</DialogDescription>
         </DialogHeader>
         {!done && (
@@ -76,7 +78,7 @@ export function BulkCodeDialog({ events, onClose }: BulkCodeDialogProps) {
           {!done && <Button variant="secondary" disabled={!flow.canPreview} onClick={() => void flow.preview()}>Preview</Button>}
           {step.kind === 'preview' && (
             <Button disabled={flow.pending || (step.preview.exclusions.length > 0 && events.length <= ATOMIC_BULK_LIMIT)} onClick={() => void flow.apply()}>
-              Apply to {step.preview.count}
+              Apply to {number(step.preview.count)}
             </Button>
           )}
         </DialogFooter>

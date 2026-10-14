@@ -2,6 +2,7 @@ import { useCodeList } from '@/api/v2/queries/codes-admin';
 import type { CodeDetailView } from '@/api/v2/types/codes-admin';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ImpactCodePickerProps {
   selected: readonly string[];
@@ -18,6 +19,7 @@ export interface ImpactCodePickerProps {
  * other codes: 422).
  */
 export function ImpactCodePicker({ selected, onChange, legend = 'Independent cost components', checkLabel = 'Counted on its own', testId = 'impact-code-picker' }: ImpactCodePickerProps) {
+  const { number } = useNumberFormat();
   const codes = useCodeList('impact-codes');
   const toggle = (id: string, on: boolean) => onChange(on ? [...selected, id] : selected.filter((entry) => entry !== id));
   const columns: Array<DataTableColumn<CodeDetailView>> = [
@@ -40,7 +42,7 @@ export function ImpactCodePicker({ selected, onChange, legend = 'Independent cos
   return (
     <fieldset className="space-y-2" data-testid={testId}>
       <legend className="text-sm font-medium">
-        {legend} ({selected.length} chosen)
+        {legend} ({number(selected.length)} chosen)
       </legend>
       <DataTable
         caption="Impact codes"

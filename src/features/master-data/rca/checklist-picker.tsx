@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label';
 import type { VerificationChecklistView } from '../api/master-data-types';
 import { VERIFICATION_CHECKLISTS } from '../api/record-resource';
 import { useRecordLookup } from '../api/use-record-queries';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ChecklistPickerProps {
   value: string[];
@@ -12,6 +13,7 @@ export interface ChecklistPickerProps {
 
 /** The plant's active verification checklists as checkboxes (every page loaded). */
 export function ChecklistPicker({ value, onChange, disabled }: ChecklistPickerProps) {
+  const { number } = useNumberFormat();
   const checklists = useRecordLookup<VerificationChecklistView>(VERIFICATION_CHECKLISTS, { status: 'active', sort: 'name' });
   const toggle = (id: string, on: boolean) => onChange(on ? [...value, id] : value.filter((entry) => entry !== id));
   return (
@@ -30,7 +32,7 @@ export function ChecklistPicker({ value, onChange, disabled }: ChecklistPickerPr
             disabled={disabled}
           />
           <Label htmlFor={`checklist-${checklist.id}`} className="font-normal">
-            {checklist.name} <span className="text-muted-foreground">({checklist.items.length} items)</span>
+            {checklist.name} <span className="text-muted-foreground">({number(checklist.items.length)} items)</span>
           </Label>
         </div>
       ))}

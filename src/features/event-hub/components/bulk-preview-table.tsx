@@ -10,6 +10,7 @@ import {
 } from '@/features/ux-kit/labels';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { useEventHubEnv } from '../use-event-hub-env';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 type PreviewItem = BulkCodePreviewView['items'][number];
 
@@ -27,6 +28,7 @@ export interface BulkPreviewTableProps {
 
 /** DT10 preview: before / after per event (paged), exclusions with reasons, and the windows that will recalculate. */
 export function BulkPreviewTable({ preview, events }: BulkPreviewTableProps) {
+  const { number } = useNumberFormat();
   const env = useEventHubEnv();
   const { dateTime } = usePlantFormat();
   const codingText = useCodingText();
@@ -43,8 +45,8 @@ export function BulkPreviewTable({ preview, events }: BulkPreviewTableProps) {
   return (
     <div className="space-y-3" data-testid="bulk-preview">
       <p className="text-sm">
-        <strong data-testid="bulk-preview-count">{preview.count}</strong> events change ·{' '}
-        <strong data-testid="bulk-preview-exclusions">{preview.exclusions.length}</strong> excluded
+        <strong data-testid="bulk-preview-count">{number(preview.count)}</strong> events change ·{' '}
+        <strong data-testid="bulk-preview-exclusions">{number(preview.exclusions.length)}</strong> excluded
       </p>
       <DataTable caption="Coding before and after" columns={columns} rows={preview.items} getRowKey={(item) => item.eventId} density="compact" />
       {preview.exclusions.length > 0 && (

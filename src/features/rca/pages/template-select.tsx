@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { flattenPages, useV2InfiniteList } from '@/api/v2/queries/use-v2-list';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 interface TemplateOption {
   id: string;
@@ -28,6 +29,7 @@ function useActiveTemplates() {
 
 /** The template a new case starts from; its logic tree is copied into the case by the server. */
 export function TemplateSelect({ value, onChange }: { value: string | null; onChange: (templateId: string | null) => void }) {
+  const { number } = useNumberFormat();
   const { templates, loading } = useActiveTemplates();
   return (
     <div className="space-y-1">
@@ -40,7 +42,7 @@ export function TemplateSelect({ value, onChange }: { value: string | null; onCh
           <SelectItem value={NONE}>No template (empty logic tree)</SelectItem>
           {templates.map((template) => (
             <SelectItem key={template.id} value={template.id}>
-              {template.name} ({template.nodeCount} node(s))
+              {template.name} ({number(template.nodeCount)} node(s))
             </SelectItem>
           ))}
         </SelectContent>

@@ -13,6 +13,7 @@ import { CHANGE_CATEGORIES, LIKELIHOODS, rowId } from '../../../../model/analysi
 import { useCaseWorkspace } from '../../../case-context';
 import { ChoiceField, optionsOf } from '../../../evidence/form-controls';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function ChangeRow(props: { change: ChangeRecord; index: number; readOnly: boolean; onChange: (next: ChangeRecord) => void; onRemove: () => void }) {
   const { change, index, readOnly } = props;
@@ -36,6 +37,7 @@ function ChangeRow(props: { change: ChangeRecord; index: number; readOnly: boole
 }
 
 function Editor({ record, save }: { record: ToolRecord<'change'>; save: (body: ChangeContent) => Promise<unknown> }) {
+  const { number } = useNumberFormat();
   const { readOnly } = useCaseWorkspace();
   const zone = usePlantTimezone();
   const [content, setContent] = useState<ChangeContent>(() => ({ question: record?.question ?? 'What changed before the incident?', changes: record?.changes ?? [] }));
@@ -50,7 +52,7 @@ function Editor({ record, save }: { record: ToolRecord<'change'>; save: (body: C
         <Input id="change-question" value={content.question} maxLength={255} disabled={readOnly} onChange={(e) => setContent({ ...content, question: e.target.value })} />
       </div>
       <p className="text-sm text-muted-foreground">
-        {content.changes.length} change(s), {related} related to the incident.
+        {number(content.changes.length)} change(s), {number(related)} related to the incident.
       </p>
       <ul className="space-y-2">
         {content.changes.map((change, index) => (
