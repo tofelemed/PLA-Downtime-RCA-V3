@@ -33,10 +33,16 @@ export const DEMO_UNIT_CODE = 'DEMO-EXTRUDER1';
 export const DEMO_EVENTS_CONNECTION = 'Demo: MQTT events (simulator)';
 export const MINUTE = 60_000;
 
-/** Compose broker `proact-mqtt-1` (docker/mosquitto): dev-only users and CA, overridable by env. */
+/**
+ * Compose broker `proact-mqtt-1` (docker/mosquitto): dev-only users and CA, overridable by env. `plain` /
+ * `tls` are what the API and worker connect to; `simUrl` is where the publisher simulator on this machine
+ * connects. They differ when the API runs in Docker: e.g. E2E_MQTT_PASSWORD_URL=mqtt://host.docker.internal:1885,
+ * E2E_MQTT_TLS_URL=mqtts://host.docker.internal:8885 (both in the dev certificate), E2E_MQTT_SIM_URL=mqtt://localhost:1885.
+ */
 export const BROKER = {
   plain: process.env.E2E_MQTT_PASSWORD_URL ?? 'mqtt://localhost:1885',
   tls: process.env.E2E_MQTT_TLS_URL ?? 'mqtts://localhost:8885',
+  simUrl: process.env.E2E_MQTT_SIM_URL ?? process.env.E2E_MQTT_PASSWORD_URL ?? 'mqtt://localhost:1885',
   username: process.env.E2E_MQTT_SIM_USER ?? 'proact-sim',
   password: process.env.E2E_MQTT_SIM_PASSWORD ?? 'proact-sim-dev',
   caPath: join(process.cwd(), 'docker', 'mosquitto', 'certs', 'dev-ca.crt'),
@@ -195,7 +201,7 @@ export async function unitByCode(token: string, code: string): Promise<{ id: str
  * topics match only the connection under test. Resolves with the simulator's log once it exited cleanly.
  */
 export function runSim(scenario: string, namespace: string, extra: string[] = []): Promise<string> {
-  const args = ['-T', 'scripts/mqtt/publish-sim.ts', scenario, '--url', BROKER.plain, '--username', BROKER.username, '--namespace', namespace, ...extra];
+  const args = ['-T', 'scripts/mqtt/publish-sim.ts', scenario, '--url', BROKER.simUrl, '--username', BROKER.username, '--namespace', namespace, ...extra];
   const child = spawn('npx', ['ts-node', ...args], {
     cwd: BACKEND,
     env: { ...process.env, MQTT_SIM_PASSWORD: BROKER.password },

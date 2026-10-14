@@ -74,8 +74,11 @@ test.describe('Integration admin — mappings and report import', () => {
     await page.locator('#mappings-kind').selectOption('pattern');
     const link = page.locator(`[data-testid="source-mapping"][data-match="${matchValue}"]`);
     const row = page.getByRole('row').filter({ has: link });
+    // a page is loaded before it is judged; "Next page" exists only when there is more than one page
+    await expect(page.locator('[data-testid="source-mapping"]').first()).toBeVisible({ timeout: 30_000 });
+    const next = page.getByRole('button', { name: 'Next page' });
     await expect(async () => {
-      if ((await link.count()) === 0) await page.getByRole('button', { name: 'Next page' }).click();
+      if ((await link.count()) === 0 && (await next.isVisible()) && (await next.isEnabled())) await next.click();
       await expect(link).toBeVisible({ timeout: 2_000 });
     }).toPass({ timeout: 60_000 });
     await expect(row).toContainText('Pattern');

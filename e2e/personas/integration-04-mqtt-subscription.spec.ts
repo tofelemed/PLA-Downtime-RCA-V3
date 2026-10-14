@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { apiLogin, call, DEMO_UNIT_CODE, eventsByEventId, findConnection, INT_USERS, jobCommand, loadState, newSuffix, openConsole, runSim, saveState, seededEventIds, selectConnection, simEventId, subscribeJob, uiLogin, unitByCode, type IntSession, type IntState } from './support/integration-world';
-import { showMoreFilters } from './support/event-hub-ui';
+import { eventRowOf, showMoreFilters } from './support/event-hub-ui';
 
 /**
  * INTEGRATION ADMIN persona — journeys 4 (subscription lifecycle) and 5 (payload profile editor) on
@@ -63,7 +63,7 @@ test.describe('Integration admin — MQTT subscription and payload profile', () 
     await page.getByTestId('filter-physical-states').click();
     await page.locator('#filter-physical-states-retracted').click();
     await page.keyboard.press('Escape');
-    const row = page.locator(`[data-testid="event-row"][data-event-id="${event.id}"]`);
+    const row = eventRowOf(page, event.id);
     await expect(row).toBeVisible({ timeout: 30_000 });
     await expect(row).toContainText(unit.name);
     await page.screenshot({ path: test.info().outputPath('int-04a-event-hub.png'), fullPage: true });
