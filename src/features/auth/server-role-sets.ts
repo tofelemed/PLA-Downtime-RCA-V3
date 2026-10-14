@@ -16,9 +16,10 @@ export const PROFILE_APPROVERS = ['manager_approver'] as const;
 export const CALENDAR_WRITERS = ['master_data_admin', 'manager_approver'] as const;
 
 /** v2/periods/period-roles.ts */
-export const PERIOD_WRITERS = ['production_engineer', 'manager_approver'] as const;
+export const PERIOD_WRITERS = ['production_engineer', 'production_accountant', 'manager_approver'] as const;
 export const ADJUSTMENT_APPROVERS = ['manager_approver'] as const;
-export const REVISION_APPROVERS = ['manager_approver'] as const;
+export const REVISION_APPROVERS = ['manager_approver', 'production_accountant'] as const;
+export const BRIDGE_WRITERS = ['production_accountant'] as const;
 
 /** v2/code-libraries/code-library-v2.controller.ts */
 export const CODE_WRITERS = ['master_data_admin', 'manager_approver'] as const;

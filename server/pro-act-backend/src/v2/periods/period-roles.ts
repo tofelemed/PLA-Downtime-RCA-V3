@@ -7,6 +7,7 @@
  */
 export const PERIOD_WRITERS = [
   'production_engineer',
+  'production_accountant',
   'manager_approver',
 ] as const;
 
@@ -23,4 +24,13 @@ export const REPORT_IMPORTERS = [
  * approved period and deciding change proposals need a manager approver — never the submitter (403
  * SEPARATION_OF_DUTIES, enforced in the services for every role including SuperAdmin).
  */
-export const REVISION_APPROVERS = ['manager_approver'] as const;
+export const REVISION_APPROVERS = [
+  'manager_approver',
+  'production_accountant',
+] as const;
+
+/**
+ * SME R8 (14 Oct 2026): manual bridge lines close a gap without naming a loss, so only production
+ * accounting enters them (422 BRIDGE_NOT_ALLOWED for other writers).
+ */
+export const BRIDGE_WRITERS = ['production_accountant'] as const;

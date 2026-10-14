@@ -18,6 +18,9 @@ export type LegacyRole = (typeof LEGACY_ROLES)[number];
 
 export const SCOPE_ROLES = [
   'manager_approver',
+  'production_accountant',
+  'finance_approver',
+  'finance_maintainer',
   'production_engineer',
   'reliability_engineer',
   'integration_admin',
@@ -47,9 +50,12 @@ const ROLE_RANK: Readonly<Record<RoleName, number>> = {
   TenantAdmin: 80,
   Manager: 70,
   manager_approver: 70,
+  finance_approver: 65,
+  production_accountant: 60,
   master_data_admin: 60,
   integration_admin: 60,
   reliability_engineer: 50,
+  finance_maintainer: 50,
   Analyst: 50,
   Engineer: 50,
   production_engineer: 50,

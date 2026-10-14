@@ -7,6 +7,9 @@
 export type LegacyRole = 'SuperAdmin' | 'OrgAdmin' | 'TenantAdmin' | 'Manager' | 'Analyst' | 'Engineer' | 'Operator';
 export type ScopeRole =
   | 'manager_approver'
+  | 'production_accountant'
+  | 'finance_approver'
+  | 'finance_maintainer'
   | 'production_engineer'
   | 'reliability_engineer'
   | 'integration_admin'

@@ -6611,7 +6611,7 @@ export interface components {
             /** @description Exact e-mail of a user of the plant's organization (instead of `userId`) */
             email?: string;
             /** @enum {string} */
-            role: "manager_approver" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
+            role: "manager_approver" | "production_accountant" | "finance_approver" | "finance_maintainer" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
             /** @description Limit the grant to this unit of the plant (omit for the whole plant) */
             unitId?: string;
         };

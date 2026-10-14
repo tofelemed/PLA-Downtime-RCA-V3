@@ -16,6 +16,9 @@ export const LEGACY_ROLE_LABELS = {
 
 export const SCOPE_ROLE_LABELS = {
   manager_approver: 'Manager (approver)',
+  production_accountant: 'Production accountant',
+  finance_approver: 'Finance approver',
+  finance_maintainer: 'Finance (rates)',
   production_engineer: 'Production engineer',
   reliability_engineer: 'Reliability engineer',
   integration_admin: 'Integration administrator',
