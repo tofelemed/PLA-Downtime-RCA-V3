@@ -12,7 +12,11 @@ interface EventBody {
   id: string;
   occurrenceId: string;
   rowVersion: number;
-  failure: { mode: string | null; severity: string | null; maintainableItem: string | null };
+  failure: {
+    mode: string | null;
+    severity: string | null;
+    maintainableItem: string | null;
+  };
 }
 
 const t = (time: string) => `2026-09-23T${time}:00.000Z`;
@@ -84,18 +88,27 @@ describe('failure detail and confirmed failures (SME D8, D11)', () => {
 
   it('an incipient finding is not a failure; a coded mode without severity still is', async () => {
     const incipient = json<EventBody>(
-      await stop('08:00', { failureMode: 'Vibration', failureSeverity: 'incipient' }).expect(201),
+      await stop('08:00', {
+        failureMode: 'Vibration',
+        failureSeverity: 'incipient',
+      }).expect(201),
     );
     expect(await counted(incipient.occurrenceId)).toBe(0);
-    const pending = json<EventBody>(await stop('10:00', { failureMode: 'Seal leak' }).expect(201));
+    const pending = json<EventBody>(
+      await stop('10:00', { failureMode: 'Seal leak' }).expect(201),
+    );
     expect(await counted(pending.occurrenceId)).toBe(1);
-    const degraded = json<EventBody>(await stop('12:00', { failureSeverity: 'degraded' }).expect(201));
+    const degraded = json<EventBody>(
+      await stop('12:00', { failureSeverity: 'degraded' }).expect(201),
+    );
     expect(await counted(degraded.occurrenceId)).toBe(1);
   });
 
   it('refuses an unknown severity (422) and clears a value with null', async () => {
     await stop('14:00', { failureSeverity: 'minor' }).expect(422);
-    const created = json<EventBody>(await stop('16:00', { failureMode: 'Seal leak' }).expect(201));
+    const created = json<EventBody>(
+      await stop('16:00', { failureMode: 'Seal leak' }).expect(201),
+    );
     const patched = await request(app.getHttpServer())
       .patch(`/api/v2/production-events/${created.id}`)
       .set(bearer(token))

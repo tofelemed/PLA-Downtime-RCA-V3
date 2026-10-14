@@ -66,7 +66,8 @@ export class ProductionEventV2EditableDto {
   @ApiPropertyOptional({
     format: 'uuid',
     nullable: true,
-    description: 'SME D3: asset whose failure caused this stop (of the origin unit when one is given)',
+    description:
+      'SME D3: asset whose failure caused this stop (of the origin unit when one is given)',
   })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
@@ -117,14 +118,18 @@ export class ProductionEventV2EditableDto {
     format: 'date-time',
     nullable: true,
     description:
-      'SME D4: approved end of a planned stop\'s window; time after it counts as unplanned maintenance overrun',
+      "SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun",
   })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsISO8601({ strict: true })
   plannedEndTime?: string | null;
 
-  @ApiPropertyOptional({ maxLength: 255, nullable: true, description: 'SME D11: failure mode, e.g. external leakage' })
+  @ApiPropertyOptional({
+    maxLength: 255,
+    nullable: true,
+    description: 'SME D11: failure mode, e.g. external leakage',
+  })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsString()
@@ -134,35 +139,52 @@ export class ProductionEventV2EditableDto {
   @ApiPropertyOptional({
     enum: FAILURE_SEVERITIES,
     nullable: true,
-    description: 'SME D8: critical / degraded count as functional failures (MTBF); incipient does not; null = pending',
+    description:
+      'SME D8: critical / degraded count as functional failures (MTBF); incipient does not; null = pending',
   })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsIn(FAILURE_SEVERITIES)
   failureSeverity?: (typeof FAILURE_SEVERITIES)[number] | null;
 
-  @ApiPropertyOptional({ maxLength: 100, nullable: true, description: 'SME D11: maintainable item' })
+  @ApiPropertyOptional({
+    maxLength: 100,
+    nullable: true,
+    description: 'SME D11: maintainable item',
+  })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsString()
   @MaxLength(100)
   maintainableItem?: string | null;
 
-  @ApiPropertyOptional({ maxLength: 100, nullable: true, description: 'SME D11: failure mechanism' })
+  @ApiPropertyOptional({
+    maxLength: 100,
+    nullable: true,
+    description: 'SME D11: failure mechanism',
+  })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsString()
   @MaxLength(100)
   failureMechanism?: string | null;
 
-  @ApiPropertyOptional({ maxLength: 100, nullable: true, description: 'SME D11: failure cause' })
+  @ApiPropertyOptional({
+    maxLength: 100,
+    nullable: true,
+    description: 'SME D11: failure cause',
+  })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsString()
   @MaxLength(100)
   failureCause?: string | null;
 
-  @ApiPropertyOptional({ maxLength: 100, nullable: true, description: 'SME D11: detection method' })
+  @ApiPropertyOptional({
+    maxLength: 100,
+    nullable: true,
+    description: 'SME D11: detection method',
+  })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsString()

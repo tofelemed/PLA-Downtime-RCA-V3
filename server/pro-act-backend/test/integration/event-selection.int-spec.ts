@@ -71,7 +71,11 @@ describe('event selection snapshot (SME D13)', () => {
 
   it('returns every matching event with its version and a summary of what the action touches', async () => {
     const body = json<Selection>(
-      await select({ ...window, unitIds: world.unitA1, codingStates: 'uncoded' }).expect(200),
+      await select({
+        ...window,
+        unitIds: world.unitA1,
+        codingStates: 'uncoded',
+      }).expect(200),
     );
     expect(body.items.map((i) => i.id)).toEqual(ids);
     expect(body).toMatchObject({
@@ -85,10 +89,15 @@ describe('event selection snapshot (SME D13)', () => {
   });
 
   it('the snapshot feeds bulk coding unchanged', async () => {
-    const body = json<Selection>(await select({ ...window, unitIds: world.unitA1 }).expect(200));
+    const body = json<Selection>(
+      await select({ ...window, unitIds: world.unitA1 }).expect(200),
+    );
     const preview = await api
       .post('/api/v2/production-events/bulk-code', {
-        items: body.items.map((i) => ({ eventId: i.id, expectedVersion: i.rowVersion })),
+        items: body.items.map((i) => ({
+          eventId: i.id,
+          expectedVersion: i.rowVersion,
+        })),
         codes: { reasonCodeId: world.reasonR1 },
         reason: 'shift-end coding',
         preview: true,

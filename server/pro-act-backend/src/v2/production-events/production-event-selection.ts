@@ -42,13 +42,17 @@ const toItem = (event: ProductionEvent): SelectedEventView => ({
 function summaryOf(items: readonly SelectedEventView[]): EventSelectionView {
   const starts = items.map((item) => item.startTime).sort();
   const open = items.some((item) => item.endTime === null);
-  const ends = items.flatMap((item) => (item.endTime ? [item.endTime] : [])).sort();
+  const ends = items
+    .flatMap((item) => (item.endTime ? [item.endTime] : []))
+    .sort();
   return {
     count: items.length,
     firstStart: starts[0] ?? null,
     lastEnd: open ? null : (ends[ends.length - 1] ?? null),
     unitIds: [...new Set(items.map((item) => item.unitId))].sort(),
-    assetCount: new Set(items.flatMap((item) => (item.assetId ? [item.assetId] : []))).size,
+    assetCount: new Set(
+      items.flatMap((item) => (item.assetId ? [item.assetId] : [])),
+    ).size,
     items: [...items],
   };
 }
@@ -66,14 +70,24 @@ export async function selectEvents(
   assertExportWindow(query);
   const qb = scopedQuery(repo, 'event', { unitProperty: 'unitId', context });
   const rows = await applyProductionEventV2Filters(qb, query)
-    .select(['event.id', 'event.rowVersion', 'event.unitId', 'event.assetId', 'event.startTime', 'event.endTime'])
+    .select([
+      'event.id',
+      'event.rowVersion',
+      'event.unitId',
+      'event.assetId',
+      'event.startTime',
+      'event.endTime',
+    ])
     .orderBy('event.startTime', 'ASC')
     .addOrderBy('event.id', 'ASC')
     .take(MAX_BULK_ITEMS + 1)
     .getMany();
   if (rows.length > MAX_BULK_ITEMS) {
     const message = `more than ${MAX_BULK_ITEMS} events match; narrow the filters or the window`;
-    throw new UnprocessableEntityException({ code: 'SELECTION_TOO_LARGE', message: [message] });
+    throw new UnprocessableEntityException({
+      code: 'SELECTION_TOO_LARGE',
+      message: [message],
+    });
   }
   return summaryOf(rows.map(toItem));
 }

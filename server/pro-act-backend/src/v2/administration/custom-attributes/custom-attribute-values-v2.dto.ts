@@ -22,7 +22,10 @@ export class SetAttributeValueDto extends AttributeValuesQueryDto {
   @IsUUID()
   attributeDefinitionId!: string;
 
-  @ApiProperty({ maxLength: 4000, description: 'The value as text; empty clears it' })
+  @ApiProperty({
+    maxLength: 4000,
+    description: 'The value as text; empty clears it',
+  })
   @IsString()
   @MaxLength(4000)
   value!: string;
