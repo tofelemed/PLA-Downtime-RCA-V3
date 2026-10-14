@@ -21516,7 +21516,7 @@
         "properties": {
           "day": {
             "type": "string",
-            "description": "UTC day, YYYY-MM-DD"
+            "description": "Plant-local day, YYYY-MM-DD (default site's timezone, else the tenant's, else UTC)"
           },
           "count": {
             "type": "number"
