@@ -133,7 +133,7 @@ These findings are correctness, security, performance or cleanup. Each has eithe
 
 ---
 
-## Area 2 — Downtime & reliability KPIs (~80%: everything SME-independent done 13 Oct; the rest waits for D1–D17)
+## Area 2 — Downtime & reliability KPIs (~92%: SME answers built 14 Oct; state engine, standby and CMMS wait for plant data)
 
 ### 2.0 Work that does not wait for the SME (part B, started 13 Oct 2026)
 
@@ -175,6 +175,8 @@ Source: [SME_ANSWERS_ALL_PHASES_2026-10-14.md](SME_ANSWERS_ALL_PHASES_2026-10-14
 | D17 | Any-of triggers; pilot ≥ 2 h OR 1 % of daily planned tonnes OR 3 same-mode in 30 days, halved for critical assets; money limit from finance; safety overrides | RCA trigger policy (with CA8) | Critical assets, money limit (FIN) | Area 5 |
 
 **Build order (Area 2, SME phase):** S1 first-out default · S2 labels and lost-tonnes Pareto default · S3 repeat flag · S4 coding coverage · S5 origin unit / asset · S6 maintenance overrun · S7 failure detail and confirmed-failure MTBF · S8 bulk code by filter.
+
+**Built 14 Oct 2026:** S1 `6ef791e` (`oee_policy` v2 first-out) · S2 `2a274ef` · S3 `fcf1bcf` (`possibleRepeat`, 120 s pilot) · S4 `e8f9f45` (`coded_downtime_ratio`) · S5 `604b603` (`origin_unit_id` / `origin_asset_id`) · S6 `1dabe40` (`planned_end_time`, `downtime_maintenance_overrun`) · S7 `19b550a` (failure severity + ISO 14224 fields; `failure_events_v` counts confirmed failures) · S8 `bded959` (`GET /v2/production-events/selection` snapshot). Still waiting for plant data: D1 / D2 state mapping and heartbeat semantics, D6 thresholds per unit, D9 standby demand logs, D10 CMMS timestamps, D11 code dictionary, D17 critical assets and money limit (Area 5).
 
 | ID | Sev | Finding | Evidence | Status |
 |---|---|---|---|---|
