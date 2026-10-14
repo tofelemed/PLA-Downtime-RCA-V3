@@ -15,4 +15,8 @@ describe('codeNameResolver (FE-05)', () => {
     expect(nameOf('x')).toBe('Unknown');
     expect(nameOf(null)).toBe('—');
   });
+
+  it('an id not yet loaded is pending, not unknown', () => {
+    expect(codeNameResolver([], false)('x')).toBe('…');
+  });
 });

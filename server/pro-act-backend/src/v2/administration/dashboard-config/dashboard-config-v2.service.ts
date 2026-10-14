@@ -26,6 +26,19 @@ import {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+/** Only the keys the section still has: fields retired from the DTO stay harmless in stored rows. */
+function knownKeysOf<K extends DashboardSection>(
+  key: K,
+  stored: Record<string, unknown>,
+): DashboardSettingsDto[K] {
+  const defaults = DASHBOARD_DEFAULTS[key];
+  const known = Object.keys(defaults).filter((name) => name in stored);
+  return {
+    ...defaults,
+    ...Object.fromEntries(known.map((name) => [name, stored[name]])),
+  };
+}
+
 /** One stored section (a JSON string) over its defaults; unreadable JSON falls back to the defaults. */
 function sectionOf<K extends DashboardSection>(
   raw: string | undefined,
@@ -34,7 +47,7 @@ function sectionOf<K extends DashboardSection>(
   try {
     const parsed: unknown = raw ? JSON.parse(raw) : null;
     return isRecord(parsed)
-      ? { ...DASHBOARD_DEFAULTS[key], ...parsed }
+      ? knownKeysOf(key, parsed)
       : DASHBOARD_DEFAULTS[key];
   } catch {
     return DASHBOARD_DEFAULTS[key];

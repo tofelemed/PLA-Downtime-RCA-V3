@@ -22,7 +22,7 @@ export function DisplayCurrencyToggle({ className }: { className?: string }) {
       className={cn('gap-0', className)}
     >
       {DISPLAY_CURRENCIES.map((code) => (
-        <ToggleGroupItem key={code} value={code} aria-label={`Show money in ${code}`} className="h-8 px-2 text-xs" data-testid={`display-currency-${code}`}>
+        <ToggleGroupItem key={code} value={code} aria-label={`Show money in ${code}`} className="h-8 whitespace-nowrap px-2 text-xs" data-testid={`display-currency-${code}`}>
           {LABELS[code]}
         </ToggleGroupItem>
       ))}

@@ -72,6 +72,6 @@ export function drillEventQuery(filters: DowntimeFilters, reasonId: string | nul
 export function drillCrumbs(path: readonly string[], codes: readonly CodeView[]): Array<{ id: string; label: string }> {
   return path.map((id) => {
     const code = codes.find((entry) => entry.id === id);
-    return { id, label: code ? `${code.code} · ${code.name}` : 'Unknown reason' };
+    return { id, label: code ? `${code.code} · ${code.name}${code.active ? '' : ' (retired)'}` : 'Unknown reason' };
   });
 }

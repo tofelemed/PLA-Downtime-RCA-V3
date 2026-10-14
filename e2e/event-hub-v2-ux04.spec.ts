@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
-import { backToList, eventRowOf, fillPlantTime, openEventRow } from './personas/support/event-hub-ui';
+import { backToList, eventRowOf, fillPlantTime, openEventRow, pickReasonCode } from './personas/support/event-hub-ui';
 
 /**
  * Plan 3.2 exit test — UX04 operator journey on the v2 Event Hub (flag `v2.eventHub` switched on through
@@ -71,7 +71,7 @@ async function codeReason(page: Page, reasonId: string): Promise<void> {
   const drawer = page.getByTestId('event-detail');
   await drawer.getByRole('button', { name: 'Edit / code' }).click();
   const form = page.getByTestId('event-form');
-  await form.locator('#reasonCodeId').selectOption(reasonId);
+  await pickReasonCode(form.locator('#reasonCodeId'), reasonId);
   await expect(form.getByTestId('impacted-periods')).toBeVisible();
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();

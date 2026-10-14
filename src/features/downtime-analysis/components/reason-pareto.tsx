@@ -31,7 +31,7 @@ export function ReasonPareto({ filters, onChange, onEvents }: ReasonParetoProps)
   const groups = report?.groups ?? [];
   const labelOf = (group: DowntimeGroupView) => group.label ?? (group.key ? 'Unknown reason' : 'Not coded');
   const choose = (group: DowntimeGroupView) => {
-    const action = barAction(group, filters.reasonPath, env.reasonCodes);
+    const action = barAction(group, filters.reasonPath, env.allReasonCodes);
     if (action.kind === 'drill') onChange({ reasonPath: [...filters.reasonPath, action.reasonId] });
     else onEvents({ reasonId: action.reasonId, label: labelOf(group), group, unit: report?.unit ?? 's' });
   };
@@ -86,7 +86,7 @@ function MetricToggle({ metric, onChange }: { metric: DowntimeMetric; onChange: 
 
 function Breadcrumb({ path, onChange }: { path: string[]; onChange: (path: string[]) => void }) {
   const env = useEventHubEnv();
-  const crumbs = drillCrumbs(path, env.reasonCodes);
+  const crumbs = drillCrumbs(path, env.allReasonCodes);
   return (
     <nav aria-label="Reason level" className="flex flex-wrap items-center gap-1" data-testid="pareto-breadcrumb">
       <Button variant="link" size="sm" className="h-auto p-0" onClick={() => onChange([])} disabled={path.length === 0}>

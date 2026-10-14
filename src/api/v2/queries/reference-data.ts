@@ -29,14 +29,17 @@ export function useCodeLibrary(library: CodeLibrary, filters: CodeLibraryFilters
   });
 }
 
-/** Every page of a code library (FE-04): further pages load until the library is complete. */
-export function useAllCodes(library: CodeLibrary) {
-  const query = useCodeLibrary(library);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+/**
+ * Every page of a code library (FE-04): further keyset pages load until the library is complete
+ * (`complete`); `includeRetired` adds the codes no longer effective, so old events keep their name (FE-05).
+ */
+export function useAllCodes(library: CodeLibrary, filters: CodeLibraryFilters = {}) {
+  const query = useCodeLibrary(library, filters);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage, isError } = query;
   useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-  return query;
+    if (hasNextPage && !isFetchingNextPage && !isError) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, isError, fetchNextPage]);
+  return { ...query, complete: query.isSuccess && !hasNextPage };
 }
 
 /** Sites of the tenant with their IANA timezone (plan 2.1); the default site sets the plant timezone. */

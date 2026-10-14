@@ -21737,21 +21737,6 @@
       "OeeSettingsDto": {
         "type": "object",
         "properties": {
-          "availabilityWeight": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 10
-          },
-          "performanceWeight": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 10
-          },
-          "qualityWeight": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 10
-          },
           "targetOEE": {
             "type": "number",
             "minimum": 0,
@@ -21774,9 +21759,6 @@
           }
         },
         "required": [
-          "availabilityWeight",
-          "performanceWeight",
-          "qualityWeight",
           "targetOEE",
           "targetAvailability",
           "targetPerformance",
@@ -21786,21 +21768,12 @@
       "LossSettingsDto": {
         "type": "object",
         "properties": {
-          "lossValuePerUnit": {
-            "type": "number",
-            "minimum": 0
-          },
           "highLossThreshold": {
             "type": "number",
             "minimum": 0,
             "maximum": 100
           },
           "criticalLossThreshold": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "defaultUnaccountedLossPercentage": {
             "type": "number",
             "minimum": 0,
             "maximum": 100
@@ -21813,10 +21786,8 @@
           }
         },
         "required": [
-          "lossValuePerUnit",
           "highLossThreshold",
           "criticalLossThreshold",
-          "defaultUnaccountedLossPercentage",
           "defaultLossCategories"
         ]
       },

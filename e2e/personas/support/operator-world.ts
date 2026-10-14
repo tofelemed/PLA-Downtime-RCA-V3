@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { authenticate } from '../../test-utils/api-helpers';
 import { loginViaUI } from '../../test-utils/auth-helpers';
 import { call, command } from '../../test-utils/downtime-world';
-import { eventRowOf } from './event-hub-ui';
+import { eventRowOf, pickReasonCode } from './event-hub-ui';
 
 /**
  * Shared world of the OPERATOR persona tests (docs/DEMO_PERSONAS.md): the five operators of Demo
@@ -114,7 +114,7 @@ export async function codeReason(page: Page, reasonId: string): Promise<void> {
   const detail = page.getByTestId('event-detail');
   await detail.getByRole('button', { name: 'Edit / code' }).click();
   const form = page.getByTestId('event-form');
-  await form.locator('#reasonCodeId').selectOption(reasonId);
+  await pickReasonCode(form.locator('#reasonCodeId'), reasonId);
   await expect(form.getByTestId('impacted-periods')).toBeVisible();
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();

@@ -11,6 +11,7 @@ export interface ReasonSelectProps {
 
 /** Reconciliation reason picker: the shared searchable, leaf-only picker (FE-04). */
 export function ReasonSelect({ id, value, disabled, onChange }: ReasonSelectProps) {
-  const codes = useAllCodes('reason-codes');
+  // retired codes too: a line coded before the code was retired keeps its name on the trigger (FE-05)
+  const codes = useAllCodes('reason-codes', { includeRetired: true });
   return <ReasonCodePicker id={id} codes={flattenPages(codes.data?.pages)} value={value} disabled={disabled} onChange={onChange} emptyLabel="— choose —" />;
 }

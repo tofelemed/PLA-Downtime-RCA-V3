@@ -3,23 +3,20 @@ import { DashboardSettingsDto } from './dashboard-config-v2.dto';
 /**
  * Defaults of the plant dashboard settings (moved from the browser's `getDefaultDashboardConfiguration`,
  * which wrote them on page render). Returned while a plant stores none; "Reset to defaults" deletes the
- * stored settings so the plant follows these again.
+ * stored settings so the plant follows these again. The v1 constants nothing read (OEE weights, loss
+ * value per unit, default unaccounted %) were removed (FE-02); stored rows may still hold them and are
+ * filtered to these keys on read.
  */
 export const DASHBOARD_DEFAULTS: DashboardSettingsDto = {
   oee: {
-    availabilityWeight: 1,
-    performanceWeight: 1,
-    qualityWeight: 1,
     targetOEE: 85,
     targetAvailability: 90,
     targetPerformance: 95,
     targetQuality: 99,
   },
   losses: {
-    lossValuePerUnit: 100,
     highLossThreshold: 10,
     criticalLossThreshold: 20,
-    defaultUnaccountedLossPercentage: 30,
     defaultLossCategories: [
       'Downtime',
       'Breakdown',

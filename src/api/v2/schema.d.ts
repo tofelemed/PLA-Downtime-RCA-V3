@@ -6738,19 +6738,14 @@ export interface components {
             value: string;
         };
         OeeSettingsDto: {
-            availabilityWeight: number;
-            performanceWeight: number;
-            qualityWeight: number;
             targetOEE: number;
             targetAvailability: number;
             targetPerformance: number;
             targetQuality: number;
         };
         LossSettingsDto: {
-            lossValuePerUnit: number;
             highLossThreshold: number;
             criticalLossThreshold: number;
-            defaultUnaccountedLossPercentage: number;
             defaultLossCategories: string[];
         };
         CostSettingsDto: {
