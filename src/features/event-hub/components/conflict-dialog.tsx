@@ -33,6 +33,12 @@ const FIELD_LABEL: Readonly<Record<keyof EventFormValues, string>> = {
   originUnitId: 'Caused by unit',
   originAssetId: 'Caused by asset',
   plannedEndLocal: 'Approved planned end',
+  failureMode: 'Failure mode',
+  failureSeverity: 'Failure severity',
+  maintainableItem: 'Maintainable item',
+  failureMechanism: 'Failure mechanism',
+  failureCause: 'Failure cause',
+  detectionMethod: 'Detection method',
 };
 
 /**

@@ -46,6 +46,15 @@ export interface ProductionEventV2View {
   originAssetId: string | null;
   /** SME D4: approved end of a planned stop's window */
   plannedEndTime: string | null;
+  /** SME D8 / D11: failure detail (ISO 14224); null = not determined yet */
+  failure: {
+    mode: string | null;
+    severity: string | null;
+    maintainableItem: string | null;
+    mechanism: string | null;
+    cause: string | null;
+    detectionMethod: string | null;
+  };
   planId: string | null;
   reasonCodeId: string | null;
   rcaId: string | null;
@@ -107,6 +116,14 @@ export function toProductionEventV2View(
     plannedEndTime: event.plannedEndTime
       ? new Date(event.plannedEndTime).toISOString()
       : null,
+    failure: {
+      mode: event.failureMode ?? null,
+      severity: event.failureSeverity ?? null,
+      maintainableItem: event.maintainableItem ?? null,
+      mechanism: event.failureMechanism ?? null,
+      cause: event.failureCause ?? null,
+      detectionMethod: event.detectionMethod ?? null,
+    },
     planId: event.planId ?? null,
     reasonCodeId: event.reasonCodeId ?? null,
     rcaId: event.rcaId ?? null,

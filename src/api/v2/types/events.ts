@@ -26,6 +26,15 @@ export interface ProductionEventView {
   originAssetId: string | null;
   /** SME D4: approved end of a planned stop's window */
   plannedEndTime: string | null;
+  /** SME D8 / D11: failure detail (ISO 14224); null = not determined yet */
+  failure?: {
+    mode: string | null;
+    severity: string | null;
+    maintainableItem: string | null;
+    mechanism: string | null;
+    cause: string | null;
+    detectionMethod: string | null;
+  };
   planId: string | null;
   reasonCodeId: string | null;
   rcaId: string | null;

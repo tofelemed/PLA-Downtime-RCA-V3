@@ -3,6 +3,7 @@ import type { CreateEventBody } from '@/api/v2/queries/event-commands';
 import type { PatchEventInput } from '@/api/v2/queries/production-events';
 import { StaleRevisionError, V2ApiError } from '@/api/v2/errors';
 import type { ProductionEventView } from '@/api/v2/types/events';
+import { EMPTY_FAILURE, failureCreateFields, failurePatchFields, failureValuesOf, type FailureValues } from './failure-form';
 import { plantLocalToUtc, utcToPlantLocal } from './plant-local-time';
 
 /**
@@ -11,7 +12,7 @@ import { plantLocalToUtc, utcToPlantLocal } from './plant-local-time';
  * browser only checks what it must to build a request — interval rules (end after start, end and
  * duration agreeing within 1 s) are the server's and come back as 422 field errors.
  */
-export interface EventFormValues {
+export interface EventFormValues extends FailureValues {
   unitId: string;
   startLocal: string;
   endLocal: string;
@@ -48,6 +49,7 @@ export const EMPTY_FORM: EventFormValues = {
   originUnitId: '',
   originAssetId: '',
   plannedEndLocal: '',
+  ...EMPTY_FAILURE,
 };
 
 export function formValuesOf(event: ProductionEventView, timezone: string): EventFormValues {
@@ -65,6 +67,7 @@ export function formValuesOf(event: ProductionEventView, timezone: string): Even
     originUnitId: event.originUnitId ?? '',
     originAssetId: event.originAssetId ?? '',
     plannedEndLocal: utcToPlantLocal(event.plannedEndTime, timezone),
+    ...failureValuesOf(event),
   };
 }
 
@@ -119,6 +122,7 @@ export function toCreateBody(values: EventFormValues, timezone: string): CreateE
   const plannedEndTime = values.plannedEndLocal ? plantLocalToUtc(values.plannedEndLocal, timezone) : null;
   if (plannedEndTime) body.plannedEndTime = plannedEndTime;
   if (values.originAssetId) body.originAssetId = values.originAssetId;
+  Object.assign(body, failureCreateFields(values));
   const description = optional(values.description.trim());
   if (description) body.description = description;
   return body;
@@ -154,6 +158,7 @@ export function toPatchBody(initial: EventFormValues, values: EventFormValues, t
     changes.plannedEndTime = values.plannedEndLocal ? plantLocalToUtc(values.plannedEndLocal, timezone) : null;
   }
   if (values.originAssetId !== initial.originAssetId) changes.originAssetId = values.originAssetId || null;
+  Object.assign(changes, failurePatchFields(initial, values));
   const impactChanged = values.impactMode !== initial.impactMode || (values.impactMode === 'fractional' && values.impactPercent !== initial.impactPercent);
   if (impactChanged && values.impactMode && values.physicalType === 'downtime') {
     changes.impactMode = values.impactMode as PatchBody['impactMode'];
@@ -177,6 +182,12 @@ const SERVER_FIELDS: Readonly<Record<string, EventFormField>> = {
   originUnitId: 'originUnitId',
   originAssetId: 'originAssetId',
   plannedEndTime: 'plannedEndLocal',
+  failureMode: 'failureMode',
+  failureSeverity: 'failureSeverity',
+  maintainableItem: 'maintainableItem',
+  failureMechanism: 'failureMechanism',
+  failureCause: 'failureCause',
+  detectionMethod: 'detectionMethod',
 };
 
 export interface ServerFormErrors {

@@ -37,6 +37,7 @@ import { EventRevisionService } from '../../production-event/revisions/event-rev
 import { actorFromContext } from '../../production-event/revisions/revision-actor';
 import { RuleClassificationService } from '../../rules/rule-classification.service';
 import { EventReferencesValidator } from './event-references.validator';
+import { failureColumns } from './failure-detail';
 import { assertPlannedEnd, plannedEndColumn } from './planned-end';
 import {
   CreateProductionEventV2Dto,
@@ -340,6 +341,7 @@ function editableColumns(
     cost: dto.cost,
     impactFraction: dto.impactFraction,
     plannedEndTime: plannedEndColumn(dto.plannedEndTime),
+    ...failureColumns(dto),
   };
   return Object.fromEntries(
     Object.entries(columns).filter(([, value]) => value !== undefined),

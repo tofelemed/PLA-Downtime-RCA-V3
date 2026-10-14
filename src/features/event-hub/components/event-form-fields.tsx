@@ -11,6 +11,7 @@ import { plantLocalToUtc, utcToPlantLocal } from '../model/plant-local-time';
 import type { EventFormState } from '../hooks/use-event-form';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { ImpactFields } from './impact-fields';
+import { FailureFields } from './failure-fields';
 import { OriginFields } from './origin-fields';
 import { ReasonCodeSelect } from './reason-code-select';
 
@@ -110,6 +111,7 @@ export function EventFormFields({ form, mode }: { form: EventFormState; mode: 'c
         <PlantTimeField field="plannedEndLocal" label="Approved planned end (time after it is overrun)" form={form} />
       )}
       <OriginFields form={form} />
+      <FailureFields form={form} />
       <div className="sm:col-span-2">
         <ReasonCodeSelect id="reasonCodeId" value={values.reasonCodeId} onChange={(value) => setField('reasonCodeId', value)} error={errors.reasonCodeId} />
       </div>

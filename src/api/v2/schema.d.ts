@@ -5009,6 +5009,21 @@ export interface components {
              * @description SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun
              */
             plannedEndTime?: Record<string, never> | null;
+            /** @description SME D11: failure mode, e.g. external leakage */
+            failureMode?: Record<string, never> | null;
+            /**
+             * @description SME D8: critical / degraded count as functional failures (MTBF); incipient does not; null = pending
+             * @enum {string|null}
+             */
+            failureSeverity?: "critical" | "degraded" | "incipient" | null;
+            /** @description SME D11: maintainable item */
+            maintainableItem?: Record<string, never> | null;
+            /** @description SME D11: failure mechanism */
+            failureMechanism?: Record<string, never> | null;
+            /** @description SME D11: failure cause */
+            failureCause?: Record<string, never> | null;
+            /** @description SME D11: detection method */
+            detectionMethod?: Record<string, never> | null;
             description?: Record<string, never> | null;
             /** @example 12.5 */
             quantity?: Record<string, never> | null;
@@ -5073,6 +5088,21 @@ export interface components {
              * @description SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun
              */
             plannedEndTime?: Record<string, never> | null;
+            /** @description SME D11: failure mode, e.g. external leakage */
+            failureMode?: Record<string, never> | null;
+            /**
+             * @description SME D8: critical / degraded count as functional failures (MTBF); incipient does not; null = pending
+             * @enum {string|null}
+             */
+            failureSeverity?: "critical" | "degraded" | "incipient" | null;
+            /** @description SME D11: maintainable item */
+            maintainableItem?: Record<string, never> | null;
+            /** @description SME D11: failure mechanism */
+            failureMechanism?: Record<string, never> | null;
+            /** @description SME D11: failure cause */
+            failureCause?: Record<string, never> | null;
+            /** @description SME D11: detection method */
+            detectionMethod?: Record<string, never> | null;
             description?: Record<string, never> | null;
             /** @example 12.5 */
             quantity?: Record<string, never> | null;

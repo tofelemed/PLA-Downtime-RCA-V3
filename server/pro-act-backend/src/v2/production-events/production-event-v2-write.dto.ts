@@ -18,6 +18,7 @@ import {
   PHYSICAL_TYPES,
   SCHEDULE_CLASSES,
 } from '../../domain/events/event-classification';
+import { FAILURE_SEVERITIES } from './failure-detail';
 
 const DECIMAL = { decimal_digits: '0,8' };
 
@@ -122,6 +123,51 @@ export class ProductionEventV2EditableDto {
   @ValidateIf((_, value) => value !== null)
   @IsISO8601({ strict: true })
   plannedEndTime?: string | null;
+
+  @ApiPropertyOptional({ maxLength: 255, nullable: true, description: 'SME D11: failure mode, e.g. external leakage' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(255)
+  failureMode?: string | null;
+
+  @ApiPropertyOptional({
+    enum: FAILURE_SEVERITIES,
+    nullable: true,
+    description: 'SME D8: critical / degraded count as functional failures (MTBF); incipient does not; null = pending',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsIn(FAILURE_SEVERITIES)
+  failureSeverity?: (typeof FAILURE_SEVERITIES)[number] | null;
+
+  @ApiPropertyOptional({ maxLength: 100, nullable: true, description: 'SME D11: maintainable item' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(100)
+  maintainableItem?: string | null;
+
+  @ApiPropertyOptional({ maxLength: 100, nullable: true, description: 'SME D11: failure mechanism' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(100)
+  failureMechanism?: string | null;
+
+  @ApiPropertyOptional({ maxLength: 100, nullable: true, description: 'SME D11: failure cause' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(100)
+  failureCause?: string | null;
+
+  @ApiPropertyOptional({ maxLength: 100, nullable: true, description: 'SME D11: detection method' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(100)
+  detectionMethod?: string | null;
 
   @ApiPropertyOptional({ maxLength: 4000, nullable: true })
   @IsOptional()

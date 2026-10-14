@@ -111,6 +111,14 @@ describe('event form (plan 3.2 step 3)', () => {
     });
   });
 
+  it('SME D8 / D11: failure detail is sent when filled, trimmed, and cleared with null on edit', () => {
+    const failed = { ...values, failureMode: ' Seal leak ', failureSeverity: 'critical', maintainableItem: 'Seal' };
+    expect(toCreateBody(failed, TEHRAN)).toMatchObject({ failureMode: 'Seal leak', failureSeverity: 'critical', maintainableItem: 'Seal' });
+    expect(toCreateBody(values, TEHRAN)).not.toHaveProperty('failureSeverity');
+    const initial = { ...failed, durationMinutes: '' };
+    expect(toPatchBody(initial, { ...initial, failureSeverity: '', failureCause: 'Flush' }, TEHRAN)).toEqual({ failureSeverity: null, failureCause: 'Flush' });
+  });
+
   it('SME D4: the approved planned end is sent on the plant clock as UTC and cleared with null on edit', () => {
     const planned = { ...values, scheduleClass: 'planned', plannedEndLocal: '2026-10-09T10:00' };
     expect(toCreateBody(planned, TEHRAN)).toMatchObject({ plannedEndTime: '2026-10-09T06:30:00.000Z' });

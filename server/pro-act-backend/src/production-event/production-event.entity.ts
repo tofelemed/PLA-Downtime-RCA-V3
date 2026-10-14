@@ -246,6 +246,26 @@ export class ProductionEvent {
   })
   failureMode?: string;
 
+  /** SME D8: `critical` / `degraded` count as functional failures, `incipient` does not; null = pending */
+  @Column({ name: 'failure_severity', type: 'varchar', length: 16, nullable: true })
+  failureSeverity: string | null;
+
+  /** SME D11 (ISO 14224): maintainable item, e.g. mechanical seal */
+  @Column({ name: 'maintainable_item', type: 'varchar', length: 100, nullable: true })
+  maintainableItem: string | null;
+
+  /** SME D11 (ISO 14224): failure mechanism, e.g. wear */
+  @Column({ name: 'failure_mechanism', type: 'varchar', length: 100, nullable: true })
+  failureMechanism: string | null;
+
+  /** SME D11 (ISO 14224): failure cause, e.g. inadequate flush */
+  @Column({ name: 'failure_cause', type: 'varchar', length: 100, nullable: true })
+  failureCause: string | null;
+
+  /** SME D11 (ISO 14224): how the failure was detected, e.g. inspection */
+  @Column({ name: 'detection_method', type: 'varchar', length: 100, nullable: true })
+  detectionMethod: string | null;
+
   @Column({
     name: 'defective_quantity',
     type: 'decimal',
