@@ -64,6 +64,17 @@ export const TRANSITIONS: readonly Transition[] = [
   T('Closed', 'Analysis', 'independent_approval', 'note'),
 ];
 
+/** Statuses after the investigation was accepted: the team is frozen (CA1 independence). */
+export const TEAM_LOCKED_STATUSES: readonly RcaStatus[] = ['Monitoring', 'Closure Review', 'Closed'];
+
+/** The append-only participant list after adding `ids` (nulls ignored, order of first appearance kept). */
+export function withInvestigators(
+  current: readonly string[] | null | undefined,
+  ids: ReadonlyArray<string | null | undefined>,
+): string[] {
+  return [...new Set([...(current ?? []), ...ids.filter((id): id is string => Boolean(id))])];
+}
+
 /** Legacy rows without a status are drafts. */
 export function statusOf(stored: string | null | undefined): RcaStatus {
   return (RCA_STATUSES as readonly string[]).includes(stored ?? '')
@@ -92,13 +103,16 @@ export interface CaseParties {
   teamLeadId: string | null;
   teamMemberIds: readonly string[];
   closureRequestedBy: string | null;
+  /** append-only: everyone who ever opened, led, joined or requested closure of the case */
+  pastInvestigators: readonly string[];
 }
 
 export type IndependenceConflict =
   | 'creator'
   | 'team_lead'
   | 'team_member'
-  | 'closure_requester';
+  | 'closure_requester'
+  | 'past_investigator';
 
 /** CA1: the approver must not be the case's author, lead, a team member or whoever asked for closure. */
 export function independenceConflict(
@@ -109,5 +123,6 @@ export function independenceConflict(
   if (parties.teamLeadId === approver) return 'team_lead';
   if (parties.teamMemberIds.includes(approver)) return 'team_member';
   if (parties.closureRequestedBy === approver) return 'closure_requester';
+  if (parties.pastInvestigators.includes(approver)) return 'past_investigator';
   return null;
 }

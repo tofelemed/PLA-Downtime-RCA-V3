@@ -34,7 +34,8 @@ $$`;
 /**
  * Area 5 (EXPERT_REVIEW RCA-01, RCA-04, RCA-07, RCA-08; SME CA1-CA9, D17):
  * - `rcas`: author, consequence class (CA7), residual-risk disposition, closure request and independent
- *   approval (CA1), the effectiveness verdict frozen at closure.
+ *   approval (CA1), the effectiveness verdict frozen at closure, and `investigator_ids`: everyone who ever
+ *   opened, led, joined or requested closure of the case (append-only; never its closure approver).
  * - `rca_actions`: action type, completion files and who verified the completion evidence (CA4).
  * - `rca_trigger_outcome` + `linked_to_case` (CA8: a same-problem firing adds evidence to the open case).
  * - `rca_knowledge_base`: failure mode (similarity), organization sharing and lesson status (CA9), and
@@ -55,7 +56,8 @@ export class RcaClosureEffectiveness1793960000000
       `ALTER TABLE "rcas" ADD "created_by" uuid, ADD "consequence_class" character varying(16),
          ADD "residual_risk" text, ADD "closure_requested_by" uuid, ADD "closure_requested_at" TIMESTAMP WITH TIME ZONE,
          ADD "closure_approved_by" uuid, ADD "closure_approved_at" TIMESTAMP WITH TIME ZONE, ADD "closure_note" text,
-         ADD "effectiveness_verdict" character varying(24)`,
+         ADD "effectiveness_verdict" character varying(24),
+         ADD "investigator_ids" jsonb NOT NULL DEFAULT '[]'::jsonb`,
     );
     await queryRunner.query(
       `ALTER TABLE "rcas" ADD CONSTRAINT "CHK_rcas_consequence_class"
@@ -146,7 +148,7 @@ export class RcaClosureEffectiveness1793960000000
     );
     await queryRunner.query(
       `ALTER TABLE "rcas" DROP CONSTRAINT "CHK_rcas_effectiveness_verdict", DROP CONSTRAINT "CHK_rcas_consequence_class",
-         DROP COLUMN "effectiveness_verdict", DROP COLUMN "closure_note", DROP COLUMN "closure_approved_at",
+         DROP COLUMN "investigator_ids", DROP COLUMN "effectiveness_verdict", DROP COLUMN "closure_note", DROP COLUMN "closure_approved_at",
          DROP COLUMN "closure_approved_by", DROP COLUMN "closure_requested_at", DROP COLUMN "closure_requested_by",
          DROP COLUMN "residual_risk", DROP COLUMN "consequence_class", DROP COLUMN "created_by"`,
     );

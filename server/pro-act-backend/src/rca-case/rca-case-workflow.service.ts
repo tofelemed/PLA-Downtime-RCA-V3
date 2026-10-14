@@ -11,6 +11,7 @@ import {
   transitionOf,
   nextStatuses,
   TRANSITIONS,
+  withInvestigators,
 } from '../domain/rca/case-workflow';
 import { closeReadiness, CloseReadiness } from '../domain/rca/close-gate';
 import {
@@ -226,6 +227,7 @@ export class RcaCaseWorkflowService {
       return {
         residualRisk: input.residualRisk?.trim() ?? null,
         closureRequestedBy: input.scope.userId,
+        investigatorIds: withInvestigators(input.rca.investigatorIds, [input.scope.userId]),
         closureRequestedAt: now,
         effectivenessVerdict: input.rca.effectivenessVerdict ?? null,
         closureNote: input.note,

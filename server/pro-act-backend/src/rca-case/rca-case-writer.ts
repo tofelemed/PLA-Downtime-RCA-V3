@@ -8,7 +8,10 @@ import {
 import { writeDiagram } from './rca-case-diagram';
 import { writeJson } from './rca-case-json';
 import { templateLogicTree } from './rca-case-template';
-import { START_STATUSES } from '../domain/rca/case-workflow';
+import {
+  START_STATUSES,
+  withInvestigators,
+} from '../domain/rca/case-workflow';
 import {
   assertCaseUnit,
   invalidBody,
@@ -137,6 +140,10 @@ export async function insertCase(
     unitId,
     tenantId: scope.tenantId,
     createdBy: scope.userId,
+    investigatorIds: withInvestigators(
+      [],
+      [scope.userId, body.teamLeadId, ...(body.teamMemberIds ?? [])],
+    ),
   });
   return repository.save(entity);
 }

@@ -264,6 +264,13 @@ export class RCA {
   })
   effectivenessVerdict?: string | null;
 
+  /**
+   * CA1: everyone who ever opened, led, joined or requested closure of the case — append-only, so leaving
+   * the team never makes someone independent of it
+   */
+  @Column({ name: 'investigator_ids', type: 'jsonb', default: () => "'[]'::jsonb" })
+  investigatorIds: string[];
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

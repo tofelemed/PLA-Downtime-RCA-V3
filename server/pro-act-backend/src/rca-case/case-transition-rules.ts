@@ -81,6 +81,7 @@ export function partiesOf(rca: RCA): CaseParties {
     teamLeadId: rca.teamLeadId ?? null,
     teamMemberIds: readIds(rca.teamMemberIds),
     closureRequestedBy: rca.closureRequestedBy ?? null,
+    pastInvestigators: rca.investigatorIds ?? [],
   };
 }
 
@@ -89,6 +90,7 @@ const CONFLICT_WORDS = {
   team_lead: 'leads the investigation',
   team_member: 'is on the investigation team',
   closure_requester: 'requested the closure',
+  past_investigator: 'took part in the investigation',
 } as const;
 
 /** CA1: a manager approver independent of the investigation (403 otherwise, SuperAdmin included). */

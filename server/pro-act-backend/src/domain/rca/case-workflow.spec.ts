@@ -3,6 +3,7 @@ import {
   nextStatuses,
   statusOf,
   transitionOf,
+  withInvestigators,
 } from './case-workflow';
 
 describe('RCA case workflow (RCA-01 / SME CA1)', () => {
@@ -45,6 +46,7 @@ describe('RCA case workflow (RCA-01 / SME CA1)', () => {
       teamLeadId: 'lead',
       teamMemberIds: ['m1'],
       closureRequestedBy: 'requester',
+      pastInvestigators: ['left-the-team'],
     };
     expect(independenceConflict('author', parties)).toBe('creator');
     expect(independenceConflict('lead', parties)).toBe('team_lead');
@@ -52,6 +54,14 @@ describe('RCA case workflow (RCA-01 / SME CA1)', () => {
     expect(independenceConflict('requester', parties)).toBe(
       'closure_requester',
     );
+    expect(independenceConflict('left-the-team', parties)).toBe(
+      'past_investigator',
+    );
     expect(independenceConflict('reviewer', parties)).toBeNull();
+  });
+
+  it('the participant list only grows', () => {
+    expect(withInvestigators(['a'], ['b', null, 'a', undefined])).toEqual(['a', 'b']);
+    expect(withInvestigators(null, [])).toEqual([]);
   });
 });

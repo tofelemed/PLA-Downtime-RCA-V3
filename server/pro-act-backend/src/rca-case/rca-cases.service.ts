@@ -11,7 +11,12 @@ import {
   RcaCaseV2ListQueryDto,
   RcaCaseV2UpdateDto,
 } from '../v2/rca/rca-cases-v2.dto';
-import { statusOf } from '../domain/rca/case-workflow';
+import {
+  statusOf,
+  TEAM_LOCKED_STATUSES,
+  withInvestigators,
+} from '../domain/rca/case-workflow';
+import { readIds } from './rca-case-json';
 import {
   assertCaseReferences,
   caseColumns,
@@ -129,11 +134,42 @@ export class RcaCasesService {
           'the status changes through POST /v2/rcas/{id}/transitions (the case workflow), not by an edit',
         );
       }
+      assertTeamOpen(rca, body);
       await assertCaseReferences(manager, scope, body, unitId);
-      await manager.getRepository(RCA).save({ ...rca, ...caseColumns(body) });
+      await manager.getRepository(RCA).save({
+        ...rca,
+        ...caseColumns(body),
+        investigatorIds: withInvestigators(rca.investigatorIds, [
+          rca.teamLeadId,
+          ...readIds(rca.teamMemberIds),
+          body.teamLeadId,
+          ...(body.teamMemberIds ?? []),
+        ]),
+      });
     });
     return this.get(context, target.id);
   }
+}
+
+/**
+ * CA1: once the investigation is accepted (Monitoring, Closure Review, Closed) the team is frozen — nobody
+ * joins or leaves it, so the closure approver's independence is judged on a fixed team (422 TEAM_LOCKED).
+ */
+function assertTeamOpen(rca: RCA, body: RcaCaseV2UpdateDto): void {
+  if (!TEAM_LOCKED_STATUSES.includes(statusOf(rca.status))) return;
+  const leadChanged =
+    body.teamLeadId !== undefined && body.teamLeadId !== (rca.teamLeadId ?? null);
+  const current = readIds(rca.teamMemberIds);
+  const membersChanged =
+    body.teamMemberIds !== undefined &&
+    (body.teamMemberIds.length !== current.length ||
+      body.teamMemberIds.some((id) => !current.includes(id)));
+  if (!leadChanged && !membersChanged) return;
+  throw invalidBody(
+    'TEAM_LOCKED',
+    leadChanged ? 'teamLeadId' : 'teamMemberIds',
+    'the investigation team is fixed once the investigation is accepted (reopen the case to change it)',
+  );
 }
 
 function escapeLike(value: string): string {
