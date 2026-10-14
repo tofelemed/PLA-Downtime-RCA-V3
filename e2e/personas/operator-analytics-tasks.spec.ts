@@ -1,5 +1,6 @@
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { call } from '../test-utils/downtime-world';
+import { expandTreeNode } from './support/admin-helpers';
 import {
   DEMO_PLANT_ID, LINE_1_CODE, OPERATORS, loginOperator, logoutViaHeader, session, tag, unitByCode, writeControls,
   type UnitView,
@@ -27,18 +28,13 @@ const world = {} as World;
 
 const plantSelector = (page: Page) => page.locator('header button').filter({ hasText: /Demo Org|Select Plant/ }).first();
 
-/** Expands a tree row by its chevron (the row's first icon); the name span itself would select the row. */
-async function expandRow(tree: Locator, name: string): Promise<void> {
-  const rowOf = tree.getByText(name, { exact: true }).locator('..');
-  await rowOf.locator('svg').first().click();
-}
-
 async function pickUnitInPlantSelector(page: Page, unitName: string): Promise<void> {
   await plantSelector(page).click();
   const tree = page.getByRole('dialog');
   await expect(tree.getByText('Demo Org', { exact: true })).toBeVisible();
-  if (!(await tree.getByText('Demo Plant', { exact: true }).isVisible())) await expandRow(tree, 'Demo Org');
-  if (!(await tree.getByText(unitName, { exact: true }).isVisible())) await expandRow(tree, 'Demo Plant');
+  // chevron buttons ("Expand <name>"); an open node stays open, its units may still be loading
+  await expandTreeNode(tree, 'Demo Org');
+  await expandTreeNode(tree, 'Demo Plant');
   await tree.getByText(unitName, { exact: true }).click();
   await expect(plantSelector(page)).toContainText(unitName);
 }
@@ -114,6 +110,8 @@ test.describe('Operator — analytics, tasks and plant selection', () => {
     await logoutViaHeader(page);
     await loginOperator(page, OPERATORS.carlos);
     await page.goto('/tasks');
+    // the list is paged: find the task by its title, as above
+    await page.getByLabel('Search tasks').fill(title);
     await expect(page.locator('tr', { hasText: title })).toContainText('Completed', { timeout: 30_000 });
     const tasks = await call<TaskRecord[]>(world.carlos.token, 'GET', `/tasks?tenantId=${DEMO_PLANT_ID}`);
     const mine = tasks.body.find((task) => task.title === title);
