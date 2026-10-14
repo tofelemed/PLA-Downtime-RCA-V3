@@ -72,7 +72,7 @@ test.describe('Viewer — read-only-allowed routes, scope boundary, user lists',
     const download = page.waitForEvent('download');
     await page.getByTestId('export-period-summary-download').click();
     const file = await download;
-    expect(file.suggestedFilename()).toMatch(/^proact-period_summary-.+\.csv$/);
+    expect(file.suggestedFilename()).toMatch(/^traverse-forge-period_summary-.+\.csv$/);
     const csv = await readFile(await file.path(), 'utf8');
     expect(csv).toMatch(/status,approved/);
     expect(csv).toContain(unit);

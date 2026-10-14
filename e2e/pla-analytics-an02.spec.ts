@@ -145,10 +145,15 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
   test('AN03 Reports: named units always sent, approved revisions, async CSV export carries scope, status and run ids', async ({ page }) => {
     await loginViaUI(page, MANAGER.email, MANAGER.password);
     const unit = world.dashboard.unitId;
-    const anyUnits = reportRequest(page, 'oee', (url) => url.searchParams.getAll('unitIds').length > 0);
+    const firstOee = reportRequest(page, 'oee');
     await page.goto('/reports');
     await expect(page.getByTestId('reports-v2')).toBeVisible({ timeout: 60_000 });
-    await anyUnits; // "all units" is sent as the named list (§16.2)
+    // "all units" is sent as the named list (§16.2) up to 100 units; a bigger plant (the demo plant
+    // collects E2E units run after run) leaves the scope to the server rather than send a huge URL
+    const sent = new URL((await firstOee).url()).searchParams.getAll('unitIds');
+    const units = await call<{ items: unknown[]; nextCursor: string | null }>(manager, 'GET', '/v2/units?limit=100');
+    if (units.body.nextCursor === null) expect(sent).toHaveLength(units.body.items.length);
+    else expect(sent).toEqual([]);
 
     const scoped = reportRequest(page, 'oee', (url) => url.searchParams.getAll('unitIds').join() === unit && url.searchParams.get('approvedOnly') === 'true');
     await page.goto(scopeUrl('/reports', [unit], world.shiftA, '&approved=1'));
@@ -162,7 +167,7 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     const download = page.waitForEvent('download');
     await page.getByTestId('export-period-summary-download').click();
     const file = await download;
-    expect(file.suggestedFilename()).toMatch(/^proact-period_summary-.+\.csv$/);
+    expect(file.suggestedFilename()).toMatch(/^traverse-forge-period_summary-.+\.csv$/);
     const csv = await (await import('node:fs/promises')).readFile(await file.path(), 'utf8');
     expect(csv).toMatch(/status,approved/);
     expect(csv).toContain(unit);

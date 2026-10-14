@@ -120,8 +120,11 @@ test.describe('Viewer — home plant, plant switch, persistence', () => {
     if (sample) {
       const unit = demoUnits.find((entry) => entry.id === sample.unitId);
       expect(unit, 'the sample event belongs to a Demo Plant unit').toBeTruthy();
+      const filtered = page.waitForResponse((r) => r.url().includes('/v2/production-events?') && new URL(r.url()).searchParams.getAll('unitIds').includes((unit as UnitView).id));
       await chooseUnit(page, (unit as UnitView).name);
-      const rows = page.getByTestId('event-row');
+      await filtered; // the previous (unfiltered) list stays on screen until the filtered one answers
+      const rows = page.locator('tr', { has: page.getByTestId('event-row') }); // table rows: the unit is its own column
+      await expect(rows.first()).toContainText((unit as UnitView).name);
       const count = await rows.count();
       for (let i = 0; i < Math.min(count, 10); i += 1) await expect(rows.nth(i)).toContainText((unit as UnitView).name);
       note(test.info(), 'observation', `Event Hub rows in the default window for ${(unit as UnitView).name}: ${count}`);
@@ -132,8 +135,15 @@ test.describe('Viewer — home plant, plant switch, persistence', () => {
     expect(afterSwitch.length).toBeGreaterThan(0);
     // on every full page load the flag bootstrap first asks for the home plant (before the saved selection is
     // restored); that is a transient of the session tenant, not a data read of another plant: listed, not failed
-    const bootstrap = afterSwitch.filter((entry) => entry.url === '/api/v2/feature-flags' && entry.tenant === DEMO2.id);
-    if (bootstrap.length > 0) note(test.info(), 'observation', `GET /v2/feature-flags sent for the home plant ${bootstrap.length}× after the switch (one per full page load, before the stored selection is applied)`);
+    // the session bootstrap does the same for the user's own records: the home plant and organisation
+    // (AuthContext), the plant directories of the selector and the application-wide branding
+    const sessionReads = /^\/api\/v2\/(feature-flags|branding|tenants|organizations)(\/[0-9a-f-]{36})?$/;
+    const isOwnRecord = (url: string) => !url.startsWith('/api/v2/tenants/') || url.endsWith(DEMO2.id);
+    const bootstrap = afterSwitch.filter((entry) => entry.method === 'GET' && entry.tenant === DEMO2.id && sessionReads.test(entry.url) && isOwnRecord(entry.url));
+    if (bootstrap.length > 0) {
+      const kinds = [...new Set(bootstrap.map((entry) => entry.url.replace(/[0-9a-f-]{36}/, ':id')))].join(', ');
+      note(test.info(), 'observation', `session bootstrap reads sent for the home plant ${bootstrap.length}× after the switch (per full page load, before the stored selection is applied): ${kinds}`);
+    }
     const foreign = afterSwitch.filter((entry) => entry.tenant && entry.tenant !== DEMO.id && !bootstrap.includes(entry));
     expect(foreign, 'v2 data requests that named another plant').toEqual([]);
     const headerless = [...new Set(afterSwitch.filter((entry) => !entry.tenant).map((entry) => `${entry.method} ${entry.url}`))];

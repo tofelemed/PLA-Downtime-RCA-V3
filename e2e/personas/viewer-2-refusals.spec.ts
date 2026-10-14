@@ -118,27 +118,26 @@ test.describe('Viewer — every write in Demo Plant is refused (READ_ONLY_ROLE)'
     const title = tag('R2-task');
     await loginAsViewerInDemoPlant(page, VIEWERS.pedro);
     await page.goto('/tasks');
-    await page.getByRole('button', { name: 'New Task' }).click();
-    const dialog = page.getByRole('dialog').filter({ hasText: 'Create Task' });
-    await expect(dialog).toBeVisible();
-    await dialog.locator('input').first().fill(title);
-    await dialog.getByRole('combobox').first().click();
-    await page.getByRole('option').first().click();
-    const posted = page.waitForResponse((r) => /\/api\/tasks$/.test(r.url()) && r.request().method() === 'POST');
-    await dialog.getByRole('button', { name: 'Create Task' }).click();
+    await expect(page.getByRole('heading', { name: 'Tasks', level: 1 })).toBeVisible({ timeout: 60_000 });
+    // the read-only plant offers no New task; the form page (/tasks/new) reached directly is refused on save
+    await expect(page.getByRole('link', { name: 'New task' })).toHaveCount(0);
+    await page.goto('/tasks/new');
+    await expect(page.getByRole('heading', { name: 'New task', level: 1 })).toBeVisible({ timeout: 30_000 });
+    await page.getByLabel('Title').fill(title);
+    const posted = page.waitForResponse((r) => /\/api\/(v2\/)?tasks$/.test(r.url()) && r.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Create task' }).click();
     const response = await posted;
-    // the v1 client names the acting plant (X-Tenant-Id from the plant selection), so the server sees the
-    // viewer-only scope and refuses before anything is stored (WriteAccessGuard, 403 READ_ONLY_ROLE)
-    expect(response.request().headers()['x-tenant-id'], 'the v1 task client names the acting plant').toBe(DEMO.id);
-    const body = response.request().postDataJSON() as Record<string, unknown>;
-    expect(body.tenantId).toBe(DEMO.id);
-    expect(response.status(), 'POST /api/tasks from the read-only plant must be refused').toBe(403);
+    // the client names the acting plant, so the server sees the viewer-only scope and refuses before
+    // anything is stored (WriteAccessGuard, 403 READ_ONLY_ROLE)
+    expect(response.request().headers()['x-tenant-id'], 'the task client names the acting plant').toBe(DEMO.id);
+    expect(response.status(), 'POST tasks from the read-only plant must be refused').toBe(403);
     expect(((await response.json()) as ApiErrorBody).code).toBe('READ_ONLY_ROLE');
-    await expect(page.getByText('Save failed')).toBeVisible();
-    await expect(dialog).toBeVisible(); // the dialog stays open with the draft; no crash
+    await expect(page).toHaveURL(/\/tasks\/new$/); // stays on the form with the draft; no crash
     await page.screenshot({ path: test.info().outputPath('viewer-r2-task.png') });
     // the same payload sent directly with the acting plant named is refused the same way
-    const direct = await call<ApiErrorBody & { id?: string }>(pedro.token, 'POST', '/tasks', { ...body, title: `${title}-api` }, { ...DEMO_HEADER, 'X-Client-Audited': 'true' });
+    const body = response.request().postDataJSON() as Record<string, unknown>;
+    const path = new URL(response.url()).pathname.replace(/^\/api/, '');
+    const direct = await command<ApiErrorBody & { id?: string }>(pedro.token, path, { ...body, title: `${title}-api` }, { ...DEMO_HEADER, 'X-Client-Audited': 'true' });
     expect(direct.status).toBe(403);
     expect(direct.body.code).toBe('READ_ONLY_ROLE');
     expect(direct.body).not.toHaveProperty('id');
