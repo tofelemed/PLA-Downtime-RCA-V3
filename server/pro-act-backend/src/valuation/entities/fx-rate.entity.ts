@@ -4,6 +4,7 @@ import {
   VERSION_STATES,
   VersionState,
 } from '../../domain/profiles/profile.types';
+import { FxRateType } from '../../domain/valuation/valuation.types';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
 
 /**
@@ -15,11 +16,12 @@ import { decimalStringTransformer } from '../../v2/common/decimal-string.transfo
 @Entity('fx_rates')
 @Exclusion(
   'EX_fx_rates_approved_no_overlap',
-  `USING gist ("tenant_id" WITH =, "from_currency" WITH =, "to_currency" WITH =, ` +
+  `USING gist ("tenant_id" WITH =, "rate_type" WITH =, "from_currency" WITH =, "to_currency" WITH =, ` +
     `tstzrange("effective_from", "effective_to", '[)') WITH &&) WHERE ("state" = 'approved')`,
 )
-@Index('IDX_fx_rates_tenant_pair_from', [
+@Index('IDX_fx_rates_tenant_type_pair_from', [
   'tenantId',
+  'rateType',
   'fromCurrency',
   'toCurrency',
   'effectiveFrom',
@@ -30,6 +32,10 @@ import { decimalStringTransformer } from '../../v2/common/decimal-string.transfo
 )
 @Check('CHK_fx_rates_rate_positive', '"rate" > 0')
 @Check(
+  'CHK_fx_rates_rate_type',
+  `"rate_type" IN ('economic', 'group_reporting', 'budget')`,
+)
+@Check(
   'CHK_fx_rates_effective',
   '"effective_to" IS NULL OR "effective_to" > "effective_from"',
 )
@@ -38,6 +44,15 @@ import { decimalStringTransformer } from '../../v2/common/decimal-string.transfo
   `"state" <> 'approved' OR "approved_at" IS NOT NULL`,
 )
 export class FxRate extends TenantScopedEntity {
+  /** SME V5: the named rate table (purpose) this version belongs to; the policy picks one */
+  @Column({
+    name: 'rate_type',
+    type: 'varchar',
+    length: 20,
+    default: 'economic',
+  })
+  rateType: FxRateType;
+
   @Column({ name: 'from_currency', type: 'varchar', length: 3 })
   fromCurrency: string;
 

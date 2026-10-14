@@ -100,4 +100,36 @@ describe('baselineRecalcScope (LA-03)', () => {
       ),
     ).toBeNull();
   });
+
+  it('SME V7: an approved FX rate revalues every unit over whole months (the month average depends on it)', () => {
+    const scope = baselineRecalcScope(
+      'fx-1',
+      {
+        subject: 'fx_rate',
+        effectiveFrom: '2027-03-10T00:00:00.000Z',
+        effectiveTo: '2027-03-20T00:00:00.000Z',
+      },
+      { profileUnits: units, importWindow: null },
+    );
+    expect(scope).toEqual({
+      unitIds: null,
+      from: new Date('2027-02-28T00:00:00.000Z'),
+      to: new Date('2027-04-02T00:00:00.000Z'),
+    });
+  });
+
+  it('SME V7: a valuation policy or demand status revalues every unit over its validity', () => {
+    for (const subject of ['valuation_policy', 'demand_status']) {
+      const scope = baselineRecalcScope(
+        'x',
+        { subject, effectiveFrom: FROM, effectiveTo: null },
+        { profileUnits: units, importWindow: null },
+      );
+      expect(scope).toEqual({
+        unitIds: null,
+        from: new Date(FROM),
+        to: OPEN_ENDED,
+      });
+    }
+  });
 });

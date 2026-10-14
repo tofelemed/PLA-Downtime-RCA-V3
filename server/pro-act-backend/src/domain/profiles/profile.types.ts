@@ -40,8 +40,26 @@ export const VALUATION_BASES = [
   'contribution_margin',
   'standard_cost',
   'cost_per_hour',
+  'variable_cost',
+  'salvage_value',
+  'disposal_cost',
+  'downgrade_price_difference',
+  'rework_cost',
 ] as const;
 export type ValuationBasis = (typeof VALUATION_BASES)[number];
+
+/**
+ * SME V2 (14 Oct 2026): per-tonne product values of the economic view, always a profile's (product's):
+ * avoidable variable production cost already spent on scrap, salvage recovered from scrap, incremental
+ * disposal / handling cost, net price difference of a downgraded sale, incremental rework cost.
+ */
+export const PRODUCT_VALUE_BASES: ReadonlySet<ValuationBasis> = new Set([
+  'variable_cost',
+  'salvage_value',
+  'disposal_cost',
+  'downgrade_price_difference',
+  'rework_cost',
+]);
 
 export const RATE_IMPORT_KINDS = ['budget', 'forecast', 'mpc'] as const;
 export type RateImportKind = (typeof RATE_IMPORT_KINDS)[number];

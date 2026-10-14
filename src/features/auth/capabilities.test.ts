@@ -100,9 +100,11 @@ describe('capabilitiesOf', () => {
       ['canApproveRules', Roles.RULE_APPROVERS],
       ['canWriteRca', Roles.RCA_WRITERS],
       ['canWriteIntegration', Roles.INTEGRATION_WRITERS],
-      ['canManagePolicies', Roles.POLICY_ROLES],
+      ['canManageRcaPolicies', Roles.RCA_POLICY_WRITERS],
+      ['canMaintainValuation', Roles.FINANCE_MAINTAINERS],
+      ['canApproveValuation', Roles.FINANCE_APPROVERS],
     ];
-    const SCOPE_ROLES = ['manager_approver', 'production_accountant', 'production_engineer', 'reliability_engineer', 'integration_admin', 'master_data_admin', 'operator', 'viewer'];
+    const SCOPE_ROLES = ['manager_approver', 'production_accountant', 'finance_approver', 'finance_maintainer', 'production_engineer', 'reliability_engineer', 'integration_admin', 'master_data_admin', 'operator', 'viewer'];
 
     it.each(PINS)('%s: exactly the scope roles of its server set, plus the global admins', (key, set) => {
       for (const role of SCOPE_ROLES) expect([role, capabilitiesOf([role])[key]]).toEqual([role, set.includes(role)]);
@@ -112,7 +114,9 @@ describe('capabilitiesOf', () => {
 
     it('legacy roles count through their D06 mapping (TenantAdmin/Manager approve, Engineer/Analyst write plans)', () => {
       const manager = capabilitiesOf(effectiveRoles({ role: 'Manager' }, { tenantId: null }));
-      expect(manager.canApprovePlans && manager.canApprovePeriods && manager.canManagePolicies).toBe(true);
+      expect(manager.canApprovePlans && manager.canApprovePeriods && manager.canManageRcaPolicies).toBe(true);
+      // SME V1: production managers use approved rates but never set them
+      expect([manager.canMaintainValuation, manager.canApproveValuation]).toEqual([false, false]);
       const engineer = capabilitiesOf(effectiveRoles({ role: 'Engineer' }, { tenantId: null }));
       expect([engineer.canWritePlans, engineer.canWritePeriods, engineer.canApprovePlans, engineer.canWriteCodes]).toEqual([true, true, false, false]);
     });

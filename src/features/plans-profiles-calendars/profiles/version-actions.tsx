@@ -63,7 +63,11 @@ function RetireButton({ resource, disabled, error, timezone, onConfirm }: Retire
  * approved predecessor at this version's start. Retiring asks for confirmation first.
  */
 export function VersionActions({ resource, id, state, timezone, onEdit, testId, authorId }: VersionActionsProps) {
-  const { canWriteProfiles, canApproveProfiles } = useCapabilities();
+  const capabilities = useCapabilities();
+  // SME V1: valuation rates (margins, costs) are finance's; profiles and rates stay master data
+  const finance = resource === 'valuation-rates';
+  const canWriteProfiles = finance ? capabilities.canMaintainValuation : capabilities.canWriteProfiles;
+  const canApproveProfiles = finance ? capabilities.canApproveValuation : capabilities.canApproveProfiles;
   const access = approvalAccess(canApproveProfiles, authorId, useCurrentUserId());
   const transition = useVersionTransition();
   const [supersede, setSupersede] = useState(false);

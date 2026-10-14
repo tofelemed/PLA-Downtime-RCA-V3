@@ -1,5 +1,6 @@
 import { Dec, formatDec } from '../actuals/decimal';
 import {
+  EconomicComponent,
   LineValuation,
   LineViewValuation,
   ValuationPolicySnapshot,
@@ -19,6 +20,8 @@ export interface StoredComponent {
   quantity: string | null;
   seconds: string | null;
   amount: string;
+  /** economic view only (SME V2) */
+  component?: EconomicComponent;
 }
 
 export interface StoredAmount {
@@ -35,6 +38,9 @@ export interface StoredView {
   reason: string | null;
   components: StoredComponent[];
   amounts: StoredAmount[];
+  /** economic view only (SME V3 / V2): demand status applied, assumptions shown with the value */
+  demandStatusId?: string;
+  notes?: string[];
 }
 
 /** `loss_lines.valuation` (VAL03 snapshot): policy, valuation date, rates, FX versions, amounts, rounding. */
@@ -66,6 +72,7 @@ export function storeView(view: LineViewValuation): StoredView {
       quantity: str(c.quantity),
       seconds: str(c.seconds),
       amount: formatDec(c.amount),
+      ...(c.component ? { component: c.component } : {}),
     })),
     amounts: view.amounts.map((a) => ({
       currency: a.currency,
@@ -74,6 +81,17 @@ export function storeView(view: LineViewValuation): StoredView {
       fxRateIds: a.fxRateIds,
       native: a.native,
     })),
+    ...extrasOf(view),
+  };
+}
+
+/** Economic-view fields, written only when present so older snapshots keep their exact shape. */
+function extrasOf(
+  view: Pick<LineViewValuation, 'demandStatusId' | 'notes'>,
+): Pick<StoredView, 'demandStatusId' | 'notes'> {
+  return {
+    ...(view.demandStatusId ? { demandStatusId: view.demandStatusId } : {}),
+    ...(view.notes ? { notes: [...view.notes] } : {}),
   };
 }
 
@@ -108,6 +126,7 @@ function loadView(view: StoredView): LineViewValuation {
       quantity: dec(c.quantity),
       seconds: dec(c.seconds),
       amount: new Dec(c.amount),
+      ...(c.component ? { component: c.component } : {}),
     })),
     amounts: view.amounts.map((a) => ({
       currency: a.currency,
@@ -116,6 +135,7 @@ function loadView(view: StoredView): LineViewValuation {
       fxRateIds: a.fxRateIds,
       native: a.native,
     })),
+    ...extrasOf(view),
   };
 }
 

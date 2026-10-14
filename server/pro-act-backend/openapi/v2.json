@@ -6317,7 +6317,12 @@
               "enum": [
                 "contribution_margin",
                 "standard_cost",
-                "cost_per_hour"
+                "cost_per_hour",
+                "variable_cost",
+                "salvage_value",
+                "disposal_cost",
+                "downgrade_price_difference",
+                "rework_cost"
               ],
               "type": "string"
             }
@@ -9737,6 +9742,19 @@
             }
           },
           {
+            "name": "rateType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "economic",
+                "group_reporting",
+                "budget"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "name": "fromCurrency",
             "required": false,
             "in": "query",
@@ -9853,7 +9871,7 @@
     },
     "/api/v2/fx-rates/{id}/approve": {
       "post": {
-        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite.",
         "operationId": "FxRatesV2Controller_approve_v2",
         "parameters": [
           {
@@ -9901,7 +9919,7 @@
     },
     "/api/v2/fx-rates/{id}/retire": {
       "post": {
-        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). ",
+        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite.",
         "operationId": "FxRatesV2Controller_retire_v2",
         "parameters": [
           {
@@ -9932,6 +9950,249 @@
           }
         ],
         "summary": "Retire a draft or approved FX rate version",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/demand-statuses": {
+      "get": {
+        "operationId": "DemandStatusesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "approved",
+                "retired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List demand status versions (keyset on effectiveFrom, id)",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. A status applies to every unit making the product: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 INVALID_REFERENCE (product of another tenant), EVIDENCE_REQUIRED, INVALID_EFFECTIVE_DATES.",
+        "operationId": "DemandStatusesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandStatusCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft demand status of a product",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/demand-statuses/{id}": {
+      "get": {
+        "operationId": "DemandStatusesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one demand status version; foreign ids are 404",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/demand-statuses/{id}/approve": {
+      "post": {
+        "description": "A status applies to every unit making the product: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) status queues a recalculation of the periods it covers (`revaluation`).",
+        "operationId": "DemandStatusesV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft demand status",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/demand-statuses/{id}/retire": {
+      "post": {
+        "description": "A status applies to every unit making the product: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). SME V7: approving (or retiring an approved) status queues a recalculation of the periods it covers (`revaluation`).",
+        "operationId": "DemandStatusesV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a draft or approved demand status",
         "tags": [
           "v2 · Valuation"
         ]
@@ -10074,7 +10335,7 @@
     },
     "/api/v2/valuation-policies/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 CURRENCY_UNDECIDED for the XXX placeholder. Periods are revalued on their next recalculation.",
+        "description": "Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 CURRENCY_UNDECIDED for the XXX placeholder. SME V7: the periods from its start are queued for revaluation (`revaluation`); approved periods get a change proposal.",
         "operationId": "ValuationPoliciesV2Controller_approve_v2",
         "parameters": [
           {
@@ -10159,14 +10420,14 @@
             "name": "metric",
             "required": false,
             "in": "query",
-            "description": "margin = commercial opportunity (contribution margin), standard_cost = standard cost view, operational_cost = cost per hour of downtime, independent_components = margin + time cost of the impact codes the policy marks independent. Views are never added to each other.",
+            "description": "margin = commercial opportunity (contribution margin), standard_cost = standard cost view, operational_cost = cost per hour of downtime, independent_components = margin + time cost of the impact codes the policy marks independent, economic_impact = lost contribution on unrecovered sales + incremental costs (SME V2 / V3). Views are never added to each other. Absent: the default view of the tenant's newest approved valuation policy (SME V8), margin when none is approved.",
             "schema": {
-              "default": "margin",
               "enum": [
                 "margin",
                 "standard_cost",
                 "operational_cost",
-                "independent_components"
+                "independent_components",
+                "economic_impact"
               ],
               "type": "string"
             }
@@ -18952,7 +19213,12 @@
             "enum": [
               "contribution_margin",
               "standard_cost",
-              "cost_per_hour"
+              "cost_per_hour",
+              "variable_cost",
+              "salvage_value",
+              "disposal_cost",
+              "downgrade_price_difference",
+              "rework_cost"
             ]
           },
           "value": {
@@ -19981,6 +20247,16 @@
             "nullable": true,
             "description": "Exclusive end; absent or null = open-ended"
           },
+          "rateType": {
+            "type": "string",
+            "enum": [
+              "economic",
+              "group_reporting",
+              "budget"
+            ],
+            "default": "economic",
+            "description": "SME V5: the rate table by purpose — economic (treasury evidenced conversion basis), group_reporting (group translation policy) or budget. Name the market or fixing in `source`, not here."
+          },
           "fromCurrency": {
             "type": "string",
             "example": "USD"
@@ -20007,6 +20283,43 @@
           "rate"
         ]
       },
+      "DemandStatusCreateDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "example": "2027-01-01T02:30:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = open-ended"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "demand_constrained",
+              "not_constrained"
+            ],
+            "description": "demand_constrained = sold out: lost tonnes are lost sales; not_constrained = inventory or catch-up covers demand"
+          },
+          "evidence": {
+            "type": "string",
+            "description": "What substantiates it: unmet orders, inventory cover, ability to catch up, affected market"
+          }
+        },
+        "required": [
+          "effectiveFrom",
+          "productId",
+          "status",
+          "evidence"
+        ]
+      },
       "ValuationPolicyCreateDto": {
         "type": "object",
         "properties": {
@@ -20014,8 +20327,10 @@
             "type": "string",
             "enum": [
               "contribution_margin",
-              "standard_cost"
-            ]
+              "standard_cost",
+              "economic_impact"
+            ],
+            "description": "SME V8: economic_impact (lost contribution on unrecovered sales + incremental costs) needs demandRule"
           },
           "timeBasisRule": {
             "type": "string",
@@ -20047,6 +20362,62 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "fxRateType": {
+            "type": "string",
+            "enum": [
+              "economic",
+              "group_reporting",
+              "budget"
+            ],
+            "description": "SME V5 (version 3): the FX rate table that converts (default economic)"
+          },
+          "fxDateRule": {
+            "type": "string",
+            "enum": [
+              "event_date",
+              "period_average"
+            ],
+            "description": "SME V6: event_date (rate at each loss, summed into the month) or period_average (local-month average)"
+          },
+          "fxAverageMaxDeviation": {
+            "type": "object",
+            "nullable": true,
+            "example": "0.05",
+            "description": "period_average only: refuse the average when a rate of the month deviates more than this ratio"
+          },
+          "demandRule": {
+            "type": "string",
+            "enum": [
+              "demand_constrained_only",
+              "all_lost_output"
+            ],
+            "description": "SME V3: presence enables the economic view; demand_constrained_only charges lost contribution only where an approved demand status says the product was sold out"
+          },
+          "qualityDispositions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "scrap",
+                "downgrade",
+                "rework"
+              ]
+            },
+            "description": "SME V2: impact code id → scrap | downgrade | rework (impact codes of the tenant, 422 INVALID_REFERENCE)"
+          },
+          "defaultQualityDisposition": {
+            "type": "string",
+            "enum": [
+              "scrap",
+              "downgrade",
+              "rework"
+            ],
+            "nullable": true
+          },
+          "manualLineHours": {
+            "type": "boolean",
+            "description": "SME V4: manual downtime lines get a cost-per-hour value from the hours of their evidenced events"
           },
           "effectiveFrom": {
             "type": "string",

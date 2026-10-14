@@ -20,7 +20,7 @@ describe('FX rate form (mirrors the 422 fieldErrors of POST /fx-rates)', () => {
     const values = fx({ rate: '42000.0123456789', effectiveTo: '2026-11-01T02:30:00.000Z', source: ' CBI ' });
     expect(validateFxForm(values)).toEqual({});
     expect(fxCreateBody(values)).toEqual({
-      fromCurrency: 'USD', toCurrency: 'IRR', rate: '42000.0123456789',
+      rateType: 'economic', fromCurrency: 'USD', toCurrency: 'IRR', rate: '42000.0123456789',
       effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: '2026-11-01T02:30:00.000Z', source: 'CBI',
     });
   });
@@ -39,19 +39,25 @@ describe('FX rate form (mirrors the 422 fieldErrors of POST /fx-rates)', () => {
 });
 
 describe('valuation policy form and status', () => {
-  it('a new version copies the stored body; a fresh one starts from the D08 answer (IRR + USD, FX table)', () => {
+  it('a new version copies the stored body; a fresh one starts from the SME pilot settings (IRR + USD, economic view)', () => {
     const copied = policyFormOf(policy({ body: { defaultBasis: 'standard_cost', timeBasisRule: 'independent_components', fxPolicy: 'none', independentImpactCodeIds: ['c1'] }, reportingCurrencies: ['USD'] }));
     expect(copied).toMatchObject({ defaultBasis: 'standard_cost', timeBasisRule: 'independent_components', fxPolicy: 'none', reportingCurrencies: ['USD'], independentImpactCodeIds: ['c1'], effectiveFrom: null });
-    expect(policyFormOf(null)).toMatchObject({ defaultBasis: 'contribution_margin', timeBasisRule: 'exclusive', fxPolicy: 'snapshot', reportingCurrencies: ['IRR', 'USD'] });
+    expect(policyFormOf(null)).toMatchObject({ defaultBasis: 'economic_impact', timeBasisRule: 'exclusive', fxPolicy: 'snapshot', reportingCurrencies: ['IRR', 'USD'] });
+    expect(policyFormOf(null).economic).toMatchObject({ demandRule: 'demand_constrained_only', fxRateType: 'economic', fxDateRule: 'event_date' });
   });
 
   it('validates start and currencies; impact codes are sent only for independent components', () => {
     const values = { ...policyFormOf(null), effectiveFrom: '2026-11-01T02:30:00.000Z', independentImpactCodeIds: ['c1'] };
     expect(validatePolicyForm(values)).toEqual({});
     expect(policyCreateBody(values)).toEqual({
-      defaultBasis: 'contribution_margin', timeBasisRule: 'exclusive', reportingCurrencies: ['IRR', 'USD'], fxPolicy: 'snapshot',
+      defaultBasis: 'economic_impact', timeBasisRule: 'exclusive', reportingCurrencies: ['IRR', 'USD'], fxPolicy: 'snapshot',
       independentImpactCodeIds: [], effectiveFrom: '2026-11-01T02:30:00.000Z', notes: null,
+      fxRateType: 'economic', fxDateRule: 'event_date', fxAverageMaxDeviation: '0.05',
+      demandRule: 'demand_constrained_only', qualityDispositions: {}, defaultQualityDisposition: null, manualLineHours: true,
     });
+    const off = { ...values, economic: { ...values.economic, demandRule: 'none' as const } };
+    expect(validatePolicyForm(off)).toEqual({ defaultBasis: 'The economic view needs a lost-sales rule.' });
+    expect(policyCreateBody({ ...off, defaultBasis: 'contribution_margin' })).not.toHaveProperty('demandRule');
     expect(validatePolicyForm({ ...values, effectiveFrom: null, reportingCurrencies: [] })).toEqual({
       effectiveFrom: 'Enter the date and time it starts.', reportingCurrencies: 'Choose at least one reporting currency.',
     });

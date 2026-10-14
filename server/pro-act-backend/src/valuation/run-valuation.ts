@@ -34,11 +34,17 @@ function lostSeconds(line: LossLineDraft): Dec | null {
   return new Dec(ms).div(1000).mul(share);
 }
 
-/** Valuation of every line of a run (pure; profiles = slice → profile id). */
+/** Profile and product of a slice (the product only matters to the economic view, SME V3). */
+export interface SliceOwner {
+  profileId: string | null;
+  productId: string;
+}
+
+/** Valuation of every line of a run (pure; profiles = slice → profile and product). */
 export function valueRunLines(
   lines: readonly LossLineDraft[],
   context: ValuationContext,
-  profiles: ReadonlyMap<string, string | null>,
+  profiles: ReadonlyMap<string, SliceOwner>,
 ): LineValuation[] {
   return lines.map((line) =>
     valueLine(
@@ -49,8 +55,11 @@ export function valueRunLines(
         start: line.segmentStart,
         end: line.segmentEnd,
         seconds: lostSeconds(line),
-        profileId: profiles.get(line.sliceId) ?? null,
+        profileId: profiles.get(line.sliceId)?.profileId ?? null,
         impactCodeId: line.cause?.impactCodeId ?? null,
+        ...(context.policy.economic
+          ? { productId: profiles.get(line.sliceId)?.productId ?? null }
+          : {}),
       },
       context,
     ),

@@ -103,6 +103,7 @@ const VALUATION_TOTAL = {
         'contribution_margin',
         'standard_cost',
         'cost_per_hour',
+        'economic_impact',
         'independent_components',
       ],
     },

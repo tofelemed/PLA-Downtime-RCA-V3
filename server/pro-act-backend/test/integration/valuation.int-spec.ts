@@ -62,13 +62,17 @@ describe('valuation (plan 2.6)', () => {
 
   it('valuation rates are entered in a reporting currency only (IRR or USD)', async () => {
     const response = await env
-      .post('valuation-rates', {
-        profileId,
-        basis: 'contribution_margin',
-        value: '10',
-        currency: 'EUR',
-        effectiveFrom: '2027-03-01T00:00:00Z',
-      })
+      .post(
+        'valuation-rates',
+        {
+          profileId,
+          basis: 'contribution_margin',
+          value: '10',
+          currency: 'EUR',
+          effectiveFrom: '2027-03-01T00:00:00Z',
+        },
+        env.finance,
+      )
       .expect(422);
     expect((response.body as { code: string }).code).toBe(
       'CURRENCY_NOT_REPORTED',
@@ -90,11 +94,19 @@ describe('valuation (plan 2.6)', () => {
       'TENANT_SCOPE_REQUIRED',
     );
     await env
-      .post(`valuation-policies/${seeded.id}/approve`, {}, env.adminB)
+      .post(`valuation-policies/${seeded.id}/approve`, {}, env.financeApproverB)
       .expect(404);
     await env.get(`valuation-policies/${seeded.id}`, env.adminB).expect(404);
-    await env.post(`valuation-policies/${seeded.id}/approve`, {}).expect(200);
-    await env.post(`valuation-policies/${seeded.id}/approve`, {}).expect(409);
+    const manager = await env
+      .post(`valuation-policies/${seeded.id}/approve`, {}, env.approver)
+      .expect(403);
+    expect((manager.body as { code: string }).code).toBe('FORBIDDEN_ROLE');
+    await env
+      .post(`valuation-policies/${seeded.id}/approve`, {}, env.financeApprover)
+      .expect(200);
+    await env
+      .post(`valuation-policies/${seeded.id}/approve`, {}, env.financeApprover)
+      .expect(409);
     const content = {
       defaultBasis: 'contribution_margin',
       timeBasisRule: 'independent_components',
@@ -107,27 +119,30 @@ describe('valuation (plan 2.6)', () => {
       [env.world.tenantB],
     );
     const foreign = await env
-      .post('valuation-policies', {
-        ...content,
-        independentImpactCodeIds: [foreignCode.id],
-      })
+      .post(
+        'valuation-policies',
+        { ...content, independentImpactCodeIds: [foreignCode.id] },
+        env.finance,
+      )
       .expect(422);
     expect((foreign.body as { code: string }).code).toBe('INVALID_REFERENCE');
     await env.post('valuation-policies', content, unitUser).expect(403);
+    await env.post('valuation-policies', content, env.admin).expect(403);
     const created = await env
-      .post('valuation-policies', {
-        ...content,
-        independentImpactCodeIds: [impact],
-      })
+      .post(
+        'valuation-policies',
+        { ...content, independentImpactCodeIds: [impact] },
+        env.financeDual,
+      )
       .expect(201);
     const id = (created.body as { id: string; version: number }).id;
     expect((created.body as { version: number }).version).toBe(2);
     const self = await env
-      .post(`valuation-policies/${id}/approve`, {})
+      .post(`valuation-policies/${id}/approve`, {}, env.financeDual)
       .expect(403);
     expect((self.body as { code: string }).code).toBe('SEPARATION_OF_DUTIES');
     await env
-      .post(`valuation-policies/${id}/approve`, {}, env.approver)
+      .post(`valuation-policies/${id}/approve`, {}, env.financeApprover)
       .expect(200);
   });
 
@@ -199,21 +214,25 @@ describe('valuation (plan 2.6)', () => {
     expect((limited.body as { code: string }).code).toBe(
       'TENANT_SCOPE_REQUIRED',
     );
-    const created = await env
-      .post('fx-rates', {
-        fromCurrency: 'USD',
-        toCurrency: 'IRR',
-        rate: '500000',
-        effectiveFrom: '2027-01-01T00:00:00Z',
-        source: 'treasury',
-      })
-      .expect(201);
+    const fx = {
+      fromCurrency: 'USD',
+      toCurrency: 'IRR',
+      rate: '500000',
+      effectiveFrom: '2027-01-01T00:00:00Z',
+      source: 'treasury',
+    };
+    await env.post('fx-rates', fx, env.admin).expect(403);
+    const created = await env.post('fx-rates', fx, env.financeDual).expect(201);
     fxId = (created.body as { id: string }).id;
     await env.post(`fx-rates/${fxId}/approve`, {}, unitUser).expect(403);
     await env.get(`fx-rates/${fxId}`, env.adminB).expect(404);
-    const own = await env.post(`fx-rates/${fxId}/approve`, {}).expect(403);
+    const own = await env
+      .post(`fx-rates/${fxId}/approve`, {}, env.financeDual)
+      .expect(403);
     expect((own.body as { code: string }).code).toBe('SEPARATION_OF_DUTIES');
-    await env.post(`fx-rates/${fxId}/approve`, {}, env.approver).expect(200);
+    await env
+      .post(`fx-rates/${fxId}/approve`, {}, env.financeApprover)
+      .expect(200);
     await env.get('fx-rates', unitUser).expect(200);
     const body = await recompute();
     const line = stopLine(body);
@@ -341,19 +360,25 @@ describe('valuation (plan 2.6)', () => {
       [approved.revision.id],
     );
     const next = await env
-      .post('fx-rates', {
-        fromCurrency: 'USD',
-        toCurrency: 'IRR',
-        rate: '600000',
-        effectiveFrom: '2027-02-01T00:00:00Z',
-      })
+      .post(
+        'fx-rates',
+        {
+          fromCurrency: 'USD',
+          toCurrency: 'IRR',
+          rate: '600000',
+          effectiveFrom: '2027-02-01T00:00:00Z',
+        },
+        env.finance,
+      )
       .expect(201);
-    await env.post(`fx-rates/${fxId}/retire`, {}).expect(200);
+    await env
+      .post(`fx-rates/${fxId}/retire`, {}, env.financeApprover)
+      .expect(200);
     await env
       .post(
         `fx-rates/${(next.body as { id: string }).id}/approve`,
         {},
-        env.approver,
+        env.financeApprover,
       )
       .expect(200);
     await env

@@ -61,6 +61,11 @@ export function ValuationTiles({ period, ledger, approvedOnly }: ValuationTilesP
             Not priced: <Quantity value={u.quantity} uom={u.uom} />
           </p>
         ))}
+        {data && (
+          <Badge variant={data.valuationStatus === 'approved' ? 'default' : 'outline'} data-testid="valuation-status" data-status={data.valuationStatus}>
+            {data.valuationStatus === 'approved' ? 'Approved, reconciled value' : 'Provisional value'}
+          </Badge>
+        )}
         {report.data?.isProvisional && <p className="text-xs text-muted-foreground">Provisional: includes a revision that is not approved.</p>}
       </DataState>
     </section>

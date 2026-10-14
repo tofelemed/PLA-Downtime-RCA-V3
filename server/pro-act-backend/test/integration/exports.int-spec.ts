@@ -75,7 +75,8 @@ describe('report exports (plan 2.9)', () => {
       gap: '150',
       attributed: '150',
       residual: '0',
-      valuation_view: 'contribution_margin',
+      // SME V8: a new plant's first policy (v3 pilot settings) defaults to the economic view
+      valuation_view: 'economic_impact',
       value_1: '',
       currency_1: 'IRR',
       value_2: '',

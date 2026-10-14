@@ -5,6 +5,11 @@ import {
   ReconciledLine,
   ReconciledValuation,
 } from '../domain/valuation/reconciled-valuation';
+import {
+  ManualHours,
+  manualLineHours,
+  Span,
+} from '../domain/valuation/manual-line-hours';
 import { ValuationContext } from '../domain/valuation/valuation.types';
 import { loadLineValuation } from '../domain/valuation/valuation-snapshot';
 import { ValuationTotal } from '../domain/valuation/valuation-totals';
@@ -32,6 +37,7 @@ export interface ReviewedLineValuation {
     reason: string | null;
     rateVersionIds: string[];
     amounts: ReviewedAmount[];
+    notes?: string[];
   }>;
 }
 
@@ -83,6 +89,8 @@ function lineView(line: ReconciledLine): ReviewedLineValuation {
         reason: a.reason,
         fxRateIds: a.fxRateIds,
       })),
+      // economic view only (policy v3), so older reviewed content keeps its exact shape and hash
+      ...(v.notes ? { notes: v.notes } : {}),
     })),
   };
 }
@@ -126,14 +134,61 @@ function candidatesOf(state: RevisionState): ReconciledCandidate[] {
   });
 }
 
+const UNKEPT = new Set(['rejected', 'replaced']);
+
+/** Hours already charged by kept automatic downtime lines with a cause (their cost-per-hour view). */
+function claimedSpans(
+  state: RevisionState,
+  candidates: readonly ReconciledCandidate[],
+): Span[] {
+  const kept = new Set(
+    candidates
+      .filter((c) => !UNKEPT.has(c.state) && c.effectiveQuantity.gt(0))
+      .map((c) => c.lossLineId),
+  );
+  return state.candidateLines
+    .filter(
+      (l) => l.kind === 'availability' && l.causeEventId && kept.has(l.id),
+    )
+    .map((l) => ({
+      from: l.segmentStart.getTime(),
+      to: l.segmentEnd.getTime(),
+    }));
+}
+
+/** SME V4 (policy v3 `manualLineHours`): verified hours of the manual / replacing downtime lines. */
+function hoursOf(
+  state: RevisionState,
+  candidates: readonly ReconciledCandidate[],
+): Map<string, ManualHours> {
+  const windows = new Map(
+    state.slices.map((s) => [
+      s.id,
+      { from: s.windowFrom.getTime(), to: s.windowTo.getTime() },
+    ]),
+  );
+  const lines = state.lines.flatMap((l) => {
+    const window = windows.get(l.sliceId);
+    if (!OWN_QUANTITY_ACTIONS.has(l.action) || !l.kind || !window) return [];
+    const eventSpans = l.evidence.flatMap(
+      (e) => state.eventSpans.get(e.eventId) ?? [],
+    );
+    return [{ id: l.id, kind: l.kind, window, eventSpans }];
+  });
+  return manualLineHours(lines, claimedSpans(state, candidates));
+}
+
 /** The run's candidates with their decisions, the own-quantity lines and the slices, valued (2.6 × 2.8). */
 function reconcile(
   state: RevisionState,
   context: ValuationContext,
 ): ReconciledValuation {
+  const candidates = candidatesOf(state);
+  const economic = context.policy.economic;
+  const hours = economic?.manualLineHours ? hoursOf(state, candidates) : null;
   return reconciledValuation({
     context,
-    candidates: candidatesOf(state),
+    candidates,
     lines: state.lines
       .filter((l) => OWN_QUANTITY_ACTIONS.has(l.action))
       .map((l) => ({
@@ -143,10 +198,12 @@ function reconcile(
         quantity: decOf(l.quantity),
         uom: l.uom,
         impactCodeId: l.impactCodeId,
+        ...(hours?.has(l.id) ? { hours: hours.get(l.id) } : {}),
       })),
     slices: state.slices.map((s) => ({
       sliceId: s.id,
       profileId: s.profileId,
+      ...(economic ? { productId: s.productId } : {}),
       start: s.windowFrom,
       uom:
         state.reconciliation.slices.find((r) => r.sliceId === s.id)?.uom ??

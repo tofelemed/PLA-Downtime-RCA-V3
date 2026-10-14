@@ -25,27 +25,34 @@ describe('valuation rates (plan 2.2, v2 API)', () => {
 
   it('keeps margin versions on profiles and cost per hour on impact codes (valuation rates)', async () => {
     const margin = (body: object = {}) =>
-      env.post('valuation-rates', {
-        profileId: profileA1.id,
-        basis: 'contribution_margin',
-        value: '42.5',
-        currency: 'IRR',
-        effectiveFrom: '2026-10-01T00:00:00Z',
-        ...body,
-      });
+      env.post(
+        'valuation-rates',
+        {
+          profileId: profileA1.id,
+          basis: 'contribution_margin',
+          value: '42.5',
+          currency: 'IRR',
+          effectiveFrom: '2026-10-01T00:00:00Z',
+          ...body,
+        },
+        env.finance,
+      );
     const v1 = (await margin().expect(201)).body as {
       id: string;
       perUom: string;
       version: number;
     };
     expect(v1).toMatchObject({ perUom: 't', version: 1 });
-    expect(
-      await codeOf(
-        env.post(`valuation-rates/${v1.id}/approve`, {}).expect(403),
-      ),
-    ).toBe('SEPARATION_OF_DUTIES');
+    // SME V1: neither the finance maintainer nor a production manager approves a margin
+    for (const token of [env.finance, env.approver]) {
+      expect(
+        await codeOf(
+          env.post(`valuation-rates/${v1.id}/approve`, {}, token).expect(403),
+        ),
+      ).toBe('FORBIDDEN_ROLE');
+    }
     await env
-      .post(`valuation-rates/${v1.id}/approve`, {}, env.approver)
+      .post(`valuation-rates/${v1.id}/approve`, {}, env.financeApprover)
       .expect(200);
     const v2 = (
       await margin({
@@ -56,7 +63,7 @@ describe('valuation rates (plan 2.2, v2 API)', () => {
     expect(
       await codeOf(
         env
-          .post(`valuation-rates/${v2.id}/approve`, {}, env.approver)
+          .post(`valuation-rates/${v2.id}/approve`, {}, env.financeApprover)
           .expect(409),
       ),
     ).toBe('VERSION_OVERLAP');
@@ -64,7 +71,7 @@ describe('valuation rates (plan 2.2, v2 API)', () => {
       .post(
         `valuation-rates/${v2.id}/approve`,
         { supersede: true },
-        env.approver,
+        env.financeApprover,
       )
       .expect(200);
     const listed = await env
@@ -72,7 +79,7 @@ describe('valuation rates (plan 2.2, v2 API)', () => {
       .expect(200);
     expect(itemsOf(listed)).toHaveLength(2);
     const refused = (body: object) =>
-      codeOf(env.post('valuation-rates', body).expect(422));
+      codeOf(env.post('valuation-rates', body, env.finance).expect(422));
     const hourly = {
       impactCodeId: env.impactCodes.iA,
       basis: 'cost_per_hour',
@@ -80,7 +87,7 @@ describe('valuation rates (plan 2.2, v2 API)', () => {
       currency: 'IRR',
       effectiveFrom: '2026-10-01T00:00:00Z',
     };
-    await env.post('valuation-rates', hourly).expect(201);
+    await env.post('valuation-rates', hourly, env.finance).expect(201);
     expect(await refused({ ...hourly, impactCodeId: env.impactCodes.iB })).toBe(
       'INVALID_REFERENCE',
     );
@@ -122,8 +129,8 @@ describe('valuation rates (plan 2.2, v2 API)', () => {
       currency: 'IRR',
       effectiveFrom: '2026-10-01T00:00:00Z',
     };
-    expect(await codeOf(env.post('valuation-rates', body).expect(422))).toBe(
-      'INVALID_REFERENCE',
-    );
+    expect(
+      await codeOf(env.post('valuation-rates', body, env.finance).expect(422)),
+    ).toBe('INVALID_REFERENCE');
   });
 });

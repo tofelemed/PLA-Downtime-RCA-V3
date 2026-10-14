@@ -4,36 +4,82 @@
   "title": "Valuation basis policy",
   "description": "Which monetary basis values loss lines by default, how quantity-based and time-based valuations combine, and the reporting currencies and FX rule. Spec VAL01 (effective-dated margin or standard cost with currency; default commercial view = contribution margin; standard cost separately named; financial policy approval recorded before production use), VAL02 (duration cost and quantity cost are alternative bases unless categories are independent cost components), VAL03 (snapshot currency and FX version; never aggregate currencies without an approved conversion snapshot). Decision D08. Consumed by sub-phase 2.6 (`valuation_policies` is `accounting_policies` kind `valuation_basis`); approval is the `POST /valuation-policies/{id}/approve` command and lives on the row, not in this document.",
   "type": "object",
-  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "required": [
+    "policyKind",
+    "version",
+    "effectiveFrom",
+    "scope",
+    "body"
+  ],
   "additionalProperties": false,
   "properties": {
-    "policyKind": { "type": "string", "const": "valuation_basis" },
-    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
-    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
-    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
-    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
-    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
-    "body": { "$ref": "#/$defs/body" }
+    "policyKind": {
+      "type": "string",
+      "const": "valuation_basis"
+    },
+    "version": {
+      "$ref": "policy-envelope.schema.json#/$defs/version"
+    },
+    "effectiveFrom": {
+      "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom"
+    },
+    "effectiveTo": {
+      "$ref": "policy-envelope.schema.json#/$defs/effectiveTo"
+    },
+    "scope": {
+      "$ref": "policy-envelope.schema.json#/$defs/scope"
+    },
+    "notes": {
+      "$ref": "policy-envelope.schema.json#/$defs/notes"
+    },
+    "body": {
+      "$ref": "#/$defs/body"
+    }
   },
   "$defs": {
     "body": {
       "type": "object",
-      "required": ["defaultBasis", "timeBasisRule", "fxPolicy"],
+      "required": [
+        "defaultBasis",
+        "timeBasisRule",
+        "fxPolicy"
+      ],
       "oneOf": [
-        { "required": ["currency"], "properties": { "currency": true } },
-        { "required": ["reportingCurrencies"], "properties": { "reportingCurrencies": true } }
+        {
+          "required": [
+            "currency"
+          ],
+          "properties": {
+            "currency": true
+          }
+        },
+        {
+          "required": [
+            "reportingCurrencies"
+          ],
+          "properties": {
+            "reportingCurrencies": true
+          }
+        }
       ],
       "additionalProperties": false,
       "properties": {
         "defaultBasis": {
           "type": "string",
-          "enum": ["contribution_margin", "standard_cost"],
+          "enum": [
+            "contribution_margin",
+            "standard_cost",
+            "economic_impact"
+          ],
           "default": "contribution_margin",
-          "description": "Basis of the default commercial view (VAL01). The other basis stays available as a separately named view; neither is a realized saving."
+          "description": "Basis of the default commercial view (VAL01). The other basis stays available as a separately named view; neither is a realized saving. From version 3 (SME V8, 14 Oct 2026) `economic_impact` - lost contribution on unrecovered sales plus distinct incremental costs - is allowed when `demandRule` is present."
         },
         "timeBasisRule": {
           "type": "string",
-          "enum": ["exclusive", "independent_components"],
+          "enum": [
+            "exclusive",
+            "independent_components"
+          ],
           "default": "exclusive",
           "description": "`exclusive`: a loss is valued on one basis per view; lost margin is never added to a cost-per-hour rate that already includes it (VAL02). `independent_components`: summation allowed only for impact categories explicitly marked as independent cost components."
         },
@@ -46,21 +92,95 @@
           "minItems": 1,
           "maxItems": 2,
           "uniqueItems": true,
-          "items": { "$ref": "policy-envelope.schema.json#/$defs/currencyCode" },
+          "items": {
+            "$ref": "policy-envelope.schema.json#/$defs/currencyCode"
+          },
           "description": "From version 2 (D08 answer 2026-10-09: IRR and USD): every valued loss is reported in each of these currencies, converted through approved, dated `fx_rates` (VAL03); when no approved rate covers the valuation date the amount in that currency is null with reason `fx_rate_missing`, never estimated."
         },
         "independentImpactCodeIds": {
           "type": "array",
           "uniqueItems": true,
           "default": [],
-          "items": { "type": "string", "format": "uuid" },
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
           "description": "Impact codes whose cost per hour is an independent cost component (VAL02 `independent_components`): only for these are margin and time cost summed, in the separately named `independent_components` view."
         },
         "fxPolicy": {
           "type": "string",
-          "enum": ["none", "snapshot"],
+          "enum": [
+            "none",
+            "snapshot"
+          ],
           "default": "none",
           "description": "`none`: no conversion; an amount in another currency is null with reason `fx_rate_missing`. `snapshot`: convert with the approved `fx_rates` version in force on the valuation date and record its id (VAL03)."
+        },
+        "fxRateType": {
+          "type": "string",
+          "enum": [
+            "economic",
+            "group_reporting",
+            "budget"
+          ],
+          "default": "economic",
+          "description": "Version 3 (SME V5): which named FX rate table converts the values - the finance/treasury evidenced conversion basis (`economic`), the group accounting/translation policy (`group_reporting`) or a budget/constant-currency table (`budget`). Never a market label; the rate's `source` says where it comes from. Absent: `economic`."
+        },
+        "fxDateRule": {
+          "type": "string",
+          "enum": [
+            "event_date",
+            "period_average"
+          ],
+          "default": "event_date",
+          "description": "Version 3 (SME V6): the approved rate at each loss's date, summed into the month (default), or the time-weighted average of the approved rates over the period's local month."
+        },
+        "fxAverageMaxDeviation": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(0(\\.\\d{1,6})?|1(\\.0{1,6})?)$",
+          "default": null,
+          "description": "Version 3, `period_average` only: the average is refused (amount null, reason `fx_average_not_representative`) when a rate of the month deviates from it by more than this ratio. null = no check."
+        },
+        "demandRule": {
+          "type": "string",
+          "enum": [
+            "demand_constrained_only",
+            "all_lost_output"
+          ],
+          "description": "Version 3 (SME V3): presence enables the `economic_impact` view. `demand_constrained_only`: lost output is lost contribution only where an approved demand status of the product says demand was constrained (sold out); otherwise the lost-sales value is 0 with the tonnes kept. A missing status leaves the line unvalued (`demand_status_missing`)."
+        },
+        "qualityDispositions": {
+          "type": "object",
+          "default": {},
+          "propertyNames": {
+            "format": "uuid"
+          },
+          "additionalProperties": {
+            "enum": [
+              "scrap",
+              "downgrade",
+              "rework"
+            ]
+          },
+          "description": "Version 3 (SME V2 / E3): impact code id -> what happened to the quality-loss tonnes. scrap = lost contribution (only if the sale is not recovered) + variable cost - salvage + disposal; downgrade = net price difference + disposal/handling; rework = incremental rework cost."
+        },
+        "defaultQualityDisposition": {
+          "enum": [
+            "scrap",
+            "downgrade",
+            "rework",
+            null
+          ],
+          "default": null,
+          "description": "Version 3: disposition of quality lines whose impact code is not mapped; null = such lines stay unvalued (`disposition_missing`)."
+        },
+        "manualLineHours": {
+          "type": "boolean",
+          "default": false,
+          "description": "Version 3 (SME V4): manual downtime lines get a cost-per-hour value only for the hours of their evidenced (closed) events inside the slice, minus hours already charged by kept automatic lines or earlier manual lines."
         }
       }
     }

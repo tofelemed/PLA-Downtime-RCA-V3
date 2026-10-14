@@ -82,6 +82,11 @@ export class PlanWorld {
   approver = '';
   analyst = '';
   adminB = '';
+  /** SME V1: valuation is authored by a finance maintainer and approved by a finance approver */
+  finance = '';
+  financeApprover = '';
+  financeB = '';
+  financeApproverB = '';
 
   async start(): Promise<void> {
     await this.harness.start();
@@ -101,6 +106,10 @@ export class PlanWorld {
     this.approver = token(this.world.tenantA, 'TenantAdmin');
     this.analyst = token(this.world.tenantA, 'Analyst');
     this.adminB = token(this.world.tenantB, 'TenantAdmin');
+    this.finance = token(this.world.tenantA, 'finance_maintainer');
+    this.financeApprover = token(this.world.tenantA, 'finance_approver');
+    this.financeB = token(this.world.tenantB, 'finance_maintainer');
+    this.financeApproverB = token(this.world.tenantB, 'finance_approver');
     await this.seedCalendar();
     for (const unit of [this.world.unitA1, this.world.unitA2]) {
       for (const product of [this.products.p1, this.products.p2]) {

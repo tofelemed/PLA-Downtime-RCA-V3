@@ -151,6 +151,12 @@ export interface LossValueReportView {
   metric: string;
   view: string;
   label: string;
+  /** SME V8: the policy's default management view was used (no metric asked) */
+  defaultView: boolean;
+  /** SME V8 / R12: approved only when every shown period is approved */
+  valuationStatus: 'approved' | 'provisional';
+  approvedPeriods: number;
+  periods: number;
   ledger: LedgerKind;
   groupBy: string;
   basis: string;

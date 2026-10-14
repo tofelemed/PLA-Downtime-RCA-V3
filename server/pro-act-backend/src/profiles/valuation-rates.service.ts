@@ -8,7 +8,10 @@ import {
 } from '../common/context/request-context';
 import { scopedQuery } from '../common/query/scoped-query';
 import { toDec } from '../domain/actuals/decimal';
-import { ValuationBasis } from '../domain/profiles/profile.types';
+import {
+  PRODUCT_VALUE_BASES,
+  ValuationBasis,
+} from '../domain/profiles/profile.types';
 import { ProductionProfile } from './entities/production-profile.entity';
 import { ValuationRate } from './entities/valuation-rate.entity';
 import { invalid, invalidReference, notFound } from './profile-errors';
@@ -225,11 +228,12 @@ function assertBasisOwner(input: NewValuationRate): void {
   const fits =
     owners === 1 &&
     (input.basis !== 'cost_per_hour' || Boolean(input.impactCodeId)) &&
-    (input.basis !== 'contribution_margin' || Boolean(input.profileId));
+    (input.basis !== 'contribution_margin' || Boolean(input.profileId)) &&
+    (!PRODUCT_VALUE_BASES.has(input.basis) || Boolean(input.profileId));
   if (!fits) {
     throw invalid(
       'INVALID_OWNER',
-      'give profileId (contribution_margin, standard_cost) or impactCodeId (cost_per_hour, standard_cost)',
+      'give profileId (contribution_margin, standard_cost and the SME V2 product values) or impactCodeId (cost_per_hour, standard_cost)',
     );
   }
 }

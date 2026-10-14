@@ -38,14 +38,14 @@ function ApprovalBanner() {
  */
 export function PoliciesTab() {
   const navigate = useNavigate();
-  const { canManagePolicies } = useCapabilities();
+  const { canMaintainValuation } = useCapabilities();
   const policies = useValuationPolicies();
   return (
     <div className="space-y-4" data-testid="policies-tab">
       <ApprovalBanner />
       <div className="flex flex-wrap items-center gap-2">
         <ReadOnlyHint />
-        {canManagePolicies && (
+        {canMaintainValuation && (
           <Button onClick={() => navigate('/finance/policies/new')} data-testid="policy-new">
             <ActionIcon.add aria-hidden="true" />
             New policy version

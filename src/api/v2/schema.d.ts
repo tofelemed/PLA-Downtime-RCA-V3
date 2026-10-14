@@ -2872,7 +2872,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a draft FX rate version
-         * @description FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).
+         * @description FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite.
          */
         post: operations["FxRatesV2Controller_approve_v2"];
         delete?: never;
@@ -2892,9 +2892,87 @@ export interface paths {
         put?: never;
         /**
          * Retire a draft or approved FX rate version
-         * @description FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED).
+         * @description FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite.
          */
         post: operations["FxRatesV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/demand-statuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List demand status versions (keyset on effectiveFrom, id) */
+        get: operations["DemandStatusesV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a draft demand status of a product
+         * @description Requires `Idempotency-Key`. A status applies to every unit making the product: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 INVALID_REFERENCE (product of another tenant), EVIDENCE_REQUIRED, INVALID_EFFECTIVE_DATES.
+         */
+        post: operations["DemandStatusesV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/demand-statuses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one demand status version; foreign ids are 404 */
+        get: operations["DemandStatusesV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/demand-statuses/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a draft demand status
+         * @description A status applies to every unit making the product: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) status queues a recalculation of the periods it covers (`revaluation`).
+         */
+        post: operations["DemandStatusesV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/demand-statuses/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire a draft or approved demand status
+         * @description A status applies to every unit making the product: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). SME V7: approving (or retiring an approved) status queues a recalculation of the periods it covers (`revaluation`).
+         */
+        post: operations["DemandStatusesV2Controller_retire_v2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2950,7 +3028,7 @@ export interface paths {
         put?: never;
         /**
          * Record the finance approval of a valuation policy version
-         * @description Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 CURRENCY_UNDECIDED for the XXX placeholder. Periods are revalued on their next recalculation.
+         * @description Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 CURRENCY_UNDECIDED for the XXX placeholder. SME V7: the periods from its start are queued for revaluation (`revaluation`); approved periods get a change proposal.
          */
         post: operations["ValuationPoliciesV2Controller_approve_v2"];
         delete?: never;
@@ -5875,7 +5953,7 @@ export interface components {
              */
             impactCodeId?: string;
             /** @enum {string} */
-            basis: "contribution_margin" | "standard_cost" | "cost_per_hour";
+            basis: "contribution_margin" | "standard_cost" | "cost_per_hour" | "variable_cost" | "salvage_value" | "disposal_cost" | "downgrade_price_difference" | "rework_cost";
             /** @example 42.5 */
             value: string;
             /**
@@ -6319,6 +6397,12 @@ export interface components {
              * @example 2027-01-01T02:30:00Z
              */
             effectiveTo?: Record<string, never> | null;
+            /**
+             * @description SME V5: the rate table by purpose — economic (treasury evidenced conversion basis), group_reporting (group translation policy) or budget. Name the market or fixing in `source`, not here.
+             * @default economic
+             * @enum {string}
+             */
+            rateType: "economic" | "group_reporting" | "budget";
             /** @example USD */
             fromCurrency: string;
             /** @example IRR */
@@ -6331,9 +6415,30 @@ export interface components {
             /** @description Where the rate comes from (free text) */
             source?: Record<string, never> | null;
         };
+        DemandStatusCreateDto: {
+            /** @example 2026-10-01T02:30:00Z */
+            effectiveFrom: string;
+            /**
+             * @description Exclusive end; absent or null = open-ended
+             * @example 2027-01-01T02:30:00Z
+             */
+            effectiveTo?: Record<string, never> | null;
+            /** Format: uuid */
+            productId: string;
+            /**
+             * @description demand_constrained = sold out: lost tonnes are lost sales; not_constrained = inventory or catch-up covers demand
+             * @enum {string}
+             */
+            status: "demand_constrained" | "not_constrained";
+            /** @description What substantiates it: unmet orders, inventory cover, ability to catch up, affected market */
+            evidence: string;
+        };
         ValuationPolicyCreateDto: {
-            /** @enum {string} */
-            defaultBasis: "contribution_margin" | "standard_cost";
+            /**
+             * @description SME V8: economic_impact (lost contribution on unrecovered sales + incremental costs) needs demandRule
+             * @enum {string}
+             */
+            defaultBasis: "contribution_margin" | "standard_cost" | "economic_impact";
             /** @enum {string} */
             timeBasisRule: "exclusive" | "independent_components";
             /**
@@ -6346,6 +6451,34 @@ export interface components {
             /** @enum {string} */
             fxPolicy: "none" | "snapshot";
             independentImpactCodeIds?: string[];
+            /**
+             * @description SME V5 (version 3): the FX rate table that converts (default economic)
+             * @enum {string}
+             */
+            fxRateType?: "economic" | "group_reporting" | "budget";
+            /**
+             * @description SME V6: event_date (rate at each loss, summed into the month) or period_average (local-month average)
+             * @enum {string}
+             */
+            fxDateRule?: "event_date" | "period_average";
+            /**
+             * @description period_average only: refuse the average when a rate of the month deviates more than this ratio
+             * @example 0.05
+             */
+            fxAverageMaxDeviation?: Record<string, never> | null;
+            /**
+             * @description SME V3: presence enables the economic view; demand_constrained_only charges lost contribution only where an approved demand status says the product was sold out
+             * @enum {string}
+             */
+            demandRule?: "demand_constrained_only" | "all_lost_output";
+            /** @description SME V2: impact code id → scrap | downgrade | rework (impact codes of the tenant, 422 INVALID_REFERENCE) */
+            qualityDispositions?: {
+                [key: string]: "scrap" | "downgrade" | "rework";
+            };
+            /** @enum {string|null} */
+            defaultQualityDisposition?: "scrap" | "downgrade" | "rework" | null;
+            /** @description SME V4: manual downtime lines get a cost-per-hour value from the hours of their evidenced events */
+            manualLineHours?: boolean;
             /** @example 2027-01-01T00:00:00Z */
             effectiveFrom: string;
             notes?: Record<string, never> | null;
@@ -9868,7 +10001,7 @@ export interface operations {
                 to?: string;
                 profileId?: string;
                 impactCodeId?: string;
-                basis?: "contribution_margin" | "standard_cost" | "cost_per_hour";
+                basis?: "contribution_margin" | "standard_cost" | "cost_per_hour" | "variable_cost" | "salvage_value" | "disposal_cost" | "downgrade_price_difference" | "rework_cost";
                 state?: "draft" | "approved" | "retired";
             };
             header?: never;
@@ -11456,6 +11589,7 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+                rateType?: "economic" | "group_reporting" | "budget";
                 fromCurrency?: string;
                 toCurrency?: string;
                 state?: "draft" | "approved" | "retired";
@@ -11542,6 +11676,123 @@ export interface operations {
         };
     };
     FxRatesV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DemandStatusesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                productId?: string;
+                state?: "draft" | "approved" | "retired";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DemandStatusesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemandStatusCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DemandStatusesV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DemandStatusesV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DemandStatusesV2Controller_retire_v2: {
         parameters: {
             query?: never;
             header: {
@@ -11663,8 +11914,8 @@ export interface operations {
                 unitIds?: string[];
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
-                /** @description margin = commercial opportunity (contribution margin), standard_cost = standard cost view, operational_cost = cost per hour of downtime, independent_components = margin + time cost of the impact codes the policy marks independent. Views are never added to each other. */
-                metric?: "margin" | "standard_cost" | "operational_cost" | "independent_components";
+                /** @description margin = commercial opportunity (contribution margin), standard_cost = standard cost view, operational_cost = cost per hour of downtime, independent_components = margin + time cost of the impact codes the policy marks independent, economic_impact = lost contribution on unrecovered sales + incremental costs (SME V2 / V3). Views are never added to each other. Absent: the default view of the tenant's newest approved valuation policy (SME V8), margin when none is approved. */
+                metric?: "margin" | "standard_cost" | "operational_cost" | "independent_components" | "economic_impact";
                 ledger?: "plan" | "capacity";
                 /** @description kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only */
                 groupBy?: "kind" | "unit" | "day" | "month";

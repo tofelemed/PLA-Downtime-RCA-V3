@@ -5,10 +5,11 @@ import { useUrlParam } from '@/features/codes-admin/hooks/use-url-param';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { RecalculationNotice } from './components/recalculation-notice';
+import { DemandStatusesTab } from './demand/demand-statuses-tab';
 import { FxRatesTab } from './fx/fx-rates-tab';
 import { PoliciesTab } from './policies/policies-tab';
 
-const TABS = ['policies', 'fx'] as const;
+const TABS = ['policies', 'fx', 'demand'] as const;
 type FinanceTab = (typeof TABS)[number];
 
 function FinanceScreen() {
@@ -19,7 +20,7 @@ function FinanceScreen() {
       <div className="space-y-6" data-testid="finance">
         <PageHeader
           title="Finance"
-          description={`Valuation policy and exchange rates of this plant. Times in ${timezone}${utcFallback ? ' (no plant timezone set)' : ''}.`}
+          description={`Valuation policy, exchange rates and product demand of this plant. Times in ${timezone}${utcFallback ? ' (no plant timezone set)' : ''}.`}
         />
         <RecalculationNotice />
         <Tabs value={tab} onValueChange={(value) => setTab(value as FinanceTab)}>
@@ -30,12 +31,18 @@ function FinanceScreen() {
             <TabsTrigger value="fx" data-testid="tab-fx-rates">
               Exchange rates
             </TabsTrigger>
+            <TabsTrigger value="demand" data-testid="tab-demand">
+              Demand
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="policies" className="pt-4">
             <PoliciesTab />
           </TabsContent>
           <TabsContent value="fx" className="pt-4">
             <FxRatesTab />
+          </TabsContent>
+          <TabsContent value="demand" className="pt-4">
+            <DemandStatusesTab />
           </TabsContent>
         </Tabs>
       </div>

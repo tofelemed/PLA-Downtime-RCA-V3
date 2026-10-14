@@ -1,18 +1,19 @@
 import { EntityManager } from 'typeorm';
 import {
   parseValuationPolicy,
-  VALUATION_POLICY_V2_BODY,
+  VALUATION_POLICY_V3_BODY,
 } from '../domain/valuation/valuation-policy';
 import { ValuationPolicySnapshot } from '../domain/valuation/valuation.types';
 import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
 
 const KIND = 'valuation_basis';
 const FIRST_USE_NOTE =
-  'Seeded on first use from the D08 answer of 2026-10-09 (IRR and USD, FX snapshot); unapproved until a manager approver records the finance approval (VAL01).';
+  'Seeded on first use with the SME V1-V8 pilot settings of 2026-10-14 (IRR and USD, economic view by default); unapproved until a finance approver records the sign-off (V1).';
 
 /**
- * A tenant without any `valuation_basis` version gets version 1 with the D08 body (IRR and USD), unapproved
- * — existing tenants got v1 (XXX history) and v2 from the migration. Idempotent under concurrency.
+ * A tenant without any `valuation_basis` version gets version 1 with the SME V1–V8 body (v3 defaults: IRR
+ * and USD, economic view), unapproved — existing tenants got v1 (XXX history), v2 and v3 from the
+ * migrations. Idempotent under concurrency.
  */
 export async function ensureValuationPolicy(
   manager: EntityManager,
@@ -24,7 +25,7 @@ export async function ensureValuationPolicy(
      SELECT $1, 1, $2::accounting_policy_kind, NULL, 'tenant', 1, $3::jsonb, '1970-01-01T00:00:00Z', NULL, $4
       WHERE NOT EXISTS (SELECT 1 FROM "accounting_policies" WHERE "tenant_id" = $1 AND "policy_kind" = $2::accounting_policy_kind)
      ON CONFLICT DO NOTHING`,
-    [tenantId, KIND, JSON.stringify(VALUATION_POLICY_V2_BODY), FIRST_USE_NOTE],
+    [tenantId, KIND, JSON.stringify(VALUATION_POLICY_V3_BODY), FIRST_USE_NOTE],
   );
 }
 

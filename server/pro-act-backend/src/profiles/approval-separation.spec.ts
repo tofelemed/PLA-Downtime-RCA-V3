@@ -186,5 +186,8 @@ separationSuite('FxRatesService', (row) => {
   const { manager, save } = fakeManager(row);
   const service = new FxRatesService(repositoryOver<FxRate>(manager));
   jest.spyOn(service, 'get').mockResolvedValue(row as unknown as FxRate);
-  return { approve: (ctx) => service.approve(ctx, 'row-1', false), save };
+  return {
+    approve: async (ctx) => (await service.approve(ctx, 'row-1', false)).rate,
+    save,
+  };
 });

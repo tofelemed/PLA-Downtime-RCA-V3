@@ -27,15 +27,15 @@ function SupersedeChoice({ checked, onChange }: { checked: boolean; onChange: (o
 /**
  * Approve / retire one exchange rate version, each after a confirmation. The server decides who may
  * (403) and whether it overlaps an approved version of the pair (409, the conflicting versions are
- * listed in the dialog). Only manager approvers see these actions; the author sees approve disabled.
+ * listed in the dialog). Only finance approvers see these actions (SME V1); the author sees approve disabled.
  */
 export function FxVersionActions({ rate }: { rate: FxRateView }) {
-  const { canApproveProfiles } = useCapabilities();
-  const access = approvalAccess(canApproveProfiles, rate.createdBy, useCurrentUserId());
+  const { canApproveValuation } = useCapabilities();
+  const access = approvalAccess(canApproveValuation, rate.createdBy, useCurrentUserId());
   const transition = useFxTransition();
   const [pending, setPending] = useState<Pending>(null);
   const [supersede, setSupersede] = useState(false);
-  if (rate.state === 'retired' || !canApproveProfiles) return null;
+  if (rate.state === 'retired' || !canApproveValuation) return null;
   const onOpenChange = (next: boolean) => {
     if (next) return;
     setPending(null);
@@ -56,7 +56,7 @@ export function FxVersionActions({ rate }: { rate: FxRateView }) {
         open={pending === 'approve'}
         onOpenChange={onOpenChange}
         title={`Approve 1 ${rate.fromCurrency} = ${rate.rate} ${rate.toCurrency}?`}
-        description="Valuation uses the approved rate for losses inside its validity. Periods are revalued only when they are next recalculated."
+        description="Valuation uses the approved rate for losses inside its validity. Approving queues a recalculation of the periods of its months; approved periods get a change proposal."
         confirmLabel="Approve rate"
         onConfirm={() => transition.submit({ id: rate.id, action: 'approve', supersede })}
       >

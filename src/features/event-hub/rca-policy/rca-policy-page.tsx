@@ -40,7 +40,7 @@ export function RcaPolicyPage() {
 
 function RcaPolicyScreen() {
   const env = useEventHubEnv();
-  const { canManagePolicies } = useCapabilities();
+  const { canManageRcaPolicies } = useCapabilities();
   const [params, setParams] = useSearchParams();
   const unitId = params.get('unit');
   const current = useCurrentRcaPolicy(unitId);
@@ -70,8 +70,8 @@ function RcaPolicyScreen() {
         </DataState>
       </Section>
       <Section title="New version" description="Takes effect immediately for new and running events; earlier recommendations stay as they were.">
-        {!canManagePolicies && <ReadOnlyHint />}
-        {canManagePolicies && current.data && <RcaPolicyForm key={`${unitId ?? 'plant'}:${current.data.id}`} current={current.data} unitId={unitId} />}
+        {!canManageRcaPolicies && <ReadOnlyHint />}
+        {canManageRcaPolicies && current.data && <RcaPolicyForm key={`${unitId ?? 'plant'}:${current.data.id}`} current={current.data} unitId={unitId} />}
       </Section>
       <Section title="Version history" collapsible defaultOpen={false}>
         <VersionHistory unitId={unitId} />

@@ -1,7 +1,8 @@
 /**
  * Production profiles (unit × product, t per h) with approved nameplate, sustained and planning rates,
  * and the USD valuation rates: contribution margin and standard cost per tonne per profile, cost per hour
- * per impact code. Authored by a master-data admin, approved by a manager (never the author). The
+ * per impact code. Profiles and rates: a master-data admin authors, a manager approves; valuation rates:
+ * a finance maintainer authors, a finance approver approves (SME V1). Never the author. The
  * approved valuation policy and the approved USD→IRR FX rate of the plant are reused, never changed.
  */
 import { MASTER_DATA_FROM, PLANNING_FACTOR, UnitSpec } from './catalog-plants';
@@ -160,14 +161,14 @@ export async function seedProfiles(ctx: ShowcaseContext): Promise<void> {
   await seedValuationRates(ctx);
 }
 
-interface ValuationKey {
+export interface ValuationKey {
   label: string;
   query: Record<string, string>;
   body: Record<string, string>;
 }
 
 /** Creates the approved version from FROM up to the earliest approved one (open-ended when none). */
-async function ensureValuation(
+export async function ensureValuation(
   ctx: ShowcaseContext,
   author: PersonaSession,
   key: ValuationKey,
@@ -195,7 +196,7 @@ async function ensureValuation(
     `valuation ${key.label}`,
   );
   await ctx
-    .approverOtherThan(ctx.personaOf(author), 2)
+    .financeApproverOtherThan(ctx.personaOf(author), 1)
     .post(
       `/v2/valuation-rates/${draft.id}/approve`,
       {},
@@ -204,7 +205,8 @@ async function ensureValuation(
 }
 
 async function seedValuationRates(ctx: ShowcaseContext): Promise<void> {
-  const author = ctx.as('authors', 0);
+  // SME V1: margins and costs are finance's (maintainer drafts, approver signs off)
+  const author = ctx.as('finance', 0);
   for (const profile of ctx.ids.profiles.values()) {
     const random = new SeededRandom([
       ctx.seed,

@@ -8,6 +8,7 @@ export const LOSS_VALUE_METRICS = {
   standard_cost: 'standard_cost',
   operational_cost: 'cost_per_hour',
   independent_components: 'independent_components',
+  economic_impact: 'economic_impact',
 } as const;
 export type LossValueMetric = keyof typeof LOSS_VALUE_METRICS;
 
@@ -17,11 +18,12 @@ export type LossValueGroup = (typeof LOSS_VALUE_GROUPS)[number];
 export class LossValueReportQueryDto extends ReportWindowQueryDto {
   @ApiPropertyOptional({
     enum: Object.keys(LOSS_VALUE_METRICS),
-    default: 'margin',
     description:
       'margin = commercial opportunity (contribution margin), standard_cost = standard cost view, ' +
       'operational_cost = cost per hour of downtime, independent_components = margin + time cost of the ' +
-      'impact codes the policy marks independent. Views are never added to each other.',
+      'impact codes the policy marks independent, economic_impact = lost contribution on unrecovered sales ' +
+      '+ incremental costs (SME V2 / V3). Views are never added to each other. Absent: the default view of ' +
+      "the tenant's newest approved valuation policy (SME V8), margin when none is approved.",
   })
   @IsOptional()
   @IsIn(Object.keys(LOSS_VALUE_METRICS))

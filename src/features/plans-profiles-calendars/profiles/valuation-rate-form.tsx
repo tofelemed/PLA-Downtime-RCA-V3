@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useCreateValuationRate } from '@/api/v2/queries/profile-commands';
 import type { ValuationBasis } from '@/api/v2/types/profiles';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
+import { VALUATION_BASIS_LABELS } from '@/features/ux-kit/labels';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { PlantDateTimeField } from '../components/plant-date-time-field';
@@ -10,11 +11,20 @@ import { RefusalNotice } from '../components/refusal-notice';
 import { validateValuationForm, valuationCreateBody, type FieldErrors, type ValuationFormValues } from '../model/profile-form';
 import { refusalOf } from '../model/refusal';
 
-/** Bases a profile owns (per quantity); cost per hour belongs to impact codes. */
-const BASES = [
-  { value: 'contribution_margin', label: 'Contribution margin' },
-  { value: 'standard_cost', label: 'Standard cost' },
+/**
+ * Bases a profile owns (per quantity); cost per hour belongs to impact codes. SME V2: the per-tonne product
+ * values of the economic view (scrap cost, salvage, disposal, downgrade price difference, rework cost).
+ */
+const PROFILE_BASES: readonly ValuationBasis[] = [
+  'contribution_margin',
+  'standard_cost',
+  'variable_cost',
+  'salvage_value',
+  'disposal_cost',
+  'downgrade_price_difference',
+  'rework_cost',
 ];
+const BASES = PROFILE_BASES.map((value) => ({ value, label: VALUATION_BASIS_LABELS[value] }));
 /** Rates are entered in IRR or USD (the server refuses other currencies). */
 const CURRENCIES = [
   { value: 'IRR', label: 'IRR' },
