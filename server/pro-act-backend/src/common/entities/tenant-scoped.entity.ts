@@ -8,18 +8,14 @@ import {
 } from 'typeorm';
 
 /**
- * Base for every new tenant-owned table (spec DB01).
- *
- * - UUID primary key and `tenant_id` so child foreign keys can include the tenant (no cross-tenant links)
- * - audit columns and `row_version` for optimistic concurrency (`If-Match` / 412 on stale updates)
- *
- * Legacy entities keep their own columns until they are migrated; new entities under src/**\/v2 must extend this.
+ * Columns of every new tenant-owned table (spec DB01) without the single-column `tenant_id` index. For
+ * rewrite-heavy tables whose composite indexes all lead with `tenant_id` (DB-09): they serve every
+ * `tenant_id` predicate, so the extra index only costs writes. Everything else extends `TenantScopedEntity`.
  */
-export abstract class TenantScopedEntity {
+export abstract class TenantOwnedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Index()
   @Column({ name: 'tenant_id', type: 'uuid' })
   tenantId: string;
 
@@ -38,3 +34,15 @@ export abstract class TenantScopedEntity {
   @VersionColumn({ name: 'row_version' })
   rowVersion: number;
 }
+
+/**
+ * Base for every new tenant-owned table (spec DB01).
+ *
+ * - UUID primary key and `tenant_id` so child foreign keys can include the tenant (no cross-tenant links)
+ * - audit columns and `row_version` for optimistic concurrency (`If-Match` / 412 on stale updates)
+ * - a `tenant_id` index (same name as the former column-level `@Index()`)
+ *
+ * Legacy entities keep their own columns until they are migrated; new entities under src/**\/v2 must extend this.
+ */
+@Index(['tenantId'])
+export abstract class TenantScopedEntity extends TenantOwnedEntity {}

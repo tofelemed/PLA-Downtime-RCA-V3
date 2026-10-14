@@ -1,5 +1,5 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
-import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import {
   Ledger,
   LEDGERS,
@@ -38,7 +38,7 @@ export type LineState = (typeof LINE_STATES)[number];
 @Index('IDX_loss_lines_tenant_cause_event', ['tenantId', 'causeEventId'])
 @Index('IDX_loss_lines_tenant_period', ['tenantId', 'periodId'])
 @Index('IDX_loss_lines_run_ledger_kind', ['runId', 'ledger', 'kind'])
-export class LossLine extends TenantScopedEntity {
+export class LossLine extends TenantOwnedEntity {
   @Column({ name: 'run_id', type: 'uuid' })
   runId: string;
 
