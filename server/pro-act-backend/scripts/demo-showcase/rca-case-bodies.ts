@@ -49,7 +49,7 @@ function eventDiagram(ctx: ShowcaseContext, spec: CaseSpec) {
     .sort((a, b) => b - a)
     .map((days, index) => ({
       id: `stop-${days}`,
-      label: `Demo: ${stops.failureMode}`,
+      label: `Demo: ${stops.modeLabel}`,
       type: 'Failure',
       timestamp: iso(ctx.window.today - days * DAY_MS + START_HOUR * HOUR_MS),
       description: `${stops.minutes} min stop`,

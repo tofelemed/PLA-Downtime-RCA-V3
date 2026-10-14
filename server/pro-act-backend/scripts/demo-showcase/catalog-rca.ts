@@ -9,8 +9,8 @@
  *   closure review for an independent manager to send back;
  * - melt pressure after screen pack changes on Extruder Line 1: pre-heating packs is verified EFFECTIVE
  *   (no repeat in the window), the case is closed by an independent manager and its lesson shared.
- * `failureStops` are the demo stops each story needs, on the named asset with the failure mode the
- * triggers and the effectiveness verification match on.
+ * `failureStops` are the demo stops each story needs, on the named asset with the failure-mode (and
+ * mechanism) codes of the demo failure dictionary the triggers and the effectiveness verification match on.
  */
 export type CaseStage =
   | 'draft'
@@ -45,7 +45,10 @@ export interface ActionSpec {
 /** Demo stops of one failure mode on one asset (minutes long, `daysAgo` before today's start). */
 export interface FailureStops {
   assetKind: string;
+  /** failure-mode code of the demo failure dictionary (ISO 14224 style, catalog-failure-dictionary) */
   failureMode: string;
+  /** its plain words, for descriptions and the timeline */
+  modeLabel: string;
   failureMechanism?: string;
   minutes: number;
   daysAgo: readonly number[];
@@ -120,8 +123,9 @@ const GEARBOX: CaseSpec = {
   ],
   failureStops: {
     assetKind: 'GBX',
-    failureMode: 'Gearbox bearing overheating',
-    failureMechanism: 'Lubricant degradation',
+    failureMode: 'OHE',
+    modeLabel: 'Gearbox bearing overheating',
+    failureMechanism: '2.7',
     minutes: 35,
     daysAgo: [26, 19, 12],
   },
@@ -174,7 +178,9 @@ const KNIFE: CaseSpec = {
   ],
   failureStops: {
     assetKind: 'CUT',
-    failureMode: 'Cutter knife breakage',
+    failureMode: 'STD',
+    modeLabel: 'Cutter knife breakage',
+    failureMechanism: '2.5',
     minutes: 45,
     daysAgo: [28, 25, 22, 15, 9, 4],
   },
@@ -225,7 +231,8 @@ const MELT: CaseSpec = {
   ],
   failureStops: {
     assetKind: 'DIE',
-    failureMode: 'Melt pressure high after screen change',
+    failureMode: 'PDE',
+    modeLabel: 'Melt pressure high after screen change',
     minutes: 30,
     daysAgo: [29, 26, 23],
   },

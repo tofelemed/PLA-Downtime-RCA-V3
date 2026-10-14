@@ -61,7 +61,7 @@ function stopBody(ctx: ShowcaseContext, spec: CaseSpec, daysAgo: number) {
     ...(stops.failureMechanism
       ? { failureMechanism: stops.failureMechanism }
       : {}),
-    description: `Demo: ${stops.failureMode} (${spec.title.replace(/^Demo: /, '')})`,
+    description: `Demo: ${stops.modeLabel} (${spec.title.replace(/^Demo: /, '')})`,
   };
 }
 
