@@ -154,8 +154,7 @@ test.describe('Codes & rules — T18 UI and T22 (plan 3.8)', () => {
     await expect(page.getByTestId('code-detail')).toHaveAttribute('data-active', 'false', { timeout: 20_000 });
     await openLibrary(page, 'reason-codes', LEAF);
     await expect(page.locator(`[data-testid="code-match"][data-code="${LEAF}"]`)).toHaveCount(0, { timeout: 20_000 });
-    const list = await call<{ items: Array<{ code: string }> }>(manager, 'GET', '/v2/reason-codes?limit=500');
-    if (world.foreignCode) expect(list.body.items.map((item) => item.code)).not.toContain(world.foreignCode);
+    if (world.foreignCode) expect(await findCode(manager, world.foreignCode)).toBeNull(); // every page of the library
   });
 
   test('T18: a production engineer sees the codes but a write is refused with 403, shown clearly', async ({ page }) => {

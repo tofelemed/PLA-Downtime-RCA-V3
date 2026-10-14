@@ -64,8 +64,20 @@ export async function reasonCode(token: string, code: string, name: string, pare
 }
 
 export async function findCode(token: string, code: string): Promise<{ id: string; version: number; parentId: string | null } | null> {
-  const list = await call<{ items: Array<{ id: string; code: string; version: number; parentId: string | null }> }>(token, 'GET', '/v2/reason-codes?limit=500&includeRetired=true');
-  return list.body.items.find((item) => item.code === code) ?? null;
+  // every page: the demo library outgrows one page of 500 as runs add codes
+  let cursor: string | null = null;
+  do {
+    const query: string = cursor ? `&cursor=${encodeURIComponent(cursor)}` : '';
+    const list = await call<{ items: Array<{ id: string; code: string; version: number; parentId: string | null }>; nextCursor: string | null }>(
+      token,
+      'GET',
+      `/v2/reason-codes?limit=500&includeRetired=true${query}`,
+    );
+    const found = list.body.items.find((item) => item.code === code);
+    if (found) return found;
+    cursor = list.body.nextCursor ?? null;
+  } while (cursor);
+  return null;
 }
 
 export async function findRule(token: string, name: string): Promise<{ id: string; rowVersion: number; state: string } | null> {

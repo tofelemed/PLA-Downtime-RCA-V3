@@ -181,7 +181,8 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     await expect(page.getByTestId('analytics-dashboard')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('dashboard-oee-operational')).toContainText('Operational OEE (ISO 22400)');
     await expect(page.getByTestId('dashboard-oee-reconciled')).toContainText('Reconciled PLA OEE');
-    await expect(page.getByTestId('dashboard-overdue')).toHaveAttribute('data-count', /^\d+$/);
+    // rendered once the reconciliation summary answers (a heavy read on the big demo plant)
+    await expect(page.getByTestId('dashboard-overdue')).toHaveAttribute('data-count', /^\d+$/, { timeout: 30_000 });
     await expect(page.getByTestId('dashboard-oee-operational-tile').getByTestId('oee-tile-value')).toHaveText(/%|^Not available: /);
     expect(writes).toEqual([]);
   });

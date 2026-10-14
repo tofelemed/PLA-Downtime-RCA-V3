@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PLANTS, expandTreeNode, openPlantTree, selectPlant } from './support/admin-helpers';
+import { findCode } from '../test-utils/codes-world';
 import { expectHidden, expectRefused } from './support/hidden-controls';
 import { apiLogin, BROKER, call, command, DEMO_EVENTS_CONNECTION, DEMO_PLANT, DEMO_PLANT_2, findConnection, findOnPages, INT_USERS, newSuffix, NOAH, openConsole, PREFIX, selectConnection, uiLogin } from './support/integration-world';
 
@@ -137,7 +138,6 @@ test.describe('Integration admin — access, cross-plant, refusals', () => {
     await page.screenshot({ path: test.info().outputPath('int-09b-codes-read-only.png'), fullPage: true });
     const diego = await apiLogin(INT_USERS.diego);
     expectRefused(await command(diego.token, '/v2/reason-codes', { code: `${PREFIX}CODE-${suffix}`, name: `${PREFIX}integration admin attempt` }), 'FORBIDDEN_ROLE');
-    const codes = await call<{ items: Array<{ code: string }> }>(diego.token, 'GET', '/v2/reason-codes?limit=500');
-    expect(codes.body.items.map((item) => item.code)).not.toContain(`${PREFIX}CODE-${suffix}`);
+    expect(await findCode(diego.token, `${PREFIX}CODE-${suffix}`)).toBeNull(); // every page of the library
   });
 });
