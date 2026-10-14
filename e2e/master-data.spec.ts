@@ -36,8 +36,9 @@ test.describe('Master Data Management', () => {
     await page.goto('/master-data/hierarchy');
     const tree = page.getByRole('list', { name: 'Plant hierarchy' });
     await expect(tree).toBeVisible({ timeout: 30_000 });
-    await expect(tree.getByText(fixture.organization.name, { exact: true })).toBeVisible();
-    await expect(tree.getByText(fixture.tenant.name, { exact: true })).toBeVisible();
+    // each node name carries a screen-reader prefix with its level ("Organisation: …", "Plant: …")
+    await expect(tree.getByText(`Organisation: ${fixture.organization.name}`, { exact: true })).toBeVisible();
+    await expect(tree.getByText(`Plant: ${fixture.tenant.name}`, { exact: true })).toBeVisible();
   });
 
   test('the units list pages at 20 rows and searches by code', async ({ page }) => {
