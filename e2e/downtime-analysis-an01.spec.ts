@@ -66,7 +66,8 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
     await expect(tile(page, 'unknown_time').getByTestId('kpi-value')).toHaveText('0:15');
     await expect(tile(page, 'stop_count').getByTestId('kpi-value')).toHaveText('4');
     await expect(page.getByTestId('unknown-lower-bound')).toBeVisible();
-    await expect(page.getByTestId('kpi-summary').getByTestId('report-meta')).toContainText('Provisional');
+    // snapshot widgets state approval once, in the page header (UX03)
+    await expect(page.getByTestId('scope-header')).toContainText('Provisional');
 
     // Pareto level 1 with the server's cumulative share reaching 100 %
     await expect(bars(page)).toHaveCount(3);
@@ -77,7 +78,7 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
 
     // bad actors: 60 + 60 min stops overlapping 30 min → allocated 45 + 45 min, labelled
     const actors = page.getByTestId('bad-actors');
-    await expect(actors).toContainText('Allocated');
+    await expect(page.getByText(/^Allocated: overlapping stops/)).toBeVisible();
     await expect(actors.locator(`[data-testid="bad-actor"][data-key="${world.assets.pump}"]`)).toHaveAttribute('data-value', '2700');
     await expect(actors.locator(`[data-testid="bad-actor"][data-key="${world.assets.valve}"]`)).toHaveAttribute('data-value', '2700');
 
@@ -106,9 +107,13 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
     const reports: ReportCall[] = [];
     await openPage(page, reports);
     await expect(page.getByTestId('snapshot-runs')).toBeVisible();
-    await expect(page.getByTestId('crew-comparison').getByTestId('report-meta')).toBeVisible();
+    // snapshot widgets state runs and approval once, in the page header (snapshot-runs)
+    await expect(page.getByTestId('crew-comparison')).toBeVisible();
     const current = reports.filter((r) => r.url.searchParams.get('from') === world.from);
-    expect(current.length).toBeGreaterThanOrEqual(6);
+    // the snapshot widgets share one downtime-bundle read (was eight reads before 7801cae); the
+    // reads outside the snapshot must still ask with the same filters and name the same runs
+    expect(current.some((r) => r.url.pathname.endsWith('/reports/downtime-bundle'))).toBe(true);
+    expect(current.length).toBeGreaterThanOrEqual(2);
     for (const report of current) {
       expect(report.url.searchParams.get('to')).toBe(world.to);
       expect(report.url.searchParams.getAll('unitIds')).toEqual([world.unitId]);
@@ -120,8 +125,10 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
     for (const report of current) expect([...report.body.data.calculationRunIds].sort()).toEqual(runIds);
     const shown = await page.getByTestId('snapshot-runs').getAttribute('data-run-ids');
     expect(shown?.split(',').sort()).toEqual(runIds);
+    await expect(page.getByTestId('snapshot-runs')).toContainText('same 3 calculation runs');
+    // reads outside the snapshot keep their own status line; any shown names the same runs
     const metaCounts = await page.getByTestId('report-meta').evaluateAll((nodes) => nodes.map((n) => n.getAttribute('data-run-count')));
-    expect(new Set(metaCounts.filter((count) => count !== '0'))).toEqual(new Set(['3']));
+    for (const count of metaCounts.filter((c) => c !== '0')) expect(count).toBe('3');
     // export carries approved figures only: disabled for this provisional snapshot, with the reason
     await expect(page.getByTestId('downtime-export')).toBeDisabled();
     await expect(page.getByTestId('downtime-export')).toHaveAttribute('title', /approved figures only/);
@@ -132,7 +139,7 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
     await openPage(page, []);
     await page.locator('#downtime-trend').selectOption('shift');
     await expect.poll(() => new URL(page.url()).searchParams.get('trend')).toBe('shift');
-    await expect(page.getByTestId('downtime-trend')).toContainText('Trend by shift');
+    await expect(page.getByRole('heading', { name: 'Trend by shift' })).toBeVisible();
     const segments = page.getByTestId('state-timeline').getByTestId('timeline-segment');
     await expect(segments).toHaveCount(4);
     await segments.first().focus();
