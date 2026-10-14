@@ -1,5 +1,6 @@
 import { plantLocalToUtc } from '@/lib/dates';
 import type { TransitionStandardCreateBody } from '@/api/v2/queries/profile-commands';
+import { formatNumber } from '@/features/ux-kit/format/decimal';
 import { type FieldErrors, validityErrors } from './profile-form';
 
 /**
@@ -40,9 +41,9 @@ export function secondsOfHours(hours: string): string {
   return String(Math.round(Number(hours) * SECONDS_PER_HOUR * 1000) / 1000);
 }
 
-/** Seconds from the server shown as hours (display only). */
+/** Seconds from the server shown as hours (display only; Latin digits — localize at render). */
 export function hoursOfSeconds(seconds: string): string {
-  return (Number(seconds) / SECONDS_PER_HOUR).toFixed(2);
+  return formatNumber(Number(seconds) / SECONDS_PER_HOUR, 2);
 }
 
 export function validateTransitionStandardForm(values: TransitionStandardFormValues, timezone: string): FieldErrors {

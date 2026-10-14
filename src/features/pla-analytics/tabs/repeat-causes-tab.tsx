@@ -1,8 +1,9 @@
 import { useDowntimeReport } from '@/api/v2/queries/reports';
 import type { DowntimeReportView } from '@/api/v2/types/reports';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { LocalizedNumber } from '@/features/ux-kit/localized-number';
+import { NumberText } from '@/features/ux-kit/number-text';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { formatCount } from '@/features/downtime-analysis/model/kpi-display';
 import { AnalyticsCard } from '../components/analytics-card';
 import { repeatQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { shareText } from '../model/display';
@@ -20,9 +21,9 @@ function columnsOf(title: string): Array<DataTableColumn<Group>> {
         </span>
       ),
     },
-    { id: 'stops', header: 'Stops', align: 'right', cell: (group) => formatCount(group.value) },
-    { id: 'periods', header: 'Periods', align: 'right', cell: (group) => group.periods },
-    { id: 'cumulative', header: 'Cumulative', align: 'right', nowrap: true, cell: (group) => shareText(group.cumulativeShare) },
+    { id: 'stops', header: 'Stops', align: 'right', cell: (group) => <NumberText value={group.value} /> },
+    { id: 'periods', header: 'Periods', align: 'right', cell: (group) => <NumberText value={group.periods} /> },
+    { id: 'cumulative', header: 'Cumulative', align: 'right', nowrap: true, cell: (group) => <LocalizedNumber text={shareText(group.cumulativeShare)} /> },
   ];
 }
 

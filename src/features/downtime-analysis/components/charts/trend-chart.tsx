@@ -25,7 +25,7 @@ export function TrendChart({ rows, classes, unit }: TrendChartProps) {
     ...Object.fromEntries(classes.map((scheduleClass) => [scheduleClass, Number(row.values[scheduleClass] ?? 0)])),
   }));
   const { digits } = useCalendarPreference();
-  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact', digits) : formatCount(String(value)));
+  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact', digits) : formatCount(String(value), digits));
   return (
     <div className="h-64 w-full" aria-hidden>
       <ResponsiveContainer>

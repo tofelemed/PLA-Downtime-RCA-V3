@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { friendlyToastContent } from '@/features/ux-kit/errors';
 import { PageHeader } from '@/features/ux-kit/page-layout';
 import { ScopeHeader } from '@/features/ux-kit/scope-header';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { ActionIcon } from '@/lib/icons';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
@@ -17,6 +18,7 @@ import { reportBase, type DowntimeFilters } from '../model/downtime-filters';
  */
 export function DowntimeHeader({ filters, bundle }: { filters: DowntimeFilters; bundle: DowntimeBundleResult }) {
   const env = useEventHubEnv();
+  const { number } = useNumberFormat();
   const snapshot = bundle.data ? reportSnapshot(bundle.data, reportBase(filters)) : null;
   const exporter = useCreateExport();
   const { toast } = useToast();
@@ -42,7 +44,7 @@ export function DowntimeHeader({ filters, bundle }: { filters: DowntimeFilters; 
       />
       {snapshot && (
         <p className="text-xs" data-testid="snapshot-runs" data-run-ids={snapshot.calculationRunIds.join(',')}>
-          Every figure on this page comes from the same {snapshot.calculationRunIds.length === 1 ? 'calculation run' : `${snapshot.calculationRunIds.length} calculation runs`}.
+          Every figure on this page comes from the same {snapshot.calculationRunIds.length === 1 ? 'calculation run' : `${number(snapshot.calculationRunIds.length)} calculation runs`}.
         </p>
       )}
     </div>

@@ -10,6 +10,7 @@ import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { labelOf } from '@/features/ux-kit/labels';
 import { exportFileName, plantFileDay } from '@/features/ux-kit/format/export-file-name';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { EXPORT_STATE_LABELS } from '../model/display';
 
 const log = createLogger('plaAnalyticsExport');
@@ -62,6 +63,7 @@ export function ScopeExport({ request, label, timezone, testId = 'scope-export' 
     }
   };
   const data = job.data;
+  const { number } = useNumberFormat();
   return (
     <div className="space-y-1 text-sm" data-testid={testId} data-request={request ? JSON.stringify(request) : ''}>
       <Button size="sm" variant="outline" disabled={!request || exporter.isPending} title={request ? undefined : DISABLED_HINT} onClick={() => void start()} data-testid={`${testId}-start`}>
@@ -72,7 +74,7 @@ export function ScopeExport({ request, label, timezone, testId = 'scope-export' 
       {data && (
         <p data-testid={`${testId}-job`} data-state={data.state} role="status">
           Export {labelOf(EXPORT_STATE_LABELS, data.state)}
-          {data.rowCount !== null ? ` · ${data.rowCount} rows` : ''}
+          {data.rowCount !== null ? ` · ${number(data.rowCount)} rows` : ''}
           {data.finishedAt && (
             <>
               {' '}

@@ -1,5 +1,6 @@
 import type { KpiAggregateView } from '@/api/v2/types/reports';
 import { Badge } from '@/components/ui/badge';
+import { useCalendarPreference } from '@/lib/dates';
 import { labelOf } from '@/features/ux-kit/labels';
 import { kpiText, QUALITY_STATE_LABELS } from '../model/display';
 
@@ -21,11 +22,12 @@ const QUIET_QUALITY = new Set(['ok', 'provisional']);
  * available: <reason>" (T41) — never a default 87 % or 100 %.
  */
 export function OeeTile({ title, label, view, denominator, testId }: OeeTileProps) {
+  const { digits } = useCalendarPreference();
   return (
     <div className="rounded-md border p-3" data-testid={testId} data-value={view?.value ?? ''} data-reason={view?.reason ?? ''}>
       <p className="text-xs text-muted-foreground">{title}</p>
       <p className="text-xl font-semibold" data-testid="oee-tile-value">
-        {kpiText(view)}
+        {kpiText(view, digits)}
       </p>
       <p className="text-[11px] text-muted-foreground">
         {label} · {denominator}

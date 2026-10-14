@@ -1,4 +1,5 @@
 import type { RcaActionView, RcaLinkType, RcaRecommendationView } from '@/api/v2/types/rca';
+import type { DigitSystem } from '@/lib/dates';
 import { TRIGGER_LABELS, triggerDetailText } from './trigger-detail';
 
 export const LINK_TYPE_LABELS: Readonly<Record<RcaLinkType, string>> = {
@@ -35,8 +36,8 @@ export function recommendationText(rec: RcaRecommendationView): string {
 }
 
 /** What fired in numbers, and whether it was added to an open case about the same problem (CA8). */
-export function recommendationDetail(rec: RcaRecommendationView): string {
-  const parts = triggerDetailText(rec);
+export function recommendationDetail(rec: RcaRecommendationView, digits?: DigitSystem): string {
+  const parts = triggerDetailText(rec, digits);
   if (rec.outcome === 'linked_to_case') parts.push('added to the open case about the same problem');
   return parts.join(' · ');
 }

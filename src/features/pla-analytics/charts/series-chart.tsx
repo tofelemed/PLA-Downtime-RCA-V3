@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface SeriesRow {
   label: string;
@@ -25,7 +26,9 @@ export function SeriesChart({ rows, series, kind, ratio }: SeriesChartProps) {
     label: row.label,
     ...Object.fromEntries(series.map((s) => [s.key, row.values[s.key] === null || row.values[s.key] === undefined ? null : Number(row.values[s.key])])),
   }));
-  const axis = ratio ? (value: number) => `${Math.round(value * 100)} %` : undefined;
+  const { axis: tick, number } = useNumberFormat();
+  // ticks and tooltips in the plant's digits; ratios as percentages (drawing only, nothing derived)
+  const axis = (value: number) => (ratio ? `${number(value * 100, 0)} %` : tick(value));
   const Chart = kind === 'line' ? LineChart : BarChart;
   return (
     <div className="h-64 w-full" aria-hidden>
@@ -34,7 +37,7 @@ export function SeriesChart({ rows, series, kind, ratio }: SeriesChartProps) {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="label" tick={{ fontSize: 10 }} />
           <YAxis tick={{ fontSize: 11 }} tickFormatter={axis} />
-          <Tooltip />
+          <Tooltip formatter={(value: unknown) => (typeof value === 'number' ? (ratio ? `${number(value * 100, 1)} %` : number(value, 2)) : String(value))} />
           <Legend />
           {series.map((s, index) =>
             kind === 'line' ? (

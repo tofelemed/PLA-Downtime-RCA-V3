@@ -9,6 +9,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { humanize } from '@/features/ux-kit/labels';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import type { AnalyticsScope } from '../model/analytics-scope';
 
 const SeriesChart = lazy(() => import('../charts/series-chart').then((m) => ({ default: m.SeriesChart })));
@@ -25,10 +26,11 @@ function DayChart({ days, label }: { days: readonly ActivityDayView[]; label: st
 }
 
 function Counts({ title, items }: { title: string; items: readonly ActivityCountView[] }) {
+  const { number } = useNumberFormat();
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <span className="w-24 text-muted-foreground">{title}</span>
-      {items.length === 0 ? '—' : items.map((item) => <Badge key={item.key} variant="outline">{humanize(item.key)}: {item.count}</Badge>)}
+      {items.length === 0 ? '—' : items.map((item) => <Badge key={item.key} variant="outline">{humanize(item.key)}: {number(item.count)}</Badge>)}
     </div>
   );
 }
@@ -45,10 +47,11 @@ function SummaryCard({ title, testId, children }: { title: string; testId: strin
 }
 
 function WorkItems({ title, testId, summary, overdueLabel }: { title: string; testId: string; summary: WorkItemSummaryView; overdueLabel: string }) {
+  const { number } = useNumberFormat();
   return (
     <SummaryCard title={title} testId={testId}>
       <p className="text-sm" data-total={summary.total}>
-        <strong>{summary.total}</strong> created · <strong>{summary.open}</strong> still open · <strong>{summary.overdue}</strong> {overdueLabel}
+        <strong>{number(summary.total)}</strong> created · <strong>{number(summary.open)}</strong> still open · <strong>{number(summary.overdue)}</strong> {overdueLabel}
       </p>
       <Counts title="Status" items={summary.byStatus} />
       <Counts title="Priority" items={summary.byPriority} />

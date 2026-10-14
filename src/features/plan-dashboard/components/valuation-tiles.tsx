@@ -10,6 +10,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { labelOf, VALUATION_STATUS_LABELS } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { useCalendarPreference } from '@/lib/dates';
 import { formatMoney, valuationReasonLabel } from '../model/display';
 
 export interface ValuationTilesProps {
@@ -29,6 +30,7 @@ export function ValuationTiles({ period, ledger, approvedOnly }: ValuationTilesP
   const data = report.data?.data;
   const state = dataStateOf(report);
   const { currency } = useDisplayCurrency();
+  const { digits } = useCalendarPreference();
   const tiles = entriesInCurrency(data?.total.currencies ?? [], (c) => c.currency, currency);
   return (
     <section className="space-y-2" data-testid="valuation-tiles">
@@ -44,7 +46,7 @@ export function ValuationTiles({ period, ledger, approvedOnly }: ValuationTilesP
                 <CardTitle className="text-sm">{c.currency}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
-                <p className="text-lg font-semibold">{formatMoney(c)}</p>
+                <p className="text-lg font-semibold">{formatMoney(c, digits)}</p>
                 <Badge variant={c.status === 'valued' ? 'default' : 'secondary'}>{labelOf(VALUATION_STATUS_LABELS, c.status)}</Badge>
                 {c.reasons.map((r) => (
                   <p key={r} className="text-xs text-amber-700" data-testid="value-reason" data-reason={r}>

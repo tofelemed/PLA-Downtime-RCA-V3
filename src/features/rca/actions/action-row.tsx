@@ -6,7 +6,7 @@ import { currencyDigits } from '@/features/display-currency/money-format';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { labelOf, useUserNames } from '@/features/ux-kit/labels';
 import { RCA_ACTION_STATUS_LABELS, RCA_ACTION_TYPE_LABELS, RCA_BASELINE_METRIC_LABELS } from '@/features/ux-kit/labels/rca-labels';
-import { formatDecimal } from '@/features/ux-kit/format/decimal';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { RcaErrorAlert } from '../components/rca-error-alert';
 import { verificationLabel } from '../model/rca-labels';
@@ -74,6 +74,7 @@ function Meta({ action }: { action: RcaActionView }) {
 export function ActionRow({ action }: { action: RcaActionView }) {
   const { canWriteRca } = useCapabilities();
   const realized = action.postAction?.realized;
+  const { decimal } = useNumberFormat();
   return (
     <li className="space-y-2 p-2 text-sm" data-testid="action-row">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -86,8 +87,8 @@ export function ActionRow({ action }: { action: RcaActionView }) {
       <ActionVerdict action={action} />
       {realized && (
         <p data-testid="realized">
-          Realized: expected {formatDecimal(realized.expected, 2)}, observed {formatDecimal(realized.observed, 2)}, difference{' '}
-          <strong>{formatDecimal(realized.difference, 2)}</strong> (
+          Realized: expected {decimal(realized.expected, 2)}, observed {decimal(realized.observed, 2)}, difference{' '}
+          <strong>{decimal(realized.difference, 2)}</strong> (
           {labelOf(RCA_BASELINE_METRIC_LABELS, realized.metric).toLowerCase()})
         </p>
       )}

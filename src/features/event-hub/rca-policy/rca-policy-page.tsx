@@ -76,17 +76,17 @@ function RcaPolicyScreen() {
 }
 
 function CurrentPolicy({ policy, unitScoped }: { policy: RcaPolicyVersion; unitScoped: boolean }) {
-  const { dateTime, duration } = usePlantFormat();
+  const { dateTime, duration, digits } = usePlantFormat();
   const inherited = unitScoped && policy.unitId === null;
   return (
     <dl className="grid grid-cols-[12rem_1fr] gap-x-4 gap-y-1 text-sm" data-testid="rca-policy-current">
       <dt className="text-muted-foreground">Version</dt>
       <dd>{policy.version}{inherited ? ' (plant-wide; this unit has no own version)' : ''}</dd>
       <dt className="text-muted-foreground">Triggers (any of)</dt>
-      <dd>{triggerText(policy, duration)}</dd>
+      <dd>{triggerText(policy, duration, digits)}</dd>
       <dt className="text-muted-foreground">Critical assets and safety</dt>
-      <dd>{overrideText(policy)}</dd>
-      {ruleFacts(policy).map((fact) => (
+      <dd>{overrideText(policy, digits)}</dd>
+      {ruleFacts(policy, digits).map((fact) => (
         <RuleFact key={fact.label} label={fact.label} value={fact.value} />
       ))}
       <dt className="text-muted-foreground">When a trigger fires</dt>
@@ -110,10 +110,10 @@ function RuleFact({ label, value }: { label: string; value: string }) {
 function VersionHistory({ unitId }: { unitId: string | null }) {
   const versions = useRcaPolicyVersions(unitId);
   const users = useUserNames();
-  const { dateTime, duration } = usePlantFormat();
+  const { dateTime, duration, digits } = usePlantFormat();
   const columns: DataTableColumn<RcaPolicyVersion>[] = [
     { id: 'version', header: 'Version', align: 'right', cell: (row) => row.version },
-    { id: 'triggers', header: 'Triggers', cell: (row) => triggerText(row, duration) },
+    { id: 'triggers', header: 'Triggers', cell: (row) => triggerText(row, duration, digits) },
     { id: 'auto', header: 'When it fires', cell: (row) => AUTO_LABELS[row.autoCreate] },
     { id: 'from', header: 'From', nowrap: true, cell: (row) => dateTime(row.effectiveFrom) },
     { id: 'to', header: 'Until', nowrap: true, cell: (row) => (row.effectiveTo ? dateTime(row.effectiveTo) : 'In force') },

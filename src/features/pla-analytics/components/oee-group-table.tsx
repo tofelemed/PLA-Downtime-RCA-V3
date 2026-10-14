@@ -1,4 +1,5 @@
 import type { OeeReportView, ReportGroupView } from '@/api/v2/types/reports';
+import { type DigitSystem, useCalendarPreference } from '@/lib/dates';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { findKpi, kpiText, OEE_METRIC_LABELS } from '../model/display';
 
@@ -14,7 +15,7 @@ const metricLabel = (metric: string) => OEE_METRIC_LABELS[metric.replace('reconc
 
 type OeeGroup = ReportGroupView;
 
-function columnsOf(report: OeeReportView, groupTitle: string, labelOf: OeeGroupTableProps['labelOf']): Array<DataTableColumn<OeeGroup>> {
+function columnsOf(report: OeeReportView, groupTitle: string, labelOf: OeeGroupTableProps['labelOf'], digits: DigitSystem): Array<DataTableColumn<OeeGroup>> {
   const metrics = report.total.map((t) => t.metric);
   return [
     {
@@ -35,7 +36,7 @@ function columnsOf(report: OeeReportView, groupTitle: string, labelOf: OeeGroupT
         const view = findKpi(group.metrics, metric);
         return (
           <span data-metric={metric} data-value={view?.value ?? ''}>
-            {kpiText(view)}
+            {kpiText(view, digits)}
           </span>
         );
       },
@@ -45,11 +46,12 @@ function columnsOf(report: OeeReportView, groupTitle: string, labelOf: OeeGroupT
 
 /** OEE components per server group (20 per page), each "Not available: <reason>" when the server has no value (T41). */
 export function OeeGroupTable({ report, groupTitle, labelOf, testId }: OeeGroupTableProps) {
+  const { digits } = useCalendarPreference();
   return (
     <div data-testid={testId}>
       <DataTable
         caption={`${report.label} by ${groupTitle.toLowerCase()}`}
-        columns={columnsOf(report, groupTitle, labelOf)}
+        columns={columnsOf(report, groupTitle, labelOf, digits)}
         rows={report.groups}
         getRowKey={(group) => group.key ?? '-'}
         empty={{ text: 'No groups in this scope.' }}

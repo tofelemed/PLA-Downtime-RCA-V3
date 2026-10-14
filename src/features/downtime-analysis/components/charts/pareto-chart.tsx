@@ -1,7 +1,7 @@
 import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { DowntimeGroupView } from '@/api/v2/types/reports';
 import { formatDuration } from '@/features/ux-kit/format/duration';
-import { useCalendarPreference } from '@/lib/dates';
+import { localizeNumber, useCalendarPreference } from '@/lib/dates';
 import { formatCount, formatRatio } from '../../model/kpi-display';
 
 export interface ParetoChartProps {
@@ -31,7 +31,7 @@ export function ParetoChart({ groups, unit, labelOf, onBar }: ParetoChartProps) 
     cumulative: group.cumulativeShare === null ? null : Number(group.cumulativeShare) * 100,
   }));
   const { digits } = useCalendarPreference();
-  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact', digits) : formatCount(String(value)));
+  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact', digits) : formatCount(String(value), digits));
   return (
     <div className="h-72 w-full" aria-hidden>
       <ResponsiveContainer>
@@ -39,10 +39,10 @@ export function ParetoChart({ groups, unit, labelOf, onBar }: ParetoChartProps) 
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} />
           <YAxis yAxisId="value" tickFormatter={format} allowDecimals={unit === 's'} tick={{ fontSize: 11 }} />
-          <YAxis yAxisId="share" orientation="right" domain={[0, 100]} tickFormatter={(v: number) => `${v} %`} tick={{ fontSize: 11 }} />
+          <YAxis yAxisId="share" orientation="right" domain={[0, 100]} tickFormatter={(v: number) => localizeNumber(`${v} %`, digits)} tick={{ fontSize: 11 }} />
           <Tooltip
             formatter={(value: unknown, name: string, item: { payload?: Point }) =>
-              name === 'cumulative' ? formatRatio(item.payload?.group.cumulativeShare) : format(value)
+              name === 'cumulative' ? formatRatio(item.payload?.group.cumulativeShare, 1, digits) : format(value)
             }
           />
           <Bar yAxisId="value" dataKey="value" fill="hsl(var(--primary))" onClick={(point: { payload?: Point }) => point.payload && onBar(point.payload.group)} cursor="pointer">

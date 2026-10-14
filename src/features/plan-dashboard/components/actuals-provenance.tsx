@@ -5,6 +5,7 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { labelOf, useProductNames } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { useCalendarPreference } from '@/lib/dates';
 import { ACTUALS_METHOD_LABELS, ACTUALS_QUALITY_LABELS, ACTUALS_SOURCE_LABELS, findingText, SEGMENT_QUALITY_LABELS } from '../model/actuals-labels';
 import { formatRatioPercent } from '../model/display';
 
@@ -17,6 +18,7 @@ type DetailSlice = PeriodDetailView['slices'][number];
 
 function SliceProvenance({ slice, timezone, productName }: { slice: DetailSlice; timezone: string; productName: string }) {
   const actuals = slice.actuals;
+  const { digits } = useCalendarPreference();
   return (
     <div className="mt-2 space-y-1" data-testid="provenance-slice">
       <p className="font-medium">{productName}</p>
@@ -24,7 +26,7 @@ function SliceProvenance({ slice, timezone, productName }: { slice: DetailSlice;
         <>
           <p>
             Good <Quantity value={actuals.good} uom={actuals.uom} /> · gross <Quantity value={actuals.gross} uom={actuals.uom} /> · from {labelOf(ACTUALS_METHOD_LABELS, actuals.method, 'unknown source')} · coverage{' '}
-            {formatRatioPercent(actuals.coverageRatio)} · {labelOf(ACTUALS_QUALITY_LABELS, actuals.qualityState)}
+            {formatRatioPercent(actuals.coverageRatio, digits)} · {labelOf(ACTUALS_QUALITY_LABELS, actuals.qualityState)}
           </p>
           <ul className="list-disc pl-5 text-xs">
             {actuals.sourceSegments.map((s) => (

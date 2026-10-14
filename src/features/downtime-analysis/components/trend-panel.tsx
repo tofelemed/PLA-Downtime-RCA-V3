@@ -56,6 +56,7 @@ export function TrendPanel({ filters, bundle, views }: TrendPanelProps) {
 }
 
 function TrendTable({ rows, classes, unit }: { rows: TrendRow[]; classes: readonly ScheduleClass[]; unit: 's' | 'count' }) {
+  const { digits } = useCalendarPreference();
   const columns: DataTableColumn<TrendRow>[] = [
     { id: 'bucket', header: 'Bucket', nowrap: true, cell: (row) => row.label },
     ...classes.map((scheduleClass) => ({
@@ -64,7 +65,7 @@ function TrendTable({ rows, classes, unit }: { rows: TrendRow[]; classes: readon
       align: 'right' as const,
       nowrap: true,
       cell: (row: TrendRow) =>
-        unit === 's' ? <DurationText seconds={row.values[scheduleClass] ?? null} variant="compact" /> : formatCount(row.values[scheduleClass]),
+        unit === 's' ? <DurationText seconds={row.values[scheduleClass] ?? null} variant="compact" /> : formatCount(row.values[scheduleClass], digits),
     })),
   ];
   return <DataTable caption="Trend buckets" columns={columns} rows={rows} getRowKey={(row) => row.key} density="compact" />;

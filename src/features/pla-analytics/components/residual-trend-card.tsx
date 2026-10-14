@@ -2,9 +2,10 @@ import { lazy, Suspense } from 'react';
 import { useReconciliationTrend } from '@/api/v2/queries/pla-analytics';
 import type { ReconciliationTrendView } from '@/api/v2/types/pla-analytics';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCalendarPreference } from '@/lib/dates';
+import { type DigitSystem, useCalendarPreference } from '@/lib/dates';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { formatNumber } from '@/features/ux-kit/format/decimal';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { trendQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { bucketLabel } from '../model/buckets';
@@ -25,16 +26,17 @@ type Bucket = ReconciliationTrendView['buckets'][number];
 
 /** SME R7: unexplained loss against the shortfall, flagged when above the policy's improvement target. */
 function UnexplainedShare({ bucket }: { bucket: Bucket }) {
+  const { digits } = useCalendarPreference();
   const above = bucket.unexplainedAboveTarget === true;
-  const target = bucket.unexplainedTarget === null ? '' : ` (target < ${formatRatioPercent(bucket.unexplainedTarget)})`;
+  const target = bucket.unexplainedTarget === null ? '' : ` (target < ${formatRatioPercent(bucket.unexplainedTarget, digits)})`;
   return (
     <span data-testid="unexplained-share" data-above-target={above ? 'true' : 'false'} className={above ? 'font-medium text-destructive' : undefined} title={`Unexplained loss / shortfall${target}`}>
-      {formatRatioPercent(bucket.unexplainedOfShortfall)}
+      {formatRatioPercent(bucket.unexplainedOfShortfall, digits)}
     </span>
   );
 }
 
-function columnsOf(label: (key: string) => string): Array<DataTableColumn<Bucket>> {
+function columnsOf(label: (key: string) => string, digits: DigitSystem): Array<DataTableColumn<Bucket>> {
   return [
     {
       id: 'bucket',
@@ -48,8 +50,8 @@ function columnsOf(label: (key: string) => string): Array<DataTableColumn<Bucket
     },
     ...SERIES.map<DataTableColumn<Bucket>>((s) => ({ id: s.key, header: s.label, align: 'right', nowrap: true, cell: (b) => <Quantity value={b[s.key]} uom={b.uom} /> })),
     { id: 'unexplainedOfShortfall', header: 'Unexplained / shortfall', align: 'right', nowrap: true, cell: (b) => <UnexplainedShare bucket={b} /> },
-    { id: 'unexplainedOfPlan', header: 'Unexplained / plan', align: 'right', nowrap: true, cell: (b) => formatRatioPercent(b.unexplainedOfPlan) },
-    { id: 'periods', header: 'Periods', align: 'right', cell: (b) => b.periods },
+    { id: 'unexplainedOfPlan', header: 'Unexplained / plan', align: 'right', nowrap: true, cell: (b) => formatRatioPercent(b.unexplainedOfPlan, digits) },
+    { id: 'periods', header: 'Periods', align: 'right', cell: (b) => formatNumber(b.periods, 0, digits) },
   ];
 }
 
@@ -63,7 +65,7 @@ export function ResidualTrendCard({ scope }: { scope: AnalyticsScope }) {
   const query = useReconciliationTrend(trendQuery(scope), env.timezone);
   const data = query.data?.data;
   const label = (key: string) => bucketLabel(key, scope.trendBy, pref);
-  const columns = columnsOf(label);
+  const columns = columnsOf(label, pref.digits);
   return (
     <AnalyticsCard
       title={`Unaccounted / over-accounted by ${TREND_LABELS[scope.trendBy].toLowerCase()} (plan ledger)`}

@@ -1,6 +1,8 @@
 import { useReport } from '@/api/v2/queries/reports';
 import type { LossValueReportView } from '@/api/v2/types/period-overview';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { LocalizedNumber } from '@/features/ux-kit/localized-number';
+import { useCalendarPreference } from '@/lib/dates';
 import { LEDGER_LABELS } from '@/features/ux-kit/labels';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { entriesInCurrency } from '@/features/display-currency/money-format';
@@ -29,7 +31,7 @@ function columnsOf(currencies: readonly string[], unitName: (id: string) => stri
       nowrap: true,
       cell: (row) => {
         const value = row.currencies.find((entry) => entry.currency === currency);
-        return value ? formatMoney(value) : '—';
+        return value ? <LocalizedNumber text={formatMoney(value)} /> : '—';
       },
     })),
   ];
@@ -45,6 +47,7 @@ export function LossValueCard({ scope }: { scope: AnalyticsScope }) {
   const query = useReport<LossValueReportView>('loss-value', lossValueQuery(scope), env.timezone);
   const data = query.data?.data;
   const { currency } = useDisplayCurrency();
+  const { digits } = useCalendarPreference();
   const currencies = entriesInCurrency(data?.total.currencies.map((c) => c.currency) ?? [], (c) => c, currency);
   return (
     <AnalyticsCard
@@ -64,7 +67,7 @@ export function LossValueCard({ scope }: { scope: AnalyticsScope }) {
             {currencies
               .map((c) => {
                 const value = data.total.currencies.find((entry) => entry.currency === c);
-                return value ? formatMoney(value) : `— ${c}`;
+                return value ? formatMoney(value, digits) : `— ${c}`;
               })
               .join(' · ')}
           </p>

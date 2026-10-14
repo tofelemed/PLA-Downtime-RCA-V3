@@ -1,3 +1,4 @@
+import { useCalendarPreference } from '@/lib/dates';
 import { useReliabilityReport } from '@/api/v2/queries/reports';
 import type { ReliabilityRowView } from '@/api/v2/types/reports';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -46,6 +47,7 @@ export function ReliabilityCard({ filters }: { filters: DowntimeFilters }) {
 }
 
 function ReliabilityRow({ row, unitName }: { row: ReliabilityRowView; unitName: string }) {
+  const { digits } = useCalendarPreference();
   const restore = restoreColumn(row);
   return (
     <TableRow data-testid="reliability-row" data-unit-id={row.unitId}>
@@ -59,7 +61,7 @@ function ReliabilityRow({ row, unitName }: { row: ReliabilityRowView; unitName: 
           </span>
         )}
       </TableCell>
-      <TableCell>{formatCount(row.failures)}</TableCell>
+      <TableCell>{formatCount(row.failures, digits)}</TableCell>
       <TableCell>{restore.view.value !== null ? <DurationText seconds={restore.view.value} /> : reasonText(restore.view.reason)}</TableCell>
     </TableRow>
   );

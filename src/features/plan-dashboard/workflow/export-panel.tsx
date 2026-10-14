@@ -8,6 +8,7 @@ import { labelOf } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { exportFileName } from '@/features/ux-kit/format/export-file-name';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ActionIcon } from '@/lib/icons';
 import { EditorProblem } from '../editor/editor-problem';
 import { issueText } from '../model/problem-text';
@@ -48,6 +49,7 @@ export function ExportPanel({ view, timezone }: { view: ReconciliationView; time
     }
   };
   const data = job.data;
+  const { number } = useNumberFormat();
   return (
     <Section title="Export (approved figures only)" headingLevel={3}>
       <div className="space-y-2 text-sm" data-testid="export-panel">
@@ -59,7 +61,7 @@ export function ExportPanel({ view, timezone }: { view: ReconciliationView; time
           <div className="space-y-1" data-testid="export-job" data-state={data.state}>
             <p role="status">
               Export {labelOf(EXPORT_STATE_LABELS, data.state).toLowerCase()}
-              {data.rowCount !== null ? ` · ${data.rowCount} rows` : ''}
+              {data.rowCount !== null ? ` · ${number(data.rowCount)} rows` : ''}
               {data.expiresAt ? (
                 <>
                   {' '}

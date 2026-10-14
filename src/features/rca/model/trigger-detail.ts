@@ -1,4 +1,5 @@
-import { formatDecimal } from '@/features/ux-kit/format/decimal';
+import type { DigitSystem } from '@/lib/dates';
+import { formatDecimal, formatNumber } from '@/features/ux-kit/format/decimal';
 import type { RcaRecommendationView } from '@/api/v2/types/rca';
 import { formatDuration } from '@/features/ux-kit/format/duration';
 
@@ -27,42 +28,42 @@ const text = (detail: Detail, key: string): string | null => {
   const value = detail[key];
   return typeof value === 'string' || typeof value === 'number' ? String(value) : null;
 };
-const duration = (seconds: number | null) => (seconds === null ? null : formatDuration(seconds, 'long'));
+const duration = (seconds: number | null, digits?: DigitSystem) => (seconds === null ? null : formatDuration(seconds, 'long', digits));
 
-function durationText(detail: Detail): string | null {
-  const seconds = duration(num(detail, 'seconds'));
-  const limit = duration(num(detail, 'thresholdSeconds'));
+function durationText(detail: Detail, digits?: DigitSystem): string | null {
+  const seconds = duration(num(detail, 'seconds'), digits);
+  const limit = duration(num(detail, 'thresholdSeconds'), digits);
   return seconds && limit ? `${seconds} (limit ${limit})` : null;
 }
 
-function repeatText(detail: Detail): string | null {
+function repeatText(detail: Detail, digits?: DigitSystem): string | null {
   const failures = num(detail, 'failures');
   const days = num(detail, 'repeatWindowDays');
   if (failures === null || days === null) return null;
   const limit = num(detail, 'repeatCount');
-  return `${failures} failures in ${days} days${limit === null ? '' : ` (limit ${limit})`}`;
+  return `${formatNumber(failures, 0, digits)} failures in ${formatNumber(days, 0, digits)} days${limit === null ? '' : ` (limit ${formatNumber(limit, 0, digits)})`}`;
 }
 
-function cumulativeText(detail: Detail): string | null {
-  const seconds = duration(num(detail, 'seconds'));
+function cumulativeText(detail: Detail, digits?: DigitSystem): string | null {
+  const seconds = duration(num(detail, 'seconds'), digits);
   const days = num(detail, 'windowDays');
-  const limit = duration(num(detail, 'thresholdSeconds'));
-  return seconds && days !== null ? `${seconds} in ${days} days${limit ? ` (limit ${limit})` : ''}` : null;
+  const limit = duration(num(detail, 'thresholdSeconds'), digits);
+  return seconds && days !== null ? `${seconds} in ${formatNumber(days, 0, digits)} days${limit ? ` (limit ${limit})` : ''}` : null;
 }
 
-function quantityText(detail: Detail): string | null {
+function quantityText(detail: Detail, digits?: DigitSystem): string | null {
   const lost = text(detail, 'lostQuantity');
   const limit = text(detail, 'thresholdQuantity');
   const uom = text(detail, 'uom');
-  const unit = (value: string) => (uom ? `${formatDecimal(value, 2)} ${uom}` : formatDecimal(value, 2));
+  const unit = (value: string) => (uom ? `${formatDecimal(value, 2, digits)} ${uom}` : formatDecimal(value, 2, digits));
   return lost && limit ? `lost ${unit(lost)} (limit ${unit(limit)})` : null;
 }
 
-function costText(detail: Detail): string | null {
+function costText(detail: Detail, digits?: DigitSystem): string | null {
   const amount = text(detail, 'amount');
   const currency = text(detail, 'currency');
   const limit = text(detail, 'threshold');
-  const money = (value: string) => (currency ? `${formatDecimal(value, 0)} ${currency}` : formatDecimal(value, 0));
+  const money = (value: string) => (currency ? `${formatDecimal(value, 0, digits)} ${currency}` : formatDecimal(value, 0, digits));
   if (!amount) return null;
   return `${money(amount)}${limit ? ` (limit ${money(limit)})` : ''}`;
 }
@@ -74,7 +75,7 @@ function consequenceText(detail: Detail): string | null {
   return value ? `event marked ${value} (${kind === 'solType' ? 'type' : 'severity'})` : marker;
 }
 
-const DETAIL_TEXT: Readonly<Record<string, (detail: Detail) => string | null>> = {
+const DETAIL_TEXT: Readonly<Record<string, (detail: Detail, digits?: DigitSystem) => string | null>> = {
   duration: durationText,
   repeat: repeatText,
   cumulative: cumulativeText,
@@ -83,10 +84,10 @@ const DETAIL_TEXT: Readonly<Record<string, (detail: Detail) => string | null>> =
   consequence: consequenceText,
 };
 
-/** What the server recorded when the trigger fired, in plain words (empty when it recorded nothing usable). */
-export function triggerDetailText(rec: Pick<RcaRecommendationView, 'trigger' | 'detail'>): string[] {
+/** What the server recorded when the trigger fired, in plain words and the plant's digits (empty when nothing usable). */
+export function triggerDetailText(rec: Pick<RcaRecommendationView, 'trigger' | 'detail'>, digits?: DigitSystem): string[] {
   const parts: string[] = [];
-  const main = DETAIL_TEXT[rec.trigger]?.(rec.detail);
+  const main = DETAIL_TEXT[rec.trigger]?.(rec.detail, digits);
   if (main) parts.push(main);
   if (rec.detail.criticalAsset === true && SCALED_BY_CRITICALITY.has(rec.trigger)) parts.push('critical asset: lower threshold');
   return parts;

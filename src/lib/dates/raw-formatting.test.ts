@@ -16,6 +16,9 @@ const RAW = [
   { name: 'toISOString() sliced into a date', pattern: /\.toISOString\(\)\.(?:slice|substring|substr|split)\(/ },
   { name: 'hard-coded locale', pattern: /['"]en-(?:US|GB|CA)['"]/ },
   { name: 'date-fns formatting', pattern: /from ['"]date-fns/ },
+  // numbers: the digits setting (Latin / Persian digits and separators) applies to every displayed number
+  { name: 'toFixed() / toPrecision() number text', pattern: /\.to(?:Fixed|Precision)\(/ },
+  { name: 'hand-rolled thousands grouping', pattern: /\(\\d\{3\}\)\+/ },
 ];
 
 function sourceFiles(dir: string): string[] {

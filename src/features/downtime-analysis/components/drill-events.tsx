@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { useCalendarPreference } from '@/lib/dates';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { EventTable } from '@/features/event-hub/components/event-table';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
@@ -20,6 +21,7 @@ export interface DrillEventsProps {
  */
 export function DrillEvents({ filters, selection, onDismiss }: DrillEventsProps) {
   const env = useEventHubEnv();
+  const { digits } = useCalendarPreference();
   return (
     <Section
       title={`Events · ${selection.label}`}
@@ -27,7 +29,7 @@ export function DrillEvents({ filters, selection, onDismiss }: DrillEventsProps)
       actions={<Button size="sm" variant="ghost" onClick={onDismiss}>Close list</Button>}
       description={
         <>
-          Bar: {selection.unit === 'count' ? `${formatCount(selection.group.value)} stops` : <DurationText seconds={selection.group.value} />}. Frequency
+          Bar: {selection.unit === 'count' ? `${formatCount(selection.group.value, digits)} stops` : <DurationText seconds={selection.group.value} />}. Frequency
           counts stop occurrences starting in the window; durations are allocated, so an overlapping stop shares its time with the other causes.
         </>
       }
