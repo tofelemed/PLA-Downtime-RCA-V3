@@ -1,6 +1,6 @@
 /**
  * Views of the v2 administration API (backend `src/v2/administration/**`): users, the user directory,
- * scope grants, tasks, the audit trail, custom attribute definitions, dashboard settings, organizations,
+ * scope grants, tasks, the audit trail, custom attribute definitions, organizations,
  * plants and branding. Hand-written like the other `types/` until the backend documents response schemas.
  */
 
@@ -216,25 +216,6 @@ export interface AttributeDefinitionInput {
   selectOptions?: string[];
   displayOrder?: number;
   isActive?: boolean;
-}
-
-/** Dashboard settings of a plant (`GET /v2/dashboard-configuration`); every section is a flat record. */
-export interface DashboardSettings {
-  oee: Record<string, number>;
-  losses: Record<string, number | string[]>;
-  costs: Record<string, number | string>;
-  bottleneckRisk: Record<string, number>;
-  display: Record<string, boolean | number | string>;
-  performance: Record<string, number | string>;
-  quality: Record<string, number | string>;
-  availability: Record<string, number | string>;
-}
-
-export interface DashboardConfigView {
-  settings: DashboardSettings;
-  isStored: boolean;
-  updatedAt: string | null;
-  updatedByName: string | null;
 }
 
 /** `GET /v2/organizations` item. */

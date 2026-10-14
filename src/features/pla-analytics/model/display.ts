@@ -4,6 +4,7 @@ import { formatRatio, reasonText } from '@/features/downtime-analysis/model/kpi-
 import { valuationReasonLabel } from '@/features/plan-dashboard/model/display';
 import { currencyDigits } from '@/features/display-currency/money-format';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
+import { type DigitSystem, toDigits } from '@/lib/dates';
 
 /** Labels and display rules of PLA Analytics (plan 3.6); the browser formats server figures, never derives them. */
 export const TAB_LABELS = {
@@ -98,10 +99,10 @@ export function kpiText(view: KpiAggregateView | undefined): string {
 
 export const findKpi = (views: readonly KpiAggregateView[] | undefined, metric: string) => views?.find((v) => v.metric === metric);
 
-/** "2 d 3 h" from server seconds (an age, display only). */
-export function ageText(seconds: number): string {
+/** "2 d 3 h" from server seconds (an age, display only), in the plant's digits. */
+export function ageText(seconds: number, digits?: DigitSystem): string {
   if (seconds < 0) return 'not ended';
   const hours = Math.floor(seconds / 3600);
-  if (hours < 24) return `${hours} h`;
-  return `${Math.floor(hours / 24)} d ${hours % 24} h`;
+  if (hours < 24) return toDigits(`${hours} h`, digits);
+  return toDigits(`${Math.floor(hours / 24)} d ${hours % 24} h`, digits);
 }

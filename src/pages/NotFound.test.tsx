@@ -12,6 +12,6 @@ describe('NotFound', () => {
     );
     expect(screen.getByText('/downtime-analysis')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Go to the dashboard' })).toHaveAttribute('href', '/dashboard');
-    expect(document.title).toBe('Page not found · Pro-Act');
+    expect(document.title).toBe('Page not found · Traverse Forge');
   });
 });

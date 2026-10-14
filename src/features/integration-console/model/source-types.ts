@@ -38,7 +38,7 @@ export const SOURCE_TYPE_OPTIONS: readonly SourceTypeOption[] = [
     type: 'opc_ua',
     label: 'OPC UA and other protocols',
     availability: 'planned',
-    description: 'Planned as server-side adapters in a later release. Until then, plant data reaches Pro-Act through PI or MQTT.',
+    description: 'Planned as server-side adapters in a later release. Until then, plant data reaches Traverse Forge through PI or MQTT.',
   },
 ];
 

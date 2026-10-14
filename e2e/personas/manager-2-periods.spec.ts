@@ -100,7 +100,7 @@ test.describe('Manager persona — period accounting and adjustments (Plan Dashb
     await expect(page.getByTestId('export-hash')).toHaveText(/SHA-256\): [0-9a-f]{64}/);
     const download = page.waitForEvent('download');
     await page.getByTestId('export-download').click();
-    expect((await download).suggestedFilename()).toMatch(/^proact-loss-lines-.+\.csv$/);
+    expect((await download).suggestedFilename()).toMatch(/^traverse-forge-loss-lines-.+\.csv$/);
     await page.screenshot({ path: test.info().outputPath('manager-period-approved.png'), fullPage: true });
 
     await page.reload();

@@ -1,6 +1,7 @@
 import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { DowntimeGroupView } from '@/api/v2/types/reports';
 import { formatDuration } from '@/features/ux-kit/format/duration';
+import { useCalendarPreference } from '@/lib/dates';
 import { formatCount, formatRatio } from '../../model/kpi-display';
 
 export interface ParetoChartProps {
@@ -29,7 +30,8 @@ export function ParetoChart({ groups, unit, labelOf, onBar }: ParetoChartProps) 
     value: Number(group.value),
     cumulative: group.cumulativeShare === null ? null : Number(group.cumulativeShare) * 100,
   }));
-  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact') : formatCount(String(value)));
+  const { digits } = useCalendarPreference();
+  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact', digits) : formatCount(String(value)));
   return (
     <div className="h-72 w-full" aria-hidden>
       <ResponsiveContainer>

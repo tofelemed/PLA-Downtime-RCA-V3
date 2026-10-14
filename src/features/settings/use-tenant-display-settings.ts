@@ -1,6 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { adminCall } from '@/api/v2/queries/administration-shared';
+import { resyncTenant } from '@/api/v2/queries/invalidation';
 import { v2Keys } from '@/api/v2/queries/query-keys';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import type { PlantView } from '@/api/v2/types/administration';
@@ -14,7 +15,7 @@ import {
 /** The acting plant's record (`GET /v2/tenants/:id`): shared key, fresh for 5 minutes, set after a save. */
 export const tenantKey = (tenantId: string) => v2Keys.detail(tenantId, 'admin-config', tenantId, 'plant');
 
-type PlantDisplay = Pick<PlantView, 'name' | 'calendarSystem' | 'digits'> & Partial<Pick<PlantView, 'code' | 'organizationName' | 'weekStart'>>;
+type PlantDisplay = Pick<PlantView, 'name' | 'calendarSystem' | 'digits'> & Partial<Pick<PlantView, 'code' | 'organizationName' | 'weekStart' | 'timezone'>>;
 
 /**
  * The acting plant (`plantSelection?.tenant?.id || session?.tenant?.id`) as the server has it now —
@@ -44,6 +45,16 @@ export function calendarPreferenceOf(tenant: Partial<Pick<PlantView, 'calendarSy
   };
 }
 
+/**
+ * After a display-settings save: the plant record is replaced at once (calendar and digits re-render every
+ * formatter through the provider) and every cached query of the plant is refetched, because server-made
+ * figures depend on the settings too (week buckets on the week start, operational dates on the zone).
+ */
+export async function applyPlantSettings(queryClient: QueryClient, tenantId: string, plant: PlantView): Promise<void> {
+  queryClient.setQueryData(tenantKey(tenantId), plant);
+  await resyncTenant(queryClient, tenantId);
+}
+
 /** Saves the plant's calendar system and digits (`PATCH /v2/tenants/:id/display-settings`). */
 export function useSaveDisplaySettings() {
   const queryClient = useQueryClient();
@@ -53,9 +64,7 @@ export function useSaveDisplaySettings() {
       adminCall<PlantView>('PATCH', `/tenants/${tenantId}/display-settings`, {
         body: { calendarSystem: preference.calendar, digits: preference.digits },
       }),
-    onSuccess: (plant) => {
-      if (tenantId) queryClient.setQueryData(tenantKey(tenantId), plant);
-    },
+    onSuccess: (plant) => (tenantId ? applyPlantSettings(queryClient, tenantId, plant) : undefined),
   });
 }
 
@@ -65,8 +74,6 @@ export function useSaveWeekStart() {
   const tenantId = useV2TenantId();
   return useMutation({
     mutationFn: (weekStart: string) => adminCall<PlantView>('PATCH', `/tenants/${tenantId}/display-settings`, { body: { weekStart } }),
-    onSuccess: (plant) => {
-      if (tenantId) queryClient.setQueryData(tenantKey(tenantId), plant);
-    },
+    onSuccess: (plant) => (tenantId ? applyPlantSettings(queryClient, tenantId, plant) : undefined),
   });
 }

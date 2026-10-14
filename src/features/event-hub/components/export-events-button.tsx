@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { friendlyToastContent } from '@/features/ux-kit/errors';
 import { useToast } from '@/hooks/use-toast';
 import { ActionIcon, StatusIcon } from '@/lib/icons';
+import { exportFileName, plantFileDay } from '@/features/ux-kit/format/export-file-name';
 import { toEventQuery, type EventFilterState } from '../model/event-filters';
+import { useEventHubEnv } from '../use-event-hub-env';
 
 /** The list filters without paging: the export covers every matching event (server limit 50,000). */
 function exportQuery(filters: EventFilterState): QueryParams {
@@ -25,12 +27,13 @@ function saveCsv(text: string, name: string): void {
 /** CSV of the filtered events (ISO UTC times, names not ids), built by the server from the same filters. */
 export function ExportEventsButton({ filters }: { filters: EventFilterState }) {
   const { toast } = useToast();
+  const { timezone } = useEventHubEnv();
   const [busy, setBusy] = useState(false);
   const run = async () => {
     setBusy(true);
     try {
       const response = await v2Request<string>({ method: 'GET', path: '/production-events/export', query: exportQuery(filters) });
-      saveCsv(response.data, `production-events-${(filters.from ?? '').slice(0, 10)}.csv`);
+      saveCsv(response.data, exportFileName(['production-events', plantFileDay(filters.from, timezone)]));
     } catch (error) {
       toast({ ...friendlyToastContent(error), variant: 'destructive' });
     } finally {

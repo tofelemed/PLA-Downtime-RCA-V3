@@ -8,9 +8,9 @@ export const BRANDING_KEY = 'branding';
 
 /** Defaults of the shell (`src/services/BrandingService.ts` DEFAULT_BRANDING), kept identical. */
 export const BRANDING_DEFAULTS: BrandingV2Dto = {
-  appName: 'Unified APM',
-  appSubtitle: 'Asset Performance Management',
-  logoInitials: 'UA',
+  appName: 'Traverse Forge',
+  appSubtitle: 'Production loss accounting',
+  logoInitials: 'TF',
   primaryColor: '#2563eb',
   secondaryColor: '#ec4899',
   logoSize: 32,

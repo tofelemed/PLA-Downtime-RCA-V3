@@ -6,8 +6,6 @@ import type {
   BrandingView,
   CreateOrganizationInput,
   CreatePlantInput,
-  DashboardConfigView,
-  DashboardSettings,
   OrganizationView,
   PlantView,
 } from '../types/administration';
@@ -46,16 +44,6 @@ export function useDeleteAttribute() {
   return useAdminCommand<string, void>(CONFIG, (id) => adminCall('DELETE', `/custom-attribute-definitions/${id}`));
 }
 
-export const useDashboardConfig = () => useAdminRead<DashboardConfigView>('admin-config', '/dashboard-configuration');
-
-export function useSaveDashboardConfig() {
-  return useAdminCommand<DashboardSettings, DashboardConfigView>(CONFIG, (body) => adminCall('PUT', '/dashboard-configuration', { body }));
-}
-
-export function useResetDashboardConfig() {
-  return useAdminCommand<void, DashboardConfigView>(CONFIG, () => adminCall('DELETE', '/dashboard-configuration'));
-}
-
 /** Organizations within reach (a handful; the first 500 by name). */
 export const useOrganizations = () =>
   useAdminRead<ListResponse<OrganizationView>>('admin-config', '/organizations', { limit: 500 });
@@ -88,12 +76,6 @@ export function useCreatePlant() {
 
 export function useDeletePlant() {
   return useAdminCommand<string, void>(CONFIG, (id) => adminCall('DELETE', `/tenants/${id}`));
-}
-
-export function useUpdatePlantDisplay() {
-  return useAdminCommand<{ id: string; calendarSystem: string; digits: string }, PlantView>(CONFIG, ({ id, ...body }) =>
-    adminCall('PATCH', `/tenants/${id}/display-settings`, { body }),
-  );
 }
 
 export const useBranding = () => useAdminRead<BrandingView>('admin-config', '/branding');

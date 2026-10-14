@@ -8,6 +8,7 @@ import { createLogger } from '@/lib/logger';
 import { ActionIcon } from '@/lib/icons';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { labelOf } from '@/features/ux-kit/labels';
+import { exportFileName, plantFileDay } from '@/features/ux-kit/format/export-file-name';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { EXPORT_STATE_LABELS } from '../model/display';
 
@@ -55,7 +56,7 @@ export function ScopeExport({ request, label, timezone, testId = 'scope-export' 
   const download = async () => {
     if (!jobId) return;
     try {
-      saveText(await downloadExportText(jobId), `proact-${request?.reportType ?? 'export'}-${request?.from.slice(0, 10) ?? ''}.csv`);
+      saveText(await downloadExportText(jobId), exportFileName([request?.reportType ?? 'export', plantFileDay(request?.from, timezone, '')]));
     } catch (error) {
       setFailure(error);
     }

@@ -30,7 +30,6 @@ import { RCARecommendationModule } from './rca-recommendation/rca-recommendation
 import { RCATemplateModule } from './rca-template/rca-template.module';
 import { ReasonCodeModule } from './reason-code/reason-code.module';
 import { TaskModule } from './task/task.module';
-import { DashboardConfigurationModule } from './dashboard-configuration/dashboard-configuration.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
 import { LogicTreeNodeModule } from './logic-tree-node/logic-tree-node.module';
 import { EvidenceCategoryModule } from './evidence-category/evidence-category.module';
@@ -131,7 +130,6 @@ registerPgTypeParsers();
     RCATemplateModule,
     ReasonCodeModule,
     TaskModule,
-    DashboardConfigurationModule,
     AppSettingsModule,
     LogicTreeNodeModule,
     EvidenceCategoryModule,

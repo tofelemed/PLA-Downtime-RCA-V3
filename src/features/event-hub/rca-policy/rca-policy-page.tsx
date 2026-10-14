@@ -3,7 +3,6 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { formatDuration } from '@/features/ux-kit/format/duration';
 import { useUserNames } from '@/features/ux-kit/labels';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
@@ -20,10 +19,10 @@ const AUTO_LABELS: Readonly<Record<RcaPolicyVersion['autoCreate'], string>> = {
   create: 'Open an RCA case',
 };
 
-function triggerText(policy: RcaPolicyVersion): string {
-  const duration = policy.durationThresholdSeconds > 0 ? `unplanned stops from ${formatDuration(policy.durationThresholdSeconds, 'long')}` : 'no duration trigger';
+function triggerText(policy: RcaPolicyVersion, duration: (seconds: number) => string): string {
+  const threshold = policy.durationThresholdSeconds > 0 ? `unplanned stops from ${duration(policy.durationThresholdSeconds)}` : 'no duration trigger';
   const cost = policy.costThreshold === null ? 'no cost trigger' : `valued loss from ${policy.costThreshold}`;
-  return `${duration} · ${policy.repeatCount} failures of one asset in ${policy.repeatWindowDays} days · ${cost}`;
+  return `${threshold} · ${policy.repeatCount} failures of one asset in ${policy.repeatWindowDays} days · ${cost}`;
 }
 
 /**
@@ -82,14 +81,14 @@ function RcaPolicyScreen() {
 }
 
 function CurrentPolicy({ policy, unitScoped }: { policy: RcaPolicyVersion; unitScoped: boolean }) {
-  const { dateTime } = usePlantFormat();
+  const { dateTime, duration } = usePlantFormat();
   const inherited = unitScoped && policy.unitId === null;
   return (
     <dl className="grid grid-cols-[12rem_1fr] gap-x-4 gap-y-1 text-sm" data-testid="rca-policy-current">
       <dt className="text-muted-foreground">Version</dt>
       <dd>{policy.version}{inherited ? ' (plant-wide; this unit has no own version)' : ''}</dd>
       <dt className="text-muted-foreground">Triggers</dt>
-      <dd>{triggerText(policy)}</dd>
+      <dd>{triggerText(policy, duration)}</dd>
       <dt className="text-muted-foreground">When a trigger fires</dt>
       <dd>{AUTO_LABELS[policy.autoCreate]}</dd>
       <dt className="text-muted-foreground">In force since</dt>
@@ -101,10 +100,10 @@ function CurrentPolicy({ policy, unitScoped }: { policy: RcaPolicyVersion; unitS
 function VersionHistory({ unitId }: { unitId: string | null }) {
   const versions = useRcaPolicyVersions(unitId);
   const users = useUserNames();
-  const { dateTime } = usePlantFormat();
+  const { dateTime, duration } = usePlantFormat();
   const columns: DataTableColumn<RcaPolicyVersion>[] = [
     { id: 'version', header: 'Version', align: 'right', cell: (row) => row.version },
-    { id: 'triggers', header: 'Triggers', cell: (row) => triggerText(row) },
+    { id: 'triggers', header: 'Triggers', cell: (row) => triggerText(row, duration) },
     { id: 'auto', header: 'When it fires', cell: (row) => AUTO_LABELS[row.autoCreate] },
     { id: 'from', header: 'From', nowrap: true, cell: (row) => dateTime(row.effectiveFrom) },
     { id: 'to', header: 'Until', nowrap: true, cell: (row) => (row.effectiveTo ? dateTime(row.effectiveTo) : 'In force') },

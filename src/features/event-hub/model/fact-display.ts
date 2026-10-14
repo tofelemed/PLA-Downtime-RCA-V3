@@ -13,7 +13,6 @@ import {
   SOURCE_KIND_LABELS,
 } from '@/features/ux-kit/labels';
 import { EVENT_TYPE_LABELS } from '@/features/ux-kit/labels/event-hub-labels';
-import { formatDuration } from '@/features/ux-kit/format/duration';
 
 /**
  * Display of revision facts (`effectiveFacts` / `sourceFacts`, ING06): every field gets its label and
@@ -27,6 +26,8 @@ export interface FactResolvers {
   impactName: (id: string) => string;
   userName: (id: string) => string;
   dateTime: (iso: string) => string;
+  /** seconds as `1 h 30 min` in the plant's digits */
+  duration: (seconds: number) => string;
 }
 
 type Resolver = (value: string, r: FactResolvers) => string;
@@ -64,7 +65,7 @@ export function factLabel(field: string): string {
 
 function scalarText(field: string, value: string | number | boolean, r: FactResolvers): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (DURATION_FIELDS.has(field)) return formatDuration(Number(value), 'long');
+  if (DURATION_FIELDS.has(field)) return r.duration(Number(value));
   const text = String(value);
   if (ID_RESOLVERS[field]) return ID_RESOLVERS[field](text, r);
   if (TIME_FIELDS.has(field)) return r.dateTime(text);

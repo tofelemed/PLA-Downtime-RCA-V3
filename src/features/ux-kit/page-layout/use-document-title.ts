@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 
 /** Product name appended to every browser tab title. */
-export const APP_TITLE = 'Pro-Act';
+export const APP_TITLE = 'Traverse Forge';
 
 /**
- * Sets the browser tab title to `${title} · Pro-Act` while the component is mounted and restores the
+ * Sets the browser tab title to `${title} · Traverse Forge` while the component is mounted and restores the
  * previous title on unmount. `PageHeader` calls it; use it directly only on pages without a header.
  */
 export function useDocumentTitle(title: string, enabled = true): void {
