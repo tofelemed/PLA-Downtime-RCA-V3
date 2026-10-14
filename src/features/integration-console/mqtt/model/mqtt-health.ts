@@ -61,7 +61,16 @@ export function subscribeJobOf(jobs: readonly IngestionJobView[]): IngestionJobV
   return subscriptions.find((job) => job.state !== 'stopped') ?? subscriptions[subscriptions.length - 1] ?? null;
 }
 
-export type SubscriptionStatus = 'no_job' | 'connected' | 'disconnected' | 'parked' | 'persist_failed' | 'no_lease' | 'paused' | 'draining' | 'stopped' | 'failed' | 'created';
+/**
+ * Whether the console waits for the worker: an active connection's subscribe job is created (and then
+ * started) by the worker's reconcile, not by a command, so the jobs list polls until it is running.
+ */
+export function awaitsSubscribeJob(jobs: readonly IngestionJobView[]): boolean {
+  const job = subscribeJobOf(jobs);
+  return job === null || job.state === 'created';
+}
+
+export type SubscriptionStatus ='no_job' | 'connected' | 'disconnected' | 'parked' | 'persist_failed' | 'no_lease' | 'paused' | 'draining' | 'stopped' | 'failed' | 'created';
 
 export interface SubscriptionStatusView {
   status: SubscriptionStatus;

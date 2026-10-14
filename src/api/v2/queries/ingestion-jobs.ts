@@ -22,14 +22,21 @@ export function jobPollInterval(states: ReadonlyArray<string | null | undefined>
   return states.some((state) => state && ACTIVE_JOB_STATES.has(state)) ? JOB_POLL_MS : false;
 }
 
-/** Ingestion jobs of one connection, oldest first (plan 1.5, ING02); every page (the stages need all). */
-export function useIngestionJobs(connectionId: string) {
+/**
+ * Ingestion jobs of one connection, oldest first (plan 1.5, ING02); every page (the stages need all).
+ * `awaitsWorker` keeps polling while it holds: a job the worker creates on its own (an MQTT subscribe
+ * job) arrives without a command or realtime notice, so nothing else would refresh the list.
+ */
+export function useIngestionJobs(connectionId: string, awaitsWorker?: (jobs: IngestionJobView[]) => boolean) {
   const list = useV2InfiniteList<IngestionJobView>({
     resource: 'ingestion-jobs',
     path: '/ingestion-jobs',
     query: { connectionId, limit: 100 },
     key: { filters: { connectionId } },
-    refetchInterval: (pages) => jobPollInterval(flattenPages(pages).map((job) => job.state)),
+    refetchInterval: (pages) => {
+      const jobs = flattenPages(pages);
+      return awaitsWorker?.(jobs) ? JOB_POLL_MS : jobPollInterval(jobs.map((job) => job.state));
+    },
   });
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = list;
   useEffect(() => {

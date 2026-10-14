@@ -31,7 +31,7 @@ export function MqttConnectionPanel({ connection, timezone }: MqttConnectionPane
   const { canWriteIntegration } = useCapabilities();
   const session = useConsoleSession();
   const [tab, setTab] = useUrlParam<MqttTab>('tab', TABS, 'subscription');
-  const subscription = useMqttSubscription(connection.id);
+  const subscription = useMqttSubscription(connection.id, connection.isActive);
   return (
     <Tabs value={tab} onValueChange={(next) => setTab(next as MqttTab)}>
       <TabsList className="h-auto flex-wrap">

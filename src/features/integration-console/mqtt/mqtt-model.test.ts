@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ConnectionView, IngestionJobView } from '@/api/v2/types/integrations';
 import { emptyMqttForm, mqttCreateBody, mqttEndpointConfig, mqttFormFromConnection, mqttUpdateBody, PROFILE_PRESETS } from './model/mqtt-form';
-import { mqttHealthOf, subscribeJobOf, subscriptionStatus } from './model/mqtt-health';
+import { awaitsSubscribeJob, mqttHealthOf, subscribeJobOf, subscriptionStatus } from './model/mqtt-health';
 import { errorsFromServer, firstStepWithErrors, formFieldOf } from './model/mqtt-steps';
 import { brokerUrlProblem, mqttFormErrors, pemProblem, tlsProblems, topicsProblem, topicTemplateProblem } from './model/mqtt-validation';
 import { profileDraftErrors, profileDraftOf, profilePatchOf } from './model/profile-draft';
@@ -244,6 +244,14 @@ describe('subscription health and status (design §8)', () => {
     const health = mqttHealthOf({ connected: true, reconnects: 2, counters: { received: 5, accepted: 4, quarantined: 1 }, subscribedTopics: ['a/#', 7], persistFailed: null, sourceAvailable: false, effectiveClientId: 'proact-x' });
     expect(health).toMatchObject({ connected: true, reconnects: 2, subscribedTopics: ['a/#'], sourceAvailable: false, effectiveClientId: 'proact-x', counters: { received: 5, accepted: 4, quarantined: 1, duplicate: 0, parked: 0 } });
     expect(mqttHealthOf(undefined).connected).toBe(false);
+  });
+
+  it('waits for the worker until the subscribe job exists and has left "created"', () => {
+    expect(awaitsSubscribeJob([])).toBe(true);
+    expect(awaitsSubscribeJob([job({ scope: { mode: 'window' } })])).toBe(true);
+    expect(awaitsSubscribeJob([job({ state: 'created' })])).toBe(true);
+    expect(awaitsSubscribeJob([job()])).toBe(false);
+    expect(awaitsSubscribeJob([job({ state: 'paused' })])).toBe(false);
   });
 
   it('picks the live subscribe job and never says healthy when persisting fails', () => {
