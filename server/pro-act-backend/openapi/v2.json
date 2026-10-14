@@ -16794,7 +16794,7 @@
     }
   },
   "info": {
-    "title": "ProAct API v2",
+    "title": "Traverse Forge API v2",
     "description": "Tenant from identity, AND-combined filters, cursor pagination, standard envelopes (src/v2/CONVENTIONS.md)",
     "version": "2.0",
     "contact": {}

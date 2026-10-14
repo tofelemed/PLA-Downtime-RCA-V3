@@ -81,7 +81,7 @@ describe('IconButton', () => {
 
 describe('Page layout', () => {
   afterEach(() => {
-    document.title = 'Pro-Act';
+    document.title = 'Traverse Forge';
   });
 
   it('PageHeader renders the single h1 and sets the document title, restoring it on unmount', () => {
@@ -98,7 +98,7 @@ describe('Page layout', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Production plans' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Planning' })).toHaveAttribute('href', '/planning');
     expect(screen.getByRole('region', { name: 'Active plans' })).toBeInTheDocument();
-    expect(document.title).toBe('Production plans · Pro-Act');
+    expect(document.title).toBe('Production plans · Traverse Forge');
     view.unmount();
     expect(document.title).toBe('Before');
   });

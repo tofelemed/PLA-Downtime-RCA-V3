@@ -7,6 +7,7 @@ import { AppHeader } from '@/features/shell/app-header';
 import { AppSidebar } from '@/features/shell/app-sidebar';
 import { useBranding } from '@/features/shell/use-branding';
 import { PlantAccessGuard } from '@/features/v2-foundation/plant-access-guard';
+import { APP_TITLE } from '@/features/ux-kit/page-layout/use-document-title';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -38,7 +39,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const nav = useNavState(session?.user.id ?? null);
   const branding = useBranding(Boolean(session));
   const mainRef = useRef<HTMLElement>(null);
-  useRouteAnnouncements(branding?.appName || 'Pro-Act', mainRef);
+  useRouteAnnouncements(branding?.appName || APP_TITLE, mainRef);
 
   if (!session) return <div>{children}</div>;
   return (

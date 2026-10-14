@@ -13,7 +13,7 @@ export interface PageHeaderProps {
   meta?: ReactNode;
   /** link to the parent page, e.g. `{ to: '/planning', label: 'Planning' }` */
   back?: { to: string; label: string };
-  /** default true: set `document.title` to `${title} · Pro-Act` */
+  /** default true: set `document.title` to `${title} · Traverse Forge` */
   documentTitle?: boolean;
 }
 

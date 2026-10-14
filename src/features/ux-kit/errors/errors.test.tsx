@@ -135,7 +135,7 @@ describe('SupportReference and FriendlyErrorAlert', () => {
     expect(container.textContent).not.toContain(CORR);
     fireEvent.click(screen.getByRole('button', { name: 'Copy support reference' }));
     await waitFor(() => expect(screen.getByText('Copied')).toBeInTheDocument());
-    expect(writeText.mock.calls[0][0]).toMatch(new RegExp(`^Pro-Act support reference: code=UOM_MIXED status=422 ref=${CORR} at=\\d{4}-`));
+    expect(writeText.mock.calls[0][0]).toMatch(new RegExp(`^Traverse Forge support reference: code=UOM_MIXED status=422 ref=${CORR} at=\\d{4}-`));
   });
 
   it('falls back to a selected read-only field when the clipboard is refused', async () => {
