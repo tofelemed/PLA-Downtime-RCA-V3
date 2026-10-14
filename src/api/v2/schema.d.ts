@@ -6678,7 +6678,7 @@ export interface components {
             count: number;
         };
         AuditDayCount: {
-            /** @description UTC day, YYYY-MM-DD */
+            /** @description Plant-local day, YYYY-MM-DD (default site's timezone, else the tenant's, else UTC) */
             day: string;
             count: number;
         };
