@@ -2,12 +2,30 @@ import { EntityManager } from 'typeorm';
 import { OccurrenceSpan } from '../domain/kpi/downtime-measures';
 import { FailureSource, FailureSpan } from '../domain/kpi/reliability';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
+import { StateSegment } from '../domain/reliability/unit-state';
+import { loadStateTimeline } from '../reliability/unit-state/state-timeline.loader';
 import { withRepairEvidence } from './repair-evidence.loader';
 
 /** What the KPI engine reads beyond the accounting inputs: full occurrence extents and failures. */
 export interface KpiInputs {
   occurrences: OccurrenceSpan[];
   failures: FailureSpan[];
+  /** SME D1 / D2: the unit's state timeline; null = no state mapping in force (absent in older runs) */
+  stateTimeline?: StateSegment[] | null;
+}
+
+/** Stops, failures and the state timeline of a period (plan 2.7, SME D1 / D2). */
+export async function loadKpiInputs(
+  manager: EntityManager,
+  period: ProductionPeriod,
+): Promise<KpiInputs> {
+  const stops = await loadStopInputs(manager, period);
+  const stateTimeline = await loadStateTimeline(
+    manager,
+    { tenantId: period.tenantId, unitId: period.unitId },
+    { start: period.utcStart, end: period.utcEnd },
+  );
+  return { ...stops, stateTimeline };
 }
 
 /** Occurrences with a downtime or FailureWO event touching the window (index tenant + unit + start). */
@@ -54,7 +72,7 @@ const toDate = (value: Date | null) => (value ? new Date(value) : null);
  * window with their full extent (KPI06 counting by occurrence start, mean over completed stops) and the
  * D13 failure candidates (KPI07 / KPI08). Bounded by the unit and window; no tenant-wide scan.
  */
-export async function loadKpiInputs(
+async function loadStopInputs(
   manager: EntityManager,
   period: ProductionPeriod,
 ): Promise<KpiInputs> {
@@ -114,5 +132,12 @@ export function kpiHashMaterial(inputs: KpiInputs): unknown {
       time(f.repairEnd),
       f.activeRepairSeconds ?? null,
     ]),
+    state:
+      inputs.stateTimeline?.map((s) => [
+        time(s.start),
+        time(s.end),
+        s.state,
+        s.unknownReason,
+      ]) ?? null,
   };
 }

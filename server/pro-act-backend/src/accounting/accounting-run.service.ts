@@ -273,6 +273,7 @@ function writeKpis(
       totals: accounting.totals,
       occurrences: draft.inputs.kpi.occurrences,
       failures: draft.inputs.kpi.failures,
+      stateTimeline: draft.inputs.kpi.stateTimeline,
     }),
   );
 }

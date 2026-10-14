@@ -17776,6 +17776,170 @@
           "v2 · Work-order operations"
         ]
       }
+    },
+    "/api/v2/unit-state-mappings": {
+      "get": {
+        "operationId": "UnitStateV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "State mapping versions of one unit (newest first; keyset on version)",
+        "tags": [
+          "v2 · Unit state"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. The signal must be a state signal of the unit (422). The previous version ends at effectiveFrom. Physical state only: schedule status comes from the calendar, causes from events.",
+        "operationId": "UnitStateV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitStateMappingCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record a new version of a unit’s state mapping from effectiveFrom",
+        "tags": [
+          "v2 · Unit state"
+        ]
+      }
+    },
+    "/api/v2/unit-state-mappings/coverage": {
+      "get": {
+        "description": "Scheduled time = the window minus excluded shifts. Unknown time (no data, stale heartbeat, bad or uncertain quality, unmapped value) is never filled: availability lies between running / scheduled and (running + unknown) / scheduled; `knownTimeAvailability` is conditional on observed time only. `coverage` null = no mapping at `from`. Window ≤ 31 days (422 INVALID_RANGE).",
+        "operationId": "UnitStateV2Controller_coverage_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Window start, ISO 8601 (at most 31 days before `to`)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Window end (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "State timeline, known-data coverage and availability bounds of a unit over a window",
+        "tags": [
+          "v2 · Unit state"
+        ]
+      }
     }
   },
   "info": {
@@ -24280,6 +24444,91 @@
         },
         "required": [
           "operations"
+        ]
+      },
+      "StateRuleDto": {
+        "type": "object",
+        "properties": {
+          "match": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "RUN",
+            "description": "Signal value: state name or code (no case)"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "running",
+              "internal_stop",
+              "planned_stop",
+              "starved",
+              "blocked",
+              "standby",
+              "not_scheduled"
+            ]
+          }
+        },
+        "required": [
+          "match",
+          "state"
+        ]
+      },
+      "UnitStateMappingCreateDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "signalId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "State signal of the unit (semantic type state)"
+          },
+          "rules": {
+            "description": "Unmapped values are unknown time (data quality)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StateRuleDto"
+            }
+          },
+          "expectedIntervalSeconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 86400,
+            "description": "Expected sample interval of the source (s)"
+          },
+          "jitterSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0,
+            "description": "Known communication jitter (s)"
+          },
+          "staleAfterIntervals": {
+            "type": "number",
+            "minimum": 1,
+            "default": 3,
+            "description": "Stale after this many intervals (SME D2 pilot: 3)"
+          },
+          "isHeartbeat": {
+            "type": "boolean",
+            "default": true,
+            "description": "false = exception-based source: a quiet signal is not lost communication (no staleness)"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "Start of this version (default now)"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "unitId",
+          "signalId",
+          "rules",
+          "expectedIntervalSeconds"
         ]
       }
     }

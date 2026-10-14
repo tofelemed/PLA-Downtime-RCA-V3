@@ -9,6 +9,8 @@ import { MicroStopPolicyV2Service } from './micro-stop-policy-v2.service';
 import { StandbyEquipmentV2Service } from './standby-equipment-v2.service';
 import { StandbyRecordsV2Service } from './standby-records-v2.service';
 import { StandbyV2Controller } from './standby-v2.controller';
+import { UnitStateV2Controller } from './unit-state-v2.controller';
+import { UnitStateV2Service } from './unit-state-v2.service';
 import { WorkOrderOperationsV2Controller } from './work-order-operations-v2.controller';
 import { WorkOrderOperationsV2Service } from './work-order-operations-v2.service';
 
@@ -20,6 +22,7 @@ export const RELIABILITY_V2_SERVICES = [
   StandbyEquipmentV2Service,
   StandbyRecordsV2Service,
   WorkOrderOperationsV2Service,
+  UnitStateV2Service,
 ];
 
 /**
@@ -33,6 +36,7 @@ export const RELIABILITY_V2_SERVICES = [
     MicroStopPolicyV2Controller,
     StandbyV2Controller,
     WorkOrderOperationsV2Controller,
+    UnitStateV2Controller,
   ],
   providers: RELIABILITY_V2_SERVICES,
   // V2Module's event writes use the failure dictionary validator

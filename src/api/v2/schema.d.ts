@@ -5178,6 +5178,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/unit-state-mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** State mapping versions of one unit (newest first; keyset on version) */
+        get: operations["UnitStateV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Record a new version of a unit’s state mapping from effectiveFrom
+         * @description Requires `Idempotency-Key`. The signal must be a state signal of the unit (422). The previous version ends at effectiveFrom. Physical state only: schedule status comes from the calendar, causes from events.
+         */
+        post: operations["UnitStateV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/unit-state-mappings/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * State timeline, known-data coverage and availability bounds of a unit over a window
+         * @description Scheduled time = the window minus excluded shifts. Unknown time (no data, stale heartbeat, bad or uncertain quality, unmapped value) is never filled: availability lies between running / scheduled and (running + unknown) / scheduled; `knownTimeAvailability` is conditional on observed time only. `coverage` null = no mapping at `from`. Window ≤ 31 days (422 INVALID_RANGE).
+         */
+        get: operations["UnitStateV2Controller_coverage_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7495,6 +7536,46 @@ export interface components {
         };
         WorkOrderOperationsImportDto: {
             operations: components["schemas"]["WorkOrderOperationRowDto"][];
+        };
+        StateRuleDto: {
+            /**
+             * @description Signal value: state name or code (no case)
+             * @example RUN
+             */
+            match: string;
+            /** @enum {string} */
+            state: "running" | "internal_stop" | "planned_stop" | "starved" | "blocked" | "standby" | "not_scheduled";
+        };
+        UnitStateMappingCreateDto: {
+            /** Format: uuid */
+            unitId: string;
+            /**
+             * Format: uuid
+             * @description State signal of the unit (semantic type state)
+             */
+            signalId: string;
+            /** @description Unmapped values are unknown time (data quality) */
+            rules: components["schemas"]["StateRuleDto"][];
+            /** @description Expected sample interval of the source (s) */
+            expectedIntervalSeconds: number;
+            /**
+             * @description Known communication jitter (s)
+             * @default 0
+             */
+            jitterSeconds: number;
+            /**
+             * @description Stale after this many intervals (SME D2 pilot: 3)
+             * @default 3
+             */
+            staleAfterIntervals: number;
+            /**
+             * @description false = exception-based source: a quiet signal is not lost communication (no staleness)
+             * @default true
+             */
+            isHeartbeat: boolean;
+            /** @description Start of this version (default now) */
+            effectiveFrom?: string;
+            notes?: string;
         };
     };
     responses: never;
@@ -15582,6 +15663,80 @@ export interface operations {
                 "application/json": components["schemas"]["WorkOrderOperationsImportDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitStateV2Controller_list_v2: {
+        parameters: {
+            query: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                unitId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitStateV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitStateMappingCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitStateV2Controller_coverage_v2: {
+        parameters: {
+            query: {
+                unitId: string;
+                /** @description Window start, ISO 8601 (at most 31 days before `to`) */
+                from: string;
+                /** @description Window end (exclusive) */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

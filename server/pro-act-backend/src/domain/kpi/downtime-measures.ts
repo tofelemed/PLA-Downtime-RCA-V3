@@ -85,7 +85,12 @@ function durationKpis(
         input,
         (part, kind) => kind === 'availability' && part.overrun,
       ),
-      { cohort: { meaning: 'planned stops past their approved window (part of unplanned)' } },
+      {
+        cohort: {
+          meaning:
+            'planned stops past their approved window (part of unplanned)',
+        },
+      },
     ),
     amountKpi(at('downtime_external'), stops('external'), {
       cohort: { within: 'period_window' },
@@ -183,7 +188,9 @@ function availabilityKpis(input: DowntimeInput, total: Dec): KpiDraft[] {
  */
 function codedKpi(allocated: readonly CauseSeconds[]): KpiDraft {
   const coded = sum(
-    allocated.filter((a) => a.event.reasonCodeId !== null).map((a) => a.seconds),
+    allocated
+      .filter((a) => a.event.reasonCodeId !== null)
+      .map((a) => a.seconds),
   );
   return ratioKpi(
     { metric: 'coded_downtime_ratio', scope: PERIOD },

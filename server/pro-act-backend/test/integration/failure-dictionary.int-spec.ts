@@ -144,7 +144,10 @@ describe('failure dictionary (SME D11)', () => {
       unchanged: 1,
     });
     const modes = await list('kinds=failure_mode&history=true');
-    expect(modes.items.map((m) => [m.name, m.effectiveTo])).toEqual([
+    const versions = [...modes.items].sort((a, b) =>
+      a.effectiveFrom.localeCompare(b.effectiveFrom),
+    );
+    expect(versions.map((m) => [m.name, m.effectiveTo])).toEqual([
       ['External leakage - process medium', '2026-06-01T00:00:00.000Z'],
       ['External leakage', null],
     ]);
