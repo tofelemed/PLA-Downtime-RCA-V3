@@ -15,6 +15,13 @@ export interface OeePolicy {
    * version written before the option has no field and keeps its equal shares.
    */
   overlapAllocation: 'equal_share' | 'first_out';
+  /**
+   * SME D6: micro-stop threshold per asset class (asset type → seconds), overriding `microStopSeconds` for
+   * stops of those assets (pilot 120 s for operator-cleared bagger / conveyor stops). Absent = none.
+   */
+  microStopSecondsByAssetClass?: Record<string, number>;
+  /** SME D6: reason codes of process trips — always availability events, never micro-stops. Absent = none. */
+  tripReasonCodes?: string[];
 }
 
 /** `reconciliation_tolerance` body (contracts/policies/reconciliation_tolerance.schema.json, D06). */
@@ -130,7 +137,35 @@ export function parseOeePolicy(body: unknown): OeePolicy {
             ['equal_share', 'first_out'],
             'overlapAllocation',
           ),
+    ...microStopOptions(value),
   };
+}
+
+/** SME D6 options of a body; only the fields a version states (older versions have none). */
+function microStopOptions(
+  value: Record<string, unknown>,
+): Pick<OeePolicy, 'microStopSecondsByAssetClass' | 'tripReasonCodes'> {
+  const options: Pick<
+    OeePolicy,
+    'microStopSecondsByAssetClass' | 'tripReasonCodes'
+  > = {};
+  if (value.microStopSecondsByAssetClass !== undefined) {
+    const byClass = record(value.microStopSecondsByAssetClass);
+    options.microStopSecondsByAssetClass = Object.fromEntries(
+      Object.entries(byClass).map(([assetClass, seconds]) => [
+        assetClass,
+        nonNegative(seconds, `microStopSecondsByAssetClass.${assetClass}`),
+      ]),
+    );
+  }
+  if (value.tripReasonCodes !== undefined) {
+    const codes = value.tripReasonCodes;
+    if (!Array.isArray(codes) || codes.some((c) => typeof c !== 'string')) {
+      throw new PolicyBodyError('tripReasonCodes must be a list of codes');
+    }
+    options.tripReasonCodes = codes as string[];
+  }
+  return options;
 }
 
 export function parseReconciliationTolerance(

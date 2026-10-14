@@ -35,6 +35,7 @@ import { ProductionEvent } from '../../production-event/production-event.entity'
 import { ProductionEventService } from '../../production-event/production-event.service';
 import { EventRevisionService } from '../../production-event/revisions/event-revision.service';
 import { actorFromContext } from '../../production-event/revisions/revision-actor';
+import { FailureDictionaryValidator } from '../../reliability/failure-dictionary/failure-dictionary.validator';
 import { RuleClassificationService } from '../../rules/rule-classification.service';
 import { EventReferencesValidator } from './event-references.validator';
 import { failureColumns } from './failure-detail';
@@ -65,6 +66,7 @@ export class ProductionEventsV2CommandService {
     private readonly codeDefaults: CodeDefaultsService,
     private readonly ruleDefaults: RuleClassificationService,
     private readonly clock: Clock,
+    private readonly failureCodes: FailureDictionaryValidator,
   ) {}
 
   /** Creates a manual event in the caller's tenant; returns its id. */
@@ -75,6 +77,12 @@ export class ProductionEventsV2CommandService {
     const tenantId = requireTenantId(context);
     await this.references.assertUnitOwned(tenantId, dto.unitId);
     await this.references.assertOwned(tenantId, dto.unitId, dto);
+    await this.failureCodes.assertCodes({
+      tenantId,
+      assetId: dto.assetId ?? null,
+      at: new Date(dto.startTime),
+      values: dto,
+    });
     const coded = await this.withRuleDefaults(
       tenantId,
       dto,
@@ -135,6 +143,12 @@ export class ProductionEventsV2CommandService {
     }
     assertRevision(existing.rowVersion, expectedRevision);
     await this.references.assertOwned(tenantId, existing.unitId, dto);
+    await this.failureCodes.assertCodes({
+      tenantId,
+      assetId: dto.assetId === undefined ? existing.assetId : dto.assetId,
+      at: dto.startTime ? new Date(dto.startTime) : existing.startTime,
+      values: dto,
+    });
     assertIntervalEditable(existing, dto);
     const coded = await this.withCodeDefaults(
       tenantId,

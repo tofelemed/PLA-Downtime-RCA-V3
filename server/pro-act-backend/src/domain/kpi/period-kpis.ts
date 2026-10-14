@@ -10,6 +10,7 @@ import {
   isStoppingDowntime,
   segmentSlice,
 } from '../accounting/segmentation';
+import { occurrenceThresholds } from '../accounting/micro-stop-threshold';
 import { BoundedInterval } from '../time/interval-algebra';
 import { downtimeBreakdown } from './downtime-breakdown';
 import {
@@ -24,9 +25,11 @@ import { operationalOee } from './operational-oee';
 import { reconciledFromTotals, sumReconciled } from './reconciled-terms';
 import { reconciledOee } from './reconciled-oee';
 import { FailureSpan, reliability } from './reliability';
+import { stateKpis } from './state-kpis';
+import { StateSegment } from '../reliability/unit-state';
 
 /** Bumped whenever a KPI rule changes (part of the calculation run's engine version and input hash). */
-export const KPI_ENGINE_VERSION = '2.7.3';
+export const KPI_ENGINE_VERSION = '2.7.6';
 
 export interface PeriodKpiInput {
   /** the accounting input of the same run (window, schedule, events, slices, policy, asOf) */
@@ -37,6 +40,8 @@ export interface PeriodKpiInput {
   occurrences: readonly OccurrenceSpan[];
   /** functional-failure candidates touching the window (D13) */
   failures: readonly FailureSpan[];
+  /** SME D1 / D2: the unit's state timeline; null / absent = no state mapping (no coverage KPIs) */
+  stateTimeline?: readonly StateSegment[] | null;
 }
 
 interface SliceTerms {
@@ -257,7 +262,12 @@ export function computePeriodKpis(input: PeriodKpiInput): KpiDraft[] {
       failures: input.failures,
       exposure: time.scheduled.minus(time.stopped),
       microStopSeconds: accounting.policy.microStopSeconds,
+      microStopSecondsByOccurrence: occurrenceThresholds(
+        downtimeInput.events,
+        accounting.policy,
+      ),
     }),
     coverageKpi(accounting.slices),
+    ...(input.stateTimeline ? stateKpis(accounting, input.stateTimeline) : []),
   ];
 }

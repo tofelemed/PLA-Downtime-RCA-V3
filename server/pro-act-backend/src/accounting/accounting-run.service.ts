@@ -280,6 +280,7 @@ function writeKpis(
       totals: accounting.totals,
       occurrences: draft.inputs.kpi.occurrences,
       failures: draft.inputs.kpi.failures,
+      stateTimeline: draft.inputs.kpi.stateTimeline,
     }),
   );
 }
@@ -354,6 +355,8 @@ function engineInput(
     occurrences: inputs.kpi.occurrences,
     policy: {
       microStopSeconds: engine.oee.microStopSeconds,
+      microStopSecondsByAssetClass: engine.oee.microStopSecondsByAssetClass,
+      tripReasonCodes: engine.oee.tripReasonCodes,
       derateComponent: engine.oee.derateComponent,
       overlapAllocation: engine.oee.overlapAllocation,
       plannedStopsInsideScheduleReduceAvailability:

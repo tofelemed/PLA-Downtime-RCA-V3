@@ -5195,6 +5195,304 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/failure-dictionary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dictionary entries in force (keyset; sort code, name or createdAt)
+         * @description Filters: `kinds`, `equipmentClass` (its items and modes plus those valid for every class), `q` (code and name), `at` (instant, default now) or `history=true` for every version. Tenant-wide master data.
+         */
+        get: operations["FailureDictionaryV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Add an entry to the dictionary
+         * @description Requires `Idempotency-Key` and a tenant-wide grant. 409 DICTIONARY_CODE_EXISTS when the kind + class + code is in force; 422 INVALID_REFERENCE for an equipment class that is not in the dictionary.
+         */
+        post: operations["FailureDictionaryV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/failure-dictionary/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One entry version (ETag = row version); foreign ids are 404 */
+        get: operations["FailureDictionaryV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change an entry: its version ends and the next version starts
+         * @description Requires `If-Match: "<rowVersion>"` of the entry in force (428 / 412). Returns the new version. 409 DICTIONARY_ENTRY_CLOSED for an ended entry; 422 when effectiveFrom is not after the version start.
+         */
+        patch: operations["FailureDictionaryV2Controller_change_v2"];
+        trace?: never;
+    };
+    "/api/v2/failure-dictionary/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk upsert entries from JSON rows or CSV (all or nothing)
+         * @description Requires `Idempotency-Key`. New entries are created, changed ones get a new version from `effectiveFrom`, equal ones stay; entries missing from the document are kept. 422 DICTIONARY_IMPORT_INVALID lists the row problems (`details.errors`). `dryRun` counts without storing.
+         */
+        post: operations["FailureDictionaryV2Controller_importEntries_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/failure-dictionary/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End an entry (history and coded events stay)
+         * @description Requires `Idempotency-Key`. 409 DICTIONARY_CLASS_IN_USE for an equipment class with open items or modes; 409 DICTIONARY_ENTRY_CLOSED when already ended.
+         */
+        post: operations["FailureDictionaryV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/micro-stop-policies/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Micro-stop settings in force now (unit override, else tenant-wide)
+         * @description unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE). A tenant without an oee_policy gets the D04 default on first read.
+         */
+        get: operations["MicroStopPolicyV2Controller_current_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/micro-stop-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record new micro-stop settings as an approved oee_policy version, effective now
+         * @description Requires `Idempotency-Key`. Version n+1 of the scope; other oee_policy fields are kept from the version in force. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); 422 INVALID_POLICY for a negative or non-numeric class threshold.
+         */
+        post: operations["MicroStopPolicyV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/standby-equipment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Standby registrations of the caller scope (keyset on effectiveFrom) */
+        get: operations["StandbyV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Register an asset as standby equipment from effectiveFrom
+         * @description Requires `Idempotency-Key`. 409 STANDBY_ALREADY_REGISTERED while a registration is open.
+         */
+        post: operations["StandbyV2Controller_register_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/standby-equipment/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Failure on demand, test failures, operating MTBF and exposure per standby asset
+         * @description For every asset registered as standby in [from, to): start demands, failed starts and their fraction; tests separately; running seconds (the asset’s own exposure) and failures while running — with no failure the operating MTBF is null with reason `no_failures` and the exposure is shown, never an infinite value; standby seconds apart from it. 422 INVALID_RANGE when from ≥ to.
+         */
+        get: operations["StandbyV2Controller_metrics_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/standby-equipment/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End a standby duty (its log stays) */
+        post: operations["StandbyV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/standby-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Demand / test / running log entries (keyset on startedAt; from / to overlap) */
+        get: operations["StandbyV2Controller_listRecords_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/standby-records/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import demand / test / running log entries (all or nothing)
+         * @description Requires `Idempotency-Key`. The asset by id or code; an entry with an `externalRef` already stored is replaced. 422 STANDBY_IMPORT_INVALID lists the row problems (`details.errors`).
+         */
+        post: operations["StandbyV2Controller_importRecords_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/work-order-operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operations of the caller scope (keyset on startedAt; from / to overlap, eventIds, assetIds) */
+        get: operations["WorkOrderOperationsV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/work-order-operations/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Map and import CMMS work-order operations (upsert on work order + operation, all or nothing)
+         * @description Requires `Idempotency-Key`. Operation start / end / waiting are the actual operation times — never the work-order creation or closure. A row without eventId is linked to the stop of its asset running at the operation start. Diagnosis, repair and test operations of a stop give its active repair time (KPI `mttr`, "Mean active repair time"); the stop gives the mean time to restore production. 422 WORK_ORDER_IMPORT_INVALID lists the row problems (`details.errors`).
+         */
+        post: operations["WorkOrderOperationsV2Controller_importOperations_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/unit-state-mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** State mapping versions of one unit (newest first; keyset on version) */
+        get: operations["UnitStateV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Record a new version of a unit’s state mapping from effectiveFrom
+         * @description Requires `Idempotency-Key`. The signal must be a state signal of the unit (422). The previous version ends at effectiveFrom. Physical state only: schedule status comes from the calendar, causes from events.
+         */
+        post: operations["UnitStateV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/unit-state-mappings/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * State timeline, known-data coverage and availability bounds of a unit over a window
+         * @description Scheduled time = the window minus excluded shifts. Unknown time (no data, stale heartbeat, bad or uncertain quality, unmapped value) is never filled: availability lies between running / scheduled and (running + unknown) / scheduled; `knownTimeAvailability` is conditional on observed time only. `coverage` null = no mapping at `from`. Window ≤ 31 days (422 INVALID_RANGE).
+         */
+        get: operations["UnitStateV2Controller_coverage_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7507,6 +7805,195 @@ export interface components {
             items?: string[];
             code?: string;
             name?: string;
+        };
+        FailureDictionaryCreateDto: {
+            description?: Record<string, never> | null;
+            /** @example Mechanical failure */
+            category?: Record<string, never> | null;
+            /** @description Equipment classes only: asset types the class covers */
+            assetTypes?: string[];
+            /** @description The "unknown / investigation pending" choice of its list */
+            isPending?: boolean;
+            /** @description Start of this version (default now) */
+            effectiveFrom?: string;
+            /** @enum {string} */
+            kind: "equipment_class" | "maintainable_item" | "failure_mode" | "failure_mechanism" | "failure_cause" | "detection_method";
+            /** @description Maintainable items and failure modes: code of their equipment class (empty = every class) */
+            equipmentClass?: string;
+            /** @example ELP */
+            code: string;
+            /** @example External leakage – process medium */
+            name: string;
+        };
+        FailureDictionaryRowDto: {
+            /** @enum {string} */
+            kind?: "equipment_class" | "maintainable_item" | "failure_mode" | "failure_mechanism" | "failure_cause" | "detection_method";
+            equipmentClass?: string;
+            code?: string;
+            name?: string;
+            description?: Record<string, never> | null;
+            category?: Record<string, never> | null;
+            assetTypes?: string[];
+            isPending?: boolean;
+        };
+        FailureDictionaryImportDto: {
+            entries?: components["schemas"]["FailureDictionaryRowDto"][];
+            /** @description CSV with a header row: kind,equipmentClass,code,name,description,category,assetTypes,isPending (assetTypes separated by ";", isPending yes/no) */
+            csv?: string;
+            /** @description Start of new and changed entries (default now) */
+            effectiveFrom?: string;
+            /** @description true = check and count only, store nothing */
+            dryRun?: boolean;
+        };
+        FailureDictionaryChangeDto: {
+            description?: Record<string, never> | null;
+            /** @example Mechanical failure */
+            category?: Record<string, never> | null;
+            /** @description Equipment classes only: asset types the class covers */
+            assetTypes?: string[];
+            /** @description The "unknown / investigation pending" choice of its list */
+            isPending?: boolean;
+            /** @description Start of this version (default now) */
+            effectiveFrom?: string;
+            name?: string;
+        };
+        FailureDictionaryRetireDto: {
+            /** @description End of the entry (default now) */
+            effectiveTo?: string;
+        };
+        MicroStopPolicyCreateDto: {
+            /**
+             * Format: uuid
+             * @description Unit override; absent = the tenant-wide version
+             */
+            unitId?: string;
+            /** @description Unit threshold (s): shorter stops stay in running time and reduce performance */
+            microStopSeconds: number;
+            /**
+             * @description Threshold per asset class (asset type → seconds); replaces the stated map. 0 = every stop of the class is an event
+             * @example {
+             *       "Bagger": 120,
+             *       "Conveyor": 120
+             *     }
+             */
+            microStopSecondsByAssetClass?: {
+                [key: string]: number;
+            };
+            /** @description Reason codes of process trips: always availability events, never micro-stops */
+            tripReasonCodes?: string[];
+            notes?: string;
+        };
+        StandbyEquipmentCreateDto: {
+            /** Format: uuid */
+            assetId: string;
+            /**
+             * @description How maintenance evaluates the asset (SME D9)
+             * @enum {string}
+             */
+            evaluation: "demand" | "running" | "demand_and_running";
+            /** @description Start of the standby duty (default now) */
+            effectiveFrom?: string;
+            notes?: string;
+        };
+        StandbyEquipmentRetireDto: {
+            /** @description End of the standby duty (default now) */
+            effectiveTo?: string;
+        };
+        StandbyRecordRowDto: {
+            /** Format: uuid */
+            assetId?: string;
+            /** @description Asset code (when no assetId) */
+            assetCode?: string;
+            /** @enum {string} */
+            kind: "demand" | "test" | "run";
+            startedAt: string;
+            endedAt?: Record<string, never> | null;
+            /** @enum {string} */
+            outcome: "success" | "failed_start" | "failed_while_running";
+            /**
+             * Format: uuid
+             * @description Stop of the duty equipment that caused the demand
+             */
+            eventId?: string;
+            /** @description The log’s own id: a re-import replaces the entry */
+            externalRef?: string;
+            notes?: string;
+        };
+        StandbyRecordsImportDto: {
+            records: components["schemas"]["StandbyRecordRowDto"][];
+        };
+        WorkOrderOperationRowDto: {
+            /** @example 4000123 */
+            workOrderId: string;
+            /** @example 0020 */
+            operationId: string;
+            /**
+             * @description diagnosis, repair and test count as active repair
+             * @enum {string}
+             */
+            kind: "diagnosis" | "repair" | "test" | "other";
+            /** @description Actual start of the operation (not the work-order creation) */
+            startedAt: string;
+            /** @description Actual end; absent = still running */
+            endedAt?: Record<string, never> | null;
+            /** @description Waiting for parts, permit or crew inside the operation (s) */
+            waitingSeconds?: number;
+            waitingReason?: string;
+            /** Format: uuid */
+            assetId?: string;
+            /** @description Asset code (functional location) when no assetId */
+            assetCode?: string;
+            /**
+             * Format: uuid
+             * @description The stop it repaired; absent = the stop of the asset running at the operation start, if one
+             */
+            eventId?: string;
+            description?: string;
+            /** @example SAP PM */
+            source?: string;
+        };
+        WorkOrderOperationsImportDto: {
+            operations: components["schemas"]["WorkOrderOperationRowDto"][];
+        };
+        StateRuleDto: {
+            /**
+             * @description Signal value: state name or code (no case)
+             * @example RUN
+             */
+            match: string;
+            /** @enum {string} */
+            state: "running" | "internal_stop" | "planned_stop" | "starved" | "blocked" | "standby" | "not_scheduled";
+        };
+        UnitStateMappingCreateDto: {
+            /** Format: uuid */
+            unitId: string;
+            /**
+             * Format: uuid
+             * @description State signal of the unit (semantic type state)
+             */
+            signalId: string;
+            /** @description Unmapped values are unknown time (data quality) */
+            rules: components["schemas"]["StateRuleDto"][];
+            /** @description Expected sample interval of the source (s) */
+            expectedIntervalSeconds: number;
+            /**
+             * @description Known communication jitter (s)
+             * @default 0
+             */
+            jitterSeconds: number;
+            /**
+             * @description Stale after this many intervals (SME D2 pilot: 3)
+             * @default 3
+             */
+            staleAfterIntervals: number;
+            /**
+             * @description false = exception-based source: a quiet signal is not lost communication (no staleness)
+             * @default true
+             */
+            isHeartbeat: boolean;
+            /** @description Start of this version (default now) */
+            effectiveFrom?: string;
+            notes?: string;
         };
     };
     responses: never;
@@ -15526,6 +16013,484 @@ export interface operations {
     MasterDataSummaryV2Controller_summary_v2: {
         parameters: {
             query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "code" | "-code" | "name" | "-name" | "createdAt" | "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Case-insensitive search in code and name */
+                q?: string;
+                /** @description active = not retired, retired = retired only, all = both */
+                status?: "active" | "retired" | "all";
+                /** @description Entries of these kinds only (repeat the parameter) */
+                kinds?: ("equipment_class" | "maintainable_item" | "failure_mode" | "failure_mechanism" | "failure_cause" | "detection_method")[];
+                /** @description Items and modes of this equipment class and those valid for every class */
+                equipmentClass?: string;
+                /** @description Instant the entries are in force at (default now); ignored with `history=true` */
+                at?: string;
+                /** @description true = every version, also ended ones (default false) */
+                history?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FailureDictionaryCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_change_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FailureDictionaryChangeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_importEntries_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FailureDictionaryImportDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FailureDictionaryRetireDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MicroStopPolicyV2Controller_current_v2: {
+        parameters: {
+            query?: {
+                /** @description Unit override; absent = the tenant-wide version */
+                unitId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MicroStopPolicyV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MicroStopPolicyCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description These assets only (repeat) */
+                assetIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_register_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StandbyEquipmentCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_metrics_v2: {
+        parameters: {
+            query: {
+                /** @description Window start (inclusive), ISO 8601 */
+                from: string;
+                /** @description Window end (exclusive), ISO 8601 */
+                to: string;
+                /** @description These assets only (repeat) */
+                assetIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StandbyEquipmentRetireDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_listRecords_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description These assets only (repeat) */
+                assetIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_importRecords_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StandbyRecordsImportDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkOrderOperationsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Operations linked to these stops (repeat) */
+                eventIds?: string[];
+                /** @description Operations on these assets (repeat) */
+                assetIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkOrderOperationsV2Controller_importOperations_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOrderOperationsImportDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitStateV2Controller_list_v2: {
+        parameters: {
+            query: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                unitId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitStateV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitStateMappingCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitStateV2Controller_coverage_v2: {
+        parameters: {
+            query: {
+                unitId: string;
+                /** @description Window start, ISO 8601 (at most 31 days before `to`) */
+                from: string;
+                /** @description Window end (exclusive) */
+                to: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

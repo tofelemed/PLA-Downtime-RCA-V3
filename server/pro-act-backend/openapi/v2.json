@@ -17654,6 +17654,1068 @@
           "v2 · Master Data"
         ]
       }
+    },
+    "/api/v2/failure-dictionary": {
+      "get": {
+        "description": "Filters: `kinds`, `equipmentClass` (its items and modes plus those valid for every class), `q` (code and name), `at` (instant, default now) or `history=true` for every version. Tenant-wide master data.",
+        "operationId": "FailureDictionaryV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "createdAt",
+              "enum": [
+                "code",
+                "-code",
+                "name",
+                "-name",
+                "createdAt",
+                "-createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive search in code and name",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "active = not retired, retired = retired only, all = both",
+            "schema": {
+              "default": "all",
+              "enum": [
+                "active",
+                "retired",
+                "all"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "kinds",
+            "required": false,
+            "in": "query",
+            "description": "Entries of these kinds only (repeat the parameter)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "equipment_class",
+                  "maintainable_item",
+                  "failure_mode",
+                  "failure_mechanism",
+                  "failure_cause",
+                  "detection_method"
+                ]
+              }
+            }
+          },
+          {
+            "name": "equipmentClass",
+            "required": false,
+            "in": "query",
+            "description": "Items and modes of this equipment class and those valid for every class",
+            "schema": {
+              "maxLength": 50,
+              "type": "string"
+            }
+          },
+          {
+            "name": "at",
+            "required": false,
+            "in": "query",
+            "description": "Instant the entries are in force at (default now); ignored with `history=true`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "history",
+            "required": false,
+            "in": "query",
+            "description": "true = every version, also ended ones (default false)",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dictionary entries in force (keyset; sort code, name or createdAt)",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant. 409 DICTIONARY_CODE_EXISTS when the kind + class + code is in force; 422 INVALID_REFERENCE for an equipment class that is not in the dictionary.",
+        "operationId": "FailureDictionaryV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FailureDictionaryCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add an entry to the dictionary",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      }
+    },
+    "/api/v2/failure-dictionary/{id}": {
+      "get": {
+        "operationId": "FailureDictionaryV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One entry version (ETag = row version); foreign ids are 404",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      },
+      "patch": {
+        "description": "Requires `If-Match: \"<rowVersion>\"` of the entry in force (428 / 412). Returns the new version. 409 DICTIONARY_ENTRY_CLOSED for an ended entry; 422 when effectiveFrom is not after the version start.",
+        "operationId": "FailureDictionaryV2Controller_change_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FailureDictionaryChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change an entry: its version ends and the next version starts",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      }
+    },
+    "/api/v2/failure-dictionary/import": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. New entries are created, changed ones get a new version from `effectiveFrom`, equal ones stay; entries missing from the document are kept. 422 DICTIONARY_IMPORT_INVALID lists the row problems (`details.errors`). `dryRun` counts without storing.",
+        "operationId": "FailureDictionaryV2Controller_importEntries_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FailureDictionaryImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Bulk upsert entries from JSON rows or CSV (all or nothing)",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      }
+    },
+    "/api/v2/failure-dictionary/{id}/retire": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 DICTIONARY_CLASS_IN_USE for an equipment class with open items or modes; 409 DICTIONARY_ENTRY_CLOSED when already ended.",
+        "operationId": "FailureDictionaryV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FailureDictionaryRetireDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "End an entry (history and coded events stay)",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      }
+    },
+    "/api/v2/micro-stop-policies/current": {
+      "get": {
+        "description": "unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE). A tenant without an oee_policy gets the D04 default on first read.",
+        "operationId": "MicroStopPolicyV2Controller_current_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "description": "Unit override; absent = the tenant-wide version",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Micro-stop settings in force now (unit override, else tenant-wide)",
+        "tags": [
+          "v2 · Micro-stop policy"
+        ]
+      }
+    },
+    "/api/v2/micro-stop-policies": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Version n+1 of the scope; other oee_policy fields are kept from the version in force. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); 422 INVALID_POLICY for a negative or non-numeric class threshold.",
+        "operationId": "MicroStopPolicyV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MicroStopPolicyCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record new micro-stop settings as an approved oee_policy version, effective now",
+        "tags": [
+          "v2 · Micro-stop policy"
+        ]
+      }
+    },
+    "/api/v2/standby-equipment": {
+      "get": {
+        "operationId": "StandbyV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "description": "These assets only (repeat)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Standby registrations of the caller scope (keyset on effectiveFrom)",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 STANDBY_ALREADY_REGISTERED while a registration is open.",
+        "operationId": "StandbyV2Controller_register_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StandbyEquipmentCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Register an asset as standby equipment from effectiveFrom",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      }
+    },
+    "/api/v2/standby-equipment/metrics": {
+      "get": {
+        "description": "For every asset registered as standby in [from, to): start demands, failed starts and their fraction; tests separately; running seconds (the asset’s own exposure) and failures while running — with no failure the operating MTBF is null with reason `no_failures` and the exposure is shown, never an infinite value; standby seconds apart from it. 422 INVALID_RANGE when from ≥ to.",
+        "operationId": "StandbyV2Controller_metrics_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Window start (inclusive), ISO 8601",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Window end (exclusive), ISO 8601",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "description": "These assets only (repeat)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Failure on demand, test failures, operating MTBF and exposure per standby asset",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      }
+    },
+    "/api/v2/standby-equipment/{id}/retire": {
+      "post": {
+        "operationId": "StandbyV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StandbyEquipmentRetireDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "End a standby duty (its log stays)",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      }
+    },
+    "/api/v2/standby-records": {
+      "get": {
+        "operationId": "StandbyV2Controller_listRecords_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "description": "These assets only (repeat)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Demand / test / running log entries (keyset on startedAt; from / to overlap)",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      }
+    },
+    "/api/v2/standby-records/import": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The asset by id or code; an entry with an `externalRef` already stored is replaced. 422 STANDBY_IMPORT_INVALID lists the row problems (`details.errors`).",
+        "operationId": "StandbyV2Controller_importRecords_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StandbyRecordsImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Import demand / test / running log entries (all or nothing)",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      }
+    },
+    "/api/v2/work-order-operations": {
+      "get": {
+        "operationId": "WorkOrderOperationsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventIds",
+            "required": false,
+            "in": "query",
+            "description": "Operations linked to these stops (repeat)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "description": "Operations on these assets (repeat)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Operations of the caller scope (keyset on startedAt; from / to overlap, eventIds, assetIds)",
+        "tags": [
+          "v2 · Work-order operations"
+        ]
+      }
+    },
+    "/api/v2/work-order-operations/import": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Operation start / end / waiting are the actual operation times — never the work-order creation or closure. A row without eventId is linked to the stop of its asset running at the operation start. Diagnosis, repair and test operations of a stop give its active repair time (KPI `mttr`, \"Mean active repair time\"); the stop gives the mean time to restore production. 422 WORK_ORDER_IMPORT_INVALID lists the row problems (`details.errors`).",
+        "operationId": "WorkOrderOperationsV2Controller_importOperations_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkOrderOperationsImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Map and import CMMS work-order operations (upsert on work order + operation, all or nothing)",
+        "tags": [
+          "v2 · Work-order operations"
+        ]
+      }
+    },
+    "/api/v2/unit-state-mappings": {
+      "get": {
+        "operationId": "UnitStateV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "State mapping versions of one unit (newest first; keyset on version)",
+        "tags": [
+          "v2 · Unit state"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. The signal must be a state signal of the unit (422). The previous version ends at effectiveFrom. Physical state only: schedule status comes from the calendar, causes from events.",
+        "operationId": "UnitStateV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitStateMappingCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record a new version of a unit’s state mapping from effectiveFrom",
+        "tags": [
+          "v2 · Unit state"
+        ]
+      }
+    },
+    "/api/v2/unit-state-mappings/coverage": {
+      "get": {
+        "description": "Scheduled time = the window minus excluded shifts. Unknown time (no data, stale heartbeat, bad or uncertain quality, unmapped value) is never filled: availability lies between running / scheduled and (running + unknown) / scheduled; `knownTimeAvailability` is conditional on observed time only. `coverage` null = no mapping at `from`. Window ≤ 31 days (422 INVALID_RANGE).",
+        "operationId": "UnitStateV2Controller_coverage_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Window start, ISO 8601 (at most 31 days before `to`)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Window end (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "State timeline, known-data coverage and availability bounds of a unit over a window",
+        "tags": [
+          "v2 · Unit state"
+        ]
+      }
     }
   },
   "info": {
@@ -23871,6 +24933,503 @@
             "maxLength": 255
           }
         }
+      },
+      "FailureDictionaryCreateDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "object",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "category": {
+            "type": "object",
+            "maxLength": 100,
+            "nullable": true,
+            "example": "Mechanical failure"
+          },
+          "assetTypes": {
+            "description": "Equipment classes only: asset types the class covers",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isPending": {
+            "type": "boolean",
+            "description": "The \"unknown / investigation pending\" choice of its list"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "Start of this version (default now)"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "equipment_class",
+              "maintainable_item",
+              "failure_mode",
+              "failure_mechanism",
+              "failure_cause",
+              "detection_method"
+            ]
+          },
+          "equipmentClass": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Maintainable items and failure modes: code of their equipment class (empty = every class)"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 50,
+            "example": "ELP"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "example": "External leakage – process medium"
+          }
+        },
+        "required": [
+          "kind",
+          "code",
+          "name"
+        ]
+      },
+      "FailureDictionaryRowDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "equipment_class",
+              "maintainable_item",
+              "failure_mode",
+              "failure_mechanism",
+              "failure_cause",
+              "detection_method"
+            ]
+          },
+          "equipmentClass": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "object",
+            "nullable": true
+          },
+          "category": {
+            "type": "object",
+            "nullable": true
+          },
+          "assetTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isPending": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FailureDictionaryImportDto": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "maxItems": 5000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FailureDictionaryRowDto"
+            }
+          },
+          "csv": {
+            "type": "string",
+            "description": "CSV with a header row: kind,equipmentClass,code,name,description,category,assetTypes,isPending (assetTypes separated by \";\", isPending yes/no)",
+            "maxLength": 2000000
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "Start of new and changed entries (default now)"
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "true = check and count only, store nothing"
+          }
+        }
+      },
+      "FailureDictionaryChangeDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "object",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "category": {
+            "type": "object",
+            "maxLength": 100,
+            "nullable": true,
+            "example": "Mechanical failure"
+          },
+          "assetTypes": {
+            "description": "Equipment classes only: asset types the class covers",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isPending": {
+            "type": "boolean",
+            "description": "The \"unknown / investigation pending\" choice of its list"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "Start of this version (default now)"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          }
+        }
+      },
+      "FailureDictionaryRetireDto": {
+        "type": "object",
+        "properties": {
+          "effectiveTo": {
+            "type": "string",
+            "description": "End of the entry (default now)"
+          }
+        }
+      },
+      "MicroStopPolicyCreateDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unit override; absent = the tenant-wide version"
+          },
+          "microStopSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400,
+            "description": "Unit threshold (s): shorter stops stay in running time and reduce performance"
+          },
+          "microStopSecondsByAssetClass": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "example": {
+              "Bagger": 120,
+              "Conveyor": 120
+            },
+            "description": "Threshold per asset class (asset type → seconds); replaces the stated map. 0 = every stop of the class is an event"
+          },
+          "tripReasonCodes": {
+            "description": "Reason codes of process trips: always availability events, never micro-stops",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "microStopSeconds"
+        ]
+      },
+      "StandbyEquipmentCreateDto": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evaluation": {
+            "type": "string",
+            "enum": [
+              "demand",
+              "running",
+              "demand_and_running"
+            ],
+            "description": "How maintenance evaluates the asset (SME D9)"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "Start of the standby duty (default now)"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "assetId",
+          "evaluation"
+        ]
+      },
+      "StandbyEquipmentRetireDto": {
+        "type": "object",
+        "properties": {
+          "effectiveTo": {
+            "type": "string",
+            "description": "End of the standby duty (default now)"
+          }
+        }
+      },
+      "StandbyRecordRowDto": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetCode": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Asset code (when no assetId)"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "demand",
+              "test",
+              "run"
+            ]
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "endedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "success",
+              "failed_start",
+              "failed_while_running"
+            ]
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Stop of the duty equipment that caused the demand"
+          },
+          "externalRef": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "The log’s own id: a re-import replaces the entry"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "kind",
+          "startedAt",
+          "outcome"
+        ]
+      },
+      "StandbyRecordsImportDto": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "maxItems": 5000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StandbyRecordRowDto"
+            }
+          }
+        },
+        "required": [
+          "records"
+        ]
+      },
+      "WorkOrderOperationRowDto": {
+        "type": "object",
+        "properties": {
+          "workOrderId": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "4000123"
+          },
+          "operationId": {
+            "type": "string",
+            "maxLength": 50,
+            "example": "0020"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "diagnosis",
+              "repair",
+              "test",
+              "other"
+            ],
+            "description": "diagnosis, repair and test count as active repair"
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "Actual start of the operation (not the work-order creation)"
+          },
+          "endedAt": {
+            "type": "object",
+            "nullable": true,
+            "description": "Actual end; absent = still running"
+          },
+          "waitingSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Waiting for parts, permit or crew inside the operation (s)"
+          },
+          "waitingReason": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetCode": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Asset code (functional location) when no assetId"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The stop it repaired; absent = the stop of the asset running at the operation start, if one"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 50,
+            "example": "SAP PM"
+          }
+        },
+        "required": [
+          "workOrderId",
+          "operationId",
+          "kind",
+          "startedAt"
+        ]
+      },
+      "WorkOrderOperationsImportDto": {
+        "type": "object",
+        "properties": {
+          "operations": {
+            "maxItems": 5000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkOrderOperationRowDto"
+            }
+          }
+        },
+        "required": [
+          "operations"
+        ]
+      },
+      "StateRuleDto": {
+        "type": "object",
+        "properties": {
+          "match": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "RUN",
+            "description": "Signal value: state name or code (no case)"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "running",
+              "internal_stop",
+              "planned_stop",
+              "starved",
+              "blocked",
+              "standby",
+              "not_scheduled"
+            ]
+          }
+        },
+        "required": [
+          "match",
+          "state"
+        ]
+      },
+      "UnitStateMappingCreateDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "signalId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "State signal of the unit (semantic type state)"
+          },
+          "rules": {
+            "description": "Unmapped values are unknown time (data quality)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StateRuleDto"
+            }
+          },
+          "expectedIntervalSeconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 86400,
+            "description": "Expected sample interval of the source (s)"
+          },
+          "jitterSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0,
+            "description": "Known communication jitter (s)"
+          },
+          "staleAfterIntervals": {
+            "type": "number",
+            "minimum": 1,
+            "default": 3,
+            "description": "Stale after this many intervals (SME D2 pilot: 3)"
+          },
+          "isHeartbeat": {
+            "type": "boolean",
+            "default": true,
+            "description": "false = exception-based source: a quiet signal is not lost communication (no staleness)"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "Start of this version (default now)"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "unitId",
+          "signalId",
+          "rules",
+          "expectedIntervalSeconds"
+        ]
       }
     }
   }

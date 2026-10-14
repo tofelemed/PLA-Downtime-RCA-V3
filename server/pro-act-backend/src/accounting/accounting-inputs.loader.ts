@@ -49,6 +49,9 @@ interface EventRow {
   from_product_id: string | null;
   to_product_id: string | null;
   recovery_of_event_id: string | null;
+  failure_severity: string | null;
+  asset_type: string | null;
+  reason_code: string | null;
   row_version: number;
   revision_id: string | null;
   revision: number | null;
@@ -76,8 +79,11 @@ export const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", 
        e."oee_component", e."impact_mode", e."impact_fraction"::text AS "impact_fraction", e."quantity"::text AS "quantity",
        e."reason_code_id", e."impact_code_id", e."failure_mode", e."asset_id", e."planned_end_time", e."row_version",
        e."from_product_id", e."to_product_id", e."recovery_of_event_id",
+       e."failure_severity", a."asset_type", rc."code" AS "reason_code",
        r."id" AS "revision_id", r."revision"
   FROM "production_events" e
+  LEFT JOIN "assets" a ON a."id" = e."asset_id"
+  LEFT JOIN "reason_codes" rc ON rc."id" = e."reason_code_id"
   LEFT JOIN LATERAL (SELECT er."id", er."revision" FROM "event_revisions" er WHERE er."event_id" = e."id"
                       ORDER BY er."revision" DESC LIMIT 1) r ON true
  WHERE e."tenant_id" = $1 AND e."unit_id" = $2
@@ -128,6 +134,9 @@ function toEvent(row: EventRow): LossEvent {
         ? { fromProductId: row.from_product_id, toProductId: row.to_product_id }
         : null,
     recoveryOfEventId: row.recovery_of_event_id,
+    assetClass: row.asset_type,
+    reasonCode: row.reason_code,
+    failureSeverity: row.failure_severity,
   };
 }
 

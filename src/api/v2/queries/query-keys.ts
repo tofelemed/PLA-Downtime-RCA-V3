@@ -42,7 +42,8 @@ export type V2Resource =
   | 'admin-config'
   | 'assets'
   | 'rca-settings'
-  | 'master-data';
+  | 'master-data'
+  | 'reliability';
 
 export interface V2Window {
   from?: string;
