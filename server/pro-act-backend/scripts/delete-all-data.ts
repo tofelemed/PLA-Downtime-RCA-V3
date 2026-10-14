@@ -99,7 +99,6 @@ async function deleteAllData() {
       'oee_codes',
       'tasks',
       'audit_logs',
-      'dashboard_configurations',
       'app_settings',
       'logic_tree_nodes',
       'evidence_categories',

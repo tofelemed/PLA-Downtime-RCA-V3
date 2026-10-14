@@ -33,7 +33,6 @@ export const AUDIT_ENTITY_ROUTE_MAP: Record<string, string> = {
   'oee-codes': 'OEECode',
   'reason-codes': 'ReasonCode',
   'logic-tree-nodes': 'LogicTreeNode',
-  'dashboard-configurations': 'DashboardConfiguration',
   'app-settings': 'AppSettings',
   'unmapped-events': 'UnmappedEvent',
   'hierarchy-mappings': 'HierarchyMapping',
@@ -43,7 +42,6 @@ export const AUDIT_ENTITY_ROUTE_MAP: Record<string, string> = {
   'custom-attribute-definitions': 'CustomAttributeDefinition',
   'custom-attribute-values': 'CustomAttributeValue',
   'user-scopes': 'UserScope',
-  'dashboard-configuration': 'DashboardConfiguration',
   branding: 'Branding',
 };
 

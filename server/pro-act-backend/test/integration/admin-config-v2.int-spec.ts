@@ -16,10 +16,6 @@ interface Page<T> {
   items: T[];
   nextCursor: string | null;
 }
-interface DashboardBody {
-  isStored: boolean;
-  settings: { oee: Record<string, number> } & Record<string, unknown>;
-}
 interface AttributeItem {
   id: string;
   name: string;
@@ -33,10 +29,10 @@ interface AttributeItem {
 
 /**
  * v2 administration — plant configuration: custom attribute definitions (plant-owned plus shared ones,
- * server-side display order, values deleted with the definition), dashboard settings (defaults without a
- * write on read, reset), organizations and plants (reach and super-administrator writes), branding.
+ * server-side display order, values deleted with the definition), the retired dashboard settings (404),
+ * organizations and plants (reach and super-administrator writes), branding.
  */
-describe('v2 administration: attributes, dashboard settings, hierarchy, branding', () => {
+describe('v2 administration: attributes, hierarchy, branding', () => {
   const harness = new IntegrationHarness();
   let app: INestApplication;
   let world: AdminWorld;
@@ -180,83 +176,15 @@ describe('v2 administration: attributes, dashboard settings, hierarchy, branding
     expect(values).toHaveLength(0);
   });
 
-  it('serves dashboard defaults without writing, stores, and resets them', async () => {
-    const before = bodyOf<DashboardBody>(
-      await http()
-        .get('/api/v2/dashboard-configuration')
-        .set(bearer(operatorA.token))
-        .expect(200),
-    );
-    expect(before).toMatchObject({
-      isStored: false,
-      settings: { oee: { targetOEE: 85 } },
-    });
-    const rows: unknown[] = await harness.dataSource.query(
-      'SELECT 1 FROM dashboard_configurations',
-    );
-    expect(rows).toHaveLength(0);
-    const settings = {
-      ...before.settings,
-      oee: { ...before.settings.oee, targetOEE: 80 },
-    };
+  it('no longer serves the retired dashboard settings (FE-02)', async () => {
     await http()
-      .put('/api/v2/dashboard-configuration')
-      .set(bearer(operatorA.token))
-      .send(settings)
-      .expect(403);
-    const saved = bodyOf(
-      await http()
-        .put('/api/v2/dashboard-configuration')
-        .set(bearer(adminA.token))
-        .send(settings)
-        .expect(200),
-    );
-    expect(saved).toMatchObject({
-      isStored: true,
-      updatedByName: 'Ada Admin',
-      settings: { oee: { targetOEE: 80 } },
-    });
-    await harness.dataSource.query(
-      `UPDATE dashboard_configurations SET widget_config = jsonb_set(widget_config::jsonb, '{oee}',
-         to_jsonb('{"targetOEE":80,"qualityWeight":1}'::text))::text WHERE tenant_id = $1`,
-      [world.plantA],
-    );
-    const legacy = bodyOf<DashboardBody>(
-      await http()
-        .get('/api/v2/dashboard-configuration')
-        .set(bearer(adminA.token))
-        .expect(200),
-    );
-    expect(legacy.settings.oee).toEqual({
-      targetOEE: 80,
-      targetAvailability: 90,
-      targetPerformance: 95,
-      targetQuality: 99,
-    });
-    await http()
-      .put('/api/v2/dashboard-configuration')
+      .get('/api/v2/dashboard-configuration')
       .set(bearer(adminA.token))
-      .send(legacy.settings)
-      .expect(200);
-    const retired = { ...settings, oee: { ...settings.oee, qualityWeight: 1 } };
-    await http()
-      .put('/api/v2/dashboard-configuration')
-      .set(bearer(adminA.token))
-      .send(retired)
-      .expect(422);
-    const bad = { ...settings, oee: { ...settings.oee, targetOEE: 180 } };
-    await http()
-      .put('/api/v2/dashboard-configuration')
-      .set(bearer(adminA.token))
-      .send(bad)
-      .expect(422);
-    const reset = bodyOf(
-      await http()
-        .delete('/api/v2/dashboard-configuration')
-        .set(bearer(adminA.token))
-        .expect(200),
+      .expect(404);
+    const tables: unknown[] = await harness.dataSource.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_name = 'dashboard_configurations'`,
     );
-    expect(reset.isStored).toBe(false);
+    expect(tables).toHaveLength(0);
   });
 
   it('lists organizations and plants within reach; only super administrators create and delete', async () => {

@@ -6,8 +6,6 @@ import { UserScope } from '../../auth/scopes/user-scope.entity';
 import { Site } from '../../calendar/entities/site.entity';
 import { CustomAttributeDefinition } from '../../custom-attribute-definition/custom-attribute-definition.entity';
 import { CustomAttributeValue } from '../../custom-attribute-value/custom-attribute-value.entity';
-import { DashboardConfiguration } from '../../dashboard-configuration/dashboard-configuration.entity';
-import { DashboardConfigurationModule } from '../../dashboard-configuration/dashboard-configuration.module';
 import { Organization } from '../../organization/organization.entity';
 import { OrganizationModule } from '../../organization/organization.module';
 import { Task } from '../../task/task.entity';
@@ -26,8 +24,6 @@ import { CustomAttributesV2Controller } from './custom-attributes/custom-attribu
 import { CustomAttributeValuesV2Controller } from './custom-attributes/custom-attribute-values-v2.controller';
 import { CustomAttributeValuesV2Service } from './custom-attributes/custom-attribute-values-v2.service';
 import { CustomAttributesV2Service } from './custom-attributes/custom-attributes-v2.service';
-import { DashboardConfigV2Controller } from './dashboard-config/dashboard-config-v2.controller';
-import { DashboardConfigV2Service } from './dashboard-config/dashboard-config-v2.service';
 import { HierarchyV2Service } from './hierarchy/hierarchy-v2.service';
 import { OrganizationsV2Controller } from './hierarchy/organizations-v2.controller';
 import { PlantsV2Controller } from './hierarchy/plants-v2.controller';
@@ -55,14 +51,13 @@ export const ADMINISTRATION_V2_PROVIDERS = [
   AuditLogsV2Service,
   CustomAttributesV2Service,
   CustomAttributeValuesV2Service,
-  DashboardConfigV2Service,
   HierarchyV2Service,
   BrandingV2Service,
 ];
 
 /**
  * Controllers of the administration API (users, scope grants, tasks, audit trail, custom attributes,
- * dashboard settings, organizations and plants, branding). Declared by `V2Module` itself, because the
+ * organizations and plants, branding). Declared by `V2Module` itself, because the
  * v2 OpenAPI document scans only V2Module's own controllers; their services come from this module.
  */
 export const ADMINISTRATION_V2_CONTROLLERS: Type<unknown>[] = [
@@ -72,7 +67,6 @@ export const ADMINISTRATION_V2_CONTROLLERS: Type<unknown>[] = [
   AuditLogsV2Controller,
   CustomAttributesV2Controller,
   CustomAttributeValuesV2Controller,
-  DashboardConfigV2Controller,
   OrganizationsV2Controller,
   PlantsV2Controller,
   BrandingV2Controller,
@@ -93,12 +87,10 @@ export const ADMINISTRATION_V2_CONTROLLERS: Type<unknown>[] = [
       AuditLog,
       CustomAttributeDefinition,
       CustomAttributeValue,
-      DashboardConfiguration,
     ]),
     UsersModule,
     OrganizationModule,
     TenantModule,
-    DashboardConfigurationModule,
     AppSettingsModule,
   ],
   providers: ADMINISTRATION_V2_PROVIDERS,

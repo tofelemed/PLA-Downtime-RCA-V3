@@ -6,8 +6,6 @@ import type {
   BrandingView,
   CreateOrganizationInput,
   CreatePlantInput,
-  DashboardConfigView,
-  DashboardSettings,
   OrganizationView,
   PlantView,
 } from '../types/administration';
@@ -44,16 +42,6 @@ export function useUpdateAttribute() {
 
 export function useDeleteAttribute() {
   return useAdminCommand<string, void>(CONFIG, (id) => adminCall('DELETE', `/custom-attribute-definitions/${id}`));
-}
-
-export const useDashboardConfig = () => useAdminRead<DashboardConfigView>('admin-config', '/dashboard-configuration');
-
-export function useSaveDashboardConfig() {
-  return useAdminCommand<DashboardSettings, DashboardConfigView>(CONFIG, (body) => adminCall('PUT', '/dashboard-configuration', { body }));
-}
-
-export function useResetDashboardConfig() {
-  return useAdminCommand<void, DashboardConfigView>(CONFIG, () => adminCall('DELETE', '/dashboard-configuration'));
 }
 
 /** Organizations within reach (a handful; the first 500 by name). */

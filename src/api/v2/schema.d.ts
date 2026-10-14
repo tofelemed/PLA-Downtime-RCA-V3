@@ -4224,25 +4224,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v2/dashboard-configuration": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The plant’s dashboard settings (defaults while none are stored) */
-        get: operations["DashboardConfigV2Controller_get_v2"];
-        /** Store the plant’s dashboard settings (every section) */
-        put: operations["DashboardConfigV2Controller_save_v2"];
-        post?: never;
-        /** Reset to the defaults (removes the stored settings) */
-        delete: operations["DashboardConfigV2Controller_reset_v2"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v2/organizations": {
         parameters: {
             query?: never;
@@ -6736,83 +6717,6 @@ export interface components {
             attributeDefinitionId: string;
             /** @description The value as text; empty clears it */
             value: string;
-        };
-        OeeSettingsDto: {
-            targetOEE: number;
-            targetAvailability: number;
-            targetPerformance: number;
-            targetQuality: number;
-        };
-        LossSettingsDto: {
-            highLossThreshold: number;
-            criticalLossThreshold: number;
-            defaultLossCategories: string[];
-        };
-        CostSettingsDto: {
-            /** @enum {string} */
-            costCalculationMethod: "perUnit" | "perHour" | "fixed";
-            defaultCostPerUnit: number;
-            defaultCostPerHour: number;
-            highCostThreshold: number;
-            criticalCostThreshold: number;
-        };
-        BottleneckSettingsDto: {
-            lossWeight: number;
-            costWeight: number;
-            oeeWeight: number;
-            lowRiskThreshold: number;
-            mediumRiskThreshold: number;
-            highRiskThreshold: number;
-        };
-        DisplaySettingsDto: {
-            showOEE: boolean;
-            showLosses: boolean;
-            showCosts: boolean;
-            showCapacity: boolean;
-            showActions: boolean;
-            decimalPlaces: number;
-            currencySymbol: string;
-            /** @enum {string} */
-            numberFormat: "en-US" | "en-GB" | "de-DE" | "custom";
-            /** @enum {string} */
-            theme: "default" | "high-contrast" | "colorblind-friendly";
-        };
-        PerformanceSettingsDto: {
-            /** @description seconds */
-            defaultIdealCycleTime: number;
-            /** @enum {string} */
-            performanceCalculationMethod: "cycleTime" | "outputRate" | "efficiency";
-            lowPerformanceThreshold: number;
-            highPerformanceThreshold: number;
-        };
-        QualitySettingsDto: {
-            /** @enum {string} */
-            qualityCalculationMethod: "defects" | "rework" | "scrap";
-            lowQualityThreshold: number;
-            highQualityThreshold: number;
-        };
-        AvailabilitySettingsDto: {
-            /** @enum {string} */
-            availabilityCalculationMethod: "uptime" | "downtime" | "scheduled";
-            lowAvailabilityThreshold: number;
-            highAvailabilityThreshold: number;
-        };
-        DashboardSettingsDto: {
-            oee: components["schemas"]["OeeSettingsDto"];
-            losses: components["schemas"]["LossSettingsDto"];
-            costs: components["schemas"]["CostSettingsDto"];
-            bottleneckRisk: components["schemas"]["BottleneckSettingsDto"];
-            display: components["schemas"]["DisplaySettingsDto"];
-            performance: components["schemas"]["PerformanceSettingsDto"];
-            quality: components["schemas"]["QualitySettingsDto"];
-            availability: components["schemas"]["AvailabilitySettingsDto"];
-        };
-        DashboardConfigV2View: {
-            settings: components["schemas"]["DashboardSettingsDto"];
-            /** @description false while the plant uses the defaults */
-            isStored: boolean;
-            updatedAt: string | null;
-            updatedByName: string | null;
         };
         CreateOrganizationV2Dto: {
             /** @description Short unique code (letters, digits, - _ .) */
@@ -13542,67 +13446,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    DashboardConfigV2Controller_get_v2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DashboardConfigV2View"];
-                };
-            };
-        };
-    };
-    DashboardConfigV2Controller_save_v2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DashboardSettingsDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DashboardConfigV2View"];
-                };
-            };
-        };
-    };
-    DashboardConfigV2Controller_reset_v2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DashboardConfigV2View"];
-                };
             };
         };
     };
