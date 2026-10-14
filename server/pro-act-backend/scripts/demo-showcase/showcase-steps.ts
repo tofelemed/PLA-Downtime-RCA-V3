@@ -17,6 +17,7 @@ import { seedProfiles } from './seed-profiles';
 import { seedRcaCases } from './seed-rca';
 import { seedRules } from './seed-rules';
 import { seedTasks } from './seed-tasks';
+import { seedValuationFinance } from './seed-valuation-finance';
 import { ShowcaseContext } from './showcase-context';
 import { verifyShowcase } from './verify-showcase';
 
@@ -49,6 +50,12 @@ const STEPS: readonly Step[] = [
   { name: 'open-stops', always: false, kinds: PLANTS, run: seedOpenStops },
   { name: 'recalculate', always: false, kinds: PLANTS, run: recalculate },
   { name: 'accounting', always: false, kinds: PLANTS, run: seedAccounting },
+  {
+    name: 'valuation-finance',
+    always: false,
+    kinds: ['full'],
+    run: seedValuationFinance,
+  },
   { name: 'rca', always: false, kinds: PLANTS, run: seedRcaCases },
   { name: 'tasks', always: false, kinds: PLANTS, run: seedTasks },
   { name: 'integration', always: false, kinds: ['full'], run: seedIntegration },

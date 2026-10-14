@@ -197,6 +197,15 @@ const createConnection = (plant: PlantKey, expect: ProbeExpectation) =>
   create('POST connection', '/api/v2/connections', plant, expect);
 const createRule = (plant: PlantKey, expect: ProbeExpectation) =>
   create('POST rule', '/api/v2/rules', plant, expect);
+const createPolicy = (plant: PlantKey, expect: ProbeExpectation) =>
+  create('POST valuation policy', '/api/v2/valuation-policies', plant, expect);
+const approvePolicy = (plant: PlantKey, expect: ProbeExpectation) =>
+  create(
+    'POST approve valuation policy',
+    '/api/v2/valuation-policies/00000000-0000-4000-8000-000000000000/approve',
+    plant,
+    expect,
+  );
 
 // --- personas -----------------------------------------------------------------------------------
 
@@ -391,6 +400,42 @@ export const DEMO_PERSONAS: Persona[] = [
     probes: [
       createRule('demoPlant', 'allowed'),
       setFlag('demoPlant', 'FORBIDDEN_ROLE'),
+      createPolicy('demoPlant', 'FORBIDDEN_ROLE'),
+    ],
+  },
+  // SME V1 (14 Oct 2026): finance maintains and approves valuation inputs, in both demo plants
+  {
+    key: 'financeMaintainer',
+    label: 'finance_maintainer',
+    actingPlant: 'demoPlant',
+    users: ['Mina Sadeghi', 'Thomas Keller'].map((name) =>
+      user(name, 'Analyst', 'demoPlant', {
+        extraScopes: [
+          tenantScope('demoPlant', 'finance_maintainer'),
+          tenantScope('demoPlant2', 'finance_maintainer'),
+        ],
+      }),
+    ),
+    probes: [
+      createPolicy('demoPlant', 'allowed'),
+      approvePolicy('demoPlant', 'FORBIDDEN_ROLE'),
+    ],
+  },
+  {
+    key: 'financeApprover',
+    label: 'finance_approver',
+    actingPlant: 'demoPlant',
+    users: ['Reza Karimi', 'Sofia Lindqvist'].map((name) =>
+      user(name, 'Analyst', 'demoPlant', {
+        extraScopes: [
+          tenantScope('demoPlant', 'finance_approver'),
+          tenantScope('demoPlant2', 'finance_approver'),
+        ],
+      }),
+    ),
+    probes: [
+      approvePolicy('demoPlant', 'allowed'),
+      createPolicy('demoPlant', 'FORBIDDEN_ROLE'),
     ],
   },
 ];

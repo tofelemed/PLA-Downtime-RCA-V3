@@ -43,6 +43,10 @@ export interface PersonaCast {
   operators: readonly string[];
   /** RCA case owners */
   reliability: readonly string[];
+  /** SME V1: finance maintainers draft valuation inputs (policy, FX, valuation rates, demand) */
+  finance: readonly string[];
+  /** SME V1: finance approvers, never the author of what they approve */
+  financeApprovers: readonly string[];
 }
 
 export interface PlantScenario {
@@ -114,6 +118,8 @@ const DEMO_PLANT: PlantScenario = {
     ],
     operators: ['liam.murphy', 'yuki.sato', 'carlos.mendes'],
     reliability: ['viktor.petrov', 'amara.diallo', 'sebastian.vogel'],
+    finance: ['mina.sadeghi', 'thomas.keller'],
+    financeApprovers: ['reza.karimi', 'sofia.lindqvist'],
   },
   products: HDPE_PRODUCTS,
   units: [
@@ -212,6 +218,8 @@ const DEMO_PLANT_2: PlantScenario = {
     engineers: ['sofia.bergstrom', 'ravi.krishnan'],
     operators: ['grace.whitfield', 'pedro.santos'],
     reliability: ['isabel.moreno'],
+    finance: ['mina.sadeghi'],
+    financeApprovers: ['reza.karimi'],
   },
   products: PP_PRODUCTS,
   units: [
@@ -252,6 +260,8 @@ const PARTNER_PLANT: PlantScenario = {
     engineers: ['lucas.ferreira'],
     operators: ['lucas.ferreira'],
     reliability: ['lucas.ferreira'],
+    finance: ['lucas.ferreira'],
+    financeApprovers: ['lucas.ferreira'],
   },
   products: [],
   units: [],
