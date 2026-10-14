@@ -21,11 +21,11 @@ import {
 
 /**
  * RELIABILITY ENGINEER persona — journey 8, the D13 RCA trigger policy of Demo Plant
- * (`durationThresholdSeconds` 3600, recommend-only) seen from the Event Hub as Amara:
- * - a 65 min unplanned stop recorded through "New event" gets one provisional "Long unplanned stop"
+ * (`durationThresholdSeconds` 7200 since the SME D17 answers of 2026-10-14, recommend-only) seen from the Event Hub as Amara:
+ * - a 130 min unplanned stop recorded through "New event" gets one provisional "Long unplanned stop"
  *   recommendation and no automatic case;
  * - a 10 min unplanned stop gets none;
- * - a 65 min *planned* stop gets none (the duration trigger is for unplanned downtime only).
+ * - a 130 min *planned* stop gets none (the duration trigger is for unplanned downtime only).
  * Data left behind: unit "P-REL-TRG-<suffix>" and its three stops.
  */
 const suffix = `TRG-${newSuffix()}`;
@@ -41,12 +41,12 @@ test.describe('Reliability engineer — RCA trigger policy (journey 8)', () => {
     unitName = (await ensureUnit(amara, suffix)).unitName;
   });
 
-  test('T1 (amara): a 65 min unplanned stop recorded in the Event Hub is recommended for RCA, once, without a case', async ({ page }) => {
+  test('T1 (amara): a 130 min unplanned stop recorded in the Event Hub is recommended for RCA, once, without a case', async ({ page }) => {
     await uiLogin(page, REL_USERS.amara);
     await openHub(page, unitName);
     const stopId = await createEventViaUi(page, {
       unitName,
-      startIso: new Date(Date.now() - 65 * MINUTE).toISOString(),
+      startIso: new Date(Date.now() - 130 * MINUTE).toISOString(),
       scheduleClass: 'unplanned',
       description: `${PREFIX}long-${suffix}`,
     });
@@ -88,13 +88,13 @@ test.describe('Reliability engineer — RCA trigger policy (journey 8)', () => {
     await expect(detail.getByLabel('RCA state: No RCA')).toBeVisible();
   });
 
-  test('T3 (amara): a 65 min planned stop is not an RCA trigger', async ({ page }) => {
+  test('T3 (amara): a 130 min planned stop is not an RCA trigger', async ({ page }) => {
     await uiLogin(page, REL_USERS.amara);
     await openHub(page, unitName);
     const stopId = await createEventViaUi(page, {
       unitName,
       startIso: new Date(Date.now() - 200 * MINUTE).toISOString(),
-      durationMinutes: 65,
+      durationMinutes: 130,
       scheduleClass: 'planned',
       description: `${PREFIX}planned-${suffix}`,
     });

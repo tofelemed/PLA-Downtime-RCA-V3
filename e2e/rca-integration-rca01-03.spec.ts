@@ -38,7 +38,7 @@ async function openStop(page: Page): Promise<void> {
   await page.goto('/events');
   await expect(page.getByTestId('event-hub-v2')).toBeVisible({ timeout: 60_000 });
   await page.getByTestId('filter-units').click();
-  await page.getByRole('checkbox', { name: world.unitName }).click();
+  await page.getByRole('checkbox', { name: world.unitName, exact: true }).click();
   await page.keyboard.press('Escape');
   await page.locator(`[data-testid="current-stop"][data-event-id="${world.stopId}"]`).getByRole('link', { name: 'Open' }).click();
   await expect(page.getByTestId('event-detail')).toBeVisible();

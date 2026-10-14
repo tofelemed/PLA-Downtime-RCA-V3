@@ -125,7 +125,7 @@ export async function openHub(page: Page, unitName: string): Promise<void> {
   await page.goto('/events');
   await expect(page.getByTestId('event-hub-v2')).toBeVisible({ timeout: 60_000 });
   await page.getByTestId('filter-units').click();
-  await page.getByRole('checkbox', { name: unitName }).click();
+  await page.getByRole('checkbox', { name: unitName, exact: true }).click();
   await page.keyboard.press('Escape');
 }
 

@@ -27,7 +27,7 @@ import { acceptInvestigation, finishActions, prepareInvestigation } from './supp
 /**
  * RELIABILITY ENGINEER persona — the RCA case journeys of plan 3.9 (RCA01–03) on the v2 Event Hub and
  * `/rca` of Demo Plant, as the `reliability_engineer` users of docs/DEMO_PERSONAS.md:
- * 1. Viktor records a 70 min unplanned stop in the Event Hub, sees the policy's RCA badge, creates a case
+ * 1. Viktor records a 130 min unplanned stop (past the D17 2 h threshold) in the Event Hub, sees the policy's RCA badge, creates a case
  *    from it with the evidence preview; the repeated link is idempotent (one case).
  * 2. Viktor fills the nested content (recommendations, evidence, logic tree, root cause), reloads, links a
  *    second event from the case.
@@ -61,13 +61,13 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     expect(viktor.tenantId).toBe(DEMO_PLANT);
   });
 
-  test('J1 RCA01 (viktor): 70 min stop recorded in the Event Hub → RCA badge → create case with evidence preview; repeat is idempotent', async ({ page }) => {
+  test('J1 RCA01 (viktor): 130 min stop recorded in the Event Hub → RCA badge → create case with evidence preview; repeat is idempotent', async ({ page }) => {
     world = { ...world, ...(await ensureUnit(viktor, suffix)) };
     await uiLogin(page, REL_USERS.viktor);
     await openHub(page, world.unitName);
     world.stopId = await createEventViaUi(page, {
       unitName: world.unitName,
-      startIso: new Date(Date.now() - 70 * MINUTE).toISOString(),
+      startIso: new Date(Date.now() - 130 * MINUTE).toISOString(),
       scheduleClass: 'unplanned',
       description: `${PREFIX}stop-${suffix}`,
     });
@@ -304,7 +304,9 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
 
     const conversions: string[] = [];
     page.on('request', (request) => {
-      if (/convert|fx|exchange/i.test(new URL(request.url()).pathname)) conversions.push(request.url());
+      // API calls only: a bundle file name may contain "fx" by chance (rca-labels-kFxgskiy.js)
+      const path = new URL(request.url()).pathname;
+      if (path.includes('/api/') && /convert|fx|exchange/i.test(path)) conversions.push(request.url());
     });
     await uiLogin(page, REL_USERS.sebastian);
     await openCase(page, world.caseId, 'outcome');

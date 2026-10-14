@@ -21,6 +21,8 @@ interface AnalysisRecord {
 test.describe('RCA advanced analysis tools API', () => {
   let fixture: TestFixture;
   let rcaId: string;
+  /** the plant the server opened the case in (the acting plant of the token); its analyses live there too */
+  let caseTenantId: string;
   const createdIds: {
     fiveWhy?: string;
     fishbone?: string;
@@ -68,7 +70,7 @@ test.describe('RCA advanced analysis tools API', () => {
         eventId: event.id,
         title: `Advanced Tools RCA ${Date.now()}`,
         description: 'RCA for advanced methodology tool testing',
-        status: 'Analysis',
+        status: 'In Progress', // CA1: a case opens as Draft or In Progress; later statuses go through transitions
         priority: 'High',
         teamLeadId,
         teamMemberIds: [],
@@ -77,6 +79,7 @@ test.describe('RCA advanced analysis tools API', () => {
       }),
     });
     rcaId = rca.id;
+    caseTenantId = (rca as EntityRef & { tenantId: string }).tenantId;
     createdIds.rca = rca.id;
   });
 
@@ -104,8 +107,8 @@ test.describe('RCA advanced analysis tools API', () => {
   });
 
   test('create and fetch all six methodology types for an RCA', async () => {
-    const { tokens, tenant } = fixture;
-    const tenantId = tenant.id;
+    const { tokens } = fixture;
+    const tenantId = caseTenantId;
 
     const fiveWhy = await apiRequest<AnalysisRecord>('/rca-analysis/five-why', {
       method: 'POST',
