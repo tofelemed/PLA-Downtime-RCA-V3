@@ -14,7 +14,7 @@ const nameOf = <T extends { id: string }>(rows: readonly T[], label: (row: T) =>
 export function EventHubEnvProvider({ tenantId, children }: { tenantId: string; children: ReactNode }) {
   const zone = usePlantTimezone();
   const units = useUnits();
-  const reasons = useAllCodes('reason-codes');
+  const reasons = useAllCodes('reason-codes', { includeRetired: true });
   const value = useMemo<EventHubEnv>(() => {
     const unitRows = flattenPages(units.data?.pages);
     const allReasons = flattenPages(reasons.data?.pages);
@@ -28,8 +28,8 @@ export function EventHubEnvProvider({ tenantId, children }: { tenantId: string; 
       reasonCodes: reasonRows,
       allReasonCodes: allReasons,
       unitName: nameOf(unitRows, (unit) => unit.name),
-      reasonName: codeNameResolver(allReasons),
+      reasonName: codeNameResolver(allReasons, reasons.complete || reasons.isError),
     };
-  }, [tenantId, zone.timezone, zone.source, units.data, units.isLoading, reasons.data]);
+  }, [tenantId, zone.timezone, zone.source, units.data, units.isLoading, reasons.data, reasons.complete, reasons.isError]);
   return <EventHubEnvContext.Provider value={value}>{children}</EventHubEnvContext.Provider>;
 }
