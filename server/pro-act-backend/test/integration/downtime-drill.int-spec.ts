@@ -191,6 +191,8 @@ describe('Downtime report drill-down and summary (plan 3.3)', () => {
     expect(metric('stop_count')?.value).toBe('3');
     expect(metric('downtime_equivalent')?.value).toBe('0');
     expect(metric('downtime_external')?.value).toBe('0');
+    // SME D12: the drill world codes every stop
+    expect(metric('coded_downtime_ratio')?.value).toBe('1');
     expect(metric('downtime_in_schedule')?.value).not.toBeNull();
     expect(metric('carry_in_count')?.value).toBe('0');
     expect(metric('scheduled_availability')?.value).not.toBeNull();
@@ -201,6 +203,7 @@ describe('Downtime report drill-down and summary (plan 3.3)', () => {
       'downtime_equivalent',
       'downtime_in_schedule',
       'downtime_external',
+      'coded_downtime_ratio',
       'microstop_time',
       'unknown_time',
       'stop_count',

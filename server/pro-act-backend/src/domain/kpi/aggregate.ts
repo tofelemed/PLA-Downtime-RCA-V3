@@ -12,6 +12,7 @@ const RATIO_METRICS: ReadonlySet<KpiMetric> = new Set<KpiMetric>([
   'reconciled_oee',
   'scheduled_availability',
   'onstream_factor',
+  'coded_downtime_ratio',
 ]);
 const MEAN_METRICS: ReadonlySet<KpiMetric> = new Set<KpiMetric>([
   'mean_stop_duration',

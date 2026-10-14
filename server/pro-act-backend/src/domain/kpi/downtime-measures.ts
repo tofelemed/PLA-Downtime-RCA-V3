@@ -167,6 +167,25 @@ function availabilityKpis(input: DowntimeInput, total: Dec): KpiDraft[] {
   ];
 }
 
+/**
+ * SME D12: the share of stopped time (stops and micro-stops, each second once) whose cause event carries a
+ * reason code — the coding-coverage measure behind the shift-end and daily-approval targets.
+ */
+function codedKpi(allocated: readonly CauseSeconds[]): KpiDraft {
+  const coded = sum(
+    allocated.filter((a) => a.event.reasonCodeId !== null).map((a) => a.seconds),
+  );
+  return ratioKpi(
+    { metric: 'coded_downtime_ratio', scope: PERIOD },
+    {
+      numerator: coded,
+      denominator: sum(allocated.map((a) => a.seconds)),
+      cohort: { meaning: 'stop time with a reason code / all stop time' },
+    },
+    'no_downtime',
+  );
+}
+
 /** Period downtime measures of KPI05 / KPI06 plus the allocation the breakdown rows are built from. */
 export function downtimeMeasures(input: DowntimeInput): {
   kpis: KpiDraft[];
@@ -184,6 +203,7 @@ export function downtimeMeasures(input: DowntimeInput): {
       ...durationKpis(input, allocated),
       ...countKpis(input),
       ...availabilityKpis(input, total),
+      codedKpi(allocated),
     ],
     allocated,
   };

@@ -92,6 +92,12 @@ describe('KPI labels and formatting (KPI05–KPI08)', () => {
     expect(SUMMARY_TILES[0].note).toMatch(/calendar/);
   });
 
+  it('SME D12: a coding-coverage tile states the pilot targets', () => {
+    const tile = SUMMARY_TILES.find((entry) => entry.metric === 'coded_downtime_ratio');
+    expect(tile).toMatchObject({ title: 'Stop time coded', kind: 'ratio' });
+    expect(tile?.note).toMatch(/95 %.*99 %/);
+  });
+
   it('SME D10: "Mean active repair time" only with repair evidence, otherwise "Mean time to restore production"', () => {
     const row = (mttr: string | null): ReliabilityRowView => ({
       unitId: 'u1', assetId: null, label: null, exposureSeconds: '3600', failures: '0',

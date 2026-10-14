@@ -148,6 +148,26 @@ describe('SME Q5: stopped time versus equivalent downtime', () => {
   });
 });
 
+describe('SME D12: share of stopped time coded with a reason', () => {
+  it('coded stop seconds over all stop seconds; no stop → no ratio', () => {
+    const all = run(
+      input({
+        events: [
+          event('c', HOUR, 2 * HOUR, { reasonCodeId: 'r1' }),
+          event('u', 3 * HOUR, 4 * HOUR),
+        ],
+      }),
+    );
+    const coded = period(all, 'coded_downtime_ratio');
+    expect(str(coded.numerator)).toBe(String(HOUR));
+    expect(str(coded.denominator)).toBe(String(2 * HOUR));
+    expect(str(coded.value)).toBe('0.5');
+    const none = period(run(input()), 'coded_downtime_ratio');
+    expect(none.value).toBeNull();
+    expect(none.reason).toBe('no_downtime');
+  });
+});
+
 describe('DT-07: downtime within the schedule and external downtime', () => {
   it('in-schedule downtime reconciles with scheduled availability; calendar total and external stay apart', () => {
     const all = run(

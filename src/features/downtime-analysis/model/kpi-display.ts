@@ -22,6 +22,12 @@ export const SUMMARY_TILES: readonly TileSpec[] = [
   { metric: 'downtime_equivalent', title: 'Equivalent downtime', kind: 'duration', note: 'Partial-impact events: lost rate as time at the reference rate (not stopped time)' },
   { metric: 'microstop_time', title: 'Micro-stops', kind: 'duration', note: 'Below the OEE-policy threshold; stay in run time' },
   { metric: 'unknown_time', title: 'Stops not classed planned/unplanned', kind: 'duration', note: 'Stop time whose schedule class is not set yet (not unrecorded time)' },
+  {
+    metric: 'coded_downtime_ratio',
+    title: 'Stop time coded',
+    kind: 'ratio',
+    note: 'Share of stop time with a reason code (SME D12 pilot targets: 95 % by shift end, 99 % at daily approval)',
+  },
   { metric: 'stop_count', title: 'Stops', kind: 'count', note: 'Stop occurrences starting in the window' },
   { metric: 'carry_in_count', title: 'Carry-in stops', kind: 'count', note: 'Started before the window, still counted separately' },
   { metric: 'mean_stop_duration', title: 'Mean completed stop', kind: 'duration', note: 'Cohort: completed stops ending in the window (open stops censored)' },
