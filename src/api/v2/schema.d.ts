@@ -4921,6 +4921,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/failure-dictionary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dictionary entries in force (keyset; sort code, name or createdAt)
+         * @description Filters: `kinds`, `equipmentClass` (its items and modes plus those valid for every class), `q` (code and name), `at` (instant, default now) or `history=true` for every version. Tenant-wide master data.
+         */
+        get: operations["FailureDictionaryV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Add an entry to the dictionary
+         * @description Requires `Idempotency-Key` and a tenant-wide grant. 409 DICTIONARY_CODE_EXISTS when the kind + class + code is in force; 422 INVALID_REFERENCE for an equipment class that is not in the dictionary.
+         */
+        post: operations["FailureDictionaryV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/failure-dictionary/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One entry version (ETag = row version); foreign ids are 404 */
+        get: operations["FailureDictionaryV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change an entry: its version ends and the next version starts
+         * @description Requires `If-Match: "<rowVersion>"` of the entry in force (428 / 412). Returns the new version. 409 DICTIONARY_ENTRY_CLOSED for an ended entry; 422 when effectiveFrom is not after the version start.
+         */
+        patch: operations["FailureDictionaryV2Controller_change_v2"];
+        trace?: never;
+    };
+    "/api/v2/failure-dictionary/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk upsert entries from JSON rows or CSV (all or nothing)
+         * @description Requires `Idempotency-Key`. New entries are created, changed ones get a new version from `effectiveFrom`, equal ones stay; entries missing from the document are kept. 422 DICTIONARY_IMPORT_INVALID lists the row problems (`details.errors`). `dryRun` counts without storing.
+         */
+        post: operations["FailureDictionaryV2Controller_importEntries_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/failure-dictionary/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End an entry (history and coded events stay)
+         * @description Requires `Idempotency-Key`. 409 DICTIONARY_CLASS_IN_USE for an equipment class with open items or modes; 409 DICTIONARY_ENTRY_CLOSED when already ended.
+         */
+        post: operations["FailureDictionaryV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7089,6 +7174,61 @@ export interface components {
             items?: string[];
             code?: string;
             name?: string;
+        };
+        FailureDictionaryCreateDto: {
+            description?: Record<string, never> | null;
+            /** @example Mechanical failure */
+            category?: Record<string, never> | null;
+            /** @description Equipment classes only: asset types the class covers */
+            assetTypes?: string[];
+            /** @description The "unknown / investigation pending" choice of its list */
+            isPending?: boolean;
+            /** @description Start of this version (default now) */
+            effectiveFrom?: string;
+            /** @enum {string} */
+            kind: "equipment_class" | "maintainable_item" | "failure_mode" | "failure_mechanism" | "failure_cause" | "detection_method";
+            /** @description Maintainable items and failure modes: code of their equipment class (empty = every class) */
+            equipmentClass?: string;
+            /** @example ELP */
+            code: string;
+            /** @example External leakage – process medium */
+            name: string;
+        };
+        FailureDictionaryRowDto: {
+            /** @enum {string} */
+            kind?: "equipment_class" | "maintainable_item" | "failure_mode" | "failure_mechanism" | "failure_cause" | "detection_method";
+            equipmentClass?: string;
+            code?: string;
+            name?: string;
+            description?: Record<string, never> | null;
+            category?: Record<string, never> | null;
+            assetTypes?: string[];
+            isPending?: boolean;
+        };
+        FailureDictionaryImportDto: {
+            entries?: components["schemas"]["FailureDictionaryRowDto"][];
+            /** @description CSV with a header row: kind,equipmentClass,code,name,description,category,assetTypes,isPending (assetTypes separated by ";", isPending yes/no) */
+            csv?: string;
+            /** @description Start of new and changed entries (default now) */
+            effectiveFrom?: string;
+            /** @description true = check and count only, store nothing */
+            dryRun?: boolean;
+        };
+        FailureDictionaryChangeDto: {
+            description?: Record<string, never> | null;
+            /** @example Mechanical failure */
+            category?: Record<string, never> | null;
+            /** @description Equipment classes only: asset types the class covers */
+            assetTypes?: string[];
+            /** @description The "unknown / investigation pending" choice of its list */
+            isPending?: boolean;
+            /** @description Start of this version (default now) */
+            effectiveFrom?: string;
+            name?: string;
+        };
+        FailureDictionaryRetireDto: {
+            /** @description End of the entry (default now) */
+            effectiveTo?: string;
         };
     };
     responses: never;
@@ -14772,6 +14912,160 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "code" | "-code" | "name" | "-name" | "createdAt" | "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Case-insensitive search in code and name */
+                q?: string;
+                /** @description active = not retired, retired = retired only, all = both */
+                status?: "active" | "retired" | "all";
+                /** @description Entries of these kinds only (repeat the parameter) */
+                kinds?: ("equipment_class" | "maintainable_item" | "failure_mode" | "failure_mechanism" | "failure_cause" | "detection_method")[];
+                /** @description Items and modes of this equipment class and those valid for every class */
+                equipmentClass?: string;
+                /** @description Instant the entries are in force at (default now); ignored with `history=true` */
+                at?: string;
+                /** @description true = every version, also ended ones (default false) */
+                history?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FailureDictionaryCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_change_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FailureDictionaryChangeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_importEntries_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FailureDictionaryImportDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FailureDictionaryV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FailureDictionaryRetireDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {

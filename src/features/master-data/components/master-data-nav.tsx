@@ -18,6 +18,7 @@ const SECTIONS: readonly SectionLink[] = [
   { to: '/master-data/rca/templates', label: 'RCA templates' },
   { to: '/master-data/rca/causes', label: 'Cause library' },
   { to: '/master-data/rca/checklists', label: 'Verification checklists' },
+  { to: '/master-data/failure-dictionary', label: 'Failure dictionary' },
 ];
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>

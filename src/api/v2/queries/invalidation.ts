@@ -46,6 +46,7 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   asset: ['assets', 'master-data'],
   product: ['products', 'master-data'],
   rca_settings: ['rca-settings', 'master-data'],
+  reliability: ['reliability'],
 };
 
 /** Resources to refresh for an entity type; an unknown type refreshes the whole tenant (safe default). */

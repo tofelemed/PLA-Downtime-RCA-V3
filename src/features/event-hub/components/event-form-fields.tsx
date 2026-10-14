@@ -74,7 +74,7 @@ function PlantTimeField({ field, label, form }: PlantTimeFieldProps) {
 }
 
 /** Inputs of the event form; times are on the plant clock (shown in the hint), duration in minutes. */
-export function EventFormFields({ form, mode }: { form: EventFormState; mode: 'create' | 'edit' }) {
+export function EventFormFields({ form, mode, assetId }: { form: EventFormState; mode: 'create' | 'edit'; assetId?: string | null }) {
   const env = useEventHubEnv();
   const { values, errors, setField } = form;
   const aria = (field: EventFormField) => ({ 'aria-invalid': Boolean(errors[field]), 'aria-describedby': errors[field] ? `${field}-error` : undefined });
@@ -111,7 +111,7 @@ export function EventFormFields({ form, mode }: { form: EventFormState; mode: 'c
         <PlantTimeField field="plannedEndLocal" label="Approved planned end (time after it is overrun)" form={form} />
       )}
       <OriginFields form={form} />
-      <FailureFields form={form} />
+      <FailureFields form={form} assetId={assetId ?? null} />
       <div className="sm:col-span-2">
         <ReasonCodeSelect id="reasonCodeId" value={values.reasonCodeId} onChange={(value) => setField('reasonCodeId', value)} error={errors.reasonCodeId} />
       </div>

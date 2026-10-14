@@ -50,4 +50,5 @@ export const STALE_TIME: Readonly<Record<V2Resource, number>> = {
   assets: 5 * MINUTE,
   'rca-settings': 5 * MINUTE,
   'master-data': 5 * MINUTE,
+  reliability: 5 * MINUTE,
 };

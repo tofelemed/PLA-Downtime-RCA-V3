@@ -15,6 +15,7 @@ const RcaTemplateDetail = lazyNamedWithPreload(() => import('@/features/master-d
 const RcaCauses = lazyNamedWithPreload(() => import('@/features/master-data/rca/causes-page'), 'RcaCausesPage');
 const Checklists = lazyNamedWithPreload(() => import('@/features/master-data/rca/checklists-page'), 'ChecklistsPage');
 const ChecklistDetail = lazyNamedWithPreload(() => import('@/features/master-data/rca/checklist-detail-page'), 'ChecklistDetailPage');
+const FailureDictionary = lazyNamedWithPreload(() => import('@/features/master-data/reliability/failure-dictionary-page'), 'FailureDictionaryPage');
 /** Codes and declarative admin rules (plan 3.8): libraries, code pages, rule pages. */
 const CodesAdmin = lazyNamedWithPreload(() => import('@/features/codes-admin/codes-admin-page'), 'CodesAdminPage');
 const CodeDetail = lazyNamedWithPreload(() => import('@/features/codes-admin/codes/code-detail-page'), 'CodeDetailPage');
@@ -60,6 +61,7 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/master-data/rca/checklists', element: <Checklists />, preload: Checklists.preload },
   { path: '/master-data/rca/checklists/new', element: <ChecklistDetail />, preload: ChecklistDetail.preload },
   { path: '/master-data/rca/checklists/:checklistId', element: <ChecklistDetail />, preload: ChecklistDetail.preload },
+  { path: '/master-data/failure-dictionary', element: <FailureDictionary />, preload: FailureDictionary.preload },
   { path: '/codes-admin', element: <CodesAdmin />, preload: CodesAdmin.preload },
   { path: '/codes-admin/rules/new', element: <RuleNew />, preload: RuleNew.preload },
   { path: '/codes-admin/rules/:ruleId', element: <RuleDetail />, preload: RuleDetail.preload },
