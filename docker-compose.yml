@@ -47,6 +47,12 @@ x-backend-env: &backend-env
   # Report export files (plan 2.9): private volume shared by API and worker, never under /app/uploads
   EXPORT_STORAGE_DIR: /app/storage/exports
   EXPORT_TTL_HOURS: ${EXPORT_TTL_HOURS:-168}
+  # Daily retention job (DB-07, runs in the worker): audit request log (audit_logs) and audit trail
+  # (audit_log) kept 30 days (owner decision 2026-10-14). Raw retention is not decided: empty = keep forever.
+  AUDIT_REQUEST_LOG_RETENTION_DAYS: ${AUDIT_REQUEST_LOG_RETENTION_DAYS:-30}
+  AUDIT_TRAIL_RETENTION_DAYS: ${AUDIT_TRAIL_RETENTION_DAYS:-30}
+  RAW_RETENTION_DAYS: ${RAW_RETENTION_DAYS:-}
+  RETENTION_BATCH: ${RETENTION_BATCH:-1000}
 
 services:
   postgres:

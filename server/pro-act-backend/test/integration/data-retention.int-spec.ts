@@ -29,18 +29,28 @@ describe('data retention (DB-07)', () => {
     batchSize: 1,
   };
 
-  const requestLog = (daysAgo: number) =>
-    query(
+  const requestLog = (daysAgo: number, tenant = tenantId) =>
+    query<Array<{ id: string }>>(
       `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, tenant_id, timestamp)
-       VALUES ($1, $2, 'UPDATE', 'Task', $3, $4, $5)`,
-      [randomUUID(), randomUUID(), randomUUID(), tenantId, ago(daysAgo)],
+       VALUES ($1, $2, 'UPDATE', 'Task', $3, $4, $5) RETURNING id::text AS id`,
+      [randomUUID(), randomUUID(), randomUUID(), tenant, ago(daysAgo)],
     );
-  const trail = (daysAgo: number) =>
+  const trail = (daysAgo: number, tenant = tenantId) =>
     query<Array<{ id: string }>>(
       `INSERT INTO audit_log (tenant_id, action, entity_type, entity_id, at)
        VALUES ($1, 'approve', 'period', $2, $3) RETURNING id::text AS id`,
-      [tenantId, randomUUID(), ago(daysAgo)],
+      [tenant, randomUUID(), ago(daysAgo)],
     );
+  /** The row ids of one tenant in a table, sorted as strings. */
+  const ids = async (table: 'audit_logs' | 'audit_log', tenant: string) =>
+    (
+      await query<Array<{ id: string }>>(
+        `SELECT id::text AS id FROM ${table} WHERE tenant_id = $1`,
+        [tenant],
+      )
+    )
+      .map((row) => row.id)
+      .sort();
   const rawPartitions = async () =>
     (
       await query<Array<{ name: string }>>(
@@ -126,5 +136,43 @@ describe('data retention (DB-07)', () => {
         await tx.query(`DELETE FROM audit_log WHERE id = $1`, [recent.id]);
       }),
     ).rejects.toThrow(/append-only/);
+  });
+
+  it('keeps both audit tables for the 30-day owner window: 31-day-old rows go, 29-day-old rows stay', async () => {
+    const other = randomUUID();
+    const [oldLog] = await requestLog(31, other);
+    const [keptLog] = await requestLog(29, other);
+    const [oldTrail] = await trail(31, other);
+    const [keptTrail] = await trail(29, other);
+    expect(await ids('audit_logs', other)).toEqual(
+      [oldLog.id, keptLog.id].sort(),
+    );
+    expect(await ids('audit_log', other)).toEqual(
+      [oldTrail.id, keptTrail.id].sort(),
+    );
+    const policy = readRetentionPolicy({
+      AUDIT_REQUEST_LOG_RETENTION_DAYS: '30',
+      AUDIT_TRAIL_RETENTION_DAYS: '30',
+    });
+    expect(policy).toEqual({
+      requestLogDays: 30,
+      auditTrailDays: 30,
+      rawDays: null,
+      batchSize: 1000,
+    });
+
+    const result = await service().apply(now, policy);
+
+    expect(result.rawPartitions).toEqual([]);
+    expect(result.requestLog).toBeGreaterThanOrEqual(1);
+    expect(result.auditTrail).toBeGreaterThanOrEqual(1);
+    expect(await ids('audit_logs', other)).toEqual([keptLog.id]);
+    expect(await ids('audit_log', other)).toEqual([keptTrail.id]);
+    const [{ n: older }] = await query<Array<{ n: number }>>(
+      `SELECT ((SELECT count(*) FROM audit_logs WHERE timestamp < $1) +
+               (SELECT count(*) FROM audit_log WHERE at < $1))::int AS n`,
+      [ago(30)],
+    );
+    expect(older).toBe(0);
   });
 });
