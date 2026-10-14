@@ -8,6 +8,10 @@ import {
 import { AnalyticsResponse } from '../common/response';
 import { reportEnvelope } from './kpi-reports-v2.view';
 import {
+  defaultLossValueMetric,
+  valuationStatusOf,
+} from './loss-value-default';
+import {
   LOSS_VALUE_METRICS,
   LossValueGroup,
   LossValueReportQueryDto,
@@ -36,6 +40,12 @@ export interface LossValueReportView {
   metric: string;
   view: TotalsView;
   label: string;
+  /** SME V8: true when the view is the policy's default management view (no metric asked) */
+  defaultView: boolean;
+  /** SME V8 / R12: `approved` only when every shown period is approved, else provisional figures */
+  valuationStatus: 'approved' | 'provisional';
+  approvedPeriods: number;
+  periods: number;
   ledger: 'plan' | 'capacity';
   groupBy: LossValueGroup;
   basis: string;
@@ -169,12 +179,18 @@ function grouped(rows: readonly CellRow[]): LossValueGroupView[] {
   );
 }
 
-/** The requested view, ledger and grouping with their defaults (margin, plan ledger, by kind). */
-function requestOf(query: LossValueReportQueryDto) {
-  const metric = query.metric ?? 'margin';
+/** The requested view, ledger and grouping with their defaults (policy default view, plan ledger, by kind). */
+async function requestOf(
+  manager: EntityManager,
+  scope: ReportScope,
+  query: LossValueReportQueryDto,
+) {
+  const metric =
+    query.metric ?? (await defaultLossValueMetric(manager, scope.tenantId));
   return {
     metric,
     view: LOSS_VALUE_METRICS[metric],
+    defaultView: query.metric === undefined,
     ledger: query.ledger ?? 'plan',
     groupBy: query.groupBy ?? 'kind',
   };
@@ -190,7 +206,7 @@ export async function lossValueReport(
   scope: ReportScope,
   query: LossValueReportQueryDto,
 ): Promise<AnalyticsResponse<LossValueReportView>> {
-  const request = requestOf(query);
+  const request = await requestOf(manager, scope, query);
   const { view, ledger, groupBy } = request;
   const lossKinds = groupBy === 'kind' ? null : [...LOSS_VALUE_KINDS];
   const spec = { view, ledger, kinds: lossKinds };
@@ -208,6 +224,9 @@ export async function lossValueReport(
   const data: LossValueReportView = {
     ...request,
     label: VIEW_LABELS[view],
+    valuationStatus: valuationStatusOf(stats),
+    approvedPeriods: stats.approved,
+    periods: stats.periods,
     basis: BASIS,
     groups: grouped(rows),
     total,

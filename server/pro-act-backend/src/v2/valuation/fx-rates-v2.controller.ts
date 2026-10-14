@@ -28,11 +28,20 @@ import { listResponse, ListResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import { APPROVE_DESCRIPTION, ApproveDto } from '../profiles/profile-v2.dto';
 import { FxRateCreateDto, FxRateListQueryDto } from './valuation-v2.dto';
-import { FxRateV2View, toFxRateView } from './valuation-v2.view';
+import {
+  FxRateTransitionV2View,
+  FxRateV2View,
+  toFxRateView,
+  toFxTransitionView,
+} from './valuation-v2.view';
 import { FINANCE_APPROVERS, FINANCE_MAINTAINERS } from './valuation-roles';
 
 const TENANT_WIDE =
   'FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). ';
+
+const REVALUATION =
+  'SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole ' +
+  'months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite.';
 
 /** The approved, dated FX rate table of plan 2.6 (D08: IRR and USD; VAL03). */
 @ApiTags('v2 · Valuation')
@@ -87,15 +96,15 @@ export class FxRatesV2Controller {
   @Roles(...FINANCE_APPROVERS)
   @ApiOperation({
     summary: 'Approve a draft FX rate version',
-    description: `${TENANT_WIDE}${APPROVE_DESCRIPTION}`,
+    description: `${TENANT_WIDE}${APPROVE_DESCRIPTION} ${REVALUATION}`,
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async approve(
     @Ctx() ctx: RequestContext,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: ApproveDto,
-  ): Promise<FxRateV2View> {
-    return toFxRateView(
+  ): Promise<FxRateTransitionV2View> {
+    return toFxTransitionView(
       await this.rates.approve(ctx, id, body.supersede ?? false),
     );
   }
@@ -106,13 +115,13 @@ export class FxRatesV2Controller {
   @Roles(...FINANCE_APPROVERS)
   @ApiOperation({
     summary: 'Retire a draft or approved FX rate version',
-    description: TENANT_WIDE,
+    description: `${TENANT_WIDE}${REVALUATION}`,
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async retire(
     @Ctx() ctx: RequestContext,
     @Param('id', new ParseUUIDPipe()) id: string,
-  ): Promise<FxRateV2View> {
-    return toFxRateView(await this.rates.retire(ctx, id));
+  ): Promise<FxRateTransitionV2View> {
+    return toFxTransitionView(await this.rates.retire(ctx, id));
   }
 }

@@ -48,6 +48,8 @@ export interface RevisionState {
   slices: PeriodProductSlice[];
   tolerance: TolerancePolicy;
   reconciliation: Reconciliation;
+  /** SME V4: closed intervals (epoch ms) of the events manual downtime lines cite */
+  eventSpans: ReadonlyMap<string, { from: number; to: number }>;
 }
 
 /** Decimal from a stored numeric (string, or number when the pg type parser converted it). */
@@ -148,6 +150,7 @@ export async function loadRevisionState(
     where: { periodId: period.id, supersededAt: IsNull() },
     order: { windowFrom: 'ASC', productId: 'ASC' },
   });
+  const eventSpans = await eventSpansOf(manager, lines);
   const partial = {
     period,
     revision,
@@ -159,6 +162,7 @@ export async function loadRevisionState(
     lines,
     slices,
     tolerance,
+    eventSpans,
   };
   const reconciliation = reconcile({
     candidates: candidatesOf(candidateLines),
@@ -167,6 +171,37 @@ export async function loadRevisionState(
     rule: tolerance.rule,
   });
   return { ...partial, reconciliation };
+}
+
+/** Closed intervals of the events cited by manual / replacing downtime lines (one query, by id). */
+async function eventSpansOf(
+  manager: EntityManager,
+  lines: readonly ReconciliationLine[],
+): Promise<Map<string, { from: number; to: number }>> {
+  const ids = [
+    ...new Set(
+      lines
+        .filter((l) => l.kind === 'availability' && l.action !== 'reject')
+        .flatMap((l) => l.evidence.map((e) => e.eventId)),
+    ),
+  ];
+  if (ids.length === 0) return new Map();
+  const rows = await manager.query<
+    Array<{ id: string; start_time: Date; end_time: Date }>
+  >(
+    `SELECT "id", "start_time", "end_time" FROM "production_events"
+      WHERE "id" = ANY($1::uuid[]) AND "end_time" IS NOT NULL`,
+    [ids],
+  );
+  return new Map(
+    rows.map((r) => [
+      r.id,
+      {
+        from: new Date(r.start_time).getTime(),
+        to: new Date(r.end_time).getTime(),
+      },
+    ]),
+  );
 }
 
 async function lineSetOf(

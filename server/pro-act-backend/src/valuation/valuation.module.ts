@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
+import { DemandStatusesService } from './demand-statuses.service';
+import { DemandStatus } from './entities/demand-status.entity';
 import { FxRate } from './entities/fx-rate.entity';
 import { LossLineValuation } from './entities/loss-line-valuation.entity';
 import { PeriodValuationTotal } from './entities/period-valuation-total.entity';
@@ -16,12 +18,13 @@ import { ValuationPoliciesService } from './valuation-policies.service';
   imports: [
     TypeOrmModule.forFeature([
       FxRate,
+      DemandStatus,
       LossLineValuation,
       PeriodValuationTotal,
       AccountingPolicy,
     ]),
   ],
-  providers: [FxRatesService, ValuationPoliciesService],
-  exports: [FxRatesService, ValuationPoliciesService],
+  providers: [FxRatesService, ValuationPoliciesService, DemandStatusesService],
+  exports: [FxRatesService, ValuationPoliciesService, DemandStatusesService],
 })
 export class ValuationModule {}

@@ -33,6 +33,7 @@ import {
 import { FINANCE_APPROVERS, FINANCE_MAINTAINERS } from './valuation-roles';
 import {
   toValuationPolicyView,
+  ValuationPolicyApproveV2View,
   ValuationPolicyV2View,
 } from './valuation-v2.view';
 
@@ -98,13 +99,15 @@ export class ValuationPoliciesV2Controller {
     description:
       'Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author ' +
       'cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 ' +
-      'CURRENCY_UNDECIDED for the XXX placeholder. Periods are revalued on their next recalculation.',
+      'CURRENCY_UNDECIDED for the XXX placeholder. SME V7: the periods from its start are queued for ' +
+      'revaluation (`revaluation`); approved periods get a change proposal.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async approve(
     @Ctx() ctx: RequestContext,
     @Param('id', new ParseUUIDPipe()) id: string,
-  ): Promise<ValuationPolicyV2View> {
-    return toValuationPolicyView(await this.policies.approve(ctx, id));
+  ): Promise<ValuationPolicyApproveV2View> {
+    const { policy, revaluation } = await this.policies.approve(ctx, id);
+    return { ...toValuationPolicyView(policy), revaluation };
   }
 }

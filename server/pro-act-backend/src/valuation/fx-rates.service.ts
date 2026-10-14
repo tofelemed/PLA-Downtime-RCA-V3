@@ -8,6 +8,7 @@ import {
 import { scopedQuery } from '../common/query/scoped-query';
 import { toDec } from '../domain/actuals/decimal';
 import { VersionState } from '../domain/profiles/profile.types';
+import { FxRateType } from '../domain/valuation/valuation.types';
 import { invalid, notFound } from '../profiles/profile-errors';
 import { assertTenantWideWriter } from '../profiles/profile-scope';
 import { validityOf } from '../profiles/profiles.service';
@@ -18,8 +19,14 @@ import {
 } from '../profiles/versioning';
 import { keysetPage } from '../v2/common/keyset-page';
 import { FxRate } from './entities/fx-rate.entity';
+import {
+  recordValuationChanges,
+  RevaluationRequested,
+} from './valuation-events';
 
 export interface NewFxRate {
+  /** SME V5: the named rate table (default `economic`) */
+  rateType?: FxRateType;
   fromCurrency: string;
   toCurrency: string;
   rate: string;
@@ -29,6 +36,7 @@ export interface NewFxRate {
 }
 
 export interface FxRateFilter {
+  rateType?: FxRateType;
   fromCurrency?: string;
   toCurrency?: string;
   state?: VersionState;
@@ -64,6 +72,7 @@ export class FxRatesService {
     return this.rates.manager.transaction(async (manager) => {
       const key = {
         tenantId,
+        rateType: input.rateType ?? 'economic',
         fromCurrency: input.fromCurrency,
         toCurrency: input.toCurrency,
       };
@@ -90,6 +99,8 @@ export class FxRatesService {
     query: FxRateFilter,
   ): Promise<{ items: FxRate[]; nextCursor: string | null }> {
     const qb = scopedQuery(this.rates, 'f', { context });
+    if (query.rateType)
+      qb.andWhere('f.rateType = :type', { type: query.rateType });
     if (query.fromCurrency)
       qb.andWhere('f.fromCurrency = :from', { from: query.fromCurrency });
     if (query.toCurrency)
@@ -112,11 +123,15 @@ export class FxRatesService {
     return rate;
   }
 
+  /**
+   * Approves a draft; SME V7: the periods the rate values are queued for revaluation with the approval
+   * (returned, so the caller sees what it triggered — late rates never change figures silently).
+   */
   async approve(
     context: RequestContext,
     id: string,
     supersede: boolean,
-  ): Promise<FxRate> {
+  ): Promise<{ rate: FxRate; revaluation: RevaluationRequested | null }> {
     const rate = await this.get(context, id);
     assertTenantWideWriter(context, rate.tenantId);
     return this.rates.manager.transaction(async (manager) => {
@@ -127,6 +142,7 @@ export class FxRatesService {
           id: rate.id,
           key: {
             tenantId: rate.tenantId,
+            rateType: rate.rateType,
             fromCurrency: rate.fromCurrency,
             toCurrency: rate.toCurrency,
           },
@@ -135,20 +151,47 @@ export class FxRatesService {
         },
         WHAT,
       );
-      return result.approved;
+      const approved = result.approved;
+      const revaluation = await recordValuationChanges(manager, [
+        {
+          tenantId: approved.tenantId,
+          subject: 'fx_rate',
+          change: 'approved',
+          row: approved,
+        },
+      ]);
+      return { rate: approved, revaluation };
     });
   }
 
-  async retire(context: RequestContext, id: string): Promise<FxRate> {
+  async retire(
+    context: RequestContext,
+    id: string,
+  ): Promise<{ rate: FxRate; revaluation: RevaluationRequested | null }> {
     const rate = await this.get(context, id);
     assertTenantWideWriter(context, rate.tenantId);
-    return this.rates.manager.transaction((manager) =>
-      retireVersion(
+    const wasApproved = rate.state === 'approved';
+    return this.rates.manager.transaction(async (manager) => {
+      const retired = await retireVersion(
         manager,
         FxRate,
         { id: rate.id, actorId: context.userId },
         WHAT,
-      ),
-    );
+      );
+      const changes = wasApproved
+        ? [
+            {
+              tenantId: retired.tenantId,
+              subject: 'fx_rate' as const,
+              change: 'retired' as const,
+              row: retired,
+            },
+          ]
+        : [];
+      return {
+        rate: retired,
+        revaluation: await recordValuationChanges(manager, changes),
+      };
+    });
   }
 }
