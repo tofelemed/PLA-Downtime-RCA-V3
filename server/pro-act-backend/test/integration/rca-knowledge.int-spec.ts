@@ -155,9 +155,17 @@ describe('RCA knowledge base v2', () => {
         recommendations: ['Align the coupling after every seal change'],
         isPublished: false,
       });
-      // root cause 30 + problem 15 + recommendation 10 + scope 10 + linked case 5 (no actions, no votes)
-      expect(body.qualityScore).toBe(70);
-      expect(body.quality.reduce((sum, part) => sum + part.points, 0)).toBe(70);
+      // root cause 30 + problem 15 + recommendation 10 + a tracked action 10 + scope 10 + linked case 5; the
+      // action is done but its effectiveness is not proven (insufficient evidence), so 'effective' earns 0 (RCA-08)
+      expect(body).toMatchObject({
+        caseEffectiveness: 'insufficient_evidence',
+        lessonStatus: 'unverified',
+      });
+      expect(body.qualityScore).toBe(80);
+      expect(body.quality.reduce((sum, part) => sum + part.points, 0)).toBe(80);
+      expect(
+        body.quality.find((part) => part.factor === 'effective')?.points,
+      ).toBe(0);
       expect(
         (
           (await env.get(`rca-knowledge/${kNoUnit}`).expect(200))

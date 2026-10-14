@@ -9,6 +9,7 @@ const EMPTY: KnowledgeQualityInput = {
   problem: null,
   recommendationCount: 0,
   actions: { total: 0, done: 0, cancelled: 0 },
+  effectiveness: null,
   hasScope: false,
   hasSourceCase: false,
   helpful: 0,
@@ -20,6 +21,7 @@ const FULL: KnowledgeQualityInput = {
   problem: 'Pump P-101 trips on vibration',
   recommendationCount: 2,
   actions: { total: 3, done: 2, cancelled: 1 },
+  effectiveness: 'effective',
   hasScope: true,
   hasSourceCase: true,
   helpful: 4,
@@ -51,15 +53,16 @@ describe('knowledgeQuality (RCA knowledge entry score)', () => {
     expect(points({ ...EMPTY, problem: 'stated' }, 'problem')).toBe(15);
   });
 
-  it('done actions count against the non-cancelled ones only', () => {
-    const half = { ...EMPTY, actions: { total: 5, done: 2, cancelled: 1 } };
-    expect(points(half, 'actions')).toBe(10);
-    expect(points(half, 'actionsDone')).toBe(5);
-    const allCancelled = {
-      ...EMPTY,
-      actions: { total: 2, done: 0, cancelled: 2 },
-    };
-    expect(points(allCancelled, 'actionsDone')).toBe(0);
+  it('RCA-08: verified effective earns the points; done actions alone earn nothing', () => {
+    const done = { ...EMPTY, actions: { total: 2, done: 2, cancelled: 0 } };
+    expect(points(done, 'actions')).toBe(10);
+    expect(points(done, 'effective')).toBe(0);
+    expect(
+      points({ ...done, effectiveness: 'not_effective' }, 'effective'),
+    ).toBe(0);
+    expect(points({ ...done, effectiveness: 'effective' }, 'effective')).toBe(
+      10,
+    );
   });
 
   it('feedback is the helpful share of the votes and 0 without votes', () => {

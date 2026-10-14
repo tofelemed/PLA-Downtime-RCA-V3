@@ -1,4 +1,14 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn, VersionColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+  VersionColumn,
+} from 'typeorm';
 import { RCA } from '../rca/rca.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -29,7 +39,12 @@ export class RCAKnowledgeBase {
   tenantId?: string;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @ApiProperty({ description: 'Source RCA ID' })
@@ -74,7 +89,12 @@ export class RCAKnowledgeBase {
   assetName?: string;
 
   @ApiProperty({ description: 'Equipment category', required: false })
-  @Column({ name: 'equipment_category', type: 'varchar', length: 150, nullable: true })
+  @Column({
+    name: 'equipment_category',
+    type: 'varchar',
+    length: 150,
+    nullable: true,
+  })
   equipmentCategory?: string;
 
   @ApiProperty({ description: 'Category', required: false })
@@ -98,14 +118,27 @@ export class RCAKnowledgeBase {
   rootCause?: string;
 
   @ApiProperty({ description: 'Root cause category', required: false })
-  @Column({ name: 'root_cause_category', type: 'varchar', length: 150, nullable: true })
+  @Column({
+    name: 'root_cause_category',
+    type: 'varchar',
+    length: 150,
+    nullable: true,
+  })
   rootCauseCategory?: string;
 
-  @ApiProperty({ description: 'Contributing factors', required: false, type: [String] })
+  @ApiProperty({
+    description: 'Contributing factors',
+    required: false,
+    type: [String],
+  })
   @Column({ name: 'contributing_factors', type: 'simple-json', nullable: true })
   contributingFactors?: string[];
 
-  @ApiProperty({ description: 'Recommendations', required: false, type: 'array' })
+  @ApiProperty({
+    description: 'Recommendations',
+    required: false,
+    type: 'array',
+  })
   @Column({ type: 'simple-json', nullable: true })
   recommendations?: any[];
 
@@ -137,7 +170,11 @@ export class RCAKnowledgeBase {
   @Column({ type: 'text', nullable: true })
   content?: string;
 
-  @ApiProperty({ description: 'Related RCA IDs', required: false, type: [String] })
+  @ApiProperty({
+    description: 'Related RCA IDs',
+    required: false,
+    type: [String],
+  })
   @Column({ name: 'related_rcas', type: 'simple-json', nullable: true })
   relatedRcas?: string[];
 
@@ -149,11 +186,17 @@ export class RCAKnowledgeBase {
   @Column({ name: 'is_published', type: 'boolean', default: false })
   isPublished: boolean;
 
-  @ApiProperty({ description: 'Optimistic concurrency version (If-Match on publish / unpublish)' })
+  @ApiProperty({
+    description:
+      'Optimistic concurrency version (If-Match on publish / unpublish)',
+  })
   @VersionColumn({ name: 'row_version', default: 1 })
   rowVersion: number;
 
-  @ApiProperty({ description: 'When the entry was last published', required: false })
+  @ApiProperty({
+    description: 'When the entry was last published',
+    required: false,
+  })
   @Column({ name: 'published_at', type: 'timestamptz', nullable: true })
   publishedAt?: Date | null;
 
@@ -170,7 +213,39 @@ export class RCAKnowledgeBase {
   helpfulVotes: number;
 
   @ApiProperty({ description: 'Closed date ISO string', required: false })
+  /** failure mode of the source case's linked events (similarity, CA9 applicability) */
+  @Column({
+    name: 'failure_mode',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  failureMode?: string | null;
+
+  /** CA9: `tenant` (this plant) or `organization` (published lessons other plants of the organization read) */
+  @Column({
+    name: 'share_scope',
+    type: 'varchar',
+    length: 16,
+    default: 'tenant',
+  })
+  shareScope: string;
+
+  @Column({ name: 'shared_by', type: 'uuid', nullable: true })
+  sharedBy?: string | null;
+
+  @Column({ name: 'shared_at', type: 'timestamptz', nullable: true })
+  sharedAt?: Date | null;
+
+  /** CA9: verified practice (effective), caution (not effective) or unverified, set when the case closes */
+  @Column({
+    name: 'lesson_status',
+    type: 'varchar',
+    length: 24,
+    nullable: true,
+  })
+  lessonStatus?: string | null;
+
   @Column({ name: 'closed_date', type: 'varchar', length: 50, nullable: true })
   closedDate?: string;
 }
-

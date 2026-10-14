@@ -51,6 +51,8 @@ export class KnowledgeWorld {
   operator = '';
   analyst = '';
   reliabilityA2 = '';
+  /** a second manager approver of tenant A: independent of what `admin` investigates (SME CA1) */
+  approver = '';
   adminUserId = randomUUID();
 
   async start(): Promise<void> {
@@ -64,6 +66,7 @@ export class KnowledgeWorld {
       signToken(this.app, { userId, tenantId, role });
     this.admin = token(this.world.tenantA, 'TenantAdmin', this.adminUserId);
     this.adminB = token(this.world.tenantB, 'TenantAdmin');
+    this.approver = token(this.world.tenantA, 'TenantAdmin');
     this.operator = token(this.world.tenantA, 'Operator');
     this.analyst = token(this.world.tenantA, 'Analyst');
     this.reliabilityA2 = await this.unitUser(this.world.unitA2);
@@ -130,13 +133,76 @@ export class KnowledgeWorld {
     return rows[0].id;
   }
 
-  /** Opens a case on unit A1, links event e1 (asset A1, reason R1) and closes it: the server writes the entry. */
+  /** One move of the case workflow (`POST /v2/rcas/{id}/transitions` with the current row version). */
+  async transition(
+    caseId: string,
+    body: object,
+    token = this.admin,
+  ): Promise<request.Response> {
+    const current = await this.get(`rcas/${caseId}`).expect(200);
+    return request(this.app.getHttpServer())
+      .post(`/api/v2/rcas/${caseId}/transitions`)
+      .set(bearer(token))
+      .set(
+        'If-Match',
+        `"${(current.body as { rowVersion: number }).rowVersion}"`,
+      )
+      .send(body);
+  }
+
+  /** A done, evidenced action of the case whose verification window has ended, verified now (CA2 / CA4). */
+  async verifiedAction(caseId: string): Promise<void> {
+    const now = Date.now();
+    const action = await this.post(`rcas/${caseId}/actions`, {
+      title: 'Align the coupling',
+      actionType: 'repair',
+      status: 'done',
+      completionEvidenceRef: 'WO-1001 op 10 and alignment report AR-7',
+      verificationWindowStart: new Date(
+        now - 40 * 24 * 3_600_000,
+      ).toISOString(),
+      verificationWindowEnd: new Date(now - 24 * 3_600_000).toISOString(),
+      baseline: { metric: 'recurrences' },
+    }).expect(201);
+    const body = action.body as { id: string; rowVersion: number };
+    await this.post(
+      `rca-actions/${body.id}/verify`,
+      {},
+      { ifMatch: `"${body.rowVersion}"` },
+    ).expect(200);
+  }
+
+  /**
+   * Opens a case on unit A1, links event e1 (asset A1, reason R1) and closes it through the CA1 workflow
+   * (investigation accepted, a verified action, closure requested, approved by an independent manager):
+   * the server writes the entry.
+   */
   async closedCaseEntry(): Promise<{ caseId: string; entryId: string }> {
     const created = await this.post('rcas', {
       title: 'Extruder coupling failures',
       description: 'Extruder trips on vibration',
       unitId: this.world.unitA1,
+      status: 'In Progress',
+      consequenceClass: 'minor',
       rootCause: 'Coupling misalignment',
+      logicTree: [
+        {
+          id: 'n1',
+          parentId: null,
+          label: 'Extruder trips',
+          kind: 'event',
+          status: 'open',
+          notes: null,
+        },
+        {
+          id: 'n2',
+          parentId: 'n1',
+          label: 'Coupling misalignment',
+          kind: 'hypothesis',
+          status: 'verified',
+          notes: null,
+        },
+      ],
       recommendations: [
         { title: 'Align the coupling after every seal change' },
       ],
@@ -145,16 +211,17 @@ export class KnowledgeWorld {
     await this.post(`production-events/${this.world.events.e1}/rca-link`, {
       rcaId: caseId,
     }).expect(201);
-    const current = await this.get(`rcas/${caseId}`).expect(200);
-    await request(this.app.getHttpServer())
-      .patch(`/api/v2/rcas/${caseId}`)
-      .set(bearer(this.admin))
-      .set(
-        'If-Match',
-        `"${(current.body as { rowVersion: number }).rowVersion}"`,
-      )
-      .send({ status: 'Closed' })
-      .expect(200);
+    await this.verifiedAction(caseId);
+    for (const step of [
+      { to: 'Analysis' },
+      { to: 'Monitoring' },
+      { to: 'Closure Review', residualRisk: 'Alignment checked at each PM' },
+    ]) {
+      expect((await this.transition(caseId, step)).status).toBe(200);
+    }
+    expect(
+      (await this.transition(caseId, { to: 'Closed' }, this.approver)).status,
+    ).toBe(200);
     const rows = await this.rows<{ id: string }>(
       `SELECT id FROM rca_knowledge_base WHERE rca_id = $1`,
       [caseId],

@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { assertRevision, staleRevision } from '../common/concurrency/revision';
@@ -75,11 +79,47 @@ export class RcaKnowledgeV2CommandsService {
         `UPDATE "rca_knowledge_base"
             SET "is_published" = $3, "published_at" = CASE WHEN $3 THEN now() ELSE NULL END,
                 "published_by" = CASE WHEN $3 THEN $4 ELSE NULL END,
+                "share_scope" = CASE WHEN $3 THEN "share_scope" ELSE 'tenant' END,
+                "shared_at" = CASE WHEN $3 THEN "shared_at" ELSE NULL END,
+                "shared_by" = CASE WHEN $3 THEN "shared_by" ELSE NULL END,
                 "row_version" = "row_version" + 1, "updated_at" = now()
           WHERE "id" = $1 AND "row_version" = $2`,
         [target.id, target.expectedRowVersion, published, context.userId],
       );
       if (result[1] === 0) throw staleRevision();
+    });
+    return this.entries.get(context, target.id);
+  }
+
+  /**
+   * CA9: shares a published entry with the other plants of the organization (read-only, with its lesson
+   * status: verified practice, caution or unverified) or takes it back. 409 NOT_PUBLISHED for a draft.
+   */
+  async setShared(
+    context: RequestContext,
+    target: { id: string; expectedRowVersion: number },
+    shared: boolean,
+  ): Promise<RcaKnowledgeV2View> {
+    await this.dataSource.transaction(async (manager) => {
+      const entry = await findEntry(manager, context, target.id, true);
+      assertRevision(entry.rowVersion, target.expectedRowVersion);
+      if ((entry.shareScope === 'organization') === shared) return;
+      if (shared && !entry.isPublished) {
+        throw new ConflictException({
+          code: 'NOT_PUBLISHED',
+          message:
+            'publish the entry in this plant before sharing it with other plants',
+        });
+      }
+      await manager.query(
+        `UPDATE "rca_knowledge_base"
+            SET "share_scope" = $2, "shared_at" = CASE WHEN $3 THEN now() ELSE NULL END,
+                "shared_by" = CASE WHEN $3 THEN $4::uuid ELSE NULL END,
+                "lesson_status" = COALESCE("lesson_status", 'unverified'),
+                "row_version" = "row_version" + 1, "updated_at" = now()
+          WHERE "id" = $1`,
+        [target.id, shared ? 'organization' : 'tenant', shared, context.userId],
+      );
     });
     return this.entries.get(context, target.id);
   }

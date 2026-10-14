@@ -5,7 +5,24 @@ import {
 import { RCAKnowledgeBase } from './rca-knowledge-base.entity';
 
 export type KnowledgeVote = 'helpful' | 'not_helpful';
-export type KnowledgeMatch = 'asset' | 'reason' | 'unit';
+export type KnowledgeMatch =
+  | 'failure_mode'
+  | 'asset'
+  | 'reason'
+  | 'text'
+  | 'unit';
+export type CaseEffectiveness =
+  | 'effective'
+  | 'not_effective'
+  | 'insufficient_evidence';
+
+const EFFECTIVENESS = new Set<string>([
+  'effective',
+  'not_effective',
+  'insufficient_evidence',
+]);
+const effectivenessOf = (value: string | null): CaseEffectiveness | null =>
+  value && EFFECTIVENESS.has(value) ? (value as CaseEffectiveness) : null;
 
 export interface KnowledgeActionsSummary {
   recommendations: number;
@@ -31,6 +48,14 @@ export interface RcaKnowledgeV2View {
   rcaId: string | null;
   caseTitle: string | null;
   caseStatus: string | null;
+  /** CA2 verified effectiveness of the source case (null = not verified) */
+  caseEffectiveness: CaseEffectiveness | null;
+  /** CA9: verified practice (effective), caution (not effective) or unverified */
+  lessonStatus: string | null;
+  failureMode: string | null;
+  /** CA9: tenant (this plant) or organization (shared, read-only, with other plants) */
+  shareScope: string;
+  sharedAt: string | null;
   recommendations: string[];
   actionsSummary: KnowledgeActionsSummary;
   helpfulCount: number;
@@ -51,7 +76,7 @@ export interface RcaKnowledgeV2View {
 export interface RcaKnowledgeSimilarV2View extends RcaKnowledgeV2View {
   /** what the entry shares with the event, strongest first */
   matchedOn: KnowledgeMatch[];
-  /** asset 3 + reason 2 + unit 1 */
+  /** failure mode 4 + asset 3 + reason 2 + text 1 + unit 1 */
   relevance: number;
 }
 
@@ -61,6 +86,7 @@ export interface KnowledgeDetails {
   assetName: string | null;
   caseTitle: string | null;
   caseStatus: string | null;
+  caseEffectiveness: string | null;
   actions: { total: number; done: number; cancelled: number };
   helpful: number;
   notHelpful: number;
@@ -97,6 +123,7 @@ export function toKnowledgeView(
     problem: entry.problemStatement || entry.description || null,
     recommendationCount: recommendations.length,
     actions: details.actions,
+    effectiveness: effectivenessOf(details.caseEffectiveness),
     hasScope: Boolean(entry.unitId || entry.assetId),
     hasSourceCase: Boolean(entry.rcaId),
     helpful: details.helpful,
@@ -118,6 +145,11 @@ export function toKnowledgeView(
     rcaId: entry.rcaId ?? null,
     caseTitle: details.caseTitle,
     caseStatus: details.caseStatus,
+    caseEffectiveness: effectivenessOf(details.caseEffectiveness),
+    lessonStatus: entry.lessonStatus ?? null,
+    failureMode: entry.failureMode ?? null,
+    shareScope: entry.shareScope,
+    sharedAt: iso(entry.sharedAt),
     recommendations,
     actionsSummary: {
       recommendations: recommendations.length,

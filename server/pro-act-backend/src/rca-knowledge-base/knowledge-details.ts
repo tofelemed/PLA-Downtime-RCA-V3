@@ -22,6 +22,7 @@ interface CaseRow {
   id: string;
   title: string;
   status: string | null;
+  effectiveness_verdict: string | null;
 }
 interface ActionRow {
   rca_id: string;
@@ -65,7 +66,8 @@ async function queryDetailRows(
       [tenantId, entries.map((entry) => entry.id), userId],
     ),
     manager.query<CaseRow[]>(
-      `SELECT "id"::text AS "id", "title", "status" FROM "rcas" WHERE "tenant_id" = $1 AND "id" = ANY($2::uuid[])`,
+      `SELECT "id"::text AS "id", "title", "status", "effectiveness_verdict" FROM "rcas"
+          WHERE "tenant_id" = $1 AND "id" = ANY($2::uuid[])`,
       [tenantId, caseIds],
     ),
     manager.query<ActionRow[]>(
@@ -122,6 +124,7 @@ export async function loadKnowledgeDetails(
           assetName: (entry.assetId && assets.get(entry.assetId)?.name) || null,
           caseTitle: kase?.title ?? null,
           caseStatus: kase?.status ?? null,
+          caseEffectiveness: kase?.effectiveness_verdict ?? null,
           actions: action ?? NO_ACTIONS,
           helpful: vote?.helpful ?? 0,
           notHelpful: vote?.not_helpful ?? 0,

@@ -21,17 +21,26 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import { ETagInterceptor } from '../../common/concurrency/etag.interceptor';
 import { IfMatch } from '../../common/concurrency/revision';
 import { Ctx } from '../../common/context/ctx.decorator';
-import { RequestContext } from '../../common/context/request-context';
+import {
+  RequestContext,
+  requireTenantId,
+} from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { RCA_WRITERS } from '../../rca-case/rca-scope';
+import {
+  RcaKnowledgeSharedService,
+  SHARED_LESSON_NOTE,
+  SharedLessonV2View,
+} from '../../rca-knowledge-base/knowledge-shared.service';
 import { RcaKnowledgeSimilarService } from '../../rca-knowledge-base/knowledge-similar.service';
+import { ListQueryDto } from '../common/list-query.dto';
 import { RcaKnowledgeV2CommandsService } from '../../rca-knowledge-base/knowledge-v2-commands.service';
 import { RcaKnowledgeV2Service } from '../../rca-knowledge-base/knowledge-v2.service';
 import {
   RcaKnowledgeSimilarV2View,
   RcaKnowledgeV2View,
 } from '../../rca-knowledge-base/knowledge-v2.view';
-import { ListResponse } from '../common/response';
+import { listResponse, ListResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import {
   RcaKnowledgeListQueryDto,
@@ -41,7 +50,7 @@ import {
 
 const QUALITY =
   'qualityScore (0–100) is computed on the server: root cause 30, problem statement 15, a recommendation 10, ' +
-  'a tracked action 10, share of non-cancelled actions done × 10, unit or asset 10, linked case 5, ' +
+  'a tracked action 10, source case verified effective 10 (done actions alone earn nothing, RCA-08), unit or asset 10, linked case 5, ' +
   'helpful share of votes × 10 (0 without votes); `quality` lists the parts.';
 const PUBLISHERS =
   'Reliability engineer or manager approver (unit-limited grants: entries of their units). Requires ' +
@@ -60,6 +69,7 @@ export class RcaKnowledgeV2Controller {
     private readonly entries: RcaKnowledgeV2Service,
     private readonly commands: RcaKnowledgeV2CommandsService,
     private readonly similarCases: RcaKnowledgeSimilarService,
+    private readonly sharedLessons: RcaKnowledgeSharedService,
   ) {}
 
   @Get()
@@ -88,6 +98,25 @@ export class RcaKnowledgeV2Controller {
     @Query() query: RcaKnowledgeSimilarQueryDto,
   ): Promise<RcaKnowledgeSimilarV2View[]> {
     return this.similarCases.similar(ctx, query);
+  }
+
+  @Get('shared')
+  @ApiOperation({
+    summary:
+      'Lessons other plants of your organization shared (read-only, SME CA9)',
+    description: `${SHARED_LESSON_NOTE} Redacted to the lesson (no people, assets, cases or events); newest first, keyset pages.`,
+  })
+  async shared(
+    @Ctx() ctx: RequestContext,
+    @Query() query: ListQueryDto,
+  ): Promise<ListResponse<SharedLessonV2View>> {
+    const page = await this.sharedLessons.list(ctx, {
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+    return listResponse(page.items, page.nextCursor, {
+      tenantId: requireTenantId(ctx),
+    });
   }
 
   @Get(':id')
@@ -134,6 +163,47 @@ export class RcaKnowledgeV2Controller {
     @IfMatch() expectedRowVersion: number,
   ): Promise<RcaKnowledgeV2View> {
     return this.commands.setPublished(ctx, { id, expectedRowVersion }, true);
+  }
+
+  @Post(':id/share')
+  @Idempotent()
+  @HttpCode(HttpStatus.OK)
+  @Roles('manager_approver')
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary:
+      'Share a published lesson with the other plants of the organization (SME CA9)',
+    description:
+      'Manager approver. Requires `Idempotency-Key` and `If-Match`. Other plants read the lesson with its status ' +
+      '(verified practice only after effectiveness approval; caution for an unsuccessful fix). 409 NOT_PUBLISHED.',
+  })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiHeader({ name: 'If-Match', required: true })
+  share(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @IfMatch() expectedRowVersion: number,
+  ): Promise<RcaKnowledgeV2View> {
+    return this.commands.setShared(ctx, { id, expectedRowVersion }, true);
+  }
+
+  @Post(':id/unshare')
+  @Idempotent()
+  @HttpCode(HttpStatus.OK)
+  @Roles('manager_approver')
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary: 'Stop sharing a lesson with other plants',
+    description: 'Manager approver.',
+  })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiHeader({ name: 'If-Match', required: true })
+  unshare(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @IfMatch() expectedRowVersion: number,
+  ): Promise<RcaKnowledgeV2View> {
+    return this.commands.setShared(ctx, { id, expectedRowVersion }, false);
   }
 
   @Post(':id/unpublish')

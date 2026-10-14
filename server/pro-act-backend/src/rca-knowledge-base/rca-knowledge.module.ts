@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { RcaKnowledgeSharedService } from './knowledge-shared.service';
 import { RcaKnowledgeSimilarService } from './knowledge-similar.service';
 import { RcaKnowledgeV2CommandsService } from './knowledge-v2-commands.service';
 import { RcaKnowledgeV2Service } from './knowledge-v2.service';
@@ -17,11 +18,13 @@ import { RcaKnowledgeVote } from './rca-knowledge-vote.entity';
     RcaKnowledgeV2Service,
     RcaKnowledgeV2CommandsService,
     RcaKnowledgeSimilarService,
+    RcaKnowledgeSharedService,
   ],
   exports: [
     RcaKnowledgeV2Service,
     RcaKnowledgeV2CommandsService,
     RcaKnowledgeSimilarService,
+    RcaKnowledgeSharedService,
   ],
 })
 export class RcaKnowledgeModule {}

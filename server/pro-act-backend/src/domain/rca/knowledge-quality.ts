@@ -8,7 +8,7 @@
  * | problem       | 15     | a problem statement or description is written down                    |
  * | recommendations | 10   | at least one recommendation                                           |
  * | actions       | 10     | the source case has at least one tracked action                       |
- * | actionsDone   | 10     | share of the case's non-cancelled actions that are done × 10          |
+ * | effective     | 10     | the source case's actions were verified effective (RCA-08, CA9)        |
  * | scope         | 10     | the entry names a unit or an asset                                    |
  * | sourceCase    | 5      | the entry is still linked to its source case                          |
  * | feedback      | 10     | helpful ÷ (helpful + not helpful) × 10; 0 while nobody voted          |
@@ -21,6 +21,8 @@ export interface KnowledgeQualityInput {
   recommendationCount: number;
   /** actions of the source case by status */
   actions: { total: number; done: number; cancelled: number };
+  /** the source case's verified effectiveness (null = not verified); "done" alone earns nothing */
+  effectiveness: 'effective' | 'not_effective' | 'insufficient_evidence' | null;
   hasScope: boolean;
   hasSourceCase: boolean;
   helpful: number;
@@ -32,7 +34,7 @@ export const KNOWLEDGE_QUALITY_FACTORS = [
   'problem',
   'recommendations',
   'actions',
-  'actionsDone',
+  'effective',
   'scope',
   'sourceCase',
   'feedback',
@@ -46,7 +48,7 @@ export const KNOWLEDGE_QUALITY_MAX: Readonly<
   problem: 15,
   recommendations: 10,
   actions: 10,
-  actionsDone: 10,
+  effective: 10,
   scope: 10,
   sourceCase: 5,
   feedback: 10,
@@ -73,13 +75,12 @@ const share = (part: number, whole: number): number =>
 function fractions(
   input: KnowledgeQualityInput,
 ): Record<KnowledgeQualityFactor, number> {
-  const open = input.actions.total - input.actions.cancelled;
   return {
     rootCause: written(input.rootCause) ? 1 : 0,
     problem: written(input.problem) ? 1 : 0,
     recommendations: input.recommendationCount > 0 ? 1 : 0,
     actions: input.actions.total > 0 ? 1 : 0,
-    actionsDone: share(input.actions.done, open),
+    effective: input.effectiveness === 'effective' ? 1 : 0,
     scope: input.hasScope ? 1 : 0,
     sourceCase: input.hasSourceCase ? 1 : 0,
     feedback: share(input.helpful, input.helpful + input.notHelpful),
