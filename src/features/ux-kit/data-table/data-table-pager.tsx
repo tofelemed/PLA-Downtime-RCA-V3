@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatusIcon, UiIcon, type AppIcon } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import { formatDecimal } from '../format/decimal';
 import { isPagerHidden, type PagerModel } from './pager-model';
 
 export interface ListPagerProps {
@@ -11,7 +12,8 @@ export interface ListPagerProps {
   className?: string;
 }
 
-const formatCount = (value: number) => value.toLocaleString();
+// fixed `1,234` grouping (formatDecimal): the browser locale is never consulted
+const formatCount = (value: number) => formatDecimal(String(value), 0);
 
 function rangeText(pager: PagerModel): string {
   if (pager.rangeEnd === 0) return 'No rows';

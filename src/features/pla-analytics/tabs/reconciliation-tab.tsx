@@ -73,7 +73,7 @@ function OverdueTable({ rows, timezone }: { rows: readonly OverduePeriodView[]; 
     },
     { id: 'state', header: 'State', cell: (row) => `${GRID_WORKFLOW_LABELS[row.workflowState]}${row.revision !== null ? ` · revision ${row.revision}` : ''}` },
     { id: 'residual', header: 'Residual', cell: (row) => (row.residualState ? RESIDUAL_LABELS[row.residualState] : '—') },
-    { id: 'age', header: 'Age', align: 'right', nowrap: true, cell: (row) => ageText(row.ageSeconds) },
+    { id: 'age', header: 'Age', align: 'right', nowrap: true, cell: (row) => ageText(row.ageSeconds, pref.digits) },
     {
       id: 'open',
       header: 'Plan dashboard',

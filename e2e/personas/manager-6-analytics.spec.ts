@@ -166,7 +166,7 @@ test.describe('Manager persona — Downtime Analysis and PLA analytics', () => {
     const download = page.waitForEvent('download');
     await page.getByTestId('export-period-summary-download').click();
     const file = await download;
-    expect(file.suggestedFilename()).toMatch(/^proact-period_summary-.+\.csv$/);
+    expect(file.suggestedFilename()).toMatch(/^traverse-forge-period_summary-.+\.csv$/);
     const csv = await (await import('node:fs/promises')).readFile(await file.path(), 'utf8');
     expect(csv).toMatch(/status,approved/);
     expect(csv).toContain(unit);

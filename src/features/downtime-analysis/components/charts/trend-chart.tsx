@@ -1,5 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { formatDuration } from '@/features/ux-kit/format/duration';
+import { useCalendarPreference } from '@/lib/dates';
 import type { ScheduleClass } from '../../model/downtime-filters';
 import { formatCount } from '../../model/kpi-display';
 import type { TrendRow } from '../../model/trend-rows';
@@ -23,7 +24,8 @@ export function TrendChart({ rows, classes, unit }: TrendChartProps) {
     label: row.label,
     ...Object.fromEntries(classes.map((scheduleClass) => [scheduleClass, Number(row.values[scheduleClass] ?? 0)])),
   }));
-  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact') : formatCount(String(value)));
+  const { digits } = useCalendarPreference();
+  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact', digits) : formatCount(String(value)));
   return (
     <div className="h-64 w-full" aria-hidden>
       <ResponsiveContainer>

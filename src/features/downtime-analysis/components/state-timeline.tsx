@@ -5,7 +5,6 @@ import type { ProductionEventView } from '@/api/v2/types/events';
 import { Button } from '@/components/ui/button';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { formatDuration } from '@/features/ux-kit/format/duration';
 import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { VirtualList } from '@/features/ux-kit/virtual-list';
@@ -26,7 +25,7 @@ const HATCH = 'repeating-linear-gradient(45deg, hsl(0 0% 45%) 0 3px, hsl(0 0% 85
  */
 export function StateTimeline({ filters }: { filters: DowntimeFilters }) {
   const env = useEventHubEnv();
-  const { dateTime } = usePlantFormat();
+  const { dateTime, duration } = usePlantFormat();
   const navigate = useNavigate();
   const location = useLocation();
   const onOpen = (event: ProductionEventView) => navigate(`/events/${event.id}`, { state: { listSearch: `${location.pathname}${location.search}` } });
@@ -66,7 +65,7 @@ export function StateTimeline({ filters }: { filters: DowntimeFilters }) {
             rowHeight={ROW_HEIGHT}
             height={Math.min(rows.length, 8) * ROW_HEIGHT + 4}
             getKey={(row) => row.unitId}
-            renderRow={(row) => <TimelineLane row={row} unitName={env.unitName(row.unitId)} dateTime={dateTime} onOpen={onOpen} />}
+            renderRow={(row) => <TimelineLane row={row} unitName={env.unitName(row.unitId)} dateTime={dateTime} duration={duration} onOpen={onOpen} />}
           />
         </DataState>
       </div>
@@ -78,17 +77,18 @@ interface LaneProps {
   row: TimelineRow;
   unitName: string;
   dateTime: (iso: string) => string;
+  duration: (seconds: number | null, style: 'compact') => string;
   onOpen: (event: ProductionEventView) => void;
 }
 
-function TimelineLane({ row, unitName, dateTime, onOpen }: LaneProps) {
+function TimelineLane({ row, unitName, dateTime, duration, onOpen }: LaneProps) {
   return (
     <div className="flex items-center gap-2" style={{ height: ROW_HEIGHT }} data-testid="timeline-lane" data-unit-id={row.unitId}>
       <span className="w-32 shrink-0 truncate text-xs">{unitName}</span>
       <div className="relative h-5 flex-1 rounded bg-muted">
         {row.segments.map((segment) => {
           const { event } = segment;
-          const label = `${dateTime(event.startTime)} · ${event.isOpen ? 'running' : formatDuration(event.durationSeconds, 'compact')} · ${labelOf(SCHEDULE_CLASS_LABELS, event.classification.scheduleClass)}`;
+          const label = `${dateTime(event.startTime)} · ${event.isOpen ? 'running' : duration(event.durationSeconds, 'compact')} · ${labelOf(SCHEDULE_CLASS_LABELS, event.classification.scheduleClass)}`;
           return (
             <button
               key={event.id}

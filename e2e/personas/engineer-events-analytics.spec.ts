@@ -176,7 +176,7 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
     const download = page.waitForEvent('download');
     await page.getByTestId('export-period-summary-download').click();
     const file = await download;
-    expect(file.suggestedFilename()).toMatch(/^proact-period_summary-.+\.csv$/);
+    expect(file.suggestedFilename()).toMatch(/^traverse-forge-period_summary-.+\.csv$/);
     const csv = await (await import('node:fs/promises')).readFile(await file.path(), 'utf8');
     expect(csv).toContain(world.periods.c);
     const job = await call<{ state: string }>((await apiSession(SAMUEL)).token, 'GET', `/v2/exports/${jobId}`);

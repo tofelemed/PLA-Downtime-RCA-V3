@@ -30,7 +30,8 @@ function long(seconds: number): string {
 
 function compact(seconds: number): string {
   if (seconds < 60) return `${Math.round(seconds)} s`;
-  return `${Math.round(seconds / 60).toLocaleString('en-US')} min`;
+  // fixed `1,234` grouping: the browser locale is never consulted
+  return `${String(Math.round(seconds / 60)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} min`;
 }
 
 function clock(seconds: number): string {

@@ -78,12 +78,6 @@ export function useDeletePlant() {
   return useAdminCommand<string, void>(CONFIG, (id) => adminCall('DELETE', `/tenants/${id}`));
 }
 
-export function useUpdatePlantDisplay() {
-  return useAdminCommand<{ id: string; calendarSystem: string; digits: string }, PlantView>(CONFIG, ({ id, ...body }) =>
-    adminCall('PATCH', `/tenants/${id}/display-settings`, { body }),
-  );
-}
-
 export const useBranding = () => useAdminRead<BrandingView>('admin-config', '/branding');
 
 export function useSaveBranding() {

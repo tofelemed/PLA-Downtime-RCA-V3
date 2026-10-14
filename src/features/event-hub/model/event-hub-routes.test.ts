@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultFilters, toEventQuery } from './event-filters';
 import { parseEventFilters, toEventSearchParams } from './event-url';
+import { formatDuration } from '@/features/ux-kit/format/duration';
 import { factLabel, factText, type FactResolvers } from './fact-display';
 
 const NOW = Date.parse('2026-10-12T10:00:30.000Z');
@@ -79,6 +80,7 @@ describe('revision facts are shown without internal values', () => {
     impactName: () => 'IMP · Full stop',
     userName: () => 'Jonas Weber',
     dateTime: () => '2026-10-12 06:30',
+    duration: (seconds) => formatDuration(seconds, 'long', 'persian'),
   };
 
   it('labels fields and resolves ids, times, durations and enum tokens', () => {
@@ -86,7 +88,7 @@ describe('revision facts are shown without internal values', () => {
     expect(factLabel('someNewField')).toBe('Some new field');
     expect(factText('assetId', UUID, resolvers)).toBe('Pump A');
     expect(factText('startTime', '2026-10-12T03:00:00.000Z', resolvers)).toBe('2026-10-12 06:30');
-    expect(factText('durationSeconds', 5400, resolvers)).not.toMatch(/5400/);
+    expect(factText('durationSeconds', 5400, resolvers)).toBe('۱ h ۳۰ min');
     expect(factText('physicalType', 'quality_loss', resolvers)).toBe('Quality loss');
     expect(factText('apmType', 'FailureWO', resolvers)).toBe('Failure work order');
     expect(factText('description', null, resolvers)).toBe('—');
