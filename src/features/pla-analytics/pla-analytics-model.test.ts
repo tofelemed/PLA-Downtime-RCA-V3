@@ -32,6 +32,15 @@ describe('PLA analytics scope (plan 3.6, T24)', () => {
     const parsed = scope();
     expect(parsed).toMatchObject({ unitIds: ['u1', 'u2'], approvedOnly: true, ledger: 'capacity', tab: 'trends', trendBy: 'week', lossGroupBy: 'reason', lossMetric: 'qty' });
     expect(parseScope(scopeToParams(parsed), 0)).toEqual(parsed);
+    // SME R12: management reports default to approved figures; an explicit choice in the URL wins
+    const plain = new URLSearchParams('from=2026-10-01T00:00:00.000Z&to=2026-10-08T00:00:00.000Z');
+    expect(parseScope(plain, 0).approvedOnly).toBe(false);
+    expect(parseScope(plain, 0, { approvedByDefault: true }).approvedOnly).toBe(true);
+    const provisional = { ...parseScope(plain, 0, { approvedByDefault: true }), approvedOnly: false };
+    const params = scopeToParams(provisional, { approvedByDefault: true });
+    expect(params.get('approved')).toBe('0');
+    expect(parseScope(params, 0, { approvedByDefault: true }).approvedOnly).toBe(false);
+    expect(scopeToParams({ ...provisional, approvedOnly: true }, { approvedByDefault: true }).has('approved')).toBe(false);
     expect(scopeToParams(parsed).has('metric')).toBe(false);
   });
 

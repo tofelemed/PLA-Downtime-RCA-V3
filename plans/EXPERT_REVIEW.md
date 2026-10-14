@@ -200,6 +200,28 @@ Source: [SME_ANSWERS_ALL_PHASES_2026-10-14.md](SME_ANSWERS_ALL_PHASES_2026-10-14
 | RC-03 | Low | Overdue is a report parameter (default 48 h); no close calendar, escalation or month-end sign-off. | `v2/pla-reports/pla-reports-v2.service.ts:134` | ⬜ |
 | RC-04 | Low | One evidence event can back lines in several slices or periods with no cap on its quantity. | `reconciliation/line-references.ts` | ⬜ |
 
+### 3.1 SME answers (14 Oct 2026) and what they change
+
+Source: [SME_ANSWERS_ALL_PHASES_2026-10-14.md](SME_ANSWERS_ALL_PHASES_2026-10-14.md) Part B. Numbers are pilot settings, built as policy values.
+
+| Q | SME answer (short) | Action | Plant data needed? | Phase |
+|---|---|---|---|---|
+| R1 | Maker–checker per period (built, RC-01); monthly sign-off by plant management **and** finance; extra reviewer by materiality for large losses / adjustments | Month close with two sign-offs (with R4); materiality routing | Role matrix, delegates, materiality bands | R-B, later |
+| R2 | Record and review per shift, reconcile the official **production day**, close the financial month; store each quantity once and roll up | Day certification over the shift periods — **owner 14 Oct: day certification** (shifts prepared and reviewed; one approval per production day certifies the roll-up) | Production-day start, shift patterns | R-E |
+| R3 | Pilot SLA: submit ≤ 12 h after the production day ends, approve ≤ 24 h; escalate at 48 h to the production-accounting manager, 72 h to plant management; waiting-for-lab tracked as its own exception | SLA policy, due / overdue per stage, escalation level, "waiting for data" status | Lab turnaround, weekend staffing | R-C |
+| R4 | Named working-day close: quantities by working day 3, finance sign-off by working day 5 (holiday calendar); locked months change only through a controlled correction | Month close: states, working-day deadlines, lock of the month's approved periods | Close calendar, holidays | R-B |
+| R5 | Late data → restated version of the original period with delta and re-approval, original kept; operational effective date ≠ financial posting date; finance decides posting | Current change-proposal flow kept; add delta view and posting date | Source revision ids, posting rules | R-D |
+| R6 | Return to the named preparer with an actionable reason, the failed line and a new due time; escalate the 3rd rejection of the same period to the production-accounting manager | Rejection count + escalation flag; reason per line | Escalation owner | R-C |
+| R7 | Unexplained residual only within approved limits, with a **category** (measurement adjustment, timing / inventory difference, source-data gap, unexplained cause), reason, owner, reviewer; track residual / plan and residual / gross loss; improvement target < 2 % of gross loss | Categories on Unaccounted lines; two residual KPIs; target as policy | Metrology allowance | R-A |
+| R8 | Bridge only by production accounting, with reason + evidence + independent approver; limit from measurement uncertainty and materiality; supported adjustments (inventory, timing, measurement) kept apart from unexplained residual; a bridge never overrides an impossible claim | Bridge role restriction, evidence, bridge category; limits later | Per-unit limits | R-A |
+| R9 | No unsupported negative balancing line; measured recovery gains and evidence-backed reversals as their own types; conservation at event level too | Refuse negative bridge (RC-02 rest); "reversal" type with evidence | No | R-A |
+| R10 | One event's allocations across periods / lines never exceed the event's loss (same boundary and basis) | Event-level conservation check on manual lines (RC-04) | No | R-A |
+| R11 | Evidence contract per line type: downtime → event / log / work order; rate → rate or totalizer evidence; quality → lot / sample + disposition; inventory → movement record; photo is not proof | Evidence type + reference required per manual kind | Evidence types in use | R-A |
+| R12 | Management reports default to approved; dashboards may show provisional with status, as-of and coverage; never call a partial total "final" | Report default `approvedOnly` + approved / provisional split and coverage label | Default report modes | R-D |
+| R13 | Per-source status mapping approved by the source owner (COMPLETED may not mean released); keep source id, revision, release time | Status mapping per source in the database instead of an env list | Source workflow docs | R-D |
+
+**Build order (Area 3, SME phase):** R-A line rules (R7–R11) · R-B month close (R1, R4) · R-C SLA, escalation and rejection (R3, R6) · R-D restatement delta, report defaults, source status mapping (R5, R12, R13) · R-E day certification (R2).
+
 ## Area 4 — Valuation (~65%)
 
 | ID | Sev | Finding | Evidence | Status |

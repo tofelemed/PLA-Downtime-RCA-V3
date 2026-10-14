@@ -63,8 +63,21 @@ const oneOf = <T extends string>(values: readonly T[], value: string | null, fal
 
 const isInstant = (value: string | null): value is string => value !== null && !Number.isNaN(Date.parse(value));
 
+/** Page-level defaults: management reports show approved figures unless the user chooses otherwise (SME R12). */
+export interface ScopeDefaults {
+  approvedByDefault?: boolean;
+}
+
+/** `approved=1` / `approved=0` in the URL, else the page default. */
+function approvedOf(params: URLSearchParams, defaults: ScopeDefaults): boolean {
+  const value = params.get('approved');
+  if (value === '1') return true;
+  if (value === '0') return false;
+  return defaults.approvedByDefault ?? false;
+}
+
 /** Scope from the URL; a missing or broken window falls back to the last 7 days ending `now`. */
-export function parseScope(params: URLSearchParams, now: number): AnalyticsScope {
+export function parseScope(params: URLSearchParams, now: number, defaults: ScopeDefaults = {}): AnalyticsScope {
   const from = params.get('from');
   const to = params.get('to');
   const hasWindow = isInstant(from) && isInstant(to) && Date.parse(from) < Date.parse(to);
@@ -72,7 +85,7 @@ export function parseScope(params: URLSearchParams, now: number): AnalyticsScope
     unitIds: (params.get('units') ?? '').split(',').filter(Boolean).sort(),
     ...(hasWindow ? { from, to } : presetWindowOf(DEFAULT_PRESET.hours, now)),
     windowLabel: hasWindow ? params.get('window') ?? 'Custom window' : DEFAULT_PRESET.label,
-    approvedOnly: params.get('approved') === '1',
+    approvedOnly: approvedOf(params, defaults),
     ledger: oneOf(['plan', 'capacity'] as const, params.get('ledger'), 'plan'),
     policy: oneOf(['operational', 'reconciled'] as const, params.get('policy'), 'operational'),
     tab: oneOf(PLA_TABS, LEGACY_TABS[params.get('tab') ?? ''] ?? params.get('tab'), 'waterfall'),
@@ -109,10 +122,10 @@ const PARAM: Partial<Record<keyof AnalyticsScope, string>> = {
 export const SCOPE_PARAMS: ReadonlySet<string> = new Set(['from', 'to', 'window', 'units', 'approved', ...Object.values(PARAM).filter((name): name is string => name !== undefined)]);
 
 /** URL form of the scope (defaults left out, so equal scopes give equal URLs). */
-export function scopeToParams(scope: AnalyticsScope): URLSearchParams {
+export function scopeToParams(scope: AnalyticsScope, defaults: ScopeDefaults = {}): URLSearchParams {
   const params = new URLSearchParams({ from: scope.from, to: scope.to, window: scope.windowLabel });
   if (scope.unitIds.length > 0) params.set('units', [...scope.unitIds].sort().join(','));
-  if (scope.approvedOnly) params.set('approved', '1');
+  if (scope.approvedOnly !== (defaults.approvedByDefault ?? false)) params.set('approved', scope.approvedOnly ? '1' : '0');
   for (const [key, name] of Object.entries(PARAM) as Array<[keyof AnalyticsScope, string]>) {
     const value = String(scope[key]);
     if (value !== DEFAULTS[key]) params.set(name, value);

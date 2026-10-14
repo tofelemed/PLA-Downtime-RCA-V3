@@ -45,7 +45,8 @@ export function ReportsV2Page() {
 
 function ReportsScreen() {
   const env = useEventHubEnv();
-  const { scope, change } = useAnalyticsScope();
+  // SME R12: management reports default to approved figures; provisional is an explicit choice
+  const { scope, change } = useAnalyticsScope({ approvedByDefault: true });
   const [params, setParams] = useSearchParams();
   const view = viewOf(params.get('view'));
   const chooseView = (next: string) =>
