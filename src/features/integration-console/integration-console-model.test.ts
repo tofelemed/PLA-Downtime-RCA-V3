@@ -80,6 +80,9 @@ describe('connections: write-only secret and staged diagnostics', () => {
     const failedAuth = { connected: false, message: 'auth check failed', diagnostics: { dns: { status: 'ok' as const }, tls: { status: 'not_applicable' as const }, auth: { status: 'failed' as const, detail: '401' } } };
     expect(connectionHealth(failedAuth)).toBe('auth_failed');
     expect(connectionHealth({ ...failedAuth, diagnostics: { dns: { status: 'failed' as const } } })).toBe('unreachable');
+    // plain http: the auth request is the first one, so a refused connection fails there
+    const refused = { status: 'failed' as const, detail: 'PI_UNREACHABLE: PI Web API unreachable: ECONNREFUSED' };
+    expect(connectionHealth({ ...failedAuth, diagnostics: { ...failedAuth.diagnostics, auth: refused } })).toBe('unreachable');
     expect(connectionHealth({ ...failedAuth, diagnostics: { authz: { status: 'failed' as const } } })).toBe('authz_failed');
     expect(connectionHealth({ connected: true, message: 'All PI Web API checks passed' })).toBe('connected');
   });

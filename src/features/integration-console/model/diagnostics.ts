@@ -35,6 +35,8 @@ export function connectionHealth(test: ConnectionTestView | null): ConnectionHea
   if (!test) return 'not_tested';
   if (test.connected) return 'connected';
   const failed = PI_STEPS.find((step) => test.diagnostics?.[step.key]?.status === 'failed')?.key;
+  // on plain http the auth step is the first request: a source that never answered is unreachable
+  if (failed === 'auth' && test.diagnostics?.auth?.detail?.startsWith('PI_UNREACHABLE')) return 'unreachable';
   if (failed === 'auth') return 'auth_failed';
   if (failed === 'authz' || failed === 'read') return 'authz_failed';
   if (failed === 'dns' || failed === 'tls') return 'unreachable';
