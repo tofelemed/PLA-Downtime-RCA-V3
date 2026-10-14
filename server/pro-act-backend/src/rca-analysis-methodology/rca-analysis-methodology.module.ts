@@ -8,6 +8,7 @@ import { RcaFmeaAnalysis } from './entities/fmea-analysis.entity';
 import { RcaFaultTreeAnalysis } from './entities/fault-tree-analysis.entity';
 import { RcaBarrierAnalysis } from './entities/barrier-analysis.entity';
 import { RcaChangeAnalysis } from './entities/change-analysis.entity';
+import { RCA } from '../rca/rca.entity';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { RcaChangeAnalysis } from './entities/change-analysis.entity';
       RcaFaultTreeAnalysis,
       RcaBarrierAnalysis,
       RcaChangeAnalysis,
+      RCA,
     ]),
   ],
   controllers: [RCAAnalysisMethodologyController],
@@ -25,5 +27,3 @@ import { RcaChangeAnalysis } from './entities/change-analysis.entity';
   exports: [RCAAnalysisMethodologyService],
 })
 export class RCAAnalysisMethodologyModule {}
-
-

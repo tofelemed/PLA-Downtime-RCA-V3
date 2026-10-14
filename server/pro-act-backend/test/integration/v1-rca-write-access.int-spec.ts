@@ -68,6 +68,65 @@ describe('v1 RCA write access (RCA-02)', () => {
       .expect(200);
   });
 
+  it('analysis tools take the plant from the signed-in context, never from the body or query', async () => {
+    const admin = (tenantId: string) =>
+      signToken(app, { userId: randomUUID(), tenantId, role: 'TenantAdmin' });
+    const caseA = (
+      (
+        await http()
+          .post('/api/rcas')
+          .set(bearer(admin(world.tenantA)))
+          .send({ title: 'Gearbox trip', status: 'Draft', priority: 'High' })
+          .expect(201)
+      ).body as { id: string }
+    ).id;
+    const fiveWhy = (tenantId: string) => ({
+      tenantId,
+      rcaId: caseA,
+      problem: 'Gearbox overheated',
+      whyLevels: [{ level: 1, question: 'Why?', answer: 'Low oil' }],
+      rootCause: 'Lubrication interval too long',
+    });
+    // a body naming another plant is ignored: the row belongs to the caller's plant
+    const created = await http()
+      .post('/api/rca-analysis/five-why')
+      .set(bearer(admin(world.tenantA)))
+      .send(fiveWhy(world.tenantB))
+      .expect(201);
+    const analysis = created.body as { id: string; tenantId: string };
+    expect(analysis.tenantId).toBe(world.tenantA);
+    // plant B can neither attach to, read, change nor delete plant A's case work
+    await http()
+      .post('/api/rca-analysis/five-why')
+      .set(bearer(admin(world.tenantB)))
+      .send(fiveWhy(world.tenantA))
+      .expect(404);
+    const read = await http()
+      .get(
+        `/api/rca-analysis/five-why?rcaId=${caseA}&tenantId=${world.tenantA}`,
+      )
+      .set(bearer(admin(world.tenantB)))
+      .expect(200);
+    expect(read.body).toEqual({});
+    await http()
+      .put(`/api/rca-analysis/five-why/${analysis.id}`)
+      .set(bearer(admin(world.tenantB)))
+      .send({ rootCause: 'changed by another plant' })
+      .expect(404);
+    await http()
+      .delete(`/api/rca-analysis/five-why/${analysis.id}`)
+      .set(bearer(admin(world.tenantB)))
+      .expect(404);
+    const own = await http()
+      .get(`/api/rca-analysis/five-why?rcaId=${caseA}`)
+      .set(bearer(admin(world.tenantA)))
+      .expect(200);
+    expect(own.body).toMatchObject({
+      id: analysis.id,
+      rootCause: 'Lubrication interval too long',
+    });
+  });
+
   it('analysis tools need an RCA writer; trigger configuration needs a manager approver', async () => {
     await http()
       .post('/api/rca-analysis/five-why')

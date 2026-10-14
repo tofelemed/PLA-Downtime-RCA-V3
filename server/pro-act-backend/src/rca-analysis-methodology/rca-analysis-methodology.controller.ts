@@ -57,14 +57,10 @@ export class RCAAnalysisMethodologyController {
 
   @Get('five-why')
   @ApiOperation({ summary: 'Get Five Why analysis by RCA' })
-  @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaFiveWhyAnalysis })
-  getFiveWhy(
-    @Query('tenantId') tenantId: string | undefined,
-    @Query('rcaId') rcaId: string,
-  ) {
-    return this.service.findFiveWhyByRca(tenantId, rcaId);
+  getFiveWhy(@Query('rcaId') rcaId: string) {
+    return this.service.findFiveWhyByRca(rcaId);
   }
 
   @Roles(...RCA_WRITERS)
@@ -96,14 +92,10 @@ export class RCAAnalysisMethodologyController {
 
   @Get('fishbone')
   @ApiOperation({ summary: 'Get Fishbone diagram by RCA' })
-  @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaFishboneDiagram })
-  getFishbone(
-    @Query('tenantId') tenantId: string | undefined,
-    @Query('rcaId') rcaId: string,
-  ) {
-    return this.service.findFishboneByRca(tenantId, rcaId);
+  getFishbone(@Query('rcaId') rcaId: string) {
+    return this.service.findFishboneByRca(rcaId);
   }
 
   @Roles(...RCA_WRITERS)
@@ -135,14 +127,10 @@ export class RCAAnalysisMethodologyController {
 
   @Get('fmea')
   @ApiOperation({ summary: 'Get FMEA analysis by RCA' })
-  @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaFmeaAnalysis })
-  getFmea(
-    @Query('tenantId') tenantId: string | undefined,
-    @Query('rcaId') rcaId: string,
-  ) {
-    return this.service.findFmeaByRca(tenantId, rcaId);
+  getFmea(@Query('rcaId') rcaId: string) {
+    return this.service.findFmeaByRca(rcaId);
   }
 
   @Roles(...RCA_WRITERS)
@@ -171,14 +159,10 @@ export class RCAAnalysisMethodologyController {
 
   @Get('fault-tree')
   @ApiOperation({ summary: 'Get fault tree analysis by RCA' })
-  @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaFaultTreeAnalysis })
-  getFaultTree(
-    @Query('tenantId') tenantId: string | undefined,
-    @Query('rcaId') rcaId: string,
-  ) {
-    return this.service.findFaultTreeByRca(tenantId, rcaId);
+  getFaultTree(@Query('rcaId') rcaId: string) {
+    return this.service.findFaultTreeByRca(rcaId);
   }
 
   @Roles(...RCA_WRITERS)
@@ -210,14 +194,10 @@ export class RCAAnalysisMethodologyController {
 
   @Get('barrier')
   @ApiOperation({ summary: 'Get barrier analysis by RCA' })
-  @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaBarrierAnalysis })
-  getBarrier(
-    @Query('tenantId') tenantId: string | undefined,
-    @Query('rcaId') rcaId: string,
-  ) {
-    return this.service.findBarrierByRca(tenantId, rcaId);
+  getBarrier(@Query('rcaId') rcaId: string) {
+    return this.service.findBarrierByRca(rcaId);
   }
 
   @Roles(...RCA_WRITERS)
@@ -249,14 +229,10 @@ export class RCAAnalysisMethodologyController {
 
   @Get('change')
   @ApiOperation({ summary: 'Get change analysis by RCA' })
-  @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'rcaId', required: true })
   @ApiResponse({ status: 200, type: RcaChangeAnalysis })
-  getChange(
-    @Query('tenantId') tenantId: string | undefined,
-    @Query('rcaId') rcaId: string,
-  ) {
-    return this.service.findChangeByRca(tenantId, rcaId);
+  getChange(@Query('rcaId') rcaId: string) {
+    return this.service.findChangeByRca(rcaId);
   }
 
   @Roles(...RCA_WRITERS)
