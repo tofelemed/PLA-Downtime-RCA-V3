@@ -8,8 +8,10 @@ type Line = LineBody & { flags: string[]; oeeComponent: string | null };
 /**
  * LA-08 / SME Q9, Q10, E1 on real Postgres: the transition matrix through `/v2/transition-standards`
  * (maker-checker, references, keyset list), a grade_transition event P1→P2 of 3 h against a 2 h
- * reference split into allowance and overrun in both ledgers, the standard recorded in the run
- * fingerprint, and a ramp-up after a trip charged to the trip (cause_event_id) with its own evidence.
+ * reference split into allowance and overrun (capacity ledger; the plan ledger charges only the overrun
+ * while oee_policy says `transitionAllowanceInPlan = planned`, the allowance under `loss`), the standard
+ * recorded in the run fingerprint, and a ramp-up after a trip charged to the trip (cause_event_id) with
+ * its own evidence.
  */
 describe('grade transitions (LA-08)', () => {
   const env = new AccountingWorld();
@@ -105,6 +107,37 @@ describe('grade transitions (LA-08)', () => {
     expect((response.body as ApiError).code).toBe('INVALID_GRADE_CHANGE');
   });
 
+  /** A unit-scoped oee_policy version (the tenant's latest body with the option) in force for the period. */
+  const unitVersion = (version: number, option: 'planned' | 'loss') =>
+    env.rows(
+      `INSERT INTO "accounting_policies" ("tenant_id", "row_version", "policy_kind", "unit_id", "scope_key",
+              "version", "body", "effective_from", "approved_at")
+       SELECT $1, 1, 'oee_policy', $2::uuid, $3, $4,
+              "body" || jsonb_build_object('transitionAllowanceInPlan', $5::text), '2026-01-01T00:00:00Z', now()
+         FROM "accounting_policies"
+        WHERE "tenant_id" = $1 AND "policy_kind" = 'oee_policy' AND "unit_id" IS NULL
+        ORDER BY "version" DESC LIMIT 1`,
+      [
+        env.world.tenantA,
+        env.world.unitA1,
+        `unit:${env.world.unitA1}`,
+        version,
+        option,
+      ],
+    );
+
+  const planOf = async () => {
+    const body = await env.accounting(periodA1);
+    const plan = (body.data.lines as Line[]).filter(
+      (l) => l.ledger === 'plan' && l.causeEventId === transitionId,
+    );
+    return {
+      totals: env.totals(body, 'plan'),
+      allowance: plan.filter((l) => l.kind === 'transition_allowance'),
+      excess: sum(plan.filter((l) => l.kind === 'transition_excess')),
+    };
+  };
+
   it('splits a 3 h transition against the 2 h reference: allowance 200 t, overrun 100 t at 100 t/h', async () => {
     transitionId = await env.lossEvent(env.world.unitA1, plus(A, HOUR), 3, {
       physicalType: 'grade_transition',
@@ -132,16 +165,17 @@ describe('grade transitions (LA-08)', () => {
       ),
     ).toBe(true);
     expect(capacity.every((l) => l.oeeComponent === 'performance')).toBe(true);
-    const plan = all.filter(
-      (l) => l.ledger === 'plan' && l.causeEventId === transitionId,
-    );
-    const planAllowance = sum(
-      plan.filter((l) => l.kind === 'transition_allowance'),
-    );
-    const planExcess = sum(plan.filter((l) => l.kind === 'transition_excess'));
-    expect(planAllowance.div(planExcess).toDecimalPlaces(6).toString()).toBe(
-      '2',
-    );
+    // the seeded oee_policy default plans the standard transition time: only the overrun is a plan loss
+    const plan = await planOf();
+    expect(plan.allowance).toEqual([]);
+    expect(plan.excess.gt(0)).toBe(true);
+    expect(plan.totals.flags).toContain('transition_allowance_planned');
+    expect(
+      new Dec(plan.totals.plannedTransition!)
+        .div(plan.excess)
+        .toDecimalPlaces(6)
+        .toString(),
+    ).toBe('2');
     const [run] = await env.rows<{ ids: string[] }>(
       `SELECT r."input_fingerprint"->'transitionStandardIds' AS "ids"
          FROM "calculation_runs" r JOIN "accounting_revisions" ar ON ar."current_run_id" = r."id"
@@ -149,6 +183,21 @@ describe('grade transitions (LA-08)', () => {
       [periodA1],
     );
     expect(run.ids).toEqual([standardId]);
+  });
+
+  it('a unit oee_policy version with transitionAllowanceInPlan = loss charges the allowance to the plan again', async () => {
+    await unitVersion(1, 'loss');
+    await env.recompute(periodA1);
+    const plan = await planOf();
+    expect(
+      sum(plan.allowance).div(plan.excess).toDecimalPlaces(6).toString(),
+    ).toBe('2');
+    expect(plan.totals.plannedTransition).toBeNull();
+    expect(plan.totals.flags).not.toContain('transition_allowance_planned');
+    // back to the default for the tests below: a newer unit version (policies are never deleted)
+    await unitVersion(2, 'planned');
+    await env.recompute(periodA1);
+    expect((await planOf()).allowance).toEqual([]);
   });
 
   it('a ramp-up after a trip is charged to the trip, flagged trip_recovery, evidence on the ramp-up', async () => {

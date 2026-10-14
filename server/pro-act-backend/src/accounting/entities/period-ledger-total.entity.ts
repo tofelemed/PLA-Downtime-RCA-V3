@@ -105,6 +105,10 @@ export class PeriodLedgerTotal extends TenantOwnedEntity {
   @Column(quantity('over_accounted_qty'))
   overAccountedQty: string | null;
 
+  /** LA-08: plan ledger, `transitionAllowanceInPlan = planned` — allowance the target allows for (information) */
+  @Column(quantity('planned_transition_qty'))
+  plannedTransitionQty: string | null;
+
   @Column({ name: 'flags', type: 'jsonb', default: () => "'[]'" })
   flags: string[];
 }
