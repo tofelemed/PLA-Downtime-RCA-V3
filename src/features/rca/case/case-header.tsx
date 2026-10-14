@@ -9,6 +9,7 @@ import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { PageHeader } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
 import { caseJson, downloadText, evidenceCsv, exportName, recommendationsCsv } from '../model/case-export';
+import { statusLabel } from '../model/rca-labels';
 import { useRcaFormat } from '../use-rca-format';
 import { useUnitNames } from '../use-unit-names';
 import { useCaseWorkspace } from './case-context';
@@ -75,7 +76,7 @@ export function CaseHeader() {
   const { date, day } = useRcaFormat();
   const meta = (
     <span className="flex flex-wrap items-center gap-2">
-      <Badge data-testid="case-status">{rca.status ?? 'Draft'}</Badge>
+      <Badge data-testid="case-status">{statusLabel(rca.status)}</Badge>
       <Badge variant="outline">{rca.priority ?? 'Medium'}</Badge>
       <span>{unitName(rca.unitId)}</span>
       <span>· opened {date(rca.createdAt)}</span>

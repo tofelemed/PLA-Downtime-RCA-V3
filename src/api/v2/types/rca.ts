@@ -2,7 +2,17 @@
  * v2 RCA views (plan 3.9; backend `src/rca-case/*.view.ts`, `rca-links.service.ts`,
  * `rca-recommendations.service.ts`, `rca-actions.service.ts`). Decimals are strings.
  */
-export const RCA_STATUSES = ['Draft', 'In Progress', 'Analysis', 'Published', 'Closed'] as const;
+import type {
+  RcaActionBaseline,
+  RcaActionType,
+  RcaCompletionAttachment,
+  RcaEffectivenessResult,
+  RcaEffectivenessVerdict,
+  RcaExposureWindow,
+} from './rca-workflow';
+
+/** RCA-01 workflow statuses (`Published` is a v1 status read as an analysis-stage case). */
+export const RCA_STATUSES = ['Draft', 'In Progress', 'Analysis', 'Published', 'Monitoring', 'Closure Review', 'Closed'] as const;
 export type RcaStatus = (typeof RCA_STATUSES)[number];
 export const RCA_PRIORITIES = ['Low', 'Medium', 'High', 'Critical'] as const;
 export type RcaPriority = (typeof RCA_PRIORITIES)[number];
@@ -125,6 +135,18 @@ export interface RcaCaseView extends RcaCaseSummaryView {
   logicTree: RcaLogicNode[];
   teamCharter: string | null;
   eventDiagram: RcaEventDiagram;
+  createdBy: string | null;
+  /** minor | significant | major (CA7 investigation tier), null = not classified */
+  consequenceClass: string | null;
+  /** CA1 closure: residual risk, request, independent approval and the reviewer's note */
+  residualRisk: string | null;
+  closureRequestedBy: string | null;
+  closureRequestedAt: string | null;
+  closureApprovedBy: string | null;
+  closureApprovedAt: string | null;
+  closureNote: string | null;
+  /** CA2 effectiveness frozen when closure was requested */
+  effectivenessVerdict: string | null;
 }
 
 /** Counts of the cases in scope (`GET /v2/rcas/summary`). */
@@ -226,6 +248,19 @@ export interface RealizedView {
   difference: string;
 }
 
+/** What the verification job observed after the action (exposure and effectiveness since CA2). */
+export interface RcaPostAction {
+  windowDays: number;
+  recurrences: number;
+  observedLossSeconds: string;
+  from: string;
+  to: string;
+  evaluatedAt: string;
+  realized: RealizedView;
+  exposure?: RcaExposureWindow;
+  effectiveness?: RcaEffectivenessResult;
+}
+
 export interface RcaActionView {
   id: string;
   rcaId: string;
@@ -234,15 +269,21 @@ export interface RcaActionView {
   ownerId: string | null;
   dueDate: string | null;
   status: string;
+  actionType: RcaActionType | null;
+  /** the objective evidence this type of action needs (server text) */
+  evidenceExpected: string;
   completionEvidenceRef: string | null;
+  completionAttachments: RcaCompletionAttachment[];
+  hasEvidence: boolean;
   completedAt: string | null;
+  /** who checked the evidence and marked it done (never the owner) */
+  completionVerifiedBy: string | null;
   verificationWindowStart: string | null;
   verificationWindowEnd: string | null;
-  baseline: { metric: string; windowDays: number; value: string; declared: boolean } | null;
-  postAction:
-    | { windowDays: number; recurrences: number; observedLossSeconds: string; from: string; to: string; evaluatedAt: string; realized: RealizedView }
-    | null;
+  baseline: RcaActionBaseline | null;
+  postAction: RcaPostAction | null;
   verificationStatus: 'not_planned' | 'pending' | 'due' | 'evaluated';
+  verdict: RcaEffectivenessVerdict | null;
   claimedAvoidedLoss: { amount: string; currency: string | null } | null;
   createdAt: string;
   rowVersion: number;
@@ -252,6 +293,6 @@ export interface RcaOutcomeView {
   rcaId: string;
   approvedHistoricalLoss: ApprovedImpactView;
   claimedAvoided: Array<{ currency: string; amount: string; actions: number }>;
-  realized: Array<RealizedView & { actionId: string; title: string }>;
+  realized: Array<RealizedView & { actionId: string; title: string; verdict: RcaEffectivenessVerdict | null }>;
   note: string;
 }

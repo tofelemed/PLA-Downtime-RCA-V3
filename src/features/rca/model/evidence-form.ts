@@ -1,3 +1,4 @@
+import { plantDayOf } from './plant-day';
 import type { RcaEvidenceAttachment, RcaEvidenceItem, RcaEvidenceSeries } from '@/api/v2/types/rca';
 
 export const EVIDENCE_TYPES = ['Photo', 'Document', 'Video', 'Note', 'Time Series'] as const;
@@ -74,7 +75,8 @@ function seriesForm(series: RcaEvidenceSeries | null): SeriesForm {
   };
 }
 
-export function evidenceFormOf(item: RcaEvidenceItem): EvidenceForm {
+/** The form of a stored evidence item; a task due instant shows as the plant's day. */
+export function evidenceFormOf(item: RcaEvidenceItem, timeZone: string): EvidenceForm {
   return {
     title: item.title,
     description: item.description ?? '',
@@ -89,7 +91,7 @@ export function evidenceFormOf(item: RcaEvidenceItem): EvidenceForm {
     verified: item.verified === true,
     fiveP: item.fiveP ?? 'Parts',
     task: item.task ?? '',
-    taskDueDate: item.taskDueDate ? item.taskDueDate.slice(0, 10) : '',
+    taskDueDate: plantDayOf(item.taskDueDate, timeZone),
     taskStatus: item.taskStatus === 'completed' ? 'completed' : 'pending',
     series: seriesForm(item.timeSeries),
     attachments: item.attachments,

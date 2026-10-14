@@ -12,6 +12,7 @@ import type {
   RcaOutcomeView,
   RcaRecommendationView,
 } from '../types/rca';
+import type { RcaCaseReadinessView } from '../types/rca-workflow';
 import type { ListResponse } from '../types/envelopes';
 import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
@@ -114,6 +115,13 @@ export function usePrefetchRcaCase() {
 export function useRcaAnalyses(id: string | null) {
   return useRcaDetail(id, 'analyses', async (rcaId, signal) =>
     (await v2.get<RcaAnalysesView, '/api/v2/rcas/{id}/analyses'>('/api/v2/rcas/{id}/analyses', { path: { id: rcaId }, signal })).data,
+  );
+}
+
+/** Next moves of the case with their gates, blockers, approver and effectiveness (computed by the server). */
+export function useRcaReadiness(id: string | null) {
+  return useRcaDetail(id, 'readiness', async (rcaId, signal) =>
+    (await v2.get<RcaCaseReadinessView, '/api/v2/rcas/{id}/readiness'>('/api/v2/rcas/{id}/readiness', { path: { id: rcaId }, signal })).data,
   );
 }
 

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import example from '../../../contracts/rca/rca-case-v2.example.json';
 import type { RcaRecommendationView } from '@/api/v2/types/rca';
-import { buildActionBody, EMPTY_ACTION_FORM } from './model/action-form';
+import { buildActionBody, buildCompletionPatch, completionFormOf, EMPTY_ACTION_FORM } from './model/action-form';
 import { summarizeEvidence } from './model/evidence-summary';
 import { recommendationText } from './model/rca-labels';
 import { buildCreateBody, buildDefinitionPatch, emptyCaseForm, newItemId, type RcaCaseForm } from './model/rca-form';
 
 describe('RCA case bodies (v2 contract, the verified v1 save bug)', () => {
-  it('builds the definition PATCH from the form: declared fields only, empty text as null, days as UTC midnight', () => {
+  it('builds the definition PATCH from the form: declared fields only, never the status, days at the plant day start', () => {
     const form: RcaCaseForm = {
       ...emptyCaseForm(example.unitId),
       title: ` ${example.title} `,
@@ -18,11 +18,12 @@ describe('RCA case bodies (v2 contract, the verified v1 save bug)', () => {
       teamMemberIds: example.teamMemberIds,
       targetCloseDate: '2026-11-30',
       teamCharter: '  ',
+      consequenceClass: 'significant',
     };
-    expect(buildDefinitionPatch(form)).toEqual({
+    expect(buildDefinitionPatch(form, 'UTC')).toEqual({
       title: example.title,
       description: example.description,
-      status: 'In Progress',
+      consequenceClass: 'significant',
       priority: 'High',
       unitId: example.unitId,
       targetCloseDate: example.targetCloseDate,
@@ -34,11 +35,18 @@ describe('RCA case bodies (v2 contract, the verified v1 save bug)', () => {
   });
 
   it('never sends the v1 keys the server refused (tenant, organization, teamMembers, legacy dates)', () => {
-    const body = buildCreateBody({ ...emptyCaseForm(null), title: 'x' });
+    const body = buildCreateBody({ ...emptyCaseForm(null), title: 'x' }, 'UTC');
     for (const key of ['tenantId', 'organizationId', 'teamMembers', 'targetCompletionDate', 'additionalData', 'startDate']) {
       expect(body).not.toHaveProperty(key);
     }
     expect(body).toMatchObject({ title: 'x', templateId: null, status: 'Draft' });
+    // RCA-01: a case opens as Draft or In Progress only
+    expect(buildCreateBody({ ...emptyCaseForm(null), title: 'x', status: 'Closed' }, 'UTC').status).toBe('Draft');
+  });
+
+  it('a plant calendar day starts at plant midnight (Tehran: 20:30 UTC the day before)', () => {
+    const patch = buildDefinitionPatch({ ...emptyCaseForm(null), title: 'x', targetCloseDate: '2026-11-30' }, 'Asia/Tehran');
+    expect(patch.targetCloseDate).toBe('2026-11-29T20:30:00.000Z');
   });
 
   it('new item ids do not collide', () => {
@@ -48,20 +56,42 @@ describe('RCA case bodies (v2 contract, the verified v1 save bug)', () => {
 });
 
 describe('action body and labels', () => {
-  it('sends a counted baseline without value and a claim with its currency', () => {
+  it('sends a counted baseline without value (CA3), its type and a claim with its currency', () => {
     const body = buildActionBody(
-      { ...EMPTY_ACTION_FORM, title: 'Realign', windowStart: '2026-09-01', windowEnd: '2026-09-15', baselineMetric: 'recurrences', claimed: '1000', claimedCurrency: 'USD' },
+      { ...EMPTY_ACTION_FORM, title: 'Realign', actionType: 'repair', windowStart: '2026-09-01', windowEnd: '2026-09-15', baselineMetric: 'recurrences', claimed: '1000', claimedCurrency: 'USD' },
       'u1',
+      'UTC',
     );
     expect(body).toMatchObject({
       title: 'Realign',
       ownerId: 'u1',
+      actionType: 'repair',
       verificationWindowStart: '2026-09-01T00:00:00.000Z',
-      baseline: { metric: 'recurrences', windowDays: 30 },
+      baseline: { metric: 'recurrences' },
       claimedAvoidedLoss: '1000',
       claimedCurrency: 'USD',
     });
     expect(body.baseline).not.toHaveProperty('value');
+    expect(body.baseline).not.toHaveProperty('windowDays');
+    const days = buildActionBody({ ...EMPTY_ACTION_FORM, title: 'x', baselineMetric: 'recurrences', baselineDays: '60' }, null, 'UTC');
+    expect(days.baseline).toEqual({ metric: 'recurrences', windowDays: 60 });
+  });
+
+  it('CA4: the completion patch sends type, evidence, files and the plant day; done only when asked', () => {
+    const form = completionFormOf(
+      { actionType: null, completionEvidenceRef: null, completedAt: '2026-10-01T20:30:00.000Z', completionAttachments: [] },
+      'Asia/Tehran',
+    );
+    expect(form.completedAt).toBe('2026-10-02');
+    const patch = buildCompletionPatch({ ...form, actionType: 'repair', evidenceRef: ' WO-1 ' }, true, 'Asia/Tehran');
+    expect(patch).toEqual({
+      actionType: 'repair',
+      completionEvidenceRef: 'WO-1',
+      completionAttachments: [],
+      completedAt: '2026-10-01T20:30:00.000Z',
+      status: 'done',
+    });
+    expect(buildCompletionPatch({ ...form, completedAt: '' }, false, 'UTC')).not.toHaveProperty('status');
   });
 
   it('a recommendation badge names the trigger, its version and the provisional marker', () => {

@@ -39,18 +39,21 @@ export interface FishboneContent {
   categories: FishboneCategory[];
 }
 
+/** CA5: ratings are 1–10 and null while not rated (never a default score). */
 export interface FmeaEffect {
   id: string;
   description: string;
-  severity: number;
+  severity: number | null;
   currentControls: string;
-  detection: number;
 }
 
+/** Detection belongs to the cause and its own control (CA5). */
 export interface FmeaCause {
   id: string;
   description: string;
-  occurrence: number;
+  occurrence: number | null;
+  detection: number | null;
+  detectionControl: string | null;
   recommendedActions: string[];
 }
 
@@ -60,9 +63,28 @@ export interface FmeaContent {
   causes: FmeaCause[];
 }
 
-/** Saved FMEA: each cause carries the risk priority number the server computed. */
-export interface FmeaRecord extends Omit<FmeaContent, 'causes'> {
-  causes: Array<FmeaCause & { rpn: number }>;
+export type FmeaRating = 'severity' | 'occurrence' | 'detection';
+
+/** A saved cause with what the server computed from the policy's rules. */
+export interface FmeaScoredCause extends FmeaCause {
+  /** the failure mode's worst effect severity, null while any effect is unrated */
+  severity: number | null;
+  rpn: number | null;
+  actionPriority: 'high' | 'medium' | 'low' | null;
+  needsAction: boolean | null;
+  missing: FmeaRating[];
+}
+
+/** Saved FMEA: scored causes and the rules they were scored with (thresholds come from the server). */
+export interface FmeaRecord {
+  failureMode: string;
+  /** `detection` is the deprecated effect-level rating of older records (read only, not scored) */
+  effects: Array<FmeaEffect & { detection?: number | null }>;
+  causes: FmeaScoredCause[];
+  complete: boolean;
+  method: 'rpn' | 'action_priority';
+  rpnThreshold: number;
+  severityReview: number;
 }
 
 export interface FaultTreeNode {

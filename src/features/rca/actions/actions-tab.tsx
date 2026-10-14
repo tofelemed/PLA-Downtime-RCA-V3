@@ -6,7 +6,7 @@ import { ActionForm } from './action-form';
 import { ActionRow } from './action-row';
 
 /** RCA03 actions of the case with their verification against a baseline. */
-export function ActionsTab({ rcaId, timezone }: { rcaId: string; timezone: string }) {
+export function ActionsTab({ rcaId }: { rcaId: string }) {
   const { canWriteRca } = useCapabilities();
   const actions = useRcaActions(rcaId);
   const items = actions.data ?? [];
@@ -15,7 +15,7 @@ export function ActionsTab({ rcaId, timezone }: { rcaId: string; timezone: strin
       <DataState state={dataStateOf(actions, { isEmpty: items.length === 0 })} error={actions.error} detail="No actions yet.">
         <ul className="divide-y rounded border">
           {items.map((action) => (
-            <ActionRow key={action.id} action={action} timezone={timezone} />
+            <ActionRow key={action.id} action={action} />
           ))}
         </ul>
       </DataState>

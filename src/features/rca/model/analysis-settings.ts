@@ -1,13 +1,11 @@
 /**
- * Guidance settings of the analysis tools (the "Oil & Gas industry standard" set every plant used in v1;
- * no screen ever changed them). They drive completeness hints only; the server validates the records.
+ * Default fishbone categories of the analysis tools (v1 set). 5-Why depth and FMEA thresholds come from the
+ * server's RCA policy (SME CA5 / CA6), never from constants here.
  */
 export const ANALYSIS_SETTINGS = {
-  fiveWhy: { minimumDepth: 5, requireJustification: true },
   fishbone: {
     categories: ['Man (People)', 'Machine (Equipment)', 'Material', 'Method (Process)', 'Measurement', 'Environment'],
   },
-  fmea: { riskThreshold: 100 },
 } as const;
 
 export const LIKELIHOODS = ['High', 'Medium', 'Low'] as const;

@@ -1,3 +1,4 @@
+import { useRcaFormat } from '../../use-rca-format';
 import { useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -39,15 +40,16 @@ function Fields({ form, onChange }: { form: RecommendationForm; onChange: (patch
 /** `/rca/:caseId/actions/recommendations/new` and `…/:recommendationId/edit`. */
 export function RecommendationFormPage() {
   const { rca, readOnly, basePath } = useCaseWorkspace();
+  const { timezone } = useRcaFormat();
   const { recommendationId } = useParams();
   const navigate = useNavigate();
   const patch = useCasePatch();
   const existing = recommendationId ? rca.recommendations.find((row) => row.id === recommendationId) : undefined;
-  const [form, setForm] = useState<RecommendationForm>(() => (existing ? recommendationFormOf(existing) : EMPTY_RECOMMENDATION_FORM));
+  const [form, setForm] = useState<RecommendationForm>(() => (existing ? recommendationFormOf(existing, timezone) : EMPTY_RECOMMENDATION_FORM));
   const back = () => navigate(`${basePath}/actions`);
   if (readOnly || (recommendationId && !existing)) return <Navigate to={`${basePath}/actions`} replace />;
   const save = async () => {
-    const item = recommendationItemOf(form, existing?.id ?? newItemId('rec', rca.recommendations));
+    const item = recommendationItemOf(form, existing?.id ?? newItemId('rec', rca.recommendations), timezone);
     const recommendations = existing ? rca.recommendations.map((row) => (row.id === item.id ? item : row)) : [...rca.recommendations, item];
     if (await patch.save({ recommendations }).catch(() => null)) back();
   };

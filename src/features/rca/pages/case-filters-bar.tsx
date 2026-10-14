@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
 import { ALL, type CaseListFilters } from '../model/case-filters';
+import { statusLabel } from '../model/rca-labels';
 
 interface Option {
   value: string;
@@ -29,7 +30,7 @@ function FilterSelect(props: { id: string; label: string; value: string; options
   );
 }
 
-const STATUS_OPTIONS: Option[] = [{ value: ALL, label: 'All statuses' }, ...RCA_STATUSES.map((s) => ({ value: s, label: s }))];
+const STATUS_OPTIONS: Option[] = [{ value: ALL, label: 'All statuses' }, ...RCA_STATUSES.map((s) => ({ value: s, label: statusLabel(s) }))];
 const PRIORITY_OPTIONS: Option[] = [{ value: ALL, label: 'All priorities' }, ...RCA_PRIORITIES.map((p) => ({ value: p, label: p }))];
 const DUE_OPTIONS: Option[] = [
   { value: ALL, label: 'Any target date' },

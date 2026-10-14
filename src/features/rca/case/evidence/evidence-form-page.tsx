@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { Section } from '@/features/ux-kit/page-layout';
+import { useRcaFormat } from '../../use-rca-format';
 import { EMPTY_EVIDENCE_FORM, evidenceFormOf, evidenceItemOf, type EvidenceForm } from '../../model/evidence-form';
 import { newItemId } from '../../model/rca-form';
 import { useCaseWorkspace } from '../case-context';
@@ -36,10 +37,11 @@ function useEvidenceSave(existing: RcaEvidenceItem | undefined) {
 /** `/rca/:caseId/evidence/new` and `…/:evidenceId/edit`: the evidence form with files and historian query. */
 export function EvidenceFormPage() {
   const { rca, readOnly, basePath } = useCaseWorkspace();
+  const { timezone } = useRcaFormat();
   const { evidenceId } = useParams();
   const navigate = useNavigate();
   const existing = evidenceId ? rca.evidence.find((entry) => entry.id === evidenceId) : undefined;
-  const [form, setForm] = useState<EvidenceForm>(() => (existing ? evidenceFormOf(existing) : EMPTY_EVIDENCE_FORM));
+  const [form, setForm] = useState<EvidenceForm>(() => (existing ? evidenceFormOf(existing, timezone) : EMPTY_EVIDENCE_FORM));
   const [busy, setBusy] = useState(false);
   const saving = useEvidenceSave(existing);
   if (readOnly || (evidenceId && !existing)) return <Navigate to={`${basePath}/evidence`} replace />;

@@ -34,6 +34,40 @@ const CASE: RcaCaseView = {
   description: 'Trips after the seal change', teamMemberIds: [], rootCause: null, templateId: null, teamCharter: null,
   recommendations: [{ id: 'rec-1', title: 'Realign', description: null, priority: null, ownerId: null, dueDate: null, status: 'Open', estimatedCost: null }],
   evidence: [], logicTree: [], eventDiagram: { nodes: [], edges: [] },
+  createdBy: 'u-author', consequenceClass: null, residualRisk: null, closureRequestedBy: null, closureRequestedAt: null,
+  closureApprovedBy: null, closureApprovedAt: null, closureNote: null, effectivenessVerdict: null,
+};
+
+/** `GET /v2/rcas/{id}/readiness` of a case in analysis (RCA-01 / CA1). */
+const READINESS = {
+  rcaId: 'c1',
+  status: 'Analysis',
+  next: [
+    { to: 'In Progress', gates: [] },
+    { to: 'Monitoring', gates: ['investigation'] },
+  ],
+  investigation: { blockers: [], advice: [{ code: 'FIVE_WHY_BELOW_GUIDELINE', field: 'fiveWhy.whyLevels', message: '3 of the 5 levels of the guideline' }] },
+  closure: { blockers: [], effectiveness: null },
+  approver: { canApprove: false, reason: 'closure is approved by a manager approver' },
+  linkedRecurrences: 0,
+  rules: { fiveWhyGuidelineLevels: 5, consequenceClass: 'minor' },
+};
+
+const reviewReadiness = (canApprove: boolean) => ({
+  ...READINESS,
+  status: 'Closure Review',
+  next: [
+    { to: 'Monitoring', gates: ['independent_approval', 'note'] },
+    { to: 'Closed', gates: ['independent_approval'] },
+  ],
+  closure: { blockers: [], effectiveness: 'effective' },
+  approver: { canApprove, reason: canApprove ? null : 'not independent of the investigation (team lead)' },
+});
+
+/** A GET answer of the overview: readiness, analyses or an empty list. */
+const overviewGet = (call: { url: URL }, readiness: unknown = READINESS) => {
+  if (call.url.pathname.endsWith('/readiness')) return json(200, readiness);
+  return json(200, call.url.pathname.endsWith('/analyses') ? NO_ANALYSES : list([]));
 };
 
 describe('RCA flows (v2 case workspace)', () => {
@@ -89,7 +123,7 @@ describe('RCA flows (v2 case workspace)', () => {
       rcaId: 'c1',
       approvedHistoricalLoss: { lines: 2, quantities: [{ kind: 'availability', uom: 't', quantity: '150' }], values: [{ currency: 'USD', amount: null, valuedLines: 0, unvaluedLines: 2 }], basis: 'b' },
       claimedAvoided: [{ currency: 'USD', amount: '1000', actions: 1 }],
-      realized: [{ actionId: 'a1', title: 'Realign', metric: 'recurrences', expected: '3', observed: '1', difference: '2' }],
+      realized: [{ actionId: 'a1', title: 'Realign', metric: 'recurrences', expected: '3', observed: '1', difference: '2', verdict: 'effective' }],
       note: 'separate',
     };
     reply = () => json(200, outcome);
@@ -100,7 +134,7 @@ describe('RCA flows (v2 case workspace)', () => {
   });
 
   it('saves the definition with If-Match and only the declared scalar fields', async () => {
-    reply = (call) => (call.method === 'PATCH' ? json(200, { ...CASE, rowVersion: 5 }) : json(200, call.url.pathname.endsWith('/analyses') ? NO_ANALYSES : list([])));
+    reply = (call) => (call.method === 'PATCH' ? json(200, { ...CASE, rowVersion: 5 }) : overviewGet(call));
     wrap(<OverviewPage />);
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Pump trips (P-101)' } });
     fireEvent.click(screen.getByTestId('save-case'));
@@ -111,13 +145,15 @@ describe('RCA flows (v2 case workspace)', () => {
     expect(patch?.body).toMatchObject({ title: 'Pump trips (P-101)', teamCharter: null });
     expect(patch?.body).not.toHaveProperty('recommendations');
     expect(patch?.body).not.toHaveProperty('tenantId');
+    // RCA-01: the status never travels with an edit
+    expect(patch?.body).not.toHaveProperty('status');
   });
 
   it('saves the first 5-Why without If-Match and copies its root cause to the case', async () => {
     reply = (call) => {
       if (call.method === 'PUT') return json(200, { id: 'fw1', rowVersion: 1, updatedAt: '2026-10-11T00:00:00Z', ...call.body });
       if (call.method === 'PATCH') return json(200, { ...CASE, rowVersion: 5, rootCause: 'Seal' });
-      return json(200, NO_ANALYSES);
+      return call.url.pathname.endsWith('/readiness') ? json(200, READINESS) : json(200, NO_ANALYSES);
     };
     wrap(<FiveWhyTool />);
     fireEvent.change(await screen.findByLabelText('Answer (cause found)'), { target: { value: 'Seal leak' } });
@@ -131,28 +167,49 @@ describe('RCA flows (v2 case workspace)', () => {
     expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({ rootCause: 'Seal' });
   });
 
-  it('closes the case through "Close case" after confirmation, with If-Match and status Closed only', async () => {
-    reply = (call) => (call.method === 'PATCH' ? json(200, { ...CASE, status: 'Closed', rowVersion: 5 }) : json(200, call.url.pathname.endsWith('/analyses') ? NO_ANALYSES : list([])));
+  it('RCA-01: moves the case through POST /transitions with If-Match, the moves coming from /readiness', async () => {
+    reply = (call) => (call.method === 'POST' ? json(200, { ...CASE, status: 'Monitoring', rowVersion: 5 }) : overviewGet(call));
     wrap(<OverviewPage />);
-    fireEvent.click(screen.getByTestId('close-case'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Close case' }));
-    await waitFor(() => expect(calls.some((call) => call.method === 'PATCH')).toBe(true));
-    const patch = calls.find((call) => call.method === 'PATCH');
-    expect(patch?.headers.get('If-Match')).toBe('"4"');
-    expect(patch?.body).toEqual({ status: 'Closed' });
-    await waitFor(() => expect(screen.queryByTestId('close-case')).toBeNull());
+    expect((await screen.findByTestId('investigation-advice')).textContent).toContain('3 of the 5 levels');
+    fireEvent.click(screen.getByTestId('workflow-move-monitoring'));
+    await waitFor(() => expect(calls.some((call) => call.method === 'POST')).toBe(true));
+    const post = calls.find((call) => call.method === 'POST');
+    expect(post?.url.pathname).toBe('/api/v2/rcas/c1/transitions');
+    expect(post?.headers.get('If-Match')).toBe('"4"');
+    expect(post?.body).toEqual({ to: 'Monitoring' });
+    expect(calls.some((call) => call.method === 'PATCH')).toBe(false);
   });
 
-  it('shows the refusal of a close in the dialog and keeps the case open', async () => {
-    reply = (call) =>
-      call.method === 'PATCH'
-        ? json(412, { code: 'STALE_REVISION', message: 'Changed by someone else', correlationId: 'x', retryable: false })
-        : json(200, call.url.pathname.endsWith('/analyses') ? NO_ANALYSES : list([]));
+  it('shows the server blockers of a refused move in plain words', async () => {
+    const refusal = {
+      code: 'INVESTIGATION_BLOCKED',
+      message: ['set the consequence class (minor, significant, major) to know the investigation tier'],
+      fieldErrors: [{ field: 'consequenceClass', message: 'set the consequence class (minor, significant, major) to know the investigation tier' }],
+      correlationId: 'x',
+      retryable: false,
+    };
+    reply = (call) => (call.method === 'POST' ? json(422, refusal) : overviewGet(call));
     wrap(<OverviewPage />);
-    fireEvent.click(screen.getByTestId('close-case'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Close case' }));
-    expect(await screen.findByRole('alert')).toBeTruthy();
-    expect(screen.getByTestId('close-case')).toBeTruthy();
+    fireEvent.click(await screen.findByTestId('workflow-move-monitoring'));
+    const alert = await screen.findByTestId('rca-refusal');
+    expect(alert.textContent).toContain('The investigation cannot be accepted yet');
+    expect(alert.textContent).toContain('Set the consequence class');
+  });
+
+  it('CA1: approve and reject only for an independent approver; others see why', async () => {
+    reply = (call) => overviewGet(call, reviewReadiness(false));
+    const first = wrap(<OverviewPage />);
+    expect((await screen.findByTestId('approver-reason')).textContent).toContain('team lead');
+    expect(screen.queryByTestId('workflow-move-closed')).toBeNull();
+    first.unmount();
+    client.clear();
+    reply = (call) => (call.method === 'POST' ? json(200, { ...CASE, status: 'Closed', rowVersion: 5 }) : overviewGet(call, reviewReadiness(true)));
+    wrap(<OverviewPage />);
+    const reject = await screen.findByTestId('workflow-move-monitoring');
+    expect(reject).toBeDisabled();
+    fireEvent.click(screen.getByTestId('workflow-move-closed'));
+    await waitFor(() => expect(calls.some((call) => call.method === 'POST')).toBe(true));
+    expect(calls.find((call) => call.method === 'POST')?.body).toEqual({ to: 'Closed' });
   });
 
   it('dismisses an open recommendation with the required reason', async () => {
@@ -182,11 +239,11 @@ describe('RCA flows (v2 case workspace)', () => {
     afterEach(() => actAs('SuperAdmin'));
 
     it('a read-only user sees the definition without save', () => {
-      reply = () => json(200, NO_ANALYSES);
+      reply = (call) => overviewGet(call);
       actAs('Engineer');
       wrap(<OverviewPage />, true);
       expect(screen.queryByTestId('save-case')).toBeNull();
-      expect(screen.queryByTestId('close-case')).toBeNull();
+      expect(screen.queryByTestId('workflow-moves')).toBeNull();
       expect(screen.getByLabelText('Title')).toBeDisabled();
     });
   });

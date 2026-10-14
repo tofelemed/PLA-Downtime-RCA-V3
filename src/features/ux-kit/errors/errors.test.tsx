@@ -36,13 +36,14 @@ describe('describeError', () => {
     expectNothingInternal(`${friendly.title} ${friendly.message}`);
   });
 
-  it('an RCA case that cannot close yet says what is missing (RCA-01)', () => {
+  it('an RCA case that cannot close yet says what is missing in the server words (RCA-01)', () => {
     const friendly = describeError(
       v2(422, 'CLOSE_BLOCKED', 'finish every action before closing the case', [
         { field: 'actions', message: 'finish every action (done, or cancelled with a reason) before closing the case' },
       ]),
     );
-    expect(friendly.title).toBe('This case cannot be closed yet');
+    expect(friendly.title).toBe('Closure cannot be requested yet');
+    expect(friendly.message).toBe('Finish every action before closing the case');
     expectNothingInternal(`${friendly.title} ${friendly.message}`);
   });
 

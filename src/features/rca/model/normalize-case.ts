@@ -17,5 +17,15 @@ export function normalizeCase(rca: RcaCaseView): RcaCaseView {
     evidence,
     teamCharter: rca.teamCharter ?? null,
     eventDiagram: rca.eventDiagram ?? { nodes: [], edges: [] },
+    // case workflow fields (RCA-01 / CA1) of a server older than this screen read as "not set"
+    createdBy: rca.createdBy ?? null,
+    consequenceClass: rca.consequenceClass ?? null,
+    residualRisk: rca.residualRisk ?? null,
+    closureRequestedBy: rca.closureRequestedBy ?? null,
+    closureRequestedAt: rca.closureRequestedAt ?? null,
+    closureApprovedBy: rca.closureApprovedBy ?? null,
+    closureApprovedAt: rca.closureApprovedAt ?? null,
+    closureNote: rca.closureNote ?? null,
+    effectivenessVerdict: rca.effectivenessVerdict ?? null,
   };
 }

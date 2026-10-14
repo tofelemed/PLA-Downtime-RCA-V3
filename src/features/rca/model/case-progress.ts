@@ -2,7 +2,7 @@ import type { RcaCaseView } from '@/api/v2/types/rca';
 import { RCA_STATUSES } from '@/api/v2/types/rca';
 import { isRecommendationClosed } from './recommendation-form';
 
-/** One step of the investigation checklist (shown with its state; only closing is gated, by the server). */
+/** One step of the investigation checklist (shown with its state; the workflow gates are the server's). */
 export interface ProgressStep {
   key: string;
   label: string;
@@ -37,11 +37,16 @@ export function progressSteps(rca: RcaCaseView, hasToolRecord: boolean): Progres
       done: recommendations > 0,
       hint: `${recommendations} recommendation(s), ${rca.recommendations.filter((r) => isRecommendationClosed(r.status)).length} closed.`,
     },
-    { key: 'closure', label: 'Closure', done: rca.status === 'Closed', hint: 'Close once the root cause is written down and every action is done or cancelled.' },
+    {
+      key: 'closure',
+      label: 'Closure',
+      done: rca.status === 'Closed',
+      hint: 'Request closure once the actions are done with evidence and verified; an independent manager approves it.',
+    },
   ];
 }
 
-/** Position of the case status in the workflow (Draft = 1 … Closed = 5). */
+/** Position of the case status in the workflow (Draft = 1 … Closed = 7). */
 export function statusStep(status: string | null): number {
   const index = RCA_STATUSES.findIndex((value) => value === status);
   return index < 0 ? 1 : index + 1;

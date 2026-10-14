@@ -7,6 +7,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { useRcaFormat } from '../use-rca-format';
 import { buildCreateBody, emptyCaseForm, type RcaCaseForm } from '../model/rca-form';
 import { EventCaseSection } from './event-case-section';
 import { NewCaseFields } from './new-case-form';
@@ -14,9 +15,10 @@ import { NewCaseFields } from './new-case-form';
 function StandaloneCase() {
   const navigate = useNavigate();
   const create = useCreateRcaCase();
+  const { timezone } = useRcaFormat();
   const [form, setForm] = useState<RcaCaseForm>(() => emptyCaseForm(null));
   const submit = async () => {
-    const created = await create.submit(buildCreateBody(form)).catch(() => null);
+    const created = await create.submit(buildCreateBody(form, timezone)).catch(() => null);
     if (created) navigate(`/rca/${created.id}`, { replace: true });
   };
   return (

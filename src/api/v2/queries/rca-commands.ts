@@ -14,6 +14,9 @@ export type EventRcaLinkBody = BodyOf<'/api/v2/production-events/{id}/rca-link',
 export type RcaLinkBody = BodyOf<'/api/v2/rcas/{id}/links', 'post'>;
 export type RcaActionBody = BodyOf<'/api/v2/rcas/{id}/actions', 'post'>;
 export type RcaActionPatch = BodyOf<'/api/v2/rca-actions/{id}', 'patch'>;
+export type RcaTransitionBody = BodyOf<'/api/v2/rcas/{id}/transitions', 'post'>;
+export type RcaBaselineCorrectionBody = BodyOf<'/api/v2/rca-actions/{id}/baseline-correction', 'post'>;
+export type RcaBaselineDecisionBody = BodyOf<'/api/v2/rca-actions/{id}/baseline-correction/decision', 'post'>;
 
 /** Everything an RCA write can change: cases (and their links / actions), recommendations, events. */
 function rcaChange(tenantId: string | null): ChangeNotice | null {
@@ -41,6 +44,18 @@ export function useUpdateRcaCase() {
     (await v2.patch<RcaCaseView, '/api/v2/rcas/{id}'>('/api/v2/rcas/{id}', {
       path: { id: input.rca.id },
       body: input.body,
+      ifMatch: ifMatchOf(input.rca.rowVersion),
+    })).data,
+  );
+}
+
+/** RCA-01 workflow move (`POST /v2/rcas/{id}/transitions`, If-Match); answers the case after the move. */
+export function useTransitionRcaCase() {
+  return useRcaCommand<{ rca: Pick<RcaCaseView, 'id' | 'rowVersion'>; body: RcaTransitionBody }, RcaCaseView>(async (input, idempotencyKey) =>
+    (await v2.post<RcaCaseView, '/api/v2/rcas/{id}/transitions'>('/api/v2/rcas/{id}/transitions', {
+      path: { id: input.rca.id },
+      body: input.body,
+      idempotencyKey,
       ifMatch: ifMatchOf(input.rca.rowVersion),
     })).data,
   );
@@ -95,6 +110,32 @@ export function useVerifyRcaAction() {
       path: { id: action.id },
       idempotencyKey,
       ifMatch: ifMatchOf(action.rowVersion),
+    })).data,
+  );
+}
+
+type ActionRef = Pick<RcaActionView, 'id' | 'rowVersion'>;
+
+/** CA3: proposes a corrected baseline value with a reason; another person decides on it. */
+export function useProposeBaselineCorrection() {
+  return useRcaCommand<{ action: ActionRef; body: RcaBaselineCorrectionBody }, RcaActionView>(async (input, idempotencyKey) =>
+    (await v2.post<RcaActionView, '/api/v2/rca-actions/{id}/baseline-correction'>('/api/v2/rca-actions/{id}/baseline-correction', {
+      path: { id: input.action.id },
+      body: input.body,
+      idempotencyKey,
+      ifMatch: ifMatchOf(input.action.rowVersion),
+    })).data,
+  );
+}
+
+/** CA3: a manager approver other than the proposer approves or rejects the pending correction. */
+export function useDecideBaselineCorrection() {
+  return useRcaCommand<{ action: ActionRef; body: RcaBaselineDecisionBody }, RcaActionView>(async (input, idempotencyKey) =>
+    (await v2.post<RcaActionView, '/api/v2/rca-actions/{id}/baseline-correction/decision'>('/api/v2/rca-actions/{id}/baseline-correction/decision', {
+      path: { id: input.action.id },
+      body: input.body,
+      idempotencyKey,
+      ifMatch: ifMatchOf(input.action.rowVersion),
     })).data,
   );
 }

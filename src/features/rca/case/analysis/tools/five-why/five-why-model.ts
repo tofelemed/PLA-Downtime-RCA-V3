@@ -1,5 +1,4 @@
 import type { FiveWhyContent, FiveWhyLevel } from '@/api/v2/types/rca-analyses';
-import { ANALYSIS_SETTINGS } from '../../../../model/analysis-settings';
 
 const question = (answer: string) => `Why did "${answer.trim() || 'this'}" happen?`;
 
@@ -35,19 +34,27 @@ export interface FiveWhyCheck {
   done: boolean;
 }
 
-/** The completeness checklist of the method (minimum depth, answers, justifications, root cause). */
+/**
+ * The completeness checklist the server's investigation gate applies (SME CA6): answers, evidence for every
+ * answer and a root cause. The number of levels is not a check — five is guidance (`depthGuidance`).
+ */
 export function fiveWhyChecks(content: FiveWhyContent): FiveWhyCheck[] {
-  const { minimumDepth, requireJustification } = ANALYSIS_SETTINGS.fiveWhy;
-  const checks: FiveWhyCheck[] = [
+  return [
     { label: 'Problem statement written', done: content.problem.trim() !== '' },
-    { label: `At least ${minimumDepth} levels (${content.whyLevels.length} now)`, done: content.whyLevels.length >= minimumDepth },
     { label: 'Every level answered', done: content.whyLevels.every((level) => level.answer.trim() !== '') },
+    {
+      label: 'Every answer backed by evidence',
+      done: content.whyLevels.every((level) => (level.justification ?? '').trim() !== ''),
+    },
+    { label: 'System-level root cause written', done: content.rootCause.trim() !== '' },
   ];
-  if (requireJustification) {
-    checks.push({ label: 'Every answer justified with evidence', done: content.whyLevels.every((level) => (level.justification ?? '').trim() !== '') });
-  }
-  checks.push({ label: 'Root cause identified', done: content.rootCause.trim() !== '' });
-  return checks;
+}
+
+/** CA6 guidance on depth: the server's guideline (e.g. 5) as a prompt, never a gate. */
+export function depthGuidance(levels: number, guideline: number | null): string {
+  const base = 'Stop when the evidence supports the chain to a system cause you can act on; do not invent answers.';
+  if (!guideline) return `${levels} level(s). ${base}`;
+  return `${levels} of the ${guideline} levels of the guideline. ${base}`;
 }
 
 /** Plain-text report for the clipboard. */

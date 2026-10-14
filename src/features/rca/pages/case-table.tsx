@@ -8,6 +8,7 @@ import type { CaseListFilters } from '../model/case-filters';
 import { toCaseQuery } from '../model/case-filters';
 import { useRcaFormat } from '../use-rca-format';
 import { useUnitNames } from '../use-unit-names';
+import { statusLabel } from '../model/rca-labels';
 
 interface ColumnContext {
   unitName: (id: string | null) => string;
@@ -27,7 +28,7 @@ function caseColumns(context: ColumnContext): DataTableColumn<RcaCaseSummaryView
         </span>
       ),
     },
-    { id: 'status', header: 'Status', cell: (row) => <Badge variant="secondary">{row.status ?? 'Draft'}</Badge>, nowrap: true },
+    { id: 'status', header: 'Status', cell: (row) => <Badge variant="secondary">{statusLabel(row.status)}</Badge>, nowrap: true },
     { id: 'priority', header: 'Priority', cell: (row) => <Badge variant="outline">{row.priority ?? 'Medium'}</Badge>, nowrap: true },
     { id: 'unit', header: 'Unit', cell: (row) => context.unitName(row.unitId) },
     { id: 'target', header: 'Target close', cell: (row) => context.day(row.targetCloseDate), nowrap: true },

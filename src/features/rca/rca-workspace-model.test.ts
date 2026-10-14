@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { RcaEvidenceItem, RcaLinkView, RcaLogicNode } from '@/api/v2/types/rca';
-import { addLevel, fiveWhyChecks, removeLevel, setAnswer } from './case/analysis/tools/five-why/five-why-model';
+import { addLevel, depthGuidance, fiveWhyChecks, removeLevel, setAnswer } from './case/analysis/tools/five-why/five-why-model';
 import { filtersFromParams, legacyRedirect, paramsFromFilters, toCaseQuery } from './model/case-filters';
 import { EMPTY_EVIDENCE_FORM, evidenceFormOf, evidenceItemOf } from './model/evidence-form';
 import { buildTree, newNode, removeSubtree, toggleEvidenceLink, treeCounts } from './model/logic-tree';
-import { isCostValid, recommendationItemOf, EMPTY_RECOMMENDATION_FORM } from './model/recommendation-form';
+import { isCostValid, recommendationFormOf, recommendationItemOf, EMPTY_RECOMMENDATION_FORM } from './model/recommendation-form';
 import { timelineOf } from './model/timeline';
 
 const node = (id: string, parentId: string | null, extra: Partial<RcaLogicNode> = {}): RcaLogicNode => ({
@@ -44,14 +44,21 @@ describe('evidence and recommendation forms', () => {
     expect(item).toMatchObject({ id: 'ev-1', title: 'Photo', tags: ['a', 'b'], nodeIds: ['n1'], timeSeries: null, collectedAt: base.collectedAt });
     const series = evidenceItemOf({ ...EMPTY_EVIDENCE_FORM, title: 'Trend', type: 'Time Series', series: { ...EMPTY_EVIDENCE_FORM.series, streams: 'P101.VIB', intervals: 'x' } }, base);
     expect(series.timeSeries).toMatchObject({ provider: 'pi', streams: 'P101.VIB', intervals: null });
-    expect(evidenceFormOf(item as RcaEvidenceItem).tags).toBe('a, b');
+    expect(evidenceFormOf(item as RcaEvidenceItem, 'UTC').tags).toBe('a, b');
+    const due = { ...(item as RcaEvidenceItem), taskDueDate: '2026-10-01T20:30:00.000Z' };
+    expect(evidenceFormOf(due, 'Asia/Tehran').taskDueDate).toBe('2026-10-02');
+    expect(evidenceFormOf({ ...due, taskDueDate: '2026-10-05' }, 'Asia/Tehran').taskDueDate).toBe('2026-10-05');
   });
 
-  it('validates the estimated cost as a plain decimal and stores days as UTC midnight', () => {
+  it('validates the estimated cost as a plain decimal and stores the due day at the plant day start', () => {
     expect(isCostValid('1250.50')).toBe(true);
     expect(isCostValid('$12')).toBe(false);
-    const rec = recommendationItemOf({ ...EMPTY_RECOMMENDATION_FORM, title: 'Fix', dueDate: '2026-11-01', estimatedCost: ' ' }, 'rec-1');
+    const rec = recommendationItemOf({ ...EMPTY_RECOMMENDATION_FORM, title: 'Fix', dueDate: '2026-11-01', estimatedCost: ' ' }, 'rec-1', 'UTC');
     expect(rec).toMatchObject({ dueDate: '2026-11-01T00:00:00.000Z', estimatedCost: null, ownerId: null });
+    const tehran = recommendationItemOf({ ...EMPTY_RECOMMENDATION_FORM, title: 'Fix', dueDate: '2026-11-01' }, 'rec-1', 'Asia/Tehran');
+    expect(tehran.dueDate).toBe('2026-10-31T20:30:00.000Z');
+    // FE-10 family: the stored instant reads back as the plant's day, never its UTC day
+    expect(recommendationFormOf(tehran, 'Asia/Tehran').dueDate).toBe('2026-11-01');
   });
 });
 
@@ -81,7 +88,10 @@ describe('5-Why and timeline', () => {
     expect(levels[1].question).toBe('Why did "Pump trip" happen?');
     expect(removeLevel(levels, 0).map((l) => l.level)).toEqual([1]);
     const checks = fiveWhyChecks({ problem: 'x', whyLevels: levels, rootCause: '' });
-    expect(checks.find((c) => c.label.startsWith('At least'))?.done).toBe(false);
+    // CA6: depth is guidance, not a check; evidence and the root cause are
+    expect(checks.map((c) => c.label)).not.toContain(expect.stringContaining('At least'));
+    expect(checks.find((c) => c.label.startsWith('Every answer backed'))?.done).toBe(false);
+    expect(depthGuidance(3, 5)).toContain('3 of the 5 levels of the guideline');
   });
 
   it('orders diagram events and linked events by time; undated last', () => {

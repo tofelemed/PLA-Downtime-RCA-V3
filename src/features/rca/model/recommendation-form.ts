@@ -1,4 +1,5 @@
 import type { RcaRecommendationItem } from '@/api/v2/types/rca';
+import { plantDayOf, plantDayStart } from './plant-day';
 
 export const RECOMMENDATION_STATUSES = ['Open', 'Planned', 'In Progress', 'Completed', 'Cancelled'] as const;
 export const RECOMMENDATION_PRIORITIES = ['Low', 'Medium', 'High'] as const;
@@ -26,13 +27,14 @@ export const EMPTY_RECOMMENDATION_FORM: RecommendationForm = {
   estimatedCost: '',
 };
 
-export function recommendationFormOf(item: RcaRecommendationItem): RecommendationForm {
+/** The form of a stored recommendation; its due day is the plant's day of the stored instant. */
+export function recommendationFormOf(item: RcaRecommendationItem, timeZone: string): RecommendationForm {
   return {
     title: item.title,
     description: item.description ?? '',
     priority: item.priority ?? 'Medium',
     ownerId: item.ownerId ?? '',
-    dueDate: item.dueDate ? item.dueDate.slice(0, 10) : '',
+    dueDate: plantDayOf(item.dueDate, timeZone),
     status: item.status ?? 'Open',
     estimatedCost: item.estimatedCost ?? '',
   };
@@ -43,14 +45,15 @@ const orNull = (value: string) => (value.trim() === '' ? null : value.trim());
 /** True when the cost is empty or a plain decimal (the server refuses anything else). */
 export const isCostValid = (value: string) => value.trim() === '' || /^\d{1,13}(\.\d{1,4})?$/.test(value.trim());
 
-export function recommendationItemOf(form: RecommendationForm, id: string): RcaRecommendationItem {
+/** The stored item; the due day is sent as the instant the plant day starts. */
+export function recommendationItemOf(form: RecommendationForm, id: string, timeZone: string): RcaRecommendationItem {
   return {
     id,
     title: form.title.trim(),
     description: orNull(form.description),
     priority: form.priority,
     ownerId: orNull(form.ownerId),
-    dueDate: form.dueDate ? `${form.dueDate}T00:00:00.000Z` : null,
+    dueDate: plantDayStart(form.dueDate, timeZone),
     status: form.status,
     estimatedCost: orNull(form.estimatedCost),
   };

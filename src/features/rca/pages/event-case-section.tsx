@@ -37,13 +37,14 @@ function ModeChoice({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => 
 
 function useLinkSubmit(eventId: string, evidence: EventEvidencePackageView | undefined) {
   const navigate = useNavigate();
+  const { timezone } = useRcaFormat();
   const link = useLinkEventToRca();
   const submit = async (input: { mode: Mode; form: RcaCaseForm; selected: string | null; reason: string }) => {
     const reason = input.reason.trim() || undefined;
     const body =
       input.mode === 'existing'
         ? { rcaId: input.selected ?? '', reason }
-        : { create: { ...buildCreateBody(input.form), unitId: evidence?.event.unitId ?? input.form.unitId }, reason };
+        : { create: { ...buildCreateBody(input.form, timezone), unitId: evidence?.event.unitId ?? input.form.unitId }, reason };
     const result = await link.submit({ eventId, body }).catch(() => null);
     if (result) navigate(`/rca/${result.rca.id}`, { replace: true });
   };

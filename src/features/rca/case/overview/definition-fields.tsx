@@ -2,7 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DateInput } from '@/features/ux-kit/date-inputs';
-import { PrioritySelect, StatusSelect } from '../../cases/status-fields';
+import { ConsequenceSelect, PrioritySelect } from '../../cases/status-fields';
 import { UnitSelect } from '../../cases/unit-select';
 import type { RcaCaseForm } from '../../model/rca-form';
 
@@ -26,7 +26,7 @@ function TextArea({ id, label, value, hint, onChange }: { id: string; label: str
   );
 }
 
-/** Title, status, priority, target date, unit, problem, team charter and root cause of the case. */
+/** Title, consequence class, priority, target date, unit, problem, team charter and root cause of the case. */
 export function DefinitionFields({ form, onChange, readOnly }: DefinitionFieldsProps) {
   return (
     <fieldset disabled={readOnly} className="grid gap-4 md:grid-cols-2" data-testid="case-editor">
@@ -34,7 +34,7 @@ export function DefinitionFields({ form, onChange, readOnly }: DefinitionFieldsP
         <Label htmlFor="edit-title">Title</Label>
         <Input id="edit-title" value={form.title} maxLength={255} onChange={(e) => onChange({ title: e.target.value })} />
       </div>
-      <StatusSelect id="edit-status" value={form.status} onChange={(status) => onChange({ status })} />
+      <ConsequenceSelect id="edit-consequence" value={form.consequenceClass} onChange={(consequenceClass) => onChange({ consequenceClass })} />
       <PrioritySelect id="edit-priority" value={form.priority} onChange={(priority) => onChange({ priority })} />
       <DateInput id="edit-target" label="Target close date" value={form.targetCloseDate} disabled={readOnly} onChange={(targetCloseDate) => onChange({ targetCloseDate })} />
       <UnitSelect id="edit-unit" value={form.unitId} onChange={(unitId) => onChange({ unitId })} />

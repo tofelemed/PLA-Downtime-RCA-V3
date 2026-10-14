@@ -7,13 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { IconButton } from '@/features/ux-kit/icon-button';
 import { ActionIcon } from '@/lib/icons';
-import { ANALYSIS_SETTINGS } from '../../../../model/analysis-settings';
+import { useRcaReadiness } from '@/api/v2/queries/rca-cases';
 import { useCaseWorkspace } from '../../../case-context';
 import { useCasePatch } from '../../../use-case-patch';
 import { CopyReportButton } from '../copy-report-button';
 import { ToolChecklist } from '../tool-checklist';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
-import { addLevel, fiveWhyChecks, fiveWhyReport, firstLevel, removeLevel, setAnswer, setJustification } from './five-why-model';
+import { addLevel, depthGuidance, fiveWhyChecks, fiveWhyReport, firstLevel, removeLevel, setAnswer, setJustification } from './five-why-model';
 
 function Levels({ content, onChange, readOnly }: { content: FiveWhyContent; onChange: (next: FiveWhyContent) => void; readOnly: boolean }) {
   const levels = content.whyLevels;
@@ -50,6 +50,7 @@ function Levels({ content, onChange, readOnly }: { content: FiveWhyContent; onCh
 
 function Editor({ record, save }: { record: ToolRecord<'fiveWhy'>; save: (body: FiveWhyContent) => Promise<unknown> }) {
   const { rca, readOnly } = useCaseWorkspace();
+  const guideline = useRcaReadiness(rca.id).data?.rules.fiveWhyGuidelineLevels ?? null;
   const patch = useCasePatch();
   const [content, setContent] = useState<FiveWhyContent>(() => ({
     problem: record?.problem ?? rca.description ?? rca.title,
@@ -90,7 +91,9 @@ function Editor({ record, save }: { record: ToolRecord<'fiveWhy'>; save: (body: 
         </div>
       )}
       <ToolChecklist items={fiveWhyChecks(content)} />
-      <p className="text-xs text-muted-foreground">Guidance: at least {ANALYSIS_SETTINGS.fiveWhy.minimumDepth} levels, each backed by evidence.</p>
+      <p className="text-xs text-muted-foreground" data-testid="five-why-guidance">
+        {depthGuidance(content.whyLevels.length, guideline)} A bare "operator error" is not accepted as the root cause.
+      </p>
       <div className="flex flex-wrap items-start gap-3">
         <SaveBar onSave={onSave} disabled={content.problem.trim() === ''} hint="Write the problem statement first." label="Save 5-Why" updatedAt={record?.updatedAt} />
         <CopyReportButton text={() => fiveWhyReport(content)} />
