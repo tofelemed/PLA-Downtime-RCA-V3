@@ -110,8 +110,8 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
     await expect(page.getByTestId('pla-analytics-v2')).toBeVisible({ timeout: 60_000 });
     const waterfall = page.getByTestId('waterfall');
     await expect(waterfall).toHaveAttribute('data-closes', 'true', { timeout: 60_000 });
-    await expect(waterfall).toHaveAttribute('data-opening', '3000');
-    await expect(waterfall).toHaveAttribute('data-closing', '2550');
+    await expect(waterfall).toHaveAttribute('data-opening', '2160');
+    await expect(waterfall).toHaveAttribute('data-closing', '1710');
     const capacity = page.waitForRequest((request) => request.url().includes('/v2/reports/scope-waterfall') && new URL(request.url()).searchParams.get('ledger') === 'capacity');
     await page.getByTestId('ledger-capacity').check();
     await capacity;

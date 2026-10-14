@@ -5,9 +5,9 @@ import { secondApproverToken } from './second-approver';
 /**
  * Seeds the plan 3.5 e2e through the API (new "E2E PD …" unit / product / reason code / plan; nothing
  * existing is changed): a published UTC unit calendar (A 06–14, B 14–22, C 22–06), an approved profile
- * with planning 90 t/h and sustained 100 t/h, an approved quantity plan of 3000 t over one operational
- * day three days ago (1000 t per 8 h shift), the production periods of that day with an output of 850 t
- * each (gap 150) and a 1 h stop in shifts A and B (an availability candidate of 90 t at the planning
+ * with planning 90 t/h and sustained 100 t/h, an approved quantity plan of 2160 t (the planned rate equals the 90 t/h planning rate, LA-01) over one operational
+ * day three days ago (720 t per 8 h shift), the production periods of that day with an output of 570 t
+ * each (gap 150) and a 1 h stop in shifts A and B (an availability candidate of 90 t at the planned
  * rate), recalculated. Period A then holds the T15 situation once `seedT15Lines` saved accept 90 + 50.
  * The manager drafts the profile, rates and plan; the second approver approves them (D06).
  */
@@ -75,7 +75,7 @@ async function unitWithProfile(token: string, approver: string, tenantId: string
 async function approvedPlan(tokens: { author: string; approver: string }, unit: { unitId: string; productId: string }, suffix: string, dayStart: number) {
   const token = tokens.author;
   const { unitId, productId } = unit;
-  const body = { name: `E2E PD plan ${suffix}`, unitId, validFrom: new Date(dayStart).toISOString(), validTo: new Date(dayStart + DAY).toISOString(), basis: 'quantity', headerTarget: '3000', slices: [{ productId }] };
+  const body = { name: `E2E PD plan ${suffix}`, unitId, validFrom: new Date(dayStart).toISOString(), validTo: new Date(dayStart + DAY).toISOString(), basis: 'quantity', headerTarget: '2160', slices: [{ productId }] };
   const planId = await created(command(token, '/v2/production-plans', body), 'plan');
   const jobId = await created(command(token, `/v2/production-plans/${planId}/generate-periods`, { version: 1 }), 'generate');
   await until('plan generation', async () => {
@@ -101,7 +101,7 @@ export async function seedDashboardWorld(token: string, tenantId: string): Promi
   const materialized = await command<{ created: number }>(token, '/v2/production-periods/materialize', { unitIds: [unitId], ...window });
   if (materialized.status !== 200) throw new Error(`materialize: ${JSON.stringify(materialized.body)}`);
   for (const shift of [0, 8, 16]) {
-    await event(token, unitId, dayStart + shift * HOUR, dayStart + (shift + 8) * HOUR, { physicalType: 'production_output', eventType: 'ProductionOutput', quantity: '850', quantityUom: 't' });
+    await event(token, unitId, dayStart + shift * HOUR, dayStart + (shift + 8) * HOUR, { physicalType: 'production_output', eventType: 'ProductionOutput', quantity: '570', quantityUom: 't' });
   }
   const stops = {
     a: await event(token, unitId, dayStart + 2 * HOUR, dayStart + 3 * HOUR, { physicalType: 'downtime', scheduleClass: 'unplanned', description: `E2E PD feed stop A ${suffix}` }),

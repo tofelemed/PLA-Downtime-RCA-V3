@@ -11,7 +11,7 @@ import { PREFIX } from './engineer-users';
  *   C 18–02), an approved profile (t per h) with approved planning 50 t/h and sustained 60 t/h → preview
  *   capacities 300 / 300 / 400 t on any day; the plan day is five days ahead.
  * - `kind: 'PD'`: like the plan 3.5 dashboard world — 3 × 8 h shifts, planning 90 t/h, sustained 100 t/h,
- *   an approved 3000 t quantity plan over one operational day three days ago, 850 t output and a 1 h stop
+ *   an approved 2160 t quantity plan (planned rate = planning rate, LA-01) over one operational day three days ago, 570 t output and a 1 h stop
  *   in shifts A and B (gap 150, availability candidate 90), recalculated.
  * The master data and approvals are the setup manager's (its own profile and rate drafts are approved by
  * the second approver: D06 separation of duties); the plan, periods and events are written by an
@@ -93,7 +93,7 @@ async function masterData(setup: string, tenantId: string, suffix: string, kind:
 
 /** The engineer prepares and generates the plan (PLAN_WRITERS); the manager approves it (PLAN_APPROVERS). */
 async function approvedPlan(engineer: string, setup: string, unitId: string, productId: string, suffix: string, dayStart: number) {
-  const body = { name: `${PREFIX} plan ${suffix}`, unitId, validFrom: new Date(dayStart).toISOString(), validTo: new Date(dayStart + DAY).toISOString(), basis: 'quantity', headerTarget: '3000', slices: [{ productId }] };
+  const body = { name: `${PREFIX} plan ${suffix}`, unitId, validFrom: new Date(dayStart).toISOString(), validTo: new Date(dayStart + DAY).toISOString(), basis: 'quantity', headerTarget: '2160', slices: [{ productId }] };
   const planId = await created(command(engineer, '/v2/production-plans', body), 'plan');
   const jobId = await created(command(engineer, `/v2/production-plans/${planId}/generate-periods`, { version: 1 }), 'generate');
   await until('plan generation', async () => {
@@ -132,7 +132,7 @@ async function periodsOfTheDay(engineer: string, world: Omit<EngineerWorld, 'pla
   const materialized = await command<{ created: number }>(engineer, '/v2/production-periods/materialize', { unitIds: [world.unitId], ...window });
   if (materialized.status !== 200) throw new Error(`materialize: ${materialized.status} ${JSON.stringify(materialized.body)}`);
   for (const shift of [0, 8, 16]) {
-    await event(engineer, world.unitId, dayStart + shift * HOUR, dayStart + (shift + 8) * HOUR, { physicalType: 'production_output', eventType: 'ProductionOutput', quantity: '850', quantityUom: 't' });
+    await event(engineer, world.unitId, dayStart + shift * HOUR, dayStart + (shift + 8) * HOUR, { physicalType: 'production_output', eventType: 'ProductionOutput', quantity: '570', quantityUom: 't' });
   }
   const stops = {
     a: await event(engineer, world.unitId, dayStart + 2 * HOUR, dayStart + 3 * HOUR, { physicalType: 'downtime', scheduleClass: 'unplanned', description: `${PREFIX} feed stop A ${world.suffix}` }),

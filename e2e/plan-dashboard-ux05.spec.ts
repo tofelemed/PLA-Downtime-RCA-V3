@@ -81,7 +81,7 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await expect(figure(page, 'residual')).toHaveAttribute('data-value', '10');
     await expect(page.getByTestId('waterfall')).toHaveAttribute('data-closes', 'true');
     const bars = page.getByTestId('waterfall').getByTestId('waterfall-bar');
-    await expect(bars.last()).toHaveAttribute('data-end', '850');
+    await expect(bars.last()).toHaveAttribute('data-end', '570');
     await expect(page.locator('[data-testid="waterfall-bar"][data-key="unaccounted"]')).toHaveAttribute('data-delta', '-10');
     await expect(page.getByTestId('waterfall')).not.toContainText('MT');
     await page.getByTestId('actuals-provenance').locator('summary').click();

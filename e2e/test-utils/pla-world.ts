@@ -5,8 +5,8 @@ import { secondApproverToken } from './second-approver';
 
 /**
  * Seeds the plan 3.6 e2e through the API (new "E2E …" units / products only; nothing existing changes):
- * the 3.5 dashboard world (unit "E2E PD …", one operational day three days ago, three 1000 t shifts with
- * 850 t each, 1 h stops in shifts A and B), with shift A reconciled (accept 90 t + manual 60 t), submitted
+ * the 3.5 dashboard world (unit "E2E PD …", one operational day three days ago, three 720 t shifts with
+ * 570 t each, 1 h stops in shifts A and B), with shift A reconciled (accept 90 t + manual 60 t), submitted
  * by the engineer and approved by the manager; plus a unit "E2E PLA T41 …" whose calendar excludes the
  * whole day (no scheduled time) and 0 t output per shift, recalculated, for the T41 OEE tile.
  */

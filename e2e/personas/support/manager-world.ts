@@ -95,7 +95,7 @@ export interface PeriodWorld {
 
 async function approvedPlan(token: string, unit: PlanningUnit, suffix: string, dayStart: number): Promise<{ planId: string; planName: string }> {
   const planName = `${PREFIX}PD plan ${suffix}`;
-  const body = { name: planName, unitId: unit.unitId, validFrom: new Date(dayStart).toISOString(), validTo: new Date(dayStart + DAY).toISOString(), basis: 'quantity', headerTarget: '3000', slices: [{ productId: unit.productId }] };
+  const body = { name: planName, unitId: unit.unitId, validFrom: new Date(dayStart).toISOString(), validTo: new Date(dayStart + DAY).toISOString(), basis: 'quantity', headerTarget: '2160', slices: [{ productId: unit.productId }] };
   const planId = await created(post(token, '/v2/production-plans', body), 'plan');
   const jobId = await created(post(token, `/v2/production-plans/${planId}/generate-periods`, { version: 1 }), 'generate');
   await until('plan generation', async () => {
@@ -129,7 +129,7 @@ async function calculatedPeriods(token: string, unitId: string, day: { from: str
   return { a: byShift('A'), b: byShift('B'), c: byShift('C') };
 }
 
-/** One operational day three days ago: 3 × 1000 t target, 850 t output per shift, a 1 h stop in A and B. */
+/** One operational day three days ago: 3 × 720 t target (the 90 t/h planning rate, LA-01), 570 t output per shift, a 1 h stop in A and B. */
 async function seedPeriodWorld(token: string, tenantId: string): Promise<PeriodWorld> {
   const unit = await seedPlanningUnit(token, tenantId, 'PD');
   const suffix = unit.unitCode.slice(-8);
@@ -138,7 +138,7 @@ async function seedPeriodWorld(token: string, tenantId: string): Promise<PeriodW
   const day = { from: new Date(dayStart).toISOString(), to: new Date(dayStart + DAY).toISOString() };
   await ok(post(token, '/v2/production-periods/materialize', { unitIds: [unit.unitId], ...day }), 'materialize');
   for (const shift of [0, 8, 16]) {
-    await event(token, unit.unitId, dayStart + shift * HOUR, dayStart + (shift + 8) * HOUR, { physicalType: 'production_output', eventType: 'ProductionOutput', quantity: '850', quantityUom: 't' });
+    await event(token, unit.unitId, dayStart + shift * HOUR, dayStart + (shift + 8) * HOUR, { physicalType: 'production_output', eventType: 'ProductionOutput', quantity: '570', quantityUom: 't' });
   }
   const stops = {
     a: await event(token, unit.unitId, dayStart + 2 * HOUR, dayStart + 3 * HOUR, { physicalType: 'downtime', scheduleClass: 'unplanned', description: `${PREFIX}PD feed stop A ${suffix}` }),

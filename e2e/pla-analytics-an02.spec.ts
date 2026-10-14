@@ -65,8 +65,8 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     await openAnalytics(page, scopeUrl('/pla-analytics', [unit], world.day));
     const waterfall = page.getByTestId('waterfall');
     await expect(waterfall).toHaveAttribute('data-closes', 'true', { timeout: 60_000 });
-    await expect(waterfall).toHaveAttribute('data-opening', '3000');
-    await expect(waterfall).toHaveAttribute('data-closing', '2550');
+    await expect(waterfall).toHaveAttribute('data-opening', '2160');
+    await expect(waterfall).toHaveAttribute('data-closing', '1710');
     await expect(page.locator('[data-testid="waterfall-bar"][data-key="unaccounted"]')).toHaveAttribute('data-delta', '-210');
     await expect(page.getByTestId('snapshot-runs')).toHaveAttribute('data-run-ids', /^[0-9a-f-]{36}(,[0-9a-f-]{36}){2}$/);
     await expect(page.getByTestId('scope-export')).toHaveAttribute('data-request', ''); // provisional scope: no export
