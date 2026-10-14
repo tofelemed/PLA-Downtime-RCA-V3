@@ -12,13 +12,13 @@ import { fillPlantTime } from './personas/support/event-hub-ui';
 
 test.describe('Production Module', () => {
   let fixture: TestFixture;
-  let productionPlan: any;
+  let productionPlan: { id?: string } | undefined;
 
   test.beforeAll(async () => {
     fixture = await createTestFixture();
     
     // Create a test production plan (requires unitId as UUID)
-    productionPlan = await apiRequest('/production-plans', {
+    productionPlan = await apiRequest<{ id?: string }>('/production-plans', {
       method: 'POST',
       token: fixture.tokens.accessToken,
       body: JSON.stringify({
