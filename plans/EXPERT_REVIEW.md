@@ -17,8 +17,8 @@ Status legend: ⬜ open · 🔄 in progress · ✅ fixed (commit) · ❎ won't f
 | 3 | Reconciliation workflow | ~85% (14 Oct) | Separation of duties, approved-by-default reports, manual-line rules (R7–R11). Left: month close, SLA, restatement delta, day certification (R-B…R-E). | 🔄 R-B next |
 | 4 | Valuation | ~92% (14 Oct) | Finance roles, economic view, demand-constrained lost sales, FX tables / date rule / late revaluation (V1–V8). Left: provisional FX rates, economic view in loss tree and RCA impact. | ✅ open points with finance |
 | 5 | RCA / CAPA | ~92% (14 Oct) | Server workflow with independent closure, effectiveness on run time, FMEA per cause, D17 triggers, shared lessons (CA1–CA9). Left: bad-actor report, cost trigger on Postgres. | ✅ open points with reliability lead |
-| 6 | Database & performance | ~90% (14 Oct) | Indexes, checks, numeric money, batched lookups, retention job, 16 tables to uuid. Left: DB-05 on 6 risky tables, retention periods. | 🔄 owner: retention |
-| 7 | Frontend & UX | ~92% (14 Oct) | v2 only, Traverse Forge name, searchable reason picker, retired codes, plant settings applied everywhere. Left: Persian digits for numbers (owner), e2e re-run. | ✅ |
+| 6 | Database & performance | ~90% (14 Oct) | Indexes, checks, numeric money, batched lookups, retention job, 16 tables to uuid. Left: DB-05 on 6 risky tables; raw-data retention. | ✅ |
+| 7 | Frontend & UX | ~92% (14 Oct) | v2 only, Traverse Forge name, searchable reason picker, retired codes, plant settings applied everywhere. Persian digits on every displayed number; e2e 225 / 232 (2 need a host backend for the PI simulator). | ✅ |
 
 Paths below are relative to `server/pro-act-backend/src/` unless prefixed `FE:` (frontend `src/`).
 
@@ -253,7 +253,7 @@ Source: [SME_ANSWERS_ALL_PHASES_2026-10-14.md](SME_ANSWERS_ALL_PHASES_2026-10-14
 | DB-04 | Med-High | RLS policy evaluates `current_setting` per row with a `::text` cast; `tenant_id IS NULL` rows visible to every tenant. Fix: `tenant_id = ANY ((SELECT app_rls_tenant_ids())::uuid[])`. | `database/migrations/1793484800000-TenantRowLevelSecurity.ts` | ✅ 13 Oct (InitPlan form; `tenant_id IS NULL` branch kept — owner) |
 | DB-05 | Medium | `tenant_id` still `varchar(36)` on core v1 tables, no FK; the `tenant_uuid` contract step was not finished. | Baseline migration; `rca-case/rca-cases.service.ts:35` | 🔄 14 Oct: 16 legacy tables uuid + FK; production_events, audit_logs (orphans), production_plans (orphans), assets, products, rca_* left |
 | DB-06 | Medium | Event-list cursor uses the OR form, so the index can't bound it. Fix: row comparison. | `v2/production-events/production-event-v2.query.ts:105` | ✅ 13 Oct |
-| DB-07 | Medium | No retention for outbox, inbox and audit tables (two audit tables); partitions are created but never dropped. | `common/outbox/outbox-relay.service.ts`; `raw-partitions.service.ts` | 🔄 retention job built 14 Oct, disabled until the owner sets the periods; audit-log delete exception awaits owner |
+| DB-07 | Medium | No retention for outbox, inbox and audit tables (two audit tables); partitions are created but never dropped. | `common/outbox/outbox-relay.service.ts`; `raw-partitions.service.ts` | ✅ 14 Oct: audit records kept 30 days (owner); raw retention not decided (kept) |
 | DB-08 | Medium | Scope reports fold up to hundreds of 500-row pages in one request; N+1 `resolveEngine` per run. | `v2/pla-reports/scope-periods.ts`; `v2/period-overview/period-states.ts` | ✅ 14 Oct: one batched tolerance lookup per page |
 | DB-09 | Low-Med | Redundant single-column `tenant_id` indexes on rewrite-heavy tables (`loss_lines`, `kpi_results`, …); duplicate sample index. Verify with `pg_stat_user_indexes`. | v2 entity indexes | ✅ 14 Oct: 11 redundant tenant indexes and a duplicate sample index dropped (usage evidence) |
 | DB-10 | Low | Unindexed FKs on `production_events` (`rca_id`, `plan_id`, `impact_code_id`, `oee_code_id`). | migrations | ✅ 13 Oct |
