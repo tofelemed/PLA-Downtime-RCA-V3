@@ -29,7 +29,14 @@ interface AuditRow {
 }
 
 const PROBE_SUFFIX = '(P-ADM check)';
-const PROBE_SUBTITLE = `Asset Performance Management ${PROBE_SUFFIX}`;
+const PROBE_SUBTITLE = `Production loss accounting ${PROBE_SUFFIX}`;
+
+/** Puts the application-wide subtitle back even when an assertion failed half-way (shared live setting). */
+async function restoreSubtitle(token: string, subtitle: string): Promise<void> {
+  const current = await call<Branding & Record<string, unknown>>(token, 'GET', '/app-settings/branding/value');
+  if (current.status !== 200 || current.body.appSubtitle === subtitle) return;
+  await call(token, 'POST', '/app-settings/branding/value', { value: { ...current.body, appSubtitle: subtitle } });
+}
 
 test.describe('ADM-05 admin panel and application-wide settings', () => {
   test('ADM-05a SuperAdmin changes the branding subtitle and sets it back', async ({ page }) => {
@@ -43,25 +50,31 @@ test.describe('ADM-05 admin panel and application-wide settings', () => {
     await expect(subtitle).toBeVisible();
     // retry-safe: a previous attempt may have left the probe value behind
     const original = (await subtitle.inputValue()).replace(` ${PROBE_SUFFIX}`, '');
+    // the app shell header is the page's banner; pages carry their own <header> too
+    const shellHeader = page.getByRole('banner');
 
-    await subtitle.fill(PROBE_SUBTITLE);
-    await page.getByRole('button', { name: 'Save changes' }).click();
-    await expectToast(page, 'Branding saved');
-    const saved = await call<Branding>(helena.token, 'GET', '/app-settings/branding/value');
-    expect(saved.status).toBe(200);
-    expect(saved.body.appSubtitle).toBe(PROBE_SUBTITLE);
-    await page.reload();
-    await expect(page.locator('header')).toContainText(PROBE_SUBTITLE);
-    await page.screenshot({ path: test.info().outputPath('adm-05a-branding-changed.png') });
+    try {
+      await subtitle.fill(PROBE_SUBTITLE);
+      await page.getByRole('button', { name: 'Save changes' }).click();
+      await expectToast(page, 'Branding saved');
+      const saved = await call<Branding>(helena.token, 'GET', '/app-settings/branding/value');
+      expect(saved.status).toBe(200);
+      expect(saved.body.appSubtitle).toBe(PROBE_SUBTITLE);
+      await page.reload();
+      await expect(shellHeader).toContainText(PROBE_SUBTITLE);
+      await page.screenshot({ path: test.info().outputPath('adm-05a-branding-changed.png') });
 
-    await page.getByRole('tab', { name: 'Branding' }).click();
-    await page.getByLabel('Subtitle').fill(original);
-    await page.getByRole('button', { name: 'Save changes' }).click();
-    await expectToast(page, 'Branding saved');
-    const restored = await call<Branding>(helena.token, 'GET', '/app-settings/branding/value');
-    expect(restored.body.appSubtitle).toBe(original);
-    await page.reload();
-    await expect(page.locator('header')).toContainText(original);
+      await page.getByRole('tab', { name: 'Branding' }).click();
+      await page.getByLabel('Subtitle').fill(original);
+      await page.getByRole('button', { name: 'Save changes' }).click();
+      await expectToast(page, 'Branding saved');
+      const restored = await call<Branding>(helena.token, 'GET', '/app-settings/branding/value');
+      expect(restored.body.appSubtitle).toBe(original);
+      await page.reload();
+      await expect(shellHeader).toContainText(original);
+    } finally {
+      await restoreSubtitle(helena.token, original);
+    }
   });
 
   test('ADM-05b OrgAdmin is refused on the admin panel and on application-wide settings', async ({ page }) => {
