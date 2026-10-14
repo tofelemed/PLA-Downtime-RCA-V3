@@ -16,6 +16,13 @@ export interface OeePolicy {
    */
   overlapAllocation: 'equal_share' | 'first_out';
   /**
+   * LA-08 (ISO 22400 / GE PLA common practice): whether the plan target already allows for grade
+   * transitions within their approved standard. New versions default to `planned` (14 Oct 2026): the
+   * allowance is planned time, not a plan-ledger loss; a version written before the option has no field
+   * and keeps `loss`.
+   */
+  transitionAllowanceInPlan: 'planned' | 'loss';
+  /**
    * SME D6: micro-stop threshold per asset class (asset type → seconds), overriding `microStopSeconds` for
    * stops of those assets (pilot 120 s for operator-cleared bagger / conveyor stops). Absent = none.
    */
@@ -52,6 +59,7 @@ export const OEE_POLICY_DEFAULT: OeePolicy = {
   streamCombinationRule: 'per_product_and_combined_when_compatible',
   defaultLedgerView: 'plan',
   overlapAllocation: 'first_out',
+  transitionAllowanceInPlan: 'planned',
 };
 
 export const RECONCILIATION_TOLERANCE_DEFAULT: ReconciliationTolerance = {
@@ -136,6 +144,14 @@ export function parseOeePolicy(body: unknown): OeePolicy {
             value.overlapAllocation,
             ['equal_share', 'first_out'],
             'overlapAllocation',
+          ),
+    transitionAllowanceInPlan:
+      value.transitionAllowanceInPlan === undefined
+        ? 'loss'
+        : oneOf(
+            value.transitionAllowanceInPlan,
+            ['planned', 'loss'],
+            'transitionAllowanceInPlan',
           ),
     ...microStopOptions(value),
   };

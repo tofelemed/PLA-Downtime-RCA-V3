@@ -47,6 +47,12 @@
           "default": "equal_share",
           "description": "How overlapping stops share time (SME 2026-10-13, EXPERT_REVIEW Q11: allocate each loss once by a stated rule): equal_share splits each overlapping segment equally between the causes; first_out gives it to the cause that started first. Absent = equal_share."
         },
+        "transitionAllowanceInPlan": {
+          "type": "string",
+          "enum": ["planned", "loss"],
+          "default": "loss",
+          "description": "LA-08 (ISO 22400 / GE PLA common practice, 2026-10-14): whether the plan target already allows for grade transitions within their approved standard. planned = the campaign plan deducts the standard transition time, so the planned rate is target / (eligible time - standard transition time) and the plan ledger has no transition_allowance line (only transition_excess explains the gap; the allowance is reported on the plan totals as planned transition time). loss = the plan does not deduct it, so the allowance is a plan-ledger loss line. The capacity ledger shows allowance and excess either way. Absent = loss (versions written before the option); new versions default to planned."
+        },
         "microStopSeconds": {
           "$ref": "policy-envelope.schema.json#/$defs/nonNegativeSeconds",
           "default": 60,

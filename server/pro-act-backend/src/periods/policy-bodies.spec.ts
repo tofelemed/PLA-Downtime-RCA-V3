@@ -83,6 +83,21 @@ describe('engine policy bodies (plan 2.5, D04 / D06)', () => {
     );
   });
 
+  it('LA-08 (14 Oct 2026): new plants plan the standard transition time; a version written before the option keeps it a plan loss', () => {
+    expect(OEE_POLICY_DEFAULT.transitionAllowanceInPlan).toBe('planned');
+    const beforeTheOption: Record<string, unknown> = { ...OEE_POLICY_DEFAULT };
+    delete beforeTheOption.transitionAllowanceInPlan;
+    expect(parseOeePolicy(beforeTheOption).transitionAllowanceInPlan).toBe(
+      'loss',
+    );
+    expect(() =>
+      parseOeePolicy({
+        ...OEE_POLICY_DEFAULT,
+        transitionAllowanceInPlan: 'excluded',
+      }),
+    ).toThrow(PolicyBodyError);
+  });
+
   it('SME R7 (14 Oct 2026): new plants aim for Unaccounted below 2 % of the shortfall; an older version has no target', () => {
     expect(RECONCILIATION_TOLERANCE_DEFAULT.unaccountedTargetOfShortfall).toBe(
       0.02,
