@@ -6,6 +6,10 @@
  * any plant or licensor. Every seeded entry says "Demo" in its evidence and notes; nothing here is a
  * product default. One directional pair (PEL IM55 → PE100-BK) is left out on purpose so the history shows a
  * transition without a standard (`no_transition_standard`).
+ *
+ * The seeded plans do not deduct these transitions from their targets, so the Demo Plant stays on
+ * `oee_policy.transitionAllowanceInPlan = loss` (written by the personas seeder,
+ * `scripts/demo-personas/demo-oee-policy.ts`): the allowance is a plan-ledger loss and the waterfalls close.
  */
 import { MASTER_DATA_FROM, UnitSpec } from './catalog-plants';
 import { campaignsIn } from './campaigns';

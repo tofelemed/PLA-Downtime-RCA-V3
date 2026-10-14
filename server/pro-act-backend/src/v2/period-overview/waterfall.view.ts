@@ -60,6 +60,12 @@ export interface WaterfallV2View {
   isProvisional: boolean;
   /** slices left out because a figure is unknown (reason = the ledger flag) */
   excluded: Array<{ periodId: string; sliceId: string | null; reason: string }>;
+  /**
+   * LA-08, plan ledger: grade-transition time within the standard that the plan targets already allow for
+   * (oee_policy `transitionAllowanceInPlan = planned`), decimal string — information, not a step. Null when
+   * no included slice reports any (capacity ledger, or the allowance is charged as a plan loss).
+   */
+  plannedTransition: string | null;
 }
 
 /** Running sums of a waterfall; fed page by page (`addWaterfallStates`), read by `finishWaterfall`. */
@@ -73,6 +79,7 @@ export interface WaterfallAccumulator {
   periodIds: string[];
   runIds: string[];
   provisional: boolean;
+  plannedTransition: Dec | null;
 }
 
 export const waterfallAccumulator = (): WaterfallAccumulator => ({
@@ -85,7 +92,22 @@ export const waterfallAccumulator = (): WaterfallAccumulator => ({
   periodIds: [],
   runIds: [],
   provisional: false,
+  plannedTransition: null,
 });
+
+/** Planned transition time of a plan slice (information); summed only when the run reports one. */
+function addPlannedTransition(
+  acc: WaterfallAccumulator,
+  state: PeriodState,
+  sliceId: string,
+): void {
+  const totals = state.totals.find(
+    (t) => t.ledger === 'plan' && t.sliceId === sliceId,
+  );
+  const planned = toDec(totals?.plannedTransitionQty ?? null);
+  if (planned !== null)
+    acc.plannedTransition = (acc.plannedTransition ?? ZERO).plus(planned);
+}
 
 function planInto(acc: WaterfallAccumulator, state: PeriodState): void {
   for (const slice of state.reconciliation?.slices ?? []) {
@@ -112,6 +134,7 @@ function planInto(acc: WaterfallAccumulator, state: PeriodState): void {
         planKindTotals(slice.sliceId, state.candidates, outcomes, state.lines),
       ),
     );
+    addPlannedTransition(acc, state, slice.sliceId);
     acc.opening = acc.opening.plus(slice.target);
     acc.closing = acc.closing.plus(slice.actual);
     acc.uoms.add(slice.uom);
@@ -206,6 +229,8 @@ export function finishWaterfall(
     calculationRunIds: acc.runIds,
     isProvisional: acc.provisional,
     excluded: acc.excluded,
+    plannedTransition:
+      acc.plannedTransition === null ? null : formatDec(acc.plannedTransition),
   };
   if (acc.included === 0)
     return { ...base, bars: [], opening: null, closing: null, closes: false };

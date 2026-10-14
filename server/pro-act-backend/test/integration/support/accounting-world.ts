@@ -17,6 +17,7 @@ export interface TotalsBody {
   gap: string | null;
   overproduction: string | null;
   overAccounted: string | null;
+  plannedTransition: string | null;
   flags: string[];
 }
 

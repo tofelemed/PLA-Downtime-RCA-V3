@@ -103,6 +103,7 @@ function totalsRow(
     gapQty: qty(totals.gap),
     overproductionQty: qty(totals.overproduction),
     overAccountedQty: qty(totals.overAccounted),
+    plannedTransitionQty: qty(totals.plannedTransition),
     flags: totals.flags,
   };
 }

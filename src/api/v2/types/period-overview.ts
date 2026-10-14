@@ -82,6 +82,8 @@ export interface WaterfallView {
   closes: boolean;
   isProvisional: boolean;
   excluded: Array<{ periodId: string; sliceId: string | null; reason: string }>;
+  /** LA-08, plan ledger: transition time within the standard the plan targets already allow for (information, not a step) */
+  plannedTransition: string | null;
 }
 
 export interface LedgerTotalsView {
@@ -102,6 +104,8 @@ export interface LedgerTotalsView {
   gap: string | null;
   overproduction: string | null;
   overAccounted: string | null;
+  /** LA-08: plan ledger, transition allowance the target already allows for (information) */
+  plannedTransition: string | null;
   flags: string[];
 }
 

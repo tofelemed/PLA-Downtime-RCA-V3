@@ -86,10 +86,12 @@ describe('AccountingEngine migration', () => {
         WHERE tenant_id = $1 AND policy_kind IN ('oee_policy', 'reconciliation_tolerance') ORDER BY policy_kind, version`,
       [tenant],
     );
-    // OeePolicyFirstOut (SME D7) and ToleranceUnexplainedTarget (SME R7) add version 2 on top of the seeded version 1
+    // OeePolicyFirstOut (SME D7) and ToleranceUnexplainedTarget (SME R7) add version 2 on top of the seeded
+    // version 1; OeePolicyTransitionAllowancePlanned (LA-08) adds oee_policy version 3
     expect(policies.map((p) => [p.policy_kind, p.version])).toEqual([
       ['oee_policy', 1],
       ['oee_policy', 2],
+      ['oee_policy', 3],
       ['reconciliation_tolerance', 1],
       ['reconciliation_tolerance', 2],
     ]);
@@ -99,12 +101,17 @@ describe('AccountingEngine migration', () => {
       defaultLedgerView: 'plan',
     });
     expect(policies[1].body).toMatchObject({ overlapAllocation: 'first_out' });
+    expect(policies[1].body).not.toHaveProperty('transitionAllowanceInPlan');
     expect(policies[2].body).toMatchObject({
+      overlapAllocation: 'first_out',
+      transitionAllowanceInPlan: 'planned',
+    });
+    expect(policies[3].body).toMatchObject({
       mode: 'zero',
       epsilon: 0.000001,
       allowUnaccountedClassification: false,
     });
-    expect(policies[3].body).toMatchObject({
+    expect(policies[4].body).toMatchObject({
       mode: 'zero',
       unaccountedTargetOfShortfall: 0.02,
     });

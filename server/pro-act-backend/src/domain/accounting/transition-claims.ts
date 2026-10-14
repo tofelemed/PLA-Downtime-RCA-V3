@@ -3,7 +3,11 @@ import { BoundedInterval } from '../time/interval-algebra';
 import { LossEvent, Segment, TransitionStandard } from './accounting.types';
 import { Claim, quantityInside } from './claims';
 import { RateBasis, rateOf, segmentCapacity } from './time-lines';
-import { transitionSplit } from './transition-split';
+import {
+  standardFor,
+  standardTimeRatio,
+  transitionSplit,
+} from './transition-split';
 
 export interface TransitionScope {
   events: readonly LossEvent[];
@@ -50,6 +54,30 @@ function runningCapacity(
     }
   }
   return byEvent;
+}
+
+/**
+ * The standard transition time of the slice's transitions priced at the ledger's rate: each transition's
+ * running capacity × reference ÷ actual duration (not capped — a change that finished early still had its
+ * full standard deducted by the plan, the time it gave back is output above plan). It is what a plan that
+ * schedules grade changes leaves out of its target (`transitionAllowanceInPlan = planned`).
+ */
+export function standardTransitionCapacity(
+  segments: readonly Segment[],
+  basis: RateBasis,
+  scope: TransitionScope,
+): Dec {
+  const running = runningCapacity(segments, basis);
+  return scope.events
+    .filter((event) => event.physicalType === 'grade_transition')
+    .reduce((sum, event) => {
+      const own = running.get(event.eventId);
+      if (!own) return sum;
+      const standard = standardFor(event, scope.standards);
+      return sum.plus(
+        own.quantity.mul(standardTimeRatio(event, standard, scope.asOf)),
+      );
+    }, ZERO);
 }
 
 function rateClaim(

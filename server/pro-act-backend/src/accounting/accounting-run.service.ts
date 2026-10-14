@@ -359,6 +359,7 @@ function engineInput(
       tripReasonCodes: engine.oee.tripReasonCodes,
       derateComponent: engine.oee.derateComponent,
       overlapAllocation: engine.oee.overlapAllocation,
+      transitionAllowanceInPlan: engine.oee.transitionAllowanceInPlan,
       plannedStopsInsideScheduleReduceAvailability:
         engine.oee.plannedStopsInsideScheduleReduceAvailability,
       epsilon: String(engine.tolerance.epsilon),

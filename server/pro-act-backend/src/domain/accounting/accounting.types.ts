@@ -151,6 +151,15 @@ export interface SliceInput {
  */
 export type OverlapAllocation = 'equal_share' | 'first_out';
 
+/**
+ * Whether the plan target already allows for grade transitions within their approved standard (LA-08,
+ * ISO 22400 / GE PLA: a planned grade change within its standard is planned time): `planned` = the plan
+ * deducted the standard transition time, so the allowance is no plan-ledger loss (only the overrun is);
+ * `loss` = the plan did not, so the allowance explains part of the plan gap. The capacity ledger shows
+ * both either way.
+ */
+export type TransitionAllowanceInPlan = 'planned' | 'loss';
+
 export interface EnginePolicy {
   /** absent = `equal_share` (the rule of every policy version written before the option existed) */
   overlapAllocation?: OverlapAllocation;
@@ -162,6 +171,8 @@ export interface EnginePolicy {
   derateComponent: 'performance' | 'availability';
   plannedStopsInsideScheduleReduceAvailability: boolean;
   epsilon: string;
+  /** absent = `loss` (the rule of every policy version written before the option existed) */
+  transitionAllowanceInPlan?: TransitionAllowanceInPlan;
 }
 
 export interface PeriodAccountingInput {
@@ -258,6 +269,11 @@ export interface LedgerTotals {
   gap: Dec | null;
   overproduction: Dec | null;
   overAccounted: Dec | null;
+  /**
+   * Plan ledger with `transitionAllowanceInPlan = planned`: Σ transition allowance (within the standard)
+   * the plan target already allows for — information, not a loss line. Null otherwise.
+   */
+  plannedTransition: Dec | null;
   flags: string[];
 }
 

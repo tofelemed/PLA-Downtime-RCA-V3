@@ -119,6 +119,8 @@ export interface LedgerTotalsV2View {
   gap: string | null;
   overproduction: string | null;
   overAccounted: string | null;
+  /** LA-08: plan ledger with `transitionAllowanceInPlan = planned` — allowance the target allows for (information) */
+  plannedTransition: string | null;
   flags: string[];
 }
 
@@ -232,6 +234,7 @@ export function toTotalsView(totals: PeriodLedgerTotal): LedgerTotalsV2View {
     gap: toDecimalString(totals.gapQty),
     overproduction: toDecimalString(totals.overproductionQty),
     overAccounted: toDecimalString(totals.overAccountedQty),
+    plannedTransition: toDecimalString(totals.plannedTransitionQty),
     flags: totals.flags,
   };
 }

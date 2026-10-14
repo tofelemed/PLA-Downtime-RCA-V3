@@ -24,9 +24,11 @@ import {
   SliceLedgerResult,
   splitDerates,
   totalOf,
+  transitionScope,
 } from './ledger-common';
 import { PlanTotals, planTotals } from './plan-totals';
 import { LineContext, timeLines } from './time-lines';
+import { standardTransitionCapacity } from './transition-claims';
 import { componentTotal } from './transition-lines';
 
 interface Candidates {
@@ -36,6 +38,8 @@ interface Candidates {
 
 const BRIDGE = 'bridge_required';
 const PLANNED_RATE_SCALED = 'planned_rate_scaled';
+/** the plan target already allows for the transitions' standard time (`transitionAllowanceInPlan = planned`) */
+export const TRANSITION_ALLOWANCE_PLANNED = 'transition_allowance_planned';
 
 /**
  * Performance against the planned running rate: claimed slowdowns (micro-stops, derates, measured
@@ -70,16 +74,20 @@ function performanceCandidates(
 /**
  * The planned rate of each segment (SME Q1): the planning rate scaled so that the eligible time of the
  * slice produces exactly its target — target ÷ eligible planned time, keeping the planning rate's time
- * profile. k = 1 when the plan was generated from the approved rates.
+ * profile. k = 1 when the plan was generated from the approved rates. `deducted` is the standard
+ * transition time (at the planning rate) a plan that schedules grade changes left out of its target;
+ * that time is not eligible.
  */
 function plannedSegments(
   segments: readonly Segment[],
   target: Dec,
+  deducted: Dec,
 ): { segments: Segment[]; scaled: boolean } {
   const capacity = capacityOver(segments, 'planning');
-  if (!capacity || capacity.lte(ZERO))
+  const eligible = capacity?.minus(deducted);
+  if (!eligible || eligible.lte(ZERO))
     return { segments: [...segments], scaled: false };
-  const k = target.div(capacity);
+  const k = target.div(eligible);
   if (k.eq(1)) return { segments: [...segments], scaled: false };
   return {
     scaled: true,
@@ -134,9 +142,28 @@ function candidates(ctx: SliceContext): Candidates {
   };
 }
 
+/**
+ * `transitionAllowanceInPlan = planned` (ISO 22400 / GE PLA): the plan target already allows for the
+ * transitions' standard time, so their allowance lines leave the plan ledger (only the overrun explains
+ * the gap); their sum is reported as planned transition time.
+ */
+function withoutAllowance(found: Candidates): Candidates & { planned: Dec } {
+  const allowance = found.lines.filter(
+    (l) => l.kind === 'transition_allowance',
+  );
+  return {
+    lines: found.lines.filter((l) => l.kind !== 'transition_allowance'),
+    flags:
+      allowance.length > 0
+        ? [...found.flags, TRANSITION_ALLOWANCE_PLANNED]
+        : found.flags,
+    planned: sumOf(allowance.map((l) => l.quantity)),
+  };
+}
+
 function planLedgerTotals(
   slice: SliceInput,
-  found: Candidates,
+  found: Candidates & { planned: Dec | null },
   plan: PlanTotals & { target: Dec },
 ): LedgerTotals {
   const production = productionOf(slice);
@@ -157,7 +184,44 @@ function planLedgerTotals(
     residual: plan.residual,
     overproduction: plan.overproduction,
     overAccounted: plan.overAccounted,
+    plannedTransition: found.planned,
   };
+}
+
+const PLAN_LINE = (slice: SliceInput): LineContext => ({
+  ledger: 'plan',
+  sliceId: slice.sliceId,
+  uom: slice.uom,
+  basis: 'planning',
+});
+
+/**
+ * The plan ledger's candidate lines of a slice (time-phased plans only) at the planned rate; with
+ * `transitionAllowanceInPlan = planned` the standard transition time is not eligible plan time and the
+ * allowance lines are reported, not attributed. `ctx.segments` are the slice's segments, unscaled.
+ */
+function planCandidates(
+  ctx: SliceContext,
+  target: Dec,
+): Candidates & { planned: Dec | null } {
+  const eligible = ctx.segments.filter((s) => !s.excluded);
+  const allowanceInPlan = ctx.input.policy.transitionAllowanceInPlan ?? 'loss';
+  if (!eligible.every((s) => s.planning !== null))
+    return { lines: [], flags: ['plan_allocation_required'], planned: null };
+  const deducted =
+    allowanceInPlan === 'planned'
+      ? standardTransitionCapacity(
+          eligible,
+          'planning',
+          transitionScope(ctx.input, ctx.slice),
+        )
+      : ZERO;
+  const planned = plannedSegments(eligible, target, deducted);
+  const found = candidates({ ...ctx, segments: planned.segments });
+  if (planned.scaled) found.flags.push(PLANNED_RATE_SCALED);
+  return allowanceInPlan === 'planned'
+    ? withoutAllowance(found)
+    : { ...found, planned: null };
 }
 
 /**
@@ -183,24 +247,8 @@ export function planLedger(
       totals: emptyTotals(slice, 'plan', ['no_plan_target']),
     };
   }
-  const line: LineContext = {
-    ledger: 'plan',
-    sliceId: slice.sliceId,
-    uom: slice.uom,
-    basis: 'planning',
-  };
-  const timePhased = segments
-    .filter((s) => !s.excluded)
-    .every((s) => s.planning !== null);
-  const planned = plannedSegments(
-    segments.filter((s) => !s.excluded),
-    target,
-  );
-  const ctx = contextOf(input, slice, planned.segments, line, pool);
-  const found = timePhased
-    ? candidates(ctx)
-    : { lines: [], flags: ['plan_allocation_required'] };
-  if (timePhased && planned.scaled) found.flags.push(PLANNED_RATE_SCALED);
+  const ctx = contextOf(input, slice, segments, PLAN_LINE(slice), pool);
+  const found = planCandidates(ctx, target);
   const attributed = sumOf(found.lines.map((l) => l.quantity));
   const plan = planTotals({
     target,
@@ -210,7 +258,7 @@ export function planLedger(
   });
   const lines = [...found.lines];
   if (plan.residual)
-    lines.push(sliceLine('residual', plan.residual, slice, line));
+    lines.push(sliceLine('residual', plan.residual, slice, ctx.line));
   const totals = planLedgerTotals(slice, found, { ...plan, target });
   return { lines, issues: [], totals };
 }

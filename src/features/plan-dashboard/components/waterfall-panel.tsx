@@ -53,6 +53,11 @@ export function WaterfallPanel({ periodId, ledger, view }: WaterfallPanelProps) 
                 ))}
               </tbody>
             </table>
+            {data.plannedTransition !== null && (
+              <p className="text-xs text-muted-foreground" data-testid="waterfall-planned-transition">
+                Planned grade transition (within standard, already in the plan target): <Quantity value={data.plannedTransition} uom={data.uom} /> — not a loss
+              </p>
+            )}
             {data.excluded.length > 0 && <p className="text-xs text-muted-foreground">Excluded: {data.excluded.map((e) => humanize(e.reason)).join(', ')}</p>}
           </>
         )}

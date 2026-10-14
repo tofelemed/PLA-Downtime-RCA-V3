@@ -5,6 +5,7 @@
  */
 import { randomUUID } from 'crypto';
 import { Client } from 'pg';
+import { ensureDemoTransitionPolicy } from './demo-oee-policy';
 import { DEMO_PLANT_UNIT_CODES, PlantKey } from './persona-catalog';
 
 export interface PlantRow {
@@ -196,6 +197,8 @@ export async function ensureDemoWorld(
     );
   }
   await copyFeatureFlags(client, plants.demoPlant, plants.demoPlant2, summary);
+  // the showcase history with grade transitions lives in the Demo Plant (LA-08)
+  await ensureDemoTransitionPolicy(client, plants.demoPlant, summary);
   return { organizations, plants, units };
 }
 
