@@ -76,12 +76,14 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     await page.goto('/rca');
     await expect(page.getByTestId('rca-v2')).toBeVisible({ timeout: 60_000 });
     await page.getByTestId('new-case').click();
-    const dialog = page.getByTestId('create-case-dialog');
-    await expect(dialog.getByRole('button', { name: 'Create case' })).toBeDisabled();
-    await dialog.locator('#case-title').fill(`${PREFIX}validation-${suffix}`);
-    await dialog.locator('#case-description').fill('Case opened to exercise the validation errors of the action form');
-    await dialog.getByRole('button', { name: 'Create case' }).click();
-    await expect(page.getByTestId('case-title')).toHaveText(`${PREFIX}validation-${suffix}`);
+    // a new case is its own page (/rca/new)
+    const fields = page.getByTestId('new-case-fields');
+    const create = page.getByTestId('create-case');
+    await expect(create).toBeDisabled();
+    await fields.locator('#case-title').fill(`${PREFIX}validation-${suffix}`);
+    await fields.locator('#case-description').fill('Case opened to exercise the validation errors of the action form');
+    await create.click();
+    await expect(page.getByRole('heading', { name: `${PREFIX}validation-${suffix}`, level: 1 })).toBeVisible({ timeout: 30_000 }); // the case title is the page heading
     await expect(page.getByTestId('case-status')).toHaveText('Draft');
 
     await page.getByTestId('tab-actions').click();
@@ -90,7 +92,7 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     await form.locator('#action-window-start').fill(day(-5));
     await form.locator('#action-window-end').fill(day(-20));
     await page.getByTestId('add-action').click();
-    const error = page.getByTestId('command-error');
+    const error = page.getByTestId('rca-refusal');
     await expect(error).toBeVisible();
     await expect(error).toContainText(/verification ?window/i);
     await page.screenshot({ path: test.info().outputPath('v1-action-validation.png'), fullPage: true });
@@ -99,8 +101,8 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     await form.locator('#action-window-end').fill('');
     await form.locator('#action-window-start').fill('');
     await page.getByTestId('add-action').click();
-    await expect(page.getByTestId('command-error')).toBeVisible();
-    await expect(page.getByTestId('command-error')).toContainText(/claimedCurrency|currency/i);
+    await expect(page.getByTestId('rca-refusal')).toBeVisible();
+    await expect(page.getByTestId('rca-refusal')).toContainText(/claimedCurrency|currency/i);
   });
 
   test('P1 (leila): the case survives a fresh login and matches the API', async ({ page }) => {
@@ -110,7 +112,7 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     expect(found.body.items[0].status).toBe('Draft');
     await uiLogin(page, REL_USERS.leila);
     await openCase(page, found.body.items[0].id);
-    await expect(page.getByTestId('case-title')).toHaveText(`${PREFIX}validation-${suffix}`);
+    await expect(page.getByRole('heading', { name: `${PREFIX}validation-${suffix}`, level: 1 })).toBeVisible({ timeout: 30_000 }); // the case title is the page heading
     await expect(page.locator('#edit-description')).toHaveValue('Case opened to exercise the validation errors of the action form');
     await page.getByTestId('tab-actions').click();
     await expect(page.getByTestId('action-row')).toHaveCount(0); // the refused actions were never stored
