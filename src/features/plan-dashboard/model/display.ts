@@ -41,6 +41,7 @@ export const FLAG_LABELS: Readonly<Record<string, string>> = {
   no_transition_standard: 'No approved transition standard for this grade change',
   trip_recovery: 'Ramp-up / start-up after a trip (charged to the trip)',
   'quality_class:transition_off_grade': 'Transition off-grade',
+  transition_allowance_planned: 'Grade transition within standard is planned time (in the plan target)',
 };
 
 /** Residual states that block submission (ACC10) and are shown in red. */
