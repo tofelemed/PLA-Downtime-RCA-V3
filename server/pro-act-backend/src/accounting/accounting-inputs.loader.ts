@@ -41,6 +41,7 @@ interface EventRow {
   impact_code_id: string | null;
   failure_mode: string | null;
   asset_id: string | null;
+  planned_end_time: Date | null;
   row_version: number;
   revision_id: string | null;
   revision: number | null;
@@ -66,7 +67,8 @@ interface InstanceRow {
 
 export const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", e."start_time", e."end_time", e."schedule_class",
        e."oee_component", e."impact_mode", e."impact_fraction"::text AS "impact_fraction", e."quantity"::text AS "quantity",
-       e."reason_code_id", e."impact_code_id", e."failure_mode", e."asset_id", e."row_version", r."id" AS "revision_id", r."revision"
+       e."reason_code_id", e."impact_code_id", e."failure_mode", e."asset_id", e."planned_end_time", e."row_version",
+       r."id" AS "revision_id", r."revision"
   FROM "production_events" e
   LEFT JOIN LATERAL (SELECT er."id", er."revision" FROM "event_revisions" er WHERE er."event_id" = e."id"
                       ORDER BY er."revision" DESC LIMIT 1) r ON true
@@ -112,6 +114,7 @@ function toEvent(row: EventRow): LossEvent {
     impactCodeId: row.impact_code_id,
     failureMode: row.failure_mode,
     assetId: row.asset_id,
+    plannedEnd: row.planned_end_time ? new Date(row.planned_end_time) : null,
   };
 }
 

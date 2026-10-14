@@ -42,11 +42,11 @@ export function stopKindOf(
 function secondsWhere(
   allocated: readonly CauseSeconds[],
   input: DowntimeInput,
-  keep: (event: LossEvent, kind: StopKind) => boolean,
+  keep: (part: CauseSeconds, kind: StopKind) => boolean,
 ): Dec {
   return sum(
     allocated
-      .filter((a) => keep(a.event, stopKindOf(input, a.event.occurrenceId)))
+      .filter((a) => keep(a, stopKindOf(input, a.event.occurrenceId)))
       .map((a) => a.seconds),
   );
 }
@@ -64,7 +64,8 @@ function durationKpis(
     secondsWhere(
       allocated,
       input,
-      (e, kind) => kind === 'availability' && e.scheduleClass === scheduleClass,
+      (part, kind) =>
+        kind === 'availability' && part.scheduleClass === scheduleClass,
     );
   const total = sum(allocated.map((a) => a.seconds));
   const at = (metric: KpiDraft['metric']) => ({ metric, scope: PERIOD });
@@ -77,6 +78,15 @@ function durationKpis(
     }),
     amountKpi(at('downtime_planned'), stops('planned')),
     amountKpi(at('downtime_unplanned'), stops('unplanned')),
+    amountKpi(
+      at('downtime_maintenance_overrun'),
+      secondsWhere(
+        allocated,
+        input,
+        (part, kind) => kind === 'availability' && part.overrun,
+      ),
+      { cohort: { meaning: 'planned stops past their approved window (part of unplanned)' } },
+    ),
     amountKpi(at('downtime_external'), stops('external'), {
       cohort: { within: 'period_window' },
     }),
@@ -92,7 +102,7 @@ function durationKpis(
     }),
     amountKpi(
       at('microstop_time'),
-      secondsWhere(allocated, input, (_e, kind) => kind === 'micro'),
+      secondsWhere(allocated, input, (_part, kind) => kind === 'micro'),
     ),
   ];
 }

@@ -48,7 +48,7 @@ function Field({ id, label, error, hint, children }: FieldProps) {
 const SELECT_CLASS = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 
 interface PlantTimeFieldProps {
-  field: 'startLocal' | 'endLocal';
+  field: 'startLocal' | 'endLocal' | 'plannedEndLocal';
   label: string;
   form: EventFormState;
 }
@@ -106,6 +106,9 @@ export function EventFormFields({ form, mode }: { form: EventFormState; mode: 'c
         </select>
       </Field>
       <ImpactFields form={form} />
+      {values.physicalType === 'downtime' && values.scheduleClass === 'planned' && (
+        <PlantTimeField field="plannedEndLocal" label="Approved planned end (time after it is overrun)" form={form} />
+      )}
       <OriginFields form={form} />
       <div className="sm:col-span-2">
         <ReasonCodeSelect id="reasonCodeId" value={values.reasonCodeId} onChange={(value) => setField('reasonCodeId', value)} error={errors.reasonCodeId} />

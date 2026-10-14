@@ -37,6 +37,7 @@ import { EventRevisionService } from '../../production-event/revisions/event-rev
 import { actorFromContext } from '../../production-event/revisions/revision-actor';
 import { RuleClassificationService } from '../../rules/rule-classification.service';
 import { EventReferencesValidator } from './event-references.validator';
+import { assertPlannedEnd, plannedEndColumn } from './planned-end';
 import {
   CreateProductionEventV2Dto,
   PatchProductionEventV2Dto,
@@ -79,6 +80,7 @@ export class ProductionEventsV2CommandService {
       source: MANUAL_SOURCE,
     });
     assertImpact(fields, dto.impactFraction);
+    assertPlannedEnd(fields.startTime, dto.plannedEndTime);
     assertWrittenNotInFuture(fields, this.clock.now());
     const id = randomUUID();
     const event = this.events.create({
@@ -292,6 +294,12 @@ function patchColumns(
       ? locked.impactFraction
       : dto.impactFraction,
   );
+  assertPlannedEnd(
+    fields.startTime,
+    dto.plannedEndTime === undefined
+      ? locked.plannedEndTime
+      : dto.plannedEndTime,
+  );
   return { ...editableColumns(dto), ...fields } as Partial<ProductionEvent>;
 }
 
@@ -331,6 +339,7 @@ function editableColumns(
     quantityUom: dto.quantityUom,
     cost: dto.cost,
     impactFraction: dto.impactFraction,
+    plannedEndTime: plannedEndColumn(dto.plannedEndTime),
   };
   return Object.fromEntries(
     Object.entries(columns).filter(([, value]) => value !== undefined),

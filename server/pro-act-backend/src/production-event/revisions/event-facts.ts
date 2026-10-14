@@ -69,6 +69,7 @@ export const CODING_FIELDS = [
   'reasonCodeId',
   'originUnitId',
   'originAssetId',
+  'plannedEndTime',
   'impactCodeId',
   'oeeCodeId',
   'scheduleClass',
@@ -108,7 +109,11 @@ export const OVERRIDABLE_FIELDS: readonly string[] = unique([
   'impactMode',
 ]);
 
-const DATE_FIELDS: ReadonlySet<string> = new Set(['startTime', 'endTime']);
+const DATE_FIELDS: ReadonlySet<string> = new Set([
+  'startTime',
+  'endTime',
+  'plannedEndTime',
+]);
 const NUMERIC_FIELDS: ReadonlySet<string> = new Set([
   'quantity',
   'cost',

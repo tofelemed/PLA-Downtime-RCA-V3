@@ -111,6 +111,15 @@ describe('event form (plan 3.2 step 3)', () => {
     });
   });
 
+  it('SME D4: the approved planned end is sent on the plant clock as UTC and cleared with null on edit', () => {
+    const planned = { ...values, scheduleClass: 'planned', plannedEndLocal: '2026-10-09T10:00' };
+    expect(toCreateBody(planned, TEHRAN)).toMatchObject({ plannedEndTime: '2026-10-09T06:30:00.000Z' });
+    expect(toCreateBody(values, TEHRAN)).not.toHaveProperty('plannedEndTime');
+    const initial = { ...planned, durationMinutes: '' };
+    expect(toPatchBody(initial, { ...initial, plannedEndLocal: '' }, TEHRAN)).toEqual({ plannedEndTime: null });
+    expect(validateEventForm({ ...planned, plannedEndLocal: 'not a time' }, 'create', TEHRAN).plannedEndLocal).toBeDefined();
+  });
+
   it('SME D3: the origin unit / asset is sent when chosen and cleared with null on edit', () => {
     expect(toCreateBody({ ...values, originUnitId: 'u2', originAssetId: 'a9' }, TEHRAN)).toMatchObject({ originUnitId: 'u2', originAssetId: 'a9' });
     expect(toCreateBody(values, TEHRAN)).not.toHaveProperty('originUnitId');

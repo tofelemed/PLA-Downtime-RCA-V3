@@ -73,6 +73,11 @@ export interface LossEvent {
   failureMode: string | null;
   /** asset of the event (plan 2.7 breakdowns); absent in 2.5 fixtures */
   assetId?: string | null;
+  /**
+   * SME D4: approved end of a planned stop's window, frozen before the work; time after it is an unplanned
+   * extension of the same stop (maintenance overrun). Null = no approved window recorded.
+   */
+  plannedEnd?: Date | null;
 }
 
 /** The actuals of a slice (2.4 result of the run's actuals run). */

@@ -16856,6 +16856,12 @@
             "nullable": true,
             "description": "0..1, required when impactMode = fractional"
           },
+          "plannedEndTime": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true,
+            "description": "SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun"
+          },
           "description": {
             "type": "object",
             "maxLength": 4000,
@@ -16982,6 +16988,12 @@
             "example": "0.25",
             "nullable": true,
             "description": "0..1, required when impactMode = fractional"
+          },
+          "plannedEndTime": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true,
+            "description": "SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun"
           },
           "description": {
             "type": "object",

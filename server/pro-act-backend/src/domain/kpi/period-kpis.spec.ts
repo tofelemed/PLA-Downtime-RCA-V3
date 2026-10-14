@@ -148,6 +148,44 @@ describe('SME Q5: stopped time versus equivalent downtime', () => {
   });
 });
 
+describe('SME D4: maintenance running past its approved window', () => {
+  it('time after the planned end is unplanned overrun of the same stop, not a new stop', () => {
+    // approved 1 h–4 h, finished at 5 h: 3 h planned + 1 h overrun
+    const all = run(
+      input({
+        events: [
+          event('m', HOUR, 5 * HOUR, {
+            scheduleClass: 'planned',
+            plannedEnd: at(4 * HOUR),
+          }),
+        ],
+      }),
+    );
+    expect(str(period(all, 'downtime_total').value)).toBe(String(4 * HOUR));
+    expect(str(period(all, 'downtime_planned').value)).toBe(String(3 * HOUR));
+    expect(str(period(all, 'downtime_unplanned').value)).toBe(String(HOUR));
+    expect(str(period(all, 'downtime_maintenance_overrun').value)).toBe(
+      String(HOUR),
+    );
+    expect(str(period(all, 'stop_count').value)).toBe('1');
+  });
+
+  it('a planned stop that ends within its window has no overrun', () => {
+    const all = run(
+      input({
+        events: [
+          event('m', HOUR, 3 * HOUR, {
+            scheduleClass: 'planned',
+            plannedEnd: at(4 * HOUR),
+          }),
+        ],
+      }),
+    );
+    expect(str(period(all, 'downtime_maintenance_overrun').value)).toBe('0');
+    expect(str(period(all, 'downtime_planned').value)).toBe(String(2 * HOUR));
+  });
+});
+
 describe('SME D12: share of stopped time coded with a reason', () => {
   it('coded stop seconds over all stop seconds; no stop → no ratio', () => {
     const all = run(

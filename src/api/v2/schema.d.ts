@@ -5004,6 +5004,11 @@ export interface components {
              * @example 0.25
              */
             impactFraction?: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @description SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun
+             */
+            plannedEndTime?: Record<string, never> | null;
             description?: Record<string, never> | null;
             /** @example 12.5 */
             quantity?: Record<string, never> | null;
@@ -5063,6 +5068,11 @@ export interface components {
              * @example 0.25
              */
             impactFraction?: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @description SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun
+             */
+            plannedEndTime?: Record<string, never> | null;
             description?: Record<string, never> | null;
             /** @example 12.5 */
             quantity?: Record<string, never> | null;

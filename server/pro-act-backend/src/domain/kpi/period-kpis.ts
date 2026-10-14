@@ -26,7 +26,7 @@ import { reconciledOee } from './reconciled-oee';
 import { FailureSpan, reliability } from './reliability';
 
 /** Bumped whenever a KPI rule changes (part of the calculation run's engine version and input hash). */
-export const KPI_ENGINE_VERSION = '2.7.2';
+export const KPI_ENGINE_VERSION = '2.7.3';
 
 export interface PeriodKpiInput {
   /** the accounting input of the same run (window, schedule, events, slices, policy, asOf) */

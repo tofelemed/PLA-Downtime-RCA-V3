@@ -44,6 +44,8 @@ export interface ProductionEventV2View {
   /** SME D3: unit / asset whose failure caused this stop; null = the event's own unit */
   originUnitId: string | null;
   originAssetId: string | null;
+  /** SME D4: approved end of a planned stop's window */
+  plannedEndTime: string | null;
   planId: string | null;
   reasonCodeId: string | null;
   rcaId: string | null;
@@ -102,6 +104,9 @@ export function toProductionEventV2View(
     assetId: event.assetId ?? null,
     originUnitId: event.originUnitId ?? null,
     originAssetId: event.originAssetId ?? null,
+    plannedEndTime: event.plannedEndTime
+      ? new Date(event.plannedEndTime).toISOString()
+      : null,
     planId: event.planId ?? null,
     reasonCodeId: event.reasonCodeId ?? null,
     rcaId: event.rcaId ?? null,

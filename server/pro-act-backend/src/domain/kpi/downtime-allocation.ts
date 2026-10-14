@@ -8,6 +8,15 @@ import { BoundedInterval } from '../time/interval-algebra';
 export interface CauseSeconds {
   event: LossEvent;
   seconds: Dec;
+  /** the event's schedule class, `unplanned` for a maintenance overrun piece (SME D4) */
+  scheduleClass: string;
+  /** true after a planned stop's approved end (SME D4) */
+  overrun: boolean;
+}
+
+/** Approved end of a planned stop's window, when the stop has one (SME D4). */
+function plannedEndOf(event: LossEvent): Date | null {
+  return event.scheduleClass === 'planned' ? (event.plannedEnd ?? null) : null;
 }
 
 function cutPoints(
@@ -21,7 +30,10 @@ function cutPoints(
   for (const event of events) {
     const bounded = boundedEvent(event, asOf);
     if (!bounded) continue;
-    for (const time of [bounded.start.getTime(), bounded.end.getTime()]) {
+    const plannedEnd = plannedEndOf(event)?.getTime();
+    const edges = [bounded.start.getTime(), bounded.end.getTime()];
+    if (plannedEnd !== undefined) edges.push(plannedEnd);
+    for (const time of edges) {
       if (time > from && time < to) points.add(time);
     }
   }
@@ -32,7 +44,8 @@ function cutPoints(
  * Downtime time by cause inside a window (KPI05 breakdowns): the window is cut at every stop edge; each
  * piece is shared equally by the occurrences active in it (one cause per occurrence — its earliest active
  * event, as in the 2.5 cause allocation), so split events never add time and the per-cause seconds always
- * add up to the union of the stops.
+ * add up to the union of the stops. A planned stop's approved end is a cut too: time after it is the stop's
+ * unplanned overrun (SME D4).
  */
 export function allocateDowntime(
   events: readonly LossEvent[],
@@ -52,7 +65,14 @@ export function allocateDowntime(
     if (active.length === 0) continue;
     const seconds = secondsBetween(points[i], points[i + 1]);
     for (const cause of causesOf(active, rule)) {
-      result.push({ event: cause.event, seconds: seconds.mul(cause.share) });
+      const plannedEnd = plannedEndOf(cause.event);
+      const overrun = plannedEnd !== null && start >= plannedEnd;
+      result.push({
+        event: cause.event,
+        seconds: seconds.mul(cause.share),
+        scheduleClass: overrun ? 'unplanned' : cause.event.scheduleClass,
+        overrun,
+      });
     }
   }
   return result;

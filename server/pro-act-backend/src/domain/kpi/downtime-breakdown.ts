@@ -37,12 +37,13 @@ function scopeOf(
   input: DowntimeInput,
   event: LossEvent,
   dimension: BreakdownDimension,
+  scheduleClass: string = event.scheduleClass,
 ): KpiScope {
   return {
     level: 'breakdown',
     dimension,
     key: keyOf(event, dimension),
-    scheduleClass: event.scheduleClass,
+    scheduleClass,
     stopKind: stopKindOf(input, event.occurrenceId),
   };
 }
@@ -92,7 +93,11 @@ export function downtimeBreakdown(
   const starting = startingCauses(input);
   for (const dimension of DIMENSIONS) {
     for (const part of allocated) {
-      addTo(seconds, scopeOf(input, part.event, dimension), part.seconds);
+      addTo(
+        seconds,
+        scopeOf(input, part.event, dimension, part.scheduleClass),
+        part.seconds,
+      );
     }
     for (const event of starting) {
       addTo(counts, scopeOf(input, event, dimension), new Dec(1));

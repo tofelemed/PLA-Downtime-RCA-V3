@@ -23,6 +23,12 @@ export const SUMMARY_TILES: readonly TileSpec[] = [
   { metric: 'microstop_time', title: 'Micro-stops', kind: 'duration', note: 'Below the OEE-policy threshold; stay in run time' },
   { metric: 'unknown_time', title: 'Stops not classed planned/unplanned', kind: 'duration', note: 'Stop time whose schedule class is not set yet (not unrecorded time)' },
   {
+    metric: 'downtime_maintenance_overrun',
+    title: 'Maintenance overrun',
+    kind: 'duration',
+    note: 'Planned stops past their approved window (SME D4): counted as unplanned, not as failures',
+  },
+  {
     metric: 'coded_downtime_ratio',
     title: 'Stop time coded',
     kind: 'ratio',

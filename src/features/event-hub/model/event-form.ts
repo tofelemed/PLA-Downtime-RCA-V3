@@ -27,6 +27,8 @@ export interface EventFormValues {
   /** SME D3: unit / asset whose failure caused the stop ('' = this unit) */
   originUnitId: string;
   originAssetId: string;
+  /** SME D4: approved end of a planned stop's window (plant clock); time after it is overrun */
+  plannedEndLocal: string;
 }
 
 export type EventFormField = keyof EventFormValues;
@@ -45,6 +47,7 @@ export const EMPTY_FORM: EventFormValues = {
   impactPercent: '',
   originUnitId: '',
   originAssetId: '',
+  plannedEndLocal: '',
 };
 
 export function formValuesOf(event: ProductionEventView, timezone: string): EventFormValues {
@@ -61,6 +64,7 @@ export function formValuesOf(event: ProductionEventView, timezone: string): Even
     impactPercent: event.classification.impactFraction ? String(Number(event.classification.impactFraction) * 100) : '',
     originUnitId: event.originUnitId ?? '',
     originAssetId: event.originAssetId ?? '',
+    plannedEndLocal: utcToPlantLocal(event.plannedEndTime, timezone),
   };
 }
 
@@ -84,6 +88,7 @@ export function validateEventForm(values: EventFormValues, mode: 'create' | 'edi
   if (!values.startLocal) errors.startLocal = 'Enter the start time';
   else if (!plantLocalToUtc(values.startLocal, timezone)) errors.startLocal = 'Not a valid time';
   if (values.endLocal && !plantLocalToUtc(values.endLocal, timezone)) errors.endLocal = 'Not a valid time';
+  if (values.plannedEndLocal && !plantLocalToUtc(values.plannedEndLocal, timezone)) errors.plannedEndLocal = 'Not a valid time';
   const seconds = minutesToSeconds(values.durationMinutes);
   if (seconds !== null && (Number.isNaN(seconds) || seconds < 0)) errors.durationMinutes = 'Enter minutes (0 or more)';
   if (values.physicalType === 'downtime' && values.impactMode === 'fractional') {
@@ -111,6 +116,8 @@ export function toCreateBody(values: EventFormValues, timezone: string): CreateE
   if (downtime && values.impactMode) body.impactMode = values.impactMode as CreateEventBody['impactMode'];
   if (downtime && values.impactMode === 'fractional') body.impactFraction = fractionOf(values.impactPercent);
   if (values.originUnitId) body.originUnitId = values.originUnitId;
+  const plannedEndTime = values.plannedEndLocal ? plantLocalToUtc(values.plannedEndLocal, timezone) : null;
+  if (plannedEndTime) body.plannedEndTime = plannedEndTime;
   if (values.originAssetId) body.originAssetId = values.originAssetId;
   const description = optional(values.description.trim());
   if (description) body.description = description;
@@ -143,6 +150,9 @@ export function toPatchBody(initial: EventFormValues, values: EventFormValues, t
   if (values.reasonCodeId !== initial.reasonCodeId) changes.reasonCodeId = values.reasonCodeId || null;
   if (values.description !== initial.description) changes.description = values.description.trim() || null;
   if (values.originUnitId !== initial.originUnitId) changes.originUnitId = values.originUnitId || null;
+  if (values.plannedEndLocal !== initial.plannedEndLocal) {
+    changes.plannedEndTime = values.plannedEndLocal ? plantLocalToUtc(values.plannedEndLocal, timezone) : null;
+  }
   if (values.originAssetId !== initial.originAssetId) changes.originAssetId = values.originAssetId || null;
   const impactChanged = values.impactMode !== initial.impactMode || (values.impactMode === 'fractional' && values.impactPercent !== initial.impactPercent);
   if (impactChanged && values.impactMode && values.physicalType === 'downtime') {
@@ -166,6 +176,7 @@ const SERVER_FIELDS: Readonly<Record<string, EventFormField>> = {
   impactFraction: 'impactPercent',
   originUnitId: 'originUnitId',
   originAssetId: 'originAssetId',
+  plannedEndTime: 'plannedEndLocal',
 };
 
 export interface ServerFormErrors {

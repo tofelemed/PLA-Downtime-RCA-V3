@@ -112,6 +112,17 @@ export class ProductionEventV2EditableDto {
   @IsDecimal(DECIMAL)
   impactFraction?: string | null;
 
+  @ApiPropertyOptional({
+    format: 'date-time',
+    nullable: true,
+    description:
+      'SME D4: approved end of a planned stop\'s window; time after it counts as unplanned maintenance overrun',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsISO8601({ strict: true })
+  plannedEndTime?: string | null;
+
   @ApiPropertyOptional({ maxLength: 4000, nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
