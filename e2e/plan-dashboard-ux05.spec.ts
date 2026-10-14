@@ -161,7 +161,8 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await page.selectOption('#manualEvidenceType', 'log'); // SME R11: a stop without an event cites its log
     await page.fill('#manualEvidenceRef', 'shift log line 14');
     await page.getByTestId('manual-line-add').click();
-    await page.route('**/draft-lines', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ code: 'INTERNAL_ERROR', message: 'injected failure', correlationId: 'e2e', retryable: false }) }));
+    const failure = { code: 'INTERNAL_ERROR', message: 'injected failure', correlationId: 'e2e', retryable: false };
+    await page.route('**/draft-lines', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify(failure) }));
     await page.getByTestId('save-lines').click();
     await expect(page.getByTestId('workflow-problem')).toHaveAttribute('data-code', 'INTERNAL_ERROR');
     await expect(page.getByTestId('loss-line-editor')).toHaveAttribute('data-dirty', 'true');
@@ -173,7 +174,13 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
 
     // another session changes an input and recomputes: the run the editor read is no longer current
     const start = world.dayStart + 18 * 3_600_000;
-    await command(manager, '/v2/production-events', { unitId: world.unitId, startTime: new Date(start).toISOString(), endTime: new Date(start + 3_600_000).toISOString(), physicalType: 'downtime', scheduleClass: 'unplanned' });
+    await command(manager, '/v2/production-events', {
+      unitId: world.unitId,
+      startTime: new Date(start).toISOString(),
+      endTime: new Date(start + 3_600_000).toISOString(),
+      physicalType: 'downtime',
+      scheduleClass: 'unplanned',
+    });
     await command(manager, `/v2/production-periods/${world.periods.c}/recompute`, { reason: 'e2e: late stop' });
     await expect.poll(async () => (await reconciliation(manager, world.periods.c)).candidates.length, { timeout: 60_000 }).toBe(1);
     await page.getByTestId('save-lines').click();
