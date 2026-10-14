@@ -37,5 +37,5 @@ describe('dates and numbers go through the plant-aware helpers', () => {
         return RAW.filter((raw) => raw.pattern.test(text)).map((raw) => `${file}: ${raw.name}`);
       });
     expect(offenders).toEqual([]);
-  });
+  }, 30_000); // scans the source tree: slow when the whole suite runs in parallel
 });

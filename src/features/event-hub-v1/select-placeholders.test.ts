@@ -24,5 +24,5 @@ describe('select placeholders (v1 Event Hub crash on a plant without plans)', ()
       .filter((path) => /<SelectItem[^>]*value=(""|''|\{''\}|\{""\})/.test(readFileSync(path, 'utf8')))
       .map((path) => relative(ROOT, path).replace(/\\/g, '/'));
     expect(offenders).toEqual([]);
-  });
+  }, 30_000); // scans the source tree: slow when the whole suite runs in parallel
 });
