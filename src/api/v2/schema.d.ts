@@ -3198,7 +3198,7 @@ export interface paths {
         head?: never;
         /**
          * Change a case (nested content replaced as sent)
-         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). Setting status Closed feeds the knowledge base (unpublished entry) and marks linked events RCA completed.
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). The status is not edited here (422 STATUS_VIA_TRANSITION when it differs from the current one): use POST /v2/rcas/{id}/transitions.
          */
         patch: operations["RcaCasesV2Controller_update_v2"];
         trace?: never;
@@ -3217,6 +3217,46 @@ export interface paths {
          * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). 422 NO_TEMPLATE for a case opened without a template.
          */
         post: operations["RcaCasesV2Controller_resetLogicTree_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Next moves of the case and what blocks them (RCA-01 / SME CA1, CA5–CA7)
+         * @description Investigation gate (consequence tier methods, 5-Why evidence, FMEA completeness, actions), closure gate (evidence, verified effectiveness, residual risk), whether you may approve the closure, and the same-problem events linked by the triggers.
+         */
+        get: operations["RcaCasesV2Controller_readiness_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move the case through its workflow (RCA-01 / SME CA1)
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). Draft → In Progress → Analysis → Monitoring (investigation accepted: 422 INVESTIGATION_BLOCKED) → Closure Review (residualRisk; 422 CLOSE_BLOCKED) → Closed. Closure Review → Closed / Monitoring and Closed → Analysis are decided by a manager approver who did not open, lead, join or request the case (403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES); rejecting and reopening need a note (422 NOTE_REQUIRED). Other moves: 422 INVALID_TRANSITION. Closing feeds the knowledge base and marks linked events RCA completed.
+         */
+        post: operations["RcaCasesV2Controller_transition_v2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3533,6 +3573,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/rca-actions/{id}/baseline-correction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose a correction of the computed baseline, with its reason (SME CA3)
+         * @description Requires `If-Match`. The counted baseline is kept; the correction counts once someone else approves it. 409 BASELINE_NOT_COMPUTED for a baseline typed before CA3 or without a verification plan.
+         */
+        post: operations["RcaActionsV2Controller_proposeCorrection_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-actions/{id}/baseline-correction/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve or reject a proposed baseline correction (SME CA3)
+         * @description Requires `If-Match`. Manager approver other than the proposer (403 SEPARATION_OF_DUTIES); 409 NO_PENDING_CORRECTION. Approving clears the verification result so the action is evaluated again.
+         */
+        post: operations["RcaActionsV2Controller_decideCorrection_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/rca-recommendations": {
         parameters: {
             query?: never;
@@ -3582,7 +3662,7 @@ export interface paths {
         };
         /**
          * Search knowledge entries of your scope (newest first)
-         * @description Filters: q (title, root cause, problem, description), unit, asset (entry or a linked event), reason code of a linked event, published, created from/to (half-open). qualityScore (0–100) is computed on the server: root cause 30, problem statement 15, a recommendation 10, a tracked action 10, share of non-cancelled actions done × 10, unit or asset 10, linked case 5, helpful share of votes × 10 (0 without votes); `quality` lists the parts.
+         * @description Filters: q (title, root cause, problem, description), unit, asset (entry or a linked event), reason code of a linked event, published, created from/to (half-open). qualityScore (0–100) is computed on the server: root cause 30, problem statement 15, a recommendation 10, a tracked action 10, source case verified effective 10 (done actions alone earn nothing, RCA-08), unit or asset 10, linked case 5, helpful share of votes × 10 (0 without votes); `quality` lists the parts.
          */
         get: operations["RcaKnowledgeV2Controller_list_v2"];
         put?: never;
@@ -3605,6 +3685,26 @@ export interface paths {
          * @description Entries whose case is already linked to the event are left out. Foreign or out-of-scope events are 404.
          */
         get: operations["RcaKnowledgeV2Controller_similar_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-knowledge/shared": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lessons other plants of your organization shared (read-only, SME CA9)
+         * @description Lessons shared by other plants of your organization. Check process chemistry, operating envelope and design fit, and use your own change control before copying a modification (SME CA9). Redacted to the lesson (no people, assets, cases or events); newest first, keyset pages.
+         */
+        get: operations["RcaKnowledgeV2Controller_shared_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3664,6 +3764,46 @@ export interface paths {
          * @description Reliability engineer or manager approver (unit-limited grants: entries of their units). Requires `Idempotency-Key` and `If-Match` (428/412); asking for the current state changes nothing.
          */
         post: operations["RcaKnowledgeV2Controller_publish_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-knowledge/{id}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Share a published lesson with the other plants of the organization (SME CA9)
+         * @description Manager approver. Requires `Idempotency-Key` and `If-Match`. Other plants read the lesson with its status (verified practice only after effectiveness approval; caution for an unsuccessful fix). 409 NOT_PUBLISHED.
+         */
+        post: operations["RcaKnowledgeV2Controller_share_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-knowledge/{id}/unshare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop sharing a lesson with other plants
+         * @description Manager approver.
+         */
+        post: operations["RcaKnowledgeV2Controller_unshare_v2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4371,7 +4511,7 @@ export interface paths {
         };
         /**
          * The RCA trigger policy in force now (unit override, else tenant-wide)
-         * @description Without unitId the tenant-wide version. A tenant without any version gets the D13 default (3600 s, 3 failures in 30 days, recommend, no cost trigger) as version 1 on first read. unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE).
+         * @description Without unitId the tenant-wide version. A tenant without any version gets the default (SME D17 pilot: 2 h, 1 % of the daily plan, 3 same-mode incidents in 30 days, critical assets halved, no money limit; recommend) as version 1 on first read. unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE).
          */
         get: operations["RcaPoliciesV2Controller_current_v2"];
         put?: never;
@@ -4397,7 +4537,7 @@ export interface paths {
         put?: never;
         /**
          * Record a new approved RCA trigger policy version, effective now
-         * @description Requires `Idempotency-Key`. Version n+1 of the scope (tenant-wide, or the unit override); the previous open version of the same scope ends now. The tenant-wide policy needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); 422 INVALID_POLICY when the body breaks the rca_policy contract.
+         * @description Requires `Idempotency-Key`. Version n+1 of the scope (tenant-wide, or the unit override); options left out keep the values of the version in force; the previous open version of the same scope ends now. The tenant-wide policy needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); 422 INVALID_POLICY when the body breaks the rca_policy contract.
          */
         post: operations["RcaPoliciesV2Controller_create_v2"];
         delete?: never;
@@ -6380,10 +6520,15 @@ export interface components {
             title: string;
             description?: Record<string, never> | null;
             /**
-             * @description Draft when omitted
+             * @description Draft when omitted; a case opens as Draft or In Progress (422 INVALID_STATUS otherwise). On PATCH only the current status is accepted: moves go through POST /v2/rcas/{id}/transitions (422 STATUS_VIA_TRANSITION).
              * @enum {string}
              */
-            status?: "Draft" | "In Progress" | "Analysis" | "Published" | "Closed";
+            status?: "Draft" | "In Progress" | "Analysis" | "Published" | "Monitoring" | "Closure Review" | "Closed";
+            /**
+             * @description SME CA7 actual or potential consequence (minor / significant / major) → investigation tier
+             * @enum {string|null}
+             */
+            consequenceClass?: "minor" | "significant" | "major" | null;
             /**
              * @description Medium when omitted
              * @enum {string}
@@ -6408,10 +6553,15 @@ export interface components {
             title?: string;
             description?: Record<string, never> | null;
             /**
-             * @description Draft when omitted
+             * @description Draft when omitted; a case opens as Draft or In Progress (422 INVALID_STATUS otherwise). On PATCH only the current status is accepted: moves go through POST /v2/rcas/{id}/transitions (422 STATUS_VIA_TRANSITION).
              * @enum {string}
              */
-            status?: "Draft" | "In Progress" | "Analysis" | "Published" | "Closed";
+            status?: "Draft" | "In Progress" | "Analysis" | "Published" | "Monitoring" | "Closure Review" | "Closed";
+            /**
+             * @description SME CA7 actual or potential consequence (minor / significant / major) → investigation tier
+             * @enum {string|null}
+             */
+            consequenceClass?: "minor" | "significant" | "major" | null;
             /**
              * @description Medium when omitted
              * @enum {string}
@@ -6431,6 +6581,14 @@ export interface components {
             logicTree?: components["schemas"]["RcaLogicNodeDto"][];
             teamCharter?: Record<string, never> | null;
             eventDiagram?: components["schemas"]["RcaEventDiagramDto"] | null;
+        };
+        RcaCaseTransitionV2Dto: {
+            /** @enum {string} */
+            to: "Draft" | "In Progress" | "Analysis" | "Published" | "Monitoring" | "Closure Review" | "Closed";
+            /** @description Required to reject a closure, reopen a case or go back from Monitoring (min 5 characters) */
+            note?: string;
+            /** @description SME CA1 disposition of the residual risk; required to request closure (Monitoring → Closure Review) */
+            residualRisk?: string;
         };
         RcaLinkV2CreateDto: {
             /** @enum {string} */
@@ -6469,14 +6627,16 @@ export interface components {
         FmeaEffectDto: {
             id: string;
             description: string;
-            severity: number;
+            severity?: Record<string, never> | null;
             currentControls: string;
-            detection: number;
+            detection?: Record<string, never> | null;
         };
         FmeaCauseDto: {
             id: string;
             description: string;
-            occurrence: number;
+            occurrence?: Record<string, never> | null;
+            detection?: Record<string, never> | null;
+            detectionControl?: Record<string, never> | null;
             recommendedActions?: string[];
         };
         FmeaV2Dto: {
@@ -6532,12 +6692,20 @@ export interface components {
             create?: components["schemas"]["RcaCaseV2CreateDto"];
             reason?: string;
         };
+        RcaCompletionAttachmentDto: {
+            /** @description fileName returned by the case attachment upload */
+            fileName: string;
+            name: string;
+        };
         RcaActionBaselineDto: {
             /** @enum {string} */
             metric: "recurrences" | "downtime_seconds";
-            /** @description Baseline window length in days */
-            windowDays: number;
-            /** @description Declared value (decimal string). Omitted: the server counts it over the windowDays before the verification window */
+            /** @description Lookback in days before the verification window; omitted = the policy lookback (CA3: 90) */
+            windowDays?: number;
+            /**
+             * @deprecated
+             * @description Refused since CA3 (422 BASELINE_DECLARED): the server computes the baseline from history; propose a correction instead
+             */
             value?: string;
         };
         RcaActionV2CreateDto: {
@@ -6550,7 +6718,15 @@ export interface components {
              * @enum {string}
              */
             status?: "open" | "in_progress" | "done" | "cancelled";
-            /** @description Where the completion evidence is (document, work order, photo reference) */
+            /**
+             * @description CA4: what kind of action (decides the evidence expected); required to mark it done
+             * @enum {string|null}
+             */
+            actionType?: "repair" | "design_change" | "procedure_change" | "instrument_change" | "training" | "other" | null;
+            /** @description CA4 completion date (defaults to now when marked done; never in the future) */
+            completedAt?: Record<string, never> | null;
+            completionAttachments?: components["schemas"]["RcaCompletionAttachmentDto"][];
+            /** @description CA4 objective evidence: work order, test report, drawing / procedure revision, calibration record */
             completionEvidenceRef?: Record<string, never> | null;
             verificationWindowStart?: Record<string, never> | null;
             verificationWindowEnd?: Record<string, never> | null;
@@ -6570,7 +6746,15 @@ export interface components {
              * @enum {string}
              */
             status?: "open" | "in_progress" | "done" | "cancelled";
-            /** @description Where the completion evidence is (document, work order, photo reference) */
+            /**
+             * @description CA4: what kind of action (decides the evidence expected); required to mark it done
+             * @enum {string|null}
+             */
+            actionType?: "repair" | "design_change" | "procedure_change" | "instrument_change" | "training" | "other" | null;
+            /** @description CA4 completion date (defaults to now when marked done; never in the future) */
+            completedAt?: Record<string, never> | null;
+            completionAttachments?: components["schemas"]["RcaCompletionAttachmentDto"][];
+            /** @description CA4 objective evidence: work order, test report, drawing / procedure revision, calibration record */
             completionEvidenceRef?: Record<string, never> | null;
             verificationWindowStart?: Record<string, never> | null;
             verificationWindowEnd?: Record<string, never> | null;
@@ -6579,6 +6763,16 @@ export interface components {
             claimedAvoidedLoss?: Record<string, never> | null;
             /** @enum {string|null} */
             claimedCurrency?: "IRR" | "USD" | null;
+        };
+        RcaBaselineCorrectionDto: {
+            /** @description Corrected metric value over the same exposure (decimal string) */
+            value: string;
+            /** @description Why the counted data is wrong */
+            reason: string;
+        };
+        RcaBaselineDecisionDto: {
+            approve: boolean;
+            note?: string;
         };
         RcaRecommendationDismissV2Dto: {
             reason: string;
@@ -6905,6 +7099,21 @@ export interface components {
             logoContainerPadding?: number;
             logoBackgroundOpacity?: number;
         };
+        RcaCriticalAssetsDto: {
+            criticalities: string[];
+            /** @description 0.5 = thresholds halved */
+            thresholdFactor: number;
+        };
+        RcaCumulativeDto: {
+            windowDays: number;
+            downtimeSeconds: number;
+        };
+        RcaConsequenceDto: {
+            /** @description production_events.sol_type values, e.g. Safety */
+            solTypes: string[];
+            /** @description production_events.severity values, e.g. Critical */
+            severities: string[];
+        };
         RcaPolicyCreateDto: {
             /**
              * Format: uuid
@@ -6923,6 +7132,37 @@ export interface components {
             autoCreate: "recommend" | "create";
             /** @description Approved valued impact at or above this fires the cost trigger; null disables it */
             costThreshold?: Record<string, never> | null;
+            /**
+             * @description Currency of costThreshold (required with it; finance sets both, D17)
+             * @enum {string|null}
+             */
+            costCurrency?: "IRR" | "USD" | null;
+            /** @description D17: approved lost quantity of one event at or above this share of the unit daily plan fires (0.01 = 1 %); null off */
+            lostQuantityShareOfDailyPlan?: Record<string, never> | null;
+            /**
+             * @description CA8 repeat identity (asset; asset + failure mode; + mechanism)
+             * @enum {string}
+             */
+            repeatMatch?: "asset" | "asset_and_mode" | "asset_mode_and_mechanism";
+            criticalAssets?: components["schemas"]["RcaCriticalAssetsDto"];
+            cumulative?: components["schemas"]["RcaCumulativeDto"] | null;
+            consequence?: components["schemas"]["RcaConsequenceDto"];
+            /** @description CA2/CA3 effectiveness rules (contracts/policies/rca_policy.schema.json; checked by the server parser, 422 INVALID_POLICY) */
+            effectiveness?: {
+                [key: string]: unknown;
+            };
+            /** @description CA5 FMEA rules: method, rpnThreshold, severityReview, priorityRules */
+            fmea?: {
+                [key: string]: unknown;
+            };
+            /** @description CA6 5-Why rules: guidelineLevels, minLevels, evidencePerLevel, unsupportedRootCauses */
+            fiveWhy?: {
+                [key: string]: unknown;
+            };
+            /** @description CA7 investigation tiers per consequence class: methodGroups, minTeamMembers */
+            investigation?: {
+                [key: string]: unknown;
+            };
             notes?: string;
         };
         UnitV2CreateDto: {
@@ -11823,7 +12063,7 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
-                status?: "Draft" | "In Progress" | "Analysis" | "Published" | "Closed";
+                status?: "Draft" | "In Progress" | "Analysis" | "Published" | "Monitoring" | "Closure Review" | "Closed";
                 unitId?: string;
                 /** @description Cases with a linked event of this asset (or the case asset) */
                 assetId?: string;
@@ -11985,6 +12225,50 @@ export interface operations {
         requestBody?: never;
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCasesV2Controller_readiness_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCasesV2Controller_transition_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaCaseTransitionV2Dto"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12421,6 +12705,56 @@ export interface operations {
             };
         };
     };
+    RcaActionsV2Controller_proposeCorrection_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaBaselineCorrectionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaActionsV2Controller_decideCorrection_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaBaselineDecisionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RcaActionsV2Controller_listRecommendations_v2: {
         parameters: {
             query?: {
@@ -12532,6 +12866,33 @@ export interface operations {
             };
         };
     };
+    RcaKnowledgeV2Controller_shared_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RcaKnowledgeV2Controller_get_v2: {
         parameters: {
             query?: never;
@@ -12577,6 +12938,50 @@ export interface operations {
         };
     };
     RcaKnowledgeV2Controller_publish_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaKnowledgeV2Controller_share_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaKnowledgeV2Controller_unshare_v2: {
         parameters: {
             query?: never;
             header: {

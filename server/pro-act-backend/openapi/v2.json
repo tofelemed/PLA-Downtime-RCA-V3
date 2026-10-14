@@ -10575,6 +10575,8 @@
                 "In Progress",
                 "Analysis",
                 "Published",
+                "Monitoring",
+                "Closure Review",
                 "Closed"
               ],
               "type": "string"
@@ -10763,7 +10765,7 @@
         ]
       },
       "patch": {
-        "description": "Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). Setting status Closed feeds the knowledge base (unpublished entry) and marks linked events RCA completed.",
+        "description": "Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). The status is not edited here (422 STATUS_VIA_TRANSITION when it differs from the current one): use POST /v2/rcas/{id}/transitions.",
         "operationId": "RcaCasesV2Controller_update_v2",
         "parameters": [
           {
@@ -10878,6 +10880,84 @@
           }
         ],
         "summary": "Replace the logic tree with a fresh copy of the case's template",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rcas/{id}/readiness": {
+      "get": {
+        "description": "Investigation gate (consequence tier methods, 5-Why evidence, FMEA completeness, actions), closure gate (evidence, verified effectiveness, residual risk), whether you may approve the closure, and the same-problem events linked by the triggers.",
+        "operationId": "RcaCasesV2Controller_readiness_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Next moves of the case and what blocks them (RCA-01 / SME CA1, CA5–CA7)",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rcas/{id}/transitions": {
+      "post": {
+        "description": "Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). Draft → In Progress → Analysis → Monitoring (investigation accepted: 422 INVESTIGATION_BLOCKED) → Closure Review (residualRisk; 422 CLOSE_BLOCKED) → Closed. Closure Review → Closed / Monitoring and Closed → Analysis are decided by a manager approver who did not open, lead, join or request the case (403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES); rejecting and reopening need a note (422 NOTE_REQUIRED). Other moves: 422 INVALID_TRANSITION. Closing feeds the knowledge base and marks linked events RCA completed.",
+        "operationId": "RcaCasesV2Controller_transition_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaCaseTransitionV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Move the case through its workflow (RCA-01 / SME CA1)",
         "tags": [
           "v2 · RCA"
         ]
@@ -11639,6 +11719,102 @@
         ]
       }
     },
+    "/api/v2/rca-actions/{id}/baseline-correction": {
+      "post": {
+        "description": "Requires `If-Match`. The counted baseline is kept; the correction counts once someone else approves it. 409 BASELINE_NOT_COMPUTED for a baseline typed before CA3 or without a verification plan.",
+        "operationId": "RcaActionsV2Controller_proposeCorrection_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaBaselineCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Propose a correction of the computed baseline, with its reason (SME CA3)",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rca-actions/{id}/baseline-correction/decision": {
+      "post": {
+        "description": "Requires `If-Match`. Manager approver other than the proposer (403 SEPARATION_OF_DUTIES); 409 NO_PENDING_CORRECTION. Approving clears the verification result so the action is evaluated again.",
+        "operationId": "RcaActionsV2Controller_decideCorrection_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaBaselineDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve or reject a proposed baseline correction (SME CA3)",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
     "/api/v2/rca-recommendations": {
       "get": {
         "description": "Default state open; filter by events (repeat eventIds) or unit.",
@@ -11792,7 +11968,7 @@
     },
     "/api/v2/rca-knowledge": {
       "get": {
-        "description": "Filters: q (title, root cause, problem, description), unit, asset (entry or a linked event), reason code of a linked event, published, created from/to (half-open). qualityScore (0–100) is computed on the server: root cause 30, problem statement 15, a recommendation 10, a tracked action 10, share of non-cancelled actions done × 10, unit or asset 10, linked case 5, helpful share of votes × 10 (0 without votes); `quality` lists the parts.",
+        "description": "Filters: q (title, root cause, problem, description), unit, asset (entry or a linked event), reason code of a linked event, published, created from/to (half-open). qualityScore (0–100) is computed on the server: root cause 30, problem statement 15, a recommendation 10, a tracked action 10, source case verified effective 10 (done actions alone earn nothing, RCA-08), unit or asset 10, linked case 5, helpful share of votes × 10 (0 without votes); `quality` lists the parts.",
         "operationId": "RcaKnowledgeV2Controller_list_v2",
         "parameters": [
           {
@@ -11948,6 +12124,75 @@
         ]
       }
     },
+    "/api/v2/rca-knowledge/shared": {
+      "get": {
+        "description": "Lessons shared by other plants of your organization. Check process chemistry, operating envelope and design fit, and use your own change control before copying a modification (SME CA9). Redacted to the lesson (no people, assets, cases or events); newest first, keyset pages.",
+        "operationId": "RcaKnowledgeV2Controller_shared_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lessons other plants of your organization shared (read-only, SME CA9)",
+        "tags": [
+          "v2 · RCA knowledge"
+        ]
+      }
+    },
     "/api/v2/rca-knowledge/{id}": {
       "get": {
         "operationId": "RcaKnowledgeV2Controller_get_v2",
@@ -12066,6 +12311,98 @@
           }
         ],
         "summary": "Publish an entry",
+        "tags": [
+          "v2 · RCA knowledge"
+        ]
+      }
+    },
+    "/api/v2/rca-knowledge/{id}/share": {
+      "post": {
+        "description": "Manager approver. Requires `Idempotency-Key` and `If-Match`. Other plants read the lesson with its status (verified practice only after effectiveness approval; caution for an unsuccessful fix). 409 NOT_PUBLISHED.",
+        "operationId": "RcaKnowledgeV2Controller_share_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Share a published lesson with the other plants of the organization (SME CA9)",
+        "tags": [
+          "v2 · RCA knowledge"
+        ]
+      }
+    },
+    "/api/v2/rca-knowledge/{id}/unshare": {
+      "post": {
+        "description": "Manager approver.",
+        "operationId": "RcaKnowledgeV2Controller_unshare_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stop sharing a lesson with other plants",
         "tags": [
           "v2 · RCA knowledge"
         ]
@@ -14948,7 +15285,7 @@
     },
     "/api/v2/rca-policies/current": {
       "get": {
-        "description": "Without unitId the tenant-wide version. A tenant without any version gets the D13 default (3600 s, 3 failures in 30 days, recommend, no cost trigger) as version 1 on first read. unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE).",
+        "description": "Without unitId the tenant-wide version. A tenant without any version gets the default (SME D17 pilot: 2 h, 1 % of the daily plan, 3 same-mode incidents in 30 days, critical assets halved, no money limit; recommend) as version 1 on first read. unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE).",
         "operationId": "RcaPoliciesV2Controller_current_v2",
         "parameters": [
           {
@@ -15030,7 +15367,7 @@
         ]
       },
       "post": {
-        "description": "Requires `Idempotency-Key`. Version n+1 of the scope (tenant-wide, or the unit override); the previous open version of the same scope ends now. The tenant-wide policy needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); 422 INVALID_POLICY when the body breaks the rca_policy contract.",
+        "description": "Requires `Idempotency-Key`. Version n+1 of the scope (tenant-wide, or the unit override); options left out keep the values of the version in force; the previous open version of the same scope ends now. The tenant-wide policy needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); 422 INVALID_POLICY when the body breaks the rca_policy contract.",
         "operationId": "RcaPoliciesV2Controller_create_v2",
         "parameters": [
           {
@@ -20376,9 +20713,21 @@
               "In Progress",
               "Analysis",
               "Published",
+              "Monitoring",
+              "Closure Review",
               "Closed"
             ],
-            "description": "Draft when omitted"
+            "description": "Draft when omitted; a case opens as Draft or In Progress (422 INVALID_STATUS otherwise). On PATCH only the current status is accepted: moves go through POST /v2/rcas/{id}/transitions (422 STATUS_VIA_TRANSITION)."
+          },
+          "consequenceClass": {
+            "type": "string",
+            "enum": [
+              "minor",
+              "significant",
+              "major"
+            ],
+            "nullable": true,
+            "description": "SME CA7 actual or potential consequence (minor / significant / major) → investigation tier"
           },
           "priority": {
             "type": "string",
@@ -20481,9 +20830,21 @@
               "In Progress",
               "Analysis",
               "Published",
+              "Monitoring",
+              "Closure Review",
               "Closed"
             ],
-            "description": "Draft when omitted"
+            "description": "Draft when omitted; a case opens as Draft or In Progress (422 INVALID_STATUS otherwise). On PATCH only the current status is accepted: moves go through POST /v2/rcas/{id}/transitions (422 STATUS_VIA_TRANSITION)."
+          },
+          "consequenceClass": {
+            "type": "string",
+            "enum": [
+              "minor",
+              "significant",
+              "major"
+            ],
+            "nullable": true,
+            "description": "SME CA7 actual or potential consequence (minor / significant / major) → investigation tier"
           },
           "priority": {
             "type": "string",
@@ -20563,6 +20924,36 @@
             ]
           }
         }
+      },
+      "RcaCaseTransitionV2Dto": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "enum": [
+              "Draft",
+              "In Progress",
+              "Analysis",
+              "Published",
+              "Monitoring",
+              "Closure Review",
+              "Closed"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Required to reject a closure, reopen a case or go back from Monitoring (min 5 characters)"
+          },
+          "residualRisk": {
+            "type": "string",
+            "maxLength": 4000,
+            "description": "SME CA1 disposition of the residual risk; required to request closure (Monitoring → Closure Review)"
+          }
+        },
+        "required": [
+          "to"
+        ]
       },
       "RcaLinkV2CreateDto": {
         "type": "object",
@@ -20728,26 +21119,26 @@
             "maxLength": 2000
           },
           "severity": {
-            "type": "number",
+            "type": "object",
             "minimum": 1,
-            "maximum": 10
+            "maximum": 10,
+            "nullable": true
           },
           "currentControls": {
             "type": "string",
             "maxLength": 1000
           },
           "detection": {
-            "type": "number",
+            "type": "object",
             "minimum": 1,
-            "maximum": 10
+            "maximum": 10,
+            "nullable": true
           }
         },
         "required": [
           "id",
           "description",
-          "severity",
-          "currentControls",
-          "detection"
+          "currentControls"
         ]
       },
       "FmeaCauseDto": {
@@ -20762,9 +21153,21 @@
             "maxLength": 2000
           },
           "occurrence": {
-            "type": "number",
+            "type": "object",
             "minimum": 1,
-            "maximum": 10
+            "maximum": 10,
+            "nullable": true
+          },
+          "detection": {
+            "type": "object",
+            "minimum": 1,
+            "maximum": 10,
+            "nullable": true
+          },
+          "detectionControl": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 1000
           },
           "recommendedActions": {
             "maxItems": 20,
@@ -20776,8 +21179,7 @@
         },
         "required": [
           "id",
-          "description",
-          "occurrence"
+          "description"
         ]
       },
       "FmeaV2Dto": {
@@ -21019,6 +21421,24 @@
           }
         }
       },
+      "RcaCompletionAttachmentDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "fileName returned by the case attachment upload"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "fileName",
+          "name"
+        ]
+      },
       "RcaActionBaselineDto": {
         "type": "object",
         "properties": {
@@ -21033,16 +21453,16 @@
             "type": "number",
             "minimum": 1,
             "maximum": 365,
-            "description": "Baseline window length in days"
+            "description": "Lookback in days before the verification window; omitted = the policy lookback (CA3: 90)"
           },
           "value": {
             "type": "string",
-            "description": "Declared value (decimal string). Omitted: the server counts it over the windowDays before the verification window"
+            "deprecated": true,
+            "description": "Refused since CA3 (422 BASELINE_DECLARED): the server computes the baseline from history; propose a correction instead"
           }
         },
         "required": [
-          "metric",
-          "windowDays"
+          "metric"
         ]
       },
       "RcaActionV2CreateDto": {
@@ -21075,11 +21495,35 @@
             ],
             "description": "open when omitted"
           },
+          "actionType": {
+            "type": "string",
+            "enum": [
+              "repair",
+              "design_change",
+              "procedure_change",
+              "instrument_change",
+              "training",
+              "other"
+            ],
+            "nullable": true,
+            "description": "CA4: what kind of action (decides the evidence expected); required to mark it done"
+          },
+          "completedAt": {
+            "type": "object",
+            "nullable": true,
+            "description": "CA4 completion date (defaults to now when marked done; never in the future)"
+          },
+          "completionAttachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RcaCompletionAttachmentDto"
+            }
+          },
           "completionEvidenceRef": {
             "type": "object",
             "nullable": true,
             "maxLength": 2000,
-            "description": "Where the completion evidence is (document, work order, photo reference)"
+            "description": "CA4 objective evidence: work order, test report, drawing / procedure revision, calibration record"
           },
           "verificationWindowStart": {
             "type": "object",
@@ -21145,11 +21589,35 @@
             ],
             "description": "open when omitted"
           },
+          "actionType": {
+            "type": "string",
+            "enum": [
+              "repair",
+              "design_change",
+              "procedure_change",
+              "instrument_change",
+              "training",
+              "other"
+            ],
+            "nullable": true,
+            "description": "CA4: what kind of action (decides the evidence expected); required to mark it done"
+          },
+          "completedAt": {
+            "type": "object",
+            "nullable": true,
+            "description": "CA4 completion date (defaults to now when marked done; never in the future)"
+          },
+          "completionAttachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RcaCompletionAttachmentDto"
+            }
+          },
           "completionEvidenceRef": {
             "type": "object",
             "nullable": true,
             "maxLength": 2000,
-            "description": "Where the completion evidence is (document, work order, photo reference)"
+            "description": "CA4 objective evidence: work order, test report, drawing / procedure revision, calibration record"
           },
           "verificationWindowStart": {
             "type": "object",
@@ -21181,6 +21649,40 @@
             "nullable": true
           }
         }
+      },
+      "RcaBaselineCorrectionDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Corrected metric value over the same exposure (decimal string)"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000,
+            "description": "Why the counted data is wrong"
+          }
+        },
+        "required": [
+          "value",
+          "reason"
+        ]
+      },
+      "RcaBaselineDecisionDto": {
+        "type": "object",
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "approve"
+        ]
       },
       "RcaRecommendationDismissV2Dto": {
         "type": "object",
@@ -22382,6 +22884,68 @@
           "appName"
         ]
       },
+      "RcaCriticalAssetsDto": {
+        "type": "object",
+        "properties": {
+          "criticalities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "thresholdFactor": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "0.5 = thresholds halved"
+          }
+        },
+        "required": [
+          "criticalities",
+          "thresholdFactor"
+        ]
+      },
+      "RcaCumulativeDto": {
+        "type": "object",
+        "properties": {
+          "windowDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 365
+          },
+          "downtimeSeconds": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "windowDays",
+          "downtimeSeconds"
+        ]
+      },
+      "RcaConsequenceDto": {
+        "type": "object",
+        "properties": {
+          "solTypes": {
+            "description": "production_events.sol_type values, e.g. Safety",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "severities": {
+            "description": "production_events.severity values, e.g. Critical",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "solTypes",
+          "severities"
+        ]
+      },
       "RcaPolicyCreateDto": {
         "type": "object",
         "properties": {
@@ -22419,6 +22983,65 @@
             "nullable": true,
             "minimum": 0,
             "description": "Approved valued impact at or above this fires the cost trigger; null disables it"
+          },
+          "costCurrency": {
+            "type": "string",
+            "enum": [
+              "IRR",
+              "USD"
+            ],
+            "nullable": true,
+            "description": "Currency of costThreshold (required with it; finance sets both, D17)"
+          },
+          "lostQuantityShareOfDailyPlan": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 1,
+            "description": "D17: approved lost quantity of one event at or above this share of the unit daily plan fires (0.01 = 1 %); null off"
+          },
+          "repeatMatch": {
+            "type": "string",
+            "enum": [
+              "asset",
+              "asset_and_mode",
+              "asset_mode_and_mechanism"
+            ],
+            "description": "CA8 repeat identity (asset; asset + failure mode; + mechanism)"
+          },
+          "criticalAssets": {
+            "$ref": "#/components/schemas/RcaCriticalAssetsDto"
+          },
+          "cumulative": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RcaCumulativeDto"
+              }
+            ]
+          },
+          "consequence": {
+            "$ref": "#/components/schemas/RcaConsequenceDto"
+          },
+          "effectiveness": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "CA2/CA3 effectiveness rules (contracts/policies/rca_policy.schema.json; checked by the server parser, 422 INVALID_POLICY)"
+          },
+          "fmea": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "CA5 FMEA rules: method, rpnThreshold, severityReview, priorityRules"
+          },
+          "fiveWhy": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "CA6 5-Why rules: guidelineLevels, minLevels, evidencePerLevel, unsupportedRootCauses"
+          },
+          "investigation": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "CA7 investigation tiers per consequence class: methodGroups, minTeamMembers"
           },
           "notes": {
             "type": "string",

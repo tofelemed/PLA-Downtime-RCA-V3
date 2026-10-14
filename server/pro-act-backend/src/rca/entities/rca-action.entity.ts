@@ -61,6 +61,10 @@ export interface StoredPostAction extends PostActionObservation {
   'verificationWindowEnd',
 ])
 @Check(
+  'CHK_rca_actions_action_type',
+  `"action_type" IS NULL OR "action_type" IN ('repair', 'design_change', 'procedure_change', 'instrument_change', 'training', 'other')`,
+)
+@Check(
   'CHK_rca_actions_window',
   '"verification_window_end" IS NULL OR "verification_window_end" > "verification_window_start"',
 )

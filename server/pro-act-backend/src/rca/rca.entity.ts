@@ -1,4 +1,5 @@
 import {
+  Check,
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -15,6 +16,14 @@ import { User } from '../users/user.entity';
 import { RCATemplate } from '../rca-template/rca-template.entity';
 
 @Index('IDX_rcas_tenant_created', ['tenantId', 'createdAt'])
+@Check(
+  'CHK_rcas_consequence_class',
+  `"consequence_class" IS NULL OR "consequence_class" IN ('minor', 'significant', 'major')`,
+)
+@Check(
+  'CHK_rcas_effectiveness_verdict',
+  `"effectiveness_verdict" IS NULL OR "effectiveness_verdict" IN ('effective', 'not_effective', 'insufficient_evidence')`,
+)
 @Entity('rcas')
 export class RCA {
   @PrimaryGeneratedColumn('uuid')
@@ -268,7 +277,7 @@ export class RCA {
    * CA1: everyone who ever opened, led, joined or requested closure of the case — append-only, so leaving
    * the team never makes someone independent of it
    */
-  @Column({ name: 'investigator_ids', type: 'jsonb', default: () => "'[]'::jsonb" })
+  @Column({ name: 'investigator_ids', type: 'jsonb', default: () => "'[]'" })
   investigatorIds: string[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })

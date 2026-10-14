@@ -1,4 +1,5 @@
 import {
+  Check,
   Entity,
   Column,
   PrimaryGeneratedColumn,
@@ -21,6 +22,13 @@ import { ApiProperty } from '@nestjs/swagger';
 @Index('IDX_rca_knowledge_base_tenant_unit', ['tenantId', 'unitId'])
 @Index('IDX_rca_knowledge_base_tenant_asset', ['tenantId', 'assetId'])
 @Index('IDX_rca_knowledge_base_tenant_rca', ['tenantId', 'rcaId'])
+/** CA9 shared lessons, newest first (partial, created by the migration) */
+@Index('IDX_rca_knowledge_base_shared', { synchronize: false })
+@Check('CHK_rca_knowledge_base_share_scope', `"share_scope" IN ('tenant', 'organization')`)
+@Check(
+  'CHK_rca_knowledge_base_lesson_status',
+  `"lesson_status" IS NULL OR "lesson_status" IN ('verified_practice', 'caution', 'unverified')`,
+)
 export class RCAKnowledgeBase {
   @ApiProperty({ description: 'Primary key UUID' })
   @PrimaryGeneratedColumn('uuid')

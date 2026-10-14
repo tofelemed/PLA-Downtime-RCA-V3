@@ -1,5 +1,8 @@
 import { RcaCaseModule } from '../rca-case/rca-case.module';
+import { RcaKnowledgeSharedService } from '../rca-knowledge-base/knowledge-shared.service';
 import { RcaKnowledgeSimilarService } from '../rca-knowledge-base/knowledge-similar.service';
+import { RcaBaselineCorrectionsService } from '../rca-case/rca-baseline-corrections.service';
+import { RcaCaseWorkflowService } from '../rca-case/rca-case-workflow.service';
 import { RcaKnowledgeV2CommandsService } from '../rca-knowledge-base/knowledge-v2-commands.service';
 import { RcaKnowledgeV2Service } from '../rca-knowledge-base/knowledge-v2.service';
 import { RcaKnowledgeModule } from '../rca-knowledge-base/rca-knowledge.module';
@@ -379,6 +382,8 @@ const RCA_SERVICES = [
   RcaLinksService,
   RcaRecommendationsService,
   RcaActionsService,
+  RcaCaseWorkflowService,
+  RcaBaselineCorrectionsService,
 ];
 @Module({
   providers: RCA_SERVICES.map((provide) => ({ provide, useValue: {} })),
@@ -391,6 +396,7 @@ const KNOWLEDGE_SERVICES = [
   RcaKnowledgeV2Service,
   RcaKnowledgeV2CommandsService,
   RcaKnowledgeSimilarService,
+  RcaKnowledgeSharedService,
 ];
 @Module({
   providers: KNOWLEDGE_SERVICES.map((provide) => ({ provide, useValue: {} })),

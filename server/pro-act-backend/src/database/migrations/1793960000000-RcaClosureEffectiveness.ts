@@ -57,7 +57,7 @@ export class RcaClosureEffectiveness1793960000000
          ADD "residual_risk" text, ADD "closure_requested_by" uuid, ADD "closure_requested_at" TIMESTAMP WITH TIME ZONE,
          ADD "closure_approved_by" uuid, ADD "closure_approved_at" TIMESTAMP WITH TIME ZONE, ADD "closure_note" text,
          ADD "effectiveness_verdict" character varying(24),
-         ADD "investigator_ids" jsonb NOT NULL DEFAULT '[]'::jsonb`,
+         ADD "investigator_ids" jsonb NOT NULL DEFAULT '[]'`,
     );
     await queryRunner.query(
       `ALTER TABLE "rcas" ADD CONSTRAINT "CHK_rcas_consequence_class"
