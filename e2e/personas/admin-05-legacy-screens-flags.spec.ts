@@ -16,13 +16,12 @@ import {
 } from './support/admin-helpers';
 
 /**
- * Admin persona — journeys 7 and 8: legacy screens for a flag-off plant, then a flag switch.
- * Partner Plant has every v2 flag off: Lucas (Partner OrgAdmin) sees the v1 Event Hub, creates a v1
- * event there and keeps it, and sees the v1 RCA module and v1 Connectivity. Then Helena switches
- * `v2.eventHub` ON for Partner Plant (there is no screen for flags, so through the API) and the v2
- * hub appears for both users. The flag is left on (owner requirement: never switch a flag off), so a
- * second run of ADM-07 finds the v2 hub and creates the v1 event through the v1 API instead; the v1
- * create dialog (ADM-07b) is then exercised on an "E2E Test Tenant …" plant whose flag is still off.
+ * Admin persona — journeys 7 and 8: one version of every screen whatever the flags say, then a flag switch.
+ * Lucas (Partner OrgAdmin) sees the v2 Event Hub, creates a v1 API event and keeps it, and sees the one
+ * RCA module and Connectivity. Helena switches `v2.eventHub` ON for Partner Plant (there is no screen for
+ * flags, so through the API) without touching its other flags or Demo Org's; an OrgAdmin of another
+ * organisation cannot flip Partner Plant's flags. Flags are left on (owner requirement: never switch a
+ * flag off); a plant whose flag is still off ("E2E Test Tenant …") also gets the v2 hub (ADM-07b).
  */
 interface V1Event {
   id: string;
@@ -136,15 +135,19 @@ test.describe('ADM-08 feature flag switch for Partner Plant', () => {
       'observation',
       'There is no feature-flag screen; the flag is switched through PUT /api/v2/feature-flags/{key} with X-Tenant-Id (plan 3.1 step 5).',
     );
+    // Partner Plant's flags are no longer all off in the demo data (switched on 2026-10-12): the other
+    // flags are read before the switch and must keep their value
+    const rcaBefore = await flagOn(helena.token, PLANTS.partner.id, 'v2.rca');
+    const demoHubBefore = await flagOn(helena.token, PLANTS.demo.id, 'v2.eventHub');
     const switched = await call<{ key: string; enabled: boolean }>(helena.token, 'PUT', '/v2/feature-flags/v2.eventHub', { enabled: true }, {
       'X-Tenant-Id': PLANTS.partner.id,
     });
     expect(switched.status).toBe(200);
     expect(switched.body.enabled).toBe(true);
     expect(await flagOn(helena.token, PLANTS.partner.id, 'v2.eventHub')).toBe(true);
-    // the other Partner Plant flags stay off and Demo Org's plants are untouched
-    expect(await flagOn(helena.token, PLANTS.partner.id, 'v2.rca')).toBe(false);
-    expect(await flagOn(helena.token, PLANTS.demo.id, 'v2.eventHub')).toBe(true);
+    // the other Partner Plant flags and Demo Org's plants are untouched
+    expect(await flagOn(helena.token, PLANTS.partner.id, 'v2.rca')).toBe(rcaBefore);
+    expect(await flagOn(helena.token, PLANTS.demo.id, 'v2.eventHub')).toBe(demoHubBefore);
 
     await signIn(page, USERS.helena);
     await selectPlant(page, PLANTS.partner);
@@ -164,11 +167,13 @@ test.describe('ADM-08 feature flag switch for Partner Plant', () => {
     await signIn(page, USERS.lucas);
     await page.goto('/events');
     await expect(page.getByTestId('event-hub-v2')).toBeVisible({ timeout: 60_000 });
+    const helena = await apiLogin(USERS.helena);
+    const before = await flagOn(helena.token, PLANTS.partner.id, 'v2.rca');
     const isabel = await apiLogin(USERS.isabel);
-    const refused = await call<{ code?: string }>(isabel.token, 'PUT', '/v2/feature-flags/v2.rca', { enabled: true }, { 'X-Tenant-Id': PLANTS.partner.id });
+    // the refused write asks for the opposite of the current value, so a leak would show
+    const refused = await call<{ code?: string }>(isabel.token, 'PUT', '/v2/feature-flags/v2.rca', { enabled: !before }, { 'X-Tenant-Id': PLANTS.partner.id });
     expect(refused.status).toBe(403);
     expect(refused.body.code).toBe('TENANT_NOT_ALLOWED');
-    const helena = await apiLogin(USERS.helena);
-    expect(await flagOn(helena.token, PLANTS.partner.id, 'v2.rca')).toBe(false);
+    expect(await flagOn(helena.token, PLANTS.partner.id, 'v2.rca')).toBe(before);
   });
 });

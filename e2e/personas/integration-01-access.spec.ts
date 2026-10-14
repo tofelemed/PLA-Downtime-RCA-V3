@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { PLANTS, openPlantTree, selectPlant } from './support/admin-helpers';
+import { PLANTS, expandTreeNode, openPlantTree, selectPlant } from './support/admin-helpers';
 import { expectHidden, expectRefused } from './support/hidden-controls';
 import { apiLogin, BROKER, call, command, DEMO_EVENTS_CONNECTION, DEMO_PLANT, DEMO_PLANT_2, findConnection, findOnPages, INT_USERS, newSuffix, NOAH, openConsole, PREFIX, selectConnection, uiLogin } from './support/integration-world';
 
@@ -91,9 +91,8 @@ test.describe('Integration admin — access, cross-plant, refusals', () => {
     await uiLogin(page, INT_USERS.freya);
     // the tree lists organisations; plants show once the organisation is expanded through its chevron
     const tree = await openPlantTree(page);
-    const orgLabel = tree.getByText(PLANTS.demo.org, { exact: true });
-    await expect(orgLabel).toBeVisible();
-    if ((await tree.getByText(PLANTS.demo.name, { exact: true }).count()) === 0) await orgLabel.locator('xpath=..').locator('svg').first().click();
+    await expect(tree.getByText(PLANTS.demo.org, { exact: true })).toBeVisible();
+    await expandTreeNode(tree, PLANTS.demo.org);
     await expect(tree.getByText(PLANTS.demo.name, { exact: true })).toBeVisible();
     await expect(tree.getByText(PLANTS.demo2.name, { exact: true })).toHaveCount(0);
     await expect(tree.getByText(PLANTS.partner.name, { exact: true })).toHaveCount(0);

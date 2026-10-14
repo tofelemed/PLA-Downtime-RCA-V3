@@ -4,7 +4,7 @@ import {
   USERS,
   apiLogin,
   call,
-  flagOn,
+  expandTreeNode,
   note,
   openDialog,
   openPlantTree,
@@ -44,11 +44,8 @@ test.describe('ADM-01 SuperAdmin plant switching', () => {
     test.setTimeout(240_000);
     const helena = await apiLogin(USERS.helena);
     const v2Tenants: string[] = [];
-    const v1EventQueries: string[] = [];
     page.on('request', (request) => {
-      const url = request.url();
-      if (url.includes('/v2/production-events')) v2Tenants.push(request.headers()['x-tenant-id'] ?? '');
-      if (/\/api\/production-events\?/.test(url)) v1EventQueries.push(url);
+      if (request.url().includes('/v2/production-events')) v2Tenants.push(request.headers()['x-tenant-id'] ?? '');
     });
     await signIn(page, USERS.helena);
     for (const plant of ORDER) {
@@ -56,23 +53,14 @@ test.describe('ADM-01 SuperAdmin plant switching', () => {
       expect(ownUnits.length).toBeGreaterThan(0);
       await selectPlant(page, plant);
       await page.goto('/events');
-      if (await flagOn(helena.token, plant.id, 'v2.eventHub')) {
-        await expect(page.getByTestId('event-hub-v2')).toBeVisible({ timeout: 60_000 });
-        await page.getByTestId('filter-units').click();
-        const options = openDialog(page);
-        for (const name of ownUnits.slice(0, 3)) await expect(options.getByText(name, { exact: true })).toBeVisible();
-        await expect(options.getByText(FOREIGN_UNIT[plant.id], { exact: true })).toHaveCount(0);
-        await page.keyboard.press('Escape');
-        await expect.poll(() => v2Tenants.at(-1)).toBe(plant.id);
-      } else {
-        // flags off: the v1 Event Hub, which reads the selected plant's events by tenantId
-        await expect(page.getByRole('heading', { name: 'Event Hub' })).toBeVisible({ timeout: 60_000 });
-        await expect(page.getByTestId('event-hub-v2')).toHaveCount(0);
-        await expect
-          .poll(() => v1EventQueries.some((url) => new URL(url).searchParams.get('tenantId') === plant.id))
-          .toBe(true);
-        note(test.info(), 'observation', `${plant.name}: v1 Event Hub shown (v2.eventHub off); its unit dropdown is not filtered by plant.`);
-      }
+      // one Event Hub (v2) on every plant, whatever v2.eventHub says (7801cae)
+      await expect(page.getByTestId('event-hub-v2')).toBeVisible({ timeout: 60_000 });
+      await page.getByTestId('filter-units').click();
+      const options = openDialog(page);
+      for (const name of ownUnits.slice(0, 3)) await expect(options.getByText(name, { exact: true })).toBeVisible();
+      await expect(options.getByText(FOREIGN_UNIT[plant.id], { exact: true })).toHaveCount(0);
+      await page.keyboard.press('Escape');
+      await expect.poll(() => v2Tenants.at(-1)).toBe(plant.id);
     }
     await page.screenshot({ path: test.info().outputPath('adm-01a-partner-plant.png'), fullPage: true });
   });
@@ -80,14 +68,13 @@ test.describe('ADM-01 SuperAdmin plant switching', () => {
   test('ADM-01b the plant selector tree lists each plant with only its own units', async ({ page }) => {
     await signIn(page, USERS.priya);
     const tree = await openPlantTree(page);
-    await tree.getByText('Demo Org', { exact: true }).locator('xpath=..').locator('svg').first().click();
-    const demo2Row = tree.getByText('Demo Plant 2', { exact: true }).locator('xpath=..');
-    await demo2Row.locator('svg').first().click();
+    await expandTreeNode(tree, 'Demo Org');
+    await expandTreeNode(tree, 'Demo Plant 2');
     await expect(tree.getByText('Line 1', { exact: true })).toBeVisible();
     await expect(tree.getByText('Line 2', { exact: true })).toBeVisible();
     await expect(tree.getByText('Partner Line 1', { exact: true })).toHaveCount(0);
-    await tree.getByText('Partner Org', { exact: true }).locator('xpath=..').locator('svg').first().click();
-    await tree.getByText('Partner Plant', { exact: true }).locator('xpath=..').locator('svg').first().click();
+    await expandTreeNode(tree, 'Partner Org');
+    await expandTreeNode(tree, 'Partner Plant');
     await expect(tree.getByText('Partner Line 1', { exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
   });
@@ -185,7 +172,7 @@ test.describe('ADM-02 OrgAdmin plant isolation', () => {
     await expect(plantTrigger(page)).toContainText('Partner Plant');
     const tree = await openPlantTree(page);
     await expect(tree.getByText('Partner Org', { exact: true })).toBeVisible();
-    await tree.getByText('Partner Org', { exact: true }).locator('xpath=..').locator('svg').first().click();
+    await expandTreeNode(tree, 'Partner Org');
     await expect(tree.getByText('Partner Plant', { exact: true })).toBeVisible();
     await page.screenshot({ path: test.info().outputPath('adm-02b-lucas-selector.png') });
     await expect(tree.getByText('Demo Org', { exact: true })).toHaveCount(0);

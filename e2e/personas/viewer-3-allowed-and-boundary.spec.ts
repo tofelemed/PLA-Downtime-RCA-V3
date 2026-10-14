@@ -4,7 +4,7 @@ import {
   DEMO, DEMO2, DEMO_HEADER, PARTNER, VIEWERS, apiLogin, call, command, loginAsViewerInDemoPlant, note, plantTrigger,
   readOnlyBadge, tag, uiLogin, unitsOf, type ApiErrorBody, type ListBody, type UnitView, type ViewerSession,
 } from './support/viewer-world';
-import { openPlantTree } from './support/admin-helpers';
+import { expandTreeNode, openPlantTree } from './support/admin-helpers';
 
 /**
  * VIEWER persona — journeys 4, 5 and 7.
@@ -116,8 +116,7 @@ test.describe('Viewer — read-only-allowed routes, scope boundary, user lists',
     await uiLogin(page, VIEWERS.nadia);
     const tree = await openPlantTree(page);
     await expect(tree.getByText('Demo Org', { exact: true })).toBeVisible();
-    const demoLabel = tree.getByText('Demo Plant', { exact: true });
-    if ((await demoLabel.count()) === 0) await tree.getByText('Demo Org', { exact: true }).locator('xpath=..').locator('svg').first().click();
+    await expandTreeNode(tree, 'Demo Org');
     await expect(tree.getByText('Demo Plant', { exact: true })).toBeVisible();
     await expect(tree.getByText('Demo Plant 2', { exact: true })).toBeVisible();
     await expect(tree.getByText('Partner Org', { exact: true })).toHaveCount(0);

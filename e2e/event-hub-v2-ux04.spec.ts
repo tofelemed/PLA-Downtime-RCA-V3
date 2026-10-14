@@ -6,7 +6,7 @@ import { backToList, eventRowOf, fillPlantTime, openEventRow, pickReasonCode } f
 
 /**
  * Plan 3.2 exit test — UX04 operator journey on the v2 Event Hub (flag `v2.eventHub` switched on through
- * the API for the demo tenant and off again afterwards):
+ * the API for the demo tenant and left on — owner requirement: never switch a flag off):
  * unit → current stop with elapsed time → code reason → impacted periods → save → split at the cause
  * change → recode the second part → close the stop → list follows realtime without a reload;
  * reconnect mid-edit restores the draft and a changed server revision forces the conflict review;
@@ -60,7 +60,7 @@ async function openHub(page: Page, unitName: string): Promise<void> {
   // first visit compiles the lazy page chunk on the dev server
   await expect(page.getByTestId('event-hub-v2')).toBeVisible({ timeout: 60_000 });
   await page.getByTestId('filter-units').click();
-  await page.getByRole('checkbox', { name: unitName }).click();
+  await page.getByRole('checkbox', { name: unitName, exact: true }).click();
   await page.keyboard.press('Escape');
 }
 
@@ -92,10 +92,6 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     const reason = (code: string, name: string) => command<{ id: string }>(world.manager, '/v2/reason-codes', { code: `${code}-${suffix}`, name });
     world.reasonA = (await reason('E2E-JAM', 'Conveyor jam')).body.id;
     world.reasonB = (await reason('E2E-MOT', 'Motor trip')).body.id;
-  });
-
-  test.afterAll(async () => {
-    await call(world.manager, 'PUT', '/v2/feature-flags/v2.eventHub', { enabled: false });
   });
 
   test('unit → current stop → code → split → recode → close; list follows realtime', async ({ page }) => {
@@ -132,6 +128,8 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     const running = result.events.find((event) => event.isOpen);
     const ended = result.events.find((event) => !event.isOpen);
     expect(running && ended).toBeTruthy();
+    // the split replaces the event page with a part of the split; Back only once it did
+    await expect(page).toHaveURL(new RegExp(`/events/(${running!.id}|${ended!.id})$`));
     await backToList(page);
     await expect(row(page, running!.id)).toBeVisible();
     await expect(row(page, ended!.id)).toBeVisible();

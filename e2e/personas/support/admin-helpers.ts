@@ -144,15 +144,21 @@ export async function openPlantTree(page: Page): Promise<Locator> {
 }
 
 /**
- * Selects a plant: expands its organisation through the chevron (clicking the organisation name
- * would select the organisation itself) and clicks the plant name.
+ * Expands a node of the plant selector tree through its chevron button ("Expand <name>"); a node that
+ * is already open is left open. Clicking the name itself would select the organisation or plant.
  */
+export async function expandTreeNode(tree: Locator, name: string): Promise<void> {
+  const expand = tree.getByRole('button', { name: `Expand ${name}`, exact: true });
+  if ((await expand.count()) > 0) await expand.click();
+  await expect(tree.getByRole('button', { name: `Collapse ${name}`, exact: true })).toBeVisible();
+}
+
+/** Selects a plant: expands its organisation and clicks the plant name. */
 export async function selectPlant(page: Page, plant: Plant): Promise<void> {
   const tree = await openPlantTree(page);
-  const orgLabel = tree.getByText(plant.org, { exact: true });
-  await expect(orgLabel).toBeVisible();
+  await expect(tree.getByText(plant.org, { exact: true })).toBeVisible();
+  await expandTreeNode(tree, plant.org);
   const plantLabel = tree.getByText(plant.name, { exact: true });
-  if ((await plantLabel.count()) === 0) await orgLabel.locator('xpath=..').locator('svg').first().click();
   await plantLabel.click();
   await expect(tree).toBeHidden();
   await expect(plantTrigger(page)).toContainText(plant.name);
