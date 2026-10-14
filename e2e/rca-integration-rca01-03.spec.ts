@@ -3,6 +3,7 @@ import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
 import { call, command } from './test-utils/downtime-world';
 import { seedRcaWorld, waitForRecommendation, type RcaWorld } from './test-utils/rca-world';
+import { acceptInvestigation, finishActions, moveCase, prepareInvestigation } from './personas/support/rca-workflow';
 
 /**
  * Plan 3.9 journey on `/events` and `/rca` (flag `v2.rca`, switched on for the demo tenant by the manager
@@ -13,13 +14,15 @@ import { seedRcaWorld, waitForRecommendation, type RcaWorld } from './test-utils
  *   repeated link is idempotent (200); the case shows the link with its evidence package.
  * - Step 1 (the verified save bug): the case form saves nested recommendations / evidence / logic tree
  *   and they survive a reload.
- * - RCA03: an action with a declared baseline and a past verification window is verified; the outcome
+ * - RCA03: an action with a server-counted baseline and a past verification window is verified; the outcome
  *   shows approved, claimed and realized separately; closing completes the event's RCA state.
  * - §13.2: a production engineer cannot open cases (403).
  * Users: manager@acme.com, engineer@acme.com. Data: unit "E2E RCA …", its stop, case "E2E RCA case …".
  */
 const MANAGER = { email: 'manager@acme.com', password: 'demo123' };
 const ENGINEER = { email: 'engineer@acme.com', password: 'demo123' };
+/** a second approver, independent of the manager's investigation (SME CA1) */
+const APPROVER = { email: 'admin@acme.com', password: 'demo123' };
 const FLAG = 'v2.rca';
 /** the journey starts in the v2 Event Hub; its flag is restored to what it was after the run */
 const HUB_FLAG = 'v2.eventHub';
@@ -127,7 +130,7 @@ test.describe('RCA integration — RCA01–03 (plan 3.9)', () => {
     await expect(link.getByTestId('evidence-package')).toContainText('Approved impact');
   });
 
-  test('RCA03: action verified against its baseline; outcome keeps the three figures apart; close completes the event', async ({ page }) => {
+  test('RCA03: action verified against its baseline; outcome keeps the three figures apart; independent closure completes the event', async ({ page }) => {
     await loginViaUI(page, MANAGER.email, MANAGER.password);
     await openCase(page, 'actions');
     const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
@@ -135,30 +138,37 @@ test.describe('RCA integration — RCA01–03 (plan 3.9)', () => {
     await form.locator('#action-title').fill('Realign coupling');
     await form.locator('#action-window-start').fill(day(-20));
     await form.locator('#action-window-end').fill(day(-5));
+    // CA3: the baseline is counted by the server from history; no value is typed
     await form.locator('#action-baseline').selectOption('recurrences');
-    await form.locator('#action-baseline-value').fill('6');
     await form.locator('#action-claim').fill('1000');
     await form.locator('#action-claim-currency').selectOption('USD');
     await page.getByTestId('add-action').click();
     const action = page.getByTestId('action-row').first();
     await expect(action.getByTestId('verification-status')).toHaveText('Verification due');
     await action.getByTestId('verify-action').click();
-    await expect(action.getByTestId('realized')).toContainText('difference 3');
+    await expect(action.getByTestId('realized')).toBeVisible();
+    await expect(action.getByTestId('verdict-badge')).toBeVisible();
 
     await page.getByTestId('tab-links').click(); // the outcome sits under "Links & outcome"
     await expect(page.getByTestId('outcome-claimed')).toContainText('1,000.00');
-    await expect(page.getByTestId('outcome-realized')).toContainText('Realign coupling: 3');
+    await expect(page.getByTestId('outcome-realized')).toContainText('Realign coupling');
     await expect(page.getByTestId('outcome-panel')).toContainText('Approved historical loss');
 
+    // RCA-01 / CA1: no status edit; the investigation is accepted, the action done by someone other
+    // than its owner (the manager owns it: the approver marks it done), closure requested on screen and
+    // approved by the independent approver
+    const approver = (await authenticate(APPROVER.email, APPROVER.password)).accessToken;
+    await prepareInvestigation(manager, caseId, 'Coupling misalignment');
+    await finishActions(manager, approver, caseId);
+    await acceptInvestigation(manager, caseId);
+    await page.reload();
     await page.getByTestId('tab-overview').click();
-    // open the Radix select from the keyboard: a pointer-opened select can swallow an option click made
-    // within the same gesture window, leaving the status unchanged (seen once in a repeated run)
-    await page.locator('#edit-status').focus();
-    await page.keyboard.press('Enter');
-    await page.getByRole('option', { name: 'Closed' }).click();
-    await expect(page.locator('#edit-status')).toHaveText('Closed');
-    await page.getByTestId('save-case').click();
-    await expect(page.getByTestId('case-status')).toHaveText('Closed');
+    await page.locator('#workflow-residual-risk').fill('Alignment checked at every PM');
+    await page.getByTestId('workflow-move-closure-review').click();
+    await expect(page.getByTestId('case-status')).toHaveText('Closure Review');
+    await expect(page.getByTestId('workflow-move-closed')).toHaveCount(0);
+    const closed = await moveCase(approver, caseId, { to: 'Closed' });
+    expect(closed.status, JSON.stringify(closed.body)).toBe(200);
     const event = await call<{ states: { rca: string } }>(manager, 'GET', `/v2/production-events/${world.stopId}`);
     expect(event.body.states.rca).toBe('completed');
   });

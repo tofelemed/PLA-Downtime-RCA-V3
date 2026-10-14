@@ -1,13 +1,16 @@
 import { test, expect } from '@playwright/test';
 import { apiLogin, call, command, DEMO_PLANT, loadState, newSuffix, PREFIX, REL_USERS, uiLogin, type RelSession } from './support/reliability-world';
+import { MANAGERS } from './support/manager-users';
+import { acceptInvestigation, addVerifiedAction, finishActions, moveCase, prepareInvestigation } from './support/rca-workflow';
 
 /**
  * RELIABILITY ENGINEER persona — journey 5, the RCA knowledge base (`/rca-knowledge-base`) as Leila:
  * the entry the server wrote when a case was closed (plan 3.9 step 4) is found by search, opens with the
  * case's root cause, and a helpful vote is kept once per user (v2 screen behind `v2.rca`, owner decision
  * 2026-10-12; publish is offered to RCA writers). The entry comes from
- * `reliability-rca-case.spec.ts` (state file); when that file did not run, Leila opens and closes a case
- * of her own through the v2 API so the journey still has its closed case.
+ * `reliability-rca-case.spec.ts` (state file); when that file did not run, Leila opens a case of her own
+ * through the v2 API and takes it through the case workflow (RCA-01 / SME CA1: a verified action, closure
+ * requested by her, approved by Jonas, a manager approver independent of the investigation).
  */
 interface KnowledgeEntry {
   id: string;
@@ -45,7 +48,14 @@ async function ensureClosedCase(): Promise<void> {
   });
   expect(created.status, JSON.stringify(created.body)).toBe(201);
   caseId = created.body.id;
-  const closed = await call(leila.token, 'PATCH', `/v2/rcas/${caseId}`, { status: 'Closed' }, { 'If-Match': `"${created.body.rowVersion}"` });
+  const jonas = await apiLogin(MANAGERS.jonas.email);
+  await addVerifiedAction(leila.token, caseId, `${PREFIX}kb-action-${suffix}`);
+  await prepareInvestigation(leila.token, caseId, rootCause);
+  await finishActions(leila.token, jonas.token, caseId);
+  await acceptInvestigation(leila.token, caseId);
+  const requested = await moveCase(leila.token, caseId, { to: 'Closure Review', residualRisk: 'Coupling alignment checked at each PM' });
+  expect(requested.status, JSON.stringify(requested.body)).toBe(200);
+  const closed = await moveCase(jonas.token, caseId, { to: 'Closed' });
   expect(closed.status, JSON.stringify(closed.body)).toBe(200);
 }
 

@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import {
   apiLogin,
   call,
@@ -22,6 +22,7 @@ import {
   type RelSession,
 } from './support/reliability-world';
 import { MANAGERS } from './support/manager-users';
+import { acceptInvestigation, finishActions, prepareInvestigation } from './support/rca-workflow';
 
 /**
  * RELIABILITY ENGINEER persona — the RCA case journeys of plan 3.9 (RCA01–03) on the v2 Event Hub and
@@ -32,7 +33,8 @@ import { MANAGERS } from './support/manager-users';
  *    second event from the case.
  * 7. Amara sees Viktor's case, adds her own action; the audit trail names both users (read by a manager
  *    approver: GET /audit-logs is for admins and approvers only).
- * 3. Viktor adds an action with a baseline, verifies it, closes the case → the event shows "RCA completed".
+ * 3. Viktor adds an action with a server-counted baseline, verifies it and requests closure; Jonas (a
+ *    manager approver independent of the investigation) approves it → the event shows "RCA completed".
  * 4. Sebastian reads the outcome in USD and IRR: the figures are the server's (GET), nothing is converted.
  * Data left behind: unit "P-REL-<suffix>", its two stops, case "P-REL-case-<suffix>" with actions.
  */
@@ -50,14 +52,6 @@ function resume(): void {
   if (!state) throw new Error('no case yet: run J1 first');
   world = { unitId: state.unitId, unitName: state.unitName, stopId: state.stopId, secondStopId: state.secondStopId, caseId: state.caseId };
   caseTitle = state.caseTitle;
-}
-
-async function selectStatus(page: Page, status: string): Promise<void> {
-  // open the Radix select from the keyboard (a pointer-opened select can swallow the option click)
-  await page.locator('#edit-status').focus();
-  await page.keyboard.press('Enter');
-  await page.getByRole('option', { name: status }).click();
-  await expect(page.locator('#edit-status')).toHaveText(status);
 }
 
 test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
@@ -221,7 +215,7 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     expect(byUser.body.some((row) => row.action === 'CREATE' && row.entityType === 'RCA')).toBe(true);
   });
 
-  test('J3 RCA03 (viktor): action verified against its baseline, claims in USD and IRR, close → event shows RCA completed', async ({ page }) => {
+  test('J3 RCA03 (viktor, jonas): action verified against its baseline, claims in USD and IRR, closure approved by jonas → event shows RCA completed', async ({ page, browser }) => {
     resume();
     await uiLogin(page, REL_USERS.viktor);
     await openCase(page, world.caseId, 'actions');
@@ -231,16 +225,18 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await form.locator('#action-title').fill(realign);
     await form.locator('#action-window-start').fill(day(-20));
     await form.locator('#action-window-end').fill(day(-5));
+    // CA3: the baseline is counted by the server from history; no value is typed
     await form.locator('#action-baseline').selectOption('recurrences');
-    await form.locator('#action-baseline-value').fill('6');
     await form.locator('#action-claim').fill('1000');
     await form.locator('#action-claim-currency').selectOption('USD');
     await page.getByTestId('add-action').click();
     const action = page.getByTestId('action-row').filter({ hasText: realign });
     await expect(action.getByTestId('verification-status')).toHaveText('Verification due');
     await action.getByTestId('verify-action').click();
-    await expect(action.getByTestId('realized')).toContainText('difference 3');
+    await expect(action.getByTestId('realized')).toBeVisible();
     await expect(action.getByTestId('verification-status')).toHaveText('Verified');
+    await expect(action.getByTestId('verdict-badge')).toBeVisible();
+    await expect(action.getByTestId('action-baseline')).toContainText('counted from history');
 
     await form.locator('#action-title').fill(seal);
     await form.locator('#action-claim').fill('50000000');
@@ -251,13 +247,29 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await page.getByTestId('tab-links').click(); // the outcome sits under "Links & outcome"
     await expect(page.getByTestId('outcome-claimed')).toContainText('1,000.00');
     await expect(page.getByTestId('outcome-claimed')).toContainText('50,000,000');
-    await expect(page.getByTestId('outcome-realized')).toContainText(`${realign}: 3`);
+    await expect(page.getByTestId('outcome-realized')).toContainText(realign);
     await expect(page.getByTestId('outcome-panel')).toContainText('Approved historical loss');
 
+    // CA1 / CA4: the investigation is accepted and the actions finished with evidence by someone other
+    // than their owner (viktor owns "realign": jonas marks it done); the rest are cancelled
+    const jonas = await apiLogin(MANAGERS.jonas.email);
+    await prepareInvestigation(viktor.token, world.caseId, 'Coupling misalignment');
+    await finishActions(viktor.token, jonas.token, world.caseId);
+    await acceptInvestigation(viktor.token, world.caseId);
+    await page.reload();
     await page.getByTestId('tab-overview').click();
-    await selectStatus(page, 'Closed');
-    await page.getByTestId('save-case').click();
-    await expect(page.getByTestId('case-status')).toHaveText('Closed');
+    await page.locator('#workflow-residual-risk').fill('Coupling alignment checked at every PM');
+    await page.getByTestId('workflow-move-closure-review').click();
+    await expect(page.getByTestId('case-status')).toHaveText('Closure Review');
+    await expect(page.getByTestId('workflow-move-closed')).toHaveCount(0); // viktor investigated: not independent
+
+    const managerContext = await browser.newContext();
+    const manager = await managerContext.newPage();
+    await uiLogin(manager, MANAGERS.jonas.email);
+    await openCase(manager, world.caseId);
+    await manager.getByTestId('workflow-move-closed').click();
+    await expect(manager.getByTestId('case-status')).toHaveText('Closed');
+    await managerContext.close();
     const event = await call<{ states: { rca: string } }>(viktor.token, 'GET', `/v2/production-events/${world.stopId}`);
     expect(event.body.states.rca).toBe('completed');
 
