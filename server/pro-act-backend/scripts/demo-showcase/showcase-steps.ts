@@ -15,6 +15,8 @@ import { seedPlans } from './seed-plans';
 import { seedValuationPolicy } from './seed-policy';
 import { seedProfiles } from './seed-profiles';
 import { seedRcaCases } from './seed-rca';
+import { seedReliabilityRecords } from './seed-reliability-records';
+import { seedReliabilitySetup } from './seed-reliability-setup';
 import { seedRules } from './seed-rules';
 import { seedTasks } from './seed-tasks';
 import { ShowcaseContext } from './showcase-context';
@@ -36,6 +38,12 @@ const STEPS: readonly Step[] = [
   { name: 'codes', always: true, kinds: PLANTS, run: seedCodeLibraries },
   { name: 'rules', always: false, kinds: PLANTS, run: seedRules },
   { name: 'calendars', always: false, kinds: PLANTS, run: seedCalendars },
+  {
+    name: 'reliability-setup',
+    always: false,
+    kinds: ['full'],
+    run: seedReliabilitySetup,
+  },
   { name: 'profiles', always: true, kinds: PLANTS, run: seedProfiles },
   {
     name: 'valuation-policy',
@@ -49,6 +57,12 @@ const STEPS: readonly Step[] = [
   { name: 'open-stops', always: false, kinds: PLANTS, run: seedOpenStops },
   { name: 'recalculate', always: false, kinds: PLANTS, run: recalculate },
   { name: 'accounting', always: false, kinds: PLANTS, run: seedAccounting },
+  {
+    name: 'reliability-records',
+    always: false,
+    kinds: ['full'],
+    run: seedReliabilityRecords,
+  },
   { name: 'rca', always: false, kinds: PLANTS, run: seedRcaCases },
   { name: 'tasks', always: false, kinds: PLANTS, run: seedTasks },
   { name: 'integration', always: false, kinds: ['full'], run: seedIntegration },
