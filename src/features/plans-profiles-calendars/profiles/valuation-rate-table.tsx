@@ -56,11 +56,11 @@ function columnsOf(timezone: string): DataTableColumn<ValuationRateView>[] {
 
 /** Margin / standard-cost versions of the profile: basis, value, currency, validity and approval (20 per page). */
 export function ValuationRateTable({ profile, timezone }: ValuationRateTableProps) {
-  const { canWriteProfiles } = useCapabilities();
+  const { canMaintainValuation } = useCapabilities();
   const rates = useValuationRates(profile.id);
   const [adding, setAdding] = useState(false);
   const items = flattenPages(rates.data?.pages);
-  const add = !adding && canWriteProfiles && (
+  const add = !adding && canMaintainValuation && (
     <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
       <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
       Add valuation rate

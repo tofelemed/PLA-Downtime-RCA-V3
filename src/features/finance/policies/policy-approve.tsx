@@ -17,12 +17,12 @@ export interface PolicyApproveProps {
 /**
  * The finance sign-off of one version (VAL01) after a confirmation. The server checks role, access to
  * the whole plant and separation of duties (403 for the author); a refusal keeps the dialog open with
- * the reason. Only manager approvers see it; the author sees it disabled with the reason.
+ * the reason. Only finance approvers see it (SME V1); the author sees it disabled with the reason.
  */
 export function PolicyApprove({ policy, status }: PolicyApproveProps) {
   const approve = useApproveValuationPolicy();
   const [open, setOpen] = useState(false);
-  const access = approvalAccess(useCapabilities().canManagePolicies, policy.createdBy, useCurrentUserId());
+  const access = approvalAccess(useCapabilities().canApproveValuation, policy.createdBy, useCurrentUserId());
   if (status !== 'unapproved' || access === 'hidden') return null;
   const onOpenChange = (next: boolean) => {
     setOpen(next);

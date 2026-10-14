@@ -27,7 +27,8 @@ const PINS: ReadonlyArray<[mirror: readonly string[], file: string, name: string
   [Mirror.RULE_APPROVERS, 'v2/rules/rules-v2.controller.ts', 'RULE_APPROVERS'],
   [Mirror.RCA_WRITERS, 'rca-case/rca-scope.ts', 'RCA_WRITERS'],
   [Mirror.INTEGRATION_WRITERS, 'v2/intake/intake-roles.ts', 'INTEGRATION_WRITERS'],
-  [Mirror.POLICY_ROLES, 'v2/valuation/valuation-policies-v2.controller.ts', 'POLICY_ROLES'],
+  [Mirror.FINANCE_MAINTAINERS, 'v2/valuation/valuation-roles.ts', 'FINANCE_MAINTAINERS'],
+  [Mirror.FINANCE_APPROVERS, 'v2/valuation/valuation-roles.ts', 'FINANCE_APPROVERS'],
   [Mirror.AUDIT_READERS, 'audit-log/audit-roles.ts', 'AUDIT_READERS'],
   [Mirror.READ_ONLY_ROLES, 'auth/guards/write-access.guard.ts', 'READ_ONLY_ROLES'],
 ];
@@ -45,6 +46,25 @@ describe('server role sets mirror', () => {
     const text = readFileSync(join(SERVER, 'v2/feature-flags/feature-flags-v2.controller.ts'), 'utf8');
     const roles = [...text.matchAll(/@Roles\(([^)]*)\)/g)].map((m) => m[1].replace(/'/g, '').split(/,\s*/));
     expect(roles).toEqual([[...Mirror.FLAG_WRITERS]]);
+  });
+
+  it('RCA policies are written by manager approvers only', () => {
+    const text = readFileSync(join(SERVER, 'v2/rca-policies/rca-policies-v2.controller.ts'), 'utf8');
+    const roles = [...text.matchAll(/@Roles\(([^)]*)\)/g)].map((m) => m[1].replace(/'/g, '').split(/,\s*/));
+    expect(roles).toEqual([[...Mirror.RCA_POLICY_WRITERS]]);
+  });
+
+  it('valuation policies, FX rates and valuation rates use the finance sets (SME V1)', () => {
+    for (const file of [
+      'v2/valuation/valuation-policies-v2.controller.ts',
+      'v2/valuation/fx-rates-v2.controller.ts',
+      'v2/profiles/valuation-rates-v2.controller.ts',
+    ]) {
+      const text = readFileSync(join(SERVER, file), 'utf8');
+      const sets = [...text.matchAll(/@Roles\(\.\.\.([A-Z_]+)\)/g)].map((m) => m[1]);
+      expect(sets.length).toBeGreaterThan(0);
+      expect(new Set(sets)).toEqual(new Set(['FINANCE_MAINTAINERS', 'FINANCE_APPROVERS']));
+    }
   });
 
   it('satisfiesAnyRole mirrors satisfiesRole: SuperAdmin anything, OrgAdmin all but SuperAdmin', () => {

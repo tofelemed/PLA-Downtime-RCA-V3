@@ -54,12 +54,12 @@ function PolicyFacts({ policy }: { policy: ValuationPolicyView }) {
 
 function PolicyView({ policy }: { policy: ValuationPolicyView }) {
   const navigate = useNavigate();
-  const { canManagePolicies } = useCapabilities();
+  const { canMaintainValuation } = useCapabilities();
   const status = policyStatus(policy);
   const actions = (
     <>
       <PolicyApprove policy={policy} status={status} />
-      {status !== 'placeholder' && canManagePolicies && (
+      {status !== 'placeholder' && canMaintainValuation && (
         <Button variant="outline" onClick={() => navigate(`/finance/policies/new?from=${policy.id}`)} data-testid="policy-copy">
           <ActionIcon.duplicate aria-hidden="true" />
           New version from this

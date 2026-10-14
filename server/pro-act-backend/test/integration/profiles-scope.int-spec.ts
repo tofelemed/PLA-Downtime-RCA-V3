@@ -9,6 +9,7 @@ import { signToken } from './support/test-app';
 describe('profile writes and the unit scope', () => {
   const env = new ProfileWorld();
   let unitApprover = '';
+  let unitFinance = '';
 
   beforeAll(async () => {
     await env.start();
@@ -25,6 +26,22 @@ describe('profile writes and the unit scope', () => {
     );
     unitApprover = signToken(env.app, {
       userId,
+      tenantId: env.world.tenantA,
+      role: 'Operator',
+    });
+    const financeId = randomUUID();
+    await env.harness.dataSource.query(
+      `INSERT INTO users (id, name, email, password_hash, role, tenant_id)
+       VALUES ($1, 'unit finance', $2, 'x', 'Operator', $3)`,
+      [financeId, `${financeId}@test.local`, env.world.tenantA],
+    );
+    await env.harness.dataSource.query(
+      `INSERT INTO user_scopes (tenant_id, user_id, scope_kind, scope_id, role, row_version)
+       VALUES ($1, $2, 'unit', $3, 'finance_maintainer', 1)`,
+      [env.world.tenantA, financeId, env.world.unitA1],
+    );
+    unitFinance = signToken(env.app, {
+      userId: financeId,
       tenantId: env.world.tenantA,
       role: 'Operator',
     });
@@ -54,7 +71,7 @@ describe('profile writes and the unit scope', () => {
     expect((response.body as ApiError).code).toBe('TENANT_SCOPE_REQUIRED');
   });
 
-  it('refuses tenant-wide valuation rates from a unit-limited approver', async () => {
+  it('refuses tenant-wide valuation rates from a unit-limited finance maintainer', async () => {
     const response = await env
       .post(
         'valuation-rates',
@@ -65,7 +82,7 @@ describe('profile writes and the unit scope', () => {
           currency: 'IRR',
           effectiveFrom: '2026-10-01T00:00:00Z',
         },
-        unitApprover,
+        unitFinance,
       )
       .expect(403);
     expect((response.body as ApiError).code).toBe('TENANT_SCOPE_REQUIRED');

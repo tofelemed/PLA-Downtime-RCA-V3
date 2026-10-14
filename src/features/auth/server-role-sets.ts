@@ -8,7 +8,7 @@
 export const PLAN_WRITERS = ['production_engineer', 'manager_approver'] as const;
 export const PLAN_APPROVERS = ['manager_approver'] as const;
 
-/** v2/profiles/profile-roles.ts (profiles, rates, valuation rates, FX rates) */
+/** v2/profiles/profile-roles.ts (profiles and rates) */
 export const PROFILE_WRITERS = ['master_data_admin', 'manager_approver'] as const;
 export const PROFILE_APPROVERS = ['manager_approver'] as const;
 
@@ -34,8 +34,12 @@ export const RCA_WRITERS = ['reliability_engineer', 'manager_approver'] as const
 /** v2/intake/intake-roles.ts (connections, jobs, signals, replay, quarantine) */
 export const INTEGRATION_WRITERS = ['integration_admin', 'manager_approver'] as const;
 
-/** v2/valuation/valuation-policies-v2.controller.ts */
-export const POLICY_ROLES = ['manager_approver'] as const;
+/** v2/valuation/valuation-roles.ts (SME V1: valuation policies, FX rates, valuation rates, demand statuses) */
+export const FINANCE_MAINTAINERS = ['finance_maintainer'] as const;
+export const FINANCE_APPROVERS = ['finance_approver'] as const;
+
+/** v2/rca-policies/rca-policies-v2.controller.ts (`@Roles` on the write) */
+export const RCA_POLICY_WRITERS = ['manager_approver'] as const;
 
 /** v2/feature-flags/feature-flags-v2.controller.ts */
 export const FLAG_WRITERS = ['manager_approver'] as const;

@@ -96,7 +96,7 @@ describe('finance — exchange rates and valuation policy commands', () => {
       call.method === 'POST'
         ? json(409, refusal('VERSION_OVERLAP', { details: { conflicts: [{ id: 'f1', version: 1, effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: null }] } }))
         : json(200, { items: [], nextCursor: null });
-    actAs('Manager', 'approver-2');
+    actAs('finance_approver', 'approver-2');
     wrap(<FxVersionActions rate={FX} />);
     fireEvent.click(screen.getByTestId('fx-approve'));
     expect(posts()).toHaveLength(0);
@@ -110,7 +110,7 @@ describe('finance — exchange rates and valuation policy commands', () => {
 
   it('retiring a rate asks first and sends nothing until confirmed', async () => {
     reply = () => json(200, { ...FX, state: 'retired' });
-    actAs('Manager', 'approver-2');
+    actAs('finance_approver', 'approver-2');
     wrap(<FxVersionActions rate={FX} />);
     fireEvent.click(screen.getByTestId('fx-retire'));
     expect(await screen.findByRole('alertdialog')).toBeTruthy();
@@ -122,7 +122,7 @@ describe('finance — exchange rates and valuation policy commands', () => {
   it('a SEPARATION_OF_DUTIES refusal from the server is still shown as such (fallback)', async () => {
     reply = (call) =>
       call.method === 'POST' ? json(403, refusal('SEPARATION_OF_DUTIES', { message: 'a valuation policy version is approved by someone other than its author' })) : json(200, { items: [], nextCursor: null });
-    actAs('Manager', 'approver-2');
+    actAs('finance_approver', 'approver-2');
     wrap(<PolicyApprove policy={POLICY} status="unapproved" />);
     fireEvent.click(screen.getByTestId('policy-approve-start'));
     fireEvent.click(await screen.findByRole('button', { name: 'Approve version 3' }));
@@ -144,16 +144,16 @@ describe('finance — exchange rates and valuation policy commands', () => {
     expect(text).not.toMatch(/contribution_margin|XXX|p3/);
   });
 
-  describe('controls follow PROFILE_* (FX) and POLICY_ROLES (owner decision 2026-10-12)', () => {
+  describe('controls follow the finance role sets (SME V1)', () => {
     it('the author who can approve sees the policy approval disabled with the separation-of-duties tooltip', () => {
       reply = () => json(200, {});
-      actAs('Manager', 'author-1');
+      actAs('finance_approver', 'author-1');
       wrap(<PolicyApprove policy={POLICY} status="unapproved" />);
       expect((screen.getByTestId('policy-approve-start') as HTMLButtonElement).disabled).toBe(true);
       expect(screen.getByTestId('sod-disabled').getAttribute('title')).toMatch(/separation of duties/);
     });
 
-    it('canManagePolicies: an engineer sees neither approval nor "New policy version"; a viewer gets the Read-only hint', () => {
+    it('canApproveValuation / canMaintainValuation: an engineer sees neither approval nor "New policy version"; a viewer gets the Read-only hint', () => {
       reply = () => json(200, { items: [POLICY], nextCursor: null });
       actAs('Engineer');
       wrap(<PolicyApprove policy={POLICY} status="unapproved" />);
@@ -164,12 +164,14 @@ describe('finance — exchange rates and valuation policy commands', () => {
       expect(screen.getByTestId('read-only-hint')).toBeTruthy();
     });
 
-    it('canApproveProfiles (FX): a master-data admin sees no approve / retire; a manager does', () => {
+    it('canApproveValuation (FX): a manager or a finance maintainer sees no approve / retire; a finance approver does', () => {
       reply = () => json(200, {});
-      actAs('master_data_admin');
-      wrap(<FxVersionActions rate={FX} />);
-      expect(screen.queryByTestId('fx-actions')).toBeNull();
-      actAs('Manager');
+      for (const role of ['Manager', 'finance_maintainer']) {
+        actAs(role);
+        wrap(<FxVersionActions rate={FX} />);
+        expect(screen.queryByTestId('fx-actions')).toBeNull();
+      }
+      actAs('finance_approver');
       wrap(<FxVersionActions rate={FX} />);
       expect(screen.getByTestId('fx-approve')).toBeTruthy();
       expect(screen.getByTestId('fx-retire')).toBeTruthy();

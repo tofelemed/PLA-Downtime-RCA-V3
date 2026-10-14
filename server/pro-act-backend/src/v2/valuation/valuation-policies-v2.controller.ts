@@ -30,13 +30,11 @@ import {
   ValuationPolicyCreateDto,
   ValuationPolicyListQueryDto,
 } from './valuation-v2.dto';
+import { FINANCE_APPROVERS, FINANCE_MAINTAINERS } from './valuation-roles';
 import {
   toValuationPolicyView,
   ValuationPolicyV2View,
 } from './valuation-v2.view';
-
-/** Finance sign-off of the valuation basis (VAL01) is a manager approver's act (D06 role map). */
-const POLICY_ROLES = ['manager_approver'] as const;
 
 /** `valuation_basis` policy versions of plan 2.6 (VAL01–VAL03, D08). */
 @ApiTags('v2 · Valuation')
@@ -75,7 +73,7 @@ export class ValuationPoliciesV2Controller {
 
   @Post()
   @Idempotent()
-  @Roles(...POLICY_ROLES)
+  @Roles(...FINANCE_MAINTAINERS)
   @ApiOperation({
     summary: 'Create a new (unapproved) valuation policy version',
     description:
@@ -94,7 +92,7 @@ export class ValuationPoliciesV2Controller {
   @Post(':id/approve')
   @HttpCode(HttpStatus.OK)
   @Idempotent()
-  @Roles(...POLICY_ROLES)
+  @Roles(...FINANCE_APPROVERS)
   @ApiOperation({
     summary: 'Record the finance approval of a valuation policy version',
     description:
