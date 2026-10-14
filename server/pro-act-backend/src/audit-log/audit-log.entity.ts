@@ -3,6 +3,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 @Index('IDX_audit_logs_tenant_created', ['tenantId', 'createdAt'])
 @Index('IDX_audit_logs_tenant_time', ['tenantId', 'timestamp', 'id'])
 @Index('IDX_audit_logs_tenant_user', ['tenantId', 'userId'])
+@Index('IDX_audit_logs_timestamp', ['timestamp'])
 @Entity('audit_logs')
 export class AuditLog {
   @PrimaryGeneratedColumn('uuid')

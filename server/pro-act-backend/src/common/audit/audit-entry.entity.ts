@@ -10,7 +10,7 @@ import {
  * Append-only audit trail of domain commands (spec §14.2 `audit_log`, plan 2.8): actor (a user, or a named
  * service), action, entity and its revision, content hashes before / after, reason, correlation id, time
  * and a small detail document (e.g. the lifecycle `from` / `to`). UPDATE and DELETE are refused by a
- * trigger. The legacy request log `audit_logs` (global interceptor) is a different, mutable table.
+ * trigger, except a retention delete of rows older than a declared cutoff (DB-07). The legacy request log `audit_logs` (global interceptor) is a different, mutable table.
  */
 @Entity('audit_log')
 @Index('IDX_audit_log_tenant_entity_at', [
@@ -19,6 +19,7 @@ import {
   'entityId',
   'at',
 ])
+@Index('IDX_audit_log_at', ['at'])
 export class AuditEntry {
   @PrimaryGeneratedColumn('uuid')
   id: string;
