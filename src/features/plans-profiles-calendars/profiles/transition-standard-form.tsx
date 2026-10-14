@@ -1,0 +1,85 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useCreateTransitionStandard } from '@/api/v2/queries/profile-commands';
+import { DecimalInput } from '@/features/ux-kit/decimal-input';
+import { FormField } from '../components/form-field';
+import { NativeSelect, type Option } from '../components/native-select';
+import { PlantDateTimeField } from '../components/plant-date-time-field';
+import { RefusalNotice } from '../components/refusal-notice';
+import type { FieldErrors } from '../model/profile-form';
+import { refusalOf } from '../model/refusal';
+import {
+  emptyTransitionStandardForm,
+  transitionStandardCreateBody,
+  type TransitionStandardFormValues,
+  validateTransitionStandardForm,
+} from '../model/transition-standard-form';
+
+export interface TransitionStandardFormProps {
+  unitId: string;
+  productOptions: Option[];
+  timezone: string;
+  onDone: () => void;
+}
+
+/** A draft matrix entry: directional product change, reference hours, optional reference off-grade, evidence. */
+export function TransitionStandardForm({ unitId, productOptions, timezone, onDone }: TransitionStandardFormProps) {
+  const [values, setValues] = useState<TransitionStandardFormValues>(() => emptyTransitionStandardForm(unitId));
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const create = useCreateTransitionStandard();
+  const set = <K extends keyof TransitionStandardFormValues>(key: K, value: TransitionStandardFormValues[K]) => setValues((prev) => ({ ...prev, [key]: value }));
+  const fieldError = (key: string) => errors[key] ?? refusalOf(create.error)?.fieldErrors[key];
+
+  const save = async () => {
+    const found = validateTransitionStandardForm(values, timezone);
+    setErrors(found);
+    if (Object.keys(found).length > 0) return;
+    const saved = await create.submit(transitionStandardCreateBody(values, timezone)).catch(() => null);
+    if (saved) onDone();
+  };
+
+  return (
+    <div className="space-y-2 rounded-md border p-3" data-testid="transition-standard-form">
+      <div className="grid gap-2 sm:grid-cols-2">
+        <FormField id="tsFrom" label="From product" error={fieldError('fromProductId')}>
+          <NativeSelect id="tsFrom" value={values.fromProductId} options={productOptions} placeholder="Choose…" onChange={(v) => set('fromProductId', v)} />
+        </FormField>
+        <FormField id="tsTo" label="To product" error={fieldError('toProductId')}>
+          <NativeSelect id="tsTo" value={values.toProductId} options={productOptions} placeholder="Choose…" onChange={(v) => set('toProductId', v)} />
+        </FormField>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-4">
+        <FormField id="tsHours" label="Reference duration (h)" error={fieldError('referenceSeconds')}>
+          <DecimalInput id="tsHours" value={values.referenceHours} scale={3} onChange={(v) => set('referenceHours', v)} aria-label="Reference duration in hours" />
+        </FormField>
+        <FormField id="tsOffgrade" label="Reference off-grade (optional)" error={fieldError('referenceOffgradeQty')}>
+          <DecimalInput id="tsOffgrade" value={values.referenceOffgradeQty} onChange={(v) => set('referenceOffgradeQty', v)} aria-label="Reference off-grade quantity" />
+        </FormField>
+        <FormField id="tsUom" label="Off-grade unit" error={fieldError('offgradeUom')}>
+          <Input id="tsUom" value={values.offgradeUom} onChange={(e) => set('offgradeUom', e.target.value)} />
+        </FormField>
+        <FormField id="tsSamples" label="Transitions observed" error={fieldError('sampleCount')}>
+          <Input id="tsSamples" inputMode="numeric" value={values.sampleCount} onChange={(e) => set('sampleCount', e.target.value)} />
+        </FormField>
+      </div>
+      <FormField id="tsEvidence" label="Evidence (how the reference was derived)" error={fieldError('evidence')}>
+        <Textarea id="tsEvidence" value={values.evidence} onChange={(e) => set('evidence', e.target.value)} rows={2} />
+      </FormField>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <PlantDateTimeField id="tsEffectiveFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
+        <PlantDateTimeField id="tsEffectiveTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
+      </div>
+      <RefusalNotice error={create.error} timezone={timezone} />
+      <div className="flex gap-2">
+        <Button size="sm" onClick={save} disabled={create.isPending}>
+          Add draft standard
+        </Button>
+        <Button size="sm" variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}

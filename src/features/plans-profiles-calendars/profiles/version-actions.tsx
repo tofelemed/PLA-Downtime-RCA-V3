@@ -23,7 +23,12 @@ export interface VersionActionsProps {
   authorId?: string | null;
 }
 
-const NOUN: Record<VersionResource, string> = { profiles: 'profile version', rates: 'rate version', 'valuation-rates': 'valuation rate' };
+const NOUN: Record<VersionResource, string> = {
+  profiles: 'profile version',
+  rates: 'rate version',
+  'valuation-rates': 'valuation rate',
+  'transition-standards': 'transition standard',
+};
 
 interface RetireButtonProps {
   resource: VersionResource;
