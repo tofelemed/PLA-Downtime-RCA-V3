@@ -37,6 +37,9 @@ describe('claims beyond the measurements block submission (LA-02b)', () => {
     kind: 'availability',
     quantity,
     missingEvent: true,
+    // SME R11: a stop without an event cites its record
+    evidenceType: 'log',
+    evidenceRef: 'shift log',
     reasonCodeId: reason,
   });
 

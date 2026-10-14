@@ -226,6 +226,9 @@ export class RcaWorld extends ReconciliationWorld {
         kind: 'availability',
         quantity: residual,
         missingEvent: true,
+        // SME R11: a stop without an event cites its record
+        evidenceType: 'log',
+        evidenceRef: 'shift log',
         reasonCodeId,
         reason: 'unexplained rest',
       });

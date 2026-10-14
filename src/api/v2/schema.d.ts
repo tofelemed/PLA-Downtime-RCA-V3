@@ -6108,6 +6108,18 @@ export interface components {
             /** @description Required for adjust / replace / reject */
             reason?: string;
             comment?: string;
+            /**
+             * @description SME R7 / R8: required for unaccounted_classified (measurement_adjustment, timing_inventory, source_data_gap, unexplained_cause) and bridge (inventory, timing, measurement) lines
+             * @enum {string}
+             */
+            classification?: "measurement_adjustment" | "timing_inventory" | "source_data_gap" | "unexplained_cause" | "inventory" | "timing" | "measurement";
+            /**
+             * @description SME R11: the record a manual quantity rests on when no event or approved adjustment backs it
+             * @enum {string}
+             */
+            evidenceType?: "log" | "work_order" | "rate_record" | "totalizer" | "lot_sample" | "movement_record" | "measurement_record" | "investigation_note";
+            /** @description Reference of that record (work order, sample, tag, …) */
+            evidenceRef?: string;
         };
         DraftLinesDto: {
             /** @description The draft revision number */

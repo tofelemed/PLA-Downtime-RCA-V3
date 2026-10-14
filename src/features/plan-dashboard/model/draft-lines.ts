@@ -1,10 +1,12 @@
 import type {
   CandidateView,
   DraftLineInput,
+  EvidenceType,
   ManualKind,
   ReconciliationLineView,
   ReconciliationView,
 } from '@/api/v2/types/reconciliation';
+import { categoriesOf, needsEvidence } from './line-evidence';
 
 /**
  * Editing state of the loss-line editor (plan 3.5, ACC07/ACC08): decisions on automatic candidates keyed
@@ -32,6 +34,9 @@ export interface ManualDraft {
   missingCode: boolean;
   reason?: string;
   comment?: string;
+  classification?: string;
+  evidenceType?: EvidenceType;
+  evidenceRef?: string;
 }
 
 export interface DraftState {
@@ -72,6 +77,9 @@ function manualOf(line: ReconciliationLineView): ManualDraft {
     missingCode: line.missingCode,
     reason: line.reason ?? undefined,
     comment: line.comment ?? undefined,
+    classification: line.classification,
+    evidenceType: line.evidenceType,
+    evidenceRef: line.evidenceRef,
   };
 }
 
@@ -120,6 +128,9 @@ function manualLine(m: ManualDraft): DraftLineInput {
     missingCode: m.missingCode || undefined,
     reason: m.reason,
     comment: m.comment,
+    classification: m.classification,
+    evidenceType: m.evidenceType,
+    evidenceRef: m.evidenceRef?.trim(),
   });
 }
 
@@ -153,6 +164,9 @@ export function manualProblems(m: ManualDraft): string[] {
   if (!m.eventIds.length && !m.missingEvent) problems.push('Link an event or mark the cause as "no event".');
   if (m.missingEvent && !m.reasonCodeId && !m.missingCode) problems.push('Without an event, choose a reason code or mark the code as missing.');
   if (m.kind === 'bridge' && !m.reason?.trim()) problems.push('A bridge needs a written reason.');
+  if (m.kind === 'bridge' && m.quantity?.trim().startsWith('-')) problems.push('A bridge cannot be negative: correct the over-claimed lines.');
+  if (categoriesOf(m.kind).length && !m.classification) problems.push('Choose the category.');
+  if (needsEvidence(m.kind, m.eventIds.length) && (!m.evidenceType || !m.evidenceRef?.trim())) problems.push('Name the evidence and its reference.');
   return problems;
 }
 

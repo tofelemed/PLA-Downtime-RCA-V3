@@ -26,6 +26,12 @@ import {
   ManualKind,
 } from '../../domain/reconciliation/reconciliation.types';
 import { ListQueryDto } from '../common/list-query.dto';
+import {
+  BRIDGE_CATEGORIES,
+  EVIDENCE_TYPES,
+  EvidenceType,
+  UNACCOUNTED_CATEGORIES,
+} from '../../reconciliation/line-evidence-rules';
 
 /** Signed decimal with at most 16 integer and 8 fractional digits (numeric(24,8), §15.3). */
 const DECIMAL = /^-?\d{1,16}(\.\d{1,8})?$/;
@@ -151,6 +157,33 @@ export class DraftLineDto {
   @IsString()
   @MaxLength(2000)
   comment?: string;
+
+  @ApiPropertyOptional({
+    enum: [...UNACCOUNTED_CATEGORIES, ...BRIDGE_CATEGORIES],
+    description:
+      'SME R7 / R8: required for unaccounted_classified (measurement_adjustment, timing_inventory, source_data_gap, unexplained_cause) and bridge (inventory, timing, measurement) lines',
+  })
+  @IsOptional()
+  @IsIn([...UNACCOUNTED_CATEGORIES, ...BRIDGE_CATEGORIES])
+  classification?: string;
+
+  @ApiPropertyOptional({
+    enum: EVIDENCE_TYPES,
+    description:
+      'SME R11: the record a manual quantity rests on when no event or approved adjustment backs it',
+  })
+  @IsOptional()
+  @IsIn(EVIDENCE_TYPES)
+  evidenceType?: EvidenceType;
+
+  @ApiPropertyOptional({
+    maxLength: 200,
+    description: 'Reference of that record (work order, sample, tag, …)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  evidenceRef?: string;
 }
 
 export class DraftLinesDto {

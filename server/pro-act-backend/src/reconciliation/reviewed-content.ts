@@ -125,6 +125,10 @@ export function linesPart(state: RevisionState) {
     adjustmentId: line.adjustmentId,
     missingCode: line.missingCode,
     missingEvent: line.missingEvent,
+    // SME R7 / R8 / R11 fields only when set, so the content hash of older lines is unchanged
+    ...(line.classification ? { classification: line.classification } : {}),
+    ...(line.evidenceType ? { evidenceType: line.evidenceType } : {}),
+    ...(line.evidenceRef ? { evidenceRef: line.evidenceRef } : {}),
     reason: line.reason,
     comment: line.comment,
     authorId: line.authorId,

@@ -19475,6 +19475,38 @@
           },
           "comment": {
             "type": "string"
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "measurement_adjustment",
+              "timing_inventory",
+              "source_data_gap",
+              "unexplained_cause",
+              "inventory",
+              "timing",
+              "measurement"
+            ],
+            "description": "SME R7 / R8: required for unaccounted_classified (measurement_adjustment, timing_inventory, source_data_gap, unexplained_cause) and bridge (inventory, timing, measurement) lines"
+          },
+          "evidenceType": {
+            "type": "string",
+            "enum": [
+              "log",
+              "work_order",
+              "rate_record",
+              "totalizer",
+              "lot_sample",
+              "movement_record",
+              "measurement_record",
+              "investigation_note"
+            ],
+            "description": "SME R11: the record a manual quantity rests on when no event or approved adjustment backs it"
+          },
+          "evidenceRef": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Reference of that record (work order, sample, tag, …)"
           }
         },
         "required": [

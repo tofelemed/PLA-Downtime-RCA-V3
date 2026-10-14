@@ -127,6 +127,9 @@ describe('PLA analytics reads (plan 3.6)', () => {
           kind: 'availability',
           quantity: '15',
           missingEvent: true,
+          // SME R11: a stop without an event cites its record
+          evidenceType: 'log',
+          evidenceRef: 'shift log',
           reasonCodeId: reason,
         },
       ])

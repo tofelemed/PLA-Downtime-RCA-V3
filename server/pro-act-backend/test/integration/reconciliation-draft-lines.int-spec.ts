@@ -76,6 +76,9 @@ describe('reconciliation draft lines (plan 2.8)', () => {
           kind: 'performance',
           quantity: '70',
           missingEvent: true,
+          // SME R11: a rate loss without an event cites its rate evidence
+          evidenceType: 'totalizer',
+          evidenceRef: 'FT-101 delta',
           reasonCodeId: reason,
           reason: 'slow feed',
         },
@@ -136,6 +139,9 @@ describe('reconciliation draft lines (plan 2.8)', () => {
       kind: 'availability',
       quantity: '1',
       missingEvent: true,
+      // SME R11: a stop without an event cites its record
+      evidenceType: 'log',
+      evidenceRef: 'shift log',
       reasonCodeId: reason,
       ...extra,
     });
@@ -163,6 +169,10 @@ describe('reconciliation draft lines (plan 2.8)', () => {
       [manual({ kind: 'unaccounted_classified' }), 'UNACCOUNTED_NOT_ALLOWED'],
       [manual({ missingEvent: undefined }), 'EVIDENCE_REQUIRED'],
       [manual({ quantity: '-1' }), 'NEGATIVE_QUANTITY'],
+      // SME R11: the record must suit the kind; a stop without an event needs one
+      [manual({ evidenceType: 'lot_sample' }), 'EVIDENCE_TYPE_NOT_ALLOWED'],
+      [manual({ evidenceRef: undefined }), 'EVIDENCE_REQUIRED'],
+      [manual({ classification: 'timing' }), 'CATEGORY_NOT_ALLOWED'],
     ];
     for (const [line, code] of cases) {
       const response = await env
@@ -186,6 +196,9 @@ describe('reconciliation draft lines (plan 2.8)', () => {
       kind: 'availability',
       quantity,
       missingEvent: true,
+      // SME R11: a stop without an event cites its record
+      evidenceType: 'log',
+      evidenceRef: 'shift log',
       reasonCodeId: reason,
     });
     const response = await env
@@ -196,11 +209,34 @@ describe('reconciliation draft lines (plan 2.8)', () => {
       line: 1,
       expectedRemainingAllocation: '50',
     });
+    const bridge = {
+      ...line('20'),
+      kind: 'bridge',
+      missingEvent: true,
+      classification: 'inventory',
+      evidenceType: 'movement_record',
+      evidenceRef: 'silo 3 stock +20 t',
+      reason: 'stock rose in silo 3',
+    };
+    // SME R8: a manager is not production accounting
+    const manager = await env
+      .saveLines(
+        view,
+        [line('100'), line('30'), bridge],
+        env.admin,
+        env.periodB1,
+      )
+      .expect(422);
+    expect(issues(manager.body)[0]).toMatchObject({
+      code: 'BRIDGE_NOT_ALLOWED',
+      line: 2,
+    });
+    const accountant = await env.scopedUser('production_accountant');
     const unexplained = await env
       .saveLines(
         view,
-        [line('100'), line('70'), { ...line('-20'), kind: 'bridge' }],
-        env.admin,
+        [line('100'), line('30'), { ...bridge, reason: undefined }],
+        accountant,
         env.periodB1,
       )
       .expect(422);
@@ -208,22 +244,34 @@ describe('reconciliation draft lines (plan 2.8)', () => {
       code: 'REASON_REQUIRED',
       line: 2,
     });
+    // SME R9: over-explaining (100 + 70 > 150) is not balanced away by a negative bridge
+    const negative = await env
+      .saveLines(
+        view,
+        [line('100'), line('70'), { ...bridge, quantity: '-20' }],
+        accountant,
+        env.periodB1,
+      )
+      .expect(422);
+    expect(issues(negative.body)[0]).toMatchObject({
+      code: 'NEGATIVE_BRIDGE',
+      line: 2,
+    });
     await env
       .saveLines(
         view,
-        [
-          line('100'),
-          line('70'),
-          {
-            ...line('-20'),
-            kind: 'bridge',
-            reason: 'plan rate below the planning rate',
-          },
-        ],
-        env.admin,
+        [line('100'), line('30'), bridge],
+        accountant,
         env.periodB1,
       )
       .expect(200);
+    const saved = await env.view(env.periodB1);
+    expect(saved.lines[2]).toMatchObject({
+      kind: 'bridge',
+      classification: 'inventory',
+      evidenceType: 'movement_record',
+      evidenceRef: 'silo 3 stock +20 t',
+    });
   });
 
   it('T33: a failure after half the lines leaves the previous set, lines and ETag intact', async () => {
@@ -234,6 +282,9 @@ describe('reconciliation draft lines (plan 2.8)', () => {
       kind: 'availability',
       quantity: '15',
       missingEvent: true,
+      // SME R11: a stop without an event cites its record
+      evidenceType: 'log',
+      evidenceRef: 'shift log',
       reasonCodeId: reason,
     }));
     await env

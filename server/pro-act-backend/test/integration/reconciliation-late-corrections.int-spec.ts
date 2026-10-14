@@ -38,6 +38,9 @@ describe('late corrections and change proposals (plan 2.8)', () => {
     kind: 'availability',
     quantity,
     missingEvent: true,
+    // SME R11: a stop without an event cites its record
+    evidenceType: 'log',
+    evidenceRef: 'shift log',
     reasonCodeId: reason,
   });
 

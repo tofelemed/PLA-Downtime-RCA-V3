@@ -134,6 +134,32 @@ export class ReconciliationLine extends TenantScopedEntity {
   @Column({ name: 'missing_event', type: 'boolean', default: false })
   missingEvent: boolean;
 
+  /** SME R7 / R8: category of an Unaccounted or bridge line */
+  @Column({
+    name: 'classification',
+    type: 'varchar',
+    length: 32,
+    nullable: true,
+  })
+  classification: string | null;
+
+  /** SME R11: the record a manual quantity rests on (log, work order, totalizer, lot / sample, …) */
+  @Column({
+    name: 'evidence_type',
+    type: 'varchar',
+    length: 32,
+    nullable: true,
+  })
+  evidenceType: string | null;
+
+  @Column({
+    name: 'evidence_ref',
+    type: 'varchar',
+    length: 200,
+    nullable: true,
+  })
+  evidenceRef: string | null;
+
   @Column({ name: 'reason', type: 'text', nullable: true })
   reason: string | null;
 

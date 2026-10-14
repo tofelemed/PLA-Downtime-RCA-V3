@@ -68,6 +68,8 @@ export interface LineEvidenceRef {
 
 export type DraftAction = 'accept' | 'adjust' | 'replace' | 'reject' | 'manual';
 export type ManualKind = 'availability' | 'performance' | 'quality' | 'bridge' | 'gain' | 'unaccounted_classified';
+/** SME R11: the record a manual quantity rests on when no event or approved adjustment backs it. */
+export type EvidenceType = 'log' | 'work_order' | 'rate_record' | 'totalizer' | 'lot_sample' | 'movement_record' | 'measurement_record' | 'investigation_note';
 
 export interface ReconciliationLineView {
   id: string;
@@ -86,6 +88,10 @@ export interface ReconciliationLineView {
   adjustmentId: string | null;
   missingCode: boolean;
   missingEvent: boolean;
+  /** SME R7 / R8: category of an Unaccounted or bridge line */
+  classification?: string;
+  evidenceType?: EvidenceType;
+  evidenceRef?: string;
   reason: string | null;
   comment: string | null;
   authorId: string | null;
@@ -134,6 +140,9 @@ export interface DraftLineInput {
   missingEvent?: boolean;
   reason?: string;
   comment?: string;
+  classification?: string;
+  evidenceType?: EvidenceType;
+  evidenceRef?: string;
 }
 
 export interface ApprovalActionView {

@@ -88,6 +88,9 @@ describe('plan dashboard reads (plan 3.5)', () => {
           kind: 'availability',
           quantity: '15',
           missingEvent: true,
+          // SME R11: a stop without an event cites its record
+          evidenceType: 'log',
+          evidenceRef: 'shift log',
           reasonCodeId: reason,
         },
       ])

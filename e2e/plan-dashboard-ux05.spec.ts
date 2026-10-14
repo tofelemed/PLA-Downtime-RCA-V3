@@ -156,6 +156,8 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await page.fill('#manualQuantity', '20');
     await page.locator('#manualNoEvent').click();
     await page.selectOption('#manualReason', world.reasonCodeId);
+    await page.selectOption('#manualEvidenceType', 'log'); // SME R11: a stop without an event cites its log
+    await page.fill('#manualEvidenceRef', 'shift log line 14');
     await page.getByTestId('manual-line-add').click();
     await page.route('**/draft-lines', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ code: 'INTERNAL_ERROR', message: 'injected failure', correlationId: 'e2e', retryable: false }) }));
     await page.getByTestId('save-lines').click();

@@ -74,10 +74,16 @@ describe('draft lines (editing state)', () => {
   it('flags missing fields before sending (shape only, never budgets)', () => {
     expect(decisionProblems({ action: 'adjust' })).toEqual(['A reason is required.', 'Enter the quantity.']);
     expect(decisionProblems({ action: 'accept' })).toEqual([]);
-    expect(manualProblems({ uid: 'x', sliceId: 's1', kind: 'availability', quantity: null, eventIds: [], missingEvent: true, missingCode: false })).toHaveLength(2);
+    expect(manualProblems({ uid: 'x', sliceId: 's1', kind: 'availability', quantity: null, eventIds: [], missingEvent: true, missingCode: false })).toHaveLength(3);
+    // SME R11: a stop without an event cites a log or work order; an event is enough on its own
+    const stop = { uid: 's', sliceId: 's1', kind: 'availability' as const, quantity: '5', eventIds: [], missingEvent: true, missingCode: true };
+    expect(manualProblems(stop)).toEqual(['Name the evidence and its reference.']);
+    expect(manualProblems({ ...stop, evidenceType: 'work_order', evidenceRef: 'WO-4711' })).toEqual([]);
+    expect(manualProblems({ ...stop, missingEvent: false, eventIds: ['e1'] })).toEqual([]);
+    // SME R8 / R9: a bridge has a reason, a category and a record, and is never negative
     const bridge = { uid: 'b', sliceId: 's1', kind: 'bridge' as const, quantity: '-20', eventIds: [], missingEvent: true, missingCode: true };
-    expect(manualProblems(bridge)).toEqual(['A bridge needs a written reason.']);
-    expect(manualProblems({ ...bridge, reason: 'plan rate below planning rate' })).toEqual([]);
+    expect(manualProblems(bridge)).toEqual(['A bridge needs a written reason.', 'A bridge cannot be negative: correct the over-claimed lines.', 'Choose the category.', 'Name the evidence and its reference.']);
+    expect(manualProblems({ ...bridge, quantity: '20', reason: 'stock rose in silo 3', classification: 'inventory', evidenceType: 'movement_record', evidenceRef: 'silo 3 +20 t' })).toEqual([]);
   });
 });
 

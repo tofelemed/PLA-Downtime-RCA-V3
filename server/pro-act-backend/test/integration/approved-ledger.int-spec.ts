@@ -43,6 +43,9 @@ describe('approved ledger lines feed the loss tree and RCA impact (VA-01b)', () 
           kind: 'availability',
           quantity: '150',
           missingEvent: true,
+          // SME R11: a stop without an event cites its record
+          evidenceType: 'log',
+          evidenceRef: 'shift log',
           reasonCodeId: power,
         },
       ])

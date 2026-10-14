@@ -73,6 +73,11 @@ export interface ReconciliationLineV2View {
   adjustmentId: string | null;
   missingCode: boolean;
   missingEvent: boolean;
+  /** SME R7 / R8: category of an Unaccounted or bridge line */
+  classification?: string;
+  /** SME R11: the record a manual quantity rests on */
+  evidenceType?: string;
+  evidenceRef?: string;
   reason: string | null;
   comment: string | null;
   authorId: string | null;

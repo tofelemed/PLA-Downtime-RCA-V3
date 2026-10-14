@@ -132,6 +132,9 @@ export class ReconciliationWorld extends AccountingWorld {
         kind: 'availability',
         quantity,
         missingEvent: true,
+        // SME R11: a stop without an event cites its record
+        evidenceType: 'log',
+        evidenceRef: 'shift log',
         reasonCodeId,
         reason: 'feed outage',
       },
@@ -223,6 +226,25 @@ export class ReconciliationWorld extends AccountingWorld {
       userId: randomUUID(),
       tenantId: this.world.tenantA,
       role,
+    });
+  }
+
+  /** A token of a new user of tenant A granted one scope role on the whole tenant. */
+  async scopedUser(role: string): Promise<string> {
+    const userId = randomUUID();
+    await this.rows(
+      `INSERT INTO users (id, name, email, password_hash, role, tenant_id) VALUES ($1, $2, $3, 'x', 'Operator', $4)`,
+      [userId, role, `${userId}@test.local`, this.world.tenantA],
+    );
+    await this.rows(
+      `INSERT INTO user_scopes (tenant_id, user_id, scope_kind, scope_id, role, row_version)
+       VALUES ($1, $2, 'tenant', $1, $3, 1)`,
+      [this.world.tenantA, userId, role],
+    );
+    return signToken(this.app, {
+      userId,
+      tenantId: this.world.tenantA,
+      role: 'Operator',
     });
   }
 

@@ -3,6 +3,7 @@ import {
   DraftAction,
   ManualKind,
 } from '../domain/reconciliation/reconciliation.types';
+import type { EvidenceType } from './line-evidence-rules';
 
 /** One line of a draft save as the editor sends it (§15.3). */
 export interface DraftLineInput {
@@ -23,6 +24,11 @@ export interface DraftLineInput {
   missingEvent?: boolean;
   reason?: string;
   comment?: string;
+  /** SME R7 / R8: category of an Unaccounted or bridge line */
+  classification?: string;
+  /** SME R11: the record a quantity rests on when no event or approved adjustment backs it */
+  evidenceType?: EvidenceType;
+  evidenceRef?: string;
 }
 
 export interface DraftLinesCommand {

@@ -34,6 +34,9 @@ import {
 import { contentHashOf } from './reviewed-content';
 import { runChanged, workflowIssues } from './workflow-errors';
 import { actorOf, recordTransition } from './workflow-recorder';
+import { satisfiesRole } from '../auth/roles/role-model';
+import { BRIDGE_WRITERS } from '../v2/periods/period-roles';
+import { assertManualLineRules } from './line-evidence-rules';
 
 /**
  * The atomic draft-lines command of §15.3 (plan 2.8 step 2): in one transaction, serialized with the
@@ -63,7 +66,12 @@ export class DraftLinesService {
       const state = await this.draftState(manager, context, periodId, command);
       await assertBaseRun(manager, state, command.baseRunId);
       assertRevision(state.revision.rowVersion, expectedVersion);
-      const lines = await this.resolve(manager, state, command, actorId);
+      const lines = await this.resolve(manager, state, command, {
+        actorId,
+        mayBridge: BRIDGE_WRITERS.some((role) =>
+          satisfiesRole(context.roles, role),
+        ),
+      });
       const set = await this.writer.write(manager, {
         revision: state.revision,
         baseRunId: command.baseRunId,
@@ -133,12 +141,16 @@ export class DraftLinesService {
     manager: EntityManager,
     state: RevisionState,
     command: DraftLinesCommand,
-    actorId: string,
+    caller: { actorId: string; mayBridge: boolean },
   ): Promise<LineDraft[]> {
+    const { actorId } = caller;
     const shaped = shapeLines(
       command.lines,
       state.candidateLines,
       state.tolerance.rule,
+    );
+    command.lines.forEach((input, index) =>
+      assertManualLineRules(input, index, { mayBridge: caller.mayBridge }),
     );
     const evidence = await checkReferences(manager, state.period, shaped);
     const decisions = shaped.map(decisionOf);
@@ -192,6 +204,9 @@ function rowOf(
     adjustmentId: input.adjustmentId ?? null,
     missingCode: input.missingCode === true,
     missingEvent: input.missingEvent === true,
+    classification: input.classification ?? null,
+    evidenceType: input.evidenceType ?? null,
+    evidenceRef: input.evidenceRef?.trim() || null,
     reason: input.reason?.trim() || null,
     comment: input.comment ?? null,
     authorId: actorId,

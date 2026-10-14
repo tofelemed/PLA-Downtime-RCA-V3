@@ -93,6 +93,9 @@ describe('M1 vertical slice: PI event frame → … → approved revision → ex
           kind: 'performance',
           quantity: '25',
           missingEvent: true,
+          // SME R11: a rate loss without an event cites its rate record
+          evidenceType: 'rate_record',
+          evidenceRef: 'rate log',
           reasonCodeId: reason,
           reason: 'slow feed',
         },
