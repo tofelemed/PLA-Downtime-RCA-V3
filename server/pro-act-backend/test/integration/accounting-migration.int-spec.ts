@@ -79,22 +79,26 @@ describe('AccountingEngine migration', () => {
     );
     const policies = await q<{
       policy_kind: string;
+      version: number;
       body: Record<string, unknown>;
     }>(
-      `SELECT policy_kind, body FROM accounting_policies
-        WHERE tenant_id = $1 AND policy_kind IN ('oee_policy', 'reconciliation_tolerance') ORDER BY policy_kind`,
+      `SELECT policy_kind, version, body FROM accounting_policies
+        WHERE tenant_id = $1 AND policy_kind IN ('oee_policy', 'reconciliation_tolerance') ORDER BY policy_kind, version`,
       [tenant],
     );
-    expect(policies.map((p) => p.policy_kind)).toEqual([
-      'oee_policy',
-      'reconciliation_tolerance',
+    // OeePolicyFirstOut (SME D7) adds oee_policy version 2 on top of the seeded version 1
+    expect(policies.map((p) => [p.policy_kind, p.version])).toEqual([
+      ['oee_policy', 1],
+      ['oee_policy', 2],
+      ['reconciliation_tolerance', 1],
     ]);
     expect(policies[0].body).toMatchObject({
       derateComponent: 'performance',
       microStopSeconds: 60,
       defaultLedgerView: 'plan',
     });
-    expect(policies[1].body).toMatchObject({
+    expect(policies[1].body).toMatchObject({ overlapAllocation: 'first_out' });
+    expect(policies[2].body).toMatchObject({
       mode: 'zero',
       epsilon: 0.000001,
       allowUnaccountedClassification: false,

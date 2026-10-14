@@ -50,6 +50,14 @@ export const DURATION_SECONDS_EXPRESSION =
   'CHK_production_events_impact_fraction',
   '"impact_fraction" IS NULL OR ("impact_fraction" >= 0 AND "impact_fraction" <= 1)',
 )
+@Check(
+  'CHK_production_events_planned_end',
+  '"planned_end_time" IS NULL OR "planned_end_time" > "start_time"',
+)
+@Check(
+  'CHK_production_events_failure_severity',
+  `"failure_severity" IS NULL OR "failure_severity" IN ('critical', 'degraded', 'incipient')`,
+)
 @Index('IDX_production_events_tenant_unit_start', [
   'tenantId',
   'unitId',
@@ -125,6 +133,13 @@ export class ProductionEvent {
   @Column({ name: 'origin_unit_id', type: 'uuid', nullable: true })
   originUnitId: string | null;
 
+  @ManyToOne(() => Unit, { onDelete: 'RESTRICT' })
+  @JoinColumn({
+    name: 'origin_unit_id',
+    foreignKeyConstraintName: 'FK_production_events_origin_unit',
+  })
+  originUnit?: Unit;
+
   /** SME D4: approved end of a planned stop's window (frozen before the work); time after it is overrun */
   @Column({ name: 'planned_end_time', type: 'timestamptz', nullable: true })
   plannedEndTime: Date | null;
@@ -133,6 +148,13 @@ export class ProductionEvent {
   @Index('IDX_production_events_origin_asset', { where: '"origin_asset_id" IS NOT NULL' })
   @Column({ name: 'origin_asset_id', type: 'uuid', nullable: true })
   originAssetId: string | null;
+
+  @ManyToOne(() => Asset, { onDelete: 'RESTRICT' })
+  @JoinColumn({
+    name: 'origin_asset_id',
+    foreignKeyConstraintName: 'FK_production_events_origin_asset',
+  })
+  originAsset?: Asset;
 
   @Column({ name: 'impact_code_id', type: 'uuid', nullable: true })
   impactCodeId: string;

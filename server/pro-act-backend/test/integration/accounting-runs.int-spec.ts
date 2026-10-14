@@ -114,7 +114,7 @@ describe('loss accounting calculation runs (plan 2.5)', () => {
 
   it('a changed loss event writes a new run, supersedes the old one and keeps it intact', async () => {
     const before = await env.accounting(periodA1);
-    await env.lossEvent(env.world.unitA1, plus(A, 1.5 * HOUR), 1);
+    const later = await env.lossEvent(env.world.unitA1, plus(A, 1.5 * HOUR), 1);
     await env.settle();
     const after = await env.accounting(periodA1);
     expect(after.data.run!.id).not.toBe(firstRun);
@@ -123,10 +123,16 @@ describe('loss accounting calculation runs (plan 2.5)', () => {
       availability: '150',
       residual: '0',
     });
-    const shared = after.data.lines.filter(
-      (l) => l.ledger === 'capacity' && l.evidence[0]?.share === '0.5',
-    );
-    expect(shared).toHaveLength(2);
+    // SME D7 first-out: the first stop keeps its whole hour, the later one only the time after it
+    const byCause = (eventId: string) =>
+      after.data.lines.find(
+        (l) =>
+          l.ledger === 'capacity' &&
+          l.kind === 'availability' &&
+          l.causeEventId === eventId,
+      );
+    expect(byCause(stopId)).toMatchObject({ quantity: '100' });
+    expect(byCause(later)?.quantity).toBe('50');
     const runs = await env.runs(periodA1);
     expect(runs.map((r) => r.status)).toEqual(['validated', 'superseded']);
     const [{ count }] = await env.rows<{ count: number }>(
