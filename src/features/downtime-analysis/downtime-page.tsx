@@ -62,9 +62,10 @@ function DowntimeScreen() {
           </div>
           <CurrentStopsPanel unitIds={filters.unitIds} onClose={setClosing} onCode={setCoding} />
         </div>
+        {/* SME D14: the default ranking is lost tonnes; duration and stop counts follow as alternatives */}
+        <LostProductionPareto filters={filters} />
         <ReasonPareto filters={filters} onChange={change} onEvents={(next) => setDrill({ key: filterKey, selection: next })} />
         {selection && <DrillEvents filters={filters} selection={selection} onDismiss={() => setDrill(null)} />}
-        <LostProductionPareto filters={filters} />
         <TrendPanel filters={filters} bundle={bundle} views={views} />
         <div className="grid gap-6 lg:grid-cols-2">
           <BadActors bundle={bundle} views={views} />

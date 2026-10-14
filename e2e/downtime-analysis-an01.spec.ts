@@ -83,7 +83,7 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
 
     // reliability: no failure-coded stops → MTBF null with exposure; no repair evidence → labelled restore column
     const reliability = page.getByTestId('reliability');
-    await expect(reliability.getByTestId('restore-title')).toHaveText('Mean downtime to restore');
+    await expect(reliability.getByTestId('restore-title')).toHaveText('Mean time to restore production');
     await expect(reliability.getByTestId('mtbf')).toContainText('No failures in the window · exposure');
 
     // drill: Mechanical → its children; frequency; Bearing → exactly its events (count = bar frequency)

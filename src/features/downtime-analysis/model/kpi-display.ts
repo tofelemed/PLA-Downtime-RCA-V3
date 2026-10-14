@@ -80,17 +80,20 @@ export function hasUnknownTime(views: readonly KpiAggregateView[] | undefined): 
 }
 
 export interface RestoreColumn {
-  /** "MTTR" only with repair evidence; otherwise the labelled mean downtime to restore (KPI08 / D13) */
-  title: 'MTTR' | 'Mean downtime to restore';
+  /**
+   * SME D10: "Mean active repair time" (MTTR: diagnosis, repair and test, from repair evidence) only with repair evidence;
+   * otherwise "Mean time to restore production" (failure to production resumed). KPI08 / D13.
+   */
+  title: 'Mean active repair time' | 'Mean time to restore production';
   view: KpiAggregateView;
 }
 
 export function restoreColumn(row: ReliabilityRowView): RestoreColumn {
-  if (row.mttr.value !== null) return { title: 'MTTR', view: row.mttr };
-  return { title: 'Mean downtime to restore', view: row.meanDowntimeToRestore };
+  if (row.mttr.value !== null) return { title: 'Mean active repair time', view: row.mttr };
+  return { title: 'Mean time to restore production', view: row.meanDowntimeToRestore };
 }
 
-/** The restore column title of a whole table: MTTR only when every row has repair evidence. */
+/** The restore column title of a whole table: active repair time only when every row has repair evidence. */
 export function restoreTitle(rows: readonly ReliabilityRowView[]): RestoreColumn['title'] {
-  return rows.length > 0 && rows.every((row) => row.mttr.value !== null) ? 'MTTR' : 'Mean downtime to restore';
+  return rows.length > 0 && rows.every((row) => row.mttr.value !== null) ? 'Mean active repair time' : 'Mean time to restore production';
 }

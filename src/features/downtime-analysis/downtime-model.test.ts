@@ -92,14 +92,14 @@ describe('KPI labels and formatting (KPI05–KPI08)', () => {
     expect(SUMMARY_TILES[0].note).toMatch(/calendar/);
   });
 
-  it('MTTR only with repair evidence, otherwise "Mean downtime to restore"', () => {
+  it('SME D10: "Mean active repair time" only with repair evidence, otherwise "Mean time to restore production"', () => {
     const row = (mttr: string | null): ReliabilityRowView => ({
       unitId: 'u1', assetId: null, label: null, exposureSeconds: '3600', failures: '0',
       mtbf: kpi('mtbf', null, 'no_failures'), meanDowntimeToRestore: kpi('mean_downtime_to_restore', '600'), mttr: kpi('mttr', mttr, mttr ? null : 'repair_evidence_missing'),
     });
-    expect(restoreColumn(row(null))).toMatchObject({ title: 'Mean downtime to restore', view: { value: '600' } });
-    expect(restoreColumn(row('300')).title).toBe('MTTR');
-    expect(restoreTitle([row('300'), row(null)])).toBe('Mean downtime to restore');
+    expect(restoreColumn(row(null))).toMatchObject({ title: 'Mean time to restore production', view: { value: '600' } });
+    expect(restoreColumn(row('300')).title).toBe('Mean active repair time');
+    expect(restoreTitle([row('300'), row(null)])).toBe('Mean time to restore production');
   });
 });
 

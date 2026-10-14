@@ -9,8 +9,8 @@ import { ReportCard } from './report-card';
 
 /**
  * Reliability per unit (KPI07 / KPI08, D13): MTBF = exposure ÷ failures from the server, null with the
- * exposure when there were no failures; MTTR only with repair evidence, otherwise the column is the
- * labelled mean downtime to restore.
+ * exposure when there were no failures; mean active repair time only with repair evidence, otherwise the
+ * column is the mean time to restore production (SME D10).
  */
 export function ReliabilityCard({ filters }: { filters: DowntimeFilters }) {
   const env = useEventHubEnv();
