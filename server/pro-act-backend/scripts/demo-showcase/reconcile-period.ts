@@ -98,6 +98,9 @@ function sliceLines(
       kind: 'performance',
       quantity: formatDec(remaining),
       missingEvent: true,
+      // SME R11: a rate loss without an event cites its rate evidence
+      evidenceType: 'rate_record',
+      evidenceRef: 'Demo: shift rate record (planning rate vs. totalizer)',
       reasonCodeId: speedReasonId,
       comment:
         'Unrecorded speed loss: the line ran below the planning rate between stops',
