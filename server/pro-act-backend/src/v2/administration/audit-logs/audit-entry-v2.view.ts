@@ -24,7 +24,11 @@ export class AuditCount {
 }
 
 export class AuditDayCount {
-  @ApiProperty({ description: 'UTC day, YYYY-MM-DD' }) day: string;
+  @ApiProperty({
+    description:
+      "Plant-local day, YYYY-MM-DD (default site's timezone, else the tenant's, else UTC)",
+  })
+  day: string;
   @ApiProperty() count: number;
 }
 

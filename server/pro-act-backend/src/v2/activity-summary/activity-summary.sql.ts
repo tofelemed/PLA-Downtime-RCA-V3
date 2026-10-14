@@ -30,7 +30,7 @@ export const TASK_CELLS_SQL = `SELECT coalesce(nullif(t."status", ''), 'Unknown'
        count(*) FILTER (WHERE coalesce(t."status", '') NOT IN ('Completed', 'Cancelled')
                           AND t."due_date" < $5)::int AS "overdue"
   FROM "tasks" t
- WHERE t."tenant_id" = $1::text AND t."created_at" >= $2 AND t."created_at" < $3
+ WHERE t."tenant_id" = $1::uuid AND t."created_at" >= $2 AND t."created_at" < $3
  GROUP BY 1, 2, 3`;
 
 /** Audit cells: $1 tenant, $2 from, $3 to, $4 timezone. */

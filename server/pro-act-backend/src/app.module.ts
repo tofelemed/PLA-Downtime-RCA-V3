@@ -87,6 +87,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RequestContextMiddleware } from './common/context/request-context.middleware';
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import { IdempotencyModule } from './common/idempotency/idempotency.module';
+import { RetentionModule } from './common/retention/retention.module';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -99,6 +100,8 @@ registerPgTypeParsers();
     AccessModule,
     // Idempotency-Key storage for @Idempotent() commands (API02)
     IdempotencyModule,
+    // Audit-table and raw-partition retention (DB-07), disabled until windows are configured
+    RetentionModule,
     // Global rate limit (429 + Retry-After); per user when authenticated, per IP otherwise
     ThrottlerModule.forRoot(throttlerOptionsFromEnv()),
     // Cron providers are live only in PROCESS_ROLE=worker|all; the api role is HTTP-only

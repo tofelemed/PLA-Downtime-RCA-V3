@@ -1,6 +1,6 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { AccountingRevision } from '../../accounting/entities/accounting-revision.entity';
-import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import { LOSS_KINDS, LossKind } from '../../domain/accounting/accounting.types';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
 
@@ -13,7 +13,7 @@ import { decimalStringTransformer } from '../../v2/common/decimal-string.transfo
 @Entity('approved_loss_lines')
 @Index('IDX_approved_loss_lines_tenant_revision', ['tenantId', 'revisionId'])
 @Index('IDX_approved_loss_lines_tenant_cause', ['tenantId', 'causeEventId'])
-export class ApprovedLossLine extends TenantScopedEntity {
+export class ApprovedLossLine extends TenantOwnedEntity {
   @Column({ name: 'revision_id', type: 'uuid' })
   revisionId: string;
 

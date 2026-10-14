@@ -356,4 +356,28 @@ describe('v2 administration: tasks and audit trail', () => {
       .set(bearer(otherPlant.token))
       .expect(404);
   });
+
+  it('counts audit entries per plant-local day, not per UTC day (DB-11)', async () => {
+    const ds = harness.dataSource;
+    await ds.query(`UPDATE tenants SET timezone = 'Asia/Tokyo' WHERE id = $1`, [
+      world.plantA,
+    ]);
+    await ds.query(
+      `UPDATE sites SET timezone = 'Asia/Tokyo' WHERE tenant_id = $1`,
+      [world.plantA],
+    );
+    // 20:00 UTC on 1 Jan and 02:00 UTC on 2 Jan are both 2 Jan in Tokyo (UTC+9)
+    for (const at of ['2026-01-01T20:00:00Z', '2026-01-02T02:00:00Z']) {
+      await audit(world.plantA, manager.id, 'UPDATE', 'User', new Date(at), '');
+    }
+    const summary = bodyOf<{ byDay: Array<{ day: string; count: number }> }>(
+      await http()
+        .get(
+          '/api/v2/audit-logs/summary?from=2026-01-01T00:00:00Z&to=2026-01-03T00:00:00Z',
+        )
+        .set(bearer(manager.token))
+        .expect(200),
+    );
+    expect(summary.byDay).toEqual([{ day: '2026-01-02', count: 2 }]);
+  });
 });

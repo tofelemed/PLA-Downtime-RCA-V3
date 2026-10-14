@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Tenant } from '../../tenant/tenant.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 export type SourceType = 'PI' | 'OPCUA' | 'Modbus' | 'MQTT' | 'Database' | 'RESTAPI' | 'SystemIntegration' | '*';
@@ -42,8 +43,12 @@ export class SourceHierarchyMapping {
   targetId: string;
 
   @ApiProperty({ description: 'Tenant ID for multi-tenancy' })
-  @Column({ name: 'tenant_id', type: 'varchar', length: 36 })
+  @Column({ name: 'tenant_id', type: 'uuid' })
   tenantId: string;
+
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
   @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })

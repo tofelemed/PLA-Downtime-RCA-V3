@@ -1,5 +1,5 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
-import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
 import { LossLine } from './loss-line.entity';
 
@@ -12,7 +12,7 @@ import { LossLine } from './loss-line.entity';
 @Index('IDX_loss_line_evidence_line', ['lossLineId'])
 @Index('IDX_loss_line_evidence_tenant_event', ['tenantId', 'eventId'])
 @Index('IDX_loss_line_evidence_event_revision', ['eventRevisionId'])
-export class LossLineEvidence extends TenantScopedEntity {
+export class LossLineEvidence extends TenantOwnedEntity {
   @Column({ name: 'loss_line_id', type: 'uuid' })
   lossLineId: string;
 

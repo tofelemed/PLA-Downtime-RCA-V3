@@ -8,7 +8,7 @@ import {
   ManyToOne,
   Unique,
 } from 'typeorm';
-import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import { ScheduleExclusionKind } from '../../domain/calendar/calendar.types';
 import { Unit } from '../../unit/unit.entity';
 import { CalendarVersion } from './calendar-version.entity';
@@ -38,7 +38,7 @@ import { Crew } from './crew.entity';
   'CHK_shift_instances_exclusion',
   '"is_excluded" = ("exclusion_kind" IS NOT NULL)',
 )
-export class ShiftInstance extends TenantScopedEntity {
+export class ShiftInstance extends TenantOwnedEntity {
   @Column({ name: 'calendar_version_id', type: 'uuid' })
   calendarVersionId: string;
 

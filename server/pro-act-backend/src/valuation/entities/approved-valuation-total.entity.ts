@@ -1,6 +1,6 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, Unique } from 'typeorm';
 import { AccountingRevision } from '../../accounting/entities/accounting-revision.entity';
-import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import { LOSS_KINDS, LossKind } from '../../domain/accounting/accounting.types';
 import { TotalsView } from '../../domain/valuation/valuation.types';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
@@ -39,7 +39,7 @@ const quantity = (name: string) => ({
   'currency',
 ])
 @Index('IDX_approved_valuation_totals_tenant_period', ['tenantId', 'periodId'])
-export class ApprovedValuationTotal extends TenantScopedEntity {
+export class ApprovedValuationTotal extends TenantOwnedEntity {
   @Column({ name: 'revision_id', type: 'uuid' })
   revisionId: string;
 

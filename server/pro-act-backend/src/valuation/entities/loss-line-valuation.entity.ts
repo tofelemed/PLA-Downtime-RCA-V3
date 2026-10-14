@@ -1,7 +1,7 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, Unique } from 'typeorm';
 import { CalculationRun } from '../../accounting/entities/calculation-run.entity';
 import { LossLine } from '../../accounting/entities/loss-line.entity';
-import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import { Ledger, LEDGERS } from '../../domain/accounting/accounting.types';
 import {
   VALUATION_VIEWS,
@@ -26,7 +26,7 @@ export type LineValuationStatus = (typeof LINE_VALUATION_STATUSES)[number];
 @Index('IDX_loss_line_valuations_tenant_run', ['tenantId', 'runId'])
 @Index('IDX_loss_line_valuations_period', ['periodId'])
 @Index('IDX_loss_line_valuations_run', ['runId'])
-export class LossLineValuation extends TenantScopedEntity {
+export class LossLineValuation extends TenantOwnedEntity {
   @Column({ name: 'run_id', type: 'uuid' })
   runId: string;
 

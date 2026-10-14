@@ -1,5 +1,5 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
-import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import {
   KPI_METRICS,
   KPI_QUALITIES,
@@ -30,7 +30,7 @@ const term = (name: string, scale: number) => ({
 @Entity('kpi_results')
 @Index('IDX_kpi_results_tenant_run_metric', ['tenantId', 'runId', 'metric'])
 @Index('IDX_kpi_results_run', ['runId'])
-export class KpiResult extends TenantScopedEntity {
+export class KpiResult extends TenantOwnedEntity {
   @Column({ name: 'run_id', type: 'uuid' })
   runId: string;
 
