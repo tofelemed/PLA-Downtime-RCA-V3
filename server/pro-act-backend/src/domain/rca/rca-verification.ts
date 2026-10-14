@@ -1,16 +1,52 @@
 import { Dec, formatDec } from '../actuals/decimal';
+import { EffectivenessCriteria, ExposureWindow } from './effectiveness';
+import { RepeatMatch } from './rca-policy';
 
 export const BASELINE_METRICS = ['recurrences', 'downtime_seconds'] as const;
 export type BaselineMetric = (typeof BASELINE_METRICS)[number];
 
-/** The declared (or history-computed) baseline of an action: a metric over a window of days. */
+/** CA3 correction of a computed baseline: proposed with a reason, decided by someone else. */
+export interface BaselineCorrection {
+  /** corrected metric value over the same exposure (decimal string) */
+  value: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  proposedBy: string | null;
+  proposedAt: string;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  note: string | null;
+}
+
+/**
+ * The baseline of an action: a metric over a window of days. Since CA3 it is computed by the server from
+ * history (same assets and failure mode, run-time exposure), frozen with its query version, criteria and
+ * window; a person can only propose a correction that another person approves. `declared` rows were typed
+ * before CA3 and are kept as they were.
+ */
 export interface ActionBaseline {
   metric: BaselineMetric;
   windowDays: number;
-  /** decimal string */
+  /** decimal string: the counted metric over the window */
   value: string;
-  /** true when a person declared the value, false when the server counted it from history */
+  /** true when a person declared the value (before CA3), false when the server counted it */
   declared: boolean;
+  /** CA3: the frozen history window with its run-time exposure (absent on rows before CA3) */
+  window?: ExposureWindow;
+  match?: RepeatMatch;
+  modeKeys?: string[];
+  queryVersion?: string;
+  computedAt?: string;
+  /** CA2: acceptance criteria frozen when the verification was planned */
+  criteria?: EffectivenessCriteria;
+  correction?: BaselineCorrection | null;
+}
+
+/** The approved corrected value, else null (a pending or rejected proposal never counts). */
+export function approvedCorrection(baseline: ActionBaseline): string | null {
+  return baseline.correction?.status === 'approved'
+    ? baseline.correction.value
+    : null;
 }
 
 /** What the verification job observed in the action's verification window. */

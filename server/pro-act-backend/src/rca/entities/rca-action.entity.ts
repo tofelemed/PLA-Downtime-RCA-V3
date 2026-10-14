@@ -5,6 +5,10 @@ import {
   PostActionObservation,
   RealizedResult,
 } from '../../domain/rca/rca-verification';
+import {
+  EffectivenessResult,
+  ExposureWindow,
+} from '../../domain/rca/effectiveness';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
 import { RCA } from '../rca.entity';
 
@@ -16,12 +20,33 @@ export const RCA_ACTION_STATUSES = [
 ] as const;
 export type RcaActionStatus = (typeof RCA_ACTION_STATUSES)[number];
 
+/** CA4 action types; each names the objective evidence it needs (`ACTION_EVIDENCE`). */
+export const RCA_ACTION_TYPES = [
+  'repair',
+  'design_change',
+  'procedure_change',
+  'instrument_change',
+  'training',
+  'other',
+] as const;
+export type RcaActionType = (typeof RCA_ACTION_TYPES)[number];
+
+/** A completion evidence file (stored by `POST /v2/rcas/{id}/attachments`). */
+export interface CompletionAttachment {
+  fileName: string;
+  name: string;
+}
+
 /** Stored post-action result of the verification job. */
 export interface StoredPostAction extends PostActionObservation {
   from: string;
   to: string;
   evaluatedAt: string;
   realized: RealizedResult;
+  /** CA2: same-mode incidents and run-time exposure of the verification window (absent before CA2) */
+  exposure?: ExposureWindow;
+  /** CA2 verdict against the frozen baseline and criteria (absent for baselines typed before CA3) */
+  effectiveness?: EffectivenessResult;
 }
 
 /**
@@ -75,6 +100,18 @@ export class RcaAction extends TenantScopedEntity {
 
   @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
   completedAt: Date | null;
+
+  /** CA4: what kind of action, which decides the evidence expected (repair, design change, ...) */
+  @Column({ name: 'action_type', type: 'varchar', length: 32, nullable: true })
+  actionType: RcaActionType | null;
+
+  /** CA4: who checked the completion evidence and marked the action done (never its owner) */
+  @Column({ name: 'completion_verified_by', type: 'uuid', nullable: true })
+  completionVerifiedBy: string | null;
+
+  /** CA4: files of the case's upload area that prove the completion (test report, drawing, record) */
+  @Column({ name: 'completion_attachments', type: 'jsonb', nullable: true })
+  completionAttachments: CompletionAttachment[] | null;
 
   @Column({
     name: 'verification_window_start',

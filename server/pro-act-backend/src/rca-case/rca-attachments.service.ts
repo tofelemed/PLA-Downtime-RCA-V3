@@ -21,7 +21,7 @@ export interface RcaAttachmentV2View {
 /**
  * Evidence files of a case (v1 parity: photos, documents, videos with an evidence item). Files go to the
  * tenant's upload folder (shared upload limits and type allowlist); a case only serves files that one of
- * its evidence items references.
+ * its evidence items or one of its actions' completion evidence (CA4) references.
  */
 @Injectable()
 export class RcaAttachmentsService {
@@ -53,9 +53,10 @@ export class RcaAttachmentsService {
   ): Promise<StoredAttachment> {
     const scope = scopeOf(context);
     const rca = await findCase(this.dataSource.manager, scope, rcaId);
-    const referenced = readEvidence(rca.evidence).some((item) =>
-      item.attachments.some((attachment) => attachment.fileName === fileName),
-    );
+    const referenced =
+      readEvidence(rca.evidence).some((item) =>
+        item.attachments.some((attachment) => attachment.fileName === fileName),
+      ) || (await this.actionReferences(scope.tenantId, rcaId, fileName));
     if (!referenced) {
       throw new NotFoundException({
         code: 'NOT_FOUND',
@@ -63,5 +64,19 @@ export class RcaAttachmentsService {
       });
     }
     return resolveAttachment(context, scope.tenantId, fileName);
+  }
+
+  /** CA4: a completion file of one of the case's actions. */
+  private async actionReferences(
+    tenantId: string,
+    rcaId: string,
+    fileName: string,
+  ): Promise<boolean> {
+    const rows: unknown[] = await this.dataSource.query(
+      `SELECT 1 FROM "rca_actions" WHERE "tenant_id" = $1 AND "rca_id" = $2
+          AND "completion_attachments" @> jsonb_build_array(jsonb_build_object('fileName', $3::text)) LIMIT 1`,
+      [tenantId, rcaId, fileName],
+    );
+    return rows.length > 0;
   }
 }

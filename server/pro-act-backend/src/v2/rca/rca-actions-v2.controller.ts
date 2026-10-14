@@ -24,6 +24,7 @@ import { RequestContext } from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { RcaActionV2View } from '../../rca-case/rca-action.view';
 import { RcaActionsService } from '../../rca-case/rca-actions.service';
+import { RcaBaselineCorrectionsService } from '../../rca-case/rca-baseline-corrections.service';
 import {
   RcaRecommendationsService,
   RcaRecommendationV2View,
@@ -34,6 +35,8 @@ import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import {
   RcaActionV2CreateDto,
   RcaActionV2UpdateDto,
+  RcaBaselineCorrectionDto,
+  RcaBaselineDecisionDto,
 } from './rca-actions-v2.dto';
 import {
   RcaRecommendationDismissV2Dto,
@@ -49,6 +52,7 @@ export class RcaActionsV2Controller {
   constructor(
     private readonly actions: RcaActionsService,
     private readonly recommendations: RcaRecommendationsService,
+    private readonly corrections: RcaBaselineCorrectionsService,
   ) {}
 
   @Get('rcas/:id/actions')
@@ -112,6 +116,45 @@ export class RcaActionsV2Controller {
     @IfMatch() expectedRowVersion: number,
   ): Promise<RcaActionV2View> {
     return this.actions.verify(ctx, id, expectedRowVersion);
+  }
+
+  @Post('rca-actions/:id/baseline-correction')
+  @HttpCode(HttpStatus.OK)
+  @Roles(...RCA_WRITERS)
+  @ApiOperation({
+    summary:
+      'Propose a correction of the computed baseline, with its reason (SME CA3)',
+    description:
+      'Requires `If-Match`. The counted baseline is kept; the correction counts once someone else approves it. ' +
+      '409 BASELINE_NOT_COMPUTED for a baseline typed before CA3 or without a verification plan.',
+  })
+  @ApiHeader({ name: 'If-Match', required: true })
+  proposeCorrection(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @IfMatch() expectedRowVersion: number,
+    @Body() body: RcaBaselineCorrectionDto,
+  ): Promise<RcaActionV2View> {
+    return this.corrections.propose(ctx, { id, expectedRowVersion }, body);
+  }
+
+  @Post('rca-actions/:id/baseline-correction/decision')
+  @HttpCode(HttpStatus.OK)
+  @Roles('manager_approver')
+  @ApiOperation({
+    summary: 'Approve or reject a proposed baseline correction (SME CA3)',
+    description:
+      'Requires `If-Match`. Manager approver other than the proposer (403 SEPARATION_OF_DUTIES); 409 ' +
+      'NO_PENDING_CORRECTION. Approving clears the verification result so the action is evaluated again.',
+  })
+  @ApiHeader({ name: 'If-Match', required: true })
+  decideCorrection(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @IfMatch() expectedRowVersion: number,
+    @Body() body: RcaBaselineDecisionDto,
+  ): Promise<RcaActionV2View> {
+    return this.corrections.decide(ctx, { id, expectedRowVersion }, body);
   }
 
   @Get('rca-recommendations')

@@ -3,14 +3,40 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { ShutdownCoordinator } from '../common/scheduling/shutdown-coordinator.service';
-import { realizedDifference, windowDays } from '../domain/rca/rca-verification';
+import {
+  effectivenessOf,
+  EffectivenessResult,
+  ExposureWindow,
+} from '../domain/rca/effectiveness';
+import {
+  ActionBaseline,
+  approvedCorrection,
+  realizedDifference,
+  windowDays,
+} from '../domain/rca/rca-verification';
 import { RcaAction, StoredPostAction } from '../rca/entities/rca-action.entity';
-import { caseFootprint, footprintRecurrence } from './rca-recurrence';
+import { caseModeFootprint, exposureWindow } from './effectiveness-exposure';
+
+/** CA2 verdict against the frozen baseline (null for a baseline typed before CA3: no exposure to compare). */
+function verdictOf(
+  baseline: ActionBaseline,
+  post: ExposureWindow,
+): EffectivenessResult | null {
+  if (!baseline.window || !baseline.criteria) return null;
+  return effectivenessOf({
+    metric: baseline.metric,
+    baseline: baseline.window,
+    correctedBaseline: approvedCorrection(baseline),
+    post,
+    criteria: baseline.criteria,
+  });
+}
 
 /**
- * RCA03 verification (plan 3.9 step 4): once an action's verification window has ended, counts the
- * recurrences and downtime of the case's footprint inside the window and stores them with the realized
- * difference against the baseline. Runs hourly in the worker for every due action and on demand
+ * RCA03 / CA2 verification (plan 3.9 step 4): once an action's verification window has ended, counts the
+ * same-mode unplanned incidents of the case's assets inside the window with its run-time exposure (planned
+ * and unplanned downtime excluded) and stores them with the realized difference and the effectiveness
+ * verdict against the frozen baseline (an approved correction replaces the counted value). Runs hourly in the worker for every due action and on demand
  * (`POST /v2/rca-actions/{id}/verify`). Approved accounting is never touched.
  */
 @Injectable()
@@ -69,12 +95,17 @@ export class RcaVerificationService {
         message: 'the verification window has not ended yet',
       });
     }
-    const footprint = await caseFootprint(
-      manager,
-      action.tenantId,
-      action.rcaId,
-    );
-    const observed = await footprintRecurrence(manager, {
+    const { baseline } = action;
+    const current = await caseModeFootprint(manager, {
+      tenantId: action.tenantId,
+      rcaId: action.rcaId,
+      match: baseline.match ?? 'asset',
+    });
+    // the failure-mode identity frozen with the baseline (CA3), the case's current assets and units
+    const footprint = baseline.modeKeys
+      ? { ...current, modeKeys: baseline.modeKeys }
+      : current;
+    const exposure = await exposureWindow(manager, {
       tenantId: action.tenantId,
       footprint,
       from: start,
@@ -82,15 +113,18 @@ export class RcaVerificationService {
     });
     const observation = {
       windowDays: windowDays(start, end),
-      recurrences: observed.recurrences,
-      observedLossSeconds: observed.lossSeconds,
+      recurrences: exposure.incidents,
+      observedLossSeconds: exposure.downtimeSeconds,
     };
+    const effectiveness = verdictOf(baseline, exposure);
     const postAction: StoredPostAction = {
       ...observation,
       from: start.toISOString(),
       to: end.toISOString(),
       evaluatedAt: now.toISOString(),
-      realized: realizedDifference(action.baseline, observation),
+      realized: realizedDifference(baseline, observation),
+      exposure,
+      ...(effectiveness ? { effectiveness } : {}),
     };
     action.postAction = postAction;
     return manager.getRepository(RcaAction).save(action);
