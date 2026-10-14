@@ -7,6 +7,7 @@ import {
   ScheduleSpan,
   SliceActualsInput,
   SliceInput,
+  TransitionStandard,
 } from '../domain/accounting/accounting.types';
 import { sliceTarget } from '../domain/accounting/slice-target';
 import { RateTimebase } from '../domain/actuals/actuals.types';
@@ -14,6 +15,7 @@ import { PeriodProductSlice } from '../periods/entities/period-product-slice.ent
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { InputFingerprint } from './entities/calculation-run.entity';
 import { KpiInputs, loadKpiInputs } from './kpi-inputs.loader';
+import { loadTransitionStandards } from './transition-standards.loader';
 
 /** Everything a calculation run reads, frozen once per run (plan 2.5 step 1). */
 export interface AccountingInputs {
@@ -21,6 +23,8 @@ export interface AccountingInputs {
   events: LossEvent[];
   slices: SliceInput[];
   asOf: Date;
+  /** approved transition standards of the unit (LA-08) */
+  transitionStandards: TransitionStandard[];
   fingerprint: InputFingerprint;
   /** occurrence extents and failure candidates of the KPI engine (plan 2.7) */
   kpi: KpiInputs;
@@ -42,6 +46,9 @@ interface EventRow {
   failure_mode: string | null;
   asset_id: string | null;
   planned_end_time: Date | null;
+  from_product_id: string | null;
+  to_product_id: string | null;
+  recovery_of_event_id: string | null;
   row_version: number;
   revision_id: string | null;
   revision: number | null;
@@ -68,12 +75,13 @@ interface InstanceRow {
 export const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", e."start_time", e."end_time", e."schedule_class",
        e."oee_component", e."impact_mode", e."impact_fraction"::text AS "impact_fraction", e."quantity"::text AS "quantity",
        e."reason_code_id", e."impact_code_id", e."failure_mode", e."asset_id", e."planned_end_time", e."row_version",
+       e."from_product_id", e."to_product_id", e."recovery_of_event_id",
        r."id" AS "revision_id", r."revision"
   FROM "production_events" e
   LEFT JOIN LATERAL (SELECT er."id", er."revision" FROM "event_revisions" er WHERE er."event_id" = e."id"
                       ORDER BY er."revision" DESC LIMIT 1) r ON true
  WHERE e."tenant_id" = $1 AND e."unit_id" = $2
-   AND e."physical_type" IN ('downtime', 'slowdown', 'quality_loss') AND e."physical_state" IN ('open', 'closed')
+   AND e."physical_type" IN ('downtime', 'slowdown', 'quality_loss', 'grade_transition') AND e."physical_state" IN ('open', 'closed')
    AND tstzrange(e."start_time", e."end_time", '[)') && tstzrange($3, $4, '[)')
  ORDER BY e."start_time", e."id"`;
 
@@ -115,6 +123,11 @@ function toEvent(row: EventRow): LossEvent {
     failureMode: row.failure_mode,
     assetId: row.asset_id,
     plannedEnd: row.planned_end_time ? new Date(row.planned_end_time) : null,
+    transition:
+      row.from_product_id && row.to_product_id
+        ? { fromProductId: row.from_product_id, toProductId: row.to_product_id }
+        : null,
+    recoveryOfEventId: row.recovery_of_event_id,
   };
 }
 
@@ -144,6 +157,7 @@ interface FingerprintSource {
   events: readonly EventRow[];
   instances: readonly InstanceRow[];
   rateIds: string[];
+  standardIds: string[];
   actualsRunId: string | null;
   /** set while the period is running and an open event is measured to it */
   asOf: Date | null;
@@ -176,6 +190,7 @@ function fingerprintOf(source: FingerprintSource): InputFingerprint {
         ...instances.map((i) => i.calendar_version_id),
       ].flatMap((v) => (v ? [v] : [])),
     ),
+    transitionStandardIds: source.standardIds,
     asOf: source.asOf ? source.asOf.toISOString() : null,
   };
 }
@@ -234,9 +249,9 @@ function toSliceInput(
 
 /**
  * Loads a period's accounting inputs in the run's transaction: stored shift instances (exclusions),
- * downtime / slowdown / quality events effective now with their latest revision, the approved sustained
- * and planning rate versions of each slice's profile, the slices' plan targets and the actuals of the
- * actuals run — and the fingerprint naming each of them by id and version (FND03).
+ * downtime / slowdown / quality / grade-transition events effective now with their latest revision, the
+ * approved sustained and planning rate versions of each slice's profile, the unit's approved transition
+ * standards, the slices' plan targets and the actuals of the actuals run — and the fingerprint naming each of them by id and version (FND03).
  */
 @Injectable()
 export class AccountingInputsLoader {
@@ -259,11 +274,13 @@ export class AccountingInputsLoader {
       actualsRunId,
     );
     const openMeasured = running && events.some((e) => e.end_time === null);
+    const standards = await loadTransitionStandards(manager, period, events);
     return {
       schedule: instances.map(toSpan),
       events: events.map(toEvent),
       slices: sliceInputs.inputs,
       asOf,
+      transitionStandards: standards,
       kpi: await loadKpiInputs(manager, period),
       fingerprint: fingerprintOf({
         period,
@@ -271,6 +288,7 @@ export class AccountingInputsLoader {
         events,
         instances,
         rateIds: sliceInputs.rateIds,
+        standardIds: sorted(standards.map((s) => s.id)),
         actualsRunId,
         asOf: openMeasured ? asOf : null,
       }),

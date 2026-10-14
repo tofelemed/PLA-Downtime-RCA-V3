@@ -30,6 +30,14 @@ export function hashOf(
       s.excluded,
       s.exclusionKind,
     ]),
+    // a superseded standard keeps its id but its window closes (LA-08)
+    transitionStandards: inputs.transitionStandards.map((s) => [
+      s.id,
+      s.referenceSeconds,
+      s.referenceOffgradeQuantity,
+      s.from.getTime(),
+      s.to?.getTime() ?? null,
+    ]),
     slices: inputs.slices.map((s) => [
       s.sliceId,
       s.window.start.getTime(),

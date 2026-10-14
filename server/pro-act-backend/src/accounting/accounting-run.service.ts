@@ -343,6 +343,7 @@ function engineInput(
     events: inputs.events,
     slices: inputs.slices,
     asOf: inputs.asOf,
+    transitionStandards: inputs.transitionStandards,
     occurrences: inputs.kpi.occurrences,
     policy: {
       microStopSeconds: engine.oee.microStopSeconds,

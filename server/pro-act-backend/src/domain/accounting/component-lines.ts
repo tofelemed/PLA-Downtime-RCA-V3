@@ -5,6 +5,7 @@ import { autoKey } from './auto-key';
 import { PRODUCT_RUN_SHARE } from './claim-pooling';
 import { Claim, sumOf } from './claims';
 import { LineContext } from './time-lines';
+import { transitionLines } from './transition-lines';
 
 export interface ComponentInput {
   kind: Extract<LossKind, 'performance' | 'quality' | 'availability'>;
@@ -30,6 +31,9 @@ function claimBasis(claim: Claim, context: LineContext): LossBasis {
   return claim.event.physicalType === 'slowdown' ? 'measured' : 'declared';
 }
 
+/** SME Q10: lines of a ramp-up / startup-quality event say they recover from a stop. */
+export const TRIP_RECOVERY = 'trip_recovery';
+
 function claimLine(
   claim: Claim,
   input: ComponentInput,
@@ -53,6 +57,7 @@ function claimLine(
     flags: [
       ...(claim.rateVersionIds.length > 1 ? ['several_rate_versions'] : []),
       ...(claim.pooled ? [PRODUCT_RUN_SHARE] : []),
+      ...(event.recoveryOfEventId ? [TRIP_RECOVERY] : []),
     ],
     evidence: [
       {
@@ -112,7 +117,12 @@ export function componentLines(
   context: LineContext,
 ): ComponentResult {
   const claims = input.claims.filter((c) => c.quantity.gt(ZERO));
-  const lines = claims.map((claim) => claimLine(claim, input, context));
+  const lines = claims.flatMap((claim) => {
+    const line = claimLine(claim, input, context);
+    return claim.transition
+      ? transitionLines(line, claim.transition, input.kind)
+      : [line];
+  });
   const remainder = input.total.minus(sumOf(claims.map((c) => c.quantity)));
   if (remainder.gt(input.epsilon))
     lines.push(remainderLine(remainder, input, context));

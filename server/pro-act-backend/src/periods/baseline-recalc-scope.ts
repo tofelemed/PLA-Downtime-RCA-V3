@@ -50,8 +50,15 @@ function importScope(
   };
 }
 
+/** Subjects whose message names their unit (a transition standard is per unit, LA-08). */
+const UNIT_SUBJECTS: ReadonlySet<string> = new Set([
+  'profile',
+  'transition_standard',
+]);
+
 /**
- * LA-03: which periods an approved-baseline change recalculates. A profile names its unit; a rate or a
+ * LA-03: which periods an approved-baseline change recalculates. A profile or a transition standard
+ * names its unit; a rate or a
  * profile's valuation rate is located through its profile (the message's aggregate id); a valuation
  * rate of an impact code applies to every unit; an applied import covers its profiles' units over the
  * window of the rates it wrote. Null = nothing can be located (the recompute is skipped).
@@ -64,7 +71,7 @@ export function baselineRecalcScope(
   if (payload.subject === 'rate_import') return importScope(payload, lookups);
   const window = windowOf(payload);
   if (!window) return null;
-  if (payload.subject === 'profile' && payload.unitId) {
+  if (UNIT_SUBJECTS.has(payload.subject ?? '') && payload.unitId) {
     return { unitIds: [payload.unitId], ...window };
   }
   const unitId = lookups.profileUnits.get(aggregateId);

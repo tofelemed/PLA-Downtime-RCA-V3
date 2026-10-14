@@ -80,6 +80,8 @@ const WORDS: Readonly<Record<string, string>> = {
   availability: 'Availability',
   performance: 'Performance',
   quality: 'Quality',
+  transition_allowance: 'Grade transition (within standard)',
+  transition_excess: 'Grade transition overrun',
   bridge: 'Bridge',
   unaccounted_classified: 'Unaccounted (classified)',
 };

@@ -16,6 +16,10 @@ export const LOSS_KINDS = [
   'tolerance_adjustment',
   'unaccounted_classified',
   'bridge',
+  /** LA-08: transition loss within the approved transition standard (planned allowance) */
+  'transition_allowance',
+  /** LA-08: transition loss beyond the standard (`transition_overrun`) or without one (`no_transition_standard`) */
+  'transition_excess',
 ] as const;
 export type LossKind = (typeof LOSS_KINDS)[number];
 
@@ -51,7 +55,31 @@ export interface ScheduleSpan {
   exclusionKind: string | null;
 }
 
-export type LossEventType = 'downtime' | 'slowdown' | 'quality_loss';
+export type LossEventType =
+  | 'downtime'
+  | 'slowdown'
+  | 'quality_loss'
+  | 'grade_transition';
+
+/** The product change a `grade_transition` event records (directional: from → to). */
+export interface GradeChange {
+  fromProductId: string;
+  toProductId: string;
+}
+
+/**
+ * An approved, effective-dated entry of the unit's transition matrix (SME E1): the reference duration
+ * of one directional product change and, optionally, the reference off-grade quantity it makes.
+ */
+export interface TransitionStandard {
+  id: string;
+  fromProductId: string;
+  toProductId: string;
+  referenceSeconds: string;
+  referenceOffgradeQuantity: string | null;
+  from: Date;
+  to: Date | null;
+}
 
 /** A loss-explaining event revision effective at run time (evidence of ACC05). */
 export interface LossEvent {
@@ -78,6 +106,10 @@ export interface LossEvent {
    * extension of the same stop (maintenance overrun). Null = no approved window recorded.
    */
   plannedEnd?: Date | null;
+  /** LA-08: products of a `grade_transition` event; absent / null for every other event */
+  transition?: GradeChange | null;
+  /** SME Q10: the stop this ramp-up / startup-quality event recovers from (its lines name that stop) */
+  recoveryOfEventId?: string | null;
 }
 
 /** The actuals of a slice (2.4 result of the run's actuals run). */
@@ -132,6 +164,8 @@ export interface PeriodAccountingInput {
   /** running events are measured to here (≤ period end) */
   asOf: Date;
   policy: EnginePolicy;
+  /** LA-08: the unit's approved transition standards overlapping the period; absent = none */
+  transitionStandards?: readonly TransitionStandard[];
   /**
    * full extent of each stop occurrence over all its events, also those outside the window (DT-09):
    * a split child inside the window is a micro-stop only if the whole occurrence is short
@@ -164,6 +198,8 @@ export interface Segment {
   microStops: SegmentCause[];
   /** fractional derates active in the segment */
   derates: LossEvent[];
+  /** grade transitions active in running time (they take the segment's capacity, LA-08) */
+  transitions: SegmentCause[];
 }
 
 export interface EvidenceDraft {

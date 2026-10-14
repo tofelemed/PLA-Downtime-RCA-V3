@@ -8,7 +8,6 @@ import {
   ValidationIssue,
 } from './accounting.types';
 import { ClaimPool } from './claim-pooling';
-import { qualityClaims } from './claims';
 import {
   allocate,
   capacityOver,
@@ -17,6 +16,7 @@ import {
   emptyTotals,
   issue,
   ledgerClaims,
+  ledgerQualityClaims,
   maxZero,
   Production,
   productionOf,
@@ -89,7 +89,7 @@ function qualityPart(
   const result = allocate(ctx, {
     kind: 'quality',
     total,
-    claims: qualityClaims(ctx.input.events, ctx.slice.window),
+    claims: ledgerQualityClaims(ctx),
     remainderRateId: null,
     remainderBasis: 'measured',
   });

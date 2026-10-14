@@ -7,7 +7,7 @@ import {
   SliceInput,
 } from './accounting.types';
 import { ClaimPool } from './claim-pooling';
-import { qualityClaims, sumOf } from './claims';
+import { sumOf } from './claims';
 import {
   allocate,
   capacityOver,
@@ -15,6 +15,7 @@ import {
   derateAvailability,
   emptyTotals,
   ledgerClaims,
+  ledgerQualityClaims,
   maxZero,
   productionOf,
   runningRateId,
@@ -26,6 +27,7 @@ import {
 } from './ledger-common';
 import { PlanTotals, planTotals } from './plan-totals';
 import { LineContext, timeLines } from './time-lines';
+import { componentTotal } from './transition-lines';
 
 interface Candidates {
   lines: LossLineDraft[];
@@ -103,7 +105,7 @@ function qualityCandidates(ctx: SliceContext): Candidates {
   const result = allocate(ctx, {
     kind: 'quality',
     total: gross.minus(good),
-    claims: qualityClaims(ctx.input.events, ctx.slice.window),
+    claims: ledgerQualityClaims(ctx),
     remainderRateId: null,
     remainderBasis: 'measured',
   });
@@ -143,9 +145,9 @@ function planLedgerTotals(
     flags.add(BRIDGE);
   return {
     ...emptyTotals(slice, 'plan', [...flags]),
-    availability: totalOf(found.lines, 'availability'),
-    performance: totalOf(found.lines, 'performance'),
-    quality: totalOf(found.lines, 'quality'),
+    availability: componentTotal(found.lines, 'availability'),
+    performance: componentTotal(found.lines, 'performance'),
+    quality: componentTotal(found.lines, 'quality'),
     gain: totalOf(found.lines, 'gain').neg(),
     good: production.good,
     target: plan.target,
