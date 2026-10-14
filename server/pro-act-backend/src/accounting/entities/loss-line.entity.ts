@@ -1,4 +1,4 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { Check, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { TenantOwnedEntity } from '../../common/entities/tenant-scoped.entity';
 import {
   Ledger,
@@ -28,6 +28,7 @@ export type LineState = (typeof LINE_STATES)[number];
  * overrides are 2.8 reconciliation lines, the valuation snapshot is 2.6. Immutable (trigger `trg_loss_lines_immutable`).
  */
 @Entity('loss_lines')
+@Check('CHK_loss_lines_segment', '"segment_end" > "segment_start"')
 @Index('UQ_loss_lines_run_auto_key', ['runId', 'autoKey'], {
   unique: true,
   where: '"auto_key" IS NOT NULL',

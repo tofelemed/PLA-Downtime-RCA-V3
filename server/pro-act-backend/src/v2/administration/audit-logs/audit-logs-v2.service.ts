@@ -11,6 +11,7 @@ import {
   requireTenantId,
 } from '../../../common/context/request-context';
 import { scopedQuery } from '../../../common/query/scoped-query';
+import { TIMEZONE_SQL } from '../../activity-summary/activity-summary.sql';
 import { keysetPage } from '../../common/keyset-page';
 import { listResponse, ListResponse } from '../../common/response';
 import { parseSort } from '../../common/sort-spec';
@@ -90,16 +91,18 @@ export class AuditLogsV2Service {
         .orderBy('count', 'DESC')
         .limit(TOP_KEYS)
         .getRawMany<RawCount>();
+    const timezone = await this.plantTimezone(requireTenantId(context));
     const [total, byAction, byEntityType, byDay] = await Promise.all([
       this.filtered(context, query).getCount(),
       counted('log.action'),
       counted('log.entityType'),
       this.filtered(context, query)
         .select(
-          `to_char(log.timestamp AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+          `to_char(log.timestamp AT TIME ZONE :timezone, 'YYYY-MM-DD')`,
           'day',
         )
         .addSelect('COUNT(*)::int', 'count')
+        .setParameter('timezone', timezone)
         .groupBy('day')
         .orderBy('day', 'ASC')
         .getRawMany<AuditDayCount>(),
@@ -130,6 +133,15 @@ export class AuditLogsV2Service {
       rows: await this.toViews(requireTenantId(context), kept),
       truncated: rows.length > AUDIT_EXPORT_MAX_ROWS,
     };
+  }
+
+  /** Days are plant-local: the default site's timezone, else the tenant's, else UTC (like the work summary). */
+  private async plantTimezone(tenantId: string): Promise<string> {
+    const rows: Array<{ timezone: string }> = await this.logs.manager.query(
+      TIMEZONE_SQL,
+      [tenantId],
+    );
+    return rows[0]?.timezone ?? 'UTC';
   }
 
   private filtered(
