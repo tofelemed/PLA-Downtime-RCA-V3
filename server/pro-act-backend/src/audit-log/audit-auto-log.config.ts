@@ -38,7 +38,6 @@ export const AUDIT_ENTITY_ROUTE_MAP: Record<string, string> = {
   'hierarchy-mappings': 'HierarchyMapping',
   'pi-connections': 'PIConnection',
   'pi-sync-jobs': 'PISyncJob',
-  connectivity: 'Connectivity',
   'custom-attribute-definitions': 'CustomAttributeDefinition',
   'custom-attribute-values': 'CustomAttributeValue',
   'user-scopes': 'UserScope',

@@ -432,6 +432,8 @@ Status legend: ✅ Complete | 🟡 Partial | ❌ Stub / Not started
 
 ### 7.9 Connectivity (Industrial Protocols)
 
+> Removed on 2026-10-14 (owner decision): the v1 connectivity module (`/api/connectivity`, `ConnectivityGateway`, the protocol services and their 15 tables). The table below is historical; the v2 integration console (`/connectivity` in the UI, `/api/v2/connections`, `/api/v2/ingestion-jobs` and related routes) replaces it.
+
 | Module | Frontend | Backend | Status | Notes |
 |--------|----------|---------|--------|-------|
 | **Connectivity Overview** | `Connectivity.tsx` | `connectivity` | 🟡 | Mixed real + simulated |
@@ -842,7 +844,6 @@ server/pro-act-backend/database-setup/
 | File | Topic |
 |------|-------|
 | `FRONTEND_FULL_DOCUMENTATION.md` | Deep frontend encyclopedia (some IndexedDB references outdated) |
-| `CONNECTIVITY_MODULE.md` | Connectivity architecture |
 | `FEATURE_IMPLEMENTATION_STATUS.md` | Older status doc (connectivity-focused; backend % outdated) |
 | `PLA_RCA_TESTING_GUIDE.md` | Manual testing for PLA/RCA |
 | `STEP_BY_STEP_TESTING_CHECKLIST.md` | QA checklist |

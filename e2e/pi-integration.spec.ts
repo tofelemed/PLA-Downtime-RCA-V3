@@ -1,25 +1,11 @@
 /**
  * PI Integration validation tests (API-level)
- * Validates backend PI endpoints, source discovery, and pull response shape.
+ * Validates the backend PI endpoints.
  */
 
 import { test, expect } from '@playwright/test';
 import { createTestFixture, TestFixture } from './test-utils/test-fixtures';
 import { apiRequest, EntityRef } from './test-utils/api-helpers';
-
-interface EventSourceSummary {
-  id: string;
-  type: string;
-  sourceType: string;
-  enabled: boolean;
-}
-
-interface PullResponse {
-  success: boolean;
-  eventsFetched: number;
-  productionEventsCreated: number;
-  unmappedEventsCreated: number;
-}
 
 test.describe('PI Integration Validation', () => {
   let fixture: TestFixture;
@@ -38,62 +24,6 @@ test.describe('PI Integration Validation', () => {
       token: fixture.tokens.accessToken,
     });
     expect(Array.isArray(connections)).toBe(true);
-  });
-
-  test('PI-002: connectivity sources includes PI when connection exists', async () => {
-    const connections = await apiRequest<EntityRef[]>(`/pi-connections?tenantId=${fixture.tenant.id}`, {
-      method: 'GET',
-      token: fixture.tokens.accessToken,
-    });
-
-    const sources = await apiRequest<EventSourceSummary[]>(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
-      method: 'GET',
-      token: fixture.tokens.accessToken,
-    });
-
-    expect(Array.isArray(sources)).toBe(true);
-
-    if (connections.length > 0) {
-      const piSources = sources.filter((s) => s.type === 'PI');
-      expect(piSources.length).toBeGreaterThan(0);
-      expect(piSources[0].sourceType).toMatch(/PIConnection|SystemIntegration/);
-    }
-  });
-
-  test('PI-003: pull response includes unmappedEventsCreated field', async () => {
-    const sources = await apiRequest<EventSourceSummary[]>(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
-      method: 'GET',
-      token: fixture.tokens.accessToken,
-    });
-
-    const piSource = sources.find((s) => s.type === 'PI' && s.enabled);
-    if (!piSource) {
-      test.skip();
-      return;
-    }
-
-    const endTime = new Date();
-    const startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000);
-
-    const pullResponse = await apiRequest<PullResponse>('/connectivity/events/pull', {
-      method: 'POST',
-      token: fixture.tokens.accessToken,
-      body: JSON.stringify({
-        sourceType: 'PI',
-        sourceId: piSource.id,
-        tenantId: fixture.tenant.id,
-        startTimeUtc: startTime.toISOString(),
-        endTimeUtc: endTime.toISOString(),
-        maxCount: 50,
-        autoCreateProductionEvents: true,
-      }),
-    });
-
-    expect(pullResponse).toBeDefined();
-    expect(typeof pullResponse.success).toBe('boolean');
-    expect(typeof pullResponse.eventsFetched).toBe('number');
-    expect(typeof pullResponse.productionEventsCreated).toBe('number');
-    expect(pullResponse.unmappedEventsCreated).toBeDefined();
   });
 
   test('PI-004: unmapped-events API is reachable', async () => {
