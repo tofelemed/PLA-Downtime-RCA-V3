@@ -12,7 +12,8 @@ import { planLedger } from './plan-ledger';
 import { segmentSlice } from './segmentation';
 
 /** Bumped whenever a rule of the accounting engine changes (recorded on every calculation run). */
-export const ACCOUNTING_ENGINE_VERSION = '2.5.4';
+// 2.5.5: grade transitions (LA-08) and micro-stops per asset class (SME D6) together
+export const ACCOUNTING_ENGINE_VERSION = '2.5.5';
 
 function computeSlices(
   input: PeriodAccountingInput,

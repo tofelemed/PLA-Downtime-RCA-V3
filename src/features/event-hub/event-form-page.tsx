@@ -84,7 +84,7 @@ function EventFormBody({ event, defaultUnitId = '', backTo }: EventFormBodyProps
       {form.serverChanged && (
         <Alert data-testid="server-changed"><AlertDescription>The event changed on the server since you started; saving asks you to review the differences.</AlertDescription></Alert>
       )}
-      <EventFormFields form={form} mode={event ? 'edit' : 'create'} />
+      <EventFormFields form={form} mode={event ? 'edit' : 'create'} assetId={event?.assetId ?? null} />
       {unitId && start && <ImpactedPeriodsPreview unitId={unitId} from={start} to={end ?? event?.asOf ?? null} />}
       {save.formError && <Alert variant="destructive" role="alert" data-testid="form-error"><AlertDescription>{save.formError}</AlertDescription></Alert>}
       <div className="flex flex-wrap justify-end gap-2">

@@ -1,0 +1,229 @@
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
+import {
+  RequestContext,
+  requireTenantId,
+} from '../../common/context/request-context';
+import { scopedQuery } from '../../common/query/scoped-query';
+import {
+  scheduledIntervals,
+  StateCoverage,
+  stateCoverage,
+} from '../../domain/reliability/state-coverage';
+import { StateSegment } from '../../domain/reliability/unit-state';
+import { assertBodyUnitsInScope } from '../../periods/period-scope';
+import { UnitStateMapping } from '../../reliability/entities/unit-state-mapping.entity';
+import { loadStateTimeline } from '../../reliability/unit-state/state-timeline.loader';
+import { CursorCodec, invalidCursor } from '../common/cursor-codec';
+import { invalidField } from '../master-data/common/master-data-errors';
+import { windowOf } from './reliability-v2-common';
+import {
+  UnitStateCoverageQueryDto,
+  UnitStateMappingCreateDto,
+  UnitStateMappingListQueryDto,
+} from './unit-state-v2.dto';
+
+const MAX_WINDOW_MS = 31 * 86_400_000;
+const MAX_SEGMENTS = 5000;
+
+export interface UnitStateCoverageV2View {
+  unitId: string;
+  from: string;
+  to: string;
+  /** null = the unit has no state mapping at `from` (no state engine for it yet) */
+  coverage: StateCoverage | null;
+  segments: Array<{
+    start: string;
+    end: string;
+    state: string;
+    unknownReason: string | null;
+  }>;
+  /** more segments than returned (the coverage still counts them all) */
+  truncated: boolean;
+}
+
+/**
+ * Unit state mappings (SME D1 / D2): versions of a unit's signal → state mapping and heartbeat, and the
+ * state timeline with known-data coverage and availability bounds over a window (scheduled time = the
+ * window minus excluded shifts). Gaps are never filled; unknown time stays in the denominator.
+ */
+@Injectable()
+export class UnitStateV2Service {
+  constructor(@InjectEntityManager() private readonly manager: EntityManager) {}
+
+  async list(context: RequestContext, query: UnitStateMappingListQueryDto) {
+    assertBodyUnitsInScope(context, [query.unitId], 'unitId');
+    const qb = scopedQuery(this.manager.getRepository(UnitStateMapping), 'm', {
+      context,
+      unitProperty: 'unitId',
+    }).andWhere('m.unitId = :unitId', { unitId: query.unitId });
+    if (query.cursor) {
+      const { sortValue, id } = CursorCodec.decode(query.cursor);
+      if (typeof sortValue !== 'number') throw invalidCursor();
+      qb.andWhere('(m.version < :v OR (m.version = :v AND m.id < :id))', {
+        v: sortValue,
+        id,
+      });
+    }
+    const rows = await qb
+      .orderBy('m.version', 'DESC')
+      .addOrderBy('m.id', 'DESC')
+      .take(query.limit + 1)
+      .getMany();
+    const items = rows.slice(0, query.limit);
+    const last = items[items.length - 1];
+    const nextCursor =
+      rows.length > query.limit && last
+        ? CursorCodec.encode({ sortValue: last.version, id: last.id })
+        : null;
+    return { items, nextCursor };
+  }
+
+  async create(
+    context: RequestContext,
+    input: UnitStateMappingCreateDto,
+  ): Promise<UnitStateMapping> {
+    const tenantId = requireTenantId(context);
+    assertBodyUnitsInScope(context, [input.unitId], 'unitId');
+    await this.assertSignal(tenantId, input);
+    const from = input.effectiveFrom
+      ? new Date(input.effectiveFrom)
+      : new Date();
+    return this.manager.transaction(async (manager) => {
+      await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [
+        `unit_state_mappings:${tenantId}:${input.unitId}`,
+      ]);
+      const open = await manager
+        .getRepository(UnitStateMapping)
+        .createQueryBuilder('m')
+        .where(
+          'm.tenantId = :tenantId AND m.unitId = :unitId AND m.effectiveTo IS NULL',
+          { tenantId, unitId: input.unitId },
+        )
+        .getOne();
+      if (open && from <= open.effectiveFrom) {
+        throw invalidField(
+          'effectiveFrom',
+          'effectiveFrom must be after the start of the mapping in force',
+        );
+      }
+      const [{ next }] = await manager.query<Array<{ next: number }>>(
+        `SELECT coalesce(max("version"), 0) + 1 AS "next" FROM "unit_state_mappings" WHERE "tenant_id" = $1 AND "unit_id" = $2`,
+        [tenantId, input.unitId],
+      );
+      await manager.query(
+        `UPDATE "unit_state_mappings" SET "effective_to" = $3 WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "effective_to" IS NULL`,
+        [tenantId, input.unitId, from],
+      );
+      return manager.save(
+        manager.create(
+          UnitStateMapping,
+          rowOf(tenantId, context.userId, input, { from, version: next }),
+        ),
+      );
+    });
+  }
+
+  async coverage(
+    context: RequestContext,
+    query: UnitStateCoverageQueryDto,
+  ): Promise<UnitStateCoverageV2View> {
+    const tenantId = requireTenantId(context);
+    assertBodyUnitsInScope(context, [query.unitId], 'unitId');
+    const window = windowOf(query.from, query.to);
+    if (window.end.getTime() - window.start.getTime() > MAX_WINDOW_MS) {
+      throw new UnprocessableEntityException({
+        code: 'INVALID_RANGE',
+        message: 'The window is at most 31 days',
+      });
+    }
+    await this.assertUnit(tenantId, query.unitId);
+    const scope = { tenantId, unitId: query.unitId };
+    const timeline = await loadStateTimeline(this.manager, scope, window);
+    const excluded = await this.excludedShifts(scope, window);
+    const segments = timeline ?? [];
+    return {
+      unitId: query.unitId,
+      from: window.start.toISOString(),
+      to: window.end.toISOString(),
+      coverage: timeline
+        ? stateCoverage(timeline, scheduledIntervals(window, excluded, false))
+        : null,
+      segments: segments.slice(0, MAX_SEGMENTS).map(segmentView),
+      truncated: segments.length > MAX_SEGMENTS,
+    };
+  }
+
+  private async excludedShifts(
+    scope: { tenantId: string; unitId: string },
+    window: { start: Date; end: Date },
+  ) {
+    const rows = await this.manager.query<
+      Array<{ utc_start: Date; utc_end: Date }>
+    >(
+      `SELECT "utc_start", "utc_end" FROM "shift_instances"
+        WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "is_excluded" AND "utc_start" < $4 AND "utc_end" > $3`,
+      [scope.tenantId, scope.unitId, window.start, window.end],
+    );
+    return rows.map((r) => ({
+      start: new Date(r.utc_start),
+      end: new Date(r.utc_end),
+    }));
+  }
+
+  private async assertUnit(tenantId: string, unitId: string): Promise<void> {
+    const rows = await this.manager.query<unknown[]>(
+      `SELECT 1 FROM "units" WHERE "id" = $1 AND "tenant_id" = $2`,
+      [unitId, tenantId],
+    );
+    if (rows.length === 0)
+      throw invalidField('unitId', 'unitId must be a unit of this plant');
+  }
+
+  /** 422 unless the signal is a state signal of that unit and plant. */
+  private async assertSignal(
+    tenantId: string,
+    input: UnitStateMappingCreateDto,
+  ): Promise<void> {
+    const rows = await this.manager.query<Array<{ semantic_type: string }>>(
+      `SELECT "semantic_type" FROM "signals" WHERE "id" = $1 AND "tenant_id" = $2 AND "unit_id" = $3`,
+      [input.signalId, tenantId, input.unitId],
+    );
+    if (rows.length === 0)
+      throw invalidField('signalId', 'signalId must be a signal of this unit');
+    if (rows[0].semantic_type !== 'state')
+      throw invalidField('signalId', 'signalId must be a state signal');
+  }
+}
+
+function rowOf(
+  tenantId: string,
+  actorId: string | null,
+  input: UnitStateMappingCreateDto,
+  version: { from: Date; version: number },
+): Partial<UnitStateMapping> {
+  return {
+    tenantId,
+    unitId: input.unitId,
+    signalId: input.signalId,
+    rules: input.rules.map((r) => ({ match: r.match.trim(), state: r.state })),
+    expectedIntervalSeconds: input.expectedIntervalSeconds,
+    jitterSeconds: input.jitterSeconds ?? 0,
+    staleAfterIntervals: input.staleAfterIntervals ?? 3,
+    isHeartbeat: input.isHeartbeat ?? true,
+    version: version.version,
+    notes: input.notes?.trim() || null,
+    effectiveFrom: version.from,
+    effectiveTo: null,
+    createdBy: actorId,
+    updatedBy: actorId,
+  };
+}
+
+const segmentView = (s: StateSegment) => ({
+  start: s.start.toISOString(),
+  end: s.end.toISOString(),
+  state: s.state,
+  unknownReason: s.unknownReason,
+});

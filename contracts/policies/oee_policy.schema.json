@@ -52,6 +52,16 @@
           "default": 60,
           "description": "Stops shorter than this stay in R and reduce P (performance); stops >= this are availability stops in D (KPI02, DT03). Must equal `state_rules.body.microStopSeconds` for the same scope; the engine refuses a run when they differ."
         },
+        "microStopSecondsByAssetClass": {
+          "type": "object",
+          "additionalProperties": { "$ref": "policy-envelope.schema.json#/$defs/nonNegativeSeconds" },
+          "description": "SME D6 (2026-10-14): micro-stop threshold per asset class (the asset's asset type, compared without case), overriding microStopSeconds for stops whose first event names an asset of that class; e.g. 120 s pilot for operator-cleared bagger / conveyor stops, 0 for a reactor (every trip is an event). Absent = microStopSeconds for every stop."
+        },
+        "tripReasonCodes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "SME D6: reason codes of process trips. A stop coded with one, or carrying a functional failure (failure severity critical / degraded), is an availability event whatever its length, never a micro-stop. Absent = none."
+        },
         "idealTimeWeighting": {
           "type": "boolean",
           "default": true,

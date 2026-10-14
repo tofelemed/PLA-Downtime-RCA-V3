@@ -1,0 +1,145 @@
+import { Injectable } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
+import {
+  RequestContext,
+  requireTenantId,
+} from '../../common/context/request-context';
+import { AccountingPoliciesService } from '../../periods/accounting-policies.service';
+import { OeePolicy, parseOeePolicy } from '../../periods/engine-policy-bodies';
+import { AccountingPolicy } from '../../periods/entities/accounting-policy.entity';
+import { assertBodyUnitsInScope } from '../../periods/period-scope';
+import { PolicyBodyError } from '../../periods/policy-bodies';
+import { invalid, invalidReference } from '../../profiles/profile-errors';
+import { assertTenantWideWriter } from '../../profiles/profile-scope';
+import { MicroStopPolicyCreateDto } from './micro-stop-policy-v2.dto';
+
+const KIND = 'oee_policy';
+/** No unit has this id: resolving with it reads the tenant-wide version only. */
+const NO_UNIT = '00000000-0000-0000-0000-000000000000';
+
+export interface PolicyInForce {
+  row: AccountingPolicy;
+  body: OeePolicy;
+}
+
+/**
+ * SME D6 over HTTP: the micro-stop threshold of a unit or the plant, per asset class, and the trip reasons
+ * that are always events — written as a new approved `oee_policy` version of the scope (effective now; the
+ * previous open version of the same scope ends), every other field kept from the version in force. Periods
+ * already calculated keep the version they used.
+ */
+@Injectable()
+export class MicroStopPolicyV2Service {
+  constructor(
+    @InjectEntityManager() private readonly manager: EntityManager,
+    private readonly policies: AccountingPoliciesService,
+  ) {}
+
+  async current(
+    context: RequestContext,
+    unitId: string | undefined,
+    manager: EntityManager = this.manager,
+  ): Promise<PolicyInForce> {
+    const tenantId = requireTenantId(context);
+    if (unitId) await this.assertUnit(context, tenantId, unitId);
+    const engine = await this.policies.resolveEngine(
+      manager,
+      { tenantId, unitId: unitId ?? NO_UNIT },
+      new Date(),
+    );
+    const ref = engine.refs.find((r) => r.kind === KIND);
+    const row = await manager.findOneByOrFail(AccountingPolicy, {
+      id: ref?.id,
+      tenantId,
+    });
+    return { row, body: engine.oee };
+  }
+
+  async create(
+    context: RequestContext,
+    dto: MicroStopPolicyCreateDto,
+  ): Promise<PolicyInForce> {
+    const tenantId = requireTenantId(context);
+    if (!dto.unitId) assertTenantWideWriter(context, tenantId);
+    return this.manager.transaction(async (manager) => {
+      const base = await this.current(context, dto.unitId, manager);
+      const body = bodyOf(base.body, dto);
+      const scopeKey = dto.unitId ?? 'tenant';
+      const now = new Date();
+      const version = await nextVersion(manager, tenantId, scopeKey);
+      await manager.query(
+        `UPDATE "accounting_policies" SET "effective_to" = $4, "updated_by" = $5
+          WHERE "tenant_id" = $1 AND "policy_kind" = $2 AND "scope_key" = $3
+            AND "effective_to" IS NULL AND "effective_from" < $4`,
+        [tenantId, KIND, scopeKey, now, context.userId],
+      );
+      const row = await manager.save(
+        manager.create(AccountingPolicy, {
+          tenantId,
+          policyKind: KIND,
+          unitId: dto.unitId ?? null,
+          scopeKey,
+          version,
+          body: { ...body },
+          effectiveFrom: now,
+          effectiveTo: null,
+          approvedBy: context.userId,
+          approvedAt: now,
+          notes: dto.notes?.trim() || null,
+          createdBy: context.userId,
+          updatedBy: context.userId,
+        }),
+      );
+      return { row, body };
+    });
+  }
+
+  private async assertUnit(
+    context: RequestContext,
+    tenantId: string,
+    unitId: string,
+  ): Promise<void> {
+    assertBodyUnitsInScope(context, [unitId], 'unitId');
+    const rows = await this.manager.query<unknown[]>(
+      `SELECT 1 FROM "units" WHERE "id" = $1 AND "tenant_id" = $2`,
+      [unitId, tenantId],
+    );
+    if (rows.length === 0) throw invalidReference('unitId', 'unit');
+  }
+}
+
+/** The new body, checked by the parser the engine applies (422 INVALID_POLICY). */
+function bodyOf(base: OeePolicy, dto: MicroStopPolicyCreateDto): OeePolicy {
+  try {
+    return parseOeePolicy({
+      ...base,
+      microStopSeconds: dto.microStopSeconds,
+      microStopSecondsByAssetClass:
+        dto.microStopSecondsByAssetClass ?? base.microStopSecondsByAssetClass,
+      tripReasonCodes: dto.tripReasonCodes ?? base.tripReasonCodes,
+    });
+  } catch (error: unknown) {
+    if (error instanceof PolicyBodyError) {
+      throw invalid('INVALID_POLICY', error.message);
+    }
+    throw error;
+  }
+}
+
+/** Next version of the scope under a per-scope transaction lock. */
+async function nextVersion(
+  manager: EntityManager,
+  tenantId: string,
+  scopeKey: string,
+): Promise<number> {
+  await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [
+    `accounting_policies:${tenantId}:${KIND}:${scopeKey}`,
+  ]);
+  const [{ next }] = await manager.query<Array<{ next: number }>>(
+    `SELECT coalesce(max("version"), 0) + 1 AS "next" FROM "accounting_policies"
+      WHERE "tenant_id" = $1 AND "policy_kind" = $2 AND "scope_key" = $3`,
+    [tenantId, KIND, scopeKey],
+  );
+  return next;
+}

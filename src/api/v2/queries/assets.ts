@@ -7,6 +7,8 @@ export interface AssetSummary {
   code: string;
   name: string;
   unitId: string;
+  /** asset type as maintained in master data (selects the equipment class of the failure dictionary) */
+  assetType?: string | null;
   retiredAt: string | null;
 }
 

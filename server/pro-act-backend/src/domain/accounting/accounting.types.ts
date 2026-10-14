@@ -110,6 +110,12 @@ export interface LossEvent {
   transition?: GradeChange | null;
   /** SME Q10: the stop this ramp-up / startup-quality event recovers from (its lines name that stop) */
   recoveryOfEventId?: string | null;
+  /** SME D6: asset type of the event's asset (micro-stop threshold per asset class); absent in older fixtures */
+  assetClass?: string | null;
+  /** SME D6: code of the reason (a trip reason is never a micro-stop) */
+  reasonCode?: string | null;
+  /** SME D8: failure severity (a functional failure is never a micro-stop) */
+  failureSeverity?: string | null;
 }
 
 /** The actuals of a slice (2.4 result of the run's actuals run). */
@@ -149,6 +155,10 @@ export interface EnginePolicy {
   /** absent = `equal_share` (the rule of every policy version written before the option existed) */
   overlapAllocation?: OverlapAllocation;
   microStopSeconds: number;
+  /** SME D6: threshold per asset class (asset type), overriding `microStopSeconds`; absent = unit threshold only */
+  microStopSecondsByAssetClass?: Readonly<Record<string, number>>;
+  /** SME D6: reason codes of process trips, always availability events whatever their length */
+  tripReasonCodes?: readonly string[];
   derateComponent: 'performance' | 'availability';
   plannedStopsInsideScheduleReduceAvailability: boolean;
   epsilon: string;

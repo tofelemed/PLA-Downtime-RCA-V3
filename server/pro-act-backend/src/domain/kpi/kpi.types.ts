@@ -29,6 +29,9 @@ export const KPI_METRICS = [
   'mttr',
   'mean_downtime_to_restore',
   'coverage',
+  'state_coverage',
+  'availability_lower_bound',
+  'availability_upper_bound',
 ] as const;
 export type KpiMetric = (typeof KPI_METRICS)[number];
 
