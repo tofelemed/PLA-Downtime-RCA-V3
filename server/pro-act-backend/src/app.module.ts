@@ -48,7 +48,6 @@ import { IntegrationModule } from './integration/integration.module';
 import { IntakeModule } from './intake/intake.module';
 import { MqttAdapterModule } from './intake/adapters/mqtt/mqtt-adapter.module';
 import { HealthModule } from './health/health.module';
-import { ConnectivityModule } from './connectivity/connectivity.module';
 import { PIProxyModule } from './pi-proxy/pi-proxy.module';
 import { RCATriggerConfigModule } from './rca-trigger-config/rca-trigger-config.module';
 import { RCAKnowledgeBaseModule } from './rca-knowledge-base/rca-knowledge-base.module';
@@ -149,7 +148,6 @@ registerPgTypeParsers();
     // MQTT source adapter (plan 1.8): config validation, duplicate-feed guard, connection test
     MqttAdapterModule,
     HealthModule,
-    ConnectivityModule,
     PIProxyModule,
     // New Modules - Analysis & RCA Tools
     RCATriggerConfigModule,

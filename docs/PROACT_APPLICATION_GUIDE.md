@@ -386,13 +386,13 @@ These are server-side calculations: OEE summary and trend; production losses by 
 | RCA analysis tools | Working (backend CRUD) |
 | Knowledge base | Suggestions work; entries are only created by seeders |
 | PI integration | Real (PI Web API) |
-| OPC UA / Modbus / MQTT | Real client libraries exist, but most screens use simulated results |
-| BACnet, DNP3, EtherNet/IP, PROFINET, SCADA, CMMS | **Simulated / stub** |
+| MQTT | Real: v2 intake adapter (plan 1.8) on the integration console |
+| OPC UA, Modbus, BACnet, DNP3, EtherNet/IP, PROFINET, SCADA, CMMS | Not available. The simulated v1 connectivity module (`/api/connectivity`) was removed on 2026-10-14 (owner decision). |
 | Streaming engine | Runs in the browser; most sinks and aggregate steps are stubs |
 
 **Security gaps** (fine for development, must be fixed before production):
 
-- JWT is checked per controller. Several controllers have no guard: unmapped events, RCA recommendations, dashboard configuration, evidence upload, connectivity realtime.
+- JWT is checked per controller. Several controllers have no guard: unmapped events, RCA recommendations, dashboard configuration, evidence upload.
 - There is no tenant isolation on the server.
 - `POST /auth/register` is public and accepts any role, including SuperAdmin.
 - The realtime socket has no authentication and broadcasts every change to every client, across tenants.
@@ -428,7 +428,7 @@ flowchart TB
         Auth[Auth: JWT access 24h + refresh 7d]
         Mods[~60 feature modules<br/>controller → service → TypeORM repository]
         Audit[Global audit interceptor]
-        RT[RealtimeGateway + ConnectivityGateway]
+        RT[RealtimeGateway + ScopedRealtimeGateway]
         Cron[@nestjs/schedule: PI sync jobs every minute]
         Rules[RCA trigger evaluator · PI event pull · reporting]
     end

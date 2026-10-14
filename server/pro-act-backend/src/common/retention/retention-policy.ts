@@ -1,8 +1,9 @@
 /**
- * Data retention windows (DB-07). The owner has not chosen the periods yet (DECISIONS.md "Retention:
- * raw ___ samples ___ ledgers/audit ___"; raw retention deferred 2026-10-11), so every window is
- * **disabled by default**: unset or empty = keep forever. A set value must be a whole number of days ≥ 1;
- * anything else is a configuration error and nothing is deleted.
+ * Data retention windows (DB-07), read from the environment only: unset or empty = keep forever. The
+ * owner chose 30 days for both audit tables (2026-10-14); docker-compose passes
+ * `AUDIT_REQUEST_LOG_RETENTION_DAYS` / `AUDIT_TRAIL_RETENTION_DAYS` = 30 by default, other runs set them in
+ * `.env`. Raw retention is not decided (deferred 2026-10-11), so `RAW_RETENTION_DAYS` stays unset. A set
+ * value must be a whole number of days ≥ 1; anything else is a configuration error and nothing is deleted.
  */
 export interface RetentionPolicy {
   /** `audit_logs`, the request log of the global audit interceptor (by `timestamp`) */

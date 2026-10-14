@@ -420,53 +420,6 @@ async function setupTestEnvironment(): Promise<SetupResult> {
       console.warn('   ⚠️  Could not check PI connections:', error.response?.data?.message || error.message);
     }
 
-    // Step 8: Test event pulling (if PI connection exists)
-    if (piConnectionId) {
-      console.log('\n🧪 Step 8: Testing PI event pulling...');
-      try {
-        // First, try the unified event pull endpoint
-        const pullResponse = await axios.post(
-          `${API_BASE_URL}/connectivity/events/pull`,
-          {
-            sourceType: 'PI',
-            sourceId: piConnectionId,
-            tenantId: tenantId,
-            startTimeUtc: new Date(Date.now() - 3600 * 1000).toISOString(), // Last 1 hour
-            endTimeUtc: new Date().toISOString(),
-            maxCount: 50,
-            autoCreateProductionEvents: true,
-            filters: {
-              scopeType: 'database' // or 'element'
-            }
-          },
-          {
-            headers: { Authorization: `Bearer ${userToken}` }
-          }
-        );
-
-        const result = pullResponse.data;
-        console.log(`   ✅ Event pull completed:`);
-        console.log(`      - Events fetched: ${result.eventsFetched || 0}`);
-        console.log(`      - Events stored: ${result.eventsStored || 0}`);
-        console.log(`      - Production events created: ${result.productionEventsCreated || 0}`);
-        
-        if (result.errors && result.errors.length > 0) {
-          console.log(`      - Errors: ${result.errors.length}`);
-          result.errors.forEach((err: string) => console.log(`         ⚠️  ${err}`));
-        }
-      } catch (error: any) {
-        console.warn('   ⚠️  PI event pull test failed:', error.response?.data?.message || error.message);
-        console.log('   ℹ️  This is expected if PI system is not accessible or connection is not configured.');
-        console.log('   ℹ️  You can configure a PI connection later and test event pulling from the UI.');
-      }
-    } else {
-      console.log('\n⏭️  Step 8: Skipping PI event pull test (no PI connection found)');
-      console.log('   ℹ️  To test PI event pulling:');
-      console.log('      1. Create a PI connection in the Connectivity page');
-      console.log('      2. Configure PI mappings and bindings');
-      console.log('      3. Use the "Pull from PI" button in EventHub');
-    }
-
     // Summary
     console.log('\n' + '='.repeat(70));
     console.log('✅ Test Environment Setup Complete!\n');

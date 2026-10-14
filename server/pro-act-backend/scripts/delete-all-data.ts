@@ -111,7 +111,7 @@ async function deleteAllData() {
       'organizations',
       'users',
       'roles',
-      // Connectivity tables
+      // Streaming and data-source tables
       'stream_alerts',
       'stream_metrics',
       'stream_data_sinks',
@@ -119,20 +119,6 @@ async function deleteAllData() {
       'stream_processors',
       'stream_connection_configs',
       'data_sources',
-      'system_integrations',
-      'database_connections',
-      'restapi_connections',
-      'mqtt_connections',
-      'modbus_connections',
-      'opcua_connections',
-      'ethernetip_connections',
-      'profinet_connections',
-      'dnp3_connections',
-      'bacnet_connections',
-      'websocket_connections',
-      'scada_connections',
-      'data_transformations',
-      'data_bindings',
       // Hierarchy mapping
       'source_hierarchy_mappings',
       // RCA analysis tables

@@ -194,7 +194,7 @@ Where the logic lives today:
 | I13 | One HTTP call per attribute per frame (no streamsets); all plans of the unit loaded per event for `findPlanForEvent`. | ◐ | `pi-event-mapper.ts`, `pi-event-pull.service.ts` L235 |
 | I14 | `tenants.timezone` is never read; all bucketing is UTC; display uses browser time. | ✗ | reporting, pull service, frontend formatting |
 | I15 | Sync-job UI drops `templateName`/`maxCount`/scope on create; `stopSync` is a no-op; one job per tenant. | ◐ | `src/services/pi/AutoPIEventSyncService.ts`, `components/pi/PIEventSyncManager.tsx` |
-| I16 | Other sources (OPC UA, Modbus, MQTT, Database, REST) return `"… not yet implemented"`; MQTT/OPC UA clients only broadcast live values, never persist. | ✗ | `connectivity/services/unified-event-pull.service.ts` |
+| I16 | Other sources (OPC UA, Modbus, MQTT, Database, REST) return `"… not yet implemented"`; MQTT/OPC UA clients only broadcast live values, never persist. | ✗ | `connectivity/services/unified-event-pull.service.ts` (module removed 2026-10-14; v2 intake adapters replace it) |
 
 ---
 

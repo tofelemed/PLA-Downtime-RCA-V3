@@ -1,36 +1,16 @@
 /**
  * Event Pulling and RCA Creation E2E Tests
  * 
- * Comprehensive tests for:
- * 1. Pulling events from sources (PI, OPC UA, etc.)
- * 2. Displaying events in EventHub
- * 3. Creating RCA based on trigger rules
- * 4. Full workflow: Pull → Display → Create RCA
+ * Tests for:
+ * 1. Displaying events in EventHub
+ * 2. Creating RCA based on trigger rules
+ * 3. Full workflow: create event → display → create RCA
  */
 
 import { test, expect } from '@playwright/test';
 import { loginViaAPI } from './test-utils/auth-helpers';
 import { createTestFixture, TestFixture } from './test-utils/test-fixtures';
 import { apiRequest } from './test-utils/api-helpers';
-
-interface PiConnectionSummary {
-  id: string;
-  name: string;
-}
-
-interface EventSourceSummary {
-  id: string;
-  type: string;
-  enabled: boolean;
-}
-
-interface PullResponse {
-  success: boolean;
-  eventsFetched: number;
-  eventsStored: number;
-  productionEventsCreated: number;
-  unmappedEventsCreated: number;
-}
 
 interface ProductionEventDto {
   id: string;
@@ -59,28 +39,11 @@ interface RcaDto {
 
 test.describe('Event Pulling and RCA Creation', () => {
   let fixture: TestFixture;
-  let createdEventIds: string[] = [];
-  let createdRcaIds: string[] = [];
-  let piConnectionId: string | undefined;
+  const createdEventIds: string[] = [];
+  const createdRcaIds: string[] = [];
 
   test.beforeAll(async () => {
     fixture = await createTestFixture();
-    
-    // Check for PI connection
-    try {
-      const connections = await apiRequest<PiConnectionSummary[]>(`/pi-connections?tenantId=${fixture.tenant.id}`, {
-        method: 'GET',
-        token: fixture.tokens.accessToken,
-      });
-      if (connections && connections.length > 0) {
-        piConnectionId = connections[0].id;
-        console.log(`✅ Found PI connection: ${connections[0].name} (ID: ${piConnectionId})`);
-      } else {
-        console.log('⚠️ No PI connection found. Some tests will be skipped.');
-      }
-    } catch (error) {
-      console.warn('⚠️ Could not check for PI connections:', error);
-    }
   });
 
   test.afterAll(async () => {
@@ -111,112 +74,7 @@ test.describe('Event Pulling and RCA Creation', () => {
     await fixture.cleanup();
   });
 
-  // ==================== EVENT PULLING TESTS ====================
-
-  test('PULL: should get available event sources', async () => {
-    // Base URL already includes /api, so we use /connectivity/events/sources
-    // Controller is @Controller('api/connectivity') with global prefix 'api'
-    // This creates route: /api/api/connectivity/events/sources
-    // But we need to use just /connectivity/events/sources since base URL has /api
-    const sources = await apiRequest<EventSourceSummary[]>(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
-      method: 'GET',
-      token: fixture.tokens.accessToken,
-    }).catch(async (error) => {
-      // If 404 or 500, try with /api prefix (in case route is /api/api/connectivity/...)
-      if (error.message.includes('404') || error.message.includes('500')) {
-        return await apiRequest<EventSourceSummary[]>(`/api/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
-          method: 'GET',
-          token: fixture.tokens.accessToken,
-        });
-      }
-      throw error;
-    });
-
-    expect(Array.isArray(sources)).toBe(true);
-    console.log(`Found ${sources.length} event sources`);
-    
-    // Log source types
-    if (sources.length > 0) {
-      const sourceTypes = sources.map((s) => s.type);
-      console.log('Source types:', sourceTypes);
-    }
-  });
-
-  test('PULL: should pull events from PI (if connection exists)', async () => {
-    if (!piConnectionId) {
-      test.skip();
-      return;
-    }
-
-    // Get PI sources - try /connectivity first (base URL has /api)
-    const sources = await apiRequest<EventSourceSummary[]>(`/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
-      method: 'GET',
-      token: fixture.tokens.accessToken,
-    }).catch(async (error) => {
-      // If 404 or 500, try with /api prefix
-      if (error.message.includes('404') || error.message.includes('500')) {
-        return await apiRequest<EventSourceSummary[]>(`/api/connectivity/events/sources?tenantId=${fixture.tenant.id}`, {
-          method: 'GET',
-          token: fixture.tokens.accessToken,
-        });
-      }
-      throw error;
-    });
-
-    const piSource = sources.find((s) => s.type === 'PI' && s.enabled);
-    if (!piSource) {
-      test.skip();
-      return;
-    }
-
-    // Pull events from last 7 days
-    const endTime = new Date();
-    const startTime = new Date(endTime.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    const pullResponse = await apiRequest<PullResponse>('/connectivity/events/pull', {
-      method: 'POST',
-      token: fixture.tokens.accessToken,
-      body: JSON.stringify({
-        sourceType: 'PI',
-        sourceId: piSource.id,
-        tenantId: fixture.tenant.id,
-        startTimeUtc: startTime.toISOString(),
-        endTimeUtc: endTime.toISOString(),
-        maxCount: 100,
-        autoCreateProductionEvents: true,
-      }),
-    });
-
-    expect(pullResponse).toBeDefined();
-    expect(pullResponse.success).toBeDefined();
-    console.log('Pull response:', {
-      success: pullResponse.success,
-      eventsFetched: pullResponse.eventsFetched,
-      eventsStored: pullResponse.eventsStored,
-      productionEventsCreated: pullResponse.productionEventsCreated,
-      unmappedEventsCreated: pullResponse.unmappedEventsCreated,
-    });
-
-    // If events were created, track them
-    if (pullResponse.productionEventsCreated > 0) {
-      // Fetch the created events
-      const events = await apiRequest<ProductionEventDto[]>(`/production-events?tenantId=${fixture.tenant.id}`, {
-        method: 'GET',
-        token: fixture.tokens.accessToken,
-      });
-      
-      // Track the most recent events (likely the ones we just created)
-      const recentEvents = events
-        .filter((e) => new Date(e.createdAt) > startTime)
-        .slice(0, pullResponse.productionEventsCreated);
-      
-      recentEvents.forEach((e) => {
-        if (!createdEventIds.includes(e.id)) {
-          createdEventIds.push(e.id);
-        }
-      });
-    }
-  });
+  // ==================== EVENT TESTS ====================
 
   test('PULL: should create production event manually for testing', async () => {
     // Create a test event that will trigger RCA rules

@@ -18,7 +18,7 @@ export const API_BASE_URL: string = (
 ).replace(/\/+$/, '');
 
 /**
- * Socket.IO connects to the server root (the gateways use the "/socket.io" and "/connectivity"
+ * Socket.IO connects to the server root (the gateways use the "/socket.io" and "/realtime"
  * namespaces), so drop the trailing "/api". An empty string means "current origin", which
  * socket.io-client resolves against window.location.
  */
