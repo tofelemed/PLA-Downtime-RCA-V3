@@ -24,11 +24,16 @@ describe('RCA closure independence (SME CA1)', () => {
        VALUES ($1, $2, 'tenant', $1, 'manager_approver', 1)`,
       [env.world.tenantA, id],
     );
-    const token = signToken(env.app, { userId: id, tenantId: env.world.tenantA, role: 'manager_approver' });
+    const token = signToken(env.app, {
+      userId: id,
+      tenantId: env.world.tenantA,
+      role: 'manager_approver',
+    });
     return { id, token };
   }
 
-  const read = async () => (await env.get(`rcas/${caseId}`).expect(200)).body as CaseBody;
+  const read = async () =>
+    (await env.get(`rcas/${caseId}`).expect(200)).body as CaseBody;
   const transition = async (body: object, token: string) =>
     env
       .http()
@@ -36,7 +41,8 @@ describe('RCA closure independence (SME CA1)', () => {
       .set('Authorization', `Bearer ${token}`)
       .set('If-Match', `"${(await read()).rowVersion}"`)
       .send(body);
-  const codeOf = (response: { body: unknown }) => (response.body as ApiError).code;
+  const codeOf = (response: { body: unknown }) =>
+    (response.body as ApiError).code;
 
   beforeAll(async () => {
     await env.start();
@@ -51,8 +57,22 @@ describe('RCA closure independence (SME CA1)', () => {
       teamLeadId: people.lead.id,
       teamMemberIds: [people.member.id],
       logicTree: [
-        { id: 'n1', parentId: null, label: 'Gearbox trip', kind: 'event', status: 'open', notes: null },
-        { id: 'n2', parentId: 'n1', label: 'Bearing distress', kind: 'hypothesis', status: 'verified', notes: null },
+        {
+          id: 'n1',
+          parentId: null,
+          label: 'Gearbox trip',
+          kind: 'event',
+          status: 'open',
+          notes: null,
+        },
+        {
+          id: 'n2',
+          parentId: 'n1',
+          label: 'Bearing distress',
+          kind: 'hypothesis',
+          status: 'verified',
+          notes: null,
+        },
       ],
     });
     caseId = created.id;
@@ -81,7 +101,13 @@ describe('RCA closure independence (SME CA1)', () => {
   afterAll(() => env.stop());
 
   it('a member who leaves before acceptance still counts as an investigator', async () => {
-    await env.patch(`rcas/${caseId}`, { teamMemberIds: [] }, `"${(await read()).rowVersion}"`).expect(200);
+    await env
+      .patch(
+        `rcas/${caseId}`,
+        { teamMemberIds: [] },
+        `"${(await read()).rowVersion}"`,
+      )
+      .expect(200);
     for (const step of [{ to: 'Analysis' }, { to: 'Monitoring' }]) {
       expect((await transition(step, people.lead.token)).status).toBe(200);
     }
@@ -89,34 +115,70 @@ describe('RCA closure independence (SME CA1)', () => {
 
   it('once the investigation is accepted the team is locked', async () => {
     const locked = await env
-      .patch(`rcas/${caseId}`, { teamLeadId: null }, `"${(await read()).rowVersion}"`, people.lead.token)
+      .patch(
+        `rcas/${caseId}`,
+        { teamLeadId: null },
+        `"${(await read()).rowVersion}"`,
+        people.lead.token,
+      )
       .expect(422);
     expect(codeOf(locked)).toBe('TEAM_LOCKED');
     await env
-      .patch(`rcas/${caseId}`, { teamMemberIds: [people.lead.id] }, `"${(await read()).rowVersion}"`)
+      .patch(
+        `rcas/${caseId}`,
+        { teamMemberIds: [people.lead.id] },
+        `"${(await read()).rowVersion}"`,
+      )
       .expect(422);
   });
 
   it('the lead requests closure, leaves the team (forced around the lock) and is still refused', async () => {
     const requested = await transition(
-      { to: 'Closure Review', residualRisk: 'Residual wear watched by vibration route' },
+      {
+        to: 'Closure Review',
+        residualRisk: 'Residual wear watched by vibration route',
+      },
       people.lead.token,
     );
     expect(requested.status).toBe(200);
     // the lock is bypassed in the database to prove the check does not rely on the current team
-    await env.rows(`UPDATE rcas SET team_lead_id = NULL, team_members = '[]' WHERE id = $1`, [caseId]);
+    await env.rows(
+      `UPDATE rcas SET team_lead_id = NULL, team_members = '[]' WHERE id = $1`,
+      [caseId],
+    );
     const lead = await transition({ to: 'Closed' }, people.lead.token);
     expect(lead.status).toBe(403);
     expect(codeOf(lead)).toBe('SEPARATION_OF_DUTIES');
-    await env.rows(`UPDATE rcas SET closure_requested_by = NULL WHERE id = $1`, [caseId]);
+    await env.rows(
+      `UPDATE rcas SET closure_requested_by = NULL WHERE id = $1`,
+      [caseId],
+    );
     const again = await transition({ to: 'Closed' }, people.lead.token);
     expect(codeOf(again)).toBe('SEPARATION_OF_DUTIES');
     const member = await transition({ to: 'Closed' }, people.member.token);
     expect(codeOf(member)).toBe('SEPARATION_OF_DUTIES');
-    const readiness = (await env.get(`rcas/${caseId}/readiness`, people.member.token).expect(200)).body as {
+    const readiness = (
+      await env.get(`rcas/${caseId}/readiness`, people.member.token).expect(200)
+    ).body as {
       approver: { canApprove: boolean };
     };
     expect(readiness.approver.canApprove).toBe(false);
+  });
+
+  it('RCA-01: the v1 PUT route cannot close the case or change the locked team', async () => {
+    const put = (body: object) =>
+      env
+        .http()
+        .put(`/api/rcas/${caseId}`)
+        .set('Authorization', `Bearer ${env.admin}`)
+        .send(body);
+    expect(codeOf(await put({ status: 'Closed' }).expect(422))).toBe(
+      'STATUS_VIA_TRANSITION',
+    );
+    expect(
+      codeOf(await put({ teamLeadId: people.member.id }).expect(422)),
+    ).toBe('TEAM_LOCKED');
+    expect((await read()).status).toBe('Closure Review');
   });
 
   it('an independent manager approver closes it', async () => {

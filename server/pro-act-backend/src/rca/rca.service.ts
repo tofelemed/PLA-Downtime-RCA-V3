@@ -5,9 +5,13 @@ import { Repository } from 'typeorm';
 import { RCA } from './rca.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 import { findOrThrow } from '../common/helpers/find-or-throw';
+import { assertV1CreateStatus, assertV1Update } from './v1-workflow-guard';
 
 /** v1 body: arrays of the JSON text columns are serialized (3.9: the DTO accepts text or arrays). */
-export type RcaWriteBody = Omit<Partial<RCA>, 'recommendations' | 'evidence' | 'logicTree'> & {
+export type RcaWriteBody = Omit<
+  Partial<RCA>,
+  'recommendations' | 'evidence' | 'logicTree'
+> & {
   recommendations?: string | unknown[];
   evidence?: string | unknown[];
   logicTree?: string | unknown[];
@@ -24,7 +28,9 @@ function normalizeRcaPayload(data: RcaWriteBody): Partial<RCA> {
     logicTree: jsonText(data.logicTree),
   };
   if (Array.isArray(payload.teamMemberIds)) {
-    payload.teamMemberIds = JSON.stringify(payload.teamMemberIds) as unknown as string[];
+    payload.teamMemberIds = JSON.stringify(
+      payload.teamMemberIds,
+    ) as unknown as string[];
   }
   return Object.fromEntries(
     Object.entries(payload).filter(([, value]) => value !== undefined),
@@ -55,6 +61,7 @@ export class RCAService {
   }
 
   async create(data: RcaWriteBody): Promise<RCA> {
+    assertV1CreateStatus(data.status);
     const payload = normalizeRcaPayload({
       id: data.id ?? randomUUID(),
       ...data,
@@ -67,7 +74,8 @@ export class RCAService {
 
   async update(id: string, data: RcaWriteBody): Promise<RCA | null> {
     // v1 writes move row_version too, so a v2 If-Match sees them (plan 3.9)
-    await findOrThrow(this.findOne(id), 'RCA', id);
+    const stored = await findOrThrow(this.findOne(id), 'RCA', id);
+    assertV1Update(stored, data);
     await this.rcaRepository.update(id, {
       ...normalizeRcaPayload(data),
       rowVersion: () => '"row_version" + 1',
@@ -117,4 +125,4 @@ export class RCAService {
       relations: ['teamLead', 'template'], // Removed 'event' relation
     });
   }
-} 
+}
