@@ -54,9 +54,24 @@ function offGradeShare(
 }
 
 /**
- * The allowance of a transition: reference duration ÷ actual duration (open events measured to
- * `asOf`), capped at 1; the off-grade allowance is bounded by the reference off-grade quantity when the
- * standard has one.
+ * Reference duration ÷ actual duration of a transition (open events measured to `asOf`), not capped: above
+ * 1 when the change finished inside its standard. 0 without a standard; 1 for an event without duration.
+ */
+export function standardTimeRatio(
+  event: LossEvent,
+  standard: TransitionStandard | null,
+  asOf: Date,
+): Dec {
+  if (!standard) return ZERO;
+  const end = (event.end ?? asOf).getTime();
+  const actual = secondsBetween(event.start.getTime(), end);
+  if (actual.lte(ZERO)) return ONE;
+  return new Dec(standard.referenceSeconds).div(actual);
+}
+
+/**
+ * The allowance of a transition: reference duration ÷ actual duration, capped at 1; the off-grade
+ * allowance is bounded by the reference off-grade quantity when the standard has one.
  */
 export function transitionSplit(
   event: LossEvent,
@@ -65,10 +80,7 @@ export function transitionSplit(
 ): TransitionSplit {
   const standard = standardFor(event, standards);
   if (!standard) return { standardId: null, rate: ZERO, offGrade: ZERO };
-  const end = (event.end ?? asOf).getTime();
-  const actual = secondsBetween(event.start.getTime(), end);
-  const reference = new Dec(standard.referenceSeconds);
-  const time = actual.lte(ZERO) ? ONE : atMostOne(reference.div(actual));
+  const time = atMostOne(standardTimeRatio(event, standard, asOf));
   return {
     standardId: standard.id,
     rate: time,

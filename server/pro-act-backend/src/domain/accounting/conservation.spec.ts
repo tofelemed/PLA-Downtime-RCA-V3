@@ -44,6 +44,7 @@ function capacityTotals(capacity: Dec): LedgerTotals {
     gap: null,
     overproduction: null,
     overAccounted: null,
+    plannedTransition: null,
     flags: [],
   };
 }

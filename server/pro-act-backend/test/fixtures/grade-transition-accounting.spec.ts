@@ -55,7 +55,14 @@ function standard(extra: Partial<TransitionStandard> = {}): TransitionStandard {
   };
 }
 
-function run(standards: TransitionStandard[]) {
+interface RunOptions {
+  target?: string;
+  transitionAllowanceInPlan?: 'planned' | 'loss';
+  event?: Partial<LossEvent>;
+  actuals?: { gross: string; good: string };
+}
+
+function run(standards: TransitionStandard[], options: RunOptions = {}) {
   const window = { start: at(0), end: at(8) };
   const rates = (id: string) => [
     {
@@ -71,7 +78,7 @@ function run(standards: TransitionStandard[]) {
     periodExcluded: false,
     periodExclusionKind: null,
     schedule: [],
-    events: [transition],
+    events: [{ ...transition, ...options.event }],
     asOf: window.end,
     transitionStandards: standards,
     policy: {
@@ -79,6 +86,7 @@ function run(standards: TransitionStandard[]) {
       derateComponent: 'performance',
       plannedStopsInsideScheduleReduceAvailability: true,
       epsilon: '0.000001',
+      transitionAllowanceInPlan: options.transitionAllowanceInPlan,
     },
     slices: [
       {
@@ -87,8 +95,12 @@ function run(standards: TransitionStandard[]) {
         uom: 't',
         sustainedRates: rates('sus'),
         planningRates: rates('plan'),
-        target: gt01.inputs.target,
-        actuals: { gross: gt01.inputs.gross, good: gt01.inputs.good, uom: 't' },
+        target: options.target ?? gt01.inputs.target,
+        actuals: {
+          gross: options.actuals?.gross ?? gt01.inputs.gross,
+          good: options.actuals?.good ?? gt01.inputs.good,
+          uom: 't',
+        },
         concurrent: false,
       },
     ],
@@ -113,7 +125,7 @@ const total = (
       .reduce((s, l) => s.plus(l.quantity), new Dec(0)),
   );
 
-describe('GT01 grade transition against the transition matrix (engine 2.5.4)', () => {
+describe('GT01 grade transition against the transition matrix (engine 2.5.6)', () => {
   const result = run([standard()]);
   const capacity = result.totals.find((t) => t.ledger === 'capacity')!;
   const plan = result.totals.find((t) => t.ledger === 'plan')!;
@@ -141,7 +153,7 @@ describe('GT01 grade transition against the transition matrix (engine 2.5.4)', (
     expect(excess.every((l) => l.flags.includes(c.excessFlag))).toBe(true);
   });
 
-  it('plan: the gap of 90 closes with allowance 63 and overrun 27', () => {
+  it('plan (policy without the option = loss): the gap of 90 closes with allowance 63 and overrun 27', () => {
     const p = want('plan');
     expect(formatDec(plan.gap!)).toBe(p.gap);
     expect(total(result.lines, 'plan', 'transition_allowance')).toBe(
@@ -174,5 +186,65 @@ describe('GT01 grade transition against the transition matrix (engine 2.5.4)', (
         .filter((l) => l.kind === 'transition_excess')
         .every((l) => l.flags.includes(n.excessFlag)),
     ).toBe(true);
+  });
+
+  describe('transitionAllowanceInPlan = planned: the plan target already deducts the standard transition time', () => {
+    const p = want('planTransitionPlanned');
+    const planned = run([standard()], {
+      target: gt01.inputs.targetTransitionPlanned,
+      transitionAllowanceInPlan: 'planned',
+    });
+    const plannedPlan = planned.totals.find((t) => t.ledger === 'plan')!;
+
+    it('plan: no allowance line; the 27 t overrun alone closes the 27 t gap', () => {
+      expect(planned.issues).toEqual([]);
+      expect(formatDec(plannedPlan.gap!)).toBe(p.gap);
+      expect(total(planned.lines, 'plan', 'transition_allowance')).toBe(
+        p.allowance,
+      );
+      expect(total(planned.lines, 'plan', 'transition_excess')).toBe(p.excess);
+      expect(formatDec(plannedPlan.attributed!)).toBe(p.excess);
+      expect(formatDec(plannedPlan.residual!)).toBe(p.residual);
+    });
+
+    it('plan totals report the 63 t allowance as planned transition time, at the unscaled planning rate', () => {
+      expect(formatDec(plannedPlan.plannedTransition!)).toBe(
+        p.plannedTransition,
+      );
+      expect(plannedPlan.flags).toContain(p.flag);
+      expect(plannedPlan.flags).not.toContain('planned_rate_scaled');
+      expect(plannedPlan.flags).not.toContain('bridge_required');
+    });
+
+    it('capacity ledger is the same under both options', () => {
+      const capacityOf = (r: typeof result) => ({
+        lines: r.lines.filter((l) => l.ledger === 'capacity'),
+        totals: r.totals.filter((t) => t.ledger === 'capacity'),
+      });
+      expect(capacityOf(planned)).toEqual(capacityOf(result));
+    });
+
+    it('a change that finishes inside its standard gives the time back: output above plan, no line', () => {
+      const e = want('planTransitionEarly');
+      const early = run([standard()], {
+        target: gt01.inputs.targetTransitionPlanned,
+        transitionAllowanceInPlan: 'planned',
+        event: { end: at(Number(e.endHour)), quantity: e.offGrade },
+        actuals: { gross: e.gross, good: e.good },
+      });
+      const totals = early.totals.find((t) => t.ledger === 'plan')!;
+      expect(early.issues).toEqual([]);
+      const planLines = early.lines.filter((l) => l.ledger === 'plan');
+      // only the signed residual of the overproduction, no loss line
+      expect(planLines.map((l) => l.kind)).toEqual(['residual']);
+      expect(formatDec(totals.plannedTransition!)).toBe(e.plannedTransition);
+      expect(formatDec(totals.overproduction!)).toBe(e.overproduction);
+      expect(totals.flags).not.toContain('planned_rate_scaled');
+    });
+
+    it('loss: the same target keeps the allowance as a plan line and reports no planned transition time', () => {
+      expect(plan.plannedTransition).toBeNull();
+      expect(plan.flags).not.toContain(p.flag);
+    });
   });
 });

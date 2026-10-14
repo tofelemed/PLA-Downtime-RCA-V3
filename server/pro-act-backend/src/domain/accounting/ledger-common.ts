@@ -21,7 +21,7 @@ import {
 } from './claims';
 import { ComponentResult, componentLines } from './component-lines';
 import { LineContext, RateBasis, rateOf, segmentCapacity } from './time-lines';
-import { transitionClaims } from './transition-claims';
+import { transitionClaims, TransitionScope } from './transition-claims';
 
 /** Everything a ledger computation of one slice needs. */
 export interface SliceContext {
@@ -59,15 +59,23 @@ export function contextOf(
   };
 }
 
-/** Grade-transition claims of the slice at the ledger's rate (LA-08). */
-function transitionsOf(ctx: SliceContext): ReturnType<typeof transitionClaims> {
-  const { input, slice, segments, line } = ctx;
-  return transitionClaims(segments, line.basis, {
+/** The grade transitions a slice prices (LA-08): the run's events and standards within the slice window. */
+export function transitionScope(
+  input: PeriodAccountingInput,
+  slice: SliceInput,
+): TransitionScope {
+  return {
     events: input.events,
     window: slice.window,
     standards: input.transitionStandards ?? [],
     asOf: input.asOf,
-  });
+  };
+}
+
+/** Grade-transition claims of the slice at the ledger's rate (LA-08). */
+function transitionsOf(ctx: SliceContext): ReturnType<typeof transitionClaims> {
+  const { input, slice, segments, line } = ctx;
+  return transitionClaims(segments, line.basis, transitionScope(input, slice));
 }
 
 /**
@@ -204,6 +212,7 @@ export function emptyTotals(
     gap: null,
     overproduction: null,
     overAccounted: null,
+    plannedTransition: null,
     flags,
   };
 }
