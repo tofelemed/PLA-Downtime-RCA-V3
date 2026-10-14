@@ -13,7 +13,7 @@ import { UnitProductRate } from '../../profiles/entities/unit-product-rate.entit
 import { ValuationRate } from '../../profiles/entities/valuation-rate.entity';
 import { ProfileResolution } from '../../profiles/profile-resolution.service';
 
-interface VersionFields {
+export interface VersionFields {
   version: number;
   state: string;
   effectiveFrom: string;
@@ -88,7 +88,7 @@ export interface ProfileResolutionV2View {
 }
 
 /** Canonical decimal string (no trailing zeros), whether the driver returned text or a number. */
-function decimalText(value: string | number): string {
+export function decimalText(value: string | number): string {
   const parsed = toDec(value);
   return parsed ? formatDec(parsed) : String(value);
 }
@@ -97,7 +97,7 @@ function iso(value: Date | null): string | null {
   return value ? value.toISOString() : null;
 }
 
-function versionFields(row: {
+export function versionFields(row: {
   version: number;
   state: string;
   effectiveFrom: Date;

@@ -27,7 +27,7 @@ const CONSTRAINTS =
   `CONSTRAINT "PK_8fedcdec1899deb25c88982f711" PRIMARY KEY ("id")`;
 
 const INDEXES: ReadonlyArray<[name: string, definition: string]> = [
-  ['IDX_c47a20c8dd37a0f23e385fc776', `"${TABLE}" ("tenant_id")`],
+  ['IDX_7aca87f7b0403c779920474181', `"${TABLE}" ("tenant_id")`],
   ['IDX_transition_standards_tenant_unit', `"${TABLE}" ("tenant_id", "unit_id")`],
   ['IDX_transition_standards_from_product', `"${TABLE}" ("from_product_id")`],
   ['IDX_transition_standards_to_product', `"${TABLE}" ("to_product_id")`],
