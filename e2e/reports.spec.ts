@@ -28,7 +28,7 @@ test.describe('Reports Module', () => {
   test('audit page loads as dedicated page', async ({ page }) => {
     await page.goto('/audit');
     await expect(page).toHaveURL(/\/audit$/);
-    await expect(page.getByRole('heading', { name: 'Audit Logs' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Audit log', level: 1 })).toBeVisible({ timeout: 15000 });
   });
 
   test('reporting API endpoints return 200', async ({ request }) => {
