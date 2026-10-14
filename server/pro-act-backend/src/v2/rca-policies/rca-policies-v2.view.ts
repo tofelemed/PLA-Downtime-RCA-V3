@@ -1,19 +1,17 @@
-import { parseRcaPolicy } from '../../domain/rca/rca-policy';
+import { parseRcaPolicy, RcaPolicy } from '../../domain/rca/rca-policy';
 import { AccountingPolicy } from '../../periods/entities/accounting-policy.entity';
 
 const iso = (value: Date | null) => (value ? value.toISOString() : null);
 
-/** One `rca_policy` version (plan 3.9, D13): tenant-wide when `unitId` is null. */
-export interface RcaPolicyVersionV2View {
+/**
+ * One `rca_policy` version (plan 3.9, D13; SME D17 / CA2–CA8): tenant-wide when `unitId` is null. Carries
+ * the whole parsed body — triggers and the workflow rules the server applies (screens read thresholds
+ * from here, never from constants).
+ */
+export interface RcaPolicyVersionV2View extends RcaPolicy {
   id: string;
   unitId: string | null;
   version: number;
-  durationThresholdSeconds: number;
-  /** null = cost trigger off */
-  costThreshold: number | null;
-  repeatCount: number;
-  repeatWindowDays: number;
-  autoCreate: 'recommend' | 'create';
   effectiveFrom: string;
   effectiveTo: string | null;
   approvedBy: string | null;
@@ -29,11 +27,7 @@ export function toRcaPolicyView(row: AccountingPolicy): RcaPolicyVersionV2View {
     id: row.id,
     unitId: row.unitId,
     version: row.version,
-    durationThresholdSeconds: body.durationThresholdSeconds,
-    costThreshold: body.costThreshold,
-    repeatCount: body.repeatCount,
-    repeatWindowDays: body.repeatWindowDays,
-    autoCreate: body.autoCreate,
+    ...body,
     effectiveFrom: row.effectiveFrom.toISOString(),
     effectiveTo: iso(row.effectiveTo),
     approvedBy: row.approvedBy,

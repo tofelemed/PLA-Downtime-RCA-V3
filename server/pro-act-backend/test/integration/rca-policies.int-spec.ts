@@ -29,6 +29,7 @@ describe('RCA trigger policy API (plan 3.9)', () => {
     repeatWindowDays: 14,
     autoCreate: 'create',
     costThreshold: 5000,
+    costCurrency: 'USD',
     notes: 'tighter after audit',
   };
   const current = async (query = '', token = env.admin) =>
@@ -41,11 +42,14 @@ describe('RCA trigger policy API (plan 3.9)', () => {
   });
   afterAll(() => env.stop());
 
-  it('current seeds the D13 default as version 1', async () => {
+  it('current seeds the D17 pilot default as version 1', async () => {
     expect(await current('', env.analyst)).toMatchObject({
       unitId: null,
       version: 1,
-      durationThresholdSeconds: 3600,
+      durationThresholdSeconds: 7200,
+      lostQuantityShareOfDailyPlan: 0.01,
+      repeatMatch: 'asset_and_mode',
+      criticalAssets: { thresholdFactor: 0.5 },
       repeatCount: 3,
       repeatWindowDays: 30,
       autoCreate: 'recommend',
@@ -62,7 +66,11 @@ describe('RCA trigger policy API (plan 3.9)', () => {
       unitId: null,
       durationThresholdSeconds: 1800,
       costThreshold: 5000,
+      costCurrency: 'USD',
       autoCreate: 'create',
+      // D17 options the body left out keep the values of the version in force
+      repeatMatch: 'asset_and_mode',
+      lostQuantityShareOfDailyPlan: 0.01,
     });
     expect(created.approvedBy).not.toBeNull();
     expect(created.approvedAt).not.toBeNull();
@@ -143,5 +151,12 @@ describe('RCA trigger policy API (plan 3.9)', () => {
       .post('rca-policies', { ...change, repeatWindowDays: 400 })
       .expect(422);
     await env.post('rca-policies', { ...change, extra: true }).expect(422);
+    const noCurrency = await env
+      .post('rca-policies', { ...change, costCurrency: null })
+      .expect(422);
+    expect((noCurrency.body as { code: string }).code).toBe('INVALID_POLICY');
+    await env
+      .post('rca-policies', { ...change, fmea: { method: 'rpn' } })
+      .expect(422);
   });
 });

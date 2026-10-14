@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { RcaPolicy } from '../../src/domain/rca/rca-policy';
+import { parseRcaPolicy, RcaPolicy } from '../../src/domain/rca/rca-policy';
 import {
   decideTrigger,
   evaluateTriggers,
@@ -59,7 +59,8 @@ function context(
 
 describe('RCA01 trigger evaluation (D13 policy)', () => {
   const { inputs, expected } = fixture('RCA01');
-  const policy = inputs.policy as RcaPolicy;
+  // a D13 body: parsed as stored versions are (per-asset repeats, D17 options off)
+  const policy = parseRcaPolicy(inputs.policy);
   const open = () =>
     evaluateTriggers(
       stop(),
@@ -154,7 +155,7 @@ describe('RCA01 trigger evaluation (D13 policy)', () => {
       failure,
       context(policy, 700, {
         recentFailures: inputs.failuresOfAssetIn30Days as number,
-        openCaseOnAsset: true,
+        openCaseId: 'open-case',
       }),
     );
     expect(fired.map((c) => c.trigger)).not.toContain('repeat');
@@ -214,13 +215,13 @@ describe('T42 advisory without impact evidence', () => {
       durationSeconds: null,
     },
   });
-  const policy: RcaPolicy = {
+  const policy: RcaPolicy = parseRcaPolicy({
     durationThresholdSeconds: 60,
     costThreshold: null,
     repeatCount: 1,
     repeatWindowDays: 30,
     autoCreate: 'create',
-  };
+  });
 
   it('policy thresholds never fire; a matching hint rule only recommends, even under autoCreate=create', () => {
     const rule = {

@@ -3,13 +3,166 @@
   "version": 1,
   "effectiveFrom": "1970-01-01T00:00:00Z",
   "effectiveTo": null,
-  "scope": { "tenantId": "00000000-0000-0000-0000-000000000000", "siteId": null, "unitId": null },
-  "notes": "Seed default recorded 2026-10-07 from D13 ('added', no values -> proposed defaults): RCA recommended (not auto-created) when confirmed unplanned downtime >= 60 min or 3 functional failures of the same asset within 30 days. Cost trigger disabled (null) until a currency and valuation policy are approved (D08). scope.tenantId is a placeholder that the seeder replaces.",
+  "scope": {
+    "tenantId": "00000000-0000-0000-0000-000000000000",
+    "siteId": null,
+    "unitId": null
+  },
+  "notes": "Seed default. D13 (2026-10-07) recommend-only, extended 2026-10-14 by the SME answers D17 and CA2-CA8 (pilot settings to calibrate, not universal standards): any-of triggers - unplanned stop >= 2 h OR approved lost quantity >= 1 % of the unit daily plan OR 3 same-mode incidents (asset + failure mode) in 30 days OR 8 h cumulative same-mode downtime in 90 days (bad actor) - production thresholds halved for assets whose criticality is critical; Safety SOL and Critical severity override. Money limit off (null) until finance sets it with its currency. Effectiveness: 90-day baseline lookback, 720 run hours minimum, 50 % reduction, any repeat of a major-consequence mode is not effective. FMEA: RPN with a severity >= 9 review whatever the RPN; the priority rules are an illustrative severity-led set, not the AIAG-VDA table. 5-Why: five levels are guidance; evidence per level and a system-level cause are required. Investigation tiers per consequence class (CA7). OPS/MNT/HSE/FIN confirm. scope.tenantId is a placeholder that the seeder replaces.",
   "body": {
-    "durationThresholdSeconds": 3600,
+    "durationThresholdSeconds": 7200,
     "costThreshold": null,
+    "costCurrency": null,
+    "lostQuantityShareOfDailyPlan": 0.01,
     "repeatCount": 3,
     "repeatWindowDays": 30,
-    "autoCreate": "recommend"
+    "repeatMatch": "asset_and_mode",
+    "criticalAssets": {
+      "criticalities": [
+        "critical"
+      ],
+      "thresholdFactor": 0.5
+    },
+    "cumulative": {
+      "windowDays": 90,
+      "downtimeSeconds": 28800
+    },
+    "consequence": {
+      "solTypes": [
+        "Safety"
+      ],
+      "severities": [
+        "Critical"
+      ]
+    },
+    "autoCreate": "recommend",
+    "effectiveness": {
+      "baselineLookbackDays": 90,
+      "minExposureHours": 720,
+      "requiredReduction": 0.5,
+      "reviewDays": 90,
+      "zeroRepeatClasses": [
+        "major"
+      ]
+    },
+    "fmea": {
+      "method": "rpn",
+      "rpnThreshold": 100,
+      "severityReview": 9,
+      "priorityRules": [
+        {
+          "priority": "high",
+          "severityMin": 9,
+          "occurrenceMin": 4,
+          "detectionMin": 1
+        },
+        {
+          "priority": "high",
+          "severityMin": 9,
+          "occurrenceMin": 1,
+          "detectionMin": 7
+        },
+        {
+          "priority": "high",
+          "severityMin": 7,
+          "occurrenceMin": 7,
+          "detectionMin": 1
+        },
+        {
+          "priority": "high",
+          "severityMin": 7,
+          "occurrenceMin": 4,
+          "detectionMin": 7
+        },
+        {
+          "priority": "medium",
+          "severityMin": 9,
+          "occurrenceMin": 1,
+          "detectionMin": 1
+        },
+        {
+          "priority": "medium",
+          "severityMin": 7,
+          "occurrenceMin": 4,
+          "detectionMin": 1
+        },
+        {
+          "priority": "medium",
+          "severityMin": 7,
+          "occurrenceMin": 1,
+          "detectionMin": 7
+        },
+        {
+          "priority": "medium",
+          "severityMin": 4,
+          "occurrenceMin": 7,
+          "detectionMin": 1
+        },
+        {
+          "priority": "medium",
+          "severityMin": 4,
+          "occurrenceMin": 4,
+          "detectionMin": 7
+        }
+      ]
+    },
+    "fiveWhy": {
+      "guidelineLevels": 5,
+      "minLevels": 1,
+      "evidencePerLevel": true,
+      "unsupportedRootCauses": [
+        "operator error",
+        "human error",
+        "operator mistake"
+      ]
+    },
+    "investigation": {
+      "minor": {
+        "methodGroups": [
+          [
+            "five_why",
+            "fishbone",
+            "logic_tree",
+            "fault_tree",
+            "change"
+          ]
+        ],
+        "minTeamMembers": 0
+      },
+      "significant": {
+        "methodGroups": [
+          [
+            "timeline"
+          ],
+          [
+            "fishbone",
+            "logic_tree"
+          ],
+          [
+            "five_why",
+            "fault_tree"
+          ]
+        ],
+        "minTeamMembers": 2
+      },
+      "major": {
+        "methodGroups": [
+          [
+            "timeline"
+          ],
+          [
+            "barrier",
+            "fault_tree",
+            "fmea"
+          ],
+          [
+            "five_why",
+            "fishbone",
+            "logic_tree"
+          ]
+        ],
+        "minTeamMembers": 3
+      }
+    }
   }
 }

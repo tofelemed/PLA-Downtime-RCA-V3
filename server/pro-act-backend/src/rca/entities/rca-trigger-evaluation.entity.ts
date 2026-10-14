@@ -10,6 +10,7 @@ export const TRIGGER_FIRED_ON = [
 export const TRIGGER_OUTCOMES = [
   'recommended',
   'case_created',
+  'linked_to_case',
   'suppressed_duplicate',
 ] as const;
 export const RECOMMENDATION_STATES = ['open', 'accepted', 'dismissed'] as const;

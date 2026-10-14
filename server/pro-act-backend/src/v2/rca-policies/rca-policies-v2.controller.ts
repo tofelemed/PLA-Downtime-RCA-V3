@@ -38,8 +38,8 @@ export class RcaPoliciesV2Controller {
     summary:
       'The RCA trigger policy in force now (unit override, else tenant-wide)',
     description:
-      'Without unitId the tenant-wide version. A tenant without any version gets the D13 default ' +
-      '(3600 s, 3 failures in 30 days, recommend, no cost trigger) as version 1 on first read. unitId must ' +
+      'Without unitId the tenant-wide version. A tenant without any version gets the default (SME D17 pilot: ' +
+      '2 h, 1 % of the daily plan, 3 same-mode incidents in 30 days, critical assets halved, no money limit; recommend) as version 1 on first read. unitId must ' +
       'be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE).',
   })
   async current(
@@ -73,7 +73,7 @@ export class RcaPoliciesV2Controller {
   @ApiOperation({
     summary: 'Record a new approved RCA trigger policy version, effective now',
     description:
-      'Requires `Idempotency-Key`. Version n+1 of the scope (tenant-wide, or the unit override); the previous ' +
+      'Requires `Idempotency-Key`. Version n+1 of the scope (tenant-wide, or the unit override); options left out keep the values of the version in force; the previous ' +
       'open version of the same scope ends now. The tenant-wide policy needs a tenant-wide grant (403 ' +
       'TENANT_SCOPE_REQUIRED); unitId must be a unit of the tenant and the caller’s scope (422 ' +
       'INVALID_REFERENCE); 422 INVALID_POLICY when the body breaks the rca_policy contract.',

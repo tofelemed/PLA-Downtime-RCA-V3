@@ -4,7 +4,7 @@ import { RcaWorld } from './support/rca-world';
 
 /**
  * Plan 3.9 RCA01 / T42 on real Postgres through the outbox consumer: a running unplanned stop past the
- * D13 60 min threshold is recommended once (provisional), its closure confirms the same evaluation,
+ * pilot 2 h threshold (SME D17) is recommended once (provisional), its closure confirms the same evaluation,
  * replays and sweeps are suppressed duplicates, no case is opened under the recommend-only default; a
  * unit policy `autoCreate: create` opens one case with the event linked; an IOW advisory without
  * impact evidence can be recommended by a hint rule but gets no loss line and no downtime (T42).
@@ -27,7 +27,7 @@ describe('RCA triggers (plan 3.9, RCA01, T42)', () => {
     );
 
   it('RCA01: open stop past the threshold → one provisional recommendation; closure confirms it', async () => {
-    const stopId = await env.stopEvent(env.world.unitA2, 61, null);
+    const stopId = await env.stopEvent(env.world.unitA2, 121, null);
     await env.relay();
     const [open] = await env.recommendations(stopId);
     expect(open).toMatchObject({
@@ -181,7 +181,7 @@ describe('RCA triggers (plan 3.9, RCA01, T42)', () => {
   });
 
   it('a recommendation is dismissed by a person with a reason, never automatically', async () => {
-    const stopId = await env.stopEvent(env.world.unitA2, 900, 800);
+    const stopId = await env.stopEvent(env.world.unitA2, 900, 760);
     await env.relay();
     const [hint] = await env.recommendations(stopId);
     await env

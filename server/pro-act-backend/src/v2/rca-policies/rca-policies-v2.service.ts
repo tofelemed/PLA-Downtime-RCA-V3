@@ -7,6 +7,7 @@ import {
 } from '../../common/context/request-context';
 import { scopedQuery } from '../../common/query/scoped-query';
 import {
+  assertCostCurrency,
   parseRcaPolicy,
   RcaPolicy,
   RcaPolicyError,
@@ -98,7 +99,6 @@ export class RcaPoliciesV2Service {
     const unitId = dto.unitId ?? null;
     if (unitId) await this.assertUnit(context, tenantId, unitId);
     else assertTenantWideWriter(context, tenantId);
-    const body = policyBody(dto);
     return this.manager.transaction(async (manager) => {
       // the tenant-wide default is version 1 of its scope before the first change
       await this.policies.rcaPolicyInForce(
@@ -106,6 +106,12 @@ export class RcaPoliciesV2Service {
         { tenantId, unitId: null },
         new Date(),
       );
+      const inForce = await this.policies.rcaPolicyInForce(
+        manager,
+        { tenantId, unitId },
+        new Date(),
+      );
+      const body = policyBody(dto, parseRcaPolicy(inForce.body));
       const scopeKey = unitId ?? 'tenant';
       const now = new Date();
       const version = await lockNextVersion(manager, tenantId, scopeKey);
@@ -159,16 +165,27 @@ function afterCursor(
   );
 }
 
-/** The stored body, checked by the parser the trigger service applies (422 INVALID_POLICY). */
-function policyBody(dto: RcaPolicyCreateDto): RcaPolicy {
+/**
+ * The stored body, checked by the parser the trigger service applies (422 INVALID_POLICY). Options the
+ * body leaves out keep the values of the version in force (a D13 screen sending the five trigger fields
+ * does not switch D17 options off); a money limit names its currency.
+ */
+function policyBody(dto: RcaPolicyCreateDto, inForce: RcaPolicy): RcaPolicy {
+  const defined = Object.fromEntries(
+    Object.entries(dto).filter(
+      ([key, value]) =>
+        value !== undefined && key !== 'unitId' && key !== 'notes',
+    ),
+  );
   try {
-    return parseRcaPolicy({
-      durationThresholdSeconds: dto.durationThresholdSeconds,
-      costThreshold: dto.costThreshold ?? null,
-      repeatCount: dto.repeatCount,
-      repeatWindowDays: dto.repeatWindowDays,
-      autoCreate: dto.autoCreate,
+    const policy = parseRcaPolicy({
+      ...inForce,
+      costThreshold: null,
+      costCurrency: null,
+      ...defined,
     });
+    assertCostCurrency(policy);
+    return policy;
   } catch (error: unknown) {
     if (error instanceof RcaPolicyError) {
       throw invalid('INVALID_POLICY', error.message);

@@ -2,35 +2,65 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://proact.local/contracts/policies/rca_policy.schema.json",
   "title": "RCA trigger policy",
-  "description": "Thresholds at which a confirmed downtime occurrence or a repeated functional failure recommends or creates an RCA case. Spec RCA01 (versioned trigger conditions on confirmed duration, quantity, approved impact and repeated failure; open events trigger once the threshold is exceeded with a provisional marker; replays never duplicate cases), RCA02 (automation creates a recommendation or a case per policy, never a proven root cause), KPI07 (functional failure taxonomy). Decision D13. Consumed by sub-phase 3.9 (`RcaTriggerService`); the per-rule thresholds of 3.8 `rules(kind=rca_trigger_hint)` default to these values.",
+  "description": "Thresholds at which a confirmed downtime occurrence or a repeated functional failure recommends or creates an RCA case. Spec RCA01 (versioned trigger conditions on confirmed duration, quantity, approved impact and repeated failure; open events trigger once the threshold is exceeded with a provisional marker; replays never duplicate cases), RCA02 (automation creates a recommendation or a case per policy, never a proven root cause), KPI07 (functional failure taxonomy). Decision D13, extended by the SME answers D17 (any-of triggers, critical assets, safety override, money limit from finance) and CA2-CA8 (effectiveness, FMEA scoring, 5-Why, investigation tiers). Consumed by sub-phase 3.9 (`RcaTriggerService`); the per-rule thresholds of 3.8 `rules(kind=rca_trigger_hint)` default to these values.",
   "type": "object",
-  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "required": [
+    "policyKind",
+    "version",
+    "effectiveFrom",
+    "scope",
+    "body"
+  ],
   "additionalProperties": false,
   "properties": {
-    "policyKind": { "type": "string", "const": "rca_policy" },
-    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
-    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
-    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
-    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
-    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
-    "body": { "$ref": "#/$defs/body" }
+    "policyKind": {
+      "type": "string",
+      "const": "rca_policy"
+    },
+    "version": {
+      "$ref": "policy-envelope.schema.json#/$defs/version"
+    },
+    "effectiveFrom": {
+      "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom"
+    },
+    "effectiveTo": {
+      "$ref": "policy-envelope.schema.json#/$defs/effectiveTo"
+    },
+    "scope": {
+      "$ref": "policy-envelope.schema.json#/$defs/scope"
+    },
+    "notes": {
+      "$ref": "policy-envelope.schema.json#/$defs/notes"
+    },
+    "body": {
+      "$ref": "#/$defs/body"
+    }
   },
   "$defs": {
     "body": {
       "type": "object",
-      "required": ["durationThresholdSeconds", "costThreshold", "repeatCount", "repeatWindowDays", "autoCreate"],
+      "required": [
+        "durationThresholdSeconds",
+        "costThreshold",
+        "repeatCount",
+        "repeatWindowDays",
+        "autoCreate"
+      ],
       "additionalProperties": false,
       "properties": {
         "durationThresholdSeconds": {
           "$ref": "policy-envelope.schema.json#/$defs/nonNegativeSeconds",
-          "default": 3600,
+          "default": 7200,
           "description": "Confirmed (or elapsed, for open occurrences - provisional) unplanned downtime duration at or above which the trigger fires (RCA01). 0 disables the duration trigger."
         },
         "costThreshold": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "minimum": 0,
           "default": null,
-          "description": "Approved valued impact (in `valuation_basis.currency`, default basis) at or above which the trigger fires on `PeriodApproved`. Null disables the cost trigger - the default until a currency and valuation policy are approved (D08)."
+          "description": "Approved valued impact (contribution margin, approved ledger lines) in costCurrency at or above which the trigger fires when a period is approved or restated. Null disables the cost trigger until finance sets the money limit (D17)."
         },
         "repeatCount": {
           "type": "integer",
@@ -46,9 +76,365 @@
         },
         "autoCreate": {
           "type": "string",
-          "enum": ["recommend", "create"],
+          "enum": [
+            "recommend",
+            "create"
+          ],
           "default": "recommend",
           "description": "`recommend`: emit `RCARecommended` and show a badge; a person creates or links the case. `create`: open the case automatically with its evidence package (RCA02). Advisory events (IOW/APM) can only ever recommend (T42)."
+        },
+        "costCurrency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "IRR",
+            "USD",
+            null
+          ],
+          "description": "Currency of costThreshold; required when costThreshold is set."
+        },
+        "lostQuantityShareOfDailyPlan": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "description": "D17: approved lost quantity of one event at or above this share of the unit daily planned quantity (same unit of measure) fires on approval. Null disables. Absent in versions before D17 = off."
+        },
+        "repeatMatch": {
+          "type": "string",
+          "enum": [
+            "asset",
+            "asset_and_mode",
+            "asset_mode_and_mechanism"
+          ],
+          "description": "CA8 repeat identity: asset only (D13 versions, absent = asset), asset plus failure mode (failure_mode, else reason code), or refined by failure_mechanism. A same-problem firing while a case of that problem is open links the event to the case."
+        },
+        "criticalAssets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "criticalities",
+            "thresholdFactor"
+          ],
+          "properties": {
+            "criticalities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "thresholdFactor": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            }
+          },
+          "description": "D17: production thresholds (duration, quantity, cumulative) times thresholdFactor for assets whose criticality is listed (case-insensitive)."
+        },
+        "cumulative": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "windowDays",
+            "downtimeSeconds"
+          ],
+          "properties": {
+            "windowDays": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "downtimeSeconds": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "description": "CA8 bad actor: unplanned downtime of the same asset and mode summed over the rolling window. Null or absent = off."
+        },
+        "consequence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "solTypes",
+            "severities"
+          ],
+          "properties": {
+            "solTypes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "severities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "D17 override: events with these sol_type or severity values fire whatever their loss (advisory events recommend only)."
+        },
+        "effectiveness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "baselineLookbackDays",
+            "minExposureHours",
+            "requiredReduction",
+            "reviewDays",
+            "zeroRepeatClasses"
+          ],
+          "properties": {
+            "baselineLookbackDays": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "minExposureHours": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "requiredReduction": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            "reviewDays": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "zeroRepeatClasses": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "minor",
+                  "significant",
+                  "major"
+                ]
+              }
+            }
+          },
+          "description": "CA2/CA3: same-mode rate per run hour (planned and unplanned downtime excluded) after an action vs a server-computed baseline; criteria frozen into the action when verification is planned."
+        },
+        "fmea": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "method",
+            "rpnThreshold",
+            "severityReview",
+            "priorityRules"
+          ],
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": [
+                "rpn",
+                "action_priority"
+              ]
+            },
+            "rpnThreshold": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "severityReview": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "priorityRules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "priority",
+                  "severityMin",
+                  "occurrenceMin",
+                  "detectionMin"
+                ],
+                "properties": {
+                  "priority": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low"
+                    ]
+                  },
+                  "severityMin": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                  },
+                  "occurrenceMin": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                  },
+                  "detectionMin": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                  }
+                }
+              }
+            }
+          },
+          "description": "CA5: RPN and a configurable severity/occurrence/detection to priority rule set (first match; none = low). Not the AIAG-VDA table; a plant adopting AP enters its approved table."
+        },
+        "fiveWhy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "guidelineLevels",
+            "minLevels",
+            "evidencePerLevel",
+            "unsupportedRootCauses"
+          ],
+          "properties": {
+            "guidelineLevels": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "minLevels": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "evidencePerLevel": {
+              "type": "boolean"
+            },
+            "unsupportedRootCauses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "CA6: five levels are guidance; evidence per level and a system-level cause are enforced on the server."
+        },
+        "investigation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "minor",
+            "significant",
+            "major"
+          ],
+          "properties": {
+            "minor": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "methodGroups",
+                "minTeamMembers"
+              ],
+              "properties": {
+                "methodGroups": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "five_why",
+                        "fishbone",
+                        "fmea",
+                        "fault_tree",
+                        "barrier",
+                        "change",
+                        "logic_tree",
+                        "timeline"
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "description": "Each group needs at least one of its methods with content."
+                },
+                "minTeamMembers": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            },
+            "significant": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "methodGroups",
+                "minTeamMembers"
+              ],
+              "properties": {
+                "methodGroups": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "five_why",
+                        "fishbone",
+                        "fmea",
+                        "fault_tree",
+                        "barrier",
+                        "change",
+                        "logic_tree",
+                        "timeline"
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "description": "Each group needs at least one of its methods with content."
+                },
+                "minTeamMembers": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            },
+            "major": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "methodGroups",
+                "minTeamMembers"
+              ],
+              "properties": {
+                "methodGroups": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "five_why",
+                        "fishbone",
+                        "fmea",
+                        "fault_tree",
+                        "barrier",
+                        "change",
+                        "logic_tree",
+                        "timeline"
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "description": "Each group needs at least one of its methods with content."
+                },
+                "minTeamMembers": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "description": "CA7: required methods and team size per consequence class (tier 1/2/3)."
         }
       }
     }
