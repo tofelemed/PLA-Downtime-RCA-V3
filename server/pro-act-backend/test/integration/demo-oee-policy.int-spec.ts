@@ -68,7 +68,7 @@ describe('demo oee_policy: Demo Plant keeps the transition allowance as a plan l
     await client.connect();
   });
   afterAll(async () => {
-    await client.end();
+    await client?.end();
     await harness.stop();
   });
 
