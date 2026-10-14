@@ -51,6 +51,8 @@ interface World {
   unitName: string;
   reasonA: string;
   reasonB: string;
+  /** part of every code this run creates: the reason picker's search */
+  suffix: string;
 }
 
 const world = {} as World;
@@ -67,11 +69,11 @@ async function openHub(page: Page, unitName: string): Promise<void> {
 const row = (page: Page, id: string) => eventRowOf(page, id);
 const stop = (page: Page, id: string) => page.locator(`[data-testid="current-stop"][data-event-id="${id}"]`);
 
-async function codeReason(page: Page, reasonId: string): Promise<void> {
+async function codeReason(page: Page, reasonId: string, search: string): Promise<void> {
   const drawer = page.getByTestId('event-detail');
   await drawer.getByRole('button', { name: 'Edit / code' }).click();
   const form = page.getByTestId('event-form');
-  await pickReasonCode(form.locator('#reasonCodeId'), reasonId);
+  await pickReasonCode(form.locator('#reasonCodeId'), reasonId, search);
   await expect(form.getByTestId('impacted-periods')).toBeVisible();
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
@@ -86,6 +88,7 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     const flag = await call(world.manager, 'PUT', '/v2/feature-flags/v2.eventHub', { enabled: true });
     expect(flag.status).toBe(200);
     const suffix = randomUUID().slice(0, 8);
+    world.suffix = suffix;
     world.unitName = `E2E UX04 ${suffix}`;
     const unit = await call<{ id: string }>(world.manager, 'POST', '/units', { name: world.unitName, code: `E2E-UX04-${suffix}`, tenantId });
     world.unitId = unit.body.id;
@@ -114,7 +117,7 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath('event-hub-v2.png'), fullPage: true });
     await stop(page, stopId).getByRole('link', { name: 'Open' }).click();
-    await codeReason(page, world.reasonA);
+    await codeReason(page, world.reasonA, world.suffix);
     await expect(page.getByTestId('event-detail').getByLabel('Coding state: Coded')).toBeVisible();
 
     const drawer = page.getByTestId('event-detail');
@@ -136,7 +139,7 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     await expect(row(page, stopId)).toHaveCount(0);
 
     await openEventRow(page, running!.id);
-    await codeReason(page, world.reasonB);
+    await codeReason(page, world.reasonB, world.suffix);
     await backToList(page);
     await expect(row(page, running!.id).getByTestId('event-reason')).toContainText('Motor trip');
 

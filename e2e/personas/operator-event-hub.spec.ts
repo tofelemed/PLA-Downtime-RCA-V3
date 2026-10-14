@@ -36,8 +36,11 @@ test.describe('Operator — Event Hub v2', () => {
     await openHub(page, world.unit.name);
     await expect(page.getByTestId('current-stops')).toBeVisible();
 
-    const stops = page.getByTestId('current-stop');
-    let stopId = (await stops.count()) > 0 ? await stops.first().getAttribute('data-event-id') : null;
+    // a running stop of this unit, asked of the server: right after the unit filter changes, the panel
+    // still shows the previous (all-unit) result until its new query answers
+    const open = await call<ListBody<EventBody>>(world.liam, 'GET', `/v2/production-events?unitIds=${world.unit.id}&isOpen=true&limit=1`);
+    expect(open.status).toBe(200);
+    let stopId: string | null = open.body.items[0]?.id ?? null;
     if (!stopId) {
       // nothing is running on the line: record the stop through the UI (end empty = still running)
       await page.getByRole('link', { name: 'New event' }).click();
@@ -60,7 +63,7 @@ test.describe('Operator — Event Hub v2', () => {
     await expect(stop(page, id)).toBeVisible();
     await expect(stop(page, id).getByTestId('current-stop-elapsed')).toHaveText(/\d+:\d{2}/);
     await stop(page, id).getByRole('link', { name: 'Open' }).click();
-    await codeReason(page, world.reasons[0].id);
+    await codeReason(page, world.reasons[0].id, world.reasons[0].code);
     await expect(page.getByTestId('event-detail').getByLabel('Coding state: Coded')).toBeVisible();
 
     // cause changed: split at the slider default, recode the running half
@@ -74,14 +77,15 @@ test.describe('Operator — Event Hub v2', () => {
     const running = result.events.find((event) => event.isOpen);
     const ended = result.events.find((event) => !event.isOpen);
     expect(running && ended).toBeTruthy();
-    // the split opens the first part's page; Back returns to the list with the same filters
+    // the split opens the first part's page (replacing the event page); Back returns to the list with the same filters
+    await expect(page).toHaveURL(new RegExp(`/events/(${running!.id}|${ended!.id})$`));
     await backToList(page);
     await expect(row(page, running!.id)).toBeVisible();
     await expect(row(page, ended!.id)).toBeVisible();
     await expect(row(page, id)).toHaveCount(0);
 
     await openEventRow(page, running!.id);
-    await codeReason(page, world.reasons[1].id);
+    await codeReason(page, world.reasons[1].id, world.reasons[1].code);
     await backToList(page);
     await expect(row(page, running!.id).getByTestId('event-reason')).toContainText(world.reasons[1].name);
     await expect(row(page, ended!.id).getByTestId('event-reason')).toContainText(world.reasons[0].name);

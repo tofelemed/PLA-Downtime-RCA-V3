@@ -122,7 +122,7 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await expect(page.getByTestId('export-hash')).toHaveText(/SHA-256\): [0-9a-f]{64}/);
     const download = page.waitForEvent('download');
     await page.getByTestId('export-download').click();
-    expect((await download).suggestedFilename()).toMatch(/^proact-loss-lines-.+\.csv$/);
+    expect((await download).suggestedFilename()).toMatch(/^traverse-forge-loss-lines-.+\.csv$/); // product renamed "Traverse Forge"
     await openGrid(page);
     await expect(marker(page, world.periods.a)).toHaveAttribute('data-workflow', 'approved');
   });
@@ -157,7 +157,7 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await page.getByTestId('add-manual-line').click();
     await page.fill('#manualQuantity', '20');
     await page.locator('#manualNoEvent').click();
-    await pickReasonCode(page.locator('#manualReason'), world.reasonCodeId);
+    await pickReasonCode(page.locator('#manualReason'), world.reasonCodeId, world.suffix);
     await page.selectOption('#manualEvidenceType', 'log'); // SME R11: a stop without an event cites its log
     await page.fill('#manualEvidenceRef', 'shift log line 14');
     await page.getByTestId('manual-line-add').click();

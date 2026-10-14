@@ -33,11 +33,15 @@ export async function showMoreFilters(page: Page): Promise<void> {
 }
 
 /**
- * Picks a reason code in the shared searchable tree picker (FE-04): opens the combobox `trigger`, clicks
- * the code's row in the popover (portalled to the page) and checks the trigger holds it.
+ * Picks a reason code in the shared searchable tree picker (FE-04): opens the combobox `trigger`, types
+ * `search` (part of the code or name: the picker renders at most 200 rows, so a code of a big library is
+ * reached through the search), clicks the code's row in the popover (portalled to the page) and checks
+ * the trigger holds it.
  */
-export async function pickReasonCode(trigger: Locator, reasonId: string): Promise<void> {
+export async function pickReasonCode(trigger: Locator, reasonId: string, search: string): Promise<void> {
+  const page = trigger.page();
   await trigger.click();
-  await trigger.page().locator(`[cmdk-item][data-reason-id="${reasonId}"]`).click();
+  await page.locator('[cmdk-input]').fill(search);
+  await page.locator(`[cmdk-item][data-reason-id="${reasonId}"]`).click();
   await expect(trigger).toHaveAttribute('data-value', reasonId);
 }

@@ -110,11 +110,11 @@ export async function chooseUnit(page: Page, filterTestId: string, unitName: str
 export const row = (page: Page, id: string): Locator => eventRowOf(page, id);
 export const stop = (page: Page, id: string): Locator => page.locator(`[data-testid="current-stop"][data-event-id="${id}"]`);
 
-export async function codeReason(page: Page, reasonId: string): Promise<void> {
+export async function codeReason(page: Page, reasonId: string, search: string): Promise<void> {
   const detail = page.getByTestId('event-detail');
   await detail.getByRole('button', { name: 'Edit / code' }).click();
   const form = page.getByTestId('event-form');
-  await pickReasonCode(form.locator('#reasonCodeId'), reasonId);
+  await pickReasonCode(form.locator('#reasonCodeId'), reasonId, search);
   await expect(form.getByTestId('impacted-periods')).toBeVisible();
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();

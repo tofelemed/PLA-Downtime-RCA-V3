@@ -68,7 +68,7 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
     const detail = page.getByTestId('event-detail');
     await detail.getByRole('button', { name: 'Edit / code' }).click();
     const form = page.getByTestId('event-form');
-    await pickReasonCode(form.locator('#reasonCodeId'), world.reasons.feed);
+    await pickReasonCode(form.locator('#reasonCodeId'), world.reasons.feed, world.suffix);
     await form.locator('#scheduleClass').selectOption('unplanned');
     await expect(form.getByTestId('impacted-periods')).toBeVisible();
     await form.getByRole('button', { name: 'Save' }).click();
@@ -83,7 +83,7 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
     await expect(page.getByTestId('selection-count')).toHaveText('2 selected');
     await page.getByRole('button', { name: 'Bulk code' }).click();
     const dialog = page.getByTestId('bulk-code-dialog');
-    await pickReasonCode(dialog.locator('#bulk-reason-code'), world.reasons.motor);
+    await pickReasonCode(dialog.locator('#bulk-reason-code'), world.reasons.motor, world.suffix);
     await dialog.locator('#bulk-oee').selectOption('availability');
     await dialog.locator('#bulk-why').fill(`P-ENG motor trips of the day ${world.suffix}`);
     await dialog.getByRole('button', { name: 'Preview' }).click();
