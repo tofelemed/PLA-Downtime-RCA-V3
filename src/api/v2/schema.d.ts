@@ -1767,6 +1767,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/transition-standards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List transition standard versions (keyset on effectiveFrom, id) */
+        get: operations["TransitionStandardsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a draft transition standard version
+         * @description Requires `Idempotency-Key`. Unit and products of the tenant (422 INVALID_REFERENCE); from ≠ to (422 SAME_PRODUCT); referenceSeconds > 0 (422 INVALID_REFERENCE_SECONDS); a reference off-grade quantity needs offgradeUom (422 UOM_REQUIRED).
+         */
+        post: operations["TransitionStandardsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/transition-standards/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one transition standard version; foreign ids are 404 */
+        get: operations["TransitionStandardsV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/transition-standards/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a draft transition standard version
+         * @description Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).
+         */
+        post: operations["TransitionStandardsV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/transition-standards/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retire a draft or approved transition standard version */
+        post: operations["TransitionStandardsV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/rate-imports": {
         parameters: {
             query?: never;
@@ -5012,7 +5087,7 @@ export interface components {
              */
             reasonCodeId?: Record<string, never> | null;
             /** @enum {string} */
-            physicalType?: "downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory";
+            physicalType?: "downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition";
             /** @enum {string} */
             scheduleClass?: "planned" | "unplanned" | "external" | "unknown";
             /** @enum {string} */
@@ -5024,6 +5099,21 @@ export interface components {
              * @example 0.25
              */
             impactFraction?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description LA-08: product before a grade change; required with toProductId on grade_transition events only
+             */
+            fromProductId?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description LA-08: product after a grade change (grade_transition only)
+             */
+            toProductId?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop
+             */
+            recoveryOfEventId?: Record<string, never> | null;
             /**
              * Format: date-time
              * @description SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun
@@ -5091,7 +5181,7 @@ export interface components {
              */
             reasonCodeId?: Record<string, never> | null;
             /** @enum {string} */
-            physicalType?: "downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory";
+            physicalType?: "downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition";
             /** @enum {string} */
             scheduleClass?: "planned" | "unplanned" | "external" | "unknown";
             /** @enum {string} */
@@ -5103,6 +5193,21 @@ export interface components {
              * @example 0.25
              */
             impactFraction?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description LA-08: product before a grade change; required with toProductId on grade_transition events only
+             */
+            fromProductId?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description LA-08: product after a grade change (grade_transition only)
+             */
+            toProductId?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop
+             */
+            recoveryOfEventId?: Record<string, never> | null;
             /**
              * Format: date-time
              * @description SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun
@@ -5799,6 +5904,47 @@ export interface components {
             currency: string;
             /** @description Defaults to the profile quantityUom (must match it) or "h" for cost_per_hour */
             perUom?: string;
+        };
+        TransitionStandardCreateDto: {
+            /** @example 2026-10-01T02:30:00Z */
+            effectiveFrom: string;
+            /**
+             * @description Exclusive end; absent or null = open-ended
+             * @example 2027-01-01T02:30:00Z
+             */
+            effectiveTo?: Record<string, never> | null;
+            /** Format: uuid */
+            unitId: string;
+            /**
+             * Format: uuid
+             * @description Product (grade) before the change
+             */
+            fromProductId: string;
+            /**
+             * Format: uuid
+             * @description Product (grade) after the change; B→A is its own entry
+             */
+            toProductId: string;
+            /**
+             * @description Reference duration of the transition in seconds (> 0)
+             * @example 7560
+             */
+            referenceSeconds: string;
+            /**
+             * @description Reference off-grade quantity per transition; absent = the time share bounds the off-grade allowance
+             * @example 18
+             */
+            referenceOffgradeQty?: Record<string, never> | null;
+            /** @example t */
+            offgradeUom?: Record<string, never> | null;
+            /**
+             * @description Comparable transitions the reference was derived from
+             * @example 5
+             */
+            sampleCount?: Record<string, never> | null;
+            /** @description Derivation: observations, licensor / engineering guidance, boundary */
+            evidence?: Record<string, never> | null;
+            notes?: Record<string, never> | null;
         };
         RateImportRowDto: {
             /** @example unit100 */
@@ -7255,7 +7401,7 @@ export interface operations {
                 reasonIds?: string[];
                 eventTypes?: string[];
                 statuses?: string[];
-                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory")[];
+                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition")[];
                 scheduleClasses?: ("planned" | "unplanned" | "external" | "unknown")[];
                 oeeComponents?: ("availability" | "performance" | "quality" | "idle" | "none")[];
                 physicalStates?: ("open" | "closed" | "superseded" | "retracted")[];
@@ -7326,7 +7472,7 @@ export interface operations {
                 reasonIds?: string[];
                 eventTypes?: string[];
                 statuses?: string[];
-                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory")[];
+                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition")[];
                 scheduleClasses?: ("planned" | "unplanned" | "external" | "unknown")[];
                 oeeComponents?: ("availability" | "performance" | "quality" | "idle" | "none")[];
                 physicalStates?: ("open" | "closed" | "superseded" | "retracted")[];
@@ -7374,7 +7520,7 @@ export interface operations {
                 reasonIds?: string[];
                 eventTypes?: string[];
                 statuses?: string[];
-                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory")[];
+                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition")[];
                 scheduleClasses?: ("planned" | "unplanned" | "external" | "unknown")[];
                 oeeComponents?: ("availability" | "performance" | "quality" | "idle" | "none")[];
                 physicalStates?: ("open" | "closed" | "superseded" | "retracted")[];
@@ -9908,6 +10054,125 @@ export interface operations {
         };
     };
     ValuationRatesV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TransitionStandardsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                unitId?: string;
+                fromProductId?: string;
+                toProductId?: string;
+                state?: "draft" | "approved" | "retired";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TransitionStandardsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionStandardCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TransitionStandardsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TransitionStandardsV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TransitionStandardsV2Controller_retire_v2: {
         parameters: {
             query?: never;
             header: {
@@ -12720,7 +12985,7 @@ export interface operations {
                 ledger?: "plan" | "capacity";
                 /** @description Largest groups per unit / currency only (top opportunities); totals always cover every group */
                 limit?: number;
-                kinds?: ("schedule_exclusion" | "availability" | "performance" | "quality" | "bridge" | "unaccounted_classified")[];
+                kinds?: ("schedule_exclusion" | "availability" | "performance" | "quality" | "transition_allowance" | "transition_excess" | "bridge" | "unaccounted_classified")[];
             };
             header?: never;
             path?: never;
