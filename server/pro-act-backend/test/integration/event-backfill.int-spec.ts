@@ -118,6 +118,23 @@ const LEGACY_ROWS: LegacyRow[] = [
 const INTERVAL_MODEL_MIGRATION = 'EventIntervalModel1791584000000';
 
 /**
+ * Coding fields added after the EventRevisions backfill (SME D3 / D4 / D8 / D11, 14 Oct 2026): its
+ * baseline snapshots never had them.
+ */
+const ADDED_AFTER_BACKFILL: ReadonlySet<string> = new Set([
+  'originUnitId',
+  'originAssetId',
+  'plannedEndTime',
+  'failureSeverity',
+  'maintainableItem',
+  'failureMechanism',
+  'failureCause',
+  'detectionMethod',
+]);
+const atBackfill = (fields: readonly string[]) =>
+  fields.filter((field) => !ADDED_AFTER_BACKFILL.has(field));
+
+/**
  * Plan 1.1 step 4: the migration's SQL backfill gives the same answers as the TypeScript rules.
  * Plan 1.2 step 2: EventRevisions then snapshots the same rows exactly as `factsOf()` would.
  */
@@ -251,7 +268,7 @@ describe('EventIntervalModel + EventRevisions backfill', () => {
         kind: isSource ? 'source' : 'user',
         actor_kind: 'system',
         tenant_id: world.tenantA,
-        effective_facts: factsOf(event, EFFECTIVE_FIELDS),
+        effective_facts: factsOf(event, atBackfill(EFFECTIVE_FIELDS)),
         source_facts: isSource ? factsOf(event, SOURCE_FIELDS) : null,
       });
       const [coding] = await rowsOf('event_coding', ids[index]);
@@ -260,7 +277,7 @@ describe('EventIntervalModel + EventRevisions backfill', () => {
         is_override: false,
         reason: 'baseline',
         old_values: {},
-        new_values: factsOf(event, CODING_FIELDS),
+        new_values: factsOf(event, atBackfill(CODING_FIELDS)),
         schedule_class: event.scheduleClass,
       });
       expect(event).toMatchObject({
