@@ -74,6 +74,15 @@ describe('engine policy bodies (plan 2.5, D04 / D06)', () => {
     ).toEqual(RECONCILIATION_TOLERANCE_DEFAULT);
   });
 
+  it('SME D7 (14 Oct 2026): new plants allocate overlapping stops first-out; a version written before the option keeps equal shares', () => {
+    expect(OEE_POLICY_DEFAULT.overlapAllocation).toBe('first_out');
+    const { overlapAllocation: _omitted, ...beforeTheOption } =
+      OEE_POLICY_DEFAULT;
+    expect(parseOeePolicy(beforeTheOption).overlapAllocation).toBe(
+      'equal_share',
+    );
+  });
+
   it('refuses malformed bodies', () => {
     expect(() =>
       parseOeePolicy({ ...OEE_POLICY_DEFAULT, derateComponent: 'quality' }),

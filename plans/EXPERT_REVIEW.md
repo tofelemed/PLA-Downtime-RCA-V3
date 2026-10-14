@@ -150,6 +150,32 @@ SME questions D1–D17 were sent on 13 Oct 2026; the phases below need none of t
 | P7 | DT-10 (maths part) | A, P, Q summed over the periods their OEE counts (A × P × Q = OEE across periods); plant `week_start` (Saturday for Iranian plants — owner answer to D16, 13 Oct; Monday ISO otherwise), Saturday weeks keyed by their Saturday | ✅ |
 | P8 | FE-09 | Asset names, Event Hub asset filter, RCA asset options and mapping targets on `GET /v2/assets` (every keyset page of 500, one shared cache); the v1 asset directory helper removed. The plant selector still browses other plants through v1 (see the v2-only plan) | ✅ |
 
+### 2.1 SME answers (14 Oct 2026) and what they change
+
+Source: [SME_ANSWERS_ALL_PHASES_2026-10-14.md](SME_ANSWERS_ALL_PHASES_2026-10-14.md) (questions: [SME_QUESTIONS_ALL_PHASES.md](SME_QUESTIONS_ALL_PHASES.md)). The SME marks every number as a **pilot setting** to calibrate on plant data, not a universal standard; they are built as policy values, never hard-coded.
+
+| Q | SME answer (short) | Action | Plant data needed? | Phase |
+|---|---|---|---|---|
+| D1 | States: running, internal stop, planned maintenance / changeover, starved, blocked, standby, not scheduled; unknown = data-quality condition; physical state, schedule status and cause are separate attributes | State engine per unit from signals | **Yes**: state mapping per reactor / extruder / bagger / utility / standby (OPS + automation) | later |
+| D2 | Stale after 3 expected intervals + jitter (pilot); bad quality = unreliable at once; never fill gaps; publish coverage and availability bounds, no flattering certified KPI | Coverage measure and availability bounds | **Yes**: heartbeat semantics per source | later |
+| D3 | Starved / blocked stays in the affected unit's availability, cause coded external with the originating asset linked; site consolidation counts the final product once | Origin unit / asset on an event | No (site consolidation needs E2 flow map) | S5 |
+| D4 | Freeze the maintenance window; the excess is "unplanned extension of planned maintenance", linked to the job, not a breakdown and not an MTBF failure | Planned end on a planned stop; excess classed unplanned | No | S6 |
+| D5 | Keep every raw transition; flag same-asset / same-mode repeats within 2 min (pilot) for grouping, validate before any automatic grouping; physical stopped time = the segments | Repeat flag (list filter), window as policy | No | S3 |
+| D6 | Threshold per asset class; 120 s pilot for operator-cleared bagger / conveyor stops; a process trip is always an event | Per-unit threshold (existing policy scope); trips exempt | Thresholds per unit after a sample | config |
+| D7 | First-out as provisional default; after the first cause clears, later time goes to the cause still preventing production; never equal split by default | `oee_policy` version 2 with `first_out` | No | S1 |
+| D8 | Equipment MTBF counts confirmed functional failures (critical / degraded) inside the equipment boundary; external / no-demand / scheduled excluded | Failure severity on events; MTBF from confirmed failures | Boundary and definitions (MNT) | S7 |
+| D9 | Operating exposure; standby: demands, failed starts, tests separately; zero failures → exposure, no "infinite" MTBF | Current behaviour (null + exposure); standby metrics need D1 | Standby demand / test logs | later |
+| D10 | Name the measures: mean active repair time vs mean time to restore; timestamps from CMMS operations, not work-order creation / closure | Labels; CMMS mapping later | CMMS and timestamp meanings (MNT) | S2 |
+| D11 | ISO 14224-aligned dictionary: equipment class, maintainable item, failure mode, mechanism, cause, detection as related fields; pending allowed; ops reasons stay separate | Failure detail fields with "pending" | Code export and crosswalk (MNT) | S7 |
+| D12 | Minimum fields before shift submission; specific reason or "investigation pending"; pilot coverage 95 % of stopped minutes by shift end, 99 % by daily approval | Coding coverage KPI + targets as policy | No | S4 |
+| D13 | Operator enters, supervisor verifies, maintenance validates technical detail; bulk needs a common explanation; "all matching" only as an explicit action with count, dates / assets and a selection snapshot | Bulk code by filter (server snapshot) | No | S8 |
+| D14 | Default Pareto = gross lost good tonnes in scheduled production; duration, count and value as alternatives; recovery separate | Lost-tonnes ranking first / default | No | S2 |
+| D15 | Confirmed: external stays inside headline availability; an internal / controllable view may exist with its own name | ✅ current (`downtime_external` shown separately) | Reports needing a controllable view | — |
+| D16 | Saturday–Friday week | ✅ `9256086` | — | — |
+| D17 | Any-of triggers; pilot ≥ 2 h OR 1 % of daily planned tonnes OR 3 same-mode in 30 days, halved for critical assets; money limit from finance; safety overrides | RCA trigger policy (with CA8) | Critical assets, money limit (FIN) | Area 5 |
+
+**Build order (Area 2, SME phase):** S1 first-out default · S2 labels and lost-tonnes Pareto default · S3 repeat flag · S4 coding coverage · S5 origin unit / asset · S6 maintenance overrun · S7 failure detail and confirmed-failure MTBF · S8 bulk code by filter.
+
 | ID | Sev | Finding | Evidence | Status |
 |---|---|---|---|---|
 | DT-01 | High | **Asset-level / no-impact stops reduce unit Availability and MTBF exposure** (same root as LA-05). | `domain/accounting/segmentation.ts:35-64`; `v2/production-events/production-events-v2-commands.service.ts:327-345` | ✅ 13 Oct (SME Q5: impact `full_stop` / `fractional` / `none`; only stopping downtime is stopped time, `8171b43`) |
