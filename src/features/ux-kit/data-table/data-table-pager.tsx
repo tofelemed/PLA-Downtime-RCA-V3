@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatusIcon, UiIcon, type AppIcon } from '@/lib/icons';
 import { cn } from '@/lib/utils';
-import { formatDecimal } from '../format/decimal';
+import { useNumberFormat } from '../use-number-format';
 import { isPagerHidden, type PagerModel } from './pager-model';
 
 export interface ListPagerProps {
@@ -12,21 +12,22 @@ export interface ListPagerProps {
   className?: string;
 }
 
-// fixed `1,234` grouping (formatDecimal): the browser locale is never consulted
-const formatCount = (value: number) => formatDecimal(String(value), 0);
+/** Counts with fixed `1,234` grouping in the plant's digits: the browser locale is never consulted. */
+type Count = (value: number) => string;
 
-function rangeText(pager: PagerModel): string {
+function rangeText(pager: PagerModel, formatCount: Count): string {
   if (pager.rangeEnd === 0) return 'No rows';
   const range = `${formatCount(pager.rangeStart)}–${formatCount(pager.rangeEnd)}`;
   return pager.totalCount === null ? range : `${range} of ${formatCount(pager.totalCount)}`;
 }
 
-function pageText(pager: PagerModel): string {
+function pageText(pager: PagerModel, formatCount: Count): string {
   const page = formatCount(pager.pageIndex + 1);
   return pager.pageCount === null ? `Page ${page}` : `Page ${page} of ${formatCount(pager.pageCount)}`;
 }
 
 function PageSizeSelect({ pager }: { pager: PagerModel }) {
+  const { number } = useNumberFormat();
   return (
     <div className="flex items-center gap-2">
       <span className="text-muted-foreground" aria-hidden="true">Rows per page</span>
@@ -37,7 +38,7 @@ function PageSizeSelect({ pager }: { pager: PagerModel }) {
         <SelectContent>
           {pager.pageSizeOptions.map((size) => (
             <SelectItem key={size} value={String(size)}>
-              {size}
+              {number(size)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -66,12 +67,13 @@ function StepButton({ icon: Icon, label, disabled, busy = false, onClick }: Step
 function PageButtons({ pager }: { pager: PagerModel }) {
   const { goTo, pageCount } = pager;
   const showLast = pageCount !== null && goTo !== undefined;
+  const { number } = useNumberFormat();
   return (
     <div className="flex items-center gap-1">
       <StepButton icon={UiIcon.first} label="First page" disabled={!pager.canPrevious} onClick={pager.first} />
       <StepButton icon={UiIcon.previous} label="Previous page" disabled={!pager.canPrevious} onClick={pager.previous} />
       <span className="px-2 tabular-nums">
-        {pageText(pager)}
+        {pageText(pager, number)}
       </span>
       <StepButton icon={UiIcon.next} label="Next page" disabled={!pager.canNext || pager.isFetchingPage} busy={pager.isFetchingPage} onClick={pager.next} />
       {showLast && (
@@ -82,10 +84,11 @@ function PageButtons({ pager }: { pager: PagerModel }) {
 }
 
 function AppendControls({ pager }: { pager: PagerModel }) {
+  const { number } = useNumberFormat();
   return (
     <>
       <span className="tabular-nums text-muted-foreground" aria-live="polite">
-        Showing {formatCount(pager.rangeEnd)}
+        Showing {number(pager.rangeEnd)}
       </span>
       {pager.hasMore && pager.loadMore && (
         <Button type="button" variant="outline" size="sm" disabled={pager.isFetchingPage} onClick={pager.loadMore}>
@@ -105,6 +108,7 @@ function AppendControls({ pager }: { pager: PagerModel }) {
  * @example <ListPager pager={pager} label="Audit entries pages" />
  */
 export function ListPager({ pager, label = 'Pagination', className }: ListPagerProps) {
+  const { number } = useNumberFormat();
   if (isPagerHidden(pager)) return null;
   return (
     <nav aria-label={label} className={cn('flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-sm', className)}>
@@ -114,7 +118,7 @@ export function ListPager({ pager, label = 'Pagination', className }: ListPagerP
         <>
           <PageSizeSelect pager={pager} />
           <span className="tabular-nums text-muted-foreground" aria-live="polite">
-            {rangeText(pager)}
+            {rangeText(pager, number)}
           </span>
           <PageButtons pager={pager} />
         </>

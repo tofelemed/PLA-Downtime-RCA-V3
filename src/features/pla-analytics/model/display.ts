@@ -72,11 +72,15 @@ export const OEE_COMPONENTS = ['availability', 'performance', 'quality', 'oee'] 
 export const RECONCILED_COMPONENTS = ['reconciled_availability', 'reconciled_performance', 'reconciled_quality', 'reconciled_oee'] as const;
 
 /** A loss amount with its unit (uom or currency); null says why — never a 0 (VAL02, T45). */
-export function amountText(row: Pick<LossTreeGroupView | LossTreeTotalView, 'amount' | 'unit' | 'reasons' | 'status'>, metric: LossTreeMetric): string {
+export function amountText(
+  row: Pick<LossTreeGroupView | LossTreeTotalView, 'amount' | 'unit' | 'reasons' | 'status'>,
+  metric: LossTreeMetric,
+  digitSystem?: DigitSystem,
+): string {
   const unit = row.unit ?? (metric === 'qty' ? 'unit unknown' : 'no currency');
   if (row.amount === null) return `Not valued (${notValuedReason(row.reasons)})`;
   const digits = metric === 'qty' ? 2 : currencyDigits(row.unit);
-  return `${formatDecimal(row.amount, digits)} ${unit}`;
+  return `${formatDecimal(row.amount, digits, digitSystem)} ${unit}`;
 }
 
 export function notValuedReason(reasons: readonly string[]): string {
@@ -85,16 +89,16 @@ export function notValuedReason(reasons: readonly string[]): string {
 }
 
 /** "87.5 %" from a server ratio; null → "—". */
-export const shareText = (value: string | null) => formatRatio(value, 1);
+export const shareText = (value: string | null, digits?: DigitSystem) => formatRatio(value, 1, digits);
 
 /**
  * OEE tile text (T41, KPI04): the server's value as a percentage, or "Not available: <reason>" — never a
  * fabricated 87 % or a default 100 % quality.
  */
-export function kpiText(view: KpiAggregateView | undefined): string {
+export function kpiText(view: KpiAggregateView | undefined, digits?: DigitSystem): string {
   if (!view) return 'Not available: no calculated periods';
   if (view.value === null) return `Not available: ${(reasonText(view.reason) ?? 'no data').toLowerCase()}`;
-  return formatRatio(view.value, 1);
+  return formatRatio(view.value, 1, digits);
 }
 
 export const findKpi = (views: readonly KpiAggregateView[] | undefined, metric: string) => views?.find((v) => v.metric === metric);
