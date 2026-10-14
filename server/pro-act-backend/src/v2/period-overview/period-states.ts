@@ -18,6 +18,7 @@ import { AccountingPolicy } from '../../periods/entities/accounting-policy.entit
 import { ActualsResult } from '../../periods/entities/actuals-result.entity';
 import { ProductionPeriod } from '../../periods/entities/production-period.entity';
 import { parseReconciliationTolerance } from '../../periods/engine-policy-bodies';
+import { policyBodiesInForce } from '../../periods/policy-bodies-in-force';
 import { ReconciliationLine } from '../../reconciliation/entities/reconciliation-line.entity';
 import {
   candidatesOf,
@@ -183,21 +184,58 @@ async function toleranceRules(
     stored.map((p) => [p.id, ruleOf(parseReconciliationTolerance(p.body))]),
   );
   const rules = new Map<string, ToleranceRule>();
+  const unrecorded: CalculationRun[] = [];
   for (const run of runs) {
     const known = byId.get(refOf(run) ?? '');
-    if (known) {
-      rules.set(run.id, known);
+    if (known) rules.set(run.id, known);
+    else unrecorded.push(run);
+  }
+  await addPoliciesInForce(rules, { manager, unrecorded, periods, policies });
+  return rules;
+}
+
+/**
+ * Runs that recorded no tolerance policy (pre-2.5) get the one in force for their unit at period start,
+ * looked up for the whole page in one statement (DB-08: was one `resolveEngine` per run). Only a lookup
+ * without any version in force — a tenant never seeded — goes through `resolveEngine`, which seeds.
+ */
+async function addPoliciesInForce(
+  rules: Map<string, ToleranceRule>,
+  input: {
+    manager: EntityManager;
+    unrecorded: CalculationRun[];
+    periods: Map<string, ProductionPeriod>;
+    policies: AccountingPoliciesService;
+  },
+): Promise<void> {
+  const { manager, unrecorded, periods, policies } = input;
+  const lookups = unrecorded.map((run) => {
+    const period = periods.get(run.periodId) as ProductionPeriod;
+    return {
+      tenantId: period.tenantId,
+      unitId: period.unitId,
+      at: period.utcStart,
+    };
+  });
+  const bodies = await policyBodiesInForce(
+    manager,
+    'reconciliation_tolerance',
+    lookups,
+  );
+  for (const [index, run] of unrecorded.entries()) {
+    const body = bodies[index];
+    if (body !== undefined) {
+      rules.set(run.id, ruleOf(parseReconciliationTolerance(body)));
       continue;
     }
-    const period = periods.get(run.periodId) as ProductionPeriod;
+    const { tenantId, unitId, at } = lookups[index];
     const engine = await policies.resolveEngine(
       manager,
-      { tenantId: period.tenantId, unitId: period.unitId },
-      period.utcStart,
+      { tenantId, unitId },
+      at,
     );
     rules.set(run.id, ruleOf(engine.tolerance));
   }
-  return rules;
 }
 
 /**
