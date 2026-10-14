@@ -52,11 +52,11 @@ describe('revision helpers (API02)', () => {
 });
 
 describe('ETagInterceptor', () => {
-  async function run(body: unknown): Promise<string | undefined> {
-    let etag: string | undefined;
+  async function headersOf(body: unknown): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {};
     const response = {
-      setHeader: (_name: string, value: string) => {
-        etag = value;
+      setHeader: (name: string, value: string) => {
+        headers[name] = value;
       },
     };
     const context = {
@@ -65,11 +65,19 @@ describe('ETagInterceptor', () => {
     await lastValueFrom(
       new ETagInterceptor().intercept(context, { handle: () => of(body) }),
     );
-    return etag;
+    return headers;
   }
+  const run = async (body: unknown) => (await headersOf(body)).ETag;
 
   it('sets ETag from rowVersion', async () => {
     expect(await run({ id: 'a', rowVersion: 4 })).toBe('"4"');
+  });
+
+  it('keeps the browser from storing a revisioned response (a retire keeps the revision)', async () => {
+    expect((await headersOf({ id: 'a', rowVersion: 4 }))['Cache-Control']).toBe(
+      'private, no-store',
+    );
+    expect(await headersOf({ items: [] })).toEqual({});
   });
 
   it('leaves bodies without a numeric rowVersion alone', async () => {
