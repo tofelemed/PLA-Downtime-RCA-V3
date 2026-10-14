@@ -1,60 +1,263 @@
 /**
- * The RCA cases of the showcase, one per lifecycle stage: draft, analysis, actions open, action verified,
- * and two closed cases (closing one creates its knowledge-base entry). Each case is linked to the
- * biggest stops of its reason on its unit. Demo data only.
+ * The RCA cases of the HDPE showcase (DEMO DATA — illustrative failure modes, people and numbers, not plant
+ * records; every title starts with "Demo:"). One case per workflow stage of SME CA1: draft, analysis,
+ * effectiveness monitoring, closure review and closed. The stories:
+ * - a repeat gearbox bearing overheating on Extruder Line 2: three same-mode stops in 30 days fire the
+ *   D17 repeat trigger; the case is opened from the event (monitoring, verification still running);
+ * - cutter knife breakage on the pelletizer, opened for its approved economic impact over the demo money
+ *   limit; the knife-pressure fix is verified NOT effective (the mode kept repeating) and sits in
+ *   closure review for an independent manager to send back;
+ * - melt pressure after screen pack changes on Extruder Line 1: pre-heating packs is verified EFFECTIVE
+ *   (no repeat in the window), the case is closed by an independent manager and its lesson shared.
+ * `failureStops` are the demo stops each story needs, on the named asset with the failure mode the
+ * triggers and the effectiveness verification match on.
  */
 export type CaseStage =
   | 'draft'
   | 'analysis'
-  | 'actions_open'
-  | 'verified'
+  | 'monitoring'
+  | 'closure_review'
   | 'closed';
+
+export type ActionType =
+  | 'repair'
+  | 'design_change'
+  | 'procedure_change'
+  | 'instrument_change'
+  | 'training'
+  | 'other';
 
 export interface ActionSpec {
   title: string;
   description: string;
-  ownerRole: 'reliability' | 'engineers' | 'operators';
+  actionType: ActionType;
+  ownerRole: 'engineers' | 'operators';
   dueInDays: number;
   status: 'open' | 'in_progress' | 'done';
-  /** verification window relative to today (days); omitted = none */
+  /** CA4 objective evidence (work order, revision, test report) */
+  evidence?: string;
+  completedDaysAgo?: number;
+  /** verification window relative to today, in days (negative = in the future) */
   verification?: { fromDaysAgo: number; toDaysAgo: number };
-  baselineRecurrences?: string;
   claimedAvoidedLossUsd?: string;
 }
 
+/** Demo stops of one failure mode on one asset (minutes long, `daysAgo` before today's start). */
+export interface FailureStops {
+  assetKind: string;
+  failureMode: string;
+  failureMechanism?: string;
+  minutes: number;
+  daysAgo: readonly number[];
+}
+
 export interface CaseSpec {
+  key: string;
   unitKey: string;
   reason: string;
   stage: CaseStage;
   title: string;
   description: string;
   priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  consequenceClass: 'minor' | 'significant' | 'major' | null;
   rootCause: string | null;
+  /** 5-Why chain: answer and the evidence that supports it (CA6: evidence per level, not a count) */
+  fiveWhy?: ReadonlyArray<{ answer: string; evidence: string }>;
   recommendations: string[];
   actions: ActionSpec[];
+  failureStops?: FailureStops;
+  /** opened from the trigger recommendation of the last failure stop (rca-link on that event) */
+  openedFromTrigger?: 'repeat' | 'cost';
+  residualRisk?: string;
 }
+
+const GEARBOX: CaseSpec = {
+  key: 'gearbox',
+  unitKey: 'EXT2',
+  reason: 'MECH-GBX',
+  stage: 'monitoring',
+  title: 'Demo: Repeat gearbox bearing overheating on Extruder Line 2',
+  description:
+    'Demo case. Opened from the D17 repeat trigger: three gearbox bearing overheating stops on Extruder ' +
+    'Line 2 within 30 days (none of them two hours long). Oil analysis showed oxidised oil.',
+  priority: 'High',
+  consequenceClass: 'significant',
+  rootCause:
+    'Oil change interval (12 months) too long for the summer gearbox load: the oil oxidises and the bearing runs hot.',
+  fiveWhy: [
+    {
+      answer: 'The gearbox tripped on high bearing temperature',
+      evidence: 'DCS alarm log TI-2214 HH',
+    },
+    {
+      answer: 'The bearing ran hot because the oil had lost viscosity',
+      evidence: 'Oil analysis OA-1187: viscosity -18 %, TAN high',
+    },
+    {
+      answer:
+        'The oil oxidised because the change interval ignores the summer load',
+      evidence: 'CMMS PM-GB-EXT2 interval 12 months; load trend',
+    },
+  ],
+  recommendations: [
+    'Change the oil every 6 months',
+    'Add oil condition monitoring to the PM route',
+  ],
+  actions: [
+    {
+      title: 'Shorten the gearbox oil change interval to 6 months',
+      description: 'PM task revised; oil changed during the last PM stop.',
+      actionType: 'procedure_change',
+      ownerRole: 'engineers',
+      dueInDays: -9,
+      status: 'done',
+      evidence:
+        'PM-GB-EXT2 revision 4 released; oil change WO-55120 closed with oil sample OA-1203',
+      completedDaysAgo: 9,
+      verification: { fromDaysAgo: 8, toDaysAgo: -20 },
+      claimedAvoidedLossUsd: '14000',
+    },
+  ],
+  failureStops: {
+    assetKind: 'GBX',
+    failureMode: 'Gearbox bearing overheating',
+    failureMechanism: 'Lubricant degradation',
+    minutes: 35,
+    daysAgo: [26, 19, 12],
+  },
+  openedFromTrigger: 'repeat',
+};
+
+const KNIFE: CaseSpec = {
+  key: 'knife',
+  unitKey: 'PEL',
+  reason: 'MECH-KNF',
+  stage: 'closure_review',
+  title:
+    'Demo: Cutter knife breakage on the Underwater Pelletizer (fix not effective)',
+  description:
+    'Demo case. Opened for the approved economic impact of the knife breakage stops (over the demo money ' +
+    'limit). The knife-pressure fix did not stop the breakage: verification is not effective.',
+  priority: 'Critical',
+  consequenceClass: 'minor',
+  rootCause:
+    'Knife-to-die contact pressure drifts high after the die plate regrind; the hydraulic regulator is worn.',
+  fiveWhy: [
+    {
+      answer: 'Knives break after 9–12 days instead of 30',
+      evidence: 'Knife change log, 6 changes in 3 weeks',
+    },
+    {
+      answer: 'Contact pressure runs above 2.1 bar',
+      evidence: 'Pressure trend PI-3105 after the regrind',
+    },
+  ],
+  recommendations: [
+    'Replace the pressure regulator',
+    'Check die plate flatness after every regrind',
+  ],
+  actions: [
+    {
+      title:
+        'Re-calibrate the knife pressure regulator and add a pressure alarm',
+      description: 'Set 1.8 bar, alarm at 2.1 bar on the DCS.',
+      actionType: 'instrument_change',
+      ownerRole: 'engineers',
+      dueInDays: -20,
+      status: 'done',
+      evidence:
+        'Calibration report CAL-PI-3105; DCS change MOC-2291 (alarm 2.1 bar)',
+      completedDaysAgo: 20,
+      verification: { fromDaysAgo: 19, toDaysAgo: 1 },
+      claimedAvoidedLossUsd: '18500',
+    },
+  ],
+  failureStops: {
+    assetKind: 'CUT',
+    failureMode: 'Cutter knife breakage',
+    minutes: 45,
+    daysAgo: [28, 25, 22, 15, 9, 4],
+  },
+  openedFromTrigger: 'cost',
+  residualRisk:
+    'Breakage continues at the old rate; knives are inspected every shift until the regulator is replaced.',
+};
+
+const MELT: CaseSpec = {
+  key: 'melt',
+  unitKey: 'EXT1',
+  reason: 'PROC-MELT',
+  stage: 'closed',
+  title:
+    'Demo: Melt pressure excursions after screen pack changes (fix effective)',
+  description:
+    'Demo case. High melt pressure stops clustered in the two hours after a screen pack change. Pre-heating ' +
+    'the packs stopped them: verification is effective.',
+  priority: 'Medium',
+  consequenceClass: 'minor',
+  rootCause:
+    'New screen packs were installed cold; the pack heats up under flow and pressure peaks until it reaches temperature.',
+  fiveWhy: [
+    {
+      answer: 'Melt pressure peaks right after a screen pack change',
+      evidence: 'PT-1102 trend vs screen change log',
+    },
+    {
+      answer: 'The new pack is cold and restricts flow until it heats up',
+      evidence: 'Pack temperature measured 40 °C at install',
+    },
+  ],
+  recommendations: ['Pre-heat screen packs in the oven for 30 minutes'],
+  actions: [
+    {
+      title: 'Pre-heat screen packs before installation',
+      description:
+        'Oven at 220 °C for 30 minutes added to the work instruction.',
+      actionType: 'procedure_change',
+      ownerRole: 'engineers',
+      dueInDays: -21,
+      status: 'done',
+      evidence:
+        'Work instruction WI-EXT-014 revision 3 released; crew briefing record TR-0912',
+      completedDaysAgo: 21,
+      verification: { fromDaysAgo: 20, toDaysAgo: 2 },
+    },
+  ],
+  failureStops: {
+    assetKind: 'DIE',
+    failureMode: 'Melt pressure high after screen change',
+    minutes: 30,
+    daysAgo: [29, 26, 23],
+  },
+  residualRisk:
+    'None beyond the revised work instruction; pack temperature checked at install.',
+};
 
 export const RCA_CASES: readonly CaseSpec[] = [
   {
+    key: 'motor',
     unitKey: 'EXT2',
     reason: 'ELEC-MTR',
     stage: 'draft',
-    title: 'Main drive trips on Extruder Line 2',
+    title: 'Demo: Main drive trips on Extruder Line 2',
     description:
-      'Three main motor trips in a month, the last one still running. Opened from the trigger recommendation; team to be assigned.',
+      'Demo case. Three main motor trips in a month; team to be assigned.',
     priority: 'High',
+    consequenceClass: null,
     rootCause: null,
     recommendations: [],
     actions: [],
   },
   {
+    key: 'die',
     unitKey: 'EXT1',
     reason: 'MECH-DIE',
     stage: 'analysis',
-    title: 'Recurring die plate blockages on Extruder Line 1',
+    title: 'Demo: Recurring die plate blockages on Extruder Line 1',
     description:
-      'Die plate blockages are the largest availability loss of Extruder Line 1 this month. Evidence: melt temperature trends, screen pack change log, die hole inspection photos.',
+      'Demo case. Die plate blockages are the largest availability loss of Extruder Line 1 this month.',
     priority: 'High',
+    consequenceClass: 'significant',
     rootCause: null,
     recommendations: [
       'Inspect die heater zones 3–4',
@@ -62,123 +265,22 @@ export const RCA_CASES: readonly CaseSpec[] = [
     ],
     actions: [],
   },
-  {
-    unitKey: 'PEL',
-    reason: 'MECH-KNF',
-    stage: 'actions_open',
-    title: 'Cutter knife breakage on the Underwater Pelletizer',
-    description:
-      'Knives break after 9–12 days instead of the 30 days the supplier quotes; each change costs 40–60 minutes of the whole complex.',
-    priority: 'Critical',
-    rootCause:
-      'Knife-to-die contact pressure set too high after the last die plate regrind; hydraulic pressure regulator drifts.',
-    recommendations: [
-      'Re-calibrate knife pressure regulator',
-      'Introduce knife wear inspection at every grade change',
-    ],
-    actions: [
-      {
-        title: 'Re-calibrate knife pressure regulator and add a pressure alarm',
-        description: 'Set 1.8 bar, alarm at 2.1 bar on the DCS.',
-        ownerRole: 'reliability',
-        dueInDays: 5,
-        status: 'in_progress',
-        baselineRecurrences: '4',
-        claimedAvoidedLossUsd: '18500',
-      },
-      {
-        title: 'Add knife wear check to the grade-change checklist',
-        description: 'Operators measure knife edge wear at each changeover.',
-        ownerRole: 'operators',
-        dueInDays: 10,
-        status: 'open',
-      },
-    ],
-  },
-  {
-    unitKey: 'EXT2',
-    reason: 'MECH-GBX',
-    stage: 'verified',
-    title: 'Gearbox overheating on Extruder Line 2',
-    description:
-      'Gearbox oil temperature alarms forced rate cuts and stops. Oil cooler fouling found.',
-    priority: 'Medium',
-    rootCause:
-      'Fouled oil cooler (cooling water side) – cleaning interval of 12 months too long for the summer water quality.',
-    recommendations: [
-      'Clean oil cooler every 6 months',
-      'Add differential temperature monitoring',
-    ],
-    actions: [
-      {
-        title:
-          'Clean gearbox oil cooler and shorten the cleaning interval to 6 months',
-        description: 'Cleaning done during the PM stop; CMMS interval updated.',
-        ownerRole: 'reliability',
-        dueInDays: -12,
-        status: 'done',
-        verification: { fromDaysAgo: 11, toDaysAgo: 1 },
-        baselineRecurrences: '6',
-        claimedAvoidedLossUsd: '9200',
-      },
-    ],
-  },
-  {
-    unitKey: 'BAG',
-    reason: 'MATL-FILM',
-    stage: 'closed',
-    title: 'Bag film shortages stopping the bagging line',
-    description: 'The FFS bagger waited for film reels several times per week.',
-    priority: 'Medium',
-    rootCause:
-      'Film reels were only called off when the last reel was mounted; the warehouse needs 45 minutes for a forklift run.',
-    recommendations: [
-      'Keep two reels staged at the bagger',
-      'Kanban signal at one reel left',
-    ],
-    actions: [
-      {
-        title: 'Introduce a two-reel kanban at the bagger',
-        description: 'Kanban card at one reel left; warehouse SLA 30 minutes.',
-        ownerRole: 'engineers',
-        dueInDays: -15,
-        status: 'done',
-      },
-    ],
-  },
-  {
-    unitKey: 'EXT1',
-    reason: 'PROC-MELT',
-    stage: 'closed',
-    title: 'Melt pressure excursions after screen pack changes',
-    description:
-      'High melt pressure stops cluster in the two hours after a screen pack change.',
-    priority: 'Low',
-    rootCause:
-      'New screen packs were installed cold; the pack heats up under flow and pressure peaks until it reaches temperature.',
-    recommendations: ['Pre-heat screen packs in the oven for 30 minutes'],
-    actions: [
-      {
-        title: 'Pre-heat screen packs before installation',
-        description:
-          'Oven at 220 °C for 30 minutes added to the work instruction.',
-        ownerRole: 'engineers',
-        dueInDays: -20,
-        status: 'done',
-      },
-    ],
-  },
+  GEARBOX,
+  KNIFE,
+  MELT,
 ];
 
 export const SMALL_RCA_CASES: readonly CaseSpec[] = [
   {
+    key: 'compounding',
     unitKey: 'CMP1',
     reason: 'PROC-MELT',
     stage: 'analysis',
-    title: 'Melt pressure stops on Compounding Line 1',
+    title: 'Demo: Melt pressure stops on Compounding Line 1',
     description:
-      'Talc-filled grades show pressure peaks at the die; investigating side feeder dosing.',
+      'Demo case. Talc-filled grades show pressure peaks at the die; investigating side feeder dosing.',
     priority: 'Medium',
+    consequenceClass: 'minor',
     rootCause: null,
     recommendations: [],
     actions: [],

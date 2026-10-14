@@ -7,7 +7,7 @@
  *   npm run db:seed-demo-showcase -- --tenant <uuid>   # Demo Plant 2 (small scenario) or Partner Plant
  *       [--only <step,step>] [--skip <step,step>]
  *
- * Steps: master-data, codes, rules, calendars, profiles, plans, events, cleanup, accounting, rca, tasks,
+ * Steps: master-data, codes, rules, calendars, profiles, rca-policy, plans, events, rca-events, cleanup, accounting, rca, tasks,
  * integration, verify. Idempotent: rows that exist are kept and reported as such; a re-run on a later day
  * extends the window (new days, plan versions, periods). Env: PROACT_API_URL (default
  * http://localhost:$PORT). See docs/DEMO_SHOWCASE_DATA.md.

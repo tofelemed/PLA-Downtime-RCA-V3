@@ -15,6 +15,8 @@ import { seedPlans } from './seed-plans';
 import { seedValuationPolicy } from './seed-policy';
 import { seedProfiles } from './seed-profiles';
 import { seedRcaCases } from './seed-rca';
+import { seedRcaFailureStops } from './seed-rca-events';
+import { seedRcaPolicy } from './seed-rca-policy';
 import { seedRules } from './seed-rules';
 import { seedTasks } from './seed-tasks';
 import { ShowcaseContext } from './showcase-context';
@@ -43,10 +45,18 @@ const STEPS: readonly Step[] = [
     kinds: PLANTS,
     run: seedValuationPolicy,
   },
+  // Demo RCA trigger policy before the events and approvals evaluate the triggers
+  { name: 'rca-policy', always: false, kinds: PLANTS, run: seedRcaPolicy },
   { name: 'plans', always: false, kinds: PLANTS, run: seedPlans },
   { name: 'cleanup', always: false, kinds: ['full'], run: closeStaleStops },
   { name: 'events', always: false, kinds: PLANTS, run: seedEvents },
   { name: 'open-stops', always: false, kinds: PLANTS, run: seedOpenStops },
+  {
+    name: 'rca-events',
+    always: false,
+    kinds: PLANTS,
+    run: seedRcaFailureStops,
+  },
   { name: 'recalculate', always: false, kinds: PLANTS, run: recalculate },
   { name: 'accounting', always: false, kinds: PLANTS, run: seedAccounting },
   { name: 'rca', always: false, kinds: PLANTS, run: seedRcaCases },
