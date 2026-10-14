@@ -31,3 +31,13 @@ export async function showMoreFilters(page: Page): Promise<void> {
   const toggle = page.getByTestId('more-filters');
   if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
 }
+
+/**
+ * Picks a reason code in the shared searchable tree picker (FE-04): opens the combobox `trigger`, clicks
+ * the code's row in the popover (portalled to the page) and checks the trigger holds it.
+ */
+export async function pickReasonCode(trigger: Locator, reasonId: string): Promise<void> {
+  await trigger.click();
+  await trigger.page().locator(`[cmdk-item][data-reason-id="${reasonId}"]`).click();
+  await expect(trigger).toHaveAttribute('data-value', reasonId);
+}

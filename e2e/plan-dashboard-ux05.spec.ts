@@ -2,6 +2,7 @@ import { test, expect, type Browser, type Page } from '@playwright/test';
 import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
 import { call, command } from './test-utils/downtime-world';
+import { pickReasonCode } from './personas/support/event-hub-ui';
 import { ensureApprover, reconciliation, saveLines, seedDashboardWorld, type DashboardWorld } from './test-utils/dashboard-world';
 
 /**
@@ -156,7 +157,7 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await page.getByTestId('add-manual-line').click();
     await page.fill('#manualQuantity', '20');
     await page.locator('#manualNoEvent').click();
-    await page.selectOption('#manualReason', world.reasonCodeId);
+    await pickReasonCode(page.locator('#manualReason'), world.reasonCodeId);
     await page.selectOption('#manualEvidenceType', 'log'); // SME R11: a stop without an event cites its log
     await page.fill('#manualEvidenceRef', 'shift log line 14');
     await page.getByTestId('manual-line-add').click();

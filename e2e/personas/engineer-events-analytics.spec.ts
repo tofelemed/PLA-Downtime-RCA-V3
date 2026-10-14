@@ -4,7 +4,7 @@ import { call, command } from '../test-utils/downtime-world';
 import { scopeUrl } from '../test-utils/pla-world';
 import { AISHA, HANNAH, SAMUEL, SETUP_MANAGER, apiSession, type Session } from './support/engineer-users';
 import { approvePeriod, event, seedEngineerWorld, submitManualLine, until, type EngineerWorld } from './support/engineer-world';
-import { backToList, eventRowOf, openEventRow } from './support/event-hub-ui';
+import { backToList, eventRowOf, openEventRow, pickReasonCode } from './support/event-hub-ui';
 
 /**
  * Production engineer persona — event coding on the v2 Event Hub (journey 4) and the analytics screens
@@ -68,7 +68,7 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
     const detail = page.getByTestId('event-detail');
     await detail.getByRole('button', { name: 'Edit / code' }).click();
     const form = page.getByTestId('event-form');
-    await form.locator('#reasonCodeId').selectOption(world.reasons.feed);
+    await pickReasonCode(form.locator('#reasonCodeId'), world.reasons.feed);
     await form.locator('#scheduleClass').selectOption('unplanned');
     await expect(form.getByTestId('impacted-periods')).toBeVisible();
     await form.getByRole('button', { name: 'Save' }).click();
@@ -83,7 +83,7 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
     await expect(page.getByTestId('selection-count')).toHaveText('2 selected');
     await page.getByRole('button', { name: 'Bulk code' }).click();
     const dialog = page.getByTestId('bulk-code-dialog');
-    await dialog.locator('#bulk-reason-code').selectOption(world.reasons.motor);
+    await pickReasonCode(dialog.locator('#bulk-reason-code'), world.reasons.motor);
     await dialog.locator('#bulk-oee').selectOption('availability');
     await dialog.locator('#bulk-why').fill(`P-ENG motor trips of the day ${world.suffix}`);
     await dialog.getByRole('button', { name: 'Preview' }).click();
