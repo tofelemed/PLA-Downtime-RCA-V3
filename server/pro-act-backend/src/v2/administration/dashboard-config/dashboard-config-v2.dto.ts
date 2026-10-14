@@ -17,21 +17,6 @@ import {
 const PERCENT = { minimum: 0, maximum: 100 };
 
 export class OeeSettingsDto {
-  @ApiProperty({ minimum: 0, maximum: 10 })
-  @IsNumber()
-  @Min(0)
-  @Max(10)
-  availabilityWeight: number;
-  @ApiProperty({ minimum: 0, maximum: 10 })
-  @IsNumber()
-  @Min(0)
-  @Max(10)
-  performanceWeight: number;
-  @ApiProperty({ minimum: 0, maximum: 10 })
-  @IsNumber()
-  @Min(0)
-  @Max(10)
-  qualityWeight: number;
   @ApiProperty(PERCENT) @IsNumber() @Min(0) @Max(100) targetOEE: number;
   @ApiProperty(PERCENT)
   @IsNumber()
@@ -43,18 +28,12 @@ export class OeeSettingsDto {
 }
 
 export class LossSettingsDto {
-  @ApiProperty({ minimum: 0 }) @IsNumber() @Min(0) lossValuePerUnit: number;
   @ApiProperty(PERCENT) @IsNumber() @Min(0) @Max(100) highLossThreshold: number;
   @ApiProperty(PERCENT)
   @IsNumber()
   @Min(0)
   @Max(100)
   criticalLossThreshold: number;
-  @ApiProperty(PERCENT)
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  defaultUnaccountedLossPercentage: number;
 
   @ApiProperty({ type: [String] })
   @IsArray()

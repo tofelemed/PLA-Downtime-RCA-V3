@@ -216,6 +216,34 @@ describe('v2 administration: attributes, dashboard settings, hierarchy, branding
       updatedByName: 'Ada Admin',
       settings: { oee: { targetOEE: 80 } },
     });
+    await harness.dataSource.query(
+      `UPDATE dashboard_configurations SET widget_config = jsonb_set(widget_config::jsonb, '{oee}',
+         to_jsonb('{"targetOEE":80,"qualityWeight":1}'::text))::text WHERE tenant_id = $1`,
+      [world.plantA],
+    );
+    const legacy = bodyOf<DashboardBody>(
+      await http()
+        .get('/api/v2/dashboard-configuration')
+        .set(bearer(adminA.token))
+        .expect(200),
+    );
+    expect(legacy.settings.oee).toEqual({
+      targetOEE: 80,
+      targetAvailability: 90,
+      targetPerformance: 95,
+      targetQuality: 99,
+    });
+    await http()
+      .put('/api/v2/dashboard-configuration')
+      .set(bearer(adminA.token))
+      .send(legacy.settings)
+      .expect(200);
+    const retired = { ...settings, oee: { ...settings.oee, qualityWeight: 1 } };
+    await http()
+      .put('/api/v2/dashboard-configuration')
+      .set(bearer(adminA.token))
+      .send(retired)
+      .expect(422);
     const bad = { ...settings, oee: { ...settings.oee, targetOEE: 180 } };
     await http()
       .put('/api/v2/dashboard-configuration')

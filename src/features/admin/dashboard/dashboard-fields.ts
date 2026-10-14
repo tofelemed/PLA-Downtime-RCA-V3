@@ -22,22 +22,17 @@ const share = (key: string, label: string): FieldSpec => ({ key, label, kind: 'n
 export const DASHBOARD_GROUPS: Readonly<Record<DashboardGroup, GroupSpec>> = {
   oee: {
     label: 'OEE',
-    description: 'Targets and component weights.',
+    description: 'Targets of OEE and its components.',
     fields: [
       pct('targetOEE', 'OEE target'), pct('targetAvailability', 'Availability target'), pct('targetPerformance', 'Performance target'),
       pct('targetQuality', 'Quality target'),
-      { key: 'availabilityWeight', label: 'Availability weight', kind: 'number', step: 0.1 },
-      { key: 'performanceWeight', label: 'Performance weight', kind: 'number', step: 0.1 },
-      { key: 'qualityWeight', label: 'Quality weight', kind: 'number', step: 0.1 },
     ],
   },
   losses: {
     label: 'Losses',
-    description: 'Loss value and thresholds.',
+    description: 'Loss thresholds and categories.',
     fields: [
-      { key: 'lossValuePerUnit', label: 'Loss value per unit', kind: 'number' },
       pct('highLossThreshold', 'High loss threshold'), pct('criticalLossThreshold', 'Critical loss threshold'),
-      pct('defaultUnaccountedLossPercentage', 'Default unaccounted loss'),
       { key: 'defaultLossCategories', label: 'Loss categories', kind: 'list', hint: 'One category per line.' },
     ],
   },
