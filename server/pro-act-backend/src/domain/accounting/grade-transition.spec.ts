@@ -127,11 +127,21 @@ describe('grade transitions (LA-08, engine 2.5.4)', () => {
     const { lines } = result;
     const allowance = pick(lines, 'capacity', 'transition_allowance');
     const excess = pick(lines, 'capacity', 'transition_excess');
-    expect(sum(pick(allowance, 'capacity', 'transition_allowance', 'performance'))).toBe('35');
-    expect(sum(pick(allowance, 'capacity', 'transition_allowance', 'quality'))).toBe('28');
-    expect(sum(pick(excess, 'capacity', 'transition_excess', 'performance'))).toBe('15');
-    expect(sum(pick(excess, 'capacity', 'transition_excess', 'quality'))).toBe('12');
-    expect(excess.every((l) => l.flags.includes('transition_overrun'))).toBe(true);
+    expect(
+      sum(pick(allowance, 'capacity', 'transition_allowance', 'performance')),
+    ).toBe('35');
+    expect(
+      sum(pick(allowance, 'capacity', 'transition_allowance', 'quality')),
+    ).toBe('28');
+    expect(
+      sum(pick(excess, 'capacity', 'transition_excess', 'performance')),
+    ).toBe('15');
+    expect(sum(pick(excess, 'capacity', 'transition_excess', 'quality'))).toBe(
+      '12',
+    );
+    expect(excess.every((l) => l.flags.includes('transition_overrun'))).toBe(
+      true,
+    );
     expect(
       [...allowance, ...excess].every((l) =>
         l.flags.includes('transition_standard:STD-AB'),
@@ -141,13 +151,19 @@ describe('grade transitions (LA-08, engine 2.5.4)', () => {
       (l) => l.oeeComponent === 'quality',
     );
     expect(
-      offGrade.every((l) => l.flags.includes('quality_class:transition_off_grade')),
+      offGrade.every((l) =>
+        l.flags.includes('quality_class:transition_off_grade'),
+      ),
     ).toBe(true);
-    expect([...allowance, ...excess].every((l) => l.cause?.eventId === 'GT')).toBe(true);
+    expect(
+      [...allowance, ...excess].every((l) => l.cause?.eventId === 'GT'),
+    ).toBe(true);
   });
 
   it('keeps the OEE components whole: capacity P and Q include the transition, residual 0', () => {
-    const { totals } = computePeriodAccounting(input([transition()], [standard()]));
+    const { totals } = computePeriodAccounting(
+      input([transition()], [standard()]),
+    );
     const capacity = totals.find((t) => t.ledger === 'capacity')!;
     expect(formatDec(capacity.performance!)).toBe('50');
     expect(formatDec(capacity.quality!)).toBe('40');
@@ -159,21 +175,30 @@ describe('grade transitions (LA-08, engine 2.5.4)', () => {
   });
 
   it('mirrors the split in the plan ledger at the planned rate', () => {
-    const { lines } = computePeriodAccounting(input([transition()], [standard()]));
+    const { lines } = computePeriodAccounting(
+      input([transition()], [standard()]),
+    );
     expect(sum(pick(lines, 'plan', 'transition_allowance'))).toBe('63');
     expect(sum(pick(lines, 'plan', 'transition_excess'))).toBe('27');
   });
 
   it('with no matrix entry the whole transition is loss, flagged no_transition_standard (no reference invented)', () => {
     const { lines, issues } = computePeriodAccounting(
-      input([transition()], [standard({ fromProductId: 'B', toProductId: 'A' })]),
+      input(
+        [transition()],
+        [standard({ fromProductId: 'B', toProductId: 'A' })],
+      ),
     );
     expect(issues).toEqual([]);
     expect(pick(lines, 'capacity', 'transition_allowance')).toEqual([]);
     const excess = pick(lines, 'capacity', 'transition_excess');
     expect(sum(excess)).toBe('90');
-    expect(excess.every((l) => l.flags.includes('no_transition_standard'))).toBe(true);
-    expect(excess.some((l) => l.flags.includes('transition_overrun'))).toBe(false);
+    expect(
+      excess.every((l) => l.flags.includes('no_transition_standard')),
+    ).toBe(true);
+    expect(excess.some((l) => l.flags.includes('transition_overrun'))).toBe(
+      false,
+    );
   });
 
   it('uses the standard in force at the transition start (effective-dated)', () => {
@@ -187,9 +212,15 @@ describe('grade transitions (LA-08, engine 2.5.4)', () => {
     const { lines } = computePeriodAccounting(
       input([transition()], [standard({ referenceOffgradeQuantity: '30' })]),
     );
-    expect(sum(pick(lines, 'capacity', 'transition_allowance', 'quality'))).toBe('30');
-    expect(sum(pick(lines, 'capacity', 'transition_excess', 'quality'))).toBe('10');
-    expect(sum(pick(lines, 'capacity', 'transition_allowance', 'performance'))).toBe('35');
+    expect(
+      sum(pick(lines, 'capacity', 'transition_allowance', 'quality')),
+    ).toBe('30');
+    expect(sum(pick(lines, 'capacity', 'transition_excess', 'quality'))).toBe(
+      '10',
+    );
+    expect(
+      sum(pick(lines, 'capacity', 'transition_allowance', 'performance')),
+    ).toBe('35');
   });
 
   it('a transition within its reference has no overrun line', () => {

@@ -25,7 +25,10 @@ export class TransitionStandardCreateDto extends EffectiveDto {
   @IsUUID()
   unitId: string;
 
-  @ApiProperty({ format: 'uuid', description: 'Product (grade) before the change' })
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Product (grade) before the change',
+  })
   @IsUUID()
   fromProductId: string;
 
@@ -74,7 +77,8 @@ export class TransitionStandardCreateDto extends EffectiveDto {
 
   @ApiPropertyOptional({
     nullable: true,
-    description: 'Derivation: observations, licensor / engineering guidance, boundary',
+    description:
+      'Derivation: observations, licensor / engineering guidance, boundary',
   })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
@@ -111,4 +115,3 @@ export class TransitionStandardListQueryDto extends ListQueryDto {
   @IsIn(VERSION_STATES)
   state?: VersionState;
 }
-

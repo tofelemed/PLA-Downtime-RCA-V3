@@ -45,8 +45,12 @@ export class TransitionStandardsV2Service {
       cursor: query.cursor,
       limit: query.limit,
     });
-    return listResponse(page.items.map(toTransitionStandardView), page.nextCursor, {
-      tenantId: requireTenantId(context),
-    });
+    return listResponse(
+      page.items.map(toTransitionStandardView),
+      page.nextCursor,
+      {
+        tenantId: requireTenantId(context),
+      },
+    );
   }
 }

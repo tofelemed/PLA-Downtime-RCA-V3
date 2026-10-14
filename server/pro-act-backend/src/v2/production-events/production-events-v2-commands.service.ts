@@ -351,11 +351,13 @@ function editableColumns(
     impactFraction: dto.impactFraction,
     plannedEndTime: plannedEndColumn(dto.plannedEndTime),
     ...failureColumns(dto),
+  };
+  return {
+    ...(Object.fromEntries(
+      Object.entries(columns).filter(([, value]) => value !== undefined),
+    ) as Partial<ProductionEvent>),
     ...gradeLinkColumns(dto),
   };
-  return Object.fromEntries(
-    Object.entries(columns).filter(([, value]) => value !== undefined),
-  ) as Partial<ProductionEvent>;
 }
 
 /** `fractional` needs a 0..1 fraction; every other impact mode must not carry one. */

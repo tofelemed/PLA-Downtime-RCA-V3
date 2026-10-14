@@ -58,7 +58,13 @@ function standard(extra: Partial<TransitionStandard> = {}): TransitionStandard {
 function run(standards: TransitionStandard[]) {
   const window = { start: at(0), end: at(8) };
   const rates = (id: string) => [
-    { id, rate: gt01.inputs.sustainedRatePerHour, timebase: 'h' as const, from: at(-100), to: null },
+    {
+      id,
+      rate: gt01.inputs.sustainedRatePerHour,
+      timebase: 'h' as const,
+      from: at(-100),
+      to: null,
+    },
   ];
   const input: PeriodAccountingInput = {
     window,
@@ -119,10 +125,18 @@ describe('GT01 grade transition against the transition matrix (engine 2.5.4)', (
     expect(formatDec(capacity.quality!)).toBe(c.quality);
     expect(formatDec(capacity.residual!)).toBe(c.residual);
     const lines = result.lines;
-    expect(total(lines, 'capacity', 'transition_allowance', 'performance')).toBe(c.allowanceRate);
-    expect(total(lines, 'capacity', 'transition_allowance', 'quality')).toBe(c.allowanceOffGrade);
-    expect(total(lines, 'capacity', 'transition_excess', 'performance')).toBe(c.excessRate);
-    expect(total(lines, 'capacity', 'transition_excess', 'quality')).toBe(c.excessOffGrade);
+    expect(
+      total(lines, 'capacity', 'transition_allowance', 'performance'),
+    ).toBe(c.allowanceRate);
+    expect(total(lines, 'capacity', 'transition_allowance', 'quality')).toBe(
+      c.allowanceOffGrade,
+    );
+    expect(total(lines, 'capacity', 'transition_excess', 'performance')).toBe(
+      c.excessRate,
+    );
+    expect(total(lines, 'capacity', 'transition_excess', 'quality')).toBe(
+      c.excessOffGrade,
+    );
     const excess = lines.filter((l) => l.kind === 'transition_excess');
     expect(excess.every((l) => l.flags.includes(c.excessFlag))).toBe(true);
   });
@@ -130,7 +144,9 @@ describe('GT01 grade transition against the transition matrix (engine 2.5.4)', (
   it('plan: the gap of 90 closes with allowance 63 and overrun 27', () => {
     const p = want('plan');
     expect(formatDec(plan.gap!)).toBe(p.gap);
-    expect(total(result.lines, 'plan', 'transition_allowance')).toBe(p.allowance);
+    expect(total(result.lines, 'plan', 'transition_allowance')).toBe(
+      p.allowance,
+    );
     expect(total(result.lines, 'plan', 'transition_excess')).toBe(p.excess);
     expect(formatDec(plan.residual!)).toBe(p.residual);
   });
@@ -138,13 +154,19 @@ describe('GT01 grade transition against the transition matrix (engine 2.5.4)', (
   it('a reference off-grade of 30 t bounds the off-grade allowance', () => {
     const r = want('referenceOffgrade30');
     const lines = run([standard({ referenceOffgradeQuantity: '30' })]).lines;
-    expect(total(lines, 'capacity', 'transition_allowance', 'quality')).toBe(r.allowanceOffGrade);
-    expect(total(lines, 'capacity', 'transition_excess', 'quality')).toBe(r.excessOffGrade);
+    expect(total(lines, 'capacity', 'transition_allowance', 'quality')).toBe(
+      r.allowanceOffGrade,
+    );
+    expect(total(lines, 'capacity', 'transition_excess', 'quality')).toBe(
+      r.excessOffGrade,
+    );
   });
 
   it('B→A has no matrix entry: the whole transition is excess, flagged, nothing invented', () => {
     const n = want('noStandard');
-    const lines = run([standard({ fromProductId: 'B', toProductId: 'A' })]).lines;
+    const lines = run([
+      standard({ fromProductId: 'B', toProductId: 'A' }),
+    ]).lines;
     expect(total(lines, 'capacity', 'transition_allowance')).toBe(n.allowance);
     expect(total(lines, 'capacity', 'transition_excess')).toBe(n.excess);
     expect(

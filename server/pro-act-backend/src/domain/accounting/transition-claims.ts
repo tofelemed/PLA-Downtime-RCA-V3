@@ -1,10 +1,6 @@
 import { Dec, ZERO } from '../actuals/decimal';
 import { BoundedInterval } from '../time/interval-algebra';
-import {
-  LossEvent,
-  Segment,
-  TransitionStandard,
-} from './accounting.types';
+import { LossEvent, Segment, TransitionStandard } from './accounting.types';
 import { Claim, quantityInside } from './claims';
 import { RateBasis, rateOf, segmentCapacity } from './time-lines';
 import { transitionSplit } from './transition-split';

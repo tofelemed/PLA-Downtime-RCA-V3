@@ -51,7 +51,9 @@ export function effectiveLinks(
 ): { fromProductId: string | null; toProductId: string | null } {
   return {
     fromProductId:
-      dto.fromProductId === undefined ? locked.fromProductId : dto.fromProductId,
+      dto.fromProductId === undefined
+        ? locked.fromProductId
+        : dto.fromProductId,
     toProductId:
       dto.toProductId === undefined ? locked.toProductId : dto.toProductId,
   };
@@ -60,7 +62,8 @@ export function effectiveLinks(
 /** Columns of the links; `undefined` leaves a column untouched, `null` clears it. */
 export function gradeLinkColumns(dto: GradeLinks): Partial<ProductionEvent> {
   const columns: Partial<ProductionEvent> = {};
-  if (dto.fromProductId !== undefined) columns.fromProductId = dto.fromProductId;
+  if (dto.fromProductId !== undefined)
+    columns.fromProductId = dto.fromProductId;
   if (dto.toProductId !== undefined) columns.toProductId = dto.toProductId;
   if (dto.recoveryOfEventId !== undefined)
     columns.recoveryOfEventId = dto.recoveryOfEventId;

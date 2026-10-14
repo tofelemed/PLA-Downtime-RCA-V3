@@ -53,7 +53,10 @@ function assertQuantities(input: NewTransitionStandard): void {
     throw invalid('INVALID_OFFGRADE', 'referenceOffgradeQty must be ≥ 0');
   }
   if (!input.offgradeUom?.trim()) {
-    throw invalid('UOM_REQUIRED', 'offgradeUom is required with referenceOffgradeQty');
+    throw invalid(
+      'UOM_REQUIRED',
+      'offgradeUom is required with referenceOffgradeQty',
+    );
   }
 }
 
@@ -63,7 +66,10 @@ function assertQuantities(input: NewTransitionStandard): void {
  */
 async function recordStandardChanges(
   manager: EntityManager,
-  changes: ReadonlyArray<{ row: GradeTransitionStandard; change: BaselineChange }>,
+  changes: ReadonlyArray<{
+    row: GradeTransitionStandard;
+    change: BaselineChange;
+  }>,
 ): Promise<void> {
   await enqueueOutbox(
     manager,
@@ -106,10 +112,21 @@ export class TransitionStandardsService {
     input: NewTransitionStandard,
   ): Promise<GradeTransitionStandard> {
     await this.references.assertUnit(context, input.unitId);
-    await this.references.assertProduct(context, input.fromProductId, 'fromProductId');
-    await this.references.assertProduct(context, input.toProductId, 'toProductId');
+    await this.references.assertProduct(
+      context,
+      input.fromProductId,
+      'fromProductId',
+    );
+    await this.references.assertProduct(
+      context,
+      input.toProductId,
+      'toProductId',
+    );
     if (input.fromProductId === input.toProductId) {
-      throw invalid('SAME_PRODUCT', 'fromProductId and toProductId must differ');
+      throw invalid(
+        'SAME_PRODUCT',
+        'fromProductId and toProductId must differ',
+      );
     }
     assertQuantities(input);
     const validity = validityOf(input);
@@ -137,7 +154,10 @@ export class TransitionStandardsService {
     });
   }
 
-  async get(context: RequestContext, id: string): Promise<GradeTransitionStandard> {
+  async get(
+    context: RequestContext,
+    id: string,
+  ): Promise<GradeTransitionStandard> {
     const row = await scopedQuery(this.standards, 's', {
       context,
       unitProperty: 'unitId',
@@ -171,7 +191,10 @@ export class TransitionStandardsService {
     });
   }
 
-  async retire(context: RequestContext, id: string): Promise<GradeTransitionStandard> {
+  async retire(
+    context: RequestContext,
+    id: string,
+  ): Promise<GradeTransitionStandard> {
     const row = await this.get(context, id);
     return this.standards.manager.transaction(async (manager) => {
       const retired = await retireVersion(
@@ -181,7 +204,9 @@ export class TransitionStandardsService {
         WHAT,
       );
       if (row.state === 'approved') {
-        await recordStandardChanges(manager, [{ row: retired, change: 'retired' }]);
+        await recordStandardChanges(manager, [
+          { row: retired, change: 'retired' },
+        ]);
       }
       return retired;
     });

@@ -28,7 +28,10 @@ const CONSTRAINTS =
 
 const INDEXES: ReadonlyArray<[name: string, definition: string]> = [
   ['IDX_7aca87f7b0403c779920474181', `"${TABLE}" ("tenant_id")`],
-  ['IDX_transition_standards_tenant_unit', `"${TABLE}" ("tenant_id", "unit_id")`],
+  [
+    'IDX_transition_standards_tenant_unit',
+    `"${TABLE}" ("tenant_id", "unit_id")`,
+  ],
   ['IDX_transition_standards_from_product', `"${TABLE}" ("from_product_id")`],
   ['IDX_transition_standards_to_product', `"${TABLE}" ("to_product_id")`],
   [
@@ -45,12 +48,34 @@ const INDEXES: ReadonlyArray<[name: string, definition: string]> = [
   ],
 ];
 
-const FOREIGN_KEYS: ReadonlyArray<[table: string, name: string, definition: string]> = [
-  [TABLE, 'FK_transition_standards_unit', `("unit_id") REFERENCES "units"("id")`],
-  [TABLE, 'FK_transition_standards_from_product', `("from_product_id") REFERENCES "products"("id")`],
-  [TABLE, 'FK_transition_standards_to_product', `("to_product_id") REFERENCES "products"("id")`],
-  ['production_events', 'FK_production_events_from_product', `("from_product_id") REFERENCES "products"("id")`],
-  ['production_events', 'FK_production_events_to_product', `("to_product_id") REFERENCES "products"("id")`],
+const FOREIGN_KEYS: ReadonlyArray<
+  [table: string, name: string, definition: string]
+> = [
+  [
+    TABLE,
+    'FK_transition_standards_unit',
+    `("unit_id") REFERENCES "units"("id")`,
+  ],
+  [
+    TABLE,
+    'FK_transition_standards_from_product',
+    `("from_product_id") REFERENCES "products"("id")`,
+  ],
+  [
+    TABLE,
+    'FK_transition_standards_to_product',
+    `("to_product_id") REFERENCES "products"("id")`,
+  ],
+  [
+    'production_events',
+    'FK_production_events_from_product',
+    `("from_product_id") REFERENCES "products"("id")`,
+  ],
+  [
+    'production_events',
+    'FK_production_events_to_product',
+    `("to_product_id") REFERENCES "products"("id")`,
+  ],
   [
     'production_events',
     'FK_production_events_recovery_of',
@@ -77,14 +102,18 @@ const EVENT_CHECKS: ReadonlyArray<[name: string, definition: string]> = [
  * grade transition (both or neither, never equal) and `recovery_of_event_id`, the stop a ramp-up or
  * startup-quality event recovers from. All columns are nullable; existing rows are unchanged.
  */
-export class GradeTransitionStandards1793930100000 implements MigrationInterface {
+export class GradeTransitionStandards1793930100000
+  implements MigrationInterface
+{
   name = 'GradeTransitionStandards1793930100000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `CREATE TYPE "public"."transition_standard_state" AS ENUM('draft', 'approved', 'retired')`,
     );
-    await queryRunner.query(`CREATE TABLE "${TABLE}" (${COLUMNS}, ${CONSTRAINTS})`);
+    await queryRunner.query(
+      `CREATE TABLE "${TABLE}" (${COLUMNS}, ${CONSTRAINTS})`,
+    );
     await queryRunner.query(
       `ALTER TABLE "production_events" ADD "from_product_id" uuid, ADD "to_product_id" uuid, ADD "recovery_of_event_id" uuid`,
     );
@@ -111,13 +140,17 @@ export class GradeTransitionStandards1793930100000 implements MigrationInterface
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP POLICY tenant_isolation ON "${TABLE}"`);
     for (const [table, name] of [...FOREIGN_KEYS].reverse()) {
-      await queryRunner.query(`ALTER TABLE "${table}" DROP CONSTRAINT "${name}"`);
+      await queryRunner.query(
+        `ALTER TABLE "${table}" DROP CONSTRAINT "${name}"`,
+      );
     }
     for (const [name] of [...INDEXES].reverse()) {
       await queryRunner.query(`DROP INDEX "public"."${name}"`);
     }
     for (const [name] of [...EVENT_CHECKS].reverse()) {
-      await queryRunner.query(`ALTER TABLE "production_events" DROP CONSTRAINT "${name}"`);
+      await queryRunner.query(
+        `ALTER TABLE "production_events" DROP CONSTRAINT "${name}"`,
+      );
     }
     await queryRunner.query(
       `ALTER TABLE "production_events" DROP COLUMN "recovery_of_event_id", DROP COLUMN "to_product_id", DROP COLUMN "from_product_id"`,

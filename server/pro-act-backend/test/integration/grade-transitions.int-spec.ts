@@ -76,12 +76,18 @@ describe('grade transitions (LA-08)', () => {
 
   it('refuses a change to the same product and a product of another tenant', async () => {
     const same = await env
-      .post('transition-standards', standardBody({ toProductId: env.products.p1 }))
+      .post(
+        'transition-standards',
+        standardBody({ toProductId: env.products.p1 }),
+      )
       .set('Idempotency-Key', 'gt-same')
       .expect(422);
     expect((same.body as ApiError).code).toBe('SAME_PRODUCT');
     const foreign = await env
-      .post('transition-standards', standardBody({ toProductId: env.products.pB }))
+      .post(
+        'transition-standards',
+        standardBody({ toProductId: env.products.pB }),
+      )
       .set('Idempotency-Key', 'gt-foreign')
       .expect(422);
     expect((foreign.body as ApiError).code).toBe('INVALID_REFERENCE');
@@ -117,17 +123,25 @@ describe('grade transitions (LA-08)', () => {
     const excess = capacity.filter((l) => l.kind === 'transition_excess');
     expect(sum(allowance).toString()).toBe('200');
     expect(sum(excess).toString()).toBe('100');
-    expect(excess.every((l) => l.flags.includes('transition_overrun'))).toBe(true);
+    expect(excess.every((l) => l.flags.includes('transition_overrun'))).toBe(
+      true,
+    );
     expect(
-      capacity.every((l) => l.flags.includes(`transition_standard:${standardId}`)),
+      capacity.every((l) =>
+        l.flags.includes(`transition_standard:${standardId}`),
+      ),
     ).toBe(true);
     expect(capacity.every((l) => l.oeeComponent === 'performance')).toBe(true);
     const plan = all.filter(
       (l) => l.ledger === 'plan' && l.causeEventId === transitionId,
     );
-    const planAllowance = sum(plan.filter((l) => l.kind === 'transition_allowance'));
+    const planAllowance = sum(
+      plan.filter((l) => l.kind === 'transition_allowance'),
+    );
     const planExcess = sum(plan.filter((l) => l.kind === 'transition_excess'));
-    expect(planAllowance.div(planExcess).toDecimalPlaces(6).toString()).toBe('2');
+    expect(planAllowance.div(planExcess).toDecimalPlaces(6).toString()).toBe(
+      '2',
+    );
     const [run] = await env.rows<{ ids: string[] }>(
       `SELECT r."input_fingerprint"->'transitionStandardIds' AS "ids"
          FROM "calculation_runs" r JOIN "accounting_revisions" ar ON ar."current_run_id" = r."id"
