@@ -5046,6 +5046,101 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/standby-equipment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Standby registrations of the caller scope (keyset on effectiveFrom) */
+        get: operations["StandbyV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Register an asset as standby equipment from effectiveFrom
+         * @description Requires `Idempotency-Key`. 409 STANDBY_ALREADY_REGISTERED while a registration is open.
+         */
+        post: operations["StandbyV2Controller_register_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/standby-equipment/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Failure on demand, test failures, operating MTBF and exposure per standby asset
+         * @description For every asset registered as standby in [from, to): start demands, failed starts and their fraction; tests separately; running seconds (the asset’s own exposure) and failures while running — with no failure the operating MTBF is null with reason `no_failures` and the exposure is shown, never an infinite value; standby seconds apart from it. 422 INVALID_RANGE when from ≥ to.
+         */
+        get: operations["StandbyV2Controller_metrics_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/standby-equipment/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End a standby duty (its log stays) */
+        post: operations["StandbyV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/standby-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Demand / test / running log entries (keyset on startedAt; from / to overlap) */
+        get: operations["StandbyV2Controller_listRecords_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/standby-records/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import demand / test / running log entries (all or nothing)
+         * @description Requires `Idempotency-Key`. The asset by id or code; an entry with an `externalRef` already stored is replaced. 422 STANDBY_IMPORT_INVALID lists the row problems (`details.errors`).
+         */
+        post: operations["StandbyV2Controller_importRecords_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7291,6 +7386,45 @@ export interface components {
             /** @description Reason codes of process trips: always availability events, never micro-stops */
             tripReasonCodes?: string[];
             notes?: string;
+        };
+        StandbyEquipmentCreateDto: {
+            /** Format: uuid */
+            assetId: string;
+            /**
+             * @description How maintenance evaluates the asset (SME D9)
+             * @enum {string}
+             */
+            evaluation: "demand" | "running" | "demand_and_running";
+            /** @description Start of the standby duty (default now) */
+            effectiveFrom?: string;
+            notes?: string;
+        };
+        StandbyEquipmentRetireDto: {
+            /** @description End of the standby duty (default now) */
+            effectiveTo?: string;
+        };
+        StandbyRecordRowDto: {
+            /** Format: uuid */
+            assetId?: string;
+            /** @description Asset code (when no assetId) */
+            assetCode?: string;
+            /** @enum {string} */
+            kind: "demand" | "test" | "run";
+            startedAt: string;
+            endedAt?: Record<string, never> | null;
+            /** @enum {string} */
+            outcome: "success" | "failed_start" | "failed_while_running";
+            /**
+             * Format: uuid
+             * @description Stop of the duty equipment that caused the demand
+             */
+            eventId?: string;
+            /** @description The log’s own id: a re-import replaces the entry */
+            externalRef?: string;
+            notes?: string;
+        };
+        StandbyRecordsImportDto: {
+            records: components["schemas"]["StandbyRecordRowDto"][];
         };
     };
     responses: never;
@@ -15173,6 +15307,159 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description These assets only (repeat) */
+                assetIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_register_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StandbyEquipmentCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_metrics_v2: {
+        parameters: {
+            query: {
+                /** @description Window start (inclusive), ISO 8601 */
+                from: string;
+                /** @description Window end (exclusive), ISO 8601 */
+                to: string;
+                /** @description These assets only (repeat) */
+                assetIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StandbyEquipmentRetireDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_listRecords_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description These assets only (repeat) */
+                assetIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StandbyV2Controller_importRecords_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StandbyRecordsImportDto"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -17302,6 +17302,346 @@
           "v2 · Micro-stop policy"
         ]
       }
+    },
+    "/api/v2/standby-equipment": {
+      "get": {
+        "operationId": "StandbyV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "description": "These assets only (repeat)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Standby registrations of the caller scope (keyset on effectiveFrom)",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 STANDBY_ALREADY_REGISTERED while a registration is open.",
+        "operationId": "StandbyV2Controller_register_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StandbyEquipmentCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Register an asset as standby equipment from effectiveFrom",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      }
+    },
+    "/api/v2/standby-equipment/metrics": {
+      "get": {
+        "description": "For every asset registered as standby in [from, to): start demands, failed starts and their fraction; tests separately; running seconds (the asset’s own exposure) and failures while running — with no failure the operating MTBF is null with reason `no_failures` and the exposure is shown, never an infinite value; standby seconds apart from it. 422 INVALID_RANGE when from ≥ to.",
+        "operationId": "StandbyV2Controller_metrics_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Window start (inclusive), ISO 8601",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Window end (exclusive), ISO 8601",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "description": "These assets only (repeat)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Failure on demand, test failures, operating MTBF and exposure per standby asset",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      }
+    },
+    "/api/v2/standby-equipment/{id}/retire": {
+      "post": {
+        "operationId": "StandbyV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StandbyEquipmentRetireDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "End a standby duty (its log stays)",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      }
+    },
+    "/api/v2/standby-records": {
+      "get": {
+        "operationId": "StandbyV2Controller_listRecords_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "description": "These assets only (repeat)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Demand / test / running log entries (keyset on startedAt; from / to overlap)",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      }
+    },
+    "/api/v2/standby-records/import": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The asset by id or code; an entry with an `externalRef` already stored is replaced. 422 STANDBY_IMPORT_INVALID lists the row problems (`details.errors`).",
+        "operationId": "StandbyV2Controller_importRecords_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StandbyRecordsImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Import demand / test / running log entries (all or nothing)",
+        "tags": [
+          "v2 · Standby equipment"
+        ]
+      }
     }
   },
   "info": {
@@ -23609,6 +23949,116 @@
         },
         "required": [
           "microStopSeconds"
+        ]
+      },
+      "StandbyEquipmentCreateDto": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evaluation": {
+            "type": "string",
+            "enum": [
+              "demand",
+              "running",
+              "demand_and_running"
+            ],
+            "description": "How maintenance evaluates the asset (SME D9)"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "Start of the standby duty (default now)"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "assetId",
+          "evaluation"
+        ]
+      },
+      "StandbyEquipmentRetireDto": {
+        "type": "object",
+        "properties": {
+          "effectiveTo": {
+            "type": "string",
+            "description": "End of the standby duty (default now)"
+          }
+        }
+      },
+      "StandbyRecordRowDto": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetCode": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Asset code (when no assetId)"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "demand",
+              "test",
+              "run"
+            ]
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "endedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "success",
+              "failed_start",
+              "failed_while_running"
+            ]
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Stop of the duty equipment that caused the demand"
+          },
+          "externalRef": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "The log’s own id: a re-import replaces the entry"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "kind",
+          "startedAt",
+          "outcome"
+        ]
+      },
+      "StandbyRecordsImportDto": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "maxItems": 5000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StandbyRecordRowDto"
+            }
+          }
+        },
+        "required": [
+          "records"
         ]
       }
     }

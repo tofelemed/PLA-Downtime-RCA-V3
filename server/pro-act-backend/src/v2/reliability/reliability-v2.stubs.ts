@@ -1,29 +1,24 @@
 import { TestingModuleBuilder } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { FailureDictionaryEntry } from '../../reliability/entities/failure-dictionary-entry.entity';
 import { FailureDictionaryValidator } from '../../reliability/failure-dictionary/failure-dictionary.validator';
-import { FailureDictionaryImportV2Service } from './failure-dictionary-import-v2.service';
-import { FailureDictionaryV2Service } from './failure-dictionary-v2.service';
-import { MicroStopPolicyV2Service } from './micro-stop-policy-v2.service';
+import { RELIABILITY_ENTITIES } from '../../reliability/reliability.module';
+import { RELIABILITY_V2_SERVICES } from './reliability-v2.module';
 
-/** Providers of `ReliabilityV2Module` that need a database (EntityManager or repositories). */
+/** Database-bound providers of `ReliabilityV2Module` and `ReliabilityModule`. */
 const DATABASE_SERVICES = [
   FailureDictionaryValidator,
-  FailureDictionaryV2Service,
-  FailureDictionaryImportV2Service,
-  MicroStopPolicyV2Service,
+  ...RELIABILITY_V2_SERVICES,
 ];
-const REPOSITORIES = [FailureDictionaryEntry];
 
 /** Replaces them with empty values so the OpenAPI snapshot builds the module without a connection. */
 export function withReliabilityStubs(
   builder: TestingModuleBuilder,
 ): TestingModuleBuilder {
-  const services = DATABASE_SERVICES.reduce(
+  const services = DATABASE_SERVICES.reduce<TestingModuleBuilder>(
     (next, service) => next.overrideProvider(service).useValue({}),
     builder,
   );
-  return REPOSITORIES.reduce(
+  return RELIABILITY_ENTITIES.reduce<TestingModuleBuilder>(
     (next, entity) =>
       next.overrideProvider(getRepositoryToken(entity)).useValue({}),
     services,
