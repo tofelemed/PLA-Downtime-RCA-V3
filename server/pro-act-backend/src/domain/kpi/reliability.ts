@@ -27,6 +27,8 @@ export interface ReliabilityInput {
   /** operating exposure: the unit's run time R in the window (seconds) */
   exposure: Dec;
   microStopSeconds: number;
+  /** SME D6: threshold per stop occurrence (asset class, trips at 0); absent occurrences use the unit's */
+  microStopSecondsByOccurrence?: ReadonlyMap<string, number>;
 }
 
 const lengthOf = (start: Date, end: Date) =>
@@ -41,7 +43,10 @@ export function eligibleFailures(input: ReliabilityInput): FailureSpan[] {
   const stops = input.failures.filter(
     (f) =>
       f.source === 'unplanned_stop_with_failure_code' &&
-      lengthOf(f.start, f.end ?? input.asOf).gte(input.microStopSeconds),
+      lengthOf(f.start, f.end ?? input.asOf).gte(
+        input.microStopSecondsByOccurrence?.get(f.occurrenceId) ??
+          input.microStopSeconds,
+      ),
   );
   const orders = input.failures.filter(
     (f) =>

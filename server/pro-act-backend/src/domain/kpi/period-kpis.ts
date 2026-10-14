@@ -10,6 +10,7 @@ import {
   isStoppingDowntime,
   segmentSlice,
 } from '../accounting/segmentation';
+import { occurrenceThresholds } from '../accounting/micro-stop-threshold';
 import { BoundedInterval } from '../time/interval-algebra';
 import { downtimeBreakdown } from './downtime-breakdown';
 import {
@@ -26,7 +27,7 @@ import { reconciledOee } from './reconciled-oee';
 import { FailureSpan, reliability } from './reliability';
 
 /** Bumped whenever a KPI rule changes (part of the calculation run's engine version and input hash). */
-export const KPI_ENGINE_VERSION = '2.7.3';
+export const KPI_ENGINE_VERSION = '2.7.4';
 
 export interface PeriodKpiInput {
   /** the accounting input of the same run (window, schedule, events, slices, policy, asOf) */
@@ -257,6 +258,10 @@ export function computePeriodKpis(input: PeriodKpiInput): KpiDraft[] {
       failures: input.failures,
       exposure: time.scheduled.minus(time.stopped),
       microStopSeconds: accounting.policy.microStopSeconds,
+      microStopSecondsByOccurrence: occurrenceThresholds(
+        downtimeInput.events,
+        accounting.policy,
+      ),
     }),
     coverageKpi(accounting.slices),
   ];

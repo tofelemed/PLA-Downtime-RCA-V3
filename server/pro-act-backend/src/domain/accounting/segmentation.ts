@@ -9,6 +9,7 @@ import {
   SegmentCause,
   SliceInput,
 } from './accounting.types';
+import { occurrenceThresholds } from './micro-stop-threshold';
 import { equalShares } from './shares';
 
 /** Downtime events split by the micro-stop rule (D04 / KPI02) and planned-stop policy. */
@@ -80,9 +81,11 @@ export function classifyEvents(input: PeriodAccountingInput): ClassifiedEvents {
     );
     occurrenceSeconds.set(id, seconds);
   }
+  // SME D6: threshold per asset class; trips and functional failures are never micro-stops
+  const thresholds = occurrenceThresholds(downtime, input.policy);
   const isMicro = (e: LossEvent) =>
     (occurrenceSeconds.get(e.occurrenceId) ?? 0) <
-    input.policy.microStopSeconds;
+    (thresholds.get(e.occurrenceId) ?? input.policy.microStopSeconds);
   const excludePlanned = (e: LossEvent) =>
     !input.policy.plannedStopsInsideScheduleReduceAvailability &&
     e.scheduleClass === 'planned';

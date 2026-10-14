@@ -5006,6 +5006,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/micro-stop-policies/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Micro-stop settings in force now (unit override, else tenant-wide)
+         * @description unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE). A tenant without an oee_policy gets the D04 default on first read.
+         */
+        get: operations["MicroStopPolicyV2Controller_current_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/micro-stop-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record new micro-stop settings as an approved oee_policy version, effective now
+         * @description Requires `Idempotency-Key`. Version n+1 of the scope; other oee_policy fields are kept from the version in force. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); 422 INVALID_POLICY for a negative or non-numeric class threshold.
+         */
+        post: operations["MicroStopPolicyV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7229,6 +7269,28 @@ export interface components {
         FailureDictionaryRetireDto: {
             /** @description End of the entry (default now) */
             effectiveTo?: string;
+        };
+        MicroStopPolicyCreateDto: {
+            /**
+             * Format: uuid
+             * @description Unit override; absent = the tenant-wide version
+             */
+            unitId?: string;
+            /** @description Unit threshold (s): shorter stops stay in running time and reduce performance */
+            microStopSeconds: number;
+            /**
+             * @description Threshold per asset class (asset type → seconds); replaces the stated map. 0 = every stop of the class is an event
+             * @example {
+             *       "Bagger": 120,
+             *       "Conveyor": 120
+             *     }
+             */
+            microStopSecondsByAssetClass?: {
+                [key: string]: number;
+            };
+            /** @description Reason codes of process trips: always availability events, never micro-stops */
+            tripReasonCodes?: string[];
+            notes?: string;
         };
     };
     responses: never;
@@ -15068,6 +15130,49 @@ export interface operations {
         };
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MicroStopPolicyV2Controller_current_v2: {
+        parameters: {
+            query?: {
+                /** @description Unit override; absent = the tenant-wide version */
+                unitId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MicroStopPolicyV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MicroStopPolicyCreateDto"];
+            };
+        };
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

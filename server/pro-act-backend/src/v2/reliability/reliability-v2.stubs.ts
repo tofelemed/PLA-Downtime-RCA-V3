@@ -4,12 +4,14 @@ import { FailureDictionaryEntry } from '../../reliability/entities/failure-dicti
 import { FailureDictionaryValidator } from '../../reliability/failure-dictionary/failure-dictionary.validator';
 import { FailureDictionaryImportV2Service } from './failure-dictionary-import-v2.service';
 import { FailureDictionaryV2Service } from './failure-dictionary-v2.service';
+import { MicroStopPolicyV2Service } from './micro-stop-policy-v2.service';
 
 /** Providers of `ReliabilityV2Module` that need a database (EntityManager or repositories). */
 const DATABASE_SERVICES = [
   FailureDictionaryValidator,
   FailureDictionaryV2Service,
   FailureDictionaryImportV2Service,
+  MicroStopPolicyV2Service,
 ];
 const REPOSITORIES = [FailureDictionaryEntry];
 
