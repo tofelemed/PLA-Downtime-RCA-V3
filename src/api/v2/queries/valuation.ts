@@ -6,6 +6,7 @@ import type { FxRateType, FxRateView, ValuationPolicyView, WithRevaluation } fro
 import type { VersionState } from '../types/profiles';
 import { v2 } from '../v2';
 import type { ChangeNotice } from './invalidation';
+import { carryRevaluation } from './carry-revaluation';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
 import { usePagedQuery } from './use-paged-query';
@@ -72,13 +73,18 @@ export function useAnyApprovedPolicy() {
   });
 }
 
-function useValuationDetail<T>(path: 'fx-rates' | 'valuation-policies', id: string | null) {
+function useValuationDetail<T extends { id: string } & WithRevaluation>(path: 'fx-rates' | 'valuation-policies', id: string | null) {
   const tenantId = useV2TenantId();
+  const client = useQueryClient();
+  const queryKey = v2Keys.detail(tenantId ?? '-', 'valuation', id ?? '-', path);
   return useQuery({
-    queryKey: v2Keys.detail(tenantId ?? '-', 'valuation', id ?? '-', path),
+    queryKey,
     enabled: Boolean(tenantId && id),
     staleTime: STALE_TIME.valuation,
-    queryFn: async ({ signal }) => (await v2Request<T>({ method: 'GET', path: `/${path}/${id as string}`, signal })).data,
+    queryFn: async ({ signal }) => {
+      const fresh = (await v2Request<T>({ method: 'GET', path: `/${path}/${id as string}`, signal })).data;
+      return carryRevaluation(client.getQueryData<T>(queryKey), fresh);
+    },
   });
 }
 
