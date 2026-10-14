@@ -1,6 +1,6 @@
 import type { FaultTreeRecord } from '@/api/v2/types/rca-analyses';
 import { formatSignificant } from '@/features/ux-kit/format/decimal';
-import { useCalendarPreference } from '@/lib/dates';
+import { localizeNumber, useCalendarPreference } from '@/lib/dates';
 
 const REASONS: Readonly<Record<string, string>> = {
   probability_missing: 'a basic event has no probability',
@@ -17,7 +17,7 @@ export function TopEventProbability({ record }: { record: Result | null }) {
   const { digits } = useCalendarPreference();
   if (!record) return null;
   const { topEventProbability: p, topEventProbabilityReason: reason } = record;
-  const text = p === null ? `Not available: ${REASONS[reason ?? ''] ?? 'the tree cannot be computed'}` : `${formatSignificant(p * 100, 4, digits)} %`;
+  const text = p === null ? `Not available: ${REASONS[reason ?? ''] ?? 'the tree cannot be computed'}` : localizeNumber(`${formatSignificant(p * 100, 4)} %`, digits);
   return (
     <p className="text-sm" data-testid="ft-top-probability">
       Probability of the top event (saved tree, independent basic events): <span className="font-medium">{text}</span>

@@ -26,9 +26,9 @@ export function SeriesChart({ rows, series, kind, ratio }: SeriesChartProps) {
     label: row.label,
     ...Object.fromEntries(series.map((s) => [s.key, row.values[s.key] === null || row.values[s.key] === undefined ? null : Number(row.values[s.key])])),
   }));
-  const { axis: tick, number } = useNumberFormat();
+  const { axis: tick, number, percent } = useNumberFormat();
   // ticks and tooltips in the plant's digits; ratios as percentages (drawing only, nothing derived)
-  const axis = (value: number) => (ratio ? `${number(value * 100, 0)} %` : tick(value));
+  const axis = (value: number) => (ratio ? percent(value * 100) : tick(value));
   const Chart = kind === 'line' ? LineChart : BarChart;
   return (
     <div className="h-64 w-full" aria-hidden>
@@ -37,7 +37,7 @@ export function SeriesChart({ rows, series, kind, ratio }: SeriesChartProps) {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="label" tick={{ fontSize: 10 }} />
           <YAxis tick={{ fontSize: 11 }} tickFormatter={axis} />
-          <Tooltip formatter={(value: unknown) => (typeof value === 'number' ? (ratio ? `${number(value * 100, 1)} %` : number(value, 2)) : String(value))} />
+          <Tooltip formatter={(value: unknown) => (typeof value === 'number' ? (ratio ? percent(value * 100, 1) : number(value, 2)) : String(value))} />
           <Legend />
           {series.map((s, index) =>
             kind === 'line' ? (

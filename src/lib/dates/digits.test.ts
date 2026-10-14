@@ -13,6 +13,7 @@ describe('localizeNumber', () => {
     expect(localizeNumber('1,234,567', 'persian')).toBe('۱٬۲۳۴٬۵۶۷');
     expect(localizeNumber('-0.5', 'persian')).toBe('-۰٫۵');
     expect(localizeNumber('87.5 %', 'persian')).toBe('۸۷٫۵ %');
+    expect(localizeNumber('-12.5 %', 'persian')).toBe('-۱۲٫۵ %');
   });
 
   it('leaves punctuation that is not between two digits alone', () => {

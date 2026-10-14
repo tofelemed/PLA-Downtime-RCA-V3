@@ -8,12 +8,12 @@ import { useRcaFormat } from '../use-rca-format';
 import { BaselineCorrection } from './baseline-correction';
 
 function Criteria({ baseline }: { baseline: RcaActionBaseline }) {
-  const { number } = useNumberFormat();
+  const { number, percent } = useNumberFormat();
   const criteria = baseline.criteria;
   if (!criteria) return null;
   return (
     <p className="text-xs text-muted-foreground" data-testid="baseline-criteria">
-      Effective when the same-mode rate falls by at least {number(criteria.requiredReduction * 100)} % over at least{' '}
+      Effective when the same-mode rate falls by at least {percent(criteria.requiredReduction * 100)} over at least{' '}
       {number(criteria.minExposureHours)} run hours{criteria.zeroRepeat ? '; any repeat counts as not effective (high consequence)' : ''}.
     </p>
   );

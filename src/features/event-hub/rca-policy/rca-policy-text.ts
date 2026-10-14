@@ -1,4 +1,4 @@
-import type { DigitSystem } from '@/lib/dates';
+import { type DigitSystem, localizeNumber } from '@/lib/dates';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
 import type { RcaPolicyVersion, RcaRepeatMatch } from './rca-policy-api';
 
@@ -9,7 +9,7 @@ export const REPEAT_MATCH_LABELS: Readonly<Record<RcaRepeatMatch, string>> = {
 };
 
 /** Numbers of the policy text in the plant's digits (`system`); identifiers (criticalities, codes) stay as they are. */
-const percent = (share: number, system?: DigitSystem) => `${formatDecimal(String(share * 100), 1, system)} %`;
+const percent = (share: number, system?: DigitSystem) => localizeNumber(`${formatDecimal(String(share * 100), 1)} %`, system);
 const number = (value: number, system?: DigitSystem, fractionDigits = 0) => formatDecimal(String(value), fractionDigits, system);
 
 /** The any-of triggers of a version in plain words (SME D17 / CA8). */

@@ -13,10 +13,10 @@ const VARIANTS: Readonly<Record<string, 'default' | 'destructive' | 'secondary'>
 /** The server's CA2 verdict of a verified action with its rates per 1,000 run hours and its reasons. */
 export function ActionVerdict({ action }: { action: RcaActionView }) {
   const result = action.postAction?.effectiveness;
-  const { decimal, number, text } = useNumberFormat();
+  const { decimal, percent, text } = useNumberFormat();
   if (!action.verdict) return null;
   const share = result?.reduction ?? null;
-  const reduction = share === null ? null : `${number(Number(share) * 100)} %`;
+  const reduction = share === null ? null : percent(Number(share) * 100);
   return (
     <div className="space-y-1 text-sm" data-testid="action-verdict">
       <p className="flex flex-wrap items-center gap-2">
@@ -27,7 +27,7 @@ export function ActionVerdict({ action }: { action: RcaActionView }) {
           <span className="text-muted-foreground">
             same-mode rate {decimal(result.baselineRate, 2)} → {decimal(result.postRate, 2)} per {text('1,000')} run hours
             {reduction ? ` (reduction ${reduction})` : ''}
-            {result.mtbfLowerBound95Hours ? ` · MTBF at least ${decimal(result.mtbfLowerBound95Hours, 0)} h (${number(95)} %)` : ''}
+            {result.mtbfLowerBound95Hours ? ` · MTBF at least ${decimal(result.mtbfLowerBound95Hours, 0)} h (${percent(95)})` : ''}
           </span>
         )}
       </p>

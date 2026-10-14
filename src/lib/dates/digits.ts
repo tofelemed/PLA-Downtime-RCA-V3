@@ -3,8 +3,8 @@ import type { DigitSystem } from './calendar-types';
 const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 const ARABIC_INDIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 /** U+066B ARABIC DECIMAL SEPARATOR and U+066C ARABIC THOUSANDS SEPARATOR, used with Persian digits. */
-export const PERSIAN_DECIMAL_SEPARATOR = '٫';
-export const PERSIAN_GROUP_SEPARATOR = '٬';
+export const PERSIAN_DECIMAL_SEPARATOR = '\u066B';
+export const PERSIAN_GROUP_SEPARATOR = '\u066C';
 
 /** Rewrites Latin digits `0-9` as Persian `۰-۹` when `digits` is `'persian'`; otherwise unchanged. */
 export function toDigits(text: string, digits: DigitSystem = 'latin'): string {
@@ -14,8 +14,8 @@ export function toDigits(text: string, digits: DigitSystem = 'latin'): string {
 
 /**
  * Number text (`-12,345.67`, `87.5 %`, `1,234 min`) in the plant's digits: with Persian digits a `.` or
- * `,` between two digits becomes `٫` / `٬` as well; Latin text is returned unchanged. For displayed
- * numbers only — never for identifiers, inputs, exports or API payloads.
+ * `,` between two digits becomes `٫` / `٬` (`%` and the minus sign stay as they are); Latin text is
+ * returned unchanged. For displayed numbers only — never for identifiers, inputs, exports or API payloads.
  */
 export function localizeNumber(text: string, digits: DigitSystem = 'latin'): string {
   if (digits !== 'persian') return text;
