@@ -111,6 +111,7 @@ import { DeliveryReconciliationService } from '../exports/delivery-reconciliatio
 import { ExportJobsService } from '../exports/export-jobs.service';
 import { ExportReadsService } from '../exports/export-reads.service';
 import { ExportRequestsService } from '../exports/export-requests.service';
+import { DemandStatusesService } from '../valuation/demand-statuses.service';
 import { FxRatesService } from '../valuation/fx-rates.service';
 import { ValuationPoliciesService } from '../valuation/valuation-policies.service';
 import { ValuationModule } from '../valuation/valuation.module';
@@ -345,8 +346,9 @@ class ExportsModuleStub {}
   providers: [
     { provide: FxRatesService, useValue: {} },
     { provide: ValuationPoliciesService, useValue: {} },
+    { provide: DemandStatusesService, useValue: {} },
   ],
-  exports: [FxRatesService, ValuationPoliciesService],
+  exports: [FxRatesService, ValuationPoliciesService, DemandStatusesService],
 })
 class ValuationModuleStub {}
 
