@@ -143,8 +143,8 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
     await expect(page.getByTestId('revaluation-queued')).toBeVisible();
     const after = await fxVersions(oliver.token);
     expect(after.find((v) => v.source === fxSource)?.state).toBe('approved');
-    for (const version of live) expect(after.find((v) => v.version === version.version)?.state).toBe('approved'); // nothing retired
-    expect(after.find((v) => v.version === inForceToday?.version)?.effectiveFrom).toBe(inForceToday?.effectiveFrom); // the live rate still applies today
+    for (const version of live) expect(after.find((v) => v.id === version.id)?.state).toBe('approved'); // nothing retired
+    expect(after.find((v) => v.id === inForceToday?.id)?.effectiveFrom).toBe(inForceToday?.effectiveFrom); // the live rate still applies today
     await page.context().close();
   });
 

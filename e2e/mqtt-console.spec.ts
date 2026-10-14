@@ -155,12 +155,14 @@ test.describe('Integration console — MQTT panel (plan 1.8 step 5)', () => {
     const patched = (await connections()).find((row) => row.id === connectionId);
     expect(patched?.endpointConfig.mqtt.topics).toEqual([`e2e/${suffix}/+/+/events`]);
     expect(patched?.endpointConfig.payloadProfile.valueMaps?.state).toEqual({ RUN: 'running' });
-    await expect(page.locator('[data-testid="connection-detail"] .text-lg')).toBeVisible();
+    // the connection page still shows this connection after the patch (its name is the page heading)
+    await expect(page.getByTestId('connection-detail')).toHaveAttribute('data-connection-id', connectionId);
+    await expect(page.getByRole('heading', { name: connectionName })).toBeVisible();
 
     // 6. quarantine tab is filtered to this connection (empty for a fresh topic family)
     await page.getByTestId('tab-mqtt-quarantine').click();
     await expect(page.getByTestId('q-connection')).toHaveValue(connectionId);
-    await expect(page.getByTestId('quarantine-inbox')).toContainText('Nothing quarantined for these filters.');
+    await expect(page.getByTestId('quarantine-inbox')).toContainText('Nothing is waiting for these filters.');
     await page.screenshot({ path: test.info().outputPath('mqtt-console.png'), fullPage: true });
 
     // the password never travels back
