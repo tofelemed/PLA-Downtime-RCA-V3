@@ -6,6 +6,10 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 export interface ImpactCodePickerProps {
   selected: readonly string[];
   onChange: (ids: string[]) => void;
+  /** defaults: the independent-cost-component wording */
+  legend?: string;
+  checkLabel?: string;
+  testId?: string;
 }
 
 /**
@@ -13,20 +17,20 @@ export interface ImpactCodePickerProps {
  * these may be summed with lost margin. The plant's own active codes, 20 per page (the server refuses
  * other codes: 422).
  */
-export function ImpactCodePicker({ selected, onChange }: ImpactCodePickerProps) {
+export function ImpactCodePicker({ selected, onChange, legend = 'Independent cost components', checkLabel = 'Counted on its own', testId = 'impact-code-picker' }: ImpactCodePickerProps) {
   const codes = useCodeList('impact-codes');
   const toggle = (id: string, on: boolean) => onChange(on ? [...selected, id] : selected.filter((entry) => entry !== id));
   const columns: Array<DataTableColumn<CodeDetailView>> = [
     {
       id: 'pick',
       header: '',
-      headerLabel: 'Counted on its own',
+      headerLabel: checkLabel,
       width: '3rem',
       cell: (code) => (
         <Checkbox
           checked={selected.includes(code.id)}
           onCheckedChange={(checked) => toggle(code.id, checked === true)}
-          aria-label={`Count ${code.code} ${code.name} as an independent cost component`}
+          aria-label={`${checkLabel}: ${code.code} ${code.name}`}
         />
       ),
     },
@@ -34,8 +38,10 @@ export function ImpactCodePicker({ selected, onChange }: ImpactCodePickerProps) 
     { id: 'name', header: 'Name', cell: (code) => code.name },
   ];
   return (
-    <fieldset className="space-y-2" data-testid="impact-code-picker">
-      <legend className="text-sm font-medium">Independent cost components ({selected.length} chosen)</legend>
+    <fieldset className="space-y-2" data-testid={testId}>
+      <legend className="text-sm font-medium">
+        {legend} ({selected.length} chosen)
+      </legend>
       <DataTable
         caption="Impact codes"
         columns={columns}

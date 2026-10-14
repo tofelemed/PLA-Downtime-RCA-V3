@@ -39,7 +39,7 @@ function AddFxRate() {
       <DialogContent className="flex max-h-[90vh] flex-col">
         <DialogHeader>
           <DialogTitle>New exchange rate draft</DialogTitle>
-          <DialogDescription>A manager approver approves the draft before valuation uses it.</DialogDescription>
+          <DialogDescription>A finance approver other than you approves the draft before valuation uses it.</DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto">
           {open && <FxRateForm timezone={timezone} onCancel={() => setOpen(false)} onSaved={(rate) => navigate(`/finance/fx/${rate.id}`)} />}

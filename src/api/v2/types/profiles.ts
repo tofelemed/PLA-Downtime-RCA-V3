@@ -13,7 +13,16 @@ export type RateTimebase = (typeof RATE_TIMEBASES)[number];
 export const CAPACITY_MODELS = ['single_stream', 'shared_capacity', 'independent_streams'] as const;
 export type CapacityModel = (typeof CAPACITY_MODELS)[number];
 
-export const VALUATION_BASES = ['contribution_margin', 'standard_cost', 'cost_per_hour'] as const;
+export const VALUATION_BASES = [
+  'contribution_margin',
+  'standard_cost',
+  'cost_per_hour',
+  'variable_cost',
+  'salvage_value',
+  'disposal_cost',
+  'downgrade_price_difference',
+  'rework_cost',
+] as const;
 export type ValuationBasis = (typeof VALUATION_BASES)[number];
 
 export interface VersionFields {

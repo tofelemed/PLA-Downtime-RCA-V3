@@ -37,7 +37,7 @@ export function PolicyApprove({ policy, status }: PolicyApproveProps) {
         open={open}
         onOpenChange={onOpenChange}
         title={`Approve version ${policy.version}?`}
-        description={`Version ${policy.version} (${currenciesLabel(policy)}) becomes the valuation basis from its start. This is the finance sign-off and cannot be undone here. Periods are revalued only when they are next recalculated.`}
+        description={`Version ${policy.version} (${currenciesLabel(policy)}) becomes the valuation basis from its start. This is the finance sign-off and cannot be undone here. Approving queues a recalculation of the periods from its start; approved periods get a change proposal.`}
         confirmLabel={`Approve version ${policy.version}`}
         onConfirm={() => approve.submit({ id: policy.id })}
       >

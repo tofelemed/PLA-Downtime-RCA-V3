@@ -86,6 +86,13 @@ const VALUATION_REASON_LABELS: Record<string, string> = {
   fx_rate_missing: 'No approved FX rate for the date',
   rate_missing: 'No approved valuation rate',
   uom_mismatch: 'Rate unit differs from the loss unit',
+  demand_status_missing: 'No approved demand status for the product (lost sale unknown)',
+  disposition_missing: 'Quality loss has no disposition (scrap, downgrade, rework)',
+  variable_cost_missing: 'No approved variable cost for scrap',
+  downgrade_price_difference_missing: 'No approved downgrade price difference',
+  rework_cost_missing: 'No approved rework cost',
+  fx_average_not_representative: 'Month too volatile for an average FX rate',
+  hours_unverified: 'Manual downtime without evidenced event hours',
 };
 
 export function valuationReasonLabel(reason: string): string {

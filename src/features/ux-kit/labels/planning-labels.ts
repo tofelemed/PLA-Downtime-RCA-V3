@@ -1,7 +1,16 @@
 import type { CalendarWarningCode, ExclusionKind, HolidayTreatment } from '@/api/v2/types/calendars';
 import type { ApprovalState, Distribution, PlanBasis, SliceStream } from '@/api/v2/types/plans';
 import type { CapacityModel, RateKind, RateTimebase, ValuationBasis, VersionState } from '@/api/v2/types/profiles';
-import type { DefaultBasis, FxPolicy, TimeBasisRule } from '@/api/v2/types/valuation';
+import type {
+  DefaultBasis,
+  DemandRule,
+  DemandStatusValue,
+  FxDateRule,
+  FxPolicy,
+  FxRateType,
+  QualityDisposition,
+  TimeBasisRule,
+} from '@/api/v2/types/valuation';
 
 /**
  * Labels of plans, profiles, calendars and valuation policies (plan 3.4). Basis and distribution wording
@@ -70,11 +79,44 @@ export const VALUATION_BASIS_LABELS: Readonly<Record<ValuationBasis, string>> = 
   contribution_margin: 'Contribution margin',
   standard_cost: 'Standard cost',
   cost_per_hour: 'Cost per hour of downtime',
+  variable_cost: 'Variable production cost (scrap)',
+  salvage_value: 'Salvage value (scrap)',
+  disposal_cost: 'Disposal / handling cost',
+  downgrade_price_difference: 'Downgrade price difference',
+  rework_cost: 'Rework cost',
 };
 
 export const DEFAULT_BASIS_LABELS: Readonly<Record<DefaultBasis, string>> = {
   contribution_margin: 'Contribution margin',
   standard_cost: 'Standard cost',
+  economic_impact: 'Economic impact (lost sales + incremental costs)',
+};
+
+export const FX_RATE_TYPE_LABELS: Readonly<Record<FxRateType, string>> = {
+  economic: 'Economic (treasury conversion basis)',
+  group_reporting: 'Group reporting (translation policy)',
+  budget: 'Budget / constant currency',
+};
+
+export const FX_DATE_RULE_LABELS: Readonly<Record<FxDateRule, string>> = {
+  event_date: 'Rate of each loss date, summed into the month',
+  period_average: 'Average rate of the month',
+};
+
+export const DEMAND_RULE_LABELS: Readonly<Record<DemandRule, string>> = {
+  demand_constrained_only: 'Lost sale only when the product was sold out',
+  all_lost_output: 'Every lost tonne is a lost sale',
+};
+
+export const QUALITY_DISPOSITION_LABELS: Readonly<Record<QualityDisposition, string>> = {
+  scrap: 'Scrap',
+  downgrade: 'Downgrade (sold off-grade)',
+  rework: 'Rework (recovered)',
+};
+
+export const DEMAND_STATUS_LABELS: Readonly<Record<DemandStatusValue, string>> = {
+  demand_constrained: 'Sold out (demand constrained)',
+  not_constrained: 'Not constrained (inventory covers demand)',
 };
 
 export const TIME_BASIS_RULE_LABELS: Readonly<Record<TimeBasisRule, string>> = {

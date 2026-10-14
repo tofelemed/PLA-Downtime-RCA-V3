@@ -38,6 +38,7 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   rca_knowledge: ['rca-knowledge'],
   fx_rate: ['valuation'],
   valuation_policy: ['valuation'],
+  demand_status: ['valuation'],
   user: ['users', 'user-scopes'],
   user_scope: ['user-scopes', 'users'],
   task: ['tasks'],

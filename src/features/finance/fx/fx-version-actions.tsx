@@ -56,7 +56,7 @@ export function FxVersionActions({ rate }: { rate: FxRateView }) {
         open={pending === 'approve'}
         onOpenChange={onOpenChange}
         title={`Approve 1 ${rate.fromCurrency} = ${rate.rate} ${rate.toCurrency}?`}
-        description="Valuation uses the approved rate for losses inside its validity. Periods are revalued only when they are next recalculated."
+        description="Valuation uses the approved rate for losses inside its validity. Approving queues a recalculation of the periods of its months; approved periods get a change proposal."
         confirmLabel="Approve rate"
         onConfirm={() => transition.submit({ id: rate.id, action: 'approve', supersede })}
       >

@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { v2Request } from '../client';
 import type { BodyOf } from '../schema-types';
 import type { ListResponse } from '../types/envelopes';
-import type { FxRateView, ValuationPolicyView } from '../types/valuation';
+import type { FxRateType, FxRateView, ValuationPolicyView, WithRevaluation } from '../types/valuation';
 import type { VersionState } from '../types/profiles';
 import { v2 } from '../v2';
 import type { ChangeNotice } from './invalidation';
@@ -19,6 +19,7 @@ export type FxRateCreateBody = BodyOf<'/api/v2/fx-rates', 'post'>;
 export type ValuationPolicyCreateBody = BodyOf<'/api/v2/valuation-policies', 'post'>;
 
 export interface FxRateFilters {
+  rateType?: FxRateType;
   fromCurrency?: string;
   toCurrency?: string;
   state?: VersionState;
@@ -82,13 +83,13 @@ function useValuationDetail<T>(path: 'fx-rates' | 'valuation-policies', id: stri
 }
 
 /** One FX rate version (the detail page). */
-export const useFxRate = (id: string | null) => useValuationDetail<FxRateView>('fx-rates', id);
+export const useFxRate = (id: string | null) => useValuationDetail<FxRateView & WithRevaluation>('fx-rates', id);
 
 /** One valuation policy version (the detail page and "new version from this"). */
-export const useValuationPolicy = (id: string | null) => useValuationDetail<ValuationPolicyView>('valuation-policies', id);
+export const useValuationPolicy = (id: string | null) => useValuationDetail<ValuationPolicyView & WithRevaluation>('valuation-policies', id);
 
-/** A finance change: the FX / policy lists refresh. Approvals never recalculate periods (plan 2.6). */
-function useFinanceCommand<TInput, TResult>(entityType: string, run: (input: TInput, idempotencyKey: string) => Promise<TResult>) {
+/** A finance change: the FX / policy / demand lists refresh; an approval's revaluation runs on the server (SME V7). */
+export function useFinanceCommand<TInput, TResult>(entityType: string, run: (input: TInput, idempotencyKey: string) => Promise<TResult>) {
   const tenantId = useV2TenantId();
   const notice = (): ChangeNotice | null => (tenantId ? { tenantId, entityType, window: null } : null);
   return useV2Command<TInput, TResult>({ run: ({ input, idempotencyKey }) => run(input, idempotencyKey), changes: notice });
@@ -119,9 +120,9 @@ function useDetailWriter<T extends { id: string }>(path: 'fx-rates' | 'valuation
 
 /** Approve (409 VERSION_OVERLAP with `details.conflicts`) or retire an FX rate version; the server checks the role. */
 export function useFxTransition() {
-  const write = useDetailWriter<FxRateView>('fx-rates');
-  return useFinanceCommand<FxTransition, FxRateView>('fx_rate', async (input, idempotencyKey) =>
-    write((await v2Request<FxRateView>({
+  const write = useDetailWriter<FxRateView & WithRevaluation>('fx-rates');
+  return useFinanceCommand<FxTransition, FxRateView & WithRevaluation>('fx_rate', async (input, idempotencyKey) =>
+    write((await v2Request<FxRateView & WithRevaluation>({
       method: 'POST',
       path: `/fx-rates/${input.id}/${input.action}`,
       body: input.action === 'approve' ? { supersede: input.supersede === true } : {},
@@ -138,8 +139,8 @@ export function useCreateValuationPolicy() {
 
 /** Finance sign-off (VAL01): 403 SEPARATION_OF_DUTIES for the author, 422 CURRENCY_UNDECIDED for the placeholder. */
 export function useApproveValuationPolicy() {
-  const write = useDetailWriter<ValuationPolicyView>('valuation-policies');
-  return useFinanceCommand<{ id: string }, ValuationPolicyView>('valuation_policy', async (input, idempotencyKey) =>
-    write((await v2Request<ValuationPolicyView>({ method: 'POST', path: `/valuation-policies/${input.id}/approve`, body: {}, idempotencyKey })).data),
+  const write = useDetailWriter<ValuationPolicyView & WithRevaluation>('valuation-policies');
+  return useFinanceCommand<{ id: string }, ValuationPolicyView & WithRevaluation>('valuation_policy', async (input, idempotencyKey) =>
+    write((await v2Request<ValuationPolicyView & WithRevaluation>({ method: 'POST', path: `/valuation-policies/${input.id}/approve`, body: {}, idempotencyKey })).data),
   );
 }

@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCodeList } from '@/api/v2/queries/codes-admin';
 import { useValuationPolicy } from '@/api/v2/queries/valuation';
-import type { ValuationPolicyView } from '@/api/v2/types/valuation';
+import type { ValuationPolicyView, WithRevaluation } from '@/api/v2/types/valuation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
@@ -10,11 +10,12 @@ import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Fact } from '../components/fact';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { DEFAULT_BASIS_LABELS, FX_POLICY_LABELS, labelOf, TIME_BASIS_RULE_LABELS } from '@/features/ux-kit/labels';
+import { DEFAULT_BASIS_LABELS, DEMAND_RULE_LABELS, FX_DATE_RULE_LABELS, FX_POLICY_LABELS, FX_RATE_TYPE_LABELS, labelOf, TIME_BASIS_RULE_LABELS } from '@/features/ux-kit/labels';
 import { AUTHORSHIP_LABELS, POLICY_STATUS_LABELS } from '@/features/ux-kit/labels/codes-finance-labels';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
 import { authorshipOf, currenciesLabel, policyStatus } from '../model/policy-status';
+import { RevaluationQueued } from '../components/revaluation-queued';
 import { PolicyApprove } from './policy-approve';
 
 const BACK = { to: '/finance?tab=policies', label: 'Finance' };
@@ -36,9 +37,12 @@ function PolicyFacts({ policy }: { policy: ValuationPolicyView }) {
   return (
     <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <Fact label="Reporting currencies">{currenciesLabel(policy)}</Fact>
-      <Fact label="Default basis">{labelOf(DEFAULT_BASIS_LABELS, bodyText(policy.body.defaultBasis))}</Fact>
+      <Fact label="Default management view">{labelOf(DEFAULT_BASIS_LABELS, bodyText(policy.body.defaultBasis))}</Fact>
       <Fact label="Time-based costs">{labelOf(TIME_BASIS_RULE_LABELS, bodyText(policy.body.timeBasisRule))}</Fact>
       <Fact label="Currency conversion">{labelOf(FX_POLICY_LABELS, bodyText(policy.body.fxPolicy))}</Fact>
+      <Fact label="Exchange-rate table">{labelOf(FX_RATE_TYPE_LABELS, bodyText(policy.body.fxRateType) ?? 'economic')}</Fact>
+      <Fact label="Rate date">{labelOf(FX_DATE_RULE_LABELS, bodyText(policy.body.fxDateRule) ?? 'event_date')}</Fact>
+      <Fact label="Lost sales">{bodyText(policy.body.demandRule) ? labelOf(DEMAND_RULE_LABELS, bodyText(policy.body.demandRule)) : 'No economic view'}</Fact>
       <Fact label="Valid">{dates.validity(policy.effectiveFrom, policy.effectiveTo)}</Fact>
       <Fact label="Author">{AUTHORSHIP_LABELS[authorshipOf(policy, userId)]}</Fact>
       {policy.approvedAt && <Fact label="Approved">{dates.dateTime(policy.approvedAt)}</Fact>}
@@ -52,7 +56,7 @@ function PolicyFacts({ policy }: { policy: ValuationPolicyView }) {
   );
 }
 
-function PolicyView({ policy }: { policy: ValuationPolicyView }) {
+function PolicyView({ policy }: { policy: ValuationPolicyView & WithRevaluation }) {
   const navigate = useNavigate();
   const { canMaintainValuation } = useCapabilities();
   const status = policyStatus(policy);
@@ -77,6 +81,7 @@ function PolicyView({ policy }: { policy: ValuationPolicyView }) {
   return (
     <div className="space-y-6" data-testid="policy-detail" data-version={policy.version} data-status={status}>
       <PageHeader title={`Valuation policy version ${policy.version}`} back={BACK} description={description} actions={actions} />
+      <RevaluationQueued revaluation={policy.revaluation} />
       <Section title="Settings">
         <PolicyFacts policy={policy} />
       </Section>

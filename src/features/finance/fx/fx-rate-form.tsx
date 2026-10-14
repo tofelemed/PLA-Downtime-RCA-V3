@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCreateFxRate } from '@/api/v2/queries/valuation';
-import type { FxRateView } from '@/api/v2/types/valuation';
+import type { FxRateType, FxRateView } from '@/api/v2/types/valuation';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
 import { DateTimeInput } from '@/features/ux-kit/date-inputs';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
+import { FX_RATE_TYPE_LABELS } from '@/features/ux-kit/labels';
 import { useCalendarPreference } from '@/lib/dates';
 import { FinanceField } from '../components/finance-field';
 import { FinanceRefusalAlert } from '../components/finance-refusal-alert';
@@ -14,6 +15,7 @@ import { emptyFxForm, fxCreateBody, FX_SCALE, validateFxForm, type FxFormValues 
 import { REPORTING_CURRENCIES } from '../model/policy-form';
 
 const CURRENCIES = REPORTING_CURRENCIES.map((code) => ({ value: code, label: code }));
+const RATE_TYPES = Object.entries(FX_RATE_TYPE_LABELS).map(([value, label]) => ({ value, label }));
 
 export interface FxRateFormProps {
   timezone: string;
@@ -38,6 +40,9 @@ export function FxRateForm({ timezone, onSaved, onCancel }: FxRateFormProps) {
   };
   return (
     <div className="space-y-3" data-testid="fx-form">
+      <FinanceField id="rateType" label="Rate table" hint="Which conversion basis this rate belongs to; name the market or fixing under Source." error={fieldError('rateType')}>
+        <NativeSelect id="rateType" value={values.rateType} options={RATE_TYPES} onChange={(v) => set('rateType', v as FxRateType)} />
+      </FinanceField>
       <div className="grid gap-3 sm:grid-cols-3">
         <FinanceField id="fromCurrency" label="From (1 unit of)" error={fieldError('fromCurrency')}>
           <NativeSelect id="fromCurrency" value={values.fromCurrency} options={CURRENCIES} onChange={(v) => set('fromCurrency', v)} />
@@ -56,7 +61,7 @@ export function FxRateForm({ timezone, onSaved, onCancel }: FxRateFormProps) {
         <DateTimeInput label="Valid until (optional)" value={values.effectiveTo} timeZone={timezone} calendar={calendar} onChange={(iso) => set('effectiveTo', iso)} />
       </FinanceField>
       <FinanceField id="fxSource" label="Source (optional)" error={fieldError('source')}>
-        <Input id="fxSource" value={values.source} placeholder="e.g. central bank" onChange={(e) => set('source', e.target.value)} />
+        <Input id="fxSource" value={values.source} placeholder="e.g. CBI official fixing, treasury, exchange market" onChange={(e) => set('source', e.target.value)} />
       </FinanceField>
       <FinanceRefusalAlert error={create.error} />
       <div className="flex justify-end gap-2">

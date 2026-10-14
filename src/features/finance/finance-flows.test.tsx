@@ -34,7 +34,7 @@ const POLICY: ValuationPolicyView = {
 };
 
 const FX: FxRateView = {
-  id: 'f2', fromCurrency: 'USD', toCurrency: 'IRR', rate: '2690000', source: 'CBI', version: 2, state: 'draft', effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: null,
+  id: 'f2', rateType: 'economic', fromCurrency: 'USD', toCurrency: 'IRR', rate: '2690000', source: 'CBI', version: 2, state: 'draft', effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: null,
   createdBy: 'author-1', approvedBy: null, approvedAt: null, rowVersion: 1, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z',
 };
 
@@ -77,7 +77,7 @@ describe('finance — exchange rates and valuation policy commands', () => {
     await waitFor(() => expect(screen.getByTestId('field-error-rate').textContent).toMatch(/at most 10 decimals/));
     expect(posts()[0].url.pathname).toMatch(/\/v2\/fx-rates$/);
     expect(posts()[0].headers.get('Idempotency-Key')).toBeTruthy();
-    expect(posts()[0].body).toEqual({ fromCurrency: 'USD', toCurrency: 'IRR', rate: '585000.1234567891', effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: null, source: null });
+    expect(posts()[0].body).toEqual({ rateType: 'economic', fromCurrency: 'USD', toCurrency: 'IRR', rate: '585000.1234567891', effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: null, source: null });
   });
 
   it('a rate the browser refuses never reaches the server (same currency, zero rate)', async () => {
