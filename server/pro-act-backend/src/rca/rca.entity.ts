@@ -1,4 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany, Index, VersionColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+  Index,
+  VersionColumn,
+} from 'typeorm';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { User } from '../users/user.entity';
 import { RCATemplate } from '../rca-template/rca-template.entity';
@@ -39,11 +50,19 @@ export class RCA {
   @Column({ name: 'priority', type: 'varchar', length: 50, nullable: true })
   priority?: string; // Low, Medium, High, Critical
 
-  @Column({ name: 'target_completion_date', type: 'timestamptz', nullable: true })
+  @Column({
+    name: 'target_completion_date',
+    type: 'timestamptz',
+    nullable: true,
+  })
   targetCloseDate?: Date;
 
-  @Column({ name: 'actual_completion_date', type: 'timestamptz', nullable: true })
-  actualCloseDate?: Date;
+  @Column({
+    name: 'actual_completion_date',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  actualCloseDate?: Date | null;
 
   @Column({ name: 'root_cause', type: 'text', nullable: true })
   rootCause?: string;
@@ -70,25 +89,67 @@ export class RCA {
   @Column({ name: 'event_diagram', type: 'text', nullable: true })
   eventDiagram?: string;
 
-  @Column({ name: 'pre_failure_rate', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'pre_failure_rate',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   preFailureRate?: number;
 
-  @Column({ name: 'post_failure_rate', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'post_failure_rate',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   postFailureRate?: number;
 
-  @Column({ name: 'failure_cost_per_incident', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'failure_cost_per_incident',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   failureCostPerIncident?: number;
 
-  @Column({ name: 'implementation_cost', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'implementation_cost',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   implementationCost?: number;
 
-  @Column({ name: 'time_to_resolution', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'time_to_resolution',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   timeToResolution?: number;
 
-  @Column({ name: 'time_to_implementation', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'time_to_implementation',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   timeToImplementation?: number;
 
-  @Column({ name: 'effectiveness_score', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'effectiveness_score',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   effectivenessScore?: number;
 
   @Column({ name: 'last_updated', type: 'timestamptz', nullable: true })
@@ -100,16 +161,40 @@ export class RCA {
   @Column({ name: 'phase_timeline', type: 'text', nullable: true })
   phaseTimeline?: string;
 
-  @Column({ name: 'calculated_roi', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'calculated_roi',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   calculatedROI?: number;
 
-  @Column({ name: 'cost_savings', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'cost_savings',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   costSavings?: number;
 
-  @Column({ name: 'downtime_reduction', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'downtime_reduction',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   downtimeReduction?: number;
 
-  @Column({ name: 'productivity_improvement', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'productivity_improvement',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   productivityImprovement?: number;
 
   @Index('IDX_rcas_tenant')
@@ -128,8 +213,56 @@ export class RCA {
   @VersionColumn({ name: 'row_version', default: 1 })
   rowVersion: number;
 
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
+
+  /** who opened the case (null: opened by a trigger or before CA1) — never its closure approver */
+  @Column({ name: 'created_by', type: 'uuid', nullable: true })
+  createdBy?: string | null;
+
+  /** CA7: minor / significant / major (actual or potential consequence) → investigation tier */
+  @Column({
+    name: 'consequence_class',
+    type: 'varchar',
+    length: 16,
+    nullable: true,
+  })
+  consequenceClass?: string | null;
+
+  /** CA1: disposition of the residual risk, written when closure is requested */
+  @Column({ name: 'residual_risk', type: 'text', nullable: true })
+  residualRisk?: string | null;
+
+  @Column({ name: 'closure_requested_by', type: 'uuid', nullable: true })
+  closureRequestedBy?: string | null;
+
+  @Column({ name: 'closure_requested_at', type: 'timestamptz', nullable: true })
+  closureRequestedAt?: Date | null;
+
+  /** CA1: the independent reviewer who approved the closure */
+  @Column({ name: 'closure_approved_by', type: 'uuid', nullable: true })
+  closureApprovedBy?: string | null;
+
+  @Column({ name: 'closure_approved_at', type: 'timestamptz', nullable: true })
+  closureApprovedAt?: Date | null;
+
+  /** the reviewer's note (rejection reason, reopening reason or approval remark) */
+  @Column({ name: 'closure_note', type: 'text', nullable: true })
+  closureNote?: string | null;
+
+  /** CA2 effectiveness of the case frozen when closure was requested (null while not requested) */
+  @Column({
+    name: 'effectiveness_verdict',
+    type: 'varchar',
+    length: 24,
+    nullable: true,
+  })
+  effectivenessVerdict?: string | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
@@ -137,6 +270,6 @@ export class RCA {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 
-  @OneToMany(() => ProductionEvent, event => event.rca)
+  @OneToMany(() => ProductionEvent, (event) => event.rca)
   events: ProductionEvent[];
-} 
+}

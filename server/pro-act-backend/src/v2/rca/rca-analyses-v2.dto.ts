@@ -42,11 +42,17 @@ function List<T>(type: () => new () => T, max: number): PropertyDecorator {
   };
 }
 
-function Score(target: object, key: string | symbol): void {
+/** CA5: a 1–10 rating that may stay null while not rated (a draft); never a default score. */
+function OptionalScore(target: object, key: string | symbol): void {
+  IsOptional()(target, key);
+  ValidateIf((_: unknown, value: unknown) => value !== null)(target, key);
   IsInt()(target, key);
   Min(1)(target, key);
   Max(10)(target, key);
-  ApiProperty({ minimum: 1, maximum: 10 })(target, key);
+  ApiProperty({ minimum: 1, maximum: 10, nullable: true, required: false })(
+    target,
+    key,
+  );
 }
 
 function OneOf(values: readonly string[]): PropertyDecorator {
@@ -123,15 +129,21 @@ export class FishboneV2Dto {
 export class FmeaEffectDto {
   @Text(64) id: string;
   @Text(2000, false) description: string;
-  @Score severity: number;
+  /** null = not rated yet (the analysis stays incomplete) */
+  @OptionalScore severity?: number | null;
   @Text(1000, false) currentControls: string;
-  @Score detection: number;
+  /** deprecated (CA5): detection belongs to each cause; kept for older screens, not used in scoring */
+  @OptionalScore detection?: number | null;
 }
 
 export class FmeaCauseDto {
   @Text(64) id: string;
   @Text(2000, false) description: string;
-  @Score occurrence: number;
+  @OptionalScore occurrence?: number | null;
+  /** CA5: how well the cause's own control detects this cause / failure chain (10 = not detectable) */
+  @OptionalScore detection?: number | null;
+  /** the detection control the rating refers to */
+  @OptionalText(1000) detectionControl?: string | null;
   @OptionalStrings(20, 500) recommendedActions?: string[];
 }
 

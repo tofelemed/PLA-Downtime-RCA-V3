@@ -9,16 +9,19 @@ import { RcaCaseLink } from '../rca/entities/rca-case-link.entity';
 import { RcaTriggerEvaluation } from '../rca/entities/rca-trigger-evaluation.entity';
 import { RCA } from '../rca/rca.entity';
 import { RcaActionsService } from './rca-actions.service';
+import { RcaBaselineCorrectionsService } from './rca-baseline-corrections.service';
 import { RcaAnalysesService } from './rca-analyses.service';
 import { RcaAttachmentsService } from './rca-attachments.service';
 import { RcaCaseCommandsService } from './rca-case-commands.service';
 import { RcaCasesService } from './rca-cases.service';
+import { RcaCaseWorkflowService } from './rca-case-workflow.service';
 import { RcaLinksService } from './rca-links.service';
 import { RcaRecommendationsService } from './rca-recommendations.service';
 import { RcaVerificationService } from './rca-verification.service';
 import { RcaTriggerSweepJob } from './triggers/rca-trigger-sweep.job';
 import { RcaTriggerConsumer } from './triggers/rca-trigger.consumer';
 import { RcaTriggerService } from './triggers/rca-trigger.service';
+import { RcaApprovedTriggerService } from './triggers/rca-approved-trigger.service';
 
 /**
  * RCA integration and action feedback (plan 3.9): v2 cases, links with evidence packages, the
@@ -40,27 +43,33 @@ import { RcaTriggerService } from './triggers/rca-trigger.service';
   ],
   providers: [
     RcaCasesService,
+    RcaCaseWorkflowService,
     RcaCaseCommandsService,
     RcaAnalysesService,
     RcaAttachmentsService,
     RcaLinksService,
     RcaRecommendationsService,
     RcaActionsService,
+    RcaBaselineCorrectionsService,
     RcaVerificationService,
     RcaTriggerService,
+    RcaApprovedTriggerService,
     RcaTriggerConsumer,
     RcaTriggerSweepJob,
   ],
   exports: [
     RcaCasesService,
+    RcaCaseWorkflowService,
     RcaCaseCommandsService,
     RcaAnalysesService,
     RcaAttachmentsService,
     RcaLinksService,
     RcaRecommendationsService,
     RcaActionsService,
+    RcaBaselineCorrectionsService,
     RcaVerificationService,
     RcaTriggerService,
+    RcaApprovedTriggerService,
     RcaTriggerSweepJob,
   ],
 })

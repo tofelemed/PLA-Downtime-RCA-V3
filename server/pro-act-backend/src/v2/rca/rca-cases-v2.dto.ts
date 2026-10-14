@@ -15,6 +15,12 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { toBooleanParam } from '../../common/dto/query-param.transformers';
+import {
+  RCA_STATUSES,
+  RcaStatus,
+  START_STATUSES,
+} from '../../domain/rca/case-workflow';
+import { CONSEQUENCE_CLASSES } from '../../domain/rca/rca-policy-rules';
 import { ListQueryDto } from '../common/list-query.dto';
 import {
   RcaEventDiagramDto,
@@ -30,14 +36,8 @@ export {
   RcaRecommendationItemDto,
 } from './rca-case-items-v2.dto';
 
-export const RCA_STATUSES = [
-  'Draft',
-  'In Progress',
-  'Analysis',
-  'Published',
-  'Closed',
-] as const;
-export type RcaStatus = (typeof RCA_STATUSES)[number];
+export { RCA_STATUSES };
+export type { RcaStatus };
 export const RCA_PRIORITIES = ['Low', 'Medium', 'High', 'Critical'] as const;
 
 /**
@@ -56,11 +56,24 @@ export class RcaCaseV2CreateDto {
 
   @ApiPropertyOptional({
     enum: RCA_STATUSES,
-    description: 'Draft when omitted',
+    description:
+      'Draft when omitted; a case opens as Draft or In Progress (422 INVALID_STATUS otherwise). On PATCH only ' +
+      'the current status is accepted: moves go through POST /v2/rcas/{id}/transitions (422 STATUS_VIA_TRANSITION).',
   })
   @IsOptional()
   @IsIn(RCA_STATUSES)
   status?: RcaStatus;
+
+  @ApiPropertyOptional({
+    enum: CONSEQUENCE_CLASSES,
+    nullable: true,
+    description:
+      'SME CA7 actual or potential consequence (minor / significant / major) → investigation tier',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsIn(CONSEQUENCE_CLASSES)
+  consequenceClass?: (typeof CONSEQUENCE_CLASSES)[number] | null;
 
   @ApiPropertyOptional({
     enum: RCA_PRIORITIES,
@@ -154,6 +167,35 @@ export class RcaCaseV2CreateDto {
 }
 
 export class RcaCaseV2UpdateDto extends PartialType(RcaCaseV2CreateDto) {}
+
+/** `POST /v2/rcas/{id}/transitions`: one move of the RCA-01 / CA1 state machine. */
+export class RcaCaseTransitionV2Dto {
+  @ApiProperty({ enum: RCA_STATUSES })
+  @IsIn(RCA_STATUSES)
+  to: RcaStatus;
+
+  @ApiPropertyOptional({
+    maxLength: 2000,
+    description:
+      'Required to reject a closure, reopen a case or go back from Monitoring (min 5 characters)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  note?: string;
+
+  @ApiPropertyOptional({
+    maxLength: 4000,
+    description:
+      'SME CA1 disposition of the residual risk; required to request closure (Monitoring → Closure Review)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  residualRisk?: string;
+}
+
+export { START_STATUSES };
 
 export class RcaCaseV2ListQueryDto extends ListQueryDto {
   @ApiPropertyOptional({ enum: RCA_STATUSES })

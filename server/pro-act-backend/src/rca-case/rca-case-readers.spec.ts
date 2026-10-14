@@ -1,4 +1,6 @@
-import { withRpn } from './rca-analysis-rules';
+import { RCA_RULES_DEFAULT } from '../domain/rca/rca-policy-rules';
+import { RcaFmeaAnalysis } from '../rca-analysis-methodology/entities/fmea-analysis.entity';
+import { fmeaView } from './rca-analysis.view';
 import { readEventDiagram } from './rca-case-diagram';
 import {
   readEvidence,
@@ -120,16 +122,30 @@ describe('RCA case readers and rules', () => {
     ]);
   });
 
-  it('computes FMEA RPN from the worst effect and the cause occurrence', () => {
-    const effects = [
-      { severity: 8, detection: 3 },
-      { severity: 5, detection: 6 },
-    ];
-    expect(
-      withRpn(effects, [{ id: 'c', description: '', occurrence: 4 }])[0].rpn,
-    ).toBe(8 * 4 * 6);
-    expect(
-      withRpn([], [{ id: 'c', description: '', occurrence: 2 }])[0].rpn,
-    ).toBe(5 * 2 * 5);
+  it('reads a stored FMEA without inventing ratings: a legacy effect detection is not a cause detection', () => {
+    const row = {
+      id: 'f',
+      rowVersion: 1,
+      updatedAt: new Date('2027-01-01T00:00:00Z'),
+      failureMode: 'Seal leak',
+      effects: [
+        {
+          id: 'e',
+          description: '',
+          severity: 8,
+          currentControls: '',
+          detection: 3,
+        },
+      ],
+      causes: [{ id: 'c', description: '', occurrence: 4 }],
+    } as unknown as RcaFmeaAnalysis;
+    const view = fmeaView(row, RCA_RULES_DEFAULT.fmea);
+    expect(view.complete).toBe(false);
+    expect(view.causes[0]).toMatchObject({
+      severity: 8,
+      occurrence: 4,
+      detection: null,
+      rpn: null,
+    });
   });
 });

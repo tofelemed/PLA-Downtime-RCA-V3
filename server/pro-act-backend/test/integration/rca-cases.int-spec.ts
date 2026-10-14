@@ -206,8 +206,35 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
     });
   });
 
-  describe('RCA03 actions, outcome and close', () => {
-    it('verifies an action after its window and keeps claimed / approved / realized apart', async () => {
+  describe('RCA03 actions, outcome and the CA1 workflow', () => {
+    const transition = (body: object, token = env.admin) =>
+      env.get(`rcas/${caseId}`).then((read) =>
+        env
+          .http()
+          .post(`/api/v2/rcas/${caseId}/transitions`)
+          .set('Authorization', `Bearer ${token}`)
+          .set('If-Match', `"${(read.body as CaseBody).rowVersion}"`)
+          .send(body),
+      );
+    const codeOf = (response: { body: unknown }) =>
+      (response.body as ApiError).code;
+    let actionId = '';
+
+    it('CA3: a typed baseline is refused; the server computes and freezes it from history', async () => {
+      const declared = await env
+        .post(`rcas/${caseId}/actions`, {
+          title: 'x',
+          baseline: { metric: 'recurrences', windowDays: 30, value: '6' },
+        })
+        .expect(422);
+      expect(codeOf(declared)).toBe('BASELINE_DECLARED');
+      const counted = await env
+        .post(`rcas/${caseId}/actions`, {
+          title: 'x',
+          baseline: { metric: 'recurrences' },
+        })
+        .expect(422);
+      expect(codeOf(counted)).toBe('BASELINE_NEEDS_WINDOW');
       const action = await env
         .post(`rcas/${caseId}/actions`, {
           title: 'Realign coupling',
@@ -217,94 +244,155 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
             -20 * 24 * HOUR,
           ),
           verificationWindowEnd: plus(new Date().toISOString(), -5 * 24 * HOUR),
-          baseline: { metric: 'recurrences', windowDays: 30, value: '6' },
+          baseline: { metric: 'recurrences', windowDays: 30 },
           claimedAvoidedLoss: '1000',
           claimedCurrency: 'USD',
         })
         .expect(201);
       const body = action.body as {
         id: string;
-        rowVersion: number;
         verificationStatus: string;
+        baseline: {
+          declared: boolean;
+          queryVersion: string;
+          criteria: object;
+          window: object;
+        };
       };
       expect(body.verificationStatus).toBe('due');
+      expect(body.baseline).toMatchObject({
+        declared: false,
+        queryVersion: 'rca-exposure-v1',
+        criteria: { requiredReduction: 0.5, minExposureHours: 720 },
+      });
+      actionId = body.id;
+    });
+
+    it('CA2: verification after the window gives a verdict; 15 days of run time is insufficient evidence', async () => {
+      const [row] = await env.rows<{ row_version: number }>(
+        `SELECT row_version FROM rca_actions WHERE id = $1`,
+        [actionId],
+      );
       const verified = await env
         .http()
-        .post(`/api/v2/rca-actions/${body.id}/verify`)
+        .post(`/api/v2/rca-actions/${actionId}/verify`)
         .set('Authorization', `Bearer ${env.admin}`)
-        .set('Idempotency-Key', `verify-${body.id}`)
-        .set('If-Match', `"${body.rowVersion}"`)
+        .set('Idempotency-Key', `verify-${actionId}`)
+        .set('If-Match', `"${row.row_version}"`)
         .expect(200);
-      expect(
-        (verified.body as { postAction: { realized: unknown } }).postAction
-          .realized,
-      ).toEqual({
+      const view = verified.body as {
+        verdict: string;
+        postAction: { realized: object; effectiveness: { reasons: string[] } };
+      };
+      expect(view.postAction.realized).toEqual({
         metric: 'recurrences',
-        expected: '3',
+        expected: '0',
         observed: '0',
-        difference: '3',
+        difference: '0',
       });
+      expect(view.verdict).toBe('insufficient_evidence');
       const outcome = (await env.get(`rcas/${caseId}/outcome`).expect(200))
         .body as {
         approvedHistoricalLoss: { lines: number };
         claimedAvoided: unknown[];
-        realized: unknown[];
+        realized: Array<{ verdict: string }>;
       };
       expect(outcome.approvedHistoricalLoss.lines).toBeGreaterThan(0);
       expect(outcome.claimedAvoided).toEqual([
         { currency: 'USD', amount: '1000', actions: 1 },
       ]);
-      expect(outcome.realized).toHaveLength(1);
+      expect(outcome.realized[0].verdict).toBe('insufficient_evidence');
     });
 
-    it('refuses a counted baseline without window and verification before the window ends', async () => {
-      const counted = await env
-        .post(`rcas/${caseId}/actions`, {
-          title: 'x',
-          baseline: { metric: 'recurrences', windowDays: 30 },
-        })
-        .expect(422);
-      expect((counted.body as ApiError).code).toBe('BASELINE_NEEDS_WINDOW');
-      const future = (
-        await env
-          .post(`rcas/${caseId}/actions`, {
-            title: 'later',
-            verificationWindowStart: plus(new Date().toISOString(), 24 * HOUR),
-            verificationWindowEnd: plus(new Date().toISOString(), 48 * HOUR),
-            baseline: { metric: 'downtime_seconds', windowDays: 30 },
-          })
-          .expect(201)
-      ).body as {
-        id: string;
-        rowVersion: number;
-        baseline: { declared: boolean };
-      };
-      expect(future.baseline.declared).toBe(false);
-      const open = await env
-        .http()
-        .post(`/api/v2/rca-actions/${future.id}/verify`)
-        .set('Authorization', `Bearer ${env.admin}`)
-        .set('Idempotency-Key', `verify-${future.id}`)
-        .set('If-Match', `"${future.rowVersion}"`)
-        .expect(409);
-      expect((open.body as ApiError).code).toBe('VERIFICATION_WINDOW_OPEN');
-    });
-
-    it('RCA-01: closing is refused while actions are open; finishing them lets it close', async () => {
+    it('RCA-01: the status never comes from an edit and never jumps to Closed', async () => {
       const before = (await env.get(`rcas/${caseId}`).expect(200))
         .body as CaseBody;
-      const blocked = await env
+      const edit = await env
         .patch(`rcas/${caseId}`, { status: 'Closed' }, `"${before.rowVersion}"`)
         .expect(422);
-      expect((blocked.body as ApiError).code).toBe('CLOSE_BLOCKED');
+      expect(codeOf(edit)).toBe('STATUS_VIA_TRANSITION');
+      expect(codeOf(await transition({ to: 'Closed' }))).toBe(
+        'INVALID_TRANSITION',
+      );
+      await transition({ to: 'Analysis' }).then((r) =>
+        expect(r.status).toBe(200),
+      );
+    });
+
+    it('CA1 / CA7: accepting the investigation needs the consequence class and its methods', async () => {
+      const blocked = await transition({ to: 'Monitoring' });
+      expect(blocked.status).toBe(422);
+      expect(codeOf(blocked)).toBe('INVESTIGATION_BLOCKED');
       expect(
-        (blocked.body as { fieldErrors: Array<{ field: string }> }).fieldErrors,
-      ).toEqual([expect.objectContaining({ field: 'actions' })]);
-      const actions = await env.rows<{ id: string; row_version: number }>(
+        (blocked.body as { details: { blockers: string[] } }).details.blockers,
+      ).toContain('CONSEQUENCE_CLASS_MISSING');
+      const read = (await env.get(`rcas/${caseId}`).expect(200))
+        .body as CaseBody;
+      await env
+        .patch(
+          `rcas/${caseId}`,
+          { consequenceClass: 'minor' },
+          `"${read.rowVersion}"`,
+        )
+        .expect(200);
+      const readiness = (await env.get(`rcas/${caseId}/readiness`).expect(200))
+        .body as {
+        investigation: { blockers: unknown[] };
+      };
+      expect(readiness.investigation.blockers).toEqual([]);
+      await transition({ to: 'Monitoring' }).then((r) =>
+        expect(r.status).toBe(200),
+      );
+    });
+
+    it('CA4: done needs the action type, objective evidence and a verifier', async () => {
+      const done = async (body: object) => {
+        const [row] = await env.rows<{ row_version: number }>(
+          `SELECT row_version FROM rca_actions WHERE id = $1`,
+          [actionId],
+        );
+        return env.patch(
+          `rca-actions/${actionId}`,
+          { status: 'done', ...body },
+          `"${row.row_version}"`,
+        );
+      };
+      expect(codeOf(await done({}))).toBe('ACTION_TYPE_REQUIRED');
+      expect(codeOf(await done({ actionType: 'repair' }))).toBe(
+        'EVIDENCE_REQUIRED',
+      );
+      const ok = await done({
+        actionType: 'repair',
+        completionEvidenceRef: 'WO-4711 op 20, acceptance test AT-12',
+      });
+      expect(ok.status).toBe(200);
+      expect(ok.body).toMatchObject({
+        status: 'done',
+        hasEvidence: true,
+        evidenceExpected: 'work-order operation and acceptance test',
+      });
+      expect(
+        (ok.body as { completionVerifiedBy: string | null })
+          .completionVerifiedBy,
+      ).not.toBeNull();
+    });
+
+    it('CA1: closure needs every action finished and the residual risk disposed of', async () => {
+      await env
+        .post(`rcas/${caseId}/actions`, { title: 'Check the base plate' })
+        .expect(201);
+      const open = await transition({ to: 'Closure Review' });
+      expect(codeOf(open)).toBe('CLOSE_BLOCKED');
+      expect(
+        (open.body as { details: { blockers: string[] } }).details.blockers,
+      ).toEqual(
+        expect.arrayContaining(['ACTIONS_NOT_DONE', 'RESIDUAL_RISK_MISSING']),
+      );
+      const others = await env.rows<{ id: string; row_version: number }>(
         `SELECT id, row_version FROM rca_actions WHERE rca_id = $1 AND status NOT IN ('done', 'cancelled')`,
         [caseId],
       );
-      for (const action of actions) {
+      for (const action of others) {
         await env
           .patch(
             `rca-actions/${action.id}`,
@@ -313,27 +401,53 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
           )
           .expect(200);
       }
+      const requested = await transition({
+        to: 'Closure Review',
+        residualRisk:
+          'Alignment checked at each PM; no residual risk beyond the monitored task',
+      });
+      expect(requested.body).toMatchObject({ status: 'Closure Review' });
+      expect(requested.body).toMatchObject({
+        status: 'Closure Review',
+        effectivenessVerdict: 'insufficient_evidence',
+      });
     });
 
-    it('closing feeds the knowledge base and completes the linked events', async () => {
-      const current = (await env.get(`rcas/${caseId}`).expect(200))
-        .body as CaseBody;
-      await env
-        .patch(
-          `rcas/${caseId}`,
-          { status: 'Closed' },
-          `"${current.rowVersion}"`,
-        )
-        .expect(200);
+    it('CA1: the investigator never approves the closure; an independent manager approver does', async () => {
+      const self = await transition({ to: 'Closed' });
+      expect(self.status).toBe(403);
+      expect(codeOf(self)).toBe('SEPARATION_OF_DUTIES');
+      const engineer = await transition({ to: 'Closed' }, env.reliability);
+      expect(codeOf(engineer)).toBe('FORBIDDEN_ROLE');
+      const readiness = (
+        await env.get(`rcas/${caseId}/readiness`, env.approver).expect(200)
+      ).body as {
+        approver: { canApprove: boolean };
+      };
+      expect(readiness.approver.canApprove).toBe(true);
+      const closed = await transition({ to: 'Closed' }, env.approver);
+      expect(closed.status).toBe(200);
+      expect(closed.body).toMatchObject({ status: 'Closed' });
+      expect(
+        (closed.body as { closureApprovedBy: string | null }).closureApprovedBy,
+      ).not.toBeNull();
+    });
+
+    it('closing feeds the knowledge base (lesson unverified) and completes the linked events', async () => {
       const entries = await env.rows<{
         is_published: boolean;
         root_cause: string;
+        lesson_status: string;
       }>(
-        `SELECT is_published, root_cause FROM rca_knowledge_base WHERE rca_id = $1`,
+        `SELECT is_published, root_cause, lesson_status FROM rca_knowledge_base WHERE rca_id = $1`,
         [caseId],
       );
       expect(entries).toEqual([
-        { is_published: false, root_cause: 'Misalignment' },
+        {
+          is_published: false,
+          root_cause: 'Misalignment',
+          lesson_status: 'unverified',
+        },
       ]);
       const states = await env.rows<{ rca_state: string }>(
         `SELECT rca_state FROM production_events WHERE id = ANY($1::uuid[])`,
@@ -343,6 +457,24 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
         'completed',
         'completed',
       ]);
+    });
+
+    it('reopening a closed case needs the independent approver and a reason', async () => {
+      expect(
+        codeOf(await transition({ to: 'Analysis', note: 'repeat seen' })),
+      ).toBe('SEPARATION_OF_DUTIES');
+      expect(codeOf(await transition({ to: 'Analysis' }, env.approver))).toBe(
+        'NOTE_REQUIRED',
+      );
+      const reopened = await transition(
+        { to: 'Analysis', note: 'the trip came back' },
+        env.approver,
+      );
+      expect(reopened.body).toMatchObject({
+        status: 'Analysis',
+        actualCloseDate: null,
+        closureApprovedBy: null,
+      });
     });
   });
 

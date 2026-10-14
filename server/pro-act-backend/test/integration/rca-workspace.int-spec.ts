@@ -9,7 +9,13 @@ import { bearer } from './support/test-app';
 interface ToolBody {
   id: string;
   rowVersion: number;
-  causes?: Array<{ rpn: number }>;
+  causes?: Array<{
+    rpn: number | null;
+    actionPriority: string | null;
+    missing: string[];
+  }>;
+  complete?: boolean;
+  rpnThreshold?: number;
 }
 
 interface CaseView extends CaseBody {
@@ -104,7 +110,7 @@ describe('RCA workspace (analysis tools, evidence files, case commands)', () => 
       expect(all.fiveWhy.rootCause).toBe('Wrong seal');
     });
 
-    it('computes the FMEA RPN on the server (a client value is refused)', async () => {
+    it('CA5: scores the FMEA on the server per cause; a missing rating stays null (a client RPN is refused)', async () => {
       const body = {
         failureMode: 'Seal leak',
         effects: [
@@ -116,17 +122,42 @@ describe('RCA workspace (analysis tools, evidence files, case commands)', () => 
             detection: 3,
           },
         ],
-        causes: [{ id: 'c1', description: 'Wear', occurrence: 4 }],
+        causes: [
+          {
+            id: 'c1',
+            description: 'Wear',
+            occurrence: 4,
+            detection: 3,
+            detectionControl: 'Weekly leak round',
+          },
+        ],
       };
       const saved = (
         await put(`rcas/${caseId}/analyses/fmea`, body).expect(200)
       ).body as ToolBody;
       expect(saved.causes?.[0].rpn).toBe(7 * 4 * 3);
+      expect(saved).toMatchObject({ complete: true, rpnThreshold: 100 });
       await put(
         `rcas/${caseId}/analyses/fmea`,
         { ...body, causes: [{ ...body.causes[0], rpn: 1 }] },
         '"1"',
       ).expect(422);
+      const draft = (
+        await put(
+          `rcas/${caseId}/analyses/fmea`,
+          {
+            ...body,
+            causes: [{ id: 'c1', description: 'Wear', occurrence: 4 }],
+          },
+          '"1"',
+        ).expect(200)
+      ).body as ToolBody;
+      expect(draft.complete).toBe(false);
+      expect(draft.causes?.[0]).toMatchObject({
+        rpn: null,
+        actionPriority: null,
+        missing: ['detection'],
+      });
     });
 
     it('keeps tools to the case scope: other tenants 404, viewers and operators cannot write', async () => {

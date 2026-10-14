@@ -22,7 +22,9 @@ import {
   FiveWhyV2Dto,
   FmeaV2Dto,
 } from '../v2/rca/rca-analyses-v2.dto';
-import { withRpn } from './rca-analysis-rules';
+import { AccountingPoliciesService } from '../periods/accounting-policies.service';
+import { FmeaRules } from '../domain/rca/rca-policy-rules';
+import { casePolicy } from './case-policy';
 import {
   barrierView,
   BarrierView,
@@ -63,14 +65,26 @@ export interface AnalysisTarget {
  */
 @Injectable()
 export class RcaAnalysesService {
-  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly policies: AccountingPoliciesService,
+  ) {}
+
+  /** CA5 FMEA rules of the case's policy in force now. */
+  private async fmeaRules(
+    manager: EntityManager,
+    rca: { tenantId?: string; unitId?: string | null },
+  ): Promise<FmeaRules> {
+    return (await casePolicy(manager, this.policies, rca, new Date())).fmea;
+  }
 
   async list(
     context: RequestContext,
     rcaId: string,
   ): Promise<RcaAnalysesV2View> {
     const manager = this.dataSource.manager;
-    await findCase(manager, scopeOf(context), rcaId);
+    const rca = await findCase(manager, scopeOf(context), rcaId);
+    const rules = await this.fmeaRules(manager, rca);
     const latest = <E extends AnalysisRow>(type: RowClass<E>) =>
       this.latest(manager, type, rcaId);
     const map = <E extends AnalysisRow, V>(
@@ -80,7 +94,7 @@ export class RcaAnalysesService {
     return {
       fiveWhy: map(await latest(RcaFiveWhyAnalysis), fiveWhyView),
       fishbone: map(await latest(RcaFishboneDiagram), fishboneView),
-      fmea: map(await latest(RcaFmeaAnalysis), fmeaView),
+      fmea: map(await latest(RcaFmeaAnalysis), (row) => fmeaView(row, rules)),
       faultTree: map(await latest(RcaFaultTreeAnalysis), faultTreeView),
       barrier: map(await latest(RcaBarrierAnalysis), barrierView),
       change: map(await latest(RcaChangeAnalysis), changeView),
@@ -124,14 +138,29 @@ export class RcaAnalysesService {
     target: AnalysisTarget,
     body: FmeaV2Dto,
   ): Promise<FmeaView> {
+    // ratings are stored as given (null = not rated); scores are computed when read (CA5)
     const values = {
       failureMode: body.failureMode,
-      effects: body.effects.map((effect) => ({ ...effect })),
-      causes: withRpn(body.effects, body.causes),
+      effects: body.effects.map((effect) => ({
+        ...effect,
+        severity: effect.severity ?? null,
+        detection: effect.detection ?? null,
+      })),
+      causes: body.causes.map((cause) => ({
+        ...cause,
+        occurrence: cause.occurrence ?? null,
+        detection: cause.detection ?? null,
+        detectionControl: cause.detectionControl ?? null,
+        recommendedActions: cause.recommendedActions ?? [],
+      })),
     };
-    return fmeaView(
-      await this.upsert(context, target, RcaFmeaAnalysis, values),
+    const saved = await this.upsert(context, target, RcaFmeaAnalysis, values);
+    const rca = await findCase(
+      this.dataSource.manager,
+      scopeOf(context),
+      target.rcaId,
     );
+    return fmeaView(saved, await this.fmeaRules(this.dataSource.manager, rca));
   }
 
   async saveFaultTree(

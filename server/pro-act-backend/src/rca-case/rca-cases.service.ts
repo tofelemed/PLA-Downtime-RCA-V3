@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { assertRevision } from '../common/concurrency/revision';
 import { RequestContext } from '../common/context/request-context';
-import { actorFromContext } from '../production-event/revisions/revision-actor';
 import { RCA } from '../rca/rca.entity';
 import { keysetPage } from '../v2/common/keyset-page';
 import { listResponse, ListResponse } from '../v2/common/response';
@@ -12,8 +11,7 @@ import {
   RcaCaseV2ListQueryDto,
   RcaCaseV2UpdateDto,
 } from '../v2/rca/rca-cases-v2.dto';
-import { assertClosable } from './close-check';
-import { moveEventRcaState } from './event-rca-pointer';
+import { statusOf } from '../domain/rca/case-workflow';
 import {
   assertCaseReferences,
   caseColumns,
@@ -25,8 +23,7 @@ import {
   toRcaCaseSummary,
   toRcaCaseView,
 } from './rca-case.view';
-import { upsertKnowledgeEntry } from './rca-knowledge';
-import { findCase, RcaScope, scopeOf } from './rca-scope';
+import { findCase, invalidBody, scopeOf } from './rca-scope';
 
 /** target close date passed while the case is not closed */
 export const OVERDUE = `(rca.target_completion_date IS NOT NULL AND rca.target_completion_date < now() AND rca.status IS DISTINCT FROM 'Closed')`;
@@ -37,8 +34,9 @@ const LINKED_EVENT = (condition: string) =>
 
 /**
  * v2 RCA cases (plan 3.9 step 1): tenant and unit scope from identity, keyset lists with server-side
- * search (status, unit, asset / reason / window of linked events, title), ETag reads, If-Match edits
- * that persist the nested content, and the close transition (knowledge entry, linked events completed).
+ * search (status, unit, asset / reason / window of linked events, title), ETag reads and If-Match edits
+ * that persist the nested content. The status never comes from a body: moves go through
+ * `RcaCaseWorkflowService` (RCA-01).
  */
 @Injectable()
 export class RcaCasesService {
@@ -124,48 +122,17 @@ export class RcaCasesService {
       assertRevision(rca.rowVersion, target.expectedRowVersion);
       const unitId =
         body.unitId === undefined ? (rca.unitId ?? null) : body.unitId;
-      await assertCaseReferences(manager, scope, body, unitId);
-      const closing = body.status === 'Closed' && rca.status !== 'Closed';
-      if (closing) {
-        const rootCause =
-          body.rootCause === undefined ? rca.rootCause : body.rootCause;
-        await assertClosable(manager, rca, rootCause ?? null);
+      if (body.status !== undefined && body.status !== statusOf(rca.status)) {
+        throw invalidBody(
+          'STATUS_VIA_TRANSITION',
+          'status',
+          'the status changes through POST /v2/rcas/{id}/transitions (the case workflow), not by an edit',
+        );
       }
-      const columns = caseColumns(body);
-      if (closing && !body.actualCloseDate)
-        columns.actualCloseDate = new Date();
-      await manager.getRepository(RCA).save({ ...rca, ...columns });
-      if (closing) await this.onClosed(manager, scope, context, target.id);
+      await assertCaseReferences(manager, scope, body, unitId);
+      await manager.getRepository(RCA).save({ ...rca, ...caseColumns(body) });
     });
     return this.get(context, target.id);
-  }
-
-  /** Knowledge entry and `completed` RCA state of every linked event (a person closed the case). */
-  private async onClosed(
-    manager: EntityManager,
-    scope: RcaScope,
-    context: RequestContext,
-    id: string,
-  ): Promise<void> {
-    const rca = await findCase(manager, scope, id);
-    await upsertKnowledgeEntry(manager, {
-      rca,
-      closedBy: scope.userId,
-      closedAt: rca.actualCloseDate ?? new Date(),
-    });
-    const events: Array<{ target_id: string }> = await manager.query(
-      `SELECT "target_id" FROM "rca_case_links" WHERE "tenant_id" = $1 AND "rca_id" = $2 AND "link_type" = 'event'`,
-      [scope.tenantId, id],
-    );
-    for (const { target_id: eventId } of events) {
-      await moveEventRcaState(manager, {
-        eventId,
-        tenantId: scope.tenantId,
-        rcaId: id,
-        state: 'completed',
-        actor: actorFromContext(context),
-      });
-    }
   }
 }
 

@@ -37,6 +37,19 @@ export interface RcaCaseV2View extends RcaCaseSummaryV2View {
   logicTree: RcaLogicNode[];
   teamCharter: string | null;
   eventDiagram: RcaEventDiagram;
+  /** who opened the case (null: a trigger or before CA1) */
+  createdBy: string | null;
+  /** CA7 consequence class → investigation tier */
+  consequenceClass: string | null;
+  /** CA1 closure: residual risk, request, independent approval, the reviewer's note */
+  residualRisk: string | null;
+  closureRequestedBy: string | null;
+  closureRequestedAt: string | null;
+  closureApprovedBy: string | null;
+  closureApprovedAt: string | null;
+  closureNote: string | null;
+  /** CA2 effectiveness frozen when closure was requested */
+  effectivenessVerdict: string | null;
 }
 
 const iso = (value: Date | string | null | undefined) =>
@@ -71,5 +84,14 @@ export function toRcaCaseView(rca: RCA): RcaCaseV2View {
     logicTree: readLogicTree(rca.logicTree),
     teamCharter: rca.teamCharter ?? null,
     eventDiagram: readEventDiagram(rca.eventDiagram),
+    createdBy: rca.createdBy ?? null,
+    consequenceClass: rca.consequenceClass ?? null,
+    residualRisk: rca.residualRisk ?? null,
+    closureRequestedBy: rca.closureRequestedBy ?? null,
+    closureRequestedAt: iso(rca.closureRequestedAt),
+    closureApprovedBy: rca.closureApprovedBy ?? null,
+    closureApprovedAt: iso(rca.closureApprovedAt),
+    closureNote: rca.closureNote ?? null,
+    effectivenessVerdict: rca.effectivenessVerdict ?? null,
   };
 }

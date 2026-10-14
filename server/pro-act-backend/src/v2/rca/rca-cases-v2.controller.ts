@@ -34,6 +34,10 @@ import {
   RcaCaseSummaryV2View,
 } from '../../rca-case/rca-case-commands.service';
 import { RcaCasesService } from '../../rca-case/rca-cases.service';
+import {
+  RcaCaseReadinessV2View,
+  RcaCaseWorkflowService,
+} from '../../rca-case/rca-case-workflow.service';
 import { RcaEvidenceOptionsV2View } from '../../rca-case/rca-evidence-options';
 import {
   RcaCaseSummaryV2View as RcaCaseListItemV2View,
@@ -43,6 +47,7 @@ import { RCA_WRITERS } from '../../rca-case/rca-scope';
 import { ListResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import {
+  RcaCaseTransitionV2Dto,
   RcaCaseV2CreateDto,
   RcaCaseV2ListQueryDto,
   RcaCaseV2UpdateDto,
@@ -66,6 +71,7 @@ export class RcaCasesV2Controller {
     private readonly cases: RcaCasesService,
     private readonly actions: RcaActionsService,
     private readonly commands: RcaCaseCommandsService,
+    private readonly workflow: RcaCaseWorkflowService,
   ) {}
 
   @Get()
@@ -136,8 +142,8 @@ export class RcaCasesV2Controller {
   @ApiOperation({
     summary: 'Change a case (nested content replaced as sent)',
     description:
-      `Requires \`If-Match\` (428/412). ${SCOPE} Setting status Closed feeds the knowledge base (unpublished ` +
-      'entry) and marks linked events RCA completed.',
+      `Requires \`If-Match\` (428/412). ${SCOPE} The status is not edited here (422 STATUS_VIA_TRANSITION when ` +
+      'it differs from the current one): use POST /v2/rcas/{id}/transitions.',
   })
   @ApiHeader({ name: 'If-Match', required: true })
   update(
@@ -181,6 +187,46 @@ export class RcaCasesV2Controller {
     @IfMatch() expectedRowVersion: number,
   ): Promise<RcaCaseV2View> {
     return this.commands.resetLogicTree(ctx, { id, expectedRowVersion });
+  }
+
+  @Get(':id/readiness')
+  @ApiOperation({
+    summary:
+      'Next moves of the case and what blocks them (RCA-01 / SME CA1, CA5–CA7)',
+    description:
+      'Investigation gate (consequence tier methods, 5-Why evidence, FMEA completeness, actions), closure ' +
+      'gate (evidence, verified effectiveness, residual risk), whether you may approve the closure, and the ' +
+      'same-problem events linked by the triggers.',
+  })
+  readiness(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<RcaCaseReadinessV2View> {
+    return this.workflow.readiness(ctx, id);
+  }
+
+  @Post(':id/transitions')
+  @HttpCode(HttpStatus.OK)
+  @Roles(...RCA_WRITERS)
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary: 'Move the case through its workflow (RCA-01 / SME CA1)',
+    description:
+      `Requires \`If-Match\` (428/412). ${SCOPE} Draft → In Progress → Analysis → Monitoring (investigation ` +
+      'accepted: 422 INVESTIGATION_BLOCKED) → Closure Review (residualRisk; 422 CLOSE_BLOCKED) → Closed. ' +
+      'Closure Review → Closed / Monitoring and Closed → Analysis are decided by a manager approver who did not ' +
+      'open, lead, join or request the case (403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES); rejecting and ' +
+      'reopening need a note (422 NOTE_REQUIRED). Other moves: 422 INVALID_TRANSITION. Closing feeds the ' +
+      'knowledge base and marks linked events RCA completed.',
+  })
+  @ApiHeader({ name: 'If-Match', required: true })
+  transition(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @IfMatch() expectedRowVersion: number,
+    @Body() body: RcaCaseTransitionV2Dto,
+  ): Promise<RcaCaseV2View> {
+    return this.workflow.transition(ctx, { id, expectedRowVersion }, body);
   }
 
   @Get(':id/outcome')

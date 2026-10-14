@@ -8,18 +8,27 @@ import {
 import { writeDiagram } from './rca-case-diagram';
 import { writeJson } from './rca-case-json';
 import { templateLogicTree } from './rca-case-template';
-import { assertCaseUnit, invalidReference, RcaScope } from './rca-scope';
+import { START_STATUSES } from '../domain/rca/case-workflow';
+import {
+  assertCaseUnit,
+  invalidBody,
+  invalidReference,
+  RcaScope,
+} from './rca-scope';
 
 const date = (value: string | null | undefined) =>
   value === undefined ? undefined : value === null ? null : new Date(value);
 
-/** Columns of `rcas` a body sets (undefined = untouched; JSON text for the nested content). */
+/**
+ * Columns of `rcas` a body sets (undefined = untouched; JSON text for the nested content). The status is
+ * never copied from a body (RCA-01): it moves only through the state machine.
+ */
 export function caseColumns(body: RcaCaseV2UpdateDto): Partial<RCA> {
   const columns: Record<string, unknown> = {
     title: body.title,
     description: body.description,
-    status: body.status,
     priority: body.priority,
+    consequenceClass: body.consequenceClass,
     unitId: body.unitId,
     assetId: body.assetId,
     teamLeadId: body.teamLeadId,
@@ -36,7 +45,7 @@ export function caseColumns(body: RcaCaseV2UpdateDto): Partial<RCA> {
   };
   return Object.fromEntries(
     Object.entries(columns).filter(([, value]) => value !== undefined),
-  ) as Partial<RCA>;
+  );
 }
 
 async function exists(
@@ -112,13 +121,22 @@ export async function insertCase(
     body.templateId && !body.logicTree?.length
       ? await templateLogicTree(manager, scope.tenantId, body.templateId)
       : null;
+  const status = body.status ?? 'Draft';
+  if (!START_STATUSES.includes(status)) {
+    throw invalidBody(
+      'INVALID_STATUS',
+      'status',
+      `a case opens as ${START_STATUSES.join(' or ')}; later statuses are reached through transitions`,
+    );
+  }
   const entity = repository.create({
     ...caseColumns(fromTemplate ? { ...body, logicTree: fromTemplate } : body),
     id: randomUUID(),
-    status: body.status ?? 'Draft',
+    status,
     priority: body.priority ?? 'Medium',
     unitId,
     tenantId: scope.tenantId,
+    createdBy: scope.userId,
   });
   return repository.save(entity);
 }

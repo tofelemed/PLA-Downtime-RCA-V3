@@ -6,6 +6,8 @@ import { RcaFiveWhyAnalysis } from '../rca-analysis-methodology/entities/five-wh
 import { RcaFmeaAnalysis } from '../rca-analysis-methodology/entities/fmea-analysis.entity';
 import { bool, parseArray, Raw, strings, text } from './rca-json-read';
 import { FaultTreeReason, topEventProbability } from '../domain/rca/fault-tree';
+import { FmeaScoring, ScoredCause, scoreFmea } from '../domain/rca/fmea';
+import { FmeaRules } from '../domain/rca/rca-policy-rules';
 
 /** Common part of a stored analysis record (ETag = rowVersion). */
 export interface RcaAnalysisMeta {
@@ -39,23 +41,22 @@ export interface FishboneView extends RcaAnalysisMeta {
   }>;
 }
 
-export interface FmeaView extends RcaAnalysisMeta {
+/**
+ * CA5: severity per effect, occurrence and detection per cause, all null while not rated; RPN, priority
+ * and "needs action" computed by the server with the policy's rules (thresholds returned with it, never
+ * hard-coded in a screen); `complete` gates the acceptance of the analysis.
+ */
+export interface FmeaView extends RcaAnalysisMeta, Omit<FmeaScoring, 'causes'> {
   failureMode: string;
   effects: Array<{
     id: string;
     description: string;
-    severity: number;
+    severity: number | null;
     currentControls: string;
-    detection: number;
+    /** deprecated effect-level detection of older records (not used in scoring) */
+    detection: number | null;
   }>;
-  /** `rpn` is computed by the server when the record is saved */
-  causes: Array<{
-    id: string;
-    description: string;
-    occurrence: number;
-    rpn: number;
-    recommendedActions: string[];
-  }>;
+  causes: ScoredCause[];
 }
 
 export interface FaultTreeView extends RcaAnalysisMeta {
@@ -108,6 +109,14 @@ export interface RcaAnalysesV2View {
 
 const num = (value: unknown, fallback: number): number =>
   typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+/** A stored rating, null when missing or out of 1–10 (never a neutral default). */
+const rating = (value: unknown): number | null =>
+  typeof value === 'number' &&
+  Number.isInteger(value) &&
+  value >= 1 &&
+  value <= 10
+    ? value
+    : null;
 const str = (value: unknown): string => text(value) ?? '';
 
 function meta(row: {
@@ -156,24 +165,29 @@ export function fishboneView(row: RcaFishboneDiagram): FishboneView {
   };
 }
 
-export function fmeaView(row: RcaFmeaAnalysis): FmeaView {
+export function fmeaView(row: RcaFmeaAnalysis, rules: FmeaRules): FmeaView {
+  const effects = parseArray(row.effects).map((raw, index) => ({
+    id: itemId(raw, 'effect', index),
+    description: str(raw.description),
+    severity: rating(raw.severity),
+    currentControls: str(raw.currentControls),
+    detection: rating(raw.detection),
+  }));
+  const causes = parseArray(row.causes).map((raw, index) => ({
+    id: itemId(raw, 'cause', index),
+    description: str(raw.description),
+    occurrence: rating(raw.occurrence),
+    detection: rating(raw.detection),
+    detectionControl: text(raw.detectionControl),
+    recommendedActions: strings(raw.recommendedActions),
+  }));
+  const { causes: scored, ...scoring } = scoreFmea(effects, causes, rules);
   return {
     ...meta(row),
     failureMode: row.failureMode,
-    effects: parseArray(row.effects).map((raw, index) => ({
-      id: itemId(raw, 'effect', index),
-      description: str(raw.description),
-      severity: num(raw.severity, 5),
-      currentControls: str(raw.currentControls),
-      detection: num(raw.detection, 5),
-    })),
-    causes: parseArray(row.causes).map((raw, index) => ({
-      id: itemId(raw, 'cause', index),
-      description: str(raw.description),
-      occurrence: num(raw.occurrence, 5),
-      rpn: num(raw.rpn, 0),
-      recommendedActions: strings(raw.recommendedActions),
-    })),
+    effects,
+    causes: scored,
+    ...scoring,
   };
 }
 
