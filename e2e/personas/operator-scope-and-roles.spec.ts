@@ -27,7 +27,9 @@ const world = {} as World;
 
 async function unitOptionsOf(page: Page, filterTestId: string): Promise<string[]> {
   await page.getByTestId(filterTestId).click();
-  const names = await page.getByRole('dialog').getByRole('checkbox').evaluateAll((nodes) =>
+  const options = page.locator('[role="dialog"][data-state="open"]').getByRole('checkbox');
+  await expect(options.first()).toBeVisible({ timeout: 30_000 }); // the unit list arrives after the popover opens
+  const names = await options.evaluateAll((nodes) =>
     nodes.map((node) => node.parentElement?.textContent?.trim() ?? ''),
   );
   await page.keyboard.press('Escape');
@@ -63,15 +65,17 @@ test.describe('Operator — scope and role limits', () => {
     expect(await unitOptionsOf(page, 'filter-units')).toEqual([world.line1.name]);
     await page.getByRole('link', { name: 'New event' }).click();
     const form = page.getByTestId('event-form');
-    const options = await form.locator('#unitId option').evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).value).filter(Boolean));
-    expect(options).toEqual([world.line1.id]);
+    // the form is a page: its unit list arrives after it renders
+    const unitOptions = () => form.locator('#unitId option').evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).value).filter(Boolean));
+    await expect.poll(unitOptions).toEqual([world.line1.id]);
     await form.getByRole('button', { name: 'Keep draft and close' }).click();
     await expect(form).toBeHidden();
 
     // every listed event belongs to the line; the foreign event is not among them
     await chooseUnit(page, 'filter-units', world.line1.name);
     await expect(page.locator(`[data-testid="event-row"][data-event-id="${world.foreignEvent.id}"]`)).toHaveCount(0);
-    const rows = page.getByTestId('event-row');
+    // the table rows (the event-row marker sits in the start cell; the unit is its own column)
+    const rows = page.locator('tr', { has: page.getByTestId('event-row') });
     const count = await rows.count();
     for (let i = 0; i < Math.min(count, 25); i += 1) await expect(rows.nth(i)).toContainText(world.line1.name);
     await page.screenshot({ path: test.info().outputPath('operator-scope-j4.png'), fullPage: true });
