@@ -86,11 +86,12 @@ describe('AccountingEngine migration', () => {
         WHERE tenant_id = $1 AND policy_kind IN ('oee_policy', 'reconciliation_tolerance') ORDER BY policy_kind, version`,
       [tenant],
     );
-    // OeePolicyFirstOut (SME D7) adds oee_policy version 2 on top of the seeded version 1
+    // OeePolicyFirstOut (SME D7) and ToleranceUnexplainedTarget (SME R7) add version 2 on top of the seeded version 1
     expect(policies.map((p) => [p.policy_kind, p.version])).toEqual([
       ['oee_policy', 1],
       ['oee_policy', 2],
       ['reconciliation_tolerance', 1],
+      ['reconciliation_tolerance', 2],
     ]);
     expect(policies[0].body).toMatchObject({
       derateComponent: 'performance',
@@ -102,6 +103,10 @@ describe('AccountingEngine migration', () => {
       mode: 'zero',
       epsilon: 0.000001,
       allowUnaccountedClassification: false,
+    });
+    expect(policies[3].body).toMatchObject({
+      mode: 'zero',
+      unaccountedTargetOfShortfall: 0.02,
     });
     const triggers = await q(
       `SELECT tgname FROM pg_trigger WHERE tgname IN ('trg_loss_lines_immutable', 'trg_loss_line_evidence_immutable', 'trg_period_ledger_totals_immutable')`,

@@ -44,6 +44,13 @@
           "type": "boolean",
           "default": false,
           "description": "When true a positive residual beyond tolerance may be closed with an explicit `unaccounted_classified` line that the approver accepts (ACC10). Off by default (D06)."
+        },
+        "unaccountedTargetOfShortfall": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.02,
+          "description": "SME R7 (14 Oct 2026): improvement target for unexplained loss (positive residual, tolerance adjustments and classified Unaccounted lines) as a share of the shortfall (plan - actual). Reporting only, never the approval tolerance; absent or null = no target."
         }
       },
       "allOf": [

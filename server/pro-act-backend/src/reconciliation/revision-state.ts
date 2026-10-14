@@ -107,6 +107,9 @@ export function ruleOf(body: ReconciliationTolerance): ToleranceRule {
     value: new Dec(body.value),
     epsilon: new Dec(body.epsilon),
     allowUnaccountedClassification: body.allowUnaccountedClassification,
+    ...(body.unaccountedTargetOfShortfall === null
+      ? {}
+      : { unaccountedTarget: new Dec(body.unaccountedTargetOfShortfall) }),
   };
 }
 

@@ -10,6 +10,7 @@ import { trendQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { bucketLabel } from '../model/buckets';
 import { TREND_LABELS } from '../model/display';
 import { residualRows, trendUnits } from '../model/series';
+import { formatRatioPercent } from '@/features/plan-dashboard/model/display';
 import { AnalyticsCard } from './analytics-card';
 
 const SeriesChart = lazy(() => import('../charts/series-chart').then((m) => ({ default: m.SeriesChart })));
@@ -21,6 +22,17 @@ const SERIES = [
 ] as const;
 
 type Bucket = ReconciliationTrendView['buckets'][number];
+
+/** SME R7: unexplained loss against the shortfall, flagged when above the policy's improvement target. */
+function UnexplainedShare({ bucket }: { bucket: Bucket }) {
+  const above = bucket.unexplainedAboveTarget === true;
+  const target = bucket.unexplainedTarget === null ? '' : ` (target < ${formatRatioPercent(bucket.unexplainedTarget)})`;
+  return (
+    <span data-testid="unexplained-share" data-above-target={above ? 'true' : 'false'} className={above ? 'font-medium text-destructive' : undefined} title={`Unexplained loss / shortfall${target}`}>
+      {formatRatioPercent(bucket.unexplainedOfShortfall)}
+    </span>
+  );
+}
 
 function columnsOf(label: (key: string) => string): Array<DataTableColumn<Bucket>> {
   return [
@@ -35,6 +47,8 @@ function columnsOf(label: (key: string) => string): Array<DataTableColumn<Bucket
       ),
     },
     ...SERIES.map<DataTableColumn<Bucket>>((s) => ({ id: s.key, header: s.label, align: 'right', nowrap: true, cell: (b) => <Quantity value={b[s.key]} uom={b.uom} /> })),
+    { id: 'unexplainedOfShortfall', header: 'Unexplained / shortfall', align: 'right', nowrap: true, cell: (b) => <UnexplainedShare bucket={b} /> },
+    { id: 'unexplainedOfPlan', header: 'Unexplained / plan', align: 'right', nowrap: true, cell: (b) => formatRatioPercent(b.unexplainedOfPlan) },
     { id: 'periods', header: 'Periods', align: 'right', cell: (b) => b.periods },
   ];
 }
@@ -57,7 +71,7 @@ export function ResidualTrendCard({ scope }: { scope: AnalyticsScope }) {
       query={query}
       response={query.data}
       isEmpty={data?.buckets.length === 0}
-      note="After the saved decisions of each period; buckets without a computable slice show —."
+      note="After the saved decisions of each period; buckets without a computable slice show —. Unexplained loss counts the open residual, tolerance adjustments and classified Unaccounted lines; it is shown against the shortfall and the plan, in red above the policy's improvement target."
     >
       {data && (
         <div className="space-y-4" data-testid="residual-trend" data-group-by={data.groupBy}>

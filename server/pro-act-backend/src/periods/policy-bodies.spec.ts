@@ -83,6 +83,24 @@ describe('engine policy bodies (plan 2.5, D04 / D06)', () => {
     );
   });
 
+  it('SME R7 (14 Oct 2026): new plants aim for Unaccounted below 2 % of the shortfall; an older version has no target', () => {
+    expect(RECONCILIATION_TOLERANCE_DEFAULT.unaccountedTargetOfShortfall).toBe(
+      0.02,
+    );
+    const { unaccountedTargetOfShortfall: _omitted, ...beforeTheTarget } =
+      RECONCILIATION_TOLERANCE_DEFAULT;
+    expect(
+      parseReconciliationTolerance(beforeTheTarget)
+        .unaccountedTargetOfShortfall,
+    ).toBeNull();
+    expect(() =>
+      parseReconciliationTolerance({
+        ...RECONCILIATION_TOLERANCE_DEFAULT,
+        unaccountedTargetOfShortfall: 2,
+      }),
+    ).toThrow(PolicyBodyError);
+  });
+
   it('refuses malformed bodies', () => {
     expect(() =>
       parseOeePolicy({ ...OEE_POLICY_DEFAULT, derateComponent: 'quality' }),

@@ -75,6 +75,8 @@ export interface ToleranceRule {
   value: Dec;
   epsilon: Dec;
   allowUnaccountedClassification: boolean;
+  /** SME R7: reporting target of unexplained loss / shortfall; absent = none */
+  unaccountedTarget?: Dec;
 }
 
 export type CandidateState =

@@ -9,6 +9,7 @@
     "mode": "zero",
     "value": 0,
     "epsilon": 0.000001,
-    "allowUnaccountedClassification": false
+    "allowUnaccountedClassification": false,
+    "unaccountedTargetOfShortfall": 0.02
   }
 }

@@ -50,6 +50,16 @@ export interface ReconciliationTrendBucketView {
   unaccounted: string | null;
   overAccounted: string | null;
   overproduction: string | null;
+  plan: string | null;
+  shortfall: string | null;
+  /** SME R7: positive residual, tolerance adjustments and classified Unaccounted lines */
+  unexplained: string | null;
+  unexplainedOfPlan: string | null;
+  /** null when nothing fell short */
+  unexplainedOfShortfall: string | null;
+  /** improvement target of unexplained / shortfall from the tolerance policies; null when none or mixed */
+  unexplainedTarget: string | null;
+  unexplainedAboveTarget: boolean | null;
   periods: number;
   excludedSlices: number;
 }

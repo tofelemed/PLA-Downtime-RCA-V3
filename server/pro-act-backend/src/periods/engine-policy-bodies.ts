@@ -23,6 +23,11 @@ export interface ReconciliationTolerance {
   value: number;
   epsilon: number;
   allowUnaccountedClassification: boolean;
+  /**
+   * SME R7: improvement target for unexplained loss as a share of the shortfall (0.02 = 2 %). Reporting only,
+   * never the approval tolerance; a version written before the option has no field and no target (null).
+   */
+  unaccountedTargetOfShortfall: number | null;
 }
 
 /**
@@ -47,6 +52,7 @@ export const RECONCILIATION_TOLERANCE_DEFAULT: ReconciliationTolerance = {
   value: 0,
   epsilon: 0.000001,
   allowUnaccountedClassification: false,
+  unaccountedTargetOfShortfall: 0.02,
 };
 
 function record(value: unknown): Record<string, unknown> {
@@ -70,6 +76,14 @@ function oneOf<T extends string>(
 function nonNegative(value: unknown, field: string): number {
   if (typeof value !== 'number' || !(value >= 0)) {
     throw new PolicyBodyError(`${field} must be a number ≥ 0`);
+  }
+  return value;
+}
+
+function ratioOrNull(value: unknown, field: string): number | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'number' || !(value >= 0 && value <= 1)) {
+    throw new PolicyBodyError(`${field} must be a ratio between 0 and 1`);
   }
   return value;
 }
@@ -130,6 +144,10 @@ export function parseReconciliationTolerance(
     allowUnaccountedClassification: flag(
       value.allowUnaccountedClassification,
       'allowUnaccountedClassification',
+    ),
+    unaccountedTargetOfShortfall: ratioOrNull(
+      value.unaccountedTargetOfShortfall,
+      'unaccountedTargetOfShortfall',
     ),
   };
 }
