@@ -15,9 +15,11 @@ export interface FailureSpan {
   /** restored at; null = still open */
   end: Date | null;
   source: FailureSource;
-  /** active repair evidence (none of today's sources provide it) */
+  /** active repair evidence: first and last CMMS operation of the repair (SME D10) */
   repairStart: Date | null;
   repairEnd: Date | null;
+  /** SME D10: diagnosis + repair + test time minus waiting; absent = repairEnd − repairStart */
+  activeRepairSeconds?: number | null;
 }
 
 export interface ReliabilityInput {
@@ -111,7 +113,7 @@ function restoreMean(
   );
 }
 
-/** KPI08: MTTR only from active-repair evidence of completed repairs; open repairs are censored. */
+/** KPI08 / SME D10: mean active repair time only from CMMS operation evidence of completed repairs; open repairs are censored. */
 function mttr(
   input: ReliabilityInput,
   failures: FailureSpan[],
@@ -120,7 +122,7 @@ function mttr(
   const restored = restoredIn(failures, input.window);
   const evidenced = restored.filter((f) => f.repairStart && f.repairEnd);
   const cohort = {
-    label: 'mean time to repair',
+    label: 'mean active repair time',
     withoutEvidence: restored.length - evidenced.length,
   };
   if (evidenced.length === 0) {
@@ -137,7 +139,9 @@ function mttr(
     {
       numerator: sum(
         evidenced.map((f) =>
-          lengthOf(f.repairStart as Date, f.repairEnd as Date),
+          f.activeRepairSeconds != null
+            ? new Dec(f.activeRepairSeconds)
+            : lengthOf(f.repairStart as Date, f.repairEnd as Date),
         ),
       ),
       denominator: new Dec(evidenced.length),

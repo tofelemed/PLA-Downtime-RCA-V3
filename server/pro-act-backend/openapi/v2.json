@@ -17642,6 +17642,140 @@
           "v2 · Standby equipment"
         ]
       }
+    },
+    "/api/v2/work-order-operations": {
+      "get": {
+        "operationId": "WorkOrderOperationsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventIds",
+            "required": false,
+            "in": "query",
+            "description": "Operations linked to these stops (repeat)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "description": "Operations on these assets (repeat)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Operations of the caller scope (keyset on startedAt; from / to overlap, eventIds, assetIds)",
+        "tags": [
+          "v2 · Work-order operations"
+        ]
+      }
+    },
+    "/api/v2/work-order-operations/import": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Operation start / end / waiting are the actual operation times — never the work-order creation or closure. A row without eventId is linked to the stop of its asset running at the operation start. Diagnosis, repair and test operations of a stop give its active repair time (KPI `mttr`, \"Mean active repair time\"); the stop gives the mean time to restore production. 422 WORK_ORDER_IMPORT_INVALID lists the row problems (`details.errors`).",
+        "operationId": "WorkOrderOperationsV2Controller_importOperations_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkOrderOperationsImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Map and import CMMS work-order operations (upsert on work order + operation, all or nothing)",
+        "tags": [
+          "v2 · Work-order operations"
+        ]
+      }
     }
   },
   "info": {
@@ -24059,6 +24193,93 @@
         },
         "required": [
           "records"
+        ]
+      },
+      "WorkOrderOperationRowDto": {
+        "type": "object",
+        "properties": {
+          "workOrderId": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "4000123"
+          },
+          "operationId": {
+            "type": "string",
+            "maxLength": 50,
+            "example": "0020"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "diagnosis",
+              "repair",
+              "test",
+              "other"
+            ],
+            "description": "diagnosis, repair and test count as active repair"
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "Actual start of the operation (not the work-order creation)"
+          },
+          "endedAt": {
+            "type": "object",
+            "nullable": true,
+            "description": "Actual end; absent = still running"
+          },
+          "waitingSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Waiting for parts, permit or crew inside the operation (s)"
+          },
+          "waitingReason": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetCode": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Asset code (functional location) when no assetId"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The stop it repaired; absent = the stop of the asset running at the operation start, if one"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 50,
+            "example": "SAP PM"
+          }
+        },
+        "required": [
+          "workOrderId",
+          "operationId",
+          "kind",
+          "startedAt"
+        ]
+      },
+      "WorkOrderOperationsImportDto": {
+        "type": "object",
+        "properties": {
+          "operations": {
+            "maxItems": 5000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkOrderOperationRowDto"
+            }
+          }
+        },
+        "required": [
+          "operations"
         ]
       }
     }

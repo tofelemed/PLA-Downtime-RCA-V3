@@ -159,6 +159,55 @@ describe('standby equipment (SME D9)', () => {
       .expect(422);
   });
 
+  it('a caller scoped to one unit cannot overwrite another unit’s entry by reusing its ref', async () => {
+    const assetB = randomUUID();
+    await harness.dataSource.query(
+      `INSERT INTO "assets" ("id", "code", "name", "unit_id", "tenant_id", "asset_type") VALUES ($1, 'P-102B', 'Spare pump', $2, $3, 'Pump')`,
+      [assetB, world.unitA2, world.tenantA],
+    );
+    const entry = {
+      kind: 'demand',
+      startedAt: day(50, 6),
+      outcome: 'success',
+      externalRef: 'UNIT-B-DEM-1',
+    };
+    await post('standby-records/import', {
+      records: [{ ...entry, assetId: assetB }],
+    }).expect(200);
+    const userId = randomUUID();
+    await harness.dataSource.query(
+      `INSERT INTO users (id, name, email, password_hash, role, tenant_id) VALUES ($1, 'unit user', $2, 'x', 'Operator', $3)`,
+      [userId, `${userId}@test.local`, world.tenantA],
+    );
+    await harness.dataSource.query(
+      `INSERT INTO user_scopes (tenant_id, user_id, scope_kind, scope_id, role, row_version) VALUES ($1, $2, 'unit', $3, 'reliability_engineer', 1)`,
+      [world.tenantA, userId, world.unitA1],
+    );
+    const unitUser = signToken(app, {
+      userId,
+      tenantId: world.tenantA,
+      role: 'Operator',
+    });
+    const refused = await post(
+      'standby-records/import',
+      {
+        records: [
+          { ...entry, assetId: world.assetA1, outcome: 'failed_start' },
+        ],
+      },
+      unitUser,
+    ).expect(422);
+    expect((refused.body as { code: string }).code).toBe(
+      'STANDBY_IMPORT_INVALID',
+    );
+    const [stored] = await harness.dataSource.query<
+      Array<{ asset_id: string; outcome: string }>
+    >(
+      `SELECT "asset_id", "outcome" FROM "standby_records" WHERE "external_ref" = 'UNIT-B-DEM-1'`,
+    );
+    expect(stored).toEqual({ asset_id: assetB, outcome: 'success' });
+  });
+
   it('lists the log by window', async () => {
     const page = await http()
       .get(

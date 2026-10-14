@@ -2,6 +2,7 @@ import { EntityManager } from 'typeorm';
 import { OccurrenceSpan } from '../domain/kpi/downtime-measures';
 import { FailureSource, FailureSpan } from '../domain/kpi/reliability';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
+import { withRepairEvidence } from './repair-evidence.loader';
 
 /** What the KPI engine reads beyond the accounting inputs: full occurrence extents and failures. */
 export interface KpiInputs {
@@ -78,15 +79,19 @@ export async function loadKpiInputs(
       start: new Date(o.start_time),
       end: toDate(o.end_time),
     })),
-    failures: failures.map((f) => ({
-      occurrenceId: f.occurrence_id,
-      assetId: f.asset_id,
-      start: new Date(f.start_time),
-      end: toDate(f.restored_at),
-      source: f.source,
-      repairStart: toDate(f.repair_start),
-      repairEnd: toDate(f.repair_end),
-    })),
+    failures: await withRepairEvidence(
+      manager,
+      period.tenantId,
+      failures.map((f) => ({
+        occurrenceId: f.occurrence_id,
+        assetId: f.asset_id,
+        start: new Date(f.start_time),
+        end: toDate(f.restored_at),
+        source: f.source,
+        repairStart: toDate(f.repair_start),
+        repairEnd: toDate(f.repair_end),
+      })),
+    ),
   };
 }
 
@@ -107,6 +112,7 @@ export function kpiHashMaterial(inputs: KpiInputs): unknown {
       f.source,
       time(f.repairStart),
       time(f.repairEnd),
+      f.activeRepairSeconds ?? null,
     ]),
   };
 }

@@ -7,6 +7,7 @@ import {
 } from '../../common/context/request-context';
 import { scopedQuery } from '../../common/query/scoped-query';
 import { applyOverlapWindow } from '../../common/query/overlap-window';
+import { periodScopeUnits } from '../../periods/period-scope';
 import { StandbyRecord } from '../../reliability/entities/standby-record.entity';
 import { keysetPage } from '../common/keyset-page';
 import {
@@ -115,7 +116,15 @@ export class StandbyRecordsV2Service {
       resolved.map((r) => r.asset.unitId),
     );
     return this.manager.transaction((manager) =>
-      upsert(manager, tenantId, context.userId, resolved),
+      upsert(
+        manager,
+        {
+          tenantId,
+          actorId: context.userId,
+          allowedUnits: periodScopeUnits(context),
+        },
+        resolved,
+      ),
     );
   }
 
@@ -132,10 +141,46 @@ export class StandbyRecordsV2Service {
   }
 }
 
+/**
+ * A unit-scoped caller may replace only entries of its own units: a ref already stored for another unit is
+ * refused (422, nothing stored), so a reused ref can never overwrite a record outside the caller's scope.
+ */
+function assertRefsWritable(
+  existing: readonly StandbyRecord[],
+  rows: ReadonlyArray<{ row: StandbyRecordRowDto }>,
+  allowedUnits: readonly string[] | null,
+): void {
+  if (!allowedUnits) return;
+  const foreign = new Set(
+    existing
+      .filter((e) => !allowedUnits.includes(e.unitId))
+      .map((e) => e.externalRef),
+  );
+  const problems = rows.flatMap(({ row }, i) =>
+    row.externalRef && foreign.has(row.externalRef)
+      ? [
+          {
+            line: i + 1,
+            message: `externalRef ${row.externalRef} belongs to an entry outside your units`,
+          },
+        ]
+      : [],
+  );
+  if (problems.length > 0)
+    throw rowsInvalid('STANDBY_IMPORT_INVALID', problems);
+}
+
 async function upsert(
   manager: EntityManager,
-  tenantId: string,
-  actorId: string | null,
+  {
+    tenantId,
+    actorId,
+    allowedUnits,
+  }: {
+    tenantId: string;
+    actorId: string | null;
+    allowedUnits: readonly string[] | null;
+  },
   rows: ReadonlyArray<{ row: StandbyRecordRowDto; asset: AssetRef }>,
 ): Promise<StandbyImportV2View> {
   const repository = manager.getRepository(StandbyRecord);
@@ -151,6 +196,7 @@ async function upsert(
         })
         .getMany()
     : [];
+  assertRefsWritable(existing, rows, allowedUnits);
   const byRef = new Map(existing.map((e) => [e.externalRef, e]));
   let updated = 0;
   const inserts: Array<Partial<StandbyRecord>> = [];

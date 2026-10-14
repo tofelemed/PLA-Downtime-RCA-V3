@@ -9,6 +9,8 @@ import { MicroStopPolicyV2Service } from './micro-stop-policy-v2.service';
 import { StandbyEquipmentV2Service } from './standby-equipment-v2.service';
 import { StandbyRecordsV2Service } from './standby-records-v2.service';
 import { StandbyV2Controller } from './standby-v2.controller';
+import { WorkOrderOperationsV2Controller } from './work-order-operations-v2.controller';
+import { WorkOrderOperationsV2Service } from './work-order-operations-v2.service';
 
 /** Providers of this module that need a database (the OpenAPI snapshot stubs them). */
 export const RELIABILITY_V2_SERVICES = [
@@ -17,6 +19,7 @@ export const RELIABILITY_V2_SERVICES = [
   MicroStopPolicyV2Service,
   StandbyEquipmentV2Service,
   StandbyRecordsV2Service,
+  WorkOrderOperationsV2Service,
 ];
 
 /**
@@ -29,6 +32,7 @@ export const RELIABILITY_V2_SERVICES = [
     FailureDictionaryV2Controller,
     MicroStopPolicyV2Controller,
     StandbyV2Controller,
+    WorkOrderOperationsV2Controller,
   ],
   providers: RELIABILITY_V2_SERVICES,
   // V2Module's event writes use the failure dictionary validator

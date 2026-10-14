@@ -5141,6 +5141,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/work-order-operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operations of the caller scope (keyset on startedAt; from / to overlap, eventIds, assetIds) */
+        get: operations["WorkOrderOperationsV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/work-order-operations/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Map and import CMMS work-order operations (upsert on work order + operation, all or nothing)
+         * @description Requires `Idempotency-Key`. Operation start / end / waiting are the actual operation times — never the work-order creation or closure. A row without eventId is linked to the stop of its asset running at the operation start. Diagnosis, repair and test operations of a stop give its active repair time (KPI `mttr`, "Mean active repair time"); the stop gives the mean time to restore production. 422 WORK_ORDER_IMPORT_INVALID lists the row problems (`details.errors`).
+         */
+        post: operations["WorkOrderOperationsV2Controller_importOperations_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7425,6 +7462,39 @@ export interface components {
         };
         StandbyRecordsImportDto: {
             records: components["schemas"]["StandbyRecordRowDto"][];
+        };
+        WorkOrderOperationRowDto: {
+            /** @example 4000123 */
+            workOrderId: string;
+            /** @example 0020 */
+            operationId: string;
+            /**
+             * @description diagnosis, repair and test count as active repair
+             * @enum {string}
+             */
+            kind: "diagnosis" | "repair" | "test" | "other";
+            /** @description Actual start of the operation (not the work-order creation) */
+            startedAt: string;
+            /** @description Actual end; absent = still running */
+            endedAt?: Record<string, never> | null;
+            /** @description Waiting for parts, permit or crew inside the operation (s) */
+            waitingSeconds?: number;
+            waitingReason?: string;
+            /** Format: uuid */
+            assetId?: string;
+            /** @description Asset code (functional location) when no assetId */
+            assetCode?: string;
+            /**
+             * Format: uuid
+             * @description The stop it repaired; absent = the stop of the asset running at the operation start, if one
+             */
+            eventId?: string;
+            description?: string;
+            /** @example SAP PM */
+            source?: string;
+        };
+        WorkOrderOperationsImportDto: {
+            operations: components["schemas"]["WorkOrderOperationRowDto"][];
         };
     };
     responses: never;
@@ -15456,6 +15526,60 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["StandbyRecordsImportDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkOrderOperationsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Operations linked to these stops (repeat) */
+                eventIds?: string[];
+                /** @description Operations on these assets (repeat) */
+                assetIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkOrderOperationsV2Controller_importOperations_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOrderOperationsImportDto"];
             };
         };
         responses: {
