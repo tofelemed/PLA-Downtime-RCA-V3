@@ -130,6 +130,10 @@ const ADDED_AFTER_BACKFILL: ReadonlySet<string> = new Set([
   'failureMechanism',
   'failureCause',
   'detectionMethod',
+  // LA-08 (14 Oct 2026)
+  'fromProductId',
+  'toProductId',
+  'recoveryOfEventId',
 ]);
 const atBackfill = (fields: readonly string[]) =>
   fields.filter((field) => !ADDED_AFTER_BACKFILL.has(field));

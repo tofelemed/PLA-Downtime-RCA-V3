@@ -39,6 +39,16 @@ describe('PI connection diagnostics, browser hardening and the v1 paths (plan 1.
   beforeAll(async () => {
     usePiTestTimings();
     await harness.start();
+    // DB-05: tenant-owned v1 PI tables reference tenants, so the plant must exist
+    const organizationId = randomUUID();
+    await rows(
+      `INSERT INTO organizations (id, code, name, is_active) VALUES ($1, $2, 'PI org', true)`,
+      [organizationId, `PI-${organizationId.slice(0, 8)}`],
+    );
+    await rows(
+      `INSERT INTO tenants (id, code, name, organization_id, is_active) VALUES ($1, $2, 'PI plant', $3, true)`,
+      [tenantId, `PI-${tenantId.slice(0, 8)}`, organizationId],
+    );
     await sim.start();
     app = await createIntegrationApp(harness, {
       modules: [ProductionEventModule, IntegrationModule, PISyncJobModule],
