@@ -118,6 +118,7 @@ import { FeatureFlagsV2Controller } from './feature-flags/feature-flags-v2.contr
 import { RulesModule } from '../rules/rules.module';
 import { RulesV2Controller } from './rules/rules-v2.controller';
 import { MasterDataV2Module } from './master-data/master-data-v2.module';
+import { ReliabilityV2Module } from './reliability/reliability-v2.module';
 import {
   PeriodSummariesV2Controller,
   WaterfallReportV2Controller,
@@ -127,7 +128,10 @@ import { PlaReportsV2Controller } from './pla-reports/pla-reports-v2.controller'
 import { PlaReportsV2Service } from './pla-reports/pla-reports-v2.service';
 import { ActivitySummaryV2Controller } from './activity-summary/activity-summary-v2.controller';
 import { ActivitySummaryV2Service } from './activity-summary/activity-summary-v2.service';
-import { AdministrationV2Module, ADMINISTRATION_V2_CONTROLLERS } from './administration/administration-v2.module';
+import {
+  AdministrationV2Module,
+  ADMINISTRATION_V2_CONTROLLERS,
+} from './administration/administration-v2.module';
 import { RcaPoliciesV2Controller } from './rca-policies/rca-policies-v2.controller';
 import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
 
@@ -191,6 +195,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     RcaKnowledgeModule,
     AdministrationV2Module,
     MasterDataV2Module,
+    ReliabilityV2Module,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,

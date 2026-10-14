@@ -16878,6 +16878,358 @@
           "v2 · Master Data"
         ]
       }
+    },
+    "/api/v2/failure-dictionary": {
+      "get": {
+        "description": "Filters: `kinds`, `equipmentClass` (its items and modes plus those valid for every class), `q` (code and name), `at` (instant, default now) or `history=true` for every version. Tenant-wide master data.",
+        "operationId": "FailureDictionaryV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "createdAt",
+              "enum": [
+                "code",
+                "-code",
+                "name",
+                "-name",
+                "createdAt",
+                "-createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive search in code and name",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "active = not retired, retired = retired only, all = both",
+            "schema": {
+              "default": "all",
+              "enum": [
+                "active",
+                "retired",
+                "all"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "kinds",
+            "required": false,
+            "in": "query",
+            "description": "Entries of these kinds only (repeat the parameter)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "equipment_class",
+                  "maintainable_item",
+                  "failure_mode",
+                  "failure_mechanism",
+                  "failure_cause",
+                  "detection_method"
+                ]
+              }
+            }
+          },
+          {
+            "name": "equipmentClass",
+            "required": false,
+            "in": "query",
+            "description": "Items and modes of this equipment class and those valid for every class",
+            "schema": {
+              "maxLength": 50,
+              "type": "string"
+            }
+          },
+          {
+            "name": "at",
+            "required": false,
+            "in": "query",
+            "description": "Instant the entries are in force at (default now); ignored with `history=true`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "history",
+            "required": false,
+            "in": "query",
+            "description": "true = every version, also ended ones (default false)",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dictionary entries in force (keyset; sort code, name or createdAt)",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant. 409 DICTIONARY_CODE_EXISTS when the kind + class + code is in force; 422 INVALID_REFERENCE for an equipment class that is not in the dictionary.",
+        "operationId": "FailureDictionaryV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FailureDictionaryCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add an entry to the dictionary",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      }
+    },
+    "/api/v2/failure-dictionary/{id}": {
+      "get": {
+        "operationId": "FailureDictionaryV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One entry version (ETag = row version); foreign ids are 404",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      },
+      "patch": {
+        "description": "Requires `If-Match: \"<rowVersion>\"` of the entry in force (428 / 412). Returns the new version. 409 DICTIONARY_ENTRY_CLOSED for an ended entry; 422 when effectiveFrom is not after the version start.",
+        "operationId": "FailureDictionaryV2Controller_change_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FailureDictionaryChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change an entry: its version ends and the next version starts",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      }
+    },
+    "/api/v2/failure-dictionary/import": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. New entries are created, changed ones get a new version from `effectiveFrom`, equal ones stay; entries missing from the document are kept. 422 DICTIONARY_IMPORT_INVALID lists the row problems (`details.errors`). `dryRun` counts without storing.",
+        "operationId": "FailureDictionaryV2Controller_importEntries_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FailureDictionaryImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Bulk upsert entries from JSON rows or CSV (all or nothing)",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      }
+    },
+    "/api/v2/failure-dictionary/{id}/retire": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 DICTIONARY_CLASS_IN_USE for an equipment class with open items or modes; 409 DICTIONARY_ENTRY_CLOSED when already ended.",
+        "operationId": "FailureDictionaryV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FailureDictionaryRetireDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "End an entry (history and coded events stay)",
+        "tags": [
+          "v2 · Failure dictionary"
+        ]
+      }
     }
   },
   "info": {
@@ -22969,6 +23321,179 @@
           "name": {
             "type": "string",
             "maxLength": 255
+          }
+        }
+      },
+      "FailureDictionaryCreateDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "object",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "category": {
+            "type": "object",
+            "maxLength": 100,
+            "nullable": true,
+            "example": "Mechanical failure"
+          },
+          "assetTypes": {
+            "description": "Equipment classes only: asset types the class covers",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isPending": {
+            "type": "boolean",
+            "description": "The \"unknown / investigation pending\" choice of its list"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "Start of this version (default now)"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "equipment_class",
+              "maintainable_item",
+              "failure_mode",
+              "failure_mechanism",
+              "failure_cause",
+              "detection_method"
+            ]
+          },
+          "equipmentClass": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Maintainable items and failure modes: code of their equipment class (empty = every class)"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 50,
+            "example": "ELP"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "example": "External leakage – process medium"
+          }
+        },
+        "required": [
+          "kind",
+          "code",
+          "name"
+        ]
+      },
+      "FailureDictionaryRowDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "equipment_class",
+              "maintainable_item",
+              "failure_mode",
+              "failure_mechanism",
+              "failure_cause",
+              "detection_method"
+            ]
+          },
+          "equipmentClass": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "object",
+            "nullable": true
+          },
+          "category": {
+            "type": "object",
+            "nullable": true
+          },
+          "assetTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isPending": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FailureDictionaryImportDto": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "maxItems": 5000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FailureDictionaryRowDto"
+            }
+          },
+          "csv": {
+            "type": "string",
+            "description": "CSV with a header row: kind,equipmentClass,code,name,description,category,assetTypes,isPending (assetTypes separated by \";\", isPending yes/no)",
+            "maxLength": 2000000
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "Start of new and changed entries (default now)"
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "true = check and count only, store nothing"
+          }
+        }
+      },
+      "FailureDictionaryChangeDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "object",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "category": {
+            "type": "object",
+            "maxLength": 100,
+            "nullable": true,
+            "example": "Mechanical failure"
+          },
+          "assetTypes": {
+            "description": "Equipment classes only: asset types the class covers",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isPending": {
+            "type": "boolean",
+            "description": "The \"unknown / investigation pending\" choice of its list"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "Start of this version (default now)"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          }
+        }
+      },
+      "FailureDictionaryRetireDto": {
+        "type": "object",
+        "properties": {
+          "effectiveTo": {
+            "type": "string",
+            "description": "End of the entry (default now)"
           }
         }
       }
