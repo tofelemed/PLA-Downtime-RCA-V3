@@ -4,7 +4,7 @@ import { loginViaUI } from './auth-helpers';
 import { call } from './downtime-world';
 
 /**
- * D06 (owner decision 2026-10-12): production plans, profiles, rates, valuation rates and FX rates are
+ * D06 (owner decision 2026-10-12): production plans, profiles and rates are
  * approved by someone other than the draft's author (403 SEPARATION_OF_DUTIES, SuperAdmin included).
  * E2E seeders that author such drafts as one manager approve them as this second manager approver of the
  * same plant: the `e2e-pd-approver` account the UX05 and T22 specs already use, registered on first use.

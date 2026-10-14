@@ -6,24 +6,25 @@ import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
 import { call } from './test-utils/downtime-world';
 import { E2E_FX_SOURCE, ensureFinanceTenant, FINANCE_TENANT, FINANCE_AUTHOR, policiesOf, retireE2eFxRates, type PolicySummary } from './test-utils/finance-world';
-import { secondApproverPage, secondApproverToken } from './test-utils/second-approver';
+import { ensureFinanceUsers, FINANCE_APPROVER, FINANCE_MAINTAINER, financePage, plantOf, type FinanceUsers } from './test-utils/finance-users';
 
 /**
  * Finance screens (plan 2.6 UI, prerequisite of 3.10) at `/finance`:
- * - FX rates in Demo Plant: manager@acme.com creates a USD → IRR draft for a dedicated past window (each
- *   saved draft opens its own page); its own approve control is disabled (D06 separation of duties,
- *   2026-10-12) and the second approver approves it after a confirmation; a second draft for the same
- *   window is refused at approval with 409 VERSION_OVERLAP listing the first; both are retired again
- *   through the screen (each retire asks first).
- * - Valuation policy in the dedicated "E2E Test Tenant finance": the author creates a draft and its own
- *   approval is refused with 403 SEPARATION_OF_DUTIES. Demo Plant's policy versions are never touched
- *   (checked before / after).
+ * - FX rates in Demo Plant (SME V1, 14 Oct 2026): the E2E finance maintainer creates a USD → IRR draft for a
+ *   dedicated past window (each saved draft opens its own page) and sees no approve control; the E2E
+ *   finance approver approves it after a confirmation; a second draft for the same window is refused at
+ *   approval with 409 VERSION_OVERLAP listing the first; the approver retires both through the screen.
+ *   manager@acme.com (manager approver) is refused FX and policy writes with 403 FORBIDDEN_ROLE.
+ * - Valuation policy in the dedicated "E2E Test Tenant finance": the author (holding both finance roles)
+ *   creates a draft and its own approval is refused with 403 SEPARATION_OF_DUTIES. Demo Plant's policy
+ *   versions are never touched (checked before / after).
  */
 const MANAGER = { email: 'manager@acme.com', password: 'demo123' };
 const ADMIN = { email: 'admin@acme.com', password: 'demo123' };
 const WINDOW = { from: '2001-01-01T00:00', to: '2001-01-02T00:00' };
 
 let manager = '';
+let finance: FinanceUsers = { maintainer: '', approver: '' };
 let demoPolicies: PolicySummary[] = [];
 const suffix = Date.now().toString(36);
 
@@ -32,7 +33,7 @@ test.describe.configure({ mode: 'serial', timeout: 180_000 });
 const fxDetail = (page: Page) => page.getByTestId('fx-detail');
 
 async function fxIdOf(source: string): Promise<string> {
-  const list = await call<{ items: Array<{ id: string; source: string | null }> }>(manager, 'GET', '/v2/fx-rates?fromCurrency=USD&toCurrency=IRR&limit=200');
+  const list = await call<{ items: Array<{ id: string; source: string | null }> }>(finance.maintainer, 'GET', '/v2/fx-rates?fromCurrency=USD&toCurrency=IRR&limit=200');
   const id = list.body.items.find((rate) => rate.source === source)?.id;
   expect(id, `FX version ${source}`).toBeDefined();
   return id ?? '';
@@ -61,26 +62,36 @@ test.describe('Finance — FX rates and valuation policy approval (plan 3.10 pre
     manager = (await authenticate(MANAGER.email, MANAGER.password)).accessToken;
     const flags = await call<{ items: Array<{ key: string; enabled: boolean }> }>(manager, 'GET', '/v2/feature-flags');
     expect(flags.body.items.find((flag) => flag.key === 'v2.codesAdmin')?.enabled, 'v2.codesAdmin must be on for Demo Plant').toBe(true);
-    await retireE2eFxRates(manager);
+    const superAdmin = (await authenticate(ADMIN.email, ADMIN.password)).accessToken;
+    finance = await ensureFinanceUsers(superAdmin, manager, await plantOf(manager));
+    await retireE2eFxRates(finance.approver);
     demoPolicies = await policiesOf(manager);
-    await secondApproverToken(manager);
   });
 
   test.afterAll(async () => {
-    if (manager) await retireE2eFxRates(manager);
+    if (finance.approver) await retireE2eFxRates(finance.approver);
   });
 
-  test('FX: draft → approve (not by its author) in a dedicated window; an overlapping draft is refused with 409; both retired', async ({ page, browser }) => {
+  test('SME V1: a manager approver can no longer write FX rates or sign off a valuation policy (403 FORBIDDEN_ROLE)', async () => {
+    const draft = { fromCurrency: 'USD', toCurrency: 'IRR', rate: '1', effectiveFrom: '2001-01-01T00:00:00Z', source: `${E2E_FX_SOURCE} ${suffix} refused` };
+    expectRefused(await call(manager, 'POST', '/v2/fx-rates', draft, { 'Idempotency-Key': randomUUID() }), 'FORBIDDEN_ROLE');
+    const [newest] = demoPolicies;
+    expect(newest, 'Demo Plant has a valuation policy version').toBeDefined();
+    expectRefused(await call(manager, 'POST', `/v2/valuation-policies/${newest.id}/approve`, {}, { 'Idempotency-Key': randomUUID() }), 'FORBIDDEN_ROLE');
+  });
+
+  test('FX: finance maintainer drafts, finance approver approves in a dedicated window; an overlapping draft is refused with 409; both retired', async ({ page, browser }) => {
     const [first, second] = [`${E2E_FX_SOURCE} ${suffix} A`, `${E2E_FX_SOURCE} ${suffix} B`];
-    await loginViaUI(page, MANAGER.email, MANAGER.password);
+    await loginViaUI(page, FINANCE_MAINTAINER.email, FINANCE_MAINTAINER.password);
     await expect(page.locator('a[href="/finance"]').first()).toBeVisible();
 
     await addFxDraft(page, first, '585000.25');
     await expect(fxDetail(page).getByTestId('fx-rate')).toHaveText('1 USD = 585000.25 IRR');
-    await expect(page.getByTestId('fx-approve')).toBeDisabled();
+    // a maintainer never approves (SME V1): no approve or retire control at all
+    await expect(page.getByTestId('fx-approve')).toHaveCount(0);
     await addFxDraft(page, second, '590000');
 
-    const approver = await secondApproverPage(browser);
+    const approver = await financePage(browser, FINANCE_APPROVER);
     await openFx(approver, first);
     await approver.getByTestId('fx-approve').click();
     await confirmDialog(approver, 'Approve rate');
@@ -93,14 +104,14 @@ test.describe('Finance — FX rates and valuation policy approval (plan 3.10 pre
     await expect(refusal.getByTestId('refusal-conflict')).toHaveCount(1);
     await approver.keyboard.press('Escape');
     await expect(fxDetail(approver)).toHaveAttribute('data-state', 'draft');
-    await approver.context().close();
 
     for (const source of [second, first]) {
-      await openFx(page, source);
-      await page.getByTestId('fx-retire').click();
-      await confirmDialog(page, 'Retire rate');
-      await expect(fxDetail(page)).toHaveAttribute('data-state', 'retired', { timeout: 20_000 });
+      await openFx(approver, source);
+      await approver.getByTestId('fx-retire').click();
+      await confirmDialog(approver, 'Retire rate');
+      await expect(fxDetail(approver)).toHaveAttribute('data-state', 'retired', { timeout: 20_000 });
     }
+    await approver.context().close();
   });
 
   test("policy: the author's own approval is refused (SEPARATION_OF_DUTIES) in the E2E finance tenant", async ({ page }) => {

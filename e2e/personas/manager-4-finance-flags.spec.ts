@@ -3,17 +3,20 @@ import { loginViaUI } from '../test-utils/auth-helpers';
 import { policiesOf, type PolicySummary } from '../test-utils/finance-world';
 import { confirmDialog, fillDateTime } from './support/codes-finance-ui';
 import { api, itemsOf, post } from './support/manager-api';
-import { expectRefused, expectSodDisabled } from './support/hidden-controls';
+import { expectRefused } from './support/hidden-controls';
 import { ADMINS, PREFIX, sessionOf, shortId, type Session } from './support/manager-users';
+import { ensureFinanceUsers, FINANCE_APPROVER, FINANCE_MAINTAINER, financePage, type FinanceUsers } from '../test-utils/finance-users';
 
 /**
  * Manager approver persona — journeys 6 and 7:
- * 6. Finance (`/finance`, plan 2.6 UI): Mei (TenantAdmin) drafts an open-ended USD → IRR FX version
- *    starting far in the future (a zero rate is a validation error first); Oliver approves it — when an open-ended
- *    approved version overlaps, the 409 VERSION_OVERLAP is shown and "supersede" closes that version at
- *    the draft's start (nothing is retired, the rate in force today is unchanged). Mei drafts a valuation policy version effective in
- *    2099; her own Approve is disabled with the SoD reason and the server refuses it (403
- *    SEPARATION_OF_DUTIES); Oliver approves it. Demo Plant's
+ * 6. Finance (`/finance`, plan 2.6 UI; SME V1 14 Oct 2026, finance roles): Mei and Oliver (manager
+ *    approvers) see no draft buttons and are refused FX and policy writes with 403 FORBIDDEN_ROLE. The E2E
+ *    finance maintainer (registered by Anna, granted `finance_maintainer`) drafts an open-ended USD → IRR FX
+ *    version far in the future (a zero rate is a validation error first); the E2E finance approver approves
+ *    it — when an open-ended approved version overlaps, the 409 VERSION_OVERLAP is shown and "supersede"
+ *    closes that version at the draft's start (nothing retired, today's rate unchanged) — and the screen
+ *    names the revaluation queued. The maintainer drafts a 2099 policy version without an approve control;
+ *    the approver signs it off (author/approver SoD is covered by finance-valuation.spec.ts). Demo Plant's
  *    approved policy versions stay as they were.
  * 7. Feature flags: no screen exists for them (the frontend only reads flags), so Anna switches a flag
  *    that is already on through the API (a no-op, never off) and the audit log shows the entry; the
@@ -23,6 +26,7 @@ import { ADMINS, PREFIX, sessionOf, shortId, type Session } from './support/mana
 let mei: Session;
 let oliver: Session;
 let anna: Session;
+let finance: FinanceUsers = { maintainer: '', approver: '' };
 let policiesBefore: PolicySummary[] = [];
 const suffix = shortId();
 const fxSource = `${PREFIX}FX ${suffix}`;
@@ -72,14 +76,30 @@ async function openPolicy(page: Page, token: string, notes: string): Promise<voi
 test.describe('Manager persona — finance approvals and feature flags', () => {
   test.beforeAll(async () => {
     [mei, oliver, anna] = await Promise.all([sessionOf(ADMINS.mei), sessionOf(ADMINS.oliver), sessionOf(ADMINS.anna)]);
+    // Anna (TenantAdmin) registers the E2E finance users and grants their finance roles in Demo Plant
+    finance = await ensureFinanceUsers(anna.token, anna.token, { tenantId: anna.tenantId, organizationId: anna.organizationId });
     policiesBefore = await policiesOf(mei.token);
     const years = (await fxVersions(mei.token)).filter((v) => v.state !== 'retired').map((v) => Number(v.effectiveFrom.slice(0, 4)));
     fxWindow = { from: `${Math.max(2100, ...years) + 1}-01-01T00:00` };
   });
 
-  test('J6a Mei drafts a future USD → IRR FX version (zero rate refused first)', async ({ page }) => {
+  test('J6a SME V1: Mei (manager approver) no longer drafts FX rates or policies: no button, 403 FORBIDDEN_ROLE', async ({ page }) => {
     await loginViaUI(page, ADMINS.mei.email, ADMINS.mei.password);
     await expect(page.locator('a[href="/finance"]').first()).toBeVisible();
+    await page.goto('/finance?tab=fx');
+    await expect(page.getByTestId('fx-rates-tab')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('fx-new')).toHaveCount(0);
+    await page.goto('/finance?tab=policies');
+    await expect(page.getByTestId('policies-tab')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('policy-new')).toHaveCount(0);
+    const fx = { fromCurrency: 'USD', toCurrency: 'IRR', rate: '1', effectiveFrom: `${fxWindow.from}:00Z`, source: `${fxSource} refused` };
+    expectRefused(await post(mei.token, '/v2/fx-rates', fx), 'FORBIDDEN_ROLE');
+    const policy = { defaultBasis: 'contribution_margin', timeBasisRule: 'exclusive', reportingCurrencies: ['IRR', 'USD'], fxPolicy: 'snapshot', effectiveFrom: '2099-01-01T00:00:00Z' };
+    expectRefused(await post(mei.token, '/v2/valuation-policies', policy), 'FORBIDDEN_ROLE');
+  });
+
+  test('J6b the finance maintainer drafts a future USD → IRR FX version (zero rate refused first)', async ({ browser }) => {
+    const page = await financePage(browser, FINANCE_MAINTAINER);
     await page.goto('/finance?tab=fx');
     await page.getByTestId('fx-new').click({ timeout: 60_000 });
     await page.selectOption('#fromCurrency', 'USD');
@@ -89,20 +109,23 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
     await page.fill('#fxSource', fxSource);
     await page.getByTestId('fx-save').click();
     await expect(page.getByTestId('field-error-rate')).toContainText('greater than 0');
-    expect((await fxVersions(mei.token)).find((v) => v.source === fxSource)).toBeUndefined();
+    expect((await fxVersions(finance.maintainer)).find((v) => v.source === fxSource)).toBeUndefined();
     await page.fill('#rate', '2750000');
     await page.getByTestId('fx-save').click();
     await expect(fxDetail(page)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
     await expect(fxDetail(page).getByTestId('fx-rate')).toHaveText('1 USD = 2750000 IRR');
+    await page.context().close();
   });
 
-  test('J6b Oliver approves it: the overlap with the live version is shown (409), supersede closes it in 2099', async ({ page }) => {
+  test('J6c the finance approver approves it: the overlap with the live version is shown (409), supersede closes it; Oliver cannot approve', async ({ browser }) => {
+    const draft = (await fxVersions(oliver.token)).find((v) => v.source === fxSource);
+    expectRefused(await post(oliver.token, `/v2/fx-rates/${draft?.id}/approve`, {}), 'FORBIDDEN_ROLE');
     const live = (await fxVersions(oliver.token)).filter((v) => v.state === 'approved' && v.source !== fxSource);
     expect(live.length).toBeGreaterThan(0);
     const inForceToday = live.find((v) => v.effectiveFrom <= new Date().toISOString() && (v.effectiveTo === null || v.effectiveTo > new Date().toISOString()));
     expect(inForceToday, 'Demo Plant has a live USD → IRR rate before the test').toBeDefined();
-    await loginViaUI(page, ADMINS.oliver.email, ADMINS.oliver.password);
-    await openFx(page, oliver.token, fxSource);
+    const page = await financePage(browser, FINANCE_APPROVER);
+    await openFx(page, finance.approver, fxSource);
     await page.getByTestId('fx-approve').click();
     await confirmDialog(page, 'Approve rate');
     const refusal = page.getByRole('alertdialog').getByTestId('refusal');
@@ -116,17 +139,17 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
       test.info().annotations.push({ type: 'note', description: 'VERSION_OVERLAP with an open-ended approved version; approved with supersede' });
     }
     await expect(fxDetail(page)).toHaveAttribute('data-state', 'approved', { timeout: 20_000 });
+    // SME V7: the approval names the revaluation it queued
+    await expect(page.getByTestId('revaluation-queued')).toBeVisible();
     const after = await fxVersions(oliver.token);
     expect(after.find((v) => v.source === fxSource)?.state).toBe('approved');
     for (const version of live) expect(after.find((v) => v.version === version.version)?.state).toBe('approved'); // nothing retired
     expect(after.find((v) => v.version === inForceToday?.version)?.effectiveFrom).toBe(inForceToday?.effectiveFrom); // the live rate still applies today
-    await page.reload();
-    await expect(fxDetail(page)).toHaveAttribute('data-state', 'approved', { timeout: 60_000 });
+    await page.context().close();
   });
 
-  test("J6c valuation policy: Mei's own approval is disabled with the SoD reason and refused by the server (SEPARATION_OF_DUTIES); Oliver approves; older versions unchanged", async ({ browser }) => {
-    const author = await browser.newPage();
-    await loginViaUI(author, ADMINS.mei.email, ADMINS.mei.password);
+  test('J6d valuation policy: the finance maintainer drafts, Oliver cannot approve (403 FORBIDDEN_ROLE), the finance approver approves; older versions unchanged', async ({ browser }) => {
+    const author = await financePage(browser, FINANCE_MAINTAINER);
     await author.goto('/finance');
     await expect(author.getByTestId('policy-banner')).toBeVisible({ timeout: 60_000 });
     await author.getByTestId('policy-new').click();
@@ -134,23 +157,22 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
     await author.fill('#policyNotes', policyNotes);
     await author.getByTestId('policy-save').click();
     await expect(author.getByTestId('policy-detail')).toHaveAttribute('data-status', 'unapproved', { timeout: 20_000 });
-    // the author sees Approve disabled with the separation-of-duties reason; the server refuses her (403)
-    await expectSodDisabled(author.getByTestId('policy-approve-start'));
-    const drafted = (await policiesOf(mei.token)).find((p) => p.notes === policyNotes);
-    expectRefused(await post(mei.token, `/v2/valuation-policies/${drafted?.id}/approve`, {}), 'SEPARATION_OF_DUTIES');
-    expect((await policiesOf(mei.token)).find((p) => p.notes === policyNotes)?.approved).toBe(false);
-    await author.close();
+    // a maintainer never signs off (SME V1): no approve control
+    await expect(author.getByTestId('policy-approve-start')).toHaveCount(0);
+    const drafted = (await policiesOf(finance.maintainer)).find((p) => p.notes === policyNotes);
+    expectRefused(await post(oliver.token, `/v2/valuation-policies/${drafted?.id}/approve`, {}), 'FORBIDDEN_ROLE');
+    expect((await policiesOf(oliver.token)).find((p) => p.notes === policyNotes)?.approved).toBe(false);
+    await author.context().close();
 
-    const approver = await browser.newPage();
-    await loginViaUI(approver, ADMINS.oliver.email, ADMINS.oliver.password);
-    await openPolicy(approver, oliver.token, policyNotes);
+    const approver = await financePage(browser, FINANCE_APPROVER);
+    await openPolicy(approver, finance.approver, policyNotes);
     await approver.getByTestId('policy-approve-start').click();
     await confirmDialog(approver, `Approve version ${drafted?.version}`);
     await expect(approver.getByTestId('policy-detail')).toHaveAttribute('data-status', 'approved', { timeout: 20_000 });
     const after = await policiesOf(oliver.token);
     expect(after.find((p) => p.notes === policyNotes)?.approved).toBe(true);
     expect(after.filter((p) => p.notes !== policyNotes)).toEqual(policiesBefore); // the owner's versions are untouched
-    await approver.close();
+    await approver.context().close();
   });
 
   test('J7 feature flags: no screen; Anna sets an already-on flag on through the API (no-op, audited); menu entries stay', async ({ page }) => {
