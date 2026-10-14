@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { ProfileKind } from './model/mqtt-form';
 import { FIELD_DEFAULTS, type MapRow } from './model/profile-draft';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ProfileFieldsEditorProps {
   kind: ProfileKind;
@@ -15,13 +16,14 @@ export interface ProfileFieldsEditorProps {
  * an override only matters for a non-contract source, since the v1 schemas refuse unknown properties).
  */
 export function ProfileFieldsEditor({ kind, rows, error, onChange }: ProfileFieldsEditorProps) {
+  const { number } = useNumberFormat();
   const defaults = FIELD_DEFAULTS[kind];
   const unused = Object.keys(defaults).filter((name) => !rows.some((row) => row.token === name));
   const edit = (index: number, patch: Partial<MapRow>) => onChange(rows.map((row, at) => (at === index ? { ...row, ...patch } : row)));
   const remove = (index: number) => onChange(rows.filter((_row, at) => at !== index));
   return (
     <fieldset className="space-y-2 rounded-md border p-3" data-testid="profile-fields">
-      <legend className="px-1 text-sm font-medium">Field overrides ({rows.length})</legend>
+      <legend className="px-1 text-sm font-medium">Field overrides ({number(rows.length)})</legend>
       {rows.map((row, index) => (
         <div key={index} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 text-xs" data-testid="profile-field-row">
           <Input aria-label="Field" list="pp-field-names" value={row.token} onChange={(event) => edit(index, { token: event.target.value })} />

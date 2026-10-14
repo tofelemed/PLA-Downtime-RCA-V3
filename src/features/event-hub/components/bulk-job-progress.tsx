@@ -5,12 +5,14 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { ERROR_MESSAGES } from '@/features/ux-kit/errors';
 import { BULK_JOB_STATE_LABELS, labelOf } from '@/features/ux-kit/labels';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /** Plain text of a failed batch's refusal (the code itself is never shown). */
 const batchError = (code: string | null | undefined) => (code ? ERROR_MESSAGES[code]?.title : undefined) ?? 'Not applied';
 
 /** API04 job progress of a large bulk coding: processed / total, and a partial result made explicit. */
 export function BulkJobProgress({ jobId }: { jobId: string }) {
+  const { number } = useNumberFormat();
   const job = useBulkJob(jobId);
   const data = job.data;
   const percent = data && data.total > 0 ? Math.round((data.processed / data.total) * 100) : 0;
@@ -21,7 +23,7 @@ export function BulkJobProgress({ jobId }: { jobId: string }) {
         {data && (
           <>
             <p className="text-sm" aria-live="polite">
-              {labelOf(BULK_JOB_STATE_LABELS, data.state)}: {data.processed} of {data.total} processed{data.failed > 0 ? `, ${data.failed} failed` : ''}
+              {labelOf(BULK_JOB_STATE_LABELS, data.state)}: {number(data.processed)} of {number(data.total)} processed{data.failed > 0 ? `, ${number(data.failed)} failed` : ''}
             </p>
             <Progress value={percent} aria-label="Bulk coding progress" />
             {isTerminalJob(data) && data.state !== 'completed' && (
@@ -30,7 +32,7 @@ export function BulkJobProgress({ jobId }: { jobId: string }) {
                 <AlertDescription>
                   {failedChunks.map((chunk) => (
                     <p key={chunk.index} className="text-xs">
-                      Batch {chunk.index + 1} ({chunk.size} events): {batchError(chunk.errorCode)}
+                      Batch {number(chunk.index + 1)} ({number(chunk.size)} events): {batchError(chunk.errorCode)}
                     </p>
                   ))}
                 </AlertDescription>

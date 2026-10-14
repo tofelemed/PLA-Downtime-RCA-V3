@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { humanize } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '../components/analytics-card';
 import { waterfallQuery, type AnalyticsScope } from '../model/analytics-scope';
@@ -39,6 +40,7 @@ export function WaterfallTab({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useScopeWaterfall(waterfallQuery(scope), env.timezone);
   const data = query.data?.data;
+  const { number } = useNumberFormat();
   const closes = data && (
     <Badge variant={data.closes ? 'default' : 'destructive'} data-testid="waterfall-closes" data-closes={String(data.closes)}>
       {data.closes ? 'Closes to actual' : 'Does not close'}
@@ -62,7 +64,7 @@ export function WaterfallTab({ scope }: { scope: AnalyticsScope }) {
           <DataTable caption="Waterfall bars" columns={columnsOf(data.uom)} rows={data.bars} getRowKey={(bar) => bar.key} pager="none" density="compact" />
           {data.excluded.length > 0 && (
             <p className="text-xs text-muted-foreground" data-testid="waterfall-excluded">
-              {data.excluded.length} slices left out (figure unknown): {[...new Set(data.excluded.map((e) => humanize(e.reason)))].join(', ')}
+              {number(data.excluded.length)} slices left out (figure unknown): {[...new Set(data.excluded.map((e) => humanize(e.reason)))].join(', ')}
             </p>
           )}
         </div>

@@ -11,6 +11,7 @@ import { useCaseWorkspace } from '../../../case-context';
 import { CopyReportButton } from '../copy-report-button';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { AddCauseDialog, type NewCause } from './add-cause-dialog';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 const defaultCategories = (): FishboneCategory[] =>
   ANALYSIS_SETTINGS.fishbone.categories.map((name, index) => ({ id: `cat-${index + 1}`, name, causes: [] }));
@@ -24,12 +25,13 @@ function report(content: FishboneContent): string {
 }
 
 function CategoryCard(props: { category: FishboneCategory; readOnly: boolean; onAdd: () => void; onChange: (next: FishboneCategory) => void }) {
+  const { number } = useNumberFormat();
   const { category, readOnly } = props;
   const update = (causes: FishboneCategory['causes']) => props.onChange({ ...category, causes });
   return (
     <section className="space-y-2 rounded border p-3" aria-label={category.name} data-testid="fishbone-category">
       <h4 className="flex items-center justify-between text-sm font-semibold">
-        {category.name} <Badge variant="outline">{category.causes.length}</Badge>
+        {category.name} <Badge variant="outline">{number(category.causes.length)}</Badge>
       </h4>
       {category.causes.length === 0 && <p className="text-xs text-muted-foreground">No causes yet.</p>}
       <ul className="space-y-1 text-sm">
@@ -68,6 +70,7 @@ function CategoryCard(props: { category: FishboneCategory; readOnly: boolean; on
 }
 
 function Editor({ record, save }: { record: ToolRecord<'fishbone'>; save: (body: FishboneContent) => Promise<unknown> }) {
+  const { number } = useNumberFormat();
   const { rca, readOnly } = useCaseWorkspace();
   const [content, setContent] = useState<FishboneContent>(() => ({ effect: record?.effect ?? rca.title, categories: record?.categories ?? defaultCategories() }));
   const [adding, setAdding] = useState<FishboneCategory | null>(null);
@@ -84,7 +87,7 @@ function Editor({ record, save }: { record: ToolRecord<'fishbone'>; save: (body:
         <Input id="fishbone-effect" value={content.effect} maxLength={1000} disabled={readOnly} onChange={(e) => setContent({ ...content, effect: e.target.value })} />
       </div>
       <p className="text-sm text-muted-foreground">
-        {causes.length} cause(s), {causes.filter((c) => c.isPrimary).length} primary, {causes.filter((c) => c.likelihood === 'High').length} of high likelihood.
+        {number(causes.length)} cause(s), {number(causes.filter((c) => c.isPrimary).length)} primary, {number(causes.filter((c) => c.likelihood === 'High').length)} of high likelihood.
       </p>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {content.categories.map((category) => (

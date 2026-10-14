@@ -13,14 +13,16 @@ import { CHANGE_CATEGORIES, LIKELIHOODS, rowId } from '../../../../model/analysi
 import { useCaseWorkspace } from '../../../case-context';
 import { ChoiceField, optionsOf } from '../../../evidence/form-controls';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function ChangeRow(props: { change: ChangeRecord; index: number; readOnly: boolean; onChange: (next: ChangeRecord) => void; onRemove: () => void }) {
+  const { number } = useNumberFormat();
   const { change, index, readOnly } = props;
   const set = (patch: Partial<ChangeRecord>) => props.onChange({ ...change, ...patch });
   return (
     <li className="grid gap-2 rounded border p-3 md:grid-cols-2" data-testid="change-row">
       <div className="space-y-1 md:col-span-2">
-        <Label htmlFor={`change-${index}`}>Change {index + 1}</Label>
+        <Label htmlFor={`change-${index}`}>Change {number(index + 1)}</Label>
         <Input id={`change-${index}`} value={change.description} maxLength={1000} disabled={readOnly} onChange={(e) => set({ description: e.target.value })} />
       </div>
       <ChoiceField id={`change-category-${index}`} label="Area" value={change.category} options={optionsOf(CHANGE_CATEGORIES)} onChange={(category) => set({ category })} />
@@ -36,6 +38,7 @@ function ChangeRow(props: { change: ChangeRecord; index: number; readOnly: boole
 }
 
 function Editor({ record, save }: { record: ToolRecord<'change'>; save: (body: ChangeContent) => Promise<unknown> }) {
+  const { number } = useNumberFormat();
   const { readOnly } = useCaseWorkspace();
   const zone = usePlantTimezone();
   const [content, setContent] = useState<ChangeContent>(() => ({ question: record?.question ?? 'What changed before the incident?', changes: record?.changes ?? [] }));
@@ -50,7 +53,7 @@ function Editor({ record, save }: { record: ToolRecord<'change'>; save: (body: C
         <Input id="change-question" value={content.question} maxLength={255} disabled={readOnly} onChange={(e) => setContent({ ...content, question: e.target.value })} />
       </div>
       <p className="text-sm text-muted-foreground">
-        {content.changes.length} change(s), {related} related to the incident.
+        {number(content.changes.length)} change(s), {number(related)} related to the incident.
       </p>
       <ul className="space-y-2">
         {content.changes.map((change, index) => (

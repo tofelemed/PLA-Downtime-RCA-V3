@@ -21,7 +21,7 @@ const COLUMNS: DataTableColumn<ConnectionView>[] = [
   },
   { id: 'type', header: 'Source', nowrap: true, cell: (connection) => sourceTypeLabel(connection.sourceType) },
   { id: 'state', header: 'State', nowrap: true, cell: (connection) => (connection.isActive ? 'Active' : 'Inactive') },
-  { id: 'config', header: 'Settings version', align: 'right', nowrap: true, cell: (connection) => connection.configVersion },
+  { id: 'config', header: 'Settings version', align: 'right', nowrap: true, cell: (connection) => String(connection.configVersion) }, // an identifier: stays Latin
   { id: 'secret', header: 'Credential', nowrap: true, cell: (connection) => (connection.hasSecret ? 'Stored' : 'None') },
 ];
 

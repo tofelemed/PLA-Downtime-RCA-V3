@@ -14,8 +14,10 @@ import { TEAM_LOCKED_STATUSES } from '../../model/case-workflow';
 import { WorkflowPanel } from '../workflow/workflow-panel';
 import { DefinitionFields } from './definition-fields';
 import { TeamEditor } from './team-editor';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function Progress({ rca }: { rca: RcaCaseView }) {
+  const { text } = useNumberFormat();
   const analyses = useRcaAnalyses(rca.id);
   const hasRecord = Object.values(analyses.data ?? {}).some((record) => record !== null);
   return (
@@ -29,7 +31,7 @@ function Progress({ rca }: { rca: RcaCaseView }) {
               {step.label}
               <span className="sr-only">{step.done ? '(done)' : '(open)'}</span>
             </span>
-            <span className="text-xs text-muted-foreground">{step.hint}</span>
+            <span className="text-xs text-muted-foreground">{text(step.hint)}</span>
           </li>
         );
       })}

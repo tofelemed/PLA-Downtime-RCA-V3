@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { IconButton } from '@/features/ux-kit/icon-button';
 import { ActionIcon } from '@/lib/icons';
+import { type NumberFormat, useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { downloadRcaFile } from '../../api/rca-files';
 
-const sizeText = (size: number | null) => (size === null ? '' : size >= 1_048_576 ? `${(size / 1_048_576).toFixed(1)} MB` : `${Math.max(1, Math.round(size / 1024))} kB`);
+const sizeText = (size: number | null, { number }: NumberFormat) =>
+  size === null ? '' : size >= 1_048_576 ? `${number(size / 1_048_576, 1)} MB` : `${number(Math.max(1, Math.round(size / 1024)))} kB`;
 
 export interface AttachmentListProps {
   rcaId: string;
@@ -18,6 +20,7 @@ export interface AttachmentListProps {
 /** Files of an evidence item: download (authenticated) and, while editing, remove. */
 export function AttachmentList({ rcaId, attachments, onRemove }: AttachmentListProps) {
   const [error, setError] = useState<unknown>(null);
+  const format = useNumberFormat();
   if (attachments.length === 0) return <p className="text-sm text-muted-foreground">No files.</p>;
   const download = (file: RcaEvidenceAttachment) => {
     setError(null);
@@ -29,7 +32,7 @@ export function AttachmentList({ rcaId, attachments, onRemove }: AttachmentListP
         {attachments.map((file) => (
           <li key={file.fileName} className="flex items-center justify-between gap-2 px-2 py-1">
             <span className="truncate">
-              {file.name} <span className="text-muted-foreground">{sizeText(file.size)}</span>
+              {file.name} <span className="text-muted-foreground">{sizeText(file.size, format)}</span>
             </span>
             <span className="flex items-center gap-1">
               <Button type="button" variant="ghost" size="sm" onClick={() => download(file)}>

@@ -11,18 +11,20 @@ import { ActionIcon } from '@/lib/icons';
 import { filtersFromParams, legacyRedirect, paramsFromFilters, type CaseListFilters } from '../model/case-filters';
 import { CaseFiltersBar } from './case-filters-bar';
 import { CaseTable } from './case-table';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /** Counts of the scope (from the server): total, by status, overdue and open critical cases. */
 function CaseSummary() {
+  const { number } = useNumberFormat();
   const summary = useRcaSummary();
   if (!summary.data) return null;
   const { total, overdue, critical, byStatus } = summary.data;
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm" data-testid="case-summary" aria-label="Case counts">
-      <Badge variant="outline">{total} case(s)</Badge>
+      <Badge variant="outline">{number(total)} case(s)</Badge>
       {byStatus.map((row) => (
         <Badge key={row.status ?? 'none'} variant="secondary">
-          {row.status ?? 'No status'}: {row.count}
+          {row.status ?? 'No status'}: {number(row.count)}
         </Badge>
       ))}
       <Badge variant={overdue > 0 ? 'destructive' : 'outline'}>Overdue: {overdue}</Badge>

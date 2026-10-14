@@ -1,3 +1,4 @@
+import { type DigitSystem, localizeNumber } from '@/lib/dates';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
 import type { RcaPolicyVersion, RcaRepeatMatch } from './rca-policy-api';
 
@@ -7,34 +8,35 @@ export const REPEAT_MATCH_LABELS: Readonly<Record<RcaRepeatMatch, string>> = {
   asset_mode_and_mechanism: 'the same asset, failure mode and mechanism',
 };
 
-const percent = (share: number) => `${formatDecimal(String(share * 100), 1)} %`;
-const number = (value: number, digits = 0) => formatDecimal(String(value), digits);
+/** Numbers of the policy text in the plant's digits (`system`); identifiers (criticalities, codes) stay as they are. */
+const percent = (share: number, system?: DigitSystem) => localizeNumber(`${formatDecimal(String(share * 100), 1)} %`, system);
+const number = (value: number, system?: DigitSystem, fractionDigits = 0) => formatDecimal(String(value), fractionDigits, system);
 
 /** The any-of triggers of a version in plain words (SME D17 / CA8). */
-export function triggerText(policy: RcaPolicyVersion, duration: (seconds: number) => string): string {
+export function triggerText(policy: RcaPolicyVersion, duration: (seconds: number) => string, digits?: DigitSystem): string {
   const parts = [
     policy.durationThresholdSeconds > 0
       ? `unplanned stops from ${duration(policy.durationThresholdSeconds)}`
       : 'no duration trigger',
     policy.lostQuantityShareOfDailyPlan === null
       ? 'no lost-quantity trigger'
-      : `approved lost quantity from ${percent(policy.lostQuantityShareOfDailyPlan)} of the daily plan`,
-    `${policy.repeatCount} incidents of ${REPEAT_MATCH_LABELS[policy.repeatMatch]} in ${policy.repeatWindowDays} days`,
+      : `approved lost quantity from ${percent(policy.lostQuantityShareOfDailyPlan, digits)} of the daily plan`,
+    `${number(policy.repeatCount, digits)} incidents of ${REPEAT_MATCH_LABELS[policy.repeatMatch]} in ${number(policy.repeatWindowDays, digits)} days`,
     policy.cumulative
-      ? `${duration(policy.cumulative.downtimeSeconds)} same-mode downtime in ${policy.cumulative.windowDays} days`
+      ? `${duration(policy.cumulative.downtimeSeconds)} same-mode downtime in ${number(policy.cumulative.windowDays, digits)} days`
       : 'no cumulative trigger',
     policy.costThreshold === null || !policy.costCurrency
       ? 'no money limit'
-      : `approved value from ${number(policy.costThreshold)} ${policy.costCurrency}`,
+      : `approved value from ${number(policy.costThreshold, digits)} ${policy.costCurrency}`,
   ];
   return parts.join(' · ');
 }
 
 /** Critical assets and the safety override in plain words. */
-export function overrideText(policy: RcaPolicyVersion): string {
+export function overrideText(policy: RcaPolicyVersion, digits?: DigitSystem): string {
   const { criticalities, thresholdFactor } = policy.criticalAssets;
   const critical = criticalities.length
-    ? `assets with criticality ${criticalities.join(', ')}: production thresholds × ${number(thresholdFactor, 2)}`
+    ? `assets with criticality ${criticalities.join(', ')}: production thresholds × ${number(thresholdFactor, digits, 2)}`
     : 'no critical-asset rule';
   const markers = [...policy.consequence.solTypes, ...policy.consequence.severities];
   const safety = markers.length ? `always triggers on ${markers.join(', ')}` : 'no consequence override';
@@ -42,23 +44,23 @@ export function overrideText(policy: RcaPolicyVersion): string {
 }
 
 /** The workflow rules of the version (read-only on this page; SME CA2–CA7). */
-export function ruleFacts(policy: RcaPolicyVersion): Array<{ label: string; value: string }> {
+export function ruleFacts(policy: RcaPolicyVersion, digits?: DigitSystem): Array<{ label: string; value: string }> {
   const { effectiveness, fmea, fiveWhy, investigation } = policy;
   const tiers = Object.entries(investigation)
-    .map(([name, tier]) => `${name}: ${tier.methodGroups.map((group) => group.join(' or ')).join(' + ')} (team ≥ ${tier.minTeamMembers})`)
+    .map(([name, tier]) => `${name}: ${tier.methodGroups.map((group) => group.join(' or ')).join(' + ')} (team ≥ ${number(tier.minTeamMembers, digits)})`)
     .join('; ');
   return [
     {
       label: 'Effectiveness',
-      value: `baseline ${effectiveness.baselineLookbackDays} days before the action; at least ${number(effectiveness.minExposureHours)} run hours after; ${percent(effectiveness.requiredReduction)} fewer same-mode incidents per run hour; review after ${effectiveness.reviewDays} days`,
+      value: `baseline ${number(effectiveness.baselineLookbackDays, digits)} days before the action; at least ${number(effectiveness.minExposureHours, digits)} run hours after; ${percent(effectiveness.requiredReduction, digits)} fewer same-mode incidents per run hour; review after ${number(effectiveness.reviewDays, digits)} days`,
     },
     {
       label: 'FMEA',
-      value: `${fmea.method === 'rpn' ? 'RPN' : 'action priority'}; action from RPN ${fmea.rpnThreshold} or severity ${fmea.severityReview}+; ${fmea.priorityRules.length} priority rules`,
+      value: `${fmea.method === 'rpn' ? 'RPN' : 'action priority'}; action from RPN ${number(fmea.rpnThreshold, digits)} or severity ${number(fmea.severityReview, digits)}+; ${number(fmea.priorityRules.length, digits)} priority rules`,
     },
     {
       label: '5-Why',
-      value: `${fiveWhy.guidelineLevels} levels as guidance; evidence for every answer${fiveWhy.evidencePerLevel ? ' required' : ''}; not accepted alone: ${fiveWhy.unsupportedRootCauses.join(', ')}`,
+      value: `${number(fiveWhy.guidelineLevels, digits)} levels as guidance; evidence for every answer${fiveWhy.evidencePerLevel ? ' required' : ''}; not accepted alone: ${fiveWhy.unsupportedRootCauses.join(', ')}`,
     },
     { label: 'Methods by consequence', value: tiers },
   ];

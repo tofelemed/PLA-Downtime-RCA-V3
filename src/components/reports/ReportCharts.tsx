@@ -17,9 +17,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import {
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { NumberTooltipContent } from './number-tooltip-content';
 
 export const CHART_COLORS = [
   'hsl(221, 83%, 53%)',
@@ -74,6 +75,7 @@ export function CategoryBarChart({
   valueLabel?: string;
   layout?: 'vertical' | 'horizontal';
 }) {
+  const { axis: tick } = useNumberFormat();
   if (!data.length) return <ChartEmpty />;
 
   const chartData = data.map((d) => ({ name: d.label, value: d.value }));
@@ -86,9 +88,9 @@ export function CategoryBarChart({
       <ChartContainer config={config} className="h-[300px] w-full">
         <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-          <XAxis type="number" tickLine={false} axisLine={false} />
+          <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={tick} />
           <YAxis dataKey="name" type="category" width={110} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
-          <ChartTooltip content={<ChartTooltipContent />} />
+          <ChartTooltip content={<NumberTooltipContent chartConfig={config} />} />
           <Bar dataKey="value" fill="var(--color-value)" radius={[0, 4, 4, 0]} />
         </BarChart>
       </ChartContainer>
@@ -100,8 +102,8 @@ export function CategoryBarChart({
       <BarChart data={chartData} margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
         <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
-        <YAxis tickLine={false} axisLine={false} />
-        <ChartTooltip content={<ChartTooltipContent />} />
+        <YAxis tickLine={false} axisLine={false} tickFormatter={tick} />
+        <ChartTooltip content={<NumberTooltipContent chartConfig={config} />} />
         <Bar dataKey="value" fill="var(--color-value)" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ChartContainer>
@@ -125,7 +127,7 @@ export function DistributionPieChart({ data }: { data: LabelValuePoint[] }) {
   return (
     <ChartContainer config={config} className="mx-auto h-[300px] w-full max-w-md">
       <PieChart>
-        <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+        <ChartTooltip content={<NumberTooltipContent chartConfig={config} nameKey="name" />} />
         <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={2}>
           {chartData.map((entry) => (
             <Cell key={entry.name} fill={entry.fill} />
@@ -152,6 +154,7 @@ export function TrendLineChart({
   valueLabel?: string;
   showCount?: boolean;
 }) {
+  const { axis: tick } = useNumberFormat();
   if (!data.length) return <ChartEmpty />;
 
   const config: ChartConfig = {
@@ -164,9 +167,9 @@ export function TrendLineChart({
       <LineChart data={data} margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
         <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
-        <YAxis yAxisId="left" tickLine={false} axisLine={false} />
-        {showCount && <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} />}
-        <ChartTooltip content={<ChartTooltipContent />} />
+        <YAxis yAxisId="left" tickLine={false} axisLine={false} tickFormatter={tick} />
+        {showCount && <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickFormatter={tick} />}
+        <ChartTooltip content={<NumberTooltipContent chartConfig={config} />} />
         <Legend />
         <Line yAxisId="left" type="monotone" dataKey="value" stroke="var(--color-value)" strokeWidth={2} dot={{ r: 3 }} />
         {showCount && (
@@ -186,6 +189,7 @@ interface OeePeriodPoint {
 }
 
 export function OeeMultiLineChart({ data }: { data: OeePeriodPoint[] }) {
+  const { axis: tick } = useNumberFormat();
   if (!data.length) return <ChartEmpty />;
 
   const chartData = data.map((d) => ({ period: d.label, ...d }));
@@ -201,8 +205,8 @@ export function OeeMultiLineChart({ data }: { data: OeePeriodPoint[] }) {
       <LineChart data={chartData} margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
         <XAxis dataKey="period" tickLine={false} axisLine={false} />
-        <YAxis tickLine={false} axisLine={false} domain={[0, 100]} />
-        <ChartTooltip content={<ChartTooltipContent />} />
+        <YAxis tickLine={false} axisLine={false} domain={[0, 100]} tickFormatter={tick} />
+        <ChartTooltip content={<NumberTooltipContent chartConfig={config} />} />
         <Legend />
         <Line type="monotone" dataKey="oee" stroke="var(--color-oee)" strokeWidth={2} dot={{ r: 3 }} />
         <Line type="monotone" dataKey="availability" stroke="var(--color-availability)" strokeWidth={2} dot={false} />
@@ -214,6 +218,7 @@ export function OeeMultiLineChart({ data }: { data: OeePeriodPoint[] }) {
 }
 
 export function OeeComponentsBar({ data }: { data: Array<{ label: string; value: number }> }) {
+  const { axis: tick } = useNumberFormat();
   if (!data.length || data.every((d) => !d.value)) return <ChartEmpty />;
 
   const chartData = data.map((d) => ({ name: d.label, value: d.value }));
@@ -226,8 +231,8 @@ export function OeeComponentsBar({ data }: { data: Array<{ label: string; value:
       <BarChart data={chartData} margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
         <XAxis dataKey="name" tickLine={false} axisLine={false} />
-        <YAxis tickLine={false} axisLine={false} domain={[0, 100]} />
-        <ChartTooltip content={<ChartTooltipContent />} />
+        <YAxis tickLine={false} axisLine={false} domain={[0, 100]} tickFormatter={tick} />
+        <ChartTooltip content={<NumberTooltipContent chartConfig={config} />} />
         <Bar dataKey="value" fill="var(--color-value)" radius={[4, 4, 0, 0]}>
           {chartData.map((_, i) => (
             <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -245,6 +250,7 @@ interface ParetoPoint {
 }
 
 export function LossParetoChart({ data }: { data: ParetoPoint[] }) {
+  const { axis: tick } = useNumberFormat();
   if (!data.length) return <ChartEmpty />;
 
   const chartData = data.map((d) => ({ name: d.label, cost: d.value, cumulative: d.cumulative }));
@@ -258,9 +264,9 @@ export function LossParetoChart({ data }: { data: ParetoPoint[] }) {
       <ComposedChart data={chartData} margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
         <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
-        <YAxis yAxisId="left" tickLine={false} axisLine={false} />
-        <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tickLine={false} axisLine={false} />
-        <ChartTooltip content={<ChartTooltipContent />} />
+        <YAxis yAxisId="left" tickLine={false} axisLine={false} tickFormatter={tick} />
+        <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tickLine={false} axisLine={false} tickFormatter={tick} />
+        <ChartTooltip content={<NumberTooltipContent chartConfig={config} />} />
         <Legend />
         <Bar yAxisId="left" dataKey="cost" fill="var(--color-cost)" radius={[4, 4, 0, 0]} />
         <Line yAxisId="right" type="monotone" dataKey="cumulative" stroke="var(--color-cumulative)" strokeWidth={2} dot={{ r: 3 }} />

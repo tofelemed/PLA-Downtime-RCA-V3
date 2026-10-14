@@ -7,6 +7,7 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { CommandError } from './command-error';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface SelectAllMatchingDialogProps {
   query: EventSelectionQuery | null;
@@ -21,6 +22,7 @@ export interface SelectAllMatchingDialogProps {
  * changed after the snapshot are refused by bulk coding, never silently included.
  */
 export function SelectAllMatchingDialog({ query, onClose, onConfirm }: SelectAllMatchingDialogProps) {
+  const { number } = useNumberFormat();
   const env = useEventHubEnv();
   const { dateTime } = usePlantFormat();
   const selection = useEventSelection(query);
@@ -39,7 +41,7 @@ export function SelectAllMatchingDialog({ query, onClose, onConfirm }: SelectAll
             {data && (
               <dl className="grid grid-cols-[8rem_1fr] gap-y-1 text-sm" data-testid="selection-summary">
                 <dt className="text-muted-foreground">Events</dt>
-                <dd data-testid="selection-total">{data.count}</dd>
+                <dd data-testid="selection-total">{number(data.count)}</dd>
                 <dt className="text-muted-foreground">From</dt>
                 <dd>{dateTime(data.firstStart)}</dd>
                 <dt className="text-muted-foreground">To</dt>
@@ -47,7 +49,7 @@ export function SelectAllMatchingDialog({ query, onClose, onConfirm }: SelectAll
                 <dt className="text-muted-foreground">Units</dt>
                 <dd>{data.unitIds.map((id) => env.unitName(id)).join(', ')}</dd>
                 <dt className="text-muted-foreground">Assets</dt>
-                <dd>{data.assetCount}</dd>
+                <dd>{number(data.assetCount)}</dd>
               </dl>
             )}
           </DataState>

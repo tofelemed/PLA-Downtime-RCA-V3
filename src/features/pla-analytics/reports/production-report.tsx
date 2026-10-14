@@ -3,6 +3,7 @@ import type { DowntimeReportView } from '@/api/v2/types/reports';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
+import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '../components/analytics-card';
 import { OeeGroupTable } from '../components/oee-group-table';
@@ -35,7 +36,7 @@ const DOWNTIME_COLUMNS: Array<DataTableColumn<Group>> = [
     ),
   },
   { id: 'downtime', header: 'Downtime', align: 'right', nowrap: true, cell: (group) => <DurationText seconds={group.value} variant="clock" /> },
-  { id: 'share', header: 'Share', align: 'right', nowrap: true, cell: (group) => shareText(group.share) },
+  { id: 'share', header: 'Share', align: 'right', nowrap: true, cell: (group) => <LocalizedNumber text={shareText(group.share)} /> },
   { id: 'periods', header: 'Periods', align: 'right', cell: (group) => group.periods },
 ];
 

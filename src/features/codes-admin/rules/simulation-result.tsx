@@ -4,6 +4,7 @@ import { humanize } from '@/features/ux-kit/labels/humanize';
 import { usePlantDates } from '../hooks/use-plant-dates';
 import { useRuleValueText } from '../hooks/use-rule-value-text';
 import type { ValueText } from '../model/rule-describe';
+import { type NumberFormat, useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 type Distribution = RuleSimulationView['fields'][string];
 type Sample = RuleSimulationView['samples'][number];
@@ -13,9 +14,9 @@ interface FieldRow {
   distribution: Distribution;
 }
 
-const countsText = (field: string, record: Record<string, number>, valueText: ValueText) =>
+const countsText = (field: string, record: Record<string, number>, valueText: ValueText, number: NumberFormat['number']) =>
   Object.entries(record)
-    .map(([value, count]) => `${value === 'null' ? 'Not set' : valueText(field, value)}: ${count}`)
+    .map(([value, count]) => `${value === 'null' ? 'Not set' : valueText(field, value)}: ${number(count)}`)
     .join(', ') || '—';
 
 function fieldLabel(schema: RulesSchemaView, field: string): string {
@@ -24,13 +25,14 @@ function fieldLabel(schema: RulesSchemaView, field: string): string {
 
 /** A recorded simulation run as the server returned it (counts and diffs are never computed here). */
 export function SimulationResult({ result, schema }: { result: RuleSimulationView; schema: RulesSchemaView }) {
+  const { number } = useNumberFormat();
   const dates = usePlantDates();
   const valueText = useRuleValueText(schema);
   const fieldRows: FieldRow[] = Object.entries(result.fields).map(([field, distribution]) => ({ field, distribution }));
   const fieldColumns: Array<DataTableColumn<FieldRow>> = [
     { id: 'field', header: 'Field', cell: (row) => <span data-testid="sim-field" data-field={row.field}>{fieldLabel(schema, row.field)}</span> },
-    { id: 'before', header: 'Before', cell: (row) => countsText(row.field, row.distribution.before, valueText) },
-    { id: 'after', header: 'After', cell: (row) => countsText(row.field, row.distribution.after, valueText) },
+    { id: 'before', header: 'Before', cell: (row) => countsText(row.field, row.distribution.before, valueText, number) },
+    { id: 'after', header: 'After', cell: (row) => countsText(row.field, row.distribution.after, valueText, number) },
   ];
   const sampleColumns: Array<DataTableColumn<Sample>> = [
     { id: 'start', header: 'Event start', nowrap: true, cell: (sample) => <span data-testid="sim-sample">{dates.dateTime(sample.startTime)}</span> },
@@ -45,13 +47,13 @@ export function SimulationResult({ result, schema }: { result: RuleSimulationVie
   return (
     <div className="space-y-4 text-sm" data-testid="sim-result" data-evaluated={result.evaluated} data-matched={result.matched} data-changed={result.changed} data-version={result.version ?? 'draft'}>
       <p>
-        {result.version === null ? 'Draft' : `Version ${result.version}`} over {dates.validity(result.scope.from, result.scope.to)}: <strong>{result.evaluated}</strong> event(s) evaluated,{' '}
-        <strong>{result.matched}</strong> matched, <strong>{result.changed}</strong> would change.
+        {result.version === null ? 'Draft' : `Version ${result.version}`} over {dates.validity(result.scope.from, result.scope.to)}: <strong>{number(result.evaluated)}</strong> event(s) evaluated,{' '}
+        <strong>{number(result.matched)}</strong> matched, <strong>{number(result.changed)}</strong> would change.
         {result.truncated && ' Only the latest events were evaluated (sample limit).'}
-        {result.budgetExceeded > 0 && ` ${result.budgetExceeded} evaluation(s) were too complex to finish and did not match.`}
+        {result.budgetExceeded > 0 && ` ${number(result.budgetExceeded)} evaluation(s) were too complex to finish and did not match.`}
       </p>
       {fieldRows.length > 0 && <DataTable caption="Field values before and after" columns={fieldColumns} rows={fieldRows} getRowKey={(row) => row.field} pager="none" density="compact" />}
-      {Object.keys(result.flags).length > 0 && <p data-testid="sim-flags">Flags: {Object.entries(result.flags).map(([flag, count]) => `${flag}: ${count}`).join(', ')}</p>}
+      {Object.keys(result.flags).length > 0 && <p data-testid="sim-flags">Flags: {Object.entries(result.flags).map(([flag, count]) => `${flag}: ${number(count)}`).join(', ')}</p>}
       {result.samples.length > 0 && <DataTable caption="Sample events" columns={sampleColumns} rows={result.samples} getRowKey={(sample) => sample.eventId} density="compact" />}
       <p className="text-xs text-muted-foreground">
         The simulation was recorded. It shows the rule on its own: on new events, user choices and reason-code defaults still come first.

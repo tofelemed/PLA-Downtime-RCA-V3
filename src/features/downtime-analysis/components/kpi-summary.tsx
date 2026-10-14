@@ -1,6 +1,7 @@
 import type { KpiAggregateView } from '@/api/v2/types/reports';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { useCalendarPreference } from '@/lib/dates';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { labelOf } from '@/features/ux-kit/labels';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
@@ -37,9 +38,10 @@ export function KpiSummary({ bundle }: { bundle: DowntimeBundleResult }) {
 }
 
 function TileValue({ spec, view }: { spec: TileSpec; view: KpiAggregateView }) {
+  const { digits } = useCalendarPreference();
   if (spec.kind === 'duration') return <DurationText seconds={view.value} variant="clock" />;
-  if (spec.kind === 'ratio') return <>{formatRatio(view.value)}</>;
-  return <>{formatCount(view.value)}</>;
+  if (spec.kind === 'ratio') return <>{formatRatio(view.value, 1, digits)}</>;
+  return <>{formatCount(view.value, digits)}</>;
 }
 
 /** One server KPI: value, or "—" with the server's reason; provisional / exception flagged in text. */

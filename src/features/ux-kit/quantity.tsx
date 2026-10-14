@@ -1,4 +1,4 @@
-import { formatDecimal } from './format/decimal';
+import { useNumberFormat } from './use-number-format';
 
 export interface QuantityProps {
   /** decimal string from the API */
@@ -9,9 +9,10 @@ export interface QuantityProps {
   className?: string;
 }
 
-/** `1,234.50 t` — a decimal string with its explicit unit; a missing unit is flagged, not guessed. */
+/** `1,234.50 t` — a decimal string with its explicit unit; a missing unit is flagged, not guessed.
+ * Digits and separators follow the plant's digits setting; the hover shows the API value as sent. */
 export function Quantity({ value, uom, fractionDigits = 2, className }: QuantityProps) {
-  const text = formatDecimal(value, fractionDigits);
+  const text = useNumberFormat().decimal(value, fractionDigits);
   return (
     <span className={className} title={value ?? undefined}>
       {text}

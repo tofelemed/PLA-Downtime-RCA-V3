@@ -8,6 +8,7 @@ import { addManual, DraftState, ManualDraft, manualProblems, removeManual } from
 import type { WorkflowIssue } from '../model/workflow-errors';
 import { LineIssues } from './line-issues';
 import { ManualLineForm } from './manual-line-form';
+import { type NumberFormat, useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ManualLinesProps {
   view: ReconciliationView;
@@ -18,14 +19,15 @@ export interface ManualLinesProps {
   timezone: string;
 }
 
-function evidenceText(line: ManualDraft): string {
-  if (line.eventIds.length) return `${line.eventIds.length} linked event(s)`;
+function evidenceText(line: ManualDraft, number: NumberFormat['number']): string {
+  if (line.eventIds.length) return `${number(line.eventIds.length)} linked event(s)`;
   if (line.missingEvent) return line.missingCode ? 'no event · reason code missing' : 'no event (cause without an event)';
   return 'no evidence';
 }
 
 /** Manual lines of the draft (reason, kind, quantity, evidence) and the form that adds one. */
 export function ManualLines({ view, draft, setDraft, issues, readOnly, timezone }: ManualLinesProps) {
+  const { number } = useNumberFormat();
   const [adding, setAdding] = useState(false);
   const uomOf = (sliceId: string) => view.slices.find((s) => s.sliceId === sliceId)?.uom ?? null;
   return (
@@ -43,7 +45,7 @@ export function ManualLines({ view, draft, setDraft, issues, readOnly, timezone 
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">{KIND_LABELS[line.kind] ?? line.kind}</Badge>
             <Quantity value={line.quantity} uom={uomOf(line.sliceId)} />
-            <span className="text-xs text-muted-foreground">{evidenceText(line)}</span>
+            <span className="text-xs text-muted-foreground">{evidenceText(line, number)}</span>
             {line.reason && <span className="text-xs">“{line.reason}”</span>}
             {!readOnly && (
               <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setDraft((s) => removeManual(s, line.uid))}>

@@ -15,6 +15,7 @@ import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { actionLabel, auditColumns, entityLabel } from './components/audit-columns';
 import { ExportAuditButton } from './components/export-audit-button';
 import { toAuditFilters, type AuditUrlFilters } from './model/audit-filters';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /** Charts pull in recharts: loaded only when the "Activity" section is opened. */
 const AuditCharts = lazy(() => import('./components/audit-charts').then((module) => ({ default: module.AuditCharts })));
@@ -35,6 +36,7 @@ export function AuditPage() {
 }
 
 function AuditScreen() {
+  const { number } = useNumberFormat();
   const navigate = useNavigate();
   const dates = usePlantDates();
   const [defaults] = useState<AuditUrlFilters>(() => ({ ...rollingWindow(30 * DAY_MS), q: '', action: ALL, entity: ALL }));
@@ -61,7 +63,7 @@ function AuditScreen() {
           <FilterSelect label="Record type filter" value={values.entity} options={entities} onChange={(entity) => setValues({ entity })} />
         </div>
       </Section>
-      <Section title="Activity" description={summary.data ? `${summary.data.total} entries in the period` : undefined} collapsible defaultOpen={false}>
+      <Section title="Activity" description={summary.data ? `${number(summary.data.total)} entries in the period` : undefined} collapsible defaultOpen={false}>
         <Suspense fallback={<Skeleton className="h-72 w-full" />}>{summary.data && <AuditCharts summary={summary.data} />}</Suspense>
       </Section>
       <Section title="Entries">

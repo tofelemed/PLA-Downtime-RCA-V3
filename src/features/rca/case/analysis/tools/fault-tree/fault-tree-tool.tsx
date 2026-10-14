@@ -11,17 +11,19 @@ import { useCaseWorkspace } from '../../../case-context';
 import { ChoiceField } from '../../../evidence/form-controls';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { TopEventProbability } from './top-event-probability';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 const TYPE_OPTIONS = FAULT_TREE_TYPES.map((type) => ({ value: type, label: RCA_FAULT_TREE_NODE_LABELS[type] }));
 
 function NodeRow(props: { node: FaultTreeNode; index: number; nodes: FaultTreeNode[]; readOnly: boolean; onChange: (next: FaultTreeNode) => void; onRemove: () => void }) {
+  const { number } = useNumberFormat();
   const { node, index, readOnly } = props;
   const parents = props.nodes.filter((other) => other.id !== node.id).map((other, at) => ({ value: other.id, label: other.description || `Node ${at + 1}` }));
   const hasProbability = node.type === 'BasicEvent' || node.type === 'Event';
   return (
     <li className="grid gap-2 rounded border p-3 md:grid-cols-[2fr_1fr_1fr_1fr_auto]" data-testid="fault-tree-node">
       <div className="space-y-1">
-        <Label htmlFor={`ft-desc-${index}`}>Event or gate {index + 1}</Label>
+        <Label htmlFor={`ft-desc-${index}`}>Event or gate {number(index + 1)}</Label>
         <Input id={`ft-desc-${index}`} value={node.description} maxLength={1000} disabled={readOnly} onChange={(e) => props.onChange({ ...node, description: e.target.value })} />
       </div>
       <ChoiceField id={`ft-type-${index}`} label="Kind" value={node.type} options={TYPE_OPTIONS} onChange={(type) => props.onChange({ ...node, type })} />

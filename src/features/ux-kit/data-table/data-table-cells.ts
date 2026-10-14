@@ -1,5 +1,6 @@
-import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
+import { createElement, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { assertNoRawId } from '@/features/ux-kit/labels/assert-no-raw-id';
+import { NumberText } from '../number-text';
 import type { DataTableColumn, DataTableDensity } from './data-table-types';
 
 const ALIGN: Record<NonNullable<DataTableColumn<unknown>['align']>, string> = {
@@ -28,11 +29,14 @@ export function headClass<T>(column: DataTableColumn<T>, density: DataTableDensi
   return [HEAD_DENSITY[density], ALIGN[column.align ?? 'left'], 'whitespace-nowrap'].join(' ');
 }
 
-/** Cell content; plain text is checked (dev only) for internal ids that must never reach users. */
+/**
+ * Cell content; plain text is checked (dev only) for internal ids that must never reach users. A plain
+ * number (a count, a position) is shown in the plant's digits (`NumberText`).
+ */
 export function renderCellValue<T>(column: DataTableColumn<T>, row: T, index: number, caption: string): ReactNode {
   const value = column.cell(row, index);
   if (typeof value === 'string' || typeof value === 'number') assertNoRawId(value, `${caption} › ${column.id}`);
-  return value;
+  return typeof value === 'number' ? createElement(NumberText, { value }) : value;
 }
 
 const INTERACTIVE = 'a,button,input,select,textarea,label,[role="button"],[role="menuitem"],[role="checkbox"]';

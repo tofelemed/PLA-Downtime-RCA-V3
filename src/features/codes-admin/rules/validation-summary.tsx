@@ -1,5 +1,6 @@
 import { StatusIcon } from '@/lib/icons';
 import type { RuleCheckView, RulesSchemaView } from '@/api/v2/types/rules';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ValidationSummaryProps {
   check: RuleCheckView | undefined;
@@ -11,6 +12,7 @@ export interface ValidationSummaryProps {
 
 /** Live result of `POST /rules/validate` for the current draft (the server's verdict, not the browser's). */
 export function ValidationSummary({ check, checking, general, limits }: ValidationSummaryProps) {
+  const { number } = useNumberFormat();
   const state = checking ? 'checking' : !check ? 'idle' : check.valid ? 'valid' : 'invalid';
   return (
     <div className="rounded border p-2 text-sm" role="status" aria-live="polite" data-testid="rule-validation" data-state={state}>
@@ -21,7 +23,7 @@ export function ValidationSummary({ check, checking, general, limits }: Validati
       )}
       {state === 'valid' && (
         <p className="flex items-center gap-1 text-green-700 dark:text-green-400">
-          <StatusIcon.success className="h-4 w-4" aria-hidden="true" /> Valid: {check?.conditionCount} of at most {limits.maxConditions} conditions.
+          <StatusIcon.success className="h-4 w-4" aria-hidden="true" /> Valid: {number(check?.conditionCount)} of at most {number(limits.maxConditions)} conditions.
         </p>
       )}
       {state === 'invalid' && (

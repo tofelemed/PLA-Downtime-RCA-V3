@@ -4,6 +4,7 @@ import { invalidateForChange } from '@/api/v2/queries/invalidation';
 import { usePlanGenerationJob } from '@/api/v2/queries/plans';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { refusalTitle } from '@/features/ux-kit/errors';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 const TERMINAL = new Set(['completed', 'failed']);
 const STATE_LABELS: Record<string, string> = { queued: 'waiting', running: 'running', completed: 'completed', failed: 'failed' };
@@ -13,6 +14,7 @@ const STATE_LABELS: Record<string, string> = { queued: 'waiting', running: 'runn
  * On a terminal state the cached plan reads refresh (cache invalidation only — nothing is written).
  */
 export function GenerationProgress({ jobId }: { jobId: string }) {
+  const { number } = useNumberFormat();
   const job = usePlanGenerationJob(jobId);
   const queryClient = useQueryClient();
   const tenantId = useV2TenantId();
@@ -25,7 +27,7 @@ export function GenerationProgress({ jobId }: { jobId: string }) {
   return (
     <p className="text-sm" role="status" data-testid="generation-status" data-state={view.state}>
       Generation of version {view.version}: <strong>{STATE_LABELS[view.state] ?? 'running'}</strong>
-      {view.result?.periods !== undefined ? ` · ${String(view.result.periods)} periods stored` : ''}
+      {view.result?.periods !== undefined ? ` · ${number(view.result.periods)} periods stored` : ''}
       {view.errorCode ? ` · ${refusalTitle(view.errorCode, null)}` : ''}
     </p>
   );

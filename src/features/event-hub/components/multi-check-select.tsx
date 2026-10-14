@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { UiIcon } from '@/lib/icons';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface CheckOption {
   value: string;
@@ -28,6 +29,7 @@ const sameSelection = (a: readonly string[], b: readonly string[]) => a.length =
 
 /** Multi-value filter (OR within one dimension, server-side); keyboard reachable checkboxes. */
 export function MultiCheckSelect({ label, options, selected, onChange, testId, commitOnClose = false }: MultiCheckSelectProps) {
+  const { number } = useNumberFormat();
   const [draft, setDraft] = useState<readonly string[] | null>(null);
   const current = draft ?? selected;
   const emit = (next: string[]) => (commitOnClose ? setDraft(next) : onChange(next));
@@ -37,7 +39,7 @@ export function MultiCheckSelect({ label, options, selected, onChange, testId, c
     if (!sameSelection(draft, selected)) onChange([...draft]);
     setDraft(null);
   };
-  const summary = current.length === 0 ? 'All' : `${current.length} selected`;
+  const summary = current.length === 0 ? 'All' : `${number(current.length)} selected`;
   return (
     <Popover onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>

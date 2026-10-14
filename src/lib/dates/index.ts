@@ -9,7 +9,7 @@ export {
   isDigitSystem,
 } from './calendar-types';
 export { CalendarPreferenceContext, useCalendarPreference } from './calendar-preference-context';
-export { toDigits, toLatinDigits } from './digits';
+export { PERSIAN_DECIMAL_SEPARATOR, PERSIAN_GROUP_SEPARATOR, localizeNumber, toDigits, toLatinDigits, toLatinNumber } from './digits';
 export {
   type CalendarDisplayOptions,
   type DateTimeDisplayOptions,

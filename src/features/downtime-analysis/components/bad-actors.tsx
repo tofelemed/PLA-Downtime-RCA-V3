@@ -1,4 +1,5 @@
 import type { DowntimeGroupView } from '@/api/v2/types/reports';
+import { type DigitSystem, useCalendarPreference } from '@/lib/dates';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
@@ -11,7 +12,7 @@ interface ActorRow {
   stops: string | undefined;
 }
 
-const columns: DataTableColumn<ActorRow>[] = [
+const columnsFor = (digits: DigitSystem): DataTableColumn<ActorRow>[] => [
   { id: 'asset', header: 'Asset', cell: (row) => row.group.label ?? (row.group.key ? 'Unknown asset' : 'No asset') },
   {
     id: 'downtime',
@@ -24,8 +25,8 @@ const columns: DataTableColumn<ActorRow>[] = [
       </span>
     ),
   },
-  { id: 'share', header: 'Share', align: 'right', nowrap: true, cell: (row) => formatRatio(row.group.share) },
-  { id: 'stops', header: 'Stops', align: 'right', nowrap: true, cell: (row) => (row.stops === undefined ? '—' : formatCount(row.stops)) },
+  { id: 'share', header: 'Share', align: 'right', nowrap: true, cell: (row) => formatRatio(row.group.share, 1, digits) },
+  { id: 'stops', header: 'Stops', align: 'right', nowrap: true, cell: (row) => (row.stops === undefined ? '—' : formatCount(row.stops, digits)) },
 ];
 
 /**
@@ -34,6 +35,7 @@ const columns: DataTableColumn<ActorRow>[] = [
  * moment is shared, so the asset rows add up to the unit downtime (decision 2.7).
  */
 export function BadActors({ bundle, views }: { bundle: DowntimeBundleResult; views: PageViews }) {
+  const { digits } = useCalendarPreference();
   const duration = viewOf(bundle.data?.data, views.assetDuration);
   const frequency = viewOf(bundle.data?.data, views.assetFrequency);
   const stops = new Map((frequency?.groups ?? []).map((group) => [group.key, group.value]));
@@ -48,7 +50,7 @@ export function BadActors({ bundle, views }: { bundle: DowntimeBundleResult; vie
       isEmpty={rows.length === 0}
       note="Allocated: overlapping stops of several assets share each moment, so asset totals add up to the unit downtime. Stops without an asset are listed as “No asset”."
     >
-      <DataTable caption="Downtime by asset" columns={columns} rows={rows} getRowKey={(row) => row.group.key ?? 'none'} density="compact" />
+      <DataTable caption="Downtime by asset" columns={columnsFor(digits)} rows={rows} getRowKey={(row) => row.group.key ?? 'none'} density="compact" />
     </ReportCard>
   );
 }

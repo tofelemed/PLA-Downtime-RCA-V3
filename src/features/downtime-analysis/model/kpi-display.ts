@@ -1,4 +1,5 @@
 import type { KpiAggregateView, ReliabilityRowView } from '@/api/v2/types/reports';
+import { type DigitSystem, localizeNumber } from '@/lib/dates';
 import { formatDecimal, roundDecimal } from '@/features/ux-kit/format/decimal';
 
 /** How a summary tile shows its server value (the browser formats, it never computes). */
@@ -64,8 +65,8 @@ export function reasonText(reason: string | null | undefined): string | null {
     .join('; ');
 }
 
-/** `"0.875"` → `"87.5 %"`: the decimal point moved on the digits, never through a float. */
-export function formatRatio(value: string | null | undefined, fractionDigits = 1): string {
+/** `"0.875"` → `"87.5 %"`: the decimal point moved on the digits, never through a float; in the plant's `digits`. */
+export function formatRatio(value: string | null | undefined, fractionDigits = 1, digits?: DigitSystem): string {
   if (value === null || value === undefined || value === '') return '—';
   const match = /^(-?)(\d+)(?:\.(\d*))?$/.exec(value.trim());
   if (!match) return value;
@@ -73,12 +74,12 @@ export function formatRatio(value: string | null | undefined, fractionDigits = 1
   const padded = frac.padEnd(2, '0');
   const shifted = `${sign}${int}${padded.slice(0, 2)}.${padded.slice(2) || '0'}`;
   const rounded = roundDecimal(shifted, fractionDigits);
-  return `${rounded ?? shifted} %`;
+  return localizeNumber(`${rounded ?? shifted} %`, digits);
 }
 
-/** A count from the API ("3.0000000000" → "3"). */
-export function formatCount(value: string | null | undefined): string {
-  return formatDecimal(value ?? null, 0);
+/** A count from the API ("3.0000000000" → "3"), in the plant's `digits`. */
+export function formatCount(value: string | null | undefined, digits?: DigitSystem): string {
+  return formatDecimal(value ?? null, 0, digits);
 }
 
 export function findMetric(views: readonly KpiAggregateView[] | undefined, metric: string): KpiAggregateView | undefined {

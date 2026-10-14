@@ -6,6 +6,7 @@ import { CandidateTable } from './candidate-table';
 import { ConflictDialogs } from './conflict-dialogs';
 import { EditorProblem } from './editor-problem';
 import { ManualLines } from './manual-lines';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface LossLineEditorProps {
   view: ReconciliationView;
@@ -21,6 +22,7 @@ export interface LossLineEditorProps {
  * server's; refusals are shown on the line they concern.
  */
 export function LossLineEditor({ view, timezone, readOnly = false }: LossLineEditorProps) {
+  const { number } = useNumberFormat();
   const editor = useDraftEditor(view);
   const rowIssues = issuesByRow(editor.problem?.issues ?? [], editor.refs);
   const conflict = editor.problem?.kind === 'run_changed' || editor.problem?.kind === 'stale_revision' ? editor.problem : null;
@@ -42,7 +44,7 @@ export function LossLineEditor({ view, timezone, readOnly = false }: LossLineEdi
       {editor.draft.dirty && !readOnly && <p className="text-xs text-amber-700">Unsaved changes — the figures above are the last saved state; the server recomputes them on save.</p>}
       {editor.dropped && editor.dropped.length > 0 && (
         <p className="text-xs text-amber-700" data-testid="rebase-dropped">
-          Rebased on the new run: {editor.dropped.length} decision(s) dropped because their candidate no longer exists.
+          Rebased on the new run: {number(editor.dropped.length)} decision(s) dropped because their candidate no longer exists.
         </p>
       )}
       <CandidateTable view={view} draft={editor.draft} setDraft={editor.setDraft} issues={rowIssues} readOnly={readOnly} />

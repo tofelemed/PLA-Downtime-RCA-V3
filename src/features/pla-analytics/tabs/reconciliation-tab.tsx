@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { GRID_WORKFLOW_LABELS, RESIDUAL_LABELS } from '@/features/ux-kit/labels';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '../components/analytics-card';
@@ -20,6 +21,7 @@ export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useReconciliationStatus(statusQuery(scope), env.timezone);
   const data = query.data?.data;
+  const { number } = useNumberFormat();
   return (
     <AnalyticsCard
       title="Reconciliation status and age"
@@ -28,16 +30,16 @@ export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
       response={query.data}
       isEmpty={data?.periods === 0}
       emptyText="No production periods in this scope."
-      note={data ? `${data.periods} periods · overdue = not approved ${data.overdueAfterHours} h after the period ended.` : undefined}
+      note={data ? `${number(data.periods)} periods · overdue = not approved ${number(data.overdueAfterHours)} h after the period ended.` : undefined}
     >
       {data && (
         <div className="space-y-3" data-testid="reconciliation-status" data-overdue={data.overdueCount}>
           <CountRow title="Workflow" testId="workflow-count" items={data.workflow.map((w) => ({ key: w.state, label: GRID_WORKFLOW_LABELS[w.state], count: w.periods }))} />
           <CountRow title="Residual" testId="residual-count" items={data.residual.map((r) => ({ key: r.state, label: RESIDUAL_LABELS[r.state], count: r.periods }))} />
           <CountRow title="Age (not approved)" testId="age-count" items={data.ages.map((a) => ({ key: a.key, label: a.label, count: a.periods }))} />
-          <h4 className="text-sm font-medium">Overdue ({data.overdueCount})</h4>
+          <h4 className="text-sm font-medium">Overdue ({number(data.overdueCount)})</h4>
           <OverdueTable rows={data.overdue} timezone={env.timezone} />
-          {data.overdueCount > data.overdue.length && <p className="text-xs text-muted-foreground">Listing the {data.overdue.length} oldest; the count covers all of them.</p>}
+          {data.overdueCount > data.overdue.length && <p className="text-xs text-muted-foreground">Listing the {number(data.overdue.length)} oldest; the count covers all of them.</p>}
         </div>
       )}
     </AnalyticsCard>
@@ -45,12 +47,13 @@ export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
 }
 
 function CountRow({ title, items, testId }: { title: string; testId: string; items: Array<{ key: string; label: string; count: number }> }) {
+  const { number, text } = useNumberFormat();
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <span className="w-36 text-muted-foreground">{title}</span>
       {items.map((item) => (
         <Badge key={item.key} variant={item.count > 0 ? 'secondary' : 'outline'} data-testid={testId} data-key={item.key} data-count={item.count}>
-          {item.label}: {item.count}
+          {text(item.label)}: {number(item.count)}
         </Badge>
       ))}
     </div>

@@ -1,5 +1,5 @@
 import type { DigitSystem } from './calendar-types';
-import { toDigits } from './digits';
+import { localizeNumber } from './digits';
 
 /**
  * Durations as text — identical output to `features/ux-kit/format/duration.ts` for Latin digits
@@ -46,5 +46,5 @@ export function formatDuration(value: number | string | null | undefined, opts: 
   if (seconds === null) return '—';
   const style = opts.style ?? 'long';
   const text = style === 'compact' ? compact(seconds) : style === 'clock' ? clock(seconds) : long(seconds);
-  return toDigits(text, opts.digits);
+  return localizeNumber(text, opts.digits);
 }

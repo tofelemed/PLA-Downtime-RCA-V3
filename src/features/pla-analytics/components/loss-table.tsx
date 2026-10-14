@@ -1,6 +1,7 @@
 import type { LossTreeGroupView, LossTreeMetric, LossTreeTotalView } from '@/api/v2/types/pla-analytics';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { type NumberFormat, useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { amountText, shareText } from '../model/display';
 
 export interface LossTableProps {
@@ -13,7 +14,8 @@ export interface LossTableProps {
 
 const groupLabel = (group: LossTreeGroupView) => group.label ?? (group.key ? 'Unknown code' : 'Not coded');
 
-function columnsOf(metric: LossTreeMetric, groupTitle: string): Array<DataTableColumn<LossTreeGroupView>> {
+function columnsOf(metric: LossTreeMetric, groupTitle: string, format: NumberFormat): Array<DataTableColumn<LossTreeGroupView>> {
+  const { digits } = format;
   return [
     {
       id: 'group',
@@ -31,7 +33,7 @@ function columnsOf(metric: LossTreeMetric, groupTitle: string): Array<DataTableC
       nowrap: true,
       cell: (group) => (
         <>
-          {amountText(group, metric)}
+          {amountText(group, metric, digits)}
           {group.status === 'mixed' && (
             <Badge variant="secondary" className="ml-1">
               partly valued
@@ -40,19 +42,20 @@ function columnsOf(metric: LossTreeMetric, groupTitle: string): Array<DataTableC
         </>
       ),
     },
-    { id: 'share', header: 'Share', align: 'right', nowrap: true, cell: (group) => shareText(group.share) },
-    { id: 'cumulative', header: 'Cumulative', align: 'right', nowrap: true, cell: (group) => shareText(group.cumulativeShare) },
-    { id: 'lines', header: 'Lines', align: 'right', cell: (group) => group.lines },
+    { id: 'share', header: 'Share', align: 'right', nowrap: true, cell: (group) => shareText(group.share, digits) },
+    { id: 'cumulative', header: 'Cumulative', align: 'right', nowrap: true, cell: (group) => shareText(group.cumulativeShare, digits) },
+    { id: 'lines', header: 'Lines', align: 'right', cell: (group) => format.number(group.lines) },
   ];
 }
 
 /** Pareto table of server groups (20 per page): amount, share and the cumulative share; unvalued rows say why. */
 export function LossTable({ groups, total, metric, groupTitle, testId }: LossTableProps) {
+  const format = useNumberFormat();
   return (
     <div className="space-y-2" data-testid={testId}>
       <DataTable
         caption={`${groupTitle} losses`}
-        columns={columnsOf(metric, groupTitle)}
+        columns={columnsOf(metric, groupTitle, format)}
         rows={groups}
         getRowKey={(group) => `${group.key ?? '-'}|${group.unit ?? '-'}`}
         empty={{ text: 'No loss lines in this scope.' }}
@@ -60,7 +63,7 @@ export function LossTable({ groups, total, metric, groupTitle, testId }: LossTab
       />
       {total && (
         <p className="text-sm font-medium" data-testid="loss-total" data-amount={total.amount ?? ''} data-unit={total.unit ?? ''}>
-          Total ({total.groups} groups, {total.lines} lines): {amountText(total, metric)}
+          Total ({format.number(total.groups)} groups, {format.number(total.lines)} lines): {amountText(total, metric, format.digits)}
         </p>
       )}
     </div>

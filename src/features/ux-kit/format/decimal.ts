@@ -1,3 +1,5 @@
+import { type DigitSystem, localizeNumber, toLatinNumber } from '@/lib/dates';
+
 /**
  * Decimal strings from the API (quantities, money, ratios) formatted without going through binary
  * floating point (plan 3.1, API conventions §5): rounding half away from zero on the digits themselves.
@@ -32,15 +34,30 @@ export function roundDecimal(value: string, digits: number): string | null {
   return `${sign && !isZero ? '-' : ''}${intPart}${fracPart}`;
 }
 
-/** `"12345.678"` → `"12,345.68"`; non-decimal input is returned unchanged, null/empty → "—". */
-export function formatDecimal(value: string | null | undefined, fractionDigits = 2): string {
+/**
+ * `"12345.678"` → `"12,345.68"` (Persian `digits`: `"۱۲٬۳۴۵٫۶۸"`); non-decimal input is returned
+ * unchanged, null/empty → "—". Display only: inputs, exports and payloads keep the canonical string.
+ */
+export function formatDecimal(value: string | null | undefined, fractionDigits = 2, digits?: DigitSystem): string {
   if (value === null || value === undefined || value.trim() === '') return '—';
   const rounded = roundDecimal(value, fractionDigits);
   if (rounded === null) return value;
   const [int, frac] = rounded.split('.');
   const negative = int.startsWith('-');
   const grouped = (negative ? int.slice(1) : int).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `${negative ? '-' : ''}${grouped}${frac !== undefined ? `.${frac}` : ''}`;
+  return localizeNumber(`${negative ? '-' : ''}${grouped}${frac !== undefined ? `.${frac}` : ''}`, digits);
+}
+
+/** A JS number (a count, a length) as display text: `1234` → `"1,234"`; not finite or absent → "—". */
+export function formatNumber(value: number | null | undefined, fractionDigits = 0, digits?: DigitSystem): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—';
+  return formatDecimal(String(value), fractionDigits, digits);
+}
+
+/** `9.50001` → `"9.5"` with `significant` digits, trailing zeros dropped (no grouping); not finite → "—". */
+export function formatSignificant(value: number | null | undefined, significant = 4, digits?: DigitSystem): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—';
+  return localizeNumber(String(Number(value.toPrecision(significant))), digits);
 }
 
 export interface DecimalInputResult {
@@ -49,9 +66,12 @@ export interface DecimalInputResult {
   error: string | null;
 }
 
-/** Validates typed text as a decimal with at most `scale` fraction digits (no float conversion). */
+/**
+ * Validates typed text as a decimal with at most `scale` fraction digits (no float conversion). Persian
+ * or Arabic-Indic digits and separators typed by the user are read as Latin.
+ */
 export function parseDecimalInput(text: string, scale = MAX_SCALE, allowNegative = false): DecimalInputResult {
-  const trimmed = text.trim().replace(/,/g, '');
+  const trimmed = toLatinNumber(text).trim().replace(/,/g, '');
   if (trimmed === '') return { value: null, error: null };
   const match = DECIMAL.exec(trimmed);
   if (!match) return { value: null, error: 'Enter a number' };

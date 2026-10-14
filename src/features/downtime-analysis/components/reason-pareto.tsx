@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { useCalendarPreference } from '@/lib/dates';
 import type { DowntimeFilters, DowntimeMetric } from '../model/downtime-filters';
 import { formatCount, formatRatio } from '../model/kpi-display';
 import { barAction, drillCrumbs, paretoQuery, type DrillSelection } from '../model/reason-drill';
@@ -26,6 +27,7 @@ export interface ReasonParetoProps {
  */
 export function ReasonPareto({ filters, onChange, onEvents }: ReasonParetoProps) {
   const env = useEventHubEnv();
+  const { digits } = useCalendarPreference();
   const query = useDowntimeReport(paretoQuery(filters), env.timezone);
   const report = query.data?.data;
   const groups = report?.groups ?? [];
@@ -63,9 +65,9 @@ export function ReasonPareto({ filters, onChange, onEvents }: ReasonParetoProps)
             >
               <span className="font-medium">{labelOf(group)}</span>
               <span className="flex gap-3 font-mono text-xs">
-                <span data-testid="pareto-value">{report?.unit === 'count' ? formatCount(group.value) : <DurationText seconds={group.value} variant="compact" />}</span>
-                <span>{formatRatio(group.share)}</span>
-                <span data-testid="pareto-cumulative">Σ {formatRatio(group.cumulativeShare)}</span>
+                <span data-testid="pareto-value">{report?.unit === 'count' ? formatCount(group.value, digits) : <DurationText seconds={group.value} variant="compact" />}</span>
+                <span>{formatRatio(group.share, 1, digits)}</span>
+                <span data-testid="pareto-cumulative">Σ {formatRatio(group.cumulativeShare, 1, digits)}</span>
               </span>
             </button>
           </li>

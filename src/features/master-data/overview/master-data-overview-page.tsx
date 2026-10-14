@@ -7,6 +7,7 @@ import { EntityIcon, type AppIcon } from '@/lib/icons';
 import type { MasterDataSummaryView } from '../api/master-data-types';
 import { useMasterDataSummary } from '../api/use-master-data-summary';
 import { MasterDataLayout } from '../components/master-data-layout';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 interface Tile {
   to: string;
@@ -29,6 +30,7 @@ const RCA_TILES: readonly Tile[] = [
 ];
 
 function TileGrid({ tiles, summary, loading }: { tiles: readonly Tile[]; summary?: MasterDataSummaryView; loading: boolean }) {
+  const { number } = useNumberFormat();
   return (
     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {tiles.map((tile) => (
@@ -44,7 +46,7 @@ function TileGrid({ tiles, summary, loading }: { tiles: readonly Tile[]; summary
                   <Skeleton className="h-7 w-12" />
                 ) : (
                   <p className="text-2xl font-semibold tabular-nums">
-                    {summary?.[tile.count] ?? '—'}
+                    {number(summary?.[tile.count])}
                     <span className="sr-only"> active</span>
                   </p>
                 )}

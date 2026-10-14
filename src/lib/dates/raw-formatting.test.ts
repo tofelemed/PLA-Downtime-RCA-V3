@@ -16,6 +16,18 @@ const RAW = [
   { name: 'toISOString() sliced into a date', pattern: /\.toISOString\(\)\.(?:slice|substring|substr|split)\(/ },
   { name: 'hard-coded locale', pattern: /['"]en-(?:US|GB|CA)['"]/ },
   { name: 'date-fns formatting', pattern: /from ['"]date-fns/ },
+  // numbers: the digits setting (Latin / Persian digits and separators) applies to every displayed number
+  { name: 'toFixed() / toPrecision() number text', pattern: /\.to(?:Fixed|Precision)\(/ },
+  { name: 'hand-rolled thousands grouping', pattern: /\(\\d\{3\}\)\+/ },
+];
+/**
+ * JSX text that renders a number directly (`{rows.length}`, `{index + 1}`) skips the digits setting:
+ * wrap it in `useNumberFormat().number(...)`. Attribute values (`={...}`) and template parts (`${...}`)
+ * are not matched, so aria labels and keys stay as they are.
+ */
+const RAW_JSX = [
+  { name: 'JSX renders {x.length} / {x.size} directly', pattern: /(?<![=\w$])\{\s*[\w.?!]+\.(?:length|size)\s*\}/ },
+  { name: 'JSX renders {i + 1} directly', pattern: /(?<![=\w$])\{\s*\w+ \+ 1\s*\}/ },
 ];
 
 function sourceFiles(dir: string): string[] {
@@ -34,7 +46,8 @@ describe('dates and numbers go through the plant-aware helpers', () => {
       .filter((file) => !HELPERS.some((helper) => file.startsWith(helper)))
       .flatMap((file) => {
         const text = readFileSync(join(ROOT, file), 'utf8');
-        return RAW.filter((raw) => raw.pattern.test(text)).map((raw) => `${file}: ${raw.name}`);
+        const rules = file.endsWith('.tsx') ? [...RAW, ...RAW_JSX] : RAW;
+        return rules.filter((raw) => raw.pattern.test(text)).map((raw) => `${file}: ${raw.name}`);
       });
     expect(offenders).toEqual([]);
   }, 30_000); // scans the source tree: slow when the whole suite runs in parallel

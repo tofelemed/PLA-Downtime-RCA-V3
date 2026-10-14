@@ -5,6 +5,7 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import type { EventFilterState } from '../model/event-filters';
 import { useEventHubEnv } from '../use-event-hub-env';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /**
  * Downtime of the current units and window from the server (union seconds of the calculated periods,
@@ -12,6 +13,7 @@ import { useEventHubEnv } from '../use-event-hub-env';
  * labelled provisional/incomplete exactly as the API says.
  */
 export function QuickStats({ filters }: { filters: EventFilterState }) {
+  const { number } = useNumberFormat();
   const env = useEventHubEnv();
   const query = useDowntimeReport(
     filters.from && filters.to
@@ -34,7 +36,7 @@ export function QuickStats({ filters }: { filters: EventFilterState }) {
           </div>
           {report && (
             <div className="text-xs text-muted-foreground">
-              {report.isProvisional ? 'Provisional' : 'Approved'} · {report.data.calculationRunIds.length} calculation runs
+              {report.isProvisional ? 'Provisional' : 'Approved'} · {number(report.data.calculationRunIds.length)} calculation runs
             </div>
           )}
         </DataState>

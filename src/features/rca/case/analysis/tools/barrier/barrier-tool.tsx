@@ -9,14 +9,16 @@ import { BARRIER_EFFECTIVENESS, BARRIER_TYPES, rowId } from '../../../../model/a
 import { useCaseWorkspace } from '../../../case-context';
 import { ChoiceField, optionsOf } from '../../../evidence/form-controls';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function BarrierRow(props: { barrier: Barrier; index: number; readOnly: boolean; onChange: (next: Barrier) => void; onRemove: () => void }) {
+  const { number } = useNumberFormat();
   const { barrier, index, readOnly } = props;
   const set = (patch: Partial<Barrier>) => props.onChange({ ...barrier, ...patch });
   return (
     <li className="grid gap-2 rounded border p-3 md:grid-cols-2" data-testid="barrier-row">
       <div className="space-y-1 md:col-span-2">
-        <Label htmlFor={`barrier-${index}`}>Barrier {index + 1}</Label>
+        <Label htmlFor={`barrier-${index}`}>Barrier {number(index + 1)}</Label>
         <Input id={`barrier-${index}`} value={barrier.description} maxLength={1000} disabled={readOnly} onChange={(e) => set({ description: e.target.value })} />
       </div>
       <ChoiceField id={`barrier-type-${index}`} label="Kind" value={barrier.type} options={optionsOf(BARRIER_TYPES)} onChange={(type) => set({ type })} />
@@ -40,6 +42,7 @@ function BarrierRow(props: { barrier: Barrier; index: number; readOnly: boolean;
 }
 
 function Editor({ record, save }: { record: ToolRecord<'barrier'>; save: (body: BarrierContent) => Promise<unknown> }) {
+  const { number } = useNumberFormat();
   const { rca, readOnly } = useCaseWorkspace();
   const [content, setContent] = useState<BarrierContent>(() => ({ hazard: record?.hazard ?? (rca.description ?? rca.title).slice(0, 255), barriers: record?.barriers ?? [] }));
   const setBarriers = (barriers: Barrier[]) => setContent({ ...content, barriers });
@@ -52,7 +55,7 @@ function Editor({ record, save }: { record: ToolRecord<'barrier'>; save: (body: 
         <Input id="barrier-hazard" value={content.hazard} maxLength={255} disabled={readOnly} onChange={(e) => setContent({ ...content, hazard: e.target.value })} />
       </div>
       <p className="text-sm text-muted-foreground">
-        {content.barriers.length} barrier(s), {failed} failed.
+        {number(content.barriers.length)} barrier(s), {number(failed)} failed.
       </p>
       <ul className="space-y-2">
         {content.barriers.map((barrier, index) => (

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { IconButton } from '@/features/ux-kit/icon-button';
 import { ActionIcon, UiIcon } from '@/lib/icons';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ChecklistItemsEditorProps {
   items: string[];
@@ -21,6 +22,7 @@ const move = (items: string[], index: number, delta: number): string[] => {
 
 /** The ordered checklist items: add (Enter or button), edit in place, reorder and remove. */
 export function ChecklistItemsEditor({ items, onChange, disabled }: ChecklistItemsEditorProps) {
+  const { number } = useNumberFormat();
   const [text, setText] = useState('');
   const add = () => {
     const item = text.trim();
@@ -35,7 +37,7 @@ export function ChecklistItemsEditor({ items, onChange, disabled }: ChecklistIte
       <ol className="space-y-2">
         {items.map((item, index) => (
           <li key={`${index}-${item}`} className="flex items-center gap-1">
-            <span className="w-6 text-right text-sm text-muted-foreground">{index + 1}.</span>
+            <span className="w-6 text-right text-sm text-muted-foreground">{number(index + 1)}.</span>
             <Input
               aria-label={`Item ${index + 1}`}
               defaultValue={item}

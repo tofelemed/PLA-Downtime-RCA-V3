@@ -12,6 +12,7 @@ import { ActionIcon } from '@/lib/icons';
 import { EVIDENCE_TYPES } from '../../model/evidence-form';
 import { useRcaFormat } from '../../use-rca-format';
 import { useCaseWorkspace } from '../case-context';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function columns(day: (value: string | null) => string): DataTableColumn<RcaEvidenceItem>[] {
   return [
@@ -22,7 +23,7 @@ function columns(day: (value: string | null) => string): DataTableColumn<RcaEvid
     { id: 'due', header: 'Task due', cell: (row) => day(row.taskDueDate), nowrap: true },
     { id: 'status', header: 'Task status', cell: (row) => labelOf(RCA_EVIDENCE_TASK_LABELS, row.taskStatus, 'Pending'), nowrap: true },
     { id: 'verified', header: 'Verified', cell: (row) => (row.verified ? 'Yes' : 'No'), nowrap: true },
-    { id: 'files', header: 'Files', cell: (row) => String(row.attachments.length), align: 'right' },
+    { id: 'files', header: 'Files', cell: (row) => row.attachments.length, align: 'right' },
   ];
 }
 
@@ -35,6 +36,7 @@ function matches(item: RcaEvidenceItem, text: string, collector: string): boolea
 
 /** `/rca/:caseId/evidence`: the evidence of the case with counts per type; rows open the item. */
 export function EvidenceListPage() {
+  const { number } = useNumberFormat();
   const { rca, readOnly, basePath } = useCaseWorkspace();
   const navigate = useNavigate();
   const users = useUserNames();
@@ -58,7 +60,7 @@ export function EvidenceListPage() {
         <div className="flex flex-wrap items-center gap-2" aria-label="Evidence by type">
           {counts.map(({ type, count }) => (
             <Badge key={type} variant="secondary">
-              {type}: {count}
+              {type}: {number(count)}
             </Badge>
           ))}
         </div>

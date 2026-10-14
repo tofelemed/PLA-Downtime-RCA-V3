@@ -12,6 +12,7 @@ import { categoriesOf, evidenceTypesOf } from '../model/line-evidence';
 import { EvidencePicker } from './evidence-picker';
 import { LineEvidenceFields } from './line-evidence-fields';
 import { ReasonSelect } from './reason-select';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ManualLineFormProps {
   view: ReconciliationView;
@@ -39,6 +40,7 @@ function kindPatch(line: Omit<ManualDraft, 'uid'>, kind: ManualKind): Partial<Om
 
 /** A manual line (ACC07): slice, kind, quantity (decimal text), evidence event(s) or an explicit "no event". */
 export function ManualLineForm({ view, timezone, onAdd, onCancel }: ManualLineFormProps) {
+  const { number } = useNumberFormat();
   const [line, setLine] = useState<Omit<ManualDraft, 'uid'>>({ sliceId: view.slices[0]?.sliceId ?? '', kind: 'availability', quantity: null, eventIds: [], missingEvent: false, missingCode: false });
   const set = (patch: Partial<Omit<ManualDraft, 'uid'>>) => setLine((current) => ({ ...current, ...patch }));
   const kinds = kindsFor(view, useCapabilities().canWriteBridges);
@@ -51,7 +53,7 @@ export function ManualLineForm({ view, timezone, onAdd, onCancel }: ManualLineFo
             <Label htmlFor="manualSlice">Slice</Label>
             <select id="manualSlice" className={SELECT} value={line.sliceId} onChange={(e) => set({ sliceId: e.target.value })}>
               {view.slices.map((s, i) => (
-                <option key={s.sliceId} value={s.sliceId}>{`Slice ${i + 1} (${s.uom ?? 'unit unknown'})`}</option>
+                <option key={s.sliceId} value={s.sliceId}>{`Slice ${number(i + 1)} (${s.uom ?? 'unit unknown'})`}</option>
               ))}
             </select>
           </div>

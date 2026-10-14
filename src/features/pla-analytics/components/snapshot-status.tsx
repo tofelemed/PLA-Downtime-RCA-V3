@@ -2,6 +2,7 @@ import type { AnalyticsResponse } from '@/api/v2/types/envelopes';
 import { formatRatio } from '@/features/downtime-analysis/model/kpi-display';
 import { policyVersionsLabel } from '@/features/ux-kit/labels';
 import { ScopeHeader } from '@/features/ux-kit/scope-header';
+import { localizeNumber, useCalendarPreference } from '@/lib/dates';
 import { StatusIcon } from '@/lib/icons';
 
 export interface SnapshotStatusProps {
@@ -26,8 +27,9 @@ const isIncomplete = (response: SnapshotStatusProps['response']) =>
  */
 export function SnapshotStatus(props: SnapshotStatusProps) {
   const { response, testId = 'snapshot-runs' } = props;
+  const { digits } = useCalendarPreference();
   const runIds = response?.data.calculationRunIds ?? [];
-  const coverage = response ? formatRatio(String(response.coverage.ratio), 0) : null;
+  const coverage = response ? formatRatio(String(response.coverage.ratio), 0, digits) : null;
   return (
     <div className="space-y-1">
       <ScopeHeader
@@ -49,7 +51,7 @@ export function SnapshotStatus(props: SnapshotStatusProps) {
         <summary className="cursor-pointer select-none">Details</summary>
         <p className="mt-1">
           {response
-            ? `${runIds.length === 1 ? '1 calculation run' : `${runIds.length} calculation runs`} · ${policyVersionsLabel(response.policyVersion)} · ${coverage} of periods calculated`
+            ? `${localizeNumber(runIds.length === 1 ? '1 calculation run' : `${runIds.length} calculation runs`, digits)} · ${policyVersionsLabel(response.policyVersion)} · ${coverage} of periods calculated`
             : props.isError
               ? 'No snapshot for this scope.'
               : 'Loading the snapshot…'}

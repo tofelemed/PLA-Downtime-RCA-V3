@@ -4,13 +4,13 @@ import type { DataTableColumn } from '@/features/ux-kit/data-table';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
 import { labelOf, READINESS_LABELS } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { formatOperationalDate, type CalendarPreference } from '@/lib/dates';
+import { type CalendarPreference, type DigitSystem, formatOperationalDate } from '@/lib/dates';
 import { BLOCKING_RESIDUALS, formatRatioPercent, QUALITY_LABELS, RESIDUAL_LABELS, WORKFLOW_LABELS } from '../model/display';
 
-const num = (value: string | null | undefined, uom: string | null | undefined) =>
-  value === null || value === undefined ? '—' : `${formatDecimal(value)}${uom ? ` ${uom}` : ''}`;
+const num = (value: string | null | undefined, uom: string | null | undefined, digits: DigitSystem) =>
+  value === null || value === undefined ? '—' : `${formatDecimal(value, 2, digits)}${uom ? ` ${uom}` : ''}`;
 
-const coverageText = (ratio: string | null) => (ratio === null ? 'no actuals' : `${formatRatioPercent(ratio)} covered`);
+const coverageText = (ratio: string | null, digits: DigitSystem) => (ratio === null ? 'no actuals' : `${formatRatioPercent(ratio, digits)} covered`);
 
 function PeriodCell({ row, timezone, pref }: { row: PeriodSummaryView; timezone: string; pref: CalendarPreference }) {
   const residualState = row.plan?.residualState ?? 'not_computable';
@@ -25,11 +25,11 @@ function PeriodCell({ row, timezone, pref }: { row: PeriodSummaryView; timezone:
   );
 }
 
-function ResidualCell({ row }: { row: PeriodSummaryView }) {
+function ResidualCell({ row, digits }: { row: PeriodSummaryView; digits: DigitSystem }) {
   const state = row.plan?.residualState ?? 'not_computable';
   return (
     <span data-testid="cell-residual" className={BLOCKING_RESIDUALS.has(state) ? 'font-medium text-destructive' : undefined}>
-      {num(row.plan?.residual, row.plan?.uom)}
+      {num(row.plan?.residual, row.plan?.uom, digits)}
       <span className="block text-xs">{RESIDUAL_LABELS[state]}</span>
     </span>
   );
@@ -39,7 +39,7 @@ function ResidualCell({ row }: { row: PeriodSummaryView }) {
 export function periodGridColumns(timezone: string, pref: CalendarPreference): DataTableColumn<PeriodSummaryView>[] {
   return [
     { id: 'period', header: 'Period', nowrap: true, cell: (row) => <PeriodCell row={row} timezone={timezone} pref={pref} /> },
-    { id: 'target', header: 'Target', align: 'right', nowrap: true, cell: (row) => <span data-testid="cell-target">{num(row.plan?.target, row.plan?.uom)}</span> },
+    { id: 'target', header: 'Target', align: 'right', nowrap: true, cell: (row) => <span data-testid="cell-target">{num(row.plan?.target, row.plan?.uom, pref.digits)}</span> },
     {
       id: 'actual',
       header: 'Actual',
@@ -47,14 +47,14 @@ export function periodGridColumns(timezone: string, pref: CalendarPreference): D
       nowrap: true,
       cell: (row) => (
         <span data-testid="cell-actual">
-          {num(row.plan?.actual, row.plan?.uom)}
-          <span className="block text-xs text-muted-foreground">{coverageText(row.coverageRatio)}</span>
+          {num(row.plan?.actual, row.plan?.uom, pref.digits)}
+          <span className="block text-xs text-muted-foreground">{coverageText(row.coverageRatio, pref.digits)}</span>
         </span>
       ),
     },
-    { id: 'gap', header: 'Gap', align: 'right', nowrap: true, cell: (row) => <span data-testid="cell-gap">{num(row.plan?.gap, row.plan?.uom)}</span> },
-    { id: 'attributed', header: 'Attributed', align: 'right', nowrap: true, cell: (row) => <span data-testid="cell-attributed">{num(row.plan?.attributed, row.plan?.uom)}</span> },
-    { id: 'residual', header: 'Residual', align: 'right', nowrap: true, cell: (row) => <ResidualCell row={row} /> },
+    { id: 'gap', header: 'Gap', align: 'right', nowrap: true, cell: (row) => <span data-testid="cell-gap">{num(row.plan?.gap, row.plan?.uom, pref.digits)}</span> },
+    { id: 'attributed', header: 'Attributed', align: 'right', nowrap: true, cell: (row) => <span data-testid="cell-attributed">{num(row.plan?.attributed, row.plan?.uom, pref.digits)}</span> },
+    { id: 'residual', header: 'Residual', align: 'right', nowrap: true, cell: (row) => <ResidualCell row={row} digits={pref.digits} /> },
     { id: 'quality', header: 'Data quality', cell: (row) => <span className="text-xs">{row.qualityStates.map((q) => labelOf(QUALITY_LABELS, q)).join(', ') || '—'}</span> },
     { id: 'readiness', header: 'Inputs', cell: (row) => <span className="text-xs">{labelOf(READINESS_LABELS, row.stateReadiness)}</span> },
     {

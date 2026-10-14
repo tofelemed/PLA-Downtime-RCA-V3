@@ -5,6 +5,7 @@ import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import type { TransitionStandardView } from '@/api/v2/types/profiles';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
@@ -29,7 +30,7 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<TransitionStandardView>[
       ),
     },
     { id: 'version', header: 'Version', nowrap: true, cell: (s) => `Version ${s.version}` },
-    { id: 'reference', header: 'Reference', align: 'right', nowrap: true, cell: (s) => `${hoursOfSeconds(s.referenceSeconds)} h` },
+    { id: 'reference', header: 'Reference', align: 'right', nowrap: true, cell: (s) => <LocalizedNumber text={`${hoursOfSeconds(s.referenceSeconds)} h`} /> },
     {
       id: 'offgrade',
       header: 'Reference off-grade',
@@ -37,7 +38,7 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<TransitionStandardView>[
       nowrap: true,
       cell: (s) => (s.referenceOffgradeQty ? <Quantity value={s.referenceOffgradeQty} uom={s.offgradeUom ?? ''} /> : 'time share'),
     },
-    { id: 'evidence', header: 'Evidence', cell: (s) => <span className="text-xs">{s.sampleCount ? `${s.sampleCount} transitions · ` : ''}{s.evidence ?? '—'}</span> },
+    { id: 'evidence', header: 'Evidence', cell: (s) => <span className="text-xs">{s.sampleCount ? <LocalizedNumber text={`${s.sampleCount} transitions · `} /> : ''}{s.evidence ?? '—'}</span> },
     {
       id: 'effective',
       header: 'Effective',

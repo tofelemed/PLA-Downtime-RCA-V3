@@ -5,21 +5,23 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf, type QueryLike } from '@/features/ux-kit/data-state-of';
 import { policyVersionsLabel } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { formatRatio } from '../model/kpi-display';
 
 type RunResponse = AnalyticsResponse<{ calculationRunIds: string[] }>;
 
 /** What a figure states about itself (UX03): approval, runs and coverage, policy versions behind "Details". */
 export function ReportMeta({ response }: { response: RunResponse }) {
+  const { digits, number } = useNumberFormat();
   const runs = response.data.calculationRunIds.length;
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="report-meta" data-run-count={runs}>
       <Badge variant={response.isProvisional ? 'secondary' : 'default'}>{response.isProvisional ? 'Provisional' : 'Approved'}</Badge>
-      <span>Coverage {formatRatio(String(response.coverage.ratio), 0)}</span>
+      <span>Coverage {formatRatio(String(response.coverage.ratio), 0, digits)}</span>
       <details className="inline">
         <summary className="cursor-pointer">Details</summary>
         <span>
-          {runs === 1 ? '1 calculation run' : `${runs} calculation runs`}
+          {runs === 1 ? `${number(1)} calculation run` : `${number(runs)} calculation runs`}
           {response.policyVersion ? ` · ${policyVersionsLabel(response.policyVersion)}` : ''}
         </span>
       </details>
