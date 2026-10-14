@@ -1,4 +1,4 @@
-import { usePublishKnowledge, useVoteKnowledge } from '@/api/v2/queries/rca-knowledge';
+import { usePublishKnowledge, useShareKnowledge, useVoteKnowledge } from '@/api/v2/queries/rca-knowledge';
 import type { RcaKnowledgeView } from '@/api/v2/types/rca-knowledge';
 import { Button } from '@/components/ui/button';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
@@ -31,6 +31,25 @@ export function VoteButtons({ entry }: { entry: RcaKnowledgeView }) {
         </Button>
       </div>
       {vote.error ? <FriendlyErrorAlert error={vote.error} /> : null}
+    </div>
+  );
+}
+
+/**
+ * CA9: share a published lesson with the other plants of the organization (read-only there, with its
+ * status), or stop sharing it. 409 NOT_PUBLISHED for an unpublished entry.
+ */
+export function ShareControl({ entry }: { entry: RcaKnowledgeView }) {
+  const share = useShareKnowledge();
+  const shared = entry.shareScope === 'organization';
+  const toggle = () => void share.submit({ entry, share: !shared }).catch(() => undefined);
+  return (
+    <div className="space-y-1">
+      <Button size="sm" variant="outline" disabled={share.isPending || (!shared && !entry.isPublished)} onClick={toggle} data-testid="knowledge-share">
+        {shared ? 'Stop sharing with other plants' : 'Share with other plants'}
+      </Button>
+      {!shared && !entry.isPublished && <p className="text-xs text-muted-foreground">Publish it first.</p>}
+      {share.error ? <FriendlyErrorAlert error={share.error} /> : null}
     </div>
   );
 }

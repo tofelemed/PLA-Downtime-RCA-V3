@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ifMatchOf } from '../etag-cache';
-import type { RcaKnowledgeSimilarView, RcaKnowledgeView } from '../types/rca-knowledge';
+import type { RcaKnowledgeSimilarView, RcaKnowledgeView, SharedLessonView } from '../types/rca-knowledge';
 import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
@@ -28,6 +28,17 @@ export function useRcaKnowledgeList(filters: RcaKnowledgeFilters) {
     path: '/rca-knowledge',
     query: { limit: KNOWLEDGE_PAGE_SIZE, ...query },
     key: { filters: query },
+  });
+  return { ...list, items: flattenPages(list.data?.pages) };
+}
+
+/** CA9 lessons other plants of the organization shared (read-only, keyset pages). */
+export function useSharedLessons() {
+  const list = useV2InfiniteList<SharedLessonView>({
+    resource: 'rca-knowledge',
+    path: '/rca-knowledge/shared',
+    query: { limit: KNOWLEDGE_PAGE_SIZE },
+    key: { filters: { shared: true } },
   });
   return { ...list, items: flattenPages(list.data?.pages) };
 }
@@ -76,6 +87,17 @@ export function useVoteKnowledge() {
       idempotencyKey,
     })).data,
   );
+}
+
+/** CA9: share with the other plants of the organization, or take back (manager approver; 409 NOT_PUBLISHED). */
+export function useShareKnowledge() {
+  return useKnowledgeCommand<{ entry: Pick<RcaKnowledgeView, 'id' | 'rowVersion'>; share: boolean }>(async (input, idempotencyKey) => {
+    const args = { path: { id: input.entry.id }, idempotencyKey, ifMatch: ifMatchOf(input.entry.rowVersion) };
+    const response = input.share
+      ? await v2.post<RcaKnowledgeView, '/api/v2/rca-knowledge/{id}/share'>('/api/v2/rca-knowledge/{id}/share', args)
+      : await v2.post<RcaKnowledgeView, '/api/v2/rca-knowledge/{id}/unshare'>('/api/v2/rca-knowledge/{id}/unshare', args);
+    return response.data;
+  });
 }
 
 /** Publish (`publish` true) or withdraw with `If-Match` = the row version the user saw (412 when stale). */

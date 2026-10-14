@@ -7,7 +7,8 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { useKnowledgePermissions } from '../use-knowledge-permissions';
-import { PublishControl, VoteButtons } from './knowledge-actions';
+import { RCA_LESSON_STATUS_LABELS } from '@/features/ux-kit/labels/rca-labels';
+import { PublishControl, ShareControl, VoteButtons } from './knowledge-actions';
 import { QualityBadge, QualityBreakdown } from './quality-score';
 
 function Facts({ entry }: { entry: RcaKnowledgeView }) {
@@ -17,6 +18,13 @@ function Facts({ entry }: { entry: RcaKnowledgeView }) {
     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
       <QualityBadge score={entry.qualityScore} />
       <Badge variant={entry.isPublished ? 'default' : 'outline'}>{entry.isPublished ? 'Published' : 'Unpublished'}</Badge>
+      {entry.lessonStatus && (
+        <Badge variant={entry.lessonStatus === 'caution' ? 'destructive' : 'secondary'} data-testid="knowledge-lesson-status">
+          {RCA_LESSON_STATUS_LABELS[entry.lessonStatus] ?? entry.lessonStatus}
+        </Badge>
+      )}
+      {entry.shareScope === 'organization' && <Badge variant="outline">Shared with other plants</Badge>}
+      {entry.failureMode && <span>Failure mode: {entry.failureMode}</span>}
       <span>Unit: {entry.unitName ?? (entry.unitId ? 'Unknown unit' : 'Tenant-wide')}</span>
       {entry.assetName && <span>Asset: {entry.assetName}</span>}
       <span>Written {date(entry.createdAt)}</span>
@@ -29,14 +37,21 @@ function Facts({ entry }: { entry: RcaKnowledgeView }) {
 }
 
 function EntryBody({ entry }: { entry: RcaKnowledgeView }) {
-  const { canPublish, canVote } = useKnowledgePermissions();
+  const { canPublish, canShare, canVote } = useKnowledgePermissions();
+  const actions =
+    canPublish || canShare ? (
+      <div className="flex flex-wrap items-start gap-2">
+        {canPublish && <PublishControl entry={entry} />}
+        {canShare && <ShareControl entry={entry} />}
+      </div>
+    ) : undefined;
   return (
     <div className="space-y-6" data-testid="knowledge-detail">
       <PageHeader
         title={entry.title}
         back={{ to: '/rca-knowledge-base', label: 'Knowledge base' }}
         meta={<Facts entry={entry} />}
-        actions={canPublish ? <PublishControl entry={entry} /> : undefined}
+        actions={actions}
       />
       <div className="space-y-6">
         {entry.rcaId && (

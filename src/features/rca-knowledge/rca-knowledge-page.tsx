@@ -9,6 +9,7 @@ import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
 import { KnowledgeFiltersBar } from './components/knowledge-filters-bar';
 import { KnowledgeTable } from './components/knowledge-table';
+import { SharedLessons } from './components/shared-lessons';
 import { fetchKnowledgeForExport, knowledgeCsv } from './model/knowledge-export';
 import { filtersFromParams, paramsFromFilters, toKnowledgeQuery, type KnowledgeFilterState } from './model/knowledge-filters';
 
@@ -65,6 +66,14 @@ function KnowledgeScreen() {
             }}
           />
         </div>
+      </Section>
+      <Section
+        title="From other plants"
+        description="Lessons other plants of your organization shared. Check the fit (process, operating envelope, design) and use your own change control before copying a change."
+        collapsible
+        defaultOpen={false}
+      >
+        <SharedLessons />
       </Section>
     </Page>
   );

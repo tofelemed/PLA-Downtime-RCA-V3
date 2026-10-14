@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
 import type { RcaKnowledgeSimilarView, RcaKnowledgeView } from '@/api/v2/types/rca-knowledge';
 import { actAs } from '@/test/acting-user';
-import { canPublishKnowledge, EMPTY_FILTERS, filtersFromParams, paramsFromFilters, toKnowledgeQuery } from './model/knowledge-filters';
+import { canPublishKnowledge, canShareKnowledge, EMPTY_FILTERS, filtersFromParams, paramsFromFilters, toKnowledgeQuery } from './model/knowledge-filters';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
@@ -33,6 +33,8 @@ const ENTRY: RcaKnowledgeView = {
   helpfulCount: 2, notHelpfulCount: 0, myVote: null, isPublished: false, publishedAt: null, publishedBy: null, author: 'u-9',
   closedAt: '2026-10-01T00:00:00Z', createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z', qualityScore: 77,
   quality: [{ factor: 'rootCause', points: 30, max: 30 }, { factor: 'feedback', points: 10, max: 10 }],
+  caseEffectiveness: 'effective', lessonStatus: 'verified_practice', failureMode: 'Coupling misalignment',
+  shareScope: 'tenant', sharedAt: null,
 };
 
 describe('model', () => {
@@ -49,6 +51,12 @@ describe('model', () => {
     expect(canPublishKnowledge(['SuperAdmin'])).toBe(true);
     expect(canPublishKnowledge(['Engineer', 'production_engineer'])).toBe(false);
     expect(canPublishKnowledge(['Operator', 'operator'])).toBe(false);
+  });
+
+  it('CA9: only a manager approver (or a global admin) shares lessons with other plants', () => {
+    expect(canShareKnowledge(['manager_approver'])).toBe(true);
+    expect(canShareKnowledge(['SuperAdmin'])).toBe(true);
+    expect(canShareKnowledge(['reliability_engineer'])).toBe(false);
   });
 });
 
@@ -114,6 +122,41 @@ describe('RCA knowledge base v2 screen', () => {
     await waitFor(() => expect(calls.some((call) => call.url.pathname.endsWith('/publish'))).toBe(true));
     const publish = calls.find((call) => call.url.pathname.endsWith('/publish'));
     expect(publish?.headers.get('If-Match')).toBe('"3"');
+  });
+
+  it('CA9: shows the lesson status and shares a published lesson with If-Match', async () => {
+    const published = { ...ENTRY, isPublished: true };
+    reply = (call) => (call.method === 'POST' ? json(200, { ...published, rowVersion: 4, shareScope: 'organization' }) : json(200, published));
+    actAs('manager_approver');
+    wrap(<KnowledgeDetail id="k1" />);
+    expect((await screen.findByTestId('knowledge-lesson-status')).textContent).toBe('Verified practice');
+    fireEvent.click(screen.getByTestId('knowledge-share'));
+    await waitFor(() => expect(calls.some((call) => call.url.pathname.endsWith('/share'))).toBe(true));
+    const share = calls.find((call) => call.url.pathname.endsWith('/share'));
+    expect(share?.headers.get('If-Match')).toBe('"3"');
+    expect(share?.headers.get('Idempotency-Key')).toBeTruthy();
+  });
+
+  it('CA9: an unpublished lesson cannot be shared yet', async () => {
+    reply = () => json(200, ENTRY);
+    actAs('manager_approver');
+    wrap(<KnowledgeDetail id="k1" />);
+    expect(await screen.findByTestId('knowledge-share')).toBeDisabled();
+    expect(screen.getByText('Publish it first.')).toBeTruthy();
+  });
+
+  it('CA9: lists the lessons other plants shared, read-only, with their status', async () => {
+    const lesson = {
+      id: 's1', sourcePlant: 'Plant B', title: 'Seal material trial failed', problemStatement: null, rootCause: 'Wrong elastomer',
+      recommendations: ['Use FFKM'], failureMode: 'Seal leak', equipmentCategory: null, lessonStatus: 'caution', sharedAt: '2026-10-10T08:00:00Z',
+    };
+    reply = (call) => (call.url.pathname.endsWith('/shared') ? json(200, list([lesson])) : json(200, list([])));
+    wrap(<RcaKnowledgePage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'From other plants' }));
+    const item = await screen.findByTestId('shared-lesson');
+    expect(item.textContent).toContain('Plant B');
+    expect(item.textContent).toContain('Caution: not effective');
+    expect(item.textContent).toContain('Wrong elastomer');
   });
 
   it('hides publish for an engineer and every write for a viewer', async () => {

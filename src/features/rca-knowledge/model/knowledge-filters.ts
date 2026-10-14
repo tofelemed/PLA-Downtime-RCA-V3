@@ -54,16 +54,18 @@ export const QUALITY_FACTOR_LABELS: Readonly<Record<string, string>> = {
   problem: 'Problem statement',
   recommendations: 'Recommendations',
   actions: 'Actions tracked',
-  actionsDone: 'Actions done',
+  effective: 'Verified effective',
   scope: 'Unit or asset named',
   sourceCase: 'Linked case',
   feedback: 'Helpful votes',
 };
 
 export const MATCH_LABELS: Readonly<Record<string, string>> = {
+  failure_mode: 'same failure mode',
   asset: 'same asset',
   reason: 'same reason',
   unit: 'same unit',
+  text: 'similar words',
 };
 
 /** Roles that may publish (backend `RCA_WRITERS`; SuperAdmin / OrgAdmin hold every scope role). */
@@ -71,4 +73,11 @@ const PUBLISHER_ROLES = ['SuperAdmin', 'OrgAdmin', 'reliability_engineer', 'mana
 
 export function canPublishKnowledge(roles: readonly string[]): boolean {
   return roles.some((role) => PUBLISHER_ROLES.includes(role));
+}
+
+/** Roles that may share a lesson with the other plants (backend `@Roles('manager_approver')`, SME CA9). */
+const SHARER_ROLES = ['SuperAdmin', 'OrgAdmin', 'manager_approver'];
+
+export function canShareKnowledge(roles: readonly string[]): boolean {
+  return roles.some((role) => SHARER_ROLES.includes(role));
 }

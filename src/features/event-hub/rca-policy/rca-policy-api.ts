@@ -5,15 +5,46 @@ import { usePagedQuery } from '@/api/v2/queries/use-paged-query';
 import { useV2Command } from '@/api/v2/queries/use-v2-command';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 
-/** One `rca_policy` version (backend `RcaPolicyVersionV2View`, D13): tenant-wide when `unitId` is null. */
-export interface RcaPolicyVersion {
+export type RcaRepeatMatch = 'asset' | 'asset_and_mode' | 'asset_mode_and_mechanism';
+export type RcaCostCurrency = 'IRR' | 'USD';
+
+/** The workflow rule sections of the policy (SME CA2–CA7), shown read-only. */
+export interface RcaPolicyRules {
+  effectiveness: {
+    baselineLookbackDays: number;
+    minExposureHours: number;
+    requiredReduction: number;
+    reviewDays: number;
+    zeroRepeatClasses: string[];
+  };
+  fmea: {
+    method: 'rpn' | 'action_priority';
+    rpnThreshold: number;
+    severityReview: number;
+    priorityRules: Array<{ priority: string; severityMin: number; occurrenceMin: number; detectionMin: number }>;
+  };
+  fiveWhy: { guidelineLevels: number; minLevels: number; evidencePerLevel: boolean; unsupportedRootCauses: string[] };
+  investigation: Record<string, { methodGroups: string[][]; minTeamMembers: number }>;
+}
+
+/**
+ * One `rca_policy` version (backend `RcaPolicyVersionV2View`; D13, SME D17 / CA2–CA8): tenant-wide when
+ * `unitId` is null. The whole parsed body: the any-of triggers and the workflow rules.
+ */
+export interface RcaPolicyVersion extends RcaPolicyRules {
   id: string;
   unitId: string | null;
   version: number;
   durationThresholdSeconds: number;
   costThreshold: number | null;
+  costCurrency: RcaCostCurrency | null;
+  lostQuantityShareOfDailyPlan: number | null;
   repeatCount: number;
   repeatWindowDays: number;
+  repeatMatch: RcaRepeatMatch;
+  criticalAssets: { criticalities: string[]; thresholdFactor: number };
+  cumulative: { windowDays: number; downtimeSeconds: number } | null;
+  consequence: { solTypes: string[]; severities: string[] };
   autoCreate: 'recommend' | 'create';
   effectiveFrom: string;
   effectiveTo: string | null;
@@ -31,6 +62,11 @@ export interface RcaPolicyInput {
   repeatWindowDays: number;
   autoCreate: 'recommend' | 'create';
   costThreshold: number | null;
+  costCurrency: RcaCostCurrency | null;
+  lostQuantityShareOfDailyPlan: number | null;
+  repeatMatch: RcaRepeatMatch;
+  criticalAssets: { criticalities: string[]; thresholdFactor: number };
+  cumulative: { windowDays: number; downtimeSeconds: number } | null;
   notes?: string;
 }
 
@@ -41,7 +77,7 @@ export interface RcaPolicyInput {
 const RESOURCE = 'rca-recommendations' as const;
 const scopeQuery = (unitId: string | null) => (unitId ? { unitId } : {});
 
-/** The version in force now for the scope (the server seeds the D13 default on first read). */
+/** The version in force now for the scope (the server seeds the SME D17 pilot on first read). */
 export function useCurrentRcaPolicy(unitId: string | null) {
   const tenantId = useV2TenantId();
   return useQuery({

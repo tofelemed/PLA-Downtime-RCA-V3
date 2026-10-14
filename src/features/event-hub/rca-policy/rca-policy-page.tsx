@@ -13,20 +13,15 @@ import { useEventHubEnv } from '../use-event-hub-env';
 import { useCurrentRcaPolicy, useRcaPolicyVersions, type RcaPolicyVersion } from './rca-policy-api';
 import { RcaPolicyForm } from './rca-policy-form';
 import { RcaPolicyActivity } from './rca-policy-activity';
+import { overrideText, ruleFacts, triggerText } from './rca-policy-text';
 
 const AUTO_LABELS: Readonly<Record<RcaPolicyVersion['autoCreate'], string>> = {
   recommend: 'Recommend an RCA',
   create: 'Open an RCA case',
 };
 
-function triggerText(policy: RcaPolicyVersion, duration: (seconds: number) => string): string {
-  const threshold = policy.durationThresholdSeconds > 0 ? `unplanned stops from ${duration(policy.durationThresholdSeconds)}` : 'no duration trigger';
-  const cost = policy.costThreshold === null ? 'no cost trigger' : `valued loss from ${policy.costThreshold}`;
-  return `${threshold} · ${policy.repeatCount} failures of one asset in ${policy.repeatWindowDays} days · ${cost}`;
-}
-
 /**
- * `/events/rca-triggers`: when an event calls for a root cause analysis (the v2 `rca_policy`, D13) —
+ * `/events/rca-triggers`: when an event calls for a root cause analysis (the v2 `rca_policy`, D13 / SME D17) —
  * the version in force per plant or unit, its history, and a new version for manager approvers. Rule-
  * based extra triggers are "RCA trigger hint" rules in Codes & rules.
  */
@@ -87,13 +82,28 @@ function CurrentPolicy({ policy, unitScoped }: { policy: RcaPolicyVersion; unitS
     <dl className="grid grid-cols-[12rem_1fr] gap-x-4 gap-y-1 text-sm" data-testid="rca-policy-current">
       <dt className="text-muted-foreground">Version</dt>
       <dd>{policy.version}{inherited ? ' (plant-wide; this unit has no own version)' : ''}</dd>
-      <dt className="text-muted-foreground">Triggers</dt>
+      <dt className="text-muted-foreground">Triggers (any of)</dt>
       <dd>{triggerText(policy, duration)}</dd>
+      <dt className="text-muted-foreground">Critical assets and safety</dt>
+      <dd>{overrideText(policy)}</dd>
+      {ruleFacts(policy).map((fact) => (
+        <RuleFact key={fact.label} label={fact.label} value={fact.value} />
+      ))}
       <dt className="text-muted-foreground">When a trigger fires</dt>
       <dd>{AUTO_LABELS[policy.autoCreate]}</dd>
       <dt className="text-muted-foreground">In force since</dt>
       <dd>{dateTime(policy.effectiveFrom)}</dd>
     </dl>
+  );
+}
+
+/** A workflow rule of the version: read-only here (case workflow, SME CA2–CA7). */
+function RuleFact({ label, value }: { label: string; value: string }) {
+  return (
+    <>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd>{value}</dd>
+    </>
   );
 }
 
