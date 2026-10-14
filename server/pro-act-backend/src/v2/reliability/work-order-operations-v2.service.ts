@@ -116,13 +116,21 @@ export class WorkOrderOperationsV2Service {
         !r.assetId && r.assetCode ? [r.assetCode] : [],
       ),
     });
-    const stops = await this.stopsFor(tenantId, rows, assets);
+    const stops = await this.stopsFor(
+      tenantId,
+      { rows, assets },
+      periodScopeUnits(context),
+    );
     const { resolved, problems } = resolveRows(rows, assets, stops);
     if (problems.length > 0) throw rowsInvalid(CODE, problems);
-    assertUnitsWritable(
-      context,
-      resolved.map((r) => r.unitId),
-    );
+    const stopUnits = new Map(stops.map((s) => [s.id, s.unit_id]));
+    assertUnitsWritable(context, [
+      ...resolved.map((r) => r.unitId),
+      ...resolved.flatMap((r) => {
+        const unit = r.eventId ? stopUnits.get(r.eventId) : undefined;
+        return unit ? [unit] : [];
+      }),
+    ]);
     return this.manager.transaction((manager) =>
       upsert(
         manager,
@@ -136,24 +144,32 @@ export class WorkOrderOperationsV2Service {
     );
   }
 
-  /** Downtime events the rows name or may be linked to (assets of the rows, around their starts). */
+  /**
+   * Downtime events the rows name or may be linked to (assets of the rows, around their starts), only of
+   * the caller's units: a stop of another unit is never found, so it can never be linked.
+   */
   private async stopsFor(
     tenantId: string,
-    rows: readonly WorkOrderOperationRowDto[],
-    assets: readonly AssetRef[],
+    input: {
+      rows: readonly WorkOrderOperationRowDto[];
+      assets: readonly AssetRef[];
+    },
+    allowedUnits: readonly string[] | null,
   ): Promise<StopRow[]> {
-    const starts = rows.map((r) => Date.parse(r.startedAt));
+    const starts = input.rows.map((r) => Date.parse(r.startedAt));
     return this.manager.query<StopRow[]>(
       `SELECT "id", "unit_id", "asset_id", "start_time", "end_time" FROM "production_events"
-        WHERE "tenant_id" = $1 AND "physical_state" IN ('open', 'closed') AND (
+        WHERE "tenant_id" = $1 AND "physical_state" IN ('open', 'closed')
+          AND ($6::uuid[] IS NULL OR "unit_id" = ANY($6::uuid[])) AND (
           "id" = ANY($2::uuid[]) OR ("physical_type" = 'downtime' AND "asset_id" = ANY($3::uuid[])
             AND "start_time" <= $5 AND ("end_time" IS NULL OR "end_time" > $4)))`,
       [
         tenantId,
-        rows.flatMap((r) => (r.eventId ? [r.eventId] : [])),
-        assets.map((a) => a.id),
+        input.rows.flatMap((r) => (r.eventId ? [r.eventId] : [])),
+        input.assets.map((a) => a.id),
         new Date(Math.min(...starts)),
         new Date(Math.max(...starts)),
+        allowedUnits,
       ],
     );
   }
@@ -183,7 +199,11 @@ function resolveRows(
     if ((row.assetId || row.assetCode) && !asset)
       problem('assetId / assetCode must name an asset of this plant');
     if (row.eventId && !named)
-      problem('eventId must be an event of this plant');
+      problem('eventId must be an event of this plant and of your units');
+    if (asset && named && named.unit_id !== asset.unitId)
+      problem('the stop must be of the asset’s unit');
+    if (asset && named?.asset_id && named.asset_id !== asset.id)
+      problem('the stop belongs to another asset');
     if (!asset && !named)
       problem('an operation names its asset or the stop it repaired');
     if (row.endedAt && new Date(row.endedAt) < new Date(row.startedAt))

@@ -135,4 +135,44 @@ describe('CMMS work-order operations (SME D10)', () => {
     );
     expect(stored).toEqual({ asset_id: otherPump, operation_kind: 'repair' });
   });
+
+  it('never links an operation to a stop of another unit', async () => {
+    const otherStop = await env.lossEvent(env.world.unitA2, plus(A, HOUR), 2, {
+      assetId: otherPump,
+      scheduleClass: 'unplanned',
+    });
+    const mismatch = await env
+      .post('work-order-operations/import', {
+        operations: [
+          {
+            ...operation('0010', 'repair', 1.5, 2),
+            workOrderId: 'WO-X1',
+            eventId: otherStop,
+          },
+        ],
+      })
+      .expect(422);
+    expect((mismatch.body as ApiError).code).toBe('WORK_ORDER_IMPORT_INVALID');
+    const scoped = await env.unitUser(env.world.unitA1, 'reliability_engineer');
+    const withoutAsset = {
+      ...operation('0010', 'repair', 1.5, 2),
+      assetId: undefined,
+    };
+    await env
+      .post(
+        'work-order-operations/import',
+        {
+          operations: [
+            { ...withoutAsset, workOrderId: 'WO-X2', eventId: otherStop },
+          ],
+        },
+        scoped,
+      )
+      .expect(422);
+    const linked = await env.rows<{ n: number }>(
+      `SELECT count(*)::int AS "n" FROM "work_order_operations" WHERE "event_id" = $1`,
+      [otherStop],
+    );
+    expect(linked[0].n).toBe(0);
+  });
 });
