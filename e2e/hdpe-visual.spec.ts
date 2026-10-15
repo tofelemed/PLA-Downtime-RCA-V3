@@ -23,6 +23,14 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
       expect(labelBox?.width).toBeGreaterThan(25);
       expect(labelSize.content, 'The short HDPE plant name must be fully readable').toBeLessThanOrEqual(labelSize.visible);
       expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(currencyBox!.x);
+      if (route === '/dashboard') {
+        const reconciled = page.getByTestId('dashboard-oee-reconciled-tile');
+        const widths = await reconciled.evaluate((tile) => ({
+          tile: tile.getBoundingClientRect().width,
+          available: tile.parentElement!.getBoundingClientRect().width,
+        }));
+        expect(widths.tile, 'The single reconciled OEE tile must use its available card width').toBeGreaterThanOrEqual(widths.available * 0.95);
+      }
       if (viewport.name === 'mobile') await page.screenshot({ path: test.info().outputPath(`mobile-${route.slice(1)}-viewport.png`) });
     });
   }

@@ -18,7 +18,7 @@ export function DashboardOee({ scope, policy }: { scope: AnalyticsScope; policy:
   const components = policy === 'operational' ? ['availability', 'performance', 'quality'] : [];
   return (
     <AnalyticsCard title={label} testId={`dashboard-oee-${policy}`} query={query} response={query.data}>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className={policy === 'operational' ? 'grid grid-cols-2 gap-2 sm:grid-cols-4' : 'grid grid-cols-1 gap-2'}>
         <OeeTile title="OEE" label={label} view={findKpi(data?.total, `${prefix}oee`)} denominator={DENOMINATORS[policy]} testId={`dashboard-oee-${policy}-tile`} />
         {components.map((component) => (
           <OeeTile key={component} title={OEE_METRIC_LABELS[component]} label={label} view={findKpi(data?.total, component)} denominator="of the same periods" testId={`dashboard-oee-${component}`} />
