@@ -18079,6 +18079,78 @@
         ]
       }
     },
+    "/api/v2/transition-allowance-policies/current": {
+      "get": {
+        "description": "unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE). A version written before the option existed reads `loss`.",
+        "operationId": "TransitionAllowanceV2Controller_current_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "description": "Unit override; absent = the tenant-wide version",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transition-allowance option in force now (unit override, else tenant-wide)",
+        "tags": [
+          "v2 · Transition allowance policy"
+        ]
+      }
+    },
+    "/api/v2/transition-allowance-policies": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Version n+1 of the scope; other oee_policy fields are kept from the version in force; periods already calculated keep the version they used. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED).",
+        "operationId": "TransitionAllowanceV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionAllowanceCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record the transition-allowance option as an approved oee_policy version, effective now",
+        "tags": [
+          "v2 · Transition allowance policy"
+        ]
+      }
+    },
     "/api/v2/standby-equipment": {
       "get": {
         "operationId": "StandbyV2Controller_list_v2",
@@ -18508,6 +18580,38 @@
           }
         ],
         "summary": "Operations of the caller scope (keyset on startedAt; from / to overlap, eventIds, assetIds)",
+        "tags": [
+          "v2 · Work-order operations"
+        ]
+      }
+    },
+    "/api/v2/work-order-operations/repair-evidence": {
+      "get": {
+        "description": "Diagnosis, repair and test operations linked to the stop (any revision), overlaps once, minus waiting. `activeRepairSeconds` null with reason `no_operations` (the KPI then names the restore time) or `operation_open` (an operation still runs). 404 for a stop outside the caller’s units.",
+        "operationId": "WorkOrderOperationsV2Controller_repairEvidence_v2",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "query",
+            "description": "The stop (production event)",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Active-repair evidence of one stop: active repair vs waiting, as mean active repair time counts it",
         "tags": [
           "v2 · Work-order operations"
         ]
@@ -25147,6 +25251,31 @@
         },
         "required": [
           "microStopSeconds"
+        ]
+      },
+      "TransitionAllowanceCreateDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unit override; absent = the tenant-wide version"
+          },
+          "transitionAllowanceInPlan": {
+            "type": "string",
+            "enum": [
+              "planned",
+              "loss"
+            ],
+            "description": "`planned`: the plan target already allows for standard grade transitions — only the overrun counts against the plan, the allowance is shown as information. `loss`: the plan does not deduct transitions — the allowance is a plan-ledger loss line."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "transitionAllowanceInPlan"
         ]
       },
       "StandbyEquipmentCreateDto": {

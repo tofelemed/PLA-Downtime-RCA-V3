@@ -145,3 +145,9 @@ export class WorkOrderOperationsImportDto {
   @Type(() => WorkOrderOperationRowDto)
   operations: WorkOrderOperationRowDto[];
 }
+
+export class RepairEvidenceQueryDto {
+  @ApiProperty({ format: 'uuid', description: 'The stop (production event)' })
+  @IsUUID()
+  eventId: string;
+}
