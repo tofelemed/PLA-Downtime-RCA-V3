@@ -7,8 +7,12 @@
 #   docker compose -f docker-compose.yml -f docker-compose.devdb.yml up -d --build
 # DEV_JWT_SECRET / DEV_CREDENTIAL_ENCRYPTION_KEY must match the values the dev backend used, so
 # connection secrets stored in that database (MQTT / PI passwords) can be decrypted.
+# To bypass the Docker Desktop host-port round trip on an existing local stack:
+#   docker network connect proact_default proact-postgres
+#   export DEV_DB_HOST=proact-postgres
+# The published host port remains available to local seed and integration-test scripts.
 x-devdb-env: &devdb-env
-  DB_HOST: host.docker.internal
+  DB_HOST: ${DEV_DB_HOST:-host.docker.internal}
   DB_PORT: "5432"
   DB_PASSWORD: ${DEV_DB_PASSWORD:?Set DEV_DB_PASSWORD (DB_PASSWORD of server/pro-act-backend/.env)}
   JWT_SECRET: ${DEV_JWT_SECRET:?Set DEV_JWT_SECRET (JWT_SECRET of server/pro-act-backend/.env)}
