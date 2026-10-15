@@ -24,6 +24,11 @@ import {
   SOURCE_CLASSES,
   SourceClass,
 } from '../../domain/actuals/period/period-actuals.types';
+import { ListQueryDto } from '../common/list-query.dto';
+import {
+  SOURCE_AUTHORITY_VERSION_STATES,
+  SourceAuthorityVersionState,
+} from './source-authority-v2.view';
 
 const BOUNDARY = /^[A-Za-z0-9_.-]{1,64}$/;
 const CONDITIONS: readonly FallbackCondition[] = [
@@ -160,4 +165,20 @@ export class SourceAuthorityQueryDto {
   @IsOptional()
   @IsUUID()
   unitId?: string;
+}
+
+export class SourceAuthorityVersionListQueryDto extends ListQueryDto {
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description:
+      'Versions of this unit only; absent = every scope the caller sees',
+  })
+  @IsOptional()
+  @IsUUID()
+  unitId?: string;
+
+  @ApiPropertyOptional({ enum: SOURCE_AUTHORITY_VERSION_STATES })
+  @IsOptional()
+  @IsIn(SOURCE_AUTHORITY_VERSION_STATES)
+  state?: SourceAuthorityVersionState;
 }

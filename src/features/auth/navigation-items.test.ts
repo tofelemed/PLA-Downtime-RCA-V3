@@ -35,6 +35,7 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   Connectivity: ADMINS,
   // SME R13 source status rules: read by every analysis role, written by integration admins / production accounting
   'Source Status Rules': NOT_OPERATOR,
+  'Source Priority': NOT_OPERATOR,
   'Enhanced Historian': NOT_OPERATOR,
   // Administration: Master Data also for the writers of its reliability pages (Manager = manager_approver:
   // stop and plan policy; Operator = operator: standby log); they see only those pages' links

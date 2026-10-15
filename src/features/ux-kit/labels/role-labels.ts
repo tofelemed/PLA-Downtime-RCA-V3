@@ -18,6 +18,7 @@ export const SCOPE_ROLE_LABELS = {
   manager_approver: 'Manager (approver)',
   production_accountant: 'Production accountant',
   quality_approver: 'Quality / Lab approver',
+  metrology_approver: 'Metrology / Instrumentation approver',
   finance_approver: 'Finance approver',
   finance_maintainer: 'Finance (rates)',
   production_engineer: 'Production engineer',

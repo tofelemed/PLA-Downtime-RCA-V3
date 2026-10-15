@@ -51,6 +51,7 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   month_close: ['close', 'production-periods', 'period-accounting'],
   source_status_mapping: ['status-mappings'],
   uncertainty_budget: ['uncertainty-budgets'],
+  source_authority: ['source-authority'],
   // SME E4: adopting a budget writes the unit's tolerance version shown in the reconciliation view
   reconciliation_tolerance: ['uncertainty-budgets', 'period-accounting', 'production-periods'],
   user_notification: ['notifications'],

@@ -17,7 +17,7 @@ import { invalid, invalidReference } from '../../profiles/profile-errors';
 import { assertTenantWideWriter } from '../../profiles/profile-scope';
 import { MeasurementHierarchyDto } from './source-authority-v2.dto';
 
-const KIND = 'source_authority';
+export const SOURCE_AUTHORITY_KIND = 'source_authority';
 /** No unit has this id: resolving with it reads the tenant-wide version only. */
 const NO_UNIT = '00000000-0000-0000-0000-000000000000';
 
@@ -28,9 +28,9 @@ export interface SourceAuthorityInForce {
 
 /**
  * `source_authority` versions over HTTP (SME E7 measurement hierarchy): the version in force for a unit
- * (its override, else tenant-wide) and a new approved version of a scope, effective now — the previous
- * open version of the scope ends, every other field is kept from the version in force, and the top rank
- * becomes `primarySource`. Periods already calculated keep the version they used until recalculated.
+ * (its override, else tenant-wide) and a draft version of a scope — every other field is kept from the
+ * version in force and the top rank becomes `primarySource`. The draft resolves nowhere until production
+ * accounting approves it (`SourceAuthorityDecisionsService`, owner 15 Oct 2026: maker-checker).
  */
 @Injectable()
 export class SourceAuthorityV2Service {
@@ -62,14 +62,15 @@ export class SourceAuthorityV2Service {
     return { row, body: resolved.sourceAuthority };
   }
 
-  async write(
+  /** A draft version of the scope from the version in force; it applies only once approved. */
+  async draft(
     context: RequestContext,
     change: {
       unitId?: string;
       measurementHierarchy: MeasurementHierarchyDto | null;
       notes?: string;
     },
-  ): Promise<SourceAuthorityInForce> {
+  ): Promise<AccountingPolicy> {
     const tenantId = requireTenantId(context);
     if (!change.unitId) assertTenantWideWriter(context, tenantId);
     return this.manager.transaction(async (manager) => {
@@ -78,36 +79,30 @@ export class SourceAuthorityV2Service {
         withHierarchy(base.body, change.measurementHierarchy),
       );
       const scopeKey = change.unitId ?? 'tenant';
-      const now = new Date();
-      const version = await nextVersion(manager, tenantId, scopeKey);
-      await manager.query(
-        `UPDATE "accounting_policies" SET "effective_to" = $4, "updated_by" = $5
-          WHERE "tenant_id" = $1 AND "policy_kind" = $2 AND "scope_key" = $3
-            AND "effective_to" IS NULL AND "effective_from" < $4`,
-        [tenantId, KIND, scopeKey, now, context.userId],
-      );
-      const row = await manager.save(
+      const version = await lockedNextVersion(manager, tenantId, scopeKey);
+      return manager.save(
         manager.create(AccountingPolicy, {
           tenantId,
-          policyKind: KIND,
+          policyKind: SOURCE_AUTHORITY_KIND,
           unitId: change.unitId ?? null,
           scopeKey,
           version,
           body: { ...body },
-          effectiveFrom: now,
+          effectiveFrom: new Date(),
           effectiveTo: null,
-          approvedBy: context.userId,
-          approvedAt: now,
+          approvedBy: null,
+          approvedAt: null,
+          basedOnId: base.row.id,
           notes: change.notes?.trim() || null,
           createdBy: context.userId,
           updatedBy: context.userId,
         }),
       );
-      return { row, body };
     });
   }
 
-  private async assertUnit(
+  /** 422 INVALID_REFERENCE unless the unit is the tenant's and in the caller's scope. */
+  async assertUnit(
     context: RequestContext,
     tenantId: string,
     unitId: string,
@@ -163,18 +158,27 @@ function checked(body: Record<string, unknown>): SourceAuthorityPolicy {
   }
 }
 
-async function nextVersion(
+/** Serialises drafts and decisions of one scope (per-scope advisory lock, held to the transaction end). */
+export async function lockScope(
+  manager: EntityManager,
+  tenantId: string,
+  scopeKey: string,
+): Promise<void> {
+  await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [
+    `accounting_policies:${tenantId}:${SOURCE_AUTHORITY_KIND}:${scopeKey}`,
+  ]);
+}
+
+async function lockedNextVersion(
   manager: EntityManager,
   tenantId: string,
   scopeKey: string,
 ): Promise<number> {
-  await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [
-    `accounting_policies:${tenantId}:${KIND}:${scopeKey}`,
-  ]);
+  await lockScope(manager, tenantId, scopeKey);
   const [{ next }] = await manager.query<Array<{ next: number }>>(
     `SELECT coalesce(max("version"), 0) + 1 AS "next" FROM "accounting_policies"
       WHERE "tenant_id" = $1 AND "policy_kind" = $2 AND "scope_key" = $3`,
-    [tenantId, KIND, scopeKey],
+    [tenantId, SOURCE_AUTHORITY_KIND, scopeKey],
   );
   return next;
 }

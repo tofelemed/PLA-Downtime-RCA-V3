@@ -11,7 +11,7 @@ import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 /**
- * Approve / reject a proposed budget (production accounting, never its author) and adopt an approved
+ * Approve / reject a proposed budget (metrology / instrumentation owner, never its author) and adopt an approved
  * budget in force as the unit's absolute reconciliation tolerance — an explicit decision, never automatic.
  */
 export function BudgetActions({ budget }: { budget: UncertaintyBudgetView }) {

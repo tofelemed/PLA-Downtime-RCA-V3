@@ -98,8 +98,15 @@ describe('measurement uncertainty screen (SME E4)', () => {
     expect(calls.find((c) => c.url.pathname.endsWith('/uncertainty-budgets'))?.url.searchParams.get('unitId')).toBe('unit-1');
   });
 
-  it('production accounting approves a budget it did not write', async () => {
-    actAs('production_accountant', 'checker-1');
+  it('production accounting cannot approve a budget: the metrology owner decides', async () => {
+    actAs('production_accountant', 'accountant-1');
+    renderPage();
+    await screen.findByTestId('budget-card');
+    expect(screen.queryByTestId('budget-approve')).toBeNull();
+  });
+
+  it('the metrology / instrumentation owner approves a budget it did not write', async () => {
+    actAs('metrology_approver', 'checker-1');
     renderPage();
     fireEvent.click(await screen.findByTestId('budget-approve'));
     await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));

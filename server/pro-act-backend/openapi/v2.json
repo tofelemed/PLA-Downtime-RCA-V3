@@ -8540,7 +8540,7 @@
     },
     "/api/v2/uncertainty-budgets/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 INVALID_EFFECTIVE_FROM when not after the budget in force.",
+        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a metrology_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 INVALID_EFFECTIVE_FROM when not after the budget in force.",
         "operationId": "UncertaintyBudgetsV2Controller_approve_v2",
         "parameters": [
           {
@@ -8580,7 +8580,7 @@
             "bearer": []
           }
         ],
-        "summary": "Approve a proposed budget (production accounting, never the author); it is in force from its effective date and ends the previous one of the boundary",
+        "summary": "Approve a proposed budget (metrology / instrumentation owner, never the author); it is in force from its effective date and ends the previous one of the boundary",
         "tags": [
           "v2 · Reconciliation and approval"
         ]
@@ -8628,7 +8628,7 @@
             "bearer": []
           }
         ],
-        "summary": "Reject a proposed budget with a reason (production accounting, never the author)",
+        "summary": "Reject a proposed budget with a reason (metrology / instrumentation owner, never the author)",
         "tags": [
           "v2 · Reconciliation and approval"
         ]
@@ -8714,6 +8714,95 @@
       }
     },
     "/api/v2/source-authority/versions": {
+      "get": {
+        "operationId": "SourceAuthorityV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "description": "Versions of this unit only; absent = every scope the caller sees",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "proposed",
+                "approved",
+                "rejected"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Source authority versions (drafts, approved, rejected), newest first; keyset on createdAt, id",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      },
       "post": {
         "description": "Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit), INVALID_POLICY (ranks not unique, classes out of order, estimate not manual, same signal twice, lag on a non-signal source, top rank not at the hierarchy boundary).",
         "operationId": "SourceAuthorityV2Controller_write_v2",
@@ -8738,6 +8827,35 @@
           }
         },
         "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Draft a source authority version with a measurement hierarchy (or none) from the version in force; the top rank becomes the primary source. It applies only once approved.",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/source-authority/versions/{id}": {
+      "get": {
+        "operationId": "SourceAuthorityV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
           "200": {
             "description": ""
           }
@@ -8747,7 +8865,103 @@
             "bearer": []
           }
         ],
-        "summary": "New source authority version with a measurement hierarchy (or none), effective now; the top rank becomes the primary source",
+        "summary": "One source authority version; foreign or out-of-scope ids are 404",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/source-authority/versions/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; 409 STALE_DRAFT when the version it was prepared from is no longer in force.",
+        "operationId": "SourceAuthorityV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustmentApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft version (production accounting, never the author): in force from now, the previous version of the scope ends; calculated periods keep theirs until recalculated",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/source-authority/versions/{id}/reject": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES / TENANT_SCOPE_REQUIRED; 409 INVALID_TRANSITION when not proposed.",
+        "operationId": "SourceAuthorityV2Controller_reject_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustmentRejectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reject a draft version with a reason (production accounting, never the author); the version in force stays",
         "tags": [
           "v2 · Production periods"
         ]
@@ -25968,6 +26182,7 @@
               "manager_approver",
               "production_accountant",
               "quality_approver",
+              "metrology_approver",
               "finance_approver",
               "finance_maintainer",
               "production_engineer",

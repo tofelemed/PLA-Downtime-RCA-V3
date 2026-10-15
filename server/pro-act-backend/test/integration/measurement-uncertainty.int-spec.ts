@@ -38,20 +38,22 @@ const counter = (from: number): Array<[number, string]> =>
  * calibrated totalizer has no readings in the shift, so the redundant meter at the same boundary gives
  * the 200 t with a substitution flag in the period detail; the hierarchy API checks its ranks. E4:
  * uncertainty budgets through `/v2/uncertainty-budgets` (server maths 4.24 t / 8.49 t, maker-checker by
- * production accounting, effective-dated succession) and an explicit adoption as the unit's absolute
- * tolerance — other units keep the zero default.
+ * the metrology / instrumentation owner, effective-dated succession) and an explicit adoption as the
+ * unit's absolute tolerance by production accounting — other units keep the zero default.
  */
 describe('measurement-source hierarchy and uncertainty budgets (SME E7, E4)', () => {
   const env = new ActualsWorld();
   let accountant = '';
   let checker = '';
+  let adopter = '';
   let integration = '';
 
   beforeAll(async () => {
     await env.start();
     const { unitA3 } = env.world;
     accountant = await env.unitUser(unitA3, 'production_accountant');
-    checker = await env.unitUser(unitA3, 'production_accountant');
+    checker = await env.unitUser(unitA3, 'metrology_approver');
+    adopter = await env.unitUser(unitA3, 'production_accountant');
     integration = await env.unitUser(unitA3, 'integration_admin');
     await env.materialize([unitA3], DAY1, DAY3);
   });
@@ -171,7 +173,7 @@ describe('measurement-source hierarchy and uncertainty budgets (SME E7, E4)', ()
     expect(runs[0].engine_version).toBe('2.4.3');
   });
 
-  it('E7: the hierarchy API writes a version and refuses inconsistent ranks', async () => {
+  it('E7: the hierarchy API drafts a version and refuses inconsistent ranks', async () => {
     const hierarchy = (entries: object[]) => ({
       unitId: env.world.unitA3,
       measurementHierarchy: {
@@ -218,9 +220,11 @@ describe('measurement-source hierarchy and uncertainty budgets (SME E7, E4)', ()
         integration,
       )
       .set('Idempotency-Key', randomUUID())
-      .expect(200);
+      .expect(201);
     expect(written.body).toMatchObject({
       unitId: env.world.unitA3,
+      state: 'proposed',
+      inForce: false,
       policy: {
         primarySource: 'pi_counter',
         measurementHierarchy: { boundary: 'reactor_outlet' },
@@ -262,7 +266,7 @@ describe('measurement-source hierarchy and uncertainty budgets (SME E7, E4)', ()
     expect((range.body as ApiError).code).toBe('INVALID_RANGE');
   });
 
-  it('E4: maker-checker by production accounting, then an explicit adoption as the absolute tolerance', async () => {
+  it('E4: maker-checker by the metrology owner, then an explicit adoption as the absolute tolerance', async () => {
     const proposed = await propose();
     expect(proposed).toMatchObject({
       state: 'proposed',
@@ -271,7 +275,12 @@ describe('measurement-source hierarchy and uncertainty budgets (SME E7, E4)', ()
     });
     const role = await decide(proposed.id, 'approve', env.admin).expect(403);
     expect((role.body as ApiError).code).toBe('FORBIDDEN_ROLE');
-    const own = await decide(proposed.id, 'approve', accountant).expect(403);
+    const accounting = await decide(proposed.id, 'approve', adopter).expect(
+      403,
+    );
+    expect((accounting.body as ApiError).code).toBe('FORBIDDEN_ROLE');
+    const ownDraft = await propose({}, checker);
+    const own = await decide(ownDraft.id, 'approve', checker).expect(403);
     expect((own.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
     const approved = (await decide(proposed.id, 'approve', checker).expect(200))
       .body as BudgetBody;
@@ -283,8 +292,14 @@ describe('measurement-source hierarchy and uncertainty budgets (SME E7, E4)', ()
       accountant,
     ).expect(403);
     expect((authorAdopts.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
+    const metrologyAdopts = await decide(
+      proposed.id,
+      'adopt-as-tolerance',
+      checker,
+    ).expect(403);
+    expect((metrologyAdopts.body as ApiError).code).toBe('FORBIDDEN_ROLE');
     const adopted = (
-      await decide(proposed.id, 'adopt-as-tolerance', checker).expect(200)
+      await decide(proposed.id, 'adopt-as-tolerance', adopter).expect(200)
     ).body as AdoptedBody;
     expect(adopted.tolerance).toMatchObject({
       mode: 'absolute',

@@ -112,8 +112,10 @@ describe('capabilitiesOf', () => {
       ['canWriteUncertaintyBudgets', Roles.BUDGET_WRITERS],
       ['canApproveUncertaintyBudgets', Roles.BUDGET_APPROVERS],
       ['canAdoptTolerance', Roles.TOLERANCE_ADOPTERS],
+      ['canWriteSourceAuthority', Roles.SOURCE_AUTHORITY_WRITERS],
+      ['canApproveSourceAuthority', Roles.SOURCE_AUTHORITY_APPROVERS],
     ];
-    const SCOPE_ROLES = ['manager_approver', 'production_accountant', 'quality_approver', 'finance_approver', 'finance_maintainer', 'production_engineer', 'reliability_engineer', 'integration_admin', 'master_data_admin', 'operator', 'viewer'];
+    const SCOPE_ROLES = ['manager_approver', 'production_accountant', 'quality_approver', 'metrology_approver', 'finance_approver', 'finance_maintainer', 'production_engineer', 'reliability_engineer', 'integration_admin', 'master_data_admin', 'operator', 'viewer'];
 
     it.each(PINS)('%s: exactly the scope roles of its server set, plus the global admins', (key, set) => {
       for (const role of SCOPE_ROLES) expect([role, capabilitiesOf([role])[key]]).toEqual([role, set.includes(role)]);

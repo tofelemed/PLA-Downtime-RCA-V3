@@ -66,7 +66,7 @@ function UncertaintyScreen() {
 /**
  * SME E4 measurement uncertainty at `/measurement-uncertainty`: the budgets of a unit's measurement
  * boundaries, their server-computed combined and expanded uncertainty, evidence and review, maker-checker
- * by production accounting, and the explicit adoption of a budget as the unit's absolute tolerance.
+ * by the metrology / instrumentation owner, and the explicit adoption of a budget as the unit's absolute tolerance.
  */
 export function UncertaintyPage() {
   const tenantId = useV2TenantId();

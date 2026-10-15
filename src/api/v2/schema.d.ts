@@ -2406,8 +2406,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Approve a proposed budget (production accounting, never the author); it is in force from its effective date and ends the previous one of the boundary
-         * @description Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 INVALID_EFFECTIVE_FROM when not after the budget in force.
+         * Approve a proposed budget (metrology / instrumentation owner, never the author); it is in force from its effective date and ends the previous one of the boundary
+         * @description Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a metrology_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 INVALID_EFFECTIVE_FROM when not after the budget in force.
          */
         post: operations["UncertaintyBudgetsV2Controller_approve_v2"];
         delete?: never;
@@ -2426,7 +2426,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reject a proposed budget with a reason (production accounting, never the author)
+         * Reject a proposed budget with a reason (metrology / instrumentation owner, never the author)
          * @description Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES; 409 INVALID_TRANSITION when not proposed.
          */
         post: operations["UncertaintyBudgetsV2Controller_reject_v2"];
@@ -2480,13 +2480,71 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Source authority versions (drafts, approved, rejected), newest first; keyset on createdAt, id */
+        get: operations["SourceAuthorityV2Controller_list_v2"];
         put?: never;
         /**
-         * New source authority version with a measurement hierarchy (or none), effective now; the top rank becomes the primary source
+         * Draft a source authority version with a measurement hierarchy (or none) from the version in force; the top rank becomes the primary source. It applies only once approved.
          * @description Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit), INVALID_POLICY (ranks not unique, classes out of order, estimate not manual, same signal twice, lag on a non-signal source, top rank not at the hierarchy boundary).
          */
         post: operations["SourceAuthorityV2Controller_write_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/source-authority/versions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One source authority version; foreign or out-of-scope ids are 404 */
+        get: operations["SourceAuthorityV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/source-authority/versions/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a draft version (production accounting, never the author): in force from now, the previous version of the scope ends; calculated periods keep theirs until recalculated
+         * @description Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; 409 STALE_DRAFT when the version it was prepared from is no longer in force.
+         */
+        post: operations["SourceAuthorityV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/source-authority/versions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a draft version with a reason (production accounting, never the author); the version in force stays
+         * @description Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES / TENANT_SCOPE_REQUIRED; 409 INVALID_TRANSITION when not proposed.
+         */
+        post: operations["SourceAuthorityV2Controller_reject_v2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8333,7 +8391,7 @@ export interface components {
             /** @description Exact e-mail of a user of the plant's organization (instead of `userId`) */
             email?: string;
             /** @enum {string} */
-            role: "manager_approver" | "production_accountant" | "quality_approver" | "finance_approver" | "finance_maintainer" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
+            role: "manager_approver" | "production_accountant" | "quality_approver" | "metrology_approver" | "finance_approver" | "finance_maintainer" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
             /** @description Limit the grant to this unit of the plant (omit for the whole plant) */
             unitId?: string;
         };
@@ -12901,6 +12959,36 @@ export interface operations {
             };
         };
     };
+    SourceAuthorityV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Versions of this unit only; absent = every scope the caller sees */
+                unitId?: string;
+                state?: "proposed" | "approved" | "rejected";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     SourceAuthorityV2Controller_write_v2: {
         parameters: {
             query?: never;
@@ -12913,6 +13001,75 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SourceAuthorityVersionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SourceAuthorityV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SourceAuthorityV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustmentApproveDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SourceAuthorityV2Controller_reject_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustmentRejectDto"];
             };
         };
         responses: {

@@ -9,6 +9,7 @@ export type ScopeRole =
   | 'manager_approver'
   | 'production_accountant'
   | 'quality_approver'
+  | 'metrology_approver'
   | 'finance_approver'
   | 'finance_maintainer'
   | 'production_engineer'
