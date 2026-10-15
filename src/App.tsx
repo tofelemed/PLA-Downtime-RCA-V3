@@ -14,6 +14,7 @@ import { createAppQueryClient } from "./app/query-client";
 import { PROTECTED_ROUTES } from "./app/routes";
 import { V2SessionBridge } from "./features/v2-foundation/v2-session-bridge";
 import { RealtimeBridge } from "./features/v2-foundation/realtime-bridge";
+import { SessionRecovery } from "./features/auth/session-recovery";
 
 const queryClient = createAppQueryClient();
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -25,7 +26,7 @@ const PageFallback = () => (
 );
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, startupError } = useAuth();
 
   if (isLoading) {
     return (
@@ -34,6 +35,8 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
       </div>
     );
   }
+
+  if (startupError) return <SessionRecovery />;
 
   if (!session) {
     return <LoginForm />;

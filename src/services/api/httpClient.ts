@@ -66,11 +66,15 @@ type TenantProvider = () => string | null | undefined;
 type RefreshHandler = () => Promise<boolean>;
 
 import { API_BASE_URL } from './apiBaseUrl';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('HttpClient');
 
 export class HttpClient {
   private tokenProvider?: TokenProvider;
   private tenantProvider?: TenantProvider;
   private refreshHandler?: RefreshHandler;
+  private sessionKeyProvider?: () => string;
   private readonly baseUrl: string;
 
   constructor(baseUrl: string = API_BASE_URL) {
@@ -94,59 +98,21 @@ export class HttpClient {
     this.refreshHandler = handler;
   }
 
-  // Enhanced token getter that also checks localStorage directly as fallback
+  setSessionKeyProvider(provider: (() => string) | undefined) {
+    this.sessionKeyProvider = provider;
+  }
+
+  // An installed provider is authoritative, including null after sign-out.
   private getToken(): string | null {
-    let token: string | null = null;
-
-    // First try the token provider
     try {
-      const providerToken = this.tokenProvider?.();
-      if (providerToken && typeof providerToken === 'string' && providerToken.trim().length > 0) {
-        token = providerToken;
-      }
-    } catch (error) {
-      console.warn('[HttpClient] Token provider failed, trying localStorage fallback', error);
+      const token: unknown = this.tokenProvider
+        ? this.tokenProvider()
+        : (JSON.parse(localStorage.getItem('proact_auth_state') ?? 'null') as { tokens?: { accessToken?: unknown } } | null)?.tokens?.accessToken;
+      return typeof token === 'string' && token.split('.').length === 3 ? token : null;
+    } catch {
+      log.warn('Unable to read the current session token');
+      return null;
     }
-
-    // Fallback: Check localStorage directly
-    if (!token) {
-      try {
-        const authStateRaw = localStorage.getItem('proact_auth_state');
-        if (authStateRaw) {
-          const authState = JSON.parse(authStateRaw);
-          const storedToken = authState?.tokens?.accessToken;
-          if (storedToken && typeof storedToken === 'string' && storedToken.trim().length > 0) {
-            token = storedToken;
-            
-            // Update token provider if we got token from localStorage
-            if (!this.tokenProvider || !this.tokenProvider()) {
-              httpClient.setTokenProvider(() => {
-                try {
-                  const auth = JSON.parse(localStorage.getItem('proact_auth_state') || '{}');
-                  return auth?.tokens?.accessToken || null;
-                } catch {
-                  return null;
-                }
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.warn('[HttpClient] Failed to read token from localStorage', error);
-      }
-    }
-
-    // Validate token format (basic JWT structure check)
-    if (token) {
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        console.warn('[HttpClient] Invalid token format (not a JWT), clearing');
-        localStorage.removeItem('proact_auth_state');
-        return null;
-      }
-    }
-
-    return token;
   }
 
   private buildUrl(path: string, query?: Record<string, unknown>): string {
@@ -168,11 +134,24 @@ export class HttpClient {
   }
 
   async request<TResponse = unknown>(path: string, options: RequestOptions = {}): Promise<TResponse> {
+    const scope = () => `${this.sessionKeyProvider?.() ?? ''}:${this.tenantProvider?.() ?? ''}`;
+    const owner = scope();
+    const assertCurrent = () => {
+      options.signal?.throwIfAborted();
+      if (!options.skipAuth && owner !== scope()) throw new DOMException('Session or plant changed', 'AbortError');
+    };
     try {
-      return await this.send<TResponse>(path, options);
+      assertCurrent();
+      const response = await this.send<TResponse>(path, options);
+      assertCurrent();
+      return response;
     } catch (error) {
+      assertCurrent();
       if (!(await this.renewedAfter(error, options))) throw error;
-      return this.send<TResponse>(path, options);
+      assertCurrent();
+      const response = await this.send<TResponse>(path, options);
+      assertCurrent();
+      return response;
     }
   }
 
@@ -180,11 +159,7 @@ export class HttpClient {
   private async renewedAfter(error: unknown, options: RequestOptions): Promise<boolean> {
     if (!(error instanceof ApiError) || error.status !== 401) return false;
     if (options.skipAuth || !this.refreshHandler || error.url.includes('/auth/')) return false;
-    try {
-      return await this.refreshHandler();
-    } catch {
-      return false;
-    }
+    return this.refreshHandler();
   }
 
   private async send<TResponse>(path: string, options: RequestOptions): Promise<TResponse> {
@@ -197,8 +172,6 @@ export class HttpClient {
     // never log the token or a part of it (plan 3.11, NFR03)
     if (token) {
       requestHeaders.set('Authorization', `Bearer ${token}`);
-    } else if (!skipAuth) {
-      console.warn(`[HttpClient] No token available for authenticated request to ${path}`);
     }
     const tenantId = skipAuth ? null : this.tenantProvider?.();
     if (tenantId && !requestHeaders.has('X-Tenant-Id')) {
@@ -216,25 +189,7 @@ export class HttpClient {
     const responseBody = isJson ? await response.json().catch(() => undefined) : await response.text();
 
     if (!response.ok) {
-      if (response.status === 401) {
-        // request() retries once after a refresh; AuthContext / V2SessionBridge end a dead session
-        console.warn(`[HttpClient] 401 Unauthorized for ${path}`);
-      } else if (response.status === 400) {
-        // Log validation errors for 400 Bad Request
-        console.error(`[HttpClient] ❌ 400 Bad Request for ${path}`);
-        console.error(`[HttpClient] Request URL:`, url);
-        if (isJson && responseBody) {
-          console.error(`[HttpClient] Validation errors:`, JSON.stringify(responseBody, null, 2));
-          // If it's a validation error array, show it nicely
-          if (Array.isArray(responseBody.message)) {
-            console.error(`[HttpClient] Validation issues:`, responseBody.message.join(', '));
-          } else if (responseBody.message) {
-            console.error(`[HttpClient] Error message:`, responseBody.message);
-          }
-        } else {
-          console.error(`[HttpClient] Response body:`, responseBody);
-        }
-      }
+      log.warn('API request failed', { status: response.status });
       throw new ApiError(response.status, response.statusText, url, responseBody);
     }
 

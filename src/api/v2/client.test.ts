@@ -146,4 +146,34 @@ describe('v2 client (plan 3.1)', () => {
     await expect(v2Request({ method: 'GET', path: '/organizations' })).resolves.toMatchObject({ data: { items: [] } });
     expect(header(1, 'Authorization')).toBe('Bearer header.payload.signature');
   });
+
+  it('does not expire the session when refreshing a 401 fails with infrastructure errors', async () => {
+    responses.push(json(401, {}));
+    session.refresh.mockRejectedValueOnce(new V2ApiError(503, { code: 'SERVICE_UNAVAILABLE', message: 'Unavailable', retryable: true, correlationId: null }));
+    await expect(v2Request({ method: 'GET', path: '/organizations' })).rejects.toMatchObject({ status: 503 });
+    expect(session.expired).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(1);
+  });
+
+  it.each([200, 401])('ignores a late %i from a previous sign-in without expiring the new session', async (status) => {
+    let key = 'first';
+    let finish!: (response: Response) => void;
+    configureV2Session({ getAccessToken: () => session.token, getSessionKey: () => key,
+      getTenantId: () => 'tenant-a', refresh: session.refresh, onSessionExpired: session.expired });
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; })));
+    const request = v2Request({ method: 'GET', path: '/organizations' });
+    key = 'second'; finish(json(status, {}));
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+    expect(session.expired).not.toHaveBeenCalled(); expect(session.refresh).not.toHaveBeenCalled();
+  });
+
+  it('discards an in-flight response when the selected plant changes', async () => {
+    let tenant = 'plant-a'; let finish!: (response: Response) => void;
+    configureV2Session({ getAccessToken: () => session.token, getTenantId: () => tenant,
+      refresh: session.refresh, onSessionExpired: session.expired });
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; })));
+    const request = v2Request({ method: 'GET', path: '/production-events' });
+    tenant = 'plant-b'; finish(json(200, { items: ['old-plant'] }));
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+  });
 });

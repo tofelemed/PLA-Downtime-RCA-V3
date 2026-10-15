@@ -8,6 +8,8 @@ export interface V2Session {
   getAccessToken(): string | null;
   /** acting tenant: `plantSelection?.tenant?.id || session?.tenant?.id` */
   getTenantId(): string | null;
+  /** Changes on login, logout or a new bootstrap attempt; stable across token refresh. */
+  getSessionKey?(): string;
   /** renews the access token; resolves false when the refresh token is no longer valid */
   refresh(): Promise<boolean>;
   /** called when a 401 survives a refresh: clear caches and return to the login screen */

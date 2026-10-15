@@ -7,12 +7,13 @@ interface OrganizationPage {
 }
 
 /** The organization directory is paginated; there is no v2 organization detail GET. */
-export async function readSessionOrganization(id: string, tenantId?: string): Promise<DirectoryOrganization> {
+export async function readSessionOrganization(id: string, tenantId?: string, signal?: AbortSignal): Promise<DirectoryOrganization> {
   let cursor: string | undefined;
   const visited = new Set<string>();
   do {
     const { data } = await v2Request<OrganizationPage>({
       method: 'GET', path: '/organizations', tenantId, query: { limit: 100, cursor },
+      ...(signal ? { signal } : {}),
     });
     const organization = data.items.find((item) => item.id === id);
     if (organization) return organization;

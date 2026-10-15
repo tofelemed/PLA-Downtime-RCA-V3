@@ -58,34 +58,39 @@ interface ValidateTokenResponse {
 }
 
 export const authApi = {
-  login(payload: LoginRequest) {
+  login(payload: LoginRequest, signal?: AbortSignal) {
     return httpClient.request<LoginResponse>('auth/login', {
       method: 'POST',
       body: payload,
       skipAuth: true,
+      signal,
     });
   },
 
-  refreshToken(refreshToken: string) {
+  refreshToken(refreshToken: string, signal?: AbortSignal) {
     return httpClient.request<RefreshResponse>('auth/refresh', {
       method: 'POST',
       body: { refreshToken },
       skipAuth: true,
+      signal,
     });
   },
 
   /** Public; revokes the refresh token's sign-in family on the server (plan 3.11). */
-  logout(refreshToken?: string) {
+  logout(refreshToken?: string, signal?: AbortSignal) {
     return httpClient.request<{ message: string }>('auth/logout', {
       method: 'POST',
       body: refreshToken ? { refreshToken } : {},
       skipAuth: true,
+      signal,
     });
   },
 
-  getProfile() {
+  getProfile(signal?: AbortSignal, tenantId?: string) {
     return httpClient.request<ProfileResponse>('auth/profile', {
       method: 'GET',
+      signal,
+      headers: tenantId ? { 'X-Tenant-Id': tenantId } : undefined,
     });
   },
 

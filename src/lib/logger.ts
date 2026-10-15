@@ -4,7 +4,7 @@
  */
 type Level = 'debug' | 'info' | 'warn' | 'error';
 
-const isDev = import.meta.env.DEV;
+const isDev = (import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV ?? false;
 
 function write(level: Level, scope: string, message: string, detail?: unknown): void {
   if (!isDev && (level === 'debug' || level === 'info')) return;

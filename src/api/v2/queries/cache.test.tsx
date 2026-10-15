@@ -54,6 +54,22 @@ describe('v2 cache rules (plan 3.1)', () => {
     expect(client.getQueryCache().getAll()).toHaveLength(0);
   });
 
+  it('switching users in the same plant clears cached data', () => {
+    const view = render(<V2SessionBridge />, { wrapper });
+    seed(client, 'tenant-a', 'reports');
+    auth.session = { user: { id: 'u2' }, tenant: { id: 'tenant-a' } };
+    view.rerender(<V2SessionBridge />);
+    expect(client.getQueryCache().getAll()).toHaveLength(0);
+  });
+
+  it('a role or scope reduction for the same user and plant clears cached data', () => {
+    const view = render(<V2SessionBridge />, { wrapper });
+    seed(client, 'tenant-a', 'reports');
+    auth.session = { user: { id: 'u1', role: 'viewer', scopes: [] }, tenant: { id: 'tenant-a' } } as typeof auth.session;
+    view.rerender(<V2SessionBridge />);
+    expect(client.getQueryCache().getAll()).toHaveLength(0);
+  });
+
   it('an event change invalidates events, overlapping periods and reports of its tenant only', async () => {
     seed(client, 'tenant-a', 'production-events');
     seed(client, 'tenant-a', 'production-periods', { from: '2026-10-09T00:00:00Z', to: '2026-10-10T00:00:00Z' });

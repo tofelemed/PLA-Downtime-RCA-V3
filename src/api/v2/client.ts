@@ -1,5 +1,5 @@
 import { createLogger } from '@/lib/logger';
-import { v2BaseUrl, v2Session } from './config';
+import { v2BaseUrl, v2Session, type V2Session } from './config';
 import { SessionExpiredError, toV2Error } from './errors';
 import { etagCache } from './etag-cache';
 import { newIdempotencyKey } from './idempotency';
@@ -40,16 +40,31 @@ export const MAX_RETRY_AFTER_SECONDS = 30;
 
 function delay(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener('abort', () => {
+    const abort = () => {
       clearTimeout(timer);
-      reject(signal.reason ?? new DOMException('Aborted', 'AbortError'));
-    });
+      reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'));
+    };
+    const timer = setTimeout(() => { signal?.removeEventListener('abort', abort); resolve(); }, ms);
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
   });
 }
 
-function headersFor(options: V2RequestOptions, url: string, correlationId: string): Headers {
+interface RequestSession { session: V2Session; assertCurrent(): void }
+
+function captureSession(signal?: AbortSignal): RequestSession {
   const session = v2Session();
+  const key = session.getSessionKey?.();
+  const tenant = session.getTenantId();
+  return { session, assertCurrent: () => {
+    signal?.throwIfAborted();
+    if (session !== v2Session() || key !== session.getSessionKey?.() || tenant !== session.getTenantId()) {
+      throw new DOMException('Session or plant changed', 'AbortError');
+    }
+  } };
+}
+
+function headersFor(options: V2RequestOptions, url: string, correlationId: string, session: V2Session): Headers {
   const headers = new Headers({ Accept: 'application/json', 'X-Correlation-Id': correlationId });
   const token = session.getAccessToken();
   if (token && isApiUrl(url, v2BaseUrl())) headers.set('Authorization', `Bearer ${token}`);
@@ -71,25 +86,27 @@ async function readBody(response: Response): Promise<unknown> {
   return response.text().catch(() => undefined);
 }
 
-async function send(options: V2RequestOptions, correlationId: string): Promise<Response> {
+async function send(options: V2RequestOptions, correlationId: string, context: RequestSession): Promise<Response> {
+  context.assertCurrent();
   const url = buildUrl(v2BaseUrl(), options.path, options.query);
   return fetch(url, {
     method: options.method,
-    headers: headersFor(options, url, correlationId),
+    headers: headersFor(options, url, correlationId, context.session),
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     signal: options.signal,
   });
 }
 
 /** Sends with the bounded retries: one token refresh on 401, Retry-After waits on 429. */
-async function sendWithRetries(options: V2RequestOptions, correlationId: string): Promise<Response> {
+async function sendWithRetries(options: V2RequestOptions, correlationId: string, context: RequestSession): Promise<Response> {
   let refreshed = false;
   let rateLimited = 0;
   for (;;) {
-    const response = await send(options, correlationId);
+    const response = await send(options, correlationId, context);
+    context.assertCurrent();
     if (response.status === 401 && !refreshed) {
       refreshed = true;
-      if (await v2Session().refresh()) continue;
+      if (await context.session.refresh()) continue;
       return response;
     }
     if (response.status === 429 && rateLimited < RATE_LIMIT_RETRIES) {
@@ -108,19 +125,21 @@ async function sendWithRetries(options: V2RequestOptions, correlationId: string)
  * POST, `If-Match` on request; errors become `V2ApiError` / `StaleRevisionError` / `SessionExpiredError`.
  */
 export async function v2Request<T>(request: V2RequestOptions): Promise<V2Response<T>> {
+  const context = captureSession(request.signal);
   const correlationId = newIdempotencyKey();
   // one key per attempt: every retry below re-sends the same key
   const options =
     request.method === 'POST' && !request.idempotencyKey
       ? { ...request, idempotencyKey: newIdempotencyKey() }
       : request;
-  const response = await sendWithRetries(options, correlationId);
+  const response = await sendWithRetries(options, correlationId, context);
   const body = await readBody(response);
+  context.assertCurrent();
   const etag = response.headers.get('ETag');
   if (!response.ok) {
     const error = toV2Error(response.status, body, etag, correlationId);
     if (response.status === 401) {
-      v2Session().onSessionExpired();
+      context.session.onSessionExpired();
       throw new SessionExpiredError({
         code: error.code,
         message: error.message,
@@ -130,6 +149,6 @@ export async function v2Request<T>(request: V2RequestOptions): Promise<V2Respons
     }
     throw error;
   }
-  if (options.method === 'GET') etagCache.remember(v2Session().getTenantId(), options.path, etag);
+  if (options.method === 'GET') etagCache.remember(options.tenantId ?? context.session.getTenantId(), options.path, etag);
   return { data: body as T, status: response.status, etag, correlationId };
 }

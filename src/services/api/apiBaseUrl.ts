@@ -9,11 +9,12 @@
  *  3. The local development backend.
  */
 const DEFAULT_API_BASE_URL = 'http://localhost:4004/api';
+const buildEnv = (import.meta as ImportMeta & { env?: { VITE_API_BASE_URL?: string } }).env;
 
 export const API_BASE_URL: string = (
   (typeof window !== 'undefined' &&
     (window as Window & { __PROACT_API_BASE_URL__?: string }).__PROACT_API_BASE_URL__) ||
-  import.meta.env.VITE_API_BASE_URL ||
+  buildEnv?.VITE_API_BASE_URL ||
   DEFAULT_API_BASE_URL
 ).replace(/\/+$/, '');
 

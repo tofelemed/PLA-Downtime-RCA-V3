@@ -6,6 +6,7 @@ import { etagCache } from '@/api/v2/etag-cache';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { createLogger } from '@/lib/logger';
 import { httpClient } from '@/services/api/httpClient';
+import { sessionAuthorityKey } from '@/features/auth/session-authority-key';
 
 const log = createLogger('V2Session');
 
@@ -17,15 +18,16 @@ const log = createLogger('V2Session');
  */
 export function V2SessionBridge(): null {
   const queryClient = useQueryClient();
-  const { session, getAccessToken, refreshSession, expireSession } = useAuth();
+  const { session, getAccessToken, getSessionKey, refreshSession, expireSession } = useAuth();
   const tenantId = useV2TenantId();
-  const latest = useRef({ tenantId, getAccessToken, refreshSession, expireSession });
-  latest.current = { tenantId, getAccessToken, refreshSession, expireSession };
+  const latest = useRef({ tenantId, getAccessToken, getSessionKey, refreshSession, expireSession });
+  latest.current = { tenantId, getAccessToken, getSessionKey, refreshSession, expireSession };
 
   useEffect(() => {
     const unconfigure = configureV2Session({
       getAccessToken: () => latest.current.getAccessToken(),
       getTenantId: () => latest.current.tenantId,
+      getSessionKey: () => latest.current.getSessionKey?.() ?? '',
       refresh: () => latest.current.refreshSession(),
       onSessionExpired: () => {
         log.warn('Session expired; signing out');
@@ -39,7 +41,7 @@ export function V2SessionBridge(): null {
     };
   }, []);
 
-  useCacheReset(queryClient, session ? tenantId : null);
+  useCacheReset(queryClient, session ? `${sessionAuthorityKey(session.user)}:${tenantId ?? ''}` : null);
   return null;
 }
 

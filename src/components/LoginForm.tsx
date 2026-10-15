@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2 } from 'lucide-react';
+import { StatusIcon } from '@/lib/icons';
 import { LOGIN_COPY } from '@/features/login/login-copy';
 import { LoginHeroPanel } from '@/features/login/login-hero-panel';
 import { DemoAccountsHint } from '@/features/login/demo-accounts-hint';
@@ -14,7 +14,7 @@ import { useLoginDocumentTitle } from '@/features/login/use-login-document-title
 const FIELD_LABEL = 'text-xs font-semibold tracking-[0.15em] text-slate-700';
 
 export const LoginForm: React.FC = () => {
-  const { login } = useAuth();
+  const { login, loginError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,13 +26,9 @@ export const LoginForm: React.FC = () => {
     setIsLoading(true);
     setError('');
 
-    const success = await login(email, password);
-
-    if (!success) {
-      setError(LOGIN_COPY.invalidCredentials);
-    }
-
-    setIsLoading(false);
+    try { await login(email, password); }
+    catch { setError('The sign-in service is temporarily unavailable. Please try again.'); }
+    finally { setIsLoading(false); }
   };
 
   return (
@@ -77,14 +73,14 @@ export const LoginForm: React.FC = () => {
               />
             </div>
 
-            {error && (
+            {(error || loginError) && (
               <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{error || loginError}</AlertDescription>
               </Alert>
             )}
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading && <StatusIcon.loading className="mr-2 h-4 w-4 animate-spin" />}
               {LOGIN_COPY.submit}
             </Button>
 

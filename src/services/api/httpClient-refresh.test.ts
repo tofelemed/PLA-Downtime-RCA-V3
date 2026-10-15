@@ -46,4 +46,31 @@ describe('HttpClient refresh on 401', () => {
     expect(auth.refresh).not.toHaveBeenCalled();
     expect(profile.refresh).not.toHaveBeenCalled();
   });
+
+  it('surfaces a transient refresh failure instead of misreporting invalid credentials', async () => {
+    const { client, fetchMock, refresh } = clientWith([json(401, {})], true);
+    refresh.mockRejectedValueOnce(new ApiError(503, 'Unavailable', '/auth/refresh', {}));
+    await expect(client.request('units')).rejects.toMatchObject({ status: 503 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats a null token provider as authoritative over saved credentials', async () => {
+    localStorage.setItem('proact_auth_state', JSON.stringify({ tokens: { accessToken: 'header.old.sig' } }));
+    const { client, fetchMock } = clientWith([json(200, {})], false);
+    client.setTokenProvider(() => null);
+    await client.request('units');
+    const headers = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].headers as Headers;
+    expect(headers.has('Authorization')).toBe(false);
+    localStorage.clear();
+  });
+
+  it.each([200, 401])('discards a late %i after a session change without refreshing the new user', async (status) => {
+    let key = 'first'; let finish!: (response: Response) => void;
+    const { client, refresh } = clientWith([], true);
+    client.setSessionKeyProvider(() => key);
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; })));
+    const request = client.request('units'); key = 'second'; finish(json(status, {}));
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+    expect(refresh).not.toHaveBeenCalled();
+  });
 });
