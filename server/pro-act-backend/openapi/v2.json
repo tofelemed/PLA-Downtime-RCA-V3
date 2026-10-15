@@ -8340,6 +8340,418 @@
         ]
       }
     },
+    "/api/v2/uncertainty-budgets": {
+      "get": {
+        "operationId": "UncertaintyBudgetsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "boundary",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "reactor_outlet",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "proposed",
+                "approved",
+                "rejected"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List uncertainty budgets (effective interval overlapping [from, to); keyset on effectiveFrom, id, newest first)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. 422 INVALID_REFERENCE (unit outside the caller’s scope), INVALID_BUDGET, INVALID_RANGE (review not after the effective date).",
+        "operationId": "UncertaintyBudgetsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UncertaintyBudgetCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Propose an uncertainty budget for a unit’s measurement boundary",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/uncertainty-budgets/preview": {
+      "post": {
+        "description": "422 INVALID_BUDGET (no component, k ≤ 0, |r| > 1, a pair correlated twice, negative variance).",
+        "operationId": "UncertaintyBudgetsV2Controller_preview_v2",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UncertaintyBudgetMathsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Compute a draft budget (combined standard and expanded uncertainty, contributions); nothing is stored",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/uncertainty-budgets/{id}": {
+      "get": {
+        "operationId": "UncertaintyBudgetsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One uncertainty budget; foreign or out-of-scope ids are 404",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/uncertainty-budgets/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 INVALID_EFFECTIVE_FROM when not after the budget in force.",
+        "operationId": "UncertaintyBudgetsV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustmentApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a proposed budget (production accounting, never the author); it is in force from its effective date and ends the previous one of the boundary",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/uncertainty-budgets/{id}/reject": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES; 409 INVALID_TRANSITION when not proposed.",
+        "operationId": "UncertaintyBudgetsV2Controller_reject_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustmentRejectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reject a proposed budget with a reason (production accounting, never the author)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/uncertainty-budgets/{id}/adopt-as-tolerance": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Explicit decision, never automatic. 403 SEPARATION_OF_DUTIES for the budget’s author; 422 BUDGET_NOT_IN_FORCE (not approved or not effective now), BUDGET_REVIEW_OVERDUE, INVALID_POLICY.",
+        "operationId": "UncertaintyBudgetsV2Controller_adopt_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToleranceAdoptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Make the budget’s expanded uncertainty the unit’s absolute reconciliation tolerance (new tolerance version, effective now)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/source-authority": {
+      "get": {
+        "operationId": "SourceAuthorityV2Controller_current_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "description": "Unit whose version in force is read; absent = tenant-wide",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The source authority version in force for a unit (its override, else tenant-wide)",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/source-authority/versions": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit), INVALID_POLICY (ranks not unique, classes out of order, estimate not manual, same signal twice, lag on a non-signal source, top rank not at the hierarchy boundary).",
+        "operationId": "SourceAuthorityV2Controller_write_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceAuthorityVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "New source authority version with a measurement hierarchy (or none), effective now; the top rank becomes the primary source",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
     "/api/v2/external-production-reports": {
       "post": {
         "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED: a site document). Lines must name units and products of the tenant (422 INVALID_REFERENCE). Same id + revision with the same content → `outcome: duplicate`; with other content → 409 REPORT_REVISION_CONFLICT. A higher revision supersedes the current one (never summed) and is a correction candidate; a lower one is stored superseded (`stale`). Certified eligibility follows the approved status mapping of the record’s source system in force at import (SME R13, GET /v2/source-status-mappings; `sourceSystem` default `import`); the mapping version is kept on the record.",
@@ -22816,6 +23228,317 @@
           "uom",
           "productionStart",
           "productionEnd"
+        ]
+      },
+      "UncertaintyComponentDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "meter",
+              "scale",
+              "inventory",
+              "conversion",
+              "timing"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "example": "FT-101 totalizer (calibration 2027-01)",
+            "maxLength": 200
+          },
+          "standardUncertainty": {
+            "type": "string",
+            "example": "3",
+            "description": "Standard uncertainty u (one standard deviation) in the budget unit, decimal string ≥ 0"
+          },
+          "sensitivity": {
+            "type": "string",
+            "example": "-1",
+            "description": "Sensitivity coefficient c of the reconciled quantity (1 added, −1 subtracted); default 1"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "standardUncertainty"
+        ]
+      },
+      "UncertaintyCorrelationDto": {
+        "type": "object",
+        "properties": {
+          "a": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Index of the first component"
+          },
+          "b": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Index of the second component"
+          },
+          "coefficient": {
+            "type": "string",
+            "example": "0.5",
+            "description": "Correlation coefficient r in [-1, 1]"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "coefficient"
+        ]
+      },
+      "UncertaintyBudgetMathsDto": {
+        "type": "object",
+        "properties": {
+          "components": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UncertaintyComponentDto"
+            }
+          },
+          "correlations": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UncertaintyCorrelationDto"
+            }
+          },
+          "coverageFactor": {
+            "type": "string",
+            "example": "2",
+            "description": "Coverage factor k (default 2, about 95 % for a normal distribution), at most 3 decimals"
+          }
+        },
+        "required": [
+          "components"
+        ]
+      },
+      "UncertaintyBudgetCreateDto": {
+        "type": "object",
+        "properties": {
+          "components": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UncertaintyComponentDto"
+            }
+          },
+          "correlations": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UncertaintyCorrelationDto"
+            }
+          },
+          "coverageFactor": {
+            "type": "string",
+            "example": "2",
+            "description": "Coverage factor k (default 2, about 95 % for a normal distribution), at most 3 decimals"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "boundary": {
+            "type": "string",
+            "example": "reactor_outlet",
+            "description": "Measurement boundary the budget covers (same name as the source_authority hierarchy)"
+          },
+          "uom": {
+            "type": "string",
+            "example": "t",
+            "maxLength": 50
+          },
+          "calibrationRef": {
+            "type": "string",
+            "example": "CAL-FT101-2027-01; scale cert WS-22",
+            "maxLength": 2000
+          },
+          "reviewDueAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Next review of the budget"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the budget takes effect"
+          },
+          "evidenceRef": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "notes": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "components",
+          "unitId",
+          "boundary",
+          "uom",
+          "calibrationRef",
+          "reviewDueAt",
+          "effectiveFrom"
+        ]
+      },
+      "ToleranceAdoptionDto": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Note on the new tolerance version"
+          }
+        }
+      },
+      "BoundaryAdjustmentDto": {
+        "type": "object",
+        "properties": {
+          "inventoryChangeAccounted": {
+            "type": "boolean",
+            "description": "The record already includes the stock change between the boundaries (e.g. silo level-to-mass); false = known but never a substitute"
+          },
+          "lagSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Time lag of this boundary behind the slice boundary, seconds (signal sources only)"
+          },
+          "evidenceRef": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "silo S-1 stock reconciliation PA-2027-03"
+          }
+        },
+        "required": [
+          "inventoryChangeAccounted",
+          "lagSeconds",
+          "evidenceRef"
+        ]
+      },
+      "HierarchyEntryDto": {
+        "type": "object",
+        "properties": {
+          "rank": {
+            "type": "number",
+            "minimum": 1
+          },
+          "sourceClass": {
+            "type": "string",
+            "enum": [
+              "calibrated_primary",
+              "redundant_measurement",
+              "reconciled_record",
+              "approved_estimate"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "pi_output_ef",
+              "pi_counter",
+              "pi_rate",
+              "mqtt",
+              "kafka",
+              "manual",
+              "external_report"
+            ]
+          },
+          "signalSourceKey": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 500,
+            "description": "Source key (tag / topic) of the one signal this rank reads, e.g. a redundant meter"
+          },
+          "boundary": {
+            "type": "string",
+            "example": "reactor_outlet"
+          },
+          "boundaryAdjustment": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BoundaryAdjustmentDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "rank",
+          "sourceClass",
+          "source",
+          "boundary"
+        ]
+      },
+      "MeasurementHierarchyDto": {
+        "type": "object",
+        "properties": {
+          "boundary": {
+            "type": "string",
+            "example": "reactor_outlet",
+            "description": "The slice measurement boundary"
+          },
+          "conditions": {
+            "type": "array",
+            "description": "When a lower rank may replace a better one",
+            "items": {
+              "type": "string",
+              "enum": [
+                "primary_stale",
+                "primary_bad_quality",
+                "primary_missing",
+                "primary_conflict"
+              ]
+            }
+          },
+          "entries": {
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HierarchyEntryDto"
+            }
+          }
+        },
+        "required": [
+          "boundary",
+          "conditions",
+          "entries"
+        ]
+      },
+      "SourceAuthorityVersionDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unit override; absent = the tenant-wide version"
+          },
+          "measurementHierarchy": {
+            "nullable": true,
+            "description": "Ranked sources; null = back to primary / fallback. The top rank becomes primarySource.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MeasurementHierarchyDto"
+              }
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "measurementHierarchy"
         ]
       },
       "ExternalReportLineDto": {

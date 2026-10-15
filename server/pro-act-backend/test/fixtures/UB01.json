@@ -1,0 +1,31 @@
+{
+  "id": "UB01",
+  "title": "Uncertainty budget of a reconciliation boundary: two independent 3 t readings give 4.24 t combined and about 8.5 t expanded (k = 2); a full reactor-to-packing budget with a correlated inventory conversion",
+  "kind": "numerical",
+  "spec_ref": "SME E4 (justified reconciliation tolerance), NIST TN 1297 section 5 (combined standard uncertainty with covariance), ACC09, D06",
+  "owner_subphase": "2.8",
+  "tolerance": "0.00000001",
+  "inputs": {
+    "smeExample": "difference of two independent mass readings, each standard uncertainty 3 t (sensitivity +1 and -1), coverage factor 2",
+    "fullBudget": "residual = reactor totalizer - packing scale - silo stock change: meter u 1.5 t (c +1), scale u 0.8 t (c -1), silo inventory u 2.0 t (c -1), level-to-mass density conversion u 0.6 t (c +1), shift-boundary timing u 0.4 t (c +1); inventory and conversion correlated r = 0.5; k = 2"
+  },
+  "expected": {
+    "smeExample": {
+      "combinedVariance": "18",
+      "combinedStandardUncertainty": "4.24264069",
+      "expandedUncertainty": "8.48528137"
+    },
+    "fullBudget": {
+      "sumOfSquares": "7.41",
+      "covarianceTerm": "-1.2",
+      "combinedVariance": "6.21",
+      "combinedStandardUncertainty": "2.49198716",
+      "expandedUncertainty": "4.98397432",
+      "inventoryShareOfVariance": "0.64412238"
+    },
+    "toleranceDefault": {
+      "mode": "zero",
+      "value": "0"
+    }
+  }
+}

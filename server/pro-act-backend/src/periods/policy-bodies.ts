@@ -5,6 +5,10 @@ import {
   FallbackCondition,
   SourceAuthorityPolicy,
 } from '../domain/actuals/period/period-actuals.types';
+import { parseMeasurementHierarchy } from './measurement-hierarchy-body';
+import { PolicyBodyError } from './policy-body-error';
+
+export { PolicyBodyError };
 
 /**
  * D05 defaults recorded 2026-10-07 — the bodies of `contracts/policies/defaults/coverage_gate.default.json`
@@ -36,9 +40,6 @@ const CONDITIONS: readonly FallbackCondition[] = [
   'primary_missing',
   'primary_conflict',
 ];
-
-/** A stored body that does not have the kind's shape (configuration error, never guessed around). */
-export class PolicyBodyError extends Error {}
 
 function record(value: unknown): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -107,10 +108,15 @@ export function parseSourceAuthority(body: unknown): SourceAuthorityPolicy {
       `fallback.conditions must be a subset of ${CONDITIONS.join(', ')}`,
     );
   }
+  const primarySource = source(value.primarySource, 'primarySource');
+  const measurementHierarchy = parseMeasurementHierarchy(
+    value.measurementHierarchy,
+    primarySource,
+  );
   return {
     measurement: 'output',
     productId: typeof value.productId === 'string' ? value.productId : null,
-    primarySource: source(value.primarySource, 'primarySource'),
+    primarySource,
     fallback: fallback
       ? {
           conditions: conditions as FallbackCondition[],
@@ -124,5 +130,6 @@ export function parseSourceAuthority(body: unknown): SourceAuthorityPolicy {
       typeof value.overrideRole === 'string'
         ? value.overrideRole
         : 'integration_admin',
+    ...(measurementHierarchy ? { measurementHierarchy } : {}),
   };
 }

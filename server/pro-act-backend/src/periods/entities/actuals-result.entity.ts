@@ -8,6 +8,7 @@ import {
   QualityState,
   SliceActuals,
   SourceSegment,
+  SourceSubstitution,
 } from '../../domain/actuals/period/period-actuals.types';
 import { QualityClasses } from '../../domain/actuals/period/quality-classes';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
@@ -123,6 +124,10 @@ export class ActualsResult extends TenantOwnedEntity {
   /** SME E3: disposition class breakdown (actuals 2.4.2); null = no disposition / rework in the slice */
   @Column({ name: 'quality_classes', type: 'jsonb', nullable: true })
   qualityClasses: QualityClasses | null;
+
+  /** SME E7: lower-ranked source or approved estimate used (actuals 2.4.3); null = top rank or older run */
+  @Column({ name: 'substitution', type: 'jsonb', nullable: true })
+  substitution: SourceSubstitution | null;
 
   @Column({ name: 'computed_at', type: 'timestamptz' })
   computedAt: Date;

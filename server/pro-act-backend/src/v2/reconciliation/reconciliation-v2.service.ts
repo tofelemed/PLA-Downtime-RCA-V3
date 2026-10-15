@@ -18,6 +18,7 @@ import {
   publishedRevision,
 } from '../../reconciliation/revision-access';
 import { loadRevisionState } from '../../reconciliation/revision-state';
+import { toleranceJustification } from '../../uncertainty/tolerance-justification';
 import { keysetPage } from '../common/keyset-page';
 import { listResponse, ListResponse, ListScope } from '../common/response';
 import {
@@ -152,6 +153,11 @@ export class ReconciliationV2Service {
     return toReconciliationView(state, {
       publishedRevision: published?.revision ?? null,
       openProposalId: open?.id ?? null,
+      justification: await toleranceJustification(
+        manager,
+        period.tenantId,
+        state.tolerance.body,
+      ),
     });
   }
 
