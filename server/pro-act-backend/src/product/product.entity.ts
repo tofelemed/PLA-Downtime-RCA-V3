@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique, Index, VersionColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique, Index, VersionColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Tenant } from '../tenant/tenant.entity';
 
 @Entity('products')
 @Unique('UQ_products_tenant_code', ['tenantId', 'code'])
@@ -22,8 +23,12 @@ export class Product {
   @Column({ name: 'standard_rate', type: 'decimal', precision: 15, scale: 4, nullable: true })
   standardCost?: number;
 
-  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
   tenantId?: string;
+
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant?: Tenant;
 
   @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
   organizationId?: string;

@@ -10,6 +10,7 @@ import {
   JoinColumn,
   VersionColumn,
 } from 'typeorm';
+import { Tenant } from '../tenant/tenant.entity';
 import { RCA } from '../rca/rca.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -43,8 +44,12 @@ export class RCAKnowledgeBase {
   updatedAt: Date;
 
   @ApiProperty({ description: 'Tenant ID for multi-tenancy', required: false })
-  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
   tenantId?: string;
+
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
   @Column({

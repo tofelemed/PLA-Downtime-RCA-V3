@@ -101,7 +101,7 @@ export function appendRevision(
   const repository = manager.getRepository(EventRevision);
   return repository.save(
     repository.create({
-      tenantId: requireTenantUuid(event),
+      tenantId: requireTenant(event),
       eventId: event.id,
       revision: input.revision,
       kind: input.kind,
@@ -136,7 +136,7 @@ export async function appendCoding(
   const versions = await currentCodeVersions(manager, event);
   return repository.save(
     repository.create({
-      tenantId: requireTenantUuid(event),
+      tenantId: requireTenant(event),
       eventId: event.id,
       revision: input.revision,
       reasonCodeId: event.reasonCodeId ?? null,
@@ -186,16 +186,16 @@ export function codingFactsOf(event: ProductionEvent): EventFacts {
   return factsOf(event, CODING_FIELDS);
 }
 
-/** Events without a uuid tenant (legacy rows) cannot carry revisions. */
+/** Events without a tenant (legacy rows) cannot carry revisions. */
 export function hasRevisionTenant(event: ProductionEvent): boolean {
-  return typeof event.tenantUuid === 'string';
+  return typeof event.tenantId === 'string';
 }
 
-function requireTenantUuid(event: ProductionEvent): string {
-  if (!event.tenantUuid) {
-    throw new Error(`Event ${event.id} has no uuid tenant; no revision kept`);
+function requireTenant(event: ProductionEvent): string {
+  if (!event.tenantId) {
+    throw new Error(`Event ${event.id} has no tenant; no revision kept`);
   }
-  return event.tenantUuid;
+  return event.tenantId;
 }
 
 function toDecimalText(

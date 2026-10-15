@@ -26,7 +26,7 @@ export interface LegacyWorld extends EventWorld {
 
 interface EventRow {
   unitId: string;
-  tenant: string;
+  tenant: string | null;
   start: Date;
   end?: Date | null;
   eventId?: string;
@@ -73,14 +73,14 @@ type LegacyEventKey = Exclude<
   keyof EventWorld['events']
 >;
 type LegacyEventSpec = Omit<EventRow, 'unitId' | 'tenant'> & {
-  tenant?: string;
+  tenant?: string | null;
 };
 
 const PI_SENTINEL = new Date('9999-12-31T23:59:59Z');
 
-/** Legacy event shapes (unit A1, tenant A unless stated). */
+/** Legacy event shapes (unit A1, tenant A unless stated; `tenant_id` is uuid since DB-05, so tenantless = null). */
 const LEGACY_EVENTS: ReadonlyArray<[LegacyEventKey, LegacyEventSpec]> = [
-  ['tenantless', { tenant: 'legacy-plant-7', start: at('11:00') }],
+  ['tenantless', { tenant: null, start: at('11:00') }],
   ['sentinel', { start: at('13:00'), end: PI_SENTINEL, source: 'PI' }],
   ['unknownUnit', { start: at('14:00'), end: at('14:30'), legacyDuration: 30 }],
   [
@@ -144,7 +144,7 @@ async function legacyEvents(
     ids[key] = await insertEvent(dataSource, {
       ...spec,
       unitId: world.unitA1,
-      tenant: spec.tenant ?? world.tenantA,
+      tenant: spec.tenant === undefined ? world.tenantA : spec.tenant,
     });
   }
   return { ...world.events, ...(ids as Record<LegacyEventKey, string>) };
@@ -219,7 +219,7 @@ async function legacyAccounting(
 }
 
 /**
- * Seeds the T13 world plus legacy rows: an event with a non-uuid tenant, a PI 9999 sentinel written after
+ * Seeds the T13 world plus legacy rows: an event without a tenant, a PI 9999 sentinel written after
  * 1.1, durations of unknown unit / disagreeing minutes, an identical and a conflicting duplicate pair, a
  * plan without tenant or unit evidence, a v1 loss / reconcile form (linked and free-text) / loss category
  * / OEE summary, one generated period of 7 Oct and a product with `standard_rate` and no unit.

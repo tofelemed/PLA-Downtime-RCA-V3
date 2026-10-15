@@ -77,7 +77,7 @@ export class EventReferencesValidator {
   }
 
   /**
-   * LA-08 / SME Q10: transition products are the tenant's (v1 products carry the tenant as text); the
+   * LA-08 / SME Q10: transition products are the tenant's; the
    * stop a ramp-up recovers from is a downtime event of the same unit.
    */
   private async assertGradeLinksOwned(
@@ -88,14 +88,8 @@ export class EventReferencesValidator {
     for (const field of ['fromProductId', 'toProductId'] as const) {
       const id = refs[field];
       if (!id) continue;
-      const found = await this.products
-        .createQueryBuilder('p')
-        .where('p.id = :id AND lower(p.tenantId) = :tenant', {
-          id,
-          tenant: tenantId.toLowerCase(),
-        })
-        .getCount();
-      if (found === 0) throw invalidReference(field);
+      if ((await this.products.countBy({ id, tenantId })) === 0)
+        throw invalidReference(field);
     }
     if (!refs.recoveryOfEventId) return;
     const stops = await this.events.countBy({

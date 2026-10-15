@@ -35,7 +35,7 @@ export const OVERDUE = `(rca.target_completion_date IS NOT NULL AND rca.target_c
 
 const LINKED_EVENT = (condition: string) =>
   `EXISTS (SELECT 1 FROM "rca_case_links" k JOIN "production_events" e ON e."id"::text = k."target_id"
-     WHERE k."rca_id" = rca.id AND k."tenant_id"::text = rca.tenant_id AND k."link_type" = 'event' AND ${condition})`;
+     WHERE k."rca_id" = rca.id AND k."tenant_id" = rca.tenant_id AND k."link_type" = 'event' AND ${condition})`;
 
 /**
  * v2 RCA cases (plan 3.9 step 1): tenant and unit scope from identity, keyset lists with server-side
@@ -158,7 +158,8 @@ export class RcaCasesService {
 function assertTeamOpen(rca: RCA, body: RcaCaseV2UpdateDto): void {
   if (!TEAM_LOCKED_STATUSES.includes(statusOf(rca.status))) return;
   const leadChanged =
-    body.teamLeadId !== undefined && body.teamLeadId !== (rca.teamLeadId ?? null);
+    body.teamLeadId !== undefined &&
+    body.teamLeadId !== (rca.teamLeadId ?? null);
   const current = readIds(rca.teamMemberIds);
   const membersChanged =
     body.teamMemberIds !== undefined &&

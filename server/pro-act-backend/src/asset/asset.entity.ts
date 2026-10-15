@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, VersionColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, VersionColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Tenant } from '../tenant/tenant.entity';
 
 @Entity('assets')
 @Index('IDX_assets_tenant_unit', ['tenantId', 'unitId'])
@@ -49,8 +50,12 @@ export class Asset {
   @Column({ name: 'next_maintenance_date', type: 'timestamptz', nullable: true })
   nextMaintenanceDate?: Date;
 
-  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
   tenantId?: string;
+
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant?: Tenant;
 
   @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
   organizationId?: string;

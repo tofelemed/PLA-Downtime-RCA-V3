@@ -76,7 +76,7 @@ async function recordLineage(
   await relate(
     manager,
     children.map((child) => ({
-      tenantId: child.tenantUuid as string,
+      tenantId: child.tenantId as string,
       fromEventId: child.id,
       toEventId: parent.id,
       relationType: 'split_child_of' as const,

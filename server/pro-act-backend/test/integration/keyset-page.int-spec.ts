@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { AuditLog } from '../../src/audit-log/audit-log.entity';
 import { keysetPage } from '../../src/v2/common/keyset-page';
 import { IntegrationHarness } from './harness';
+import { seedPlant } from './support/seed-plant';
 
 /**
  * DB-02 / DB-06: keyset pages order and compare on the raw timestamp column, so the
@@ -15,6 +16,7 @@ describe('keysetPage on the raw sort column (DB-02)', () => {
 
   beforeAll(async () => {
     await harness.start();
+    await seedPlant(harness.dataSource, tenantId);
     for (let micro = 1; micro <= 5; micro += 1) {
       const id = randomUUID();
       ids.push(id);

@@ -111,7 +111,7 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
             entityId: request.params?.id || 'unknown',
             details: `READ ${entityType} via API GET ${path.split('?')[0]}`,
             organizationId: user.organizationId || '',
-            tenantId: user.tenantId || '',
+            tenantId: user.tenantId || undefined,
             timestamp: new Date(),
           })
           .catch((err: unknown) => {
@@ -153,7 +153,7 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
       (typeof body.tenantId === 'string' && body.tenantId) ||
       (typeof reqBody.tenantId === 'string' && reqBody.tenantId) ||
       user.tenantId ||
-      '';
+      undefined;
 
     const organizationId =
       (typeof body.organizationId === 'string' && body.organizationId) ||

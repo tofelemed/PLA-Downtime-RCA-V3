@@ -187,7 +187,7 @@ export async function openCaseOf(
     `SELECT rca."id" FROM "rcas" rca
       WHERE rca."tenant_id" = $1 AND COALESCE(rca."status", 'Draft') <> 'Closed'
         AND EXISTS (SELECT 1 FROM "rca_case_links" k JOIN "production_events" e ON e."id"::text = k."target_id"
-                     WHERE k."rca_id" = rca."id" AND k."tenant_id"::text = $1 AND k."link_type" = 'event'
+                     WHERE k."rca_id" = rca."id" AND k."tenant_id" = $1 AND k."link_type" = 'event'
                        AND e."asset_id" = $2 AND ${failureModeKeySql(input.policy.repeatMatch)} = $3)
       ORDER BY rca."created_at" LIMIT 1`,
     [input.tenantId, assetId, key],

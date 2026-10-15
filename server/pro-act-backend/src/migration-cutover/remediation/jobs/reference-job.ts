@@ -21,7 +21,7 @@ const EVENTS_WITHOUT_TENANT = `
     FROM "production_events" e
     LEFT JOIN "units" u ON u."id" = e."unit_id"
     LEFT JOIN "tenants" ut ON ut."id" = u."tenant_id"
-   WHERE (e."tenant_uuid" IS NULL OR NOT EXISTS (SELECT 1 FROM "tenants" t WHERE t."id" = e."tenant_uuid"))
+   WHERE (e."tenant_id" IS NULL OR NOT EXISTS (SELECT 1 FROM "tenants" t WHERE t."id" = e."tenant_id"))
      AND ($1::uuid IS NULL OR u."tenant_id" = $1::uuid)`;
 
 const PLANS_WITHOUT_TENANT = `
@@ -30,19 +30,19 @@ const PLANS_WITHOUT_TENANT = `
     LEFT JOIN "units" u ON u."id" = coalesce(p."unit_ref_id",
          CASE WHEN p."unit_id" ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN p."unit_id"::uuid END)
     LEFT JOIN "tenants" ut ON ut."id" = u."tenant_id"
-   WHERE (p."tenant_id" IS NULL OR NOT EXISTS (SELECT 1 FROM "tenants" t WHERE t."id"::text = p."tenant_id"))
+   WHERE (p."tenant_id" IS NULL OR NOT EXISTS (SELECT 1 FROM "tenants" t WHERE t."id" = p."tenant_id"))
      AND ($1::uuid IS NULL OR u."tenant_id" = $1::uuid)`;
 
 const EVENT_UNIT_MISMATCH = `
-  SELECT e."id", e."tenant_uuid"::text AS "tenant", u."tenant_id"::text AS "unitTenant"
+  SELECT e."id", e."tenant_id"::text AS "tenant", u."tenant_id"::text AS "unitTenant"
     FROM "production_events" e JOIN "units" u ON u."id" = e."unit_id"
-   WHERE e."tenant_uuid" IS NOT NULL AND u."tenant_id" <> e."tenant_uuid" AND ${tenantFilter('e."tenant_uuid"')}`;
+   WHERE e."tenant_id" IS NOT NULL AND u."tenant_id" <> e."tenant_id" AND ${tenantFilter('e."tenant_id"')}`;
 
 /** Other legacy tables with a nullable tenant: reported for review, never written. */
 const TENANTLESS: ReadonlyArray<[table: string, sql: string]> = [
   [
     'products',
-    `SELECT "id" FROM "products" WHERE ("tenant_id" IS NULL OR NOT EXISTS (SELECT 1 FROM "tenants" t WHERE t."id"::text = "products"."tenant_id")) AND $1::uuid IS NULL`,
+    `SELECT "id" FROM "products" WHERE ("tenant_id" IS NULL OR NOT EXISTS (SELECT 1 FROM "tenants" t WHERE t."id" = "products"."tenant_id")) AND $1::uuid IS NULL`,
   ],
   [
     'oee_summaries',

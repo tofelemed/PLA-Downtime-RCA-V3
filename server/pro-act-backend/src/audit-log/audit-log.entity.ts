@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Tenant } from '../tenant/tenant.entity';
 
 @Index('IDX_audit_logs_tenant_created', ['tenantId', 'createdAt'])
 @Index('IDX_audit_logs_tenant_time', ['tenantId', 'timestamp', 'id'])
@@ -31,8 +32,12 @@ export class AuditLog {
   @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
   organizationId?: string;
 
-  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
   tenantId?: string;
+
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant?: Tenant;
 
   // Note: Database schema doesn't have 'ipAddress' or 'userAgent' columns
   // @Column({ type: 'varchar', length: 64, nullable: true })

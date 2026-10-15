@@ -115,13 +115,10 @@ describe('migration remediation jobs (plan 3.10)', () => {
     expect(reports[0].database_name).toBe(harness.database);
 
     const [tenantless] = await q(
-      `SELECT tenant_id, tenant_uuid FROM production_events WHERE id = $1`,
+      `SELECT tenant_id FROM production_events WHERE id = $1`,
       [world.events.tenantless],
     );
-    expect(tenantless).toEqual({
-      tenant_id: world.tenantA,
-      tenant_uuid: world.tenantA,
-    });
+    expect(tenantless).toEqual({ tenant_id: world.tenantA });
     const [sentinel] = await q(
       `SELECT end_time, legacy_end_sentinel IS NOT NULL AS raw_kept, physical_state::text AS state FROM production_events WHERE id = $1`,
       [world.events.sentinel],
@@ -137,7 +134,7 @@ describe('migration remediation jobs (plan 3.10)', () => {
           c.table_name === 'production_events' &&
           (c.after as Record<string, unknown>).tenant_id === world.tenantA,
       ),
-    ).toMatchObject({ before: { tenant_id: 'legacy-plant-7' } });
+    ).toMatchObject({ before: { tenant_id: null } });
 
     const values = await q(
       `SELECT DISTINCT method FROM legacy_reported_values`,
@@ -219,7 +216,7 @@ describe('migration remediation jobs (plan 3.10)', () => {
       `SELECT tenant_id, end_time FROM production_events WHERE id = $1`,
       [world.events.tenantless],
     );
-    expect(tenantless.tenant_id).toBe('legacy-plant-7');
+    expect(tenantless.tenant_id).toBeNull();
     const [sentinel] = await q(
       `SELECT end_time::text AS e, legacy_end_sentinel FROM production_events WHERE id = $1`,
       [world.events.sentinel],

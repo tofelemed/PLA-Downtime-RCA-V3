@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Column, Index, ManyToOne, JoinColumn, VersionColumn } from 'typeorm';
+import { Tenant } from '../../tenant/tenant.entity';
 import { RCA } from '../../rca/rca.entity';
 
 @Entity('rca_change_analyses')
@@ -24,8 +25,12 @@ export class RcaChangeAnalysis {
   rowVersion: number;
 
   @ApiProperty({ description: 'Tenant ID', required: false })
-  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
   tenantId?: string;
+
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
   @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })

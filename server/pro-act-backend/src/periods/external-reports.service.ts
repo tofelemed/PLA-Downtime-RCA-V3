@@ -206,7 +206,7 @@ export class ExternalReportsService {
     if (units.length !== unitIds.length)
       throw invalidReference('lines.unitId', 'unit');
     const products: unknown[] = await this.dataSource.query(
-      `SELECT 1 FROM "products" WHERE "id" = ANY($1::uuid[]) AND lower("tenant_id") = $2`,
+      `SELECT 1 FROM "products" WHERE "id" = ANY($1::uuid[]) AND "tenant_id" = $2::uuid`,
       [productIds, tenantId.toLowerCase()],
     );
     if (products.length !== productIds.length)

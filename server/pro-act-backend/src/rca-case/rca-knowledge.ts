@@ -19,7 +19,7 @@ async function caseFailureMode(
   const rows: Array<{ mode: string }> = await manager.query(
     `SELECT btrim(e."failure_mode") AS "mode" FROM "rca_case_links" k
        JOIN "production_events" e ON e."id"::text = k."target_id" AND e."tenant_id" = $1
-      WHERE k."tenant_id"::text = $1 AND k."rca_id" = $2 AND k."link_type" = 'event'
+      WHERE k."tenant_id" = $1 AND k."rca_id" = $2 AND k."link_type" = 'event'
         AND NULLIF(btrim(e."failure_mode"), '') IS NOT NULL
       GROUP BY 1 ORDER BY count(*) DESC, 1 LIMIT 1`,
     [tenantId, rcaId],

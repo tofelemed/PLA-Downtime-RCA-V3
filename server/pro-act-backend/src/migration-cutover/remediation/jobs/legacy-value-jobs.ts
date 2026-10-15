@@ -40,7 +40,7 @@ const LEGACY_VALUE_ROWS = `
   SELECT 'oee_summaries', o."id"::text, coalesce(o."tenant_id", t."id")::text, o."plan_id"::text, o."period",
          v."metric", v."value"
     FROM "oee_summaries" o JOIN "production_plans" p ON p."id" = o."plan_id"
-    LEFT JOIN "tenants" t ON t."id"::text = p."tenant_id"
+    LEFT JOIN "tenants" t ON t."id" = p."tenant_id"
    CROSS JOIN LATERAL (VALUES ('availability', o."availability"::text), ('performance', o."performance"::text),
          ('quality', o."quality"::text), ('oee', o."oee"::text),
          ('planned_production_time', o."planned_production_time"::text),
@@ -105,7 +105,7 @@ async function existingEvents(
   if (ids.length === 0) return new Map();
   const rows: Array<{ id: string; tenant: string | null }> =
     await manager.query(
-      `SELECT "id"::text, "tenant_uuid"::text AS "tenant" FROM "production_events" WHERE "id" = ANY($1::uuid[])`,
+      `SELECT "id"::text, "tenant_id"::text AS "tenant" FROM "production_events" WHERE "id" = ANY($1::uuid[])`,
       [ids],
     );
   return new Map(rows.map((row) => [row.id, row.tenant]));

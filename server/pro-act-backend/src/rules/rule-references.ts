@@ -9,7 +9,7 @@ import { ruleReferenceInvalid } from './rule-errors';
 
 type Reference = NonNullable<RuleFieldSpec['references']>;
 
-/** Table and tenant predicate per referenced record (assets keep a varchar tenant id). */
+/** Table and tenant predicate per referenced record. */
 const LOOKUPS: Readonly<
   Record<Reference, { table: string; label: string; tenant: string }>
 > = {
@@ -24,7 +24,7 @@ const LOOKUPS: Readonly<
     tenant: '"tenant_id" = $1',
   },
   unit: { table: 'units', label: 'unit', tenant: '"tenant_id" = $1' },
-  asset: { table: 'assets', label: 'asset', tenant: '"tenant_id" = $1::text' },
+  asset: { table: 'assets', label: 'asset', tenant: '"tenant_id" = $1' },
 };
 
 interface ReferenceUse {

@@ -11,6 +11,7 @@ import {
   Index,
   VersionColumn,
 } from 'typeorm';
+import { Tenant } from '../tenant/tenant.entity';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { User } from '../users/user.entity';
 import { RCATemplate } from '../rca-template/rca-template.entity';
@@ -207,8 +208,12 @@ export class RCA {
   productivityImprovement?: number;
 
   @Index('IDX_rcas_tenant')
-  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
   tenantId?: string;
+
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant?: Tenant;
 
   /** unit scope of the case (plan 3.9); null = tenant-wide case */
   @Index('IDX_rcas_unit')

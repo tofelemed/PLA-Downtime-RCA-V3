@@ -40,7 +40,7 @@ const APPROVED = (key: string) => `${SHOWN}, al AS (
          AND r."kind"::text = ANY($6::text[])
          AND NOT EXISTS (SELECT 1 FROM "approved_loss_lines" z WHERE z."revision_id" = s."revision_id" AND z."tenant_id" = $1)
     ) x ON x."cause_event_id" IS NOT NULL
-    JOIN "production_events" e ON e."id" = x."cause_event_id" AND e."tenant_id" = ($1::uuid)::text
+    JOIN "production_events" e ON e."id" = x."cause_event_id" AND e."tenant_id" = $1::uuid
    WHERE s."lifecycle" = 'approved' AND e."asset_id" IS NOT NULL)`;
 
 const VALUES = `JOIN LATERAL (
@@ -220,7 +220,7 @@ export function firings(
     `SELECT DISTINCT ON (e."asset_id") e."asset_id"::text AS "asset_id", t."fired_at", t."rca_id"::text AS "rca_id",
             t."outcome"::text AS "outcome"
        FROM "rca_trigger_evaluations" t
-       JOIN "production_events" e ON e."id" = t."event_id" AND e."tenant_id" = ($1::uuid)::text
+       JOIN "production_events" e ON e."id" = t."event_id" AND e."tenant_id" = $1::uuid
       WHERE t."tenant_id" = $1 AND t."trigger" = 'cumulative' AND t."unit_id" = ANY($2::uuid[])
         AND e."start_time" >= $3 AND e."start_time" < $4 AND e."asset_id" = ANY($5::uuid[])
       ORDER BY e."asset_id", t."fired_at" DESC`,

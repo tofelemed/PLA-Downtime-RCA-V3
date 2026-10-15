@@ -8,6 +8,7 @@ import {
   JoinColumn,
   ManyToOne,
 } from 'typeorm';
+import { Tenant } from '../tenant/tenant.entity';
 import { PlanScenario } from '../plans/entities/plan-scenario.entity';
 import { Product } from '../product/product.entity';
 import { Unit } from '../unit/unit.entity';
@@ -35,8 +36,12 @@ export class ProductionPlan {
   @Column({ name: 'product_id', type: 'varchar', length: 36, nullable: true })
   productId?: string;
 
-  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
   tenantId?: string;
+
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant?: Tenant;
 
   @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
   organizationId?: string;

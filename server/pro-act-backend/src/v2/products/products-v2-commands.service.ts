@@ -167,7 +167,7 @@ async function assertCodeFree(
       WHERE lower(p."code") = lower($1) AND p."id" <> $2
         AND (p."tenant_id" = $3
           OR (p."tenant_id" IS NULL AND p."organization_id" = $4)
-          OR p."tenant_id" IN (SELECT t."id"::text FROM "tenants" t WHERE t."organization_id" = $4::uuid))
+          OR p."tenant_id" IN (SELECT t."id" FROM "tenants" t WHERE t."organization_id" = $4::uuid))
       LIMIT 1`,
     [
       code,

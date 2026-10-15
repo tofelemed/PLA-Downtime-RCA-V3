@@ -32,14 +32,13 @@ export class ProfileReferences {
     }
   }
 
-  /** v1 products carry the tenant as text (`products.tenant_id varchar`). */
   async assertProduct(
     context: RequestContext,
     productId: string,
     field = 'productId',
   ): Promise<void> {
     const found = await this.exists(
-      `SELECT 1 FROM "products" WHERE "id" = $1 AND lower("tenant_id") = $2`,
+      `SELECT 1 FROM "products" WHERE "id" = $1 AND "tenant_id" = $2::uuid`,
       [productId, requireTenantId(context).toLowerCase()],
     );
     if (!found) throw invalidReference(field, 'product');

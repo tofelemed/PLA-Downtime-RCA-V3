@@ -22,7 +22,7 @@ export const KB_ALIAS = 'kb';
 /** Entries whose source case links an event matching `condition` (alias `e`). */
 export const LINKED_EVENT = (condition: string): string =>
   `EXISTS (SELECT 1 FROM "rca_case_links" k JOIN "production_events" e ON e."id"::text = k."target_id"
-     WHERE k."rca_id" = "${KB_ALIAS}"."rca_id" AND k."tenant_id"::text = "${KB_ALIAS}"."tenant_id"
+     WHERE k."rca_id" = "${KB_ALIAS}"."rca_id" AND k."tenant_id" = "${KB_ALIAS}"."tenant_id"
        AND k."link_type" = 'event' AND ${condition})`;
 
 export function escapeLike(value: string): string {

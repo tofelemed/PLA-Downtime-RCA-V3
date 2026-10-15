@@ -119,7 +119,7 @@ async function openPendingConfirmation(
   const items = manager.getRepository(EventReviewItem);
   await items.save(
     items.create({
-      tenantId: event.tenantUuid as string,
+      tenantId: event.tenantId as string,
       eventId: event.id,
       kind: 'pending_source_confirmation',
       field: 'endTime',
