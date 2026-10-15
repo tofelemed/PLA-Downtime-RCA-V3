@@ -3,6 +3,7 @@ import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import { MasterDataV2Module } from './master-data/master-data-v2.module';
 import { ReliabilityV2Module } from './reliability/reliability-v2.module';
 import { CloseV2Module } from './close/close-v2.module';
+import { NotificationsV2Module } from './notifications/notifications-v2.module';
 import { V2Module } from './v2.module';
 
 /** OpenAPI document of `/api/v2` (V2Module only); served at /api/docs/v2 and snapshotted in `openapi/v2.json`. */
@@ -16,6 +17,12 @@ export function buildV2Document(app: INestApplication): OpenAPIObject {
     .addBearerAuth()
     .build();
   return SwaggerModule.createDocument(app, config, {
-    include: [V2Module, MasterDataV2Module, ReliabilityV2Module, CloseV2Module],
+    include: [
+      V2Module,
+      MasterDataV2Module,
+      ReliabilityV2Module,
+      CloseV2Module,
+      NotificationsV2Module,
+    ],
   });
 }

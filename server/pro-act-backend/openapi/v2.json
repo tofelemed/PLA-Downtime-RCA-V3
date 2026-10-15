@@ -9150,6 +9150,46 @@
         ]
       }
     },
+    "/api/v2/period-change-proposals": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Reason and evidence required; the proposer never decides it (403 SEPARATION_OF_DUTIES). 409 MONTH_OPEN (revise directly), PROPOSAL_OPEN, REVISION_MISMATCH, REVISION_OPEN; 404 out of scope.",
+        "operationId": "ChangeProposalsV2Controller_propose_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualProposalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Propose a correction of an approved period of a closing or locked month (manual change proposal)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
     "/api/v2/period-change-proposals/{id}": {
       "get": {
         "operationId": "ChangeProposalsV2Controller_get_v2",
@@ -19793,7 +19833,7 @@
             "bearer": []
           }
         ],
-        "summary": "Status mapping versions per source system, newest first",
+        "summary": "Status mapping versions per source system, newest first, with the version in force now",
         "tags": [
           "v2 · Production periods and actuals"
         ]
@@ -20020,6 +20060,159 @@
         "summary": "One approval certifies the day: the roll-up of its approved shift revisions (each quantity stays on its shift)",
         "tags": [
           "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/notifications": {
+      "get": {
+        "operationId": "NotificationsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "-createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unread",
+            "required": false,
+            "in": "query",
+            "description": "Only unread",
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "My notifications in the acting plant, newest first (keyset)",
+        "tags": [
+          "v2 · Notifications"
+        ]
+      }
+    },
+    "/api/v2/notifications/unread-count": {
+      "get": {
+        "operationId": "NotificationsV2Controller_unreadCount_v2",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "How many of my notifications are unread",
+        "tags": [
+          "v2 · Notifications"
+        ]
+      }
+    },
+    "/api/v2/notifications/read-all": {
+      "post": {
+        "operationId": "NotificationsV2Controller_readAll_v2",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark all my unread notifications read",
+        "tags": [
+          "v2 · Notifications"
+        ]
+      }
+    },
+    "/api/v2/notifications/{id}/read": {
+      "post": {
+        "operationId": "NotificationsV2Controller_read_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark one of my notifications read (404 for anyone else’s)",
+        "tags": [
+          "v2 · Notifications"
         ]
       }
     }
@@ -23020,6 +23213,50 @@
         "required": [
           "revision",
           "reason"
+        ]
+      },
+      "ManualProposalDto": {
+        "type": "object",
+        "properties": {
+          "periodId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approvedRevision": {
+            "type": "number",
+            "minimum": 1,
+            "description": "The published approved revision number to correct"
+          },
+          "reason": {
+            "type": "string",
+            "description": "What is wrong and what should change"
+          },
+          "evidenceType": {
+            "type": "string",
+            "enum": [
+              "log",
+              "work_order",
+              "rate_record",
+              "totalizer",
+              "lot_sample",
+              "movement_record",
+              "measurement_record",
+              "investigation_note"
+            ],
+            "description": "The record the correction rests on"
+          },
+          "evidenceRef": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Reference of that record (work order, sample, log entry, …)"
+          }
+        },
+        "required": [
+          "periodId",
+          "approvedRevision",
+          "reason",
+          "evidenceType",
+          "evidenceRef"
         ]
       },
       "ProposalDecisionDto": {

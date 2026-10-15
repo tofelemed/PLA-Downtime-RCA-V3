@@ -10,6 +10,7 @@
 import type { LucideIcon, LucideProps } from 'lucide-react';
 import {
   Activity,
+  Bell,
   Siren,
   ArrowLeftRight,
   Banknote,
@@ -215,6 +216,8 @@ export const UiIcon = {
   last: ChevronsRight,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
+  /** the header's in-app notifications */
+  notifications: Bell,
 } as const satisfies Record<string, AppIcon>;
 
 export type ActionIconKey = keyof typeof ActionIcon;

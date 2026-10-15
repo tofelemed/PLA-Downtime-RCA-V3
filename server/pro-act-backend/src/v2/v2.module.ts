@@ -129,6 +129,7 @@ import { RulesV2Controller } from './rules/rules-v2.controller';
 import { MasterDataV2Module } from './master-data/master-data-v2.module';
 import { ReliabilityV2Module } from './reliability/reliability-v2.module';
 import { CloseV2Module } from './close/close-v2.module';
+import { NotificationsV2Module } from './notifications/notifications-v2.module';
 import {
   PeriodSummariesV2Controller,
   WaterfallReportV2Controller,
@@ -209,6 +210,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     MasterDataV2Module,
     ReliabilityV2Module,
     CloseV2Module,
+    NotificationsV2Module,
   ],
   controllers: [
     ProductionEventOperationsV2Controller,

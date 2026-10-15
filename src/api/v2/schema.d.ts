@@ -2646,6 +2646,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/period-change-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose a correction of an approved period of a closing or locked month (manual change proposal)
+         * @description Requires `Idempotency-Key`. Reason and evidence required; the proposer never decides it (403 SEPARATION_OF_DUTIES). 409 MONTH_OPEN (revise directly), PROPOSAL_OPEN, REVISION_MISMATCH, REVISION_OPEN; 404 out of scope.
+         */
+        post: operations["ChangeProposalsV2Controller_propose_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/period-change-proposals/{id}": {
         parameters: {
             query?: never;
@@ -5912,7 +5932,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Status mapping versions per source system, newest first */
+        /** Status mapping versions per source system, newest first, with the version in force now */
         get: operations["SourceStatusMappingsV2Controller_list_v2"];
         put?: never;
         /**
@@ -5994,6 +6014,74 @@ export interface paths {
          * @description Requires `Idempotency-Key`. 422 DAY_NOT_READY (details list the shifts not approved), 409 DAY_CERTIFIED, 403 SEPARATION_OF_DUTIES for a submitter of one of the shifts. A revise of a shift reopens the day.
          */
         post: operations["ProductionDaysV2Controller_certify_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My notifications in the acting plant, newest first (keyset) */
+        get: operations["NotificationsV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How many of my notifications are unread */
+        get: operations["NotificationsV2Controller_unreadCount_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark all my unread notifications read */
+        post: operations["NotificationsV2Controller_readAll_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark one of my notifications read (404 for anyone else’s) */
+        post: operations["NotificationsV2Controller_read_v2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7384,6 +7472,21 @@ export interface components {
         ReasonedRevisionDto: {
             revision: number;
             reason: string;
+        };
+        ManualProposalDto: {
+            /** Format: uuid */
+            periodId: string;
+            /** @description The published approved revision number to correct */
+            approvedRevision: number;
+            /** @description What is wrong and what should change */
+            reason: string;
+            /**
+             * @description The record the correction rests on
+             * @enum {string}
+             */
+            evidenceType: "log" | "work_order" | "rate_record" | "totalizer" | "lot_sample" | "movement_record" | "measurement_record" | "investigation_note";
+            /** @description Reference of that record (work order, sample, log entry, …) */
+            evidenceRef: string;
         };
         ProposalDecisionDto: {
             reason: string;
@@ -12735,6 +12838,29 @@ export interface operations {
             };
         };
     };
+    ChangeProposalsV2Controller_propose_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualProposalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ChangeProposalsV2Controller_get_v2: {
         parameters: {
             query?: never;
@@ -17802,6 +17928,88 @@ export interface operations {
                 "application/json": components["schemas"]["CertifyDayDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NotificationsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Only unread */
+                unread?: "true" | "false";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NotificationsV2Controller_unreadCount_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NotificationsV2Controller_readAll_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NotificationsV2Controller_read_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

@@ -22,6 +22,7 @@ import { ExportsModule } from './exports/exports.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { RcaCaseModule } from './rca-case/rca-case.module';
 import { AuthTokensModule } from './auth/tokens/auth-tokens.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 registerPgTypeParsers();
 
@@ -70,6 +71,8 @@ registerPgTypeParsers();
     RcaCaseModule,
     // hourly purge of expired refresh-token records (plan 3.11)
     AuthTokensModule,
+    // SLA escalation notifications, evaluated every 10 minutes (EXPERT_REVIEW Area 3)
+    NotificationsModule,
   ],
   providers: [WorkerHealthServer],
 })

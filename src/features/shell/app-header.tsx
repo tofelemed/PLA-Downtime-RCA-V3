@@ -1,6 +1,7 @@
 import type { BrandingView as BrandingSettings } from '@/api/v2/types/administration';
 import { DisplayCurrencyToggle } from '@/features/display-currency/display-currency-toggle';
 import { PlantSelector } from '@/features/plant-selector/plant-selector';
+import { NotificationBell } from '@/features/notifications/notification-bell';
 import { APP_TITLE } from '@/features/ux-kit/page-layout/use-document-title';
 import { LiveIndicator } from './live-indicator';
 import { UserBadge } from './user-badge';
@@ -22,7 +23,7 @@ function BrandMark({ branding }: { branding: BrandingSettings | undefined }) {
 
 /**
  * The one-row app header (h-14, sticky): brand, plant scope, display currency, live-update state and
- * the user. No dead controls: search, notifications and settings return only when they work.
+ * in-app notifications (SLA escalations) and the user. No dead controls: search and settings return only when they work.
  * The app name is not a heading — every page owns its single `<h1>` (PageHeader).
  */
 export function AppHeader({ branding }: { branding: BrandingSettings | undefined }) {
@@ -41,6 +42,7 @@ export function AppHeader({ branding }: { branding: BrandingSettings | undefined
       <div className="ml-auto flex items-center gap-3">
         <LiveIndicator className="hidden md:flex" />
         <DisplayCurrencyToggle />
+        <NotificationBell />
         <UserBadge />
       </div>
     </header>
