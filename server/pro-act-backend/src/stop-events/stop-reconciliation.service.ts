@@ -8,7 +8,7 @@ import {
 import { EventChangeMessage } from '../production-event/revisions/event-change.notifier';
 import { SYSTEM_ACTOR } from '../production-event/revisions/revision-actor';
 import { UnitScope } from './derived-stop-writer';
-import { mergeDuplicate } from './duplicate-merge';
+import { mergeDuplicate, releaseEvidence } from './duplicate-merge';
 import { StopReconciliation } from './entities/stop-reconciliation.entity';
 import { loadReconcilableStops } from './reconcilable-stops.loader';
 import { StopEventSettingsService } from './stop-event-settings.service';
@@ -53,13 +53,14 @@ export class StopReconciliationService {
       now,
     );
     const tolerance = settings.duplicateToleranceSeconds;
+    const released = await this.releaseRetractedKept(manager, scope);
     const stops = await loadReconcilableStops(manager, scope, {
       start: new Date(
         window.start.getTime() - OVERLAP_MARGIN_MS - tolerance * 1000,
       ),
       end: new Date((window.end ?? now).getTime() + tolerance * 1000),
     });
-    if (stops.length < 2) return [];
+    if (stops.length < 2) return released;
     const ids = stops.map((s) => s.id);
     const rows = await manager.getRepository(StopReconciliation).find({
       where: [
@@ -85,7 +86,7 @@ export class StopReconciliationService {
     const byPair = new Map(
       rows.map((r) => [pairKey(r.keptEventId, r.evidenceEventId), r]),
     );
-    const messages: EventChangeMessage[] = [];
+    const messages: EventChangeMessage[] = [...released];
     for (const pair of pairs) {
       const row = byPair.get(pairKey(pair.keptId, pair.evidenceId)) ?? null;
       messages.push(...(await this.applyPair(manager, run, pair, row)));
@@ -98,6 +99,44 @@ export class StopReconciliationService {
       ),
       new Set(pairs.map((p) => pairKey(p.keptId, p.evidenceId))),
     );
+    return messages;
+  }
+
+  /**
+   * Merges whose kept stop was retracted (re-derived after late samples, or retracted by a person): the
+   * duplicate is live again so it can pair with what replaced it; the row becomes `expired`.
+   */
+  private async releaseRetractedKept(
+    manager: EntityManager,
+    scope: UnitScope,
+  ): Promise<EventChangeMessage[]> {
+    const rows = await manager
+      .getRepository(StopReconciliation)
+      .createQueryBuilder('r')
+      .innerJoin('production_events', 'k', 'k.id = r.kept_event_id')
+      .where('r.tenantId = :tenantId AND r.unitId = :unitId', scope)
+      .andWhere(`r.state = 'merged' AND k.physical_state = 'retracted'`)
+      .getMany();
+    const messages: EventChangeMessage[] = [];
+    for (const row of rows) {
+      const released = await releaseEvidence(
+        manager,
+        {
+          keptId: row.keptEventId,
+          evidenceId: row.evidenceEventId,
+          copied: row.copied,
+          evidenceOccurrenceId: row.evidenceOccurrenceId,
+        },
+        {
+          actor: SYSTEM_ACTOR,
+          reason: 'the stop it was merged into was retracted',
+        },
+      );
+      messages.push(...(released ?? []));
+      await manager
+        .getRepository(StopReconciliation)
+        .update({ id: row.id }, { state: 'expired' });
+    }
     return messages;
   }
 

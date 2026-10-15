@@ -195,6 +195,42 @@ describe('state-derived stops, duplicate merge and incidents (plan 1.10, DT-04, 
     expect(pair.copied).toEqual({ failureMode: 'Belt jam' });
   });
 
+  it('a re-derived stop (late correction) releases the merged manual entry, which merges into the new stop', async () => {
+    const [manual] = await env.rows<{ id: string }>(
+      `SELECT "id" FROM "production_events" WHERE "unit_id" = $1 AND "source_kind" = 'manual' AND "physical_state" = 'superseded'`,
+      [env.world.unitA1],
+    );
+    await env.app.get(SampleStore).insertSample({
+      tenantId: env.world.tenantA,
+      signalId,
+      observedAt: new Date(Date.parse(A) + 58 * MINUTE),
+      value: '0',
+      stateName: null,
+      stateValue: null,
+      quality: 'good',
+      qualityFlags: null,
+      rawId: randomUUID(),
+      rawReceivedAt: new Date(),
+      sourceRevision: '2',
+    });
+    const outcome = await engine().processUnit(
+      scope(),
+      new Date(now().getTime() + 2 * MINUTE),
+    );
+    expect(outcome).toMatchObject({ created: 1, retracted: 1 });
+    const [current] = (await derived()).filter(
+      (e) => e.physical_state === 'closed',
+    );
+    expect(new Date(current.start_time).toISOString()).toBe(
+      plus(A, 58 * MINUTE),
+    );
+    expect(await event(manual.id)).toMatchObject({
+      physical_state: 'superseded',
+      occurrence_id: current.occurrence_id,
+    });
+    expect(current.failure_mode).toBe('Belt jam');
+  });
+
   it('undo restores the manual stop and clears the copied cause; the pair is not merged again', async () => {
     const [pair] = (
       (await env.get('stop-reconciliations?state=merged').expect(200)).body as {

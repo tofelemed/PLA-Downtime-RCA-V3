@@ -10,7 +10,8 @@ import { UnitScope } from './derived-stop-writer';
 const MAX_STOPS = 5000;
 
 /**
- * Live downtime events of the unit overlapping the window (`IDX_production_events_unit_span`: unit + span
+ * Live stopping downtime events of the unit overlapping the window (an equipment event without production
+ * loss or a derate is not the unit's stop recorded twice) (`IDX_production_events_unit_span`: unit + span
  * of live events), with the cause fields a duplicate can contribute.
  */
 const STOPS_SQL = `SELECT e."id", e."unit_id", e."asset_id", e."source_kind", e."start_time", e."end_time", e."created_at",
@@ -19,7 +20,7 @@ const STOPS_SQL = `SELECT e."id", e."unit_id", e."asset_id", e."source_kind", e.
        e."detection_method", e."work_order_id"
   FROM "production_events" e
  WHERE e."tenant_id" = $1 AND e."unit_id" = $2 AND e."physical_type" = 'downtime'
-   AND e."physical_state" IN ('open', 'closed')
+   AND e."physical_state" IN ('open', 'closed') AND e."impact_mode" NOT IN ('none', 'fractional')
    AND tstzrange(e."start_time", e."end_time", '[)') && tstzrange($3, $4, '[)')
  ORDER BY e."start_time", e."id" LIMIT ${MAX_STOPS}`;
 

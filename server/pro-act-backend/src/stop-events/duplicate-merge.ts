@@ -195,22 +195,67 @@ export async function undoMerge(
     return null;
   }
   const messages = [
-    await restore(manager, evidence, provenance),
     await writeCause(
       manager,
       kept.id,
       stillCopied(kept, input.copied),
       provenance,
     ),
+    ...(await detach(manager, kept, evidence, { input, provenance })),
   ];
+  return messages.filter((m): m is EventChangeMessage => m !== null);
+}
+
+/** Evidence live again in its own occurrence, without the `correlated_with` relation. */
+async function detach(
+  manager: EntityManager,
+  kept: ProductionEvent,
+  evidence: ProductionEvent,
+  context: {
+    input: UndoInput;
+    provenance: { actor: RevisionActor; reason: string };
+  },
+): Promise<EventChangeMessage[]> {
+  const message = await restore(manager, evidence, context.provenance);
   await manager.getRepository(EventRelation).delete({
     tenantId: kept.tenantId as string,
     fromEventId: kept.id,
     toEventId: evidence.id,
     relationType: 'correlated_with',
   });
-  if (input.evidenceOccurrenceId) {
-    await moveOccurrence(manager, evidence.id, input.evidenceOccurrenceId);
+  if (context.input.evidenceOccurrenceId) {
+    await moveOccurrence(
+      manager,
+      evidence.id,
+      context.input.evidenceOccurrenceId,
+    );
   }
-  return messages.filter((m): m is EventChangeMessage => m !== null);
+  return [message];
+}
+
+/**
+ * The kept stop of a merge was retracted (the state engine re-derived it after late samples, or a person
+ * retracted it): its duplicate must not stay superseded by a stop that no longer counts, so it is live
+ * again (and may merge with the re-derived stop). Null unless the evidence is still superseded by it.
+ */
+export async function releaseEvidence(
+  manager: EntityManager,
+  input: UndoInput,
+  provenance: { actor: RevisionActor; reason: string },
+): Promise<EventChangeMessage[] | null> {
+  const [first, second] = [input.keptId, input.evidenceId].sort();
+  const rows = new Map([
+    [first, await lockEvent(manager, first)],
+    [second, await lockEvent(manager, second)],
+  ]);
+  const kept = rows.get(input.keptId) ?? null;
+  const evidence = rows.get(input.evidenceId) ?? null;
+  if (kept?.physicalState !== 'retracted' || !evidence) return null;
+  if (
+    evidence.physicalState !== 'superseded' ||
+    evidence.supersededByEventId !== kept.id
+  ) {
+    return null;
+  }
+  return detach(manager, kept, evidence, { input, provenance });
 }

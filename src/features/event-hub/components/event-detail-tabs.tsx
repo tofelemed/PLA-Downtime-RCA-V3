@@ -11,13 +11,14 @@ import { ImpactedPeriodsPreview } from './impacted-periods-preview';
 import { ReviewItemsList } from './review-items-list';
 import { RevisionTimeline } from './revision-timeline';
 import { SourceEffectiveTable } from './source-effective-table';
+import { StopLinksPanel } from '../stop-links/stop-links-panel';
 
-const TABS = ['details', 'history', 'review', 'evidence', 'repair', 'periods'] as const;
+const TABS = ['details', 'history', 'review', 'evidence', 'repair', 'related', 'periods'] as const;
 type DetailTab = (typeof TABS)[number];
 
 const tabOf = (value: string | null): DetailTab => (TABS as readonly string[]).includes(value ?? '') ? (value as DetailTab) : 'details';
 
-/** Tabs of the event page (Repair for stops only); the active one is in the URL (`?tab=history`), so Back and links work. */
+/** Tabs of the event page (Repair and Duplicates & repeats for stops only); the active one is in the URL (`?tab=history`), so Back and links work. */
 export function EventDetailTabs({ event }: { event: ProductionEventView }) {
   const [params, setParams] = useSearchParams();
   const tab = tabOf(params.get('tab'));
@@ -44,6 +45,7 @@ export function EventDetailTabs({ event }: { event: ProductionEventView }) {
         <TabsTrigger value="review">Review ({openReviews})</TabsTrigger>
         <TabsTrigger value="evidence">Evidence</TabsTrigger>
         {isStop && <TabsTrigger value="repair">Repair</TabsTrigger>}
+        {isStop && <TabsTrigger value="related">Duplicates &amp; repeats</TabsTrigger>}
         <TabsTrigger value="periods">Periods</TabsTrigger>
       </TabsList>
       <TabsContent value="details">
@@ -55,6 +57,11 @@ export function EventDetailTabs({ event }: { event: ProductionEventView }) {
       {isStop && (
         <TabsContent value="repair">
           <RepairEvidencePanel eventId={event.id} />
+        </TabsContent>
+      )}
+      {isStop && (
+        <TabsContent value="related">
+          <StopLinksPanel event={event} />
         </TabsContent>
       )}
       <TabsContent value="periods">
