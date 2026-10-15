@@ -2,15 +2,13 @@ import { secondsBetween } from '../actuals/decimal';
 import { BoundedInterval, union } from '../time/interval-algebra';
 import {
   LossEvent,
-  OverlapAllocation,
   PeriodAccountingInput,
   RateVersion,
   Segment,
-  SegmentCause,
   SliceInput,
 } from './accounting.types';
+import { allocateCauses } from './cause-allocator';
 import { occurrenceThresholds } from './micro-stop-threshold';
-import { equalShares } from './shares';
 import { eventsOfStream, slicePieces, StreamPiece } from './streams';
 
 /** Downtime events split by the micro-stop rule (D04 / KPI02) and planned-stop policy. */
@@ -126,40 +124,6 @@ function activeIn(
   });
 }
 
-/**
- * One cause per occurrence (the earliest active event of it; split children never overlap, so a
- * split or merge leaves the causes of a segment unchanged), ordered by occurrence id, equal shares —
- * or, with `first_out`, the whole segment to the occurrence that started first (SME Q11).
- */
-export function causesOf(
-  active: readonly LossEvent[],
-  rule: OverlapAllocation = 'equal_share',
-): SegmentCause[] {
-  const byOccurrence = new Map<string, LossEvent>();
-  const ordered = [...active].sort(
-    (a, b) =>
-      a.start.getTime() - b.start.getTime() ||
-      a.eventId.localeCompare(b.eventId),
-  );
-  for (const event of ordered) {
-    if (!byOccurrence.has(event.occurrenceId))
-      byOccurrence.set(event.occurrenceId, event);
-  }
-  const causes = [...byOccurrence.values()].sort((a, b) =>
-    a.occurrenceId.localeCompare(b.occurrenceId),
-  );
-  if (rule === 'first_out' && causes.length > 1) {
-    const first = [...causes].sort(
-      (a, b) =>
-        a.start.getTime() - b.start.getTime() ||
-        a.occurrenceId.localeCompare(b.occurrenceId),
-    )[0];
-    return [{ event: first, share: equalShares(1)[0] }];
-  }
-  const shares = equalShares(causes.length);
-  return causes.map((event, i) => ({ event, share: shares[i] }));
-}
-
 function boundaries(
   input: PeriodAccountingInput,
   slice: SliceInput,
@@ -225,7 +189,7 @@ function segmentWindow(
     const running = exclusion === false;
     const causes = (events: readonly LossEvent[]) =>
       running
-        ? causesOf(
+        ? allocateCauses(
             activeIn(events, part, input.asOf),
             input.policy.overlapAllocation,
           )

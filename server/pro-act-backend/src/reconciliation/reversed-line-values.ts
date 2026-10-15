@@ -72,7 +72,10 @@ export async function reversedLineValues(
       cells: [],
     };
     const cell = cellOf(row);
-    values.set(row.id, cell ? { ...value, cells: [...value.cells, cell] } : value);
+    values.set(
+      row.id,
+      cell ? { ...value, cells: [...value.cells, cell] } : value,
+    );
   }
   return values;
 }

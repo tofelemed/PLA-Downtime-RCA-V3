@@ -80,7 +80,8 @@ function viewOf(
 ): LineViewValuation {
   const valued = cells.some((c) => c.status === 'valued');
   if (!valued) {
-    const reason = cells.find((c) => c.reason)?.reason ?? REVERSED_LINE_UNVALUED;
+    const reason =
+      cells.find((c) => c.reason)?.reason ?? REVERSED_LINE_UNVALUED;
     return {
       view,
       status: 'unvalued',
@@ -117,14 +118,21 @@ function viewOf(
 export function reversalValuation(
   quantity: Dec,
   reversed: ReversedLineValue | null,
-  fallback: { views: readonly ValuationView[]; currencies: readonly string[]; date: Date },
+  fallback: {
+    views: readonly ValuationView[];
+    currencies: readonly string[];
+    date: Date;
+  },
 ): LineValuation {
-  const usable = reversed && !reversed.quantity.isZero() && reversed.cells.length > 0;
+  const usable =
+    reversed && !reversed.quantity.isZero() && reversed.cells.length > 0;
   if (!usable) {
     return {
       valuationDate: fallback.date,
       seconds: null,
-      views: fallback.views.map((view) => viewOf(view, [], new Dec(0), fallback.currencies)),
+      views: fallback.views.map((view) =>
+        viewOf(view, [], new Dec(0), fallback.currencies),
+      ),
     };
   }
   const ratio = quantity.div(reversed.quantity);
