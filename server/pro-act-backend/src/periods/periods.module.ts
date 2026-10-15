@@ -19,6 +19,8 @@ import { PeriodProductSlice } from './entities/period-product-slice.entity';
 import { ProductionPeriod } from './entities/production-period.entity';
 import { BaselineRecalcConsumer } from './baseline-recalc.consumer';
 import { ExternalReportsService } from './external-reports.service';
+import { SourceStatusMapping } from './entities/source-status-mapping.entity';
+import { SourceStatusMappingsService } from './source-status-mappings.service';
 import { PeriodMaterializerService } from './period-materializer.service';
 import { PeriodRecalcConsumer } from './period-recalc.consumer';
 import { PeriodRecomputePort } from './period-recompute.port';
@@ -42,6 +44,7 @@ import { SliceResolverService } from './slice-resolver.service';
       ActualsResult,
       ActualsAdjustment,
       ExternalProductionReport,
+      SourceStatusMapping,
       ActualsJob,
     ]),
     OutboxModule,
@@ -55,6 +58,7 @@ import { SliceResolverService } from './slice-resolver.service';
     ActualsInputsLoader,
     ActualsRunnerService,
     ExternalReportsService,
+    SourceStatusMappingsService,
     ActualsJobsService,
     ActualsAdjustmentsService,
     PeriodsService,
@@ -74,6 +78,7 @@ import { SliceResolverService } from './slice-resolver.service';
     ActualsJobsService,
     ActualsAdjustmentsService,
     ExternalReportsService,
+    SourceStatusMappingsService,
     PeriodMaterializerService,
     AccountingPoliciesService,
   ],

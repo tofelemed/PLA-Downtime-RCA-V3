@@ -8054,7 +8054,7 @@
     },
     "/api/v2/external-production-reports": {
       "post": {
-        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED: a site document). Lines must name units and products of the tenant (422 INVALID_REFERENCE). Same id + revision with the same content → `outcome: duplicate`; with other content → 409 REPORT_REVISION_CONFLICT. A higher revision supersedes the current one (never summed) and is a correction candidate; a lower one is stored superseded (`stale`). Certified eligibility follows the status mapping (EXTERNAL_REPORT_CERTIFIED_STATUSES, default COMPLETED, RELEASED).",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED: a site document). Lines must name units and products of the tenant (422 INVALID_REFERENCE). Same id + revision with the same content → `outcome: duplicate`; with other content → 409 REPORT_REVISION_CONFLICT. A higher revision supersedes the current one (never summed) and is a correction candidate; a lower one is stored superseded (`stale`). Certified eligibility follows the approved status mapping of the record’s source system in force at import (SME R13, GET /v2/source-status-mappings; `sourceSystem` default `import`); the mapping version is kept on the record.",
         "operationId": "ExternalReportsV2Controller_create_v2",
         "parameters": [
           {
@@ -19173,6 +19173,207 @@
           "v2 · Reconciliation SLA"
         ]
       }
+    },
+    "/api/v2/production-periods/{id}/restatement": {
+      "get": {
+        "description": "422 NOT_A_RESTATEMENT when the revision supersedes no approved revision. The operational effective date is the period’s date; the posting date is finance’s.",
+        "operationId": "RestatementV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "revision",
+            "required": false,
+            "in": "query",
+            "description": "Default: the latest revision that is not cancelled",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delta of a restating revision against the approved revision it supersedes: totals and actuals per unit of measure, lines by kind and reason (old, new, delta), and the posting decision",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/revisions/{revision}/posting": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. A later decision replaces the earlier one (audited). 422 NOT_A_RESTATEMENT.",
+        "operationId": "RestatementV2Controller_decide_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "revision",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostingDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Finance sets the posting date and treatment of a restatement (correction, estimate change, other adjustment, no posting)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/source-status-mappings": {
+      "get": {
+        "operationId": "SourceStatusMappingsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "sourceSystem",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Status mapping versions per source system, newest first",
+        "tags": [
+          "v2 · Production periods and actuals"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant. It applies once the source owner approves it.",
+        "operationId": "SourceStatusMappingsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceStatusMappingCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Draft a new mapping version of a source system (which statuses are released)",
+        "tags": [
+          "v2 · Production periods and actuals"
+        ]
+      }
+    },
+    "/api/v2/source-status-mappings/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 422 VERSION_OVERLAP when an approved version starts at or after it; the open approved version ends where this one starts.",
+        "operationId": "SourceStatusMappingsV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The source owner approves a draft mapping version (never its author)",
+        "tags": [
+          "v2 · Production periods and actuals"
+        ]
+      }
     }
   },
   "info": {
@@ -21737,6 +21938,11 @@
             "type": "string",
             "example": "COMPLETED"
           },
+          "sourceSystem": {
+            "type": "string",
+            "example": "mes",
+            "description": "SME R13: the source system whose status mapping decides release (default `import`)"
+          },
           "approvedAtSource": {
             "type": "string"
           },
@@ -21766,7 +21972,7 @@
         "properties": {
           "csv": {
             "type": "string",
-            "description": "CSV document (≤ 1 MB): externalReportId, externalRevision, localProductionDate, utcStart, utcEnd, basis, sourceStatus, unitId, productId and optionally siteId, timezone, approvedAtSource, evidenceRef, gross, good, reject, uom"
+            "description": "CSV document (≤ 1 MB): externalReportId, externalRevision, localProductionDate, utcStart, utcEnd, basis, sourceStatus, unitId, productId and optionally siteId, timezone, approvedAtSource, evidenceRef, sourceSystem, gross, good, reject, uom"
           }
         },
         "required": [
@@ -25963,6 +26169,78 @@
             "description": "What arrived (kept on the hold)"
           }
         }
+      },
+      "PostingDecisionDto": {
+        "type": "object",
+        "properties": {
+          "postingDate": {
+            "type": "string",
+            "example": "2026-11-03",
+            "description": "Financial posting date chosen by finance (YYYY-MM-DD)"
+          },
+          "treatment": {
+            "type": "string",
+            "enum": [
+              "correction",
+              "estimate_change",
+              "other_adjustment",
+              "no_posting"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "postingDate",
+          "treatment"
+        ]
+      },
+      "SourceStatusEntryDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "AUTHORIZED"
+          },
+          "released": {
+            "type": "boolean",
+            "description": "The status is the source’s authorised final (released) record"
+          }
+        },
+        "required": [
+          "status",
+          "released"
+        ]
+      },
+      "SourceStatusMappingCreateDto": {
+        "type": "object",
+        "properties": {
+          "sourceSystem": {
+            "type": "string",
+            "example": "lims",
+            "description": "`import` = API / file imports of external reports"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "UTC instant the version applies from"
+          },
+          "statuses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceStatusEntryDto"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "description": "The source workflow documentation it follows"
+          }
+        },
+        "required": [
+          "sourceSystem",
+          "effectiveFrom",
+          "statuses"
+        ]
       }
     }
   }

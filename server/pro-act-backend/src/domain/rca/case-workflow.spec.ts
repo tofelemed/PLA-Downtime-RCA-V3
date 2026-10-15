@@ -61,7 +61,10 @@ describe('RCA case workflow (RCA-01 / SME CA1)', () => {
   });
 
   it('the participant list only grows', () => {
-    expect(withInvestigators(['a'], ['b', null, 'a', undefined])).toEqual(['a', 'b']);
+    expect(withInvestigators(['a'], ['b', null, 'a', undefined])).toEqual([
+      'a',
+      'b',
+    ]);
     expect(withInvestigators(null, [])).toEqual([]);
   });
 });

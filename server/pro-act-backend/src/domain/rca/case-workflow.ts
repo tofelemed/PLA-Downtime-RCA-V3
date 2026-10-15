@@ -65,14 +65,23 @@ export const TRANSITIONS: readonly Transition[] = [
 ];
 
 /** Statuses after the investigation was accepted: the team is frozen (CA1 independence). */
-export const TEAM_LOCKED_STATUSES: readonly RcaStatus[] = ['Monitoring', 'Closure Review', 'Closed'];
+export const TEAM_LOCKED_STATUSES: readonly RcaStatus[] = [
+  'Monitoring',
+  'Closure Review',
+  'Closed',
+];
 
 /** The append-only participant list after adding `ids` (nulls ignored, order of first appearance kept). */
 export function withInvestigators(
   current: readonly string[] | null | undefined,
   ids: ReadonlyArray<string | null | undefined>,
 ): string[] {
-  return [...new Set([...(current ?? []), ...ids.filter((id): id is string => Boolean(id))])];
+  return [
+    ...new Set([
+      ...(current ?? []),
+      ...ids.filter((id): id is string => Boolean(id)),
+    ]),
+  ];
 }
 
 /** Legacy rows without a status are drafts. */

@@ -2271,7 +2271,7 @@ export interface paths {
         put?: never;
         /**
          * Import one external daily-production record (JSON)
-         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED: a site document). Lines must name units and products of the tenant (422 INVALID_REFERENCE). Same id + revision with the same content → `outcome: duplicate`; with other content → 409 REPORT_REVISION_CONFLICT. A higher revision supersedes the current one (never summed) and is a correction candidate; a lower one is stored superseded (`stale`). Certified eligibility follows the status mapping (EXTERNAL_REPORT_CERTIFIED_STATUSES, default COMPLETED, RELEASED).
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED: a site document). Lines must name units and products of the tenant (422 INVALID_REFERENCE). Same id + revision with the same content → `outcome: duplicate`; with other content → 409 REPORT_REVISION_CONFLICT. A higher revision supersedes the current one (never summed) and is a correction candidate; a lower one is stored superseded (`stale`). Certified eligibility follows the approved status mapping of the record’s source system in force at import (SME R13, GET /v2/source-status-mappings; `sourceSystem` default `import`); the mapping version is kept on the record.
          */
         post: operations["ExternalReportsV2Controller_create_v2"];
         delete?: never;
@@ -5707,6 +5707,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/production-periods/{id}/restatement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Delta of a restating revision against the approved revision it supersedes: totals and actuals per unit of measure, lines by kind and reason (old, new, delta), and the posting decision
+         * @description 422 NOT_A_RESTATEMENT when the revision supersedes no approved revision. The operational effective date is the period’s date; the posting date is finance’s.
+         */
+        get: operations["RestatementV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-periods/{id}/revisions/{revision}/posting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finance sets the posting date and treatment of a restatement (correction, estimate change, other adjustment, no posting)
+         * @description Requires `Idempotency-Key`. A later decision replaces the earlier one (audited). 422 NOT_A_RESTATEMENT.
+         */
+        post: operations["RestatementV2Controller_decide_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/source-status-mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status mapping versions per source system, newest first */
+        get: operations["SourceStatusMappingsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Draft a new mapping version of a source system (which statuses are released)
+         * @description Requires `Idempotency-Key` and a tenant-wide grant. It applies once the source owner approves it.
+         */
+        post: operations["SourceStatusMappingsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/source-status-mappings/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The source owner approves a draft mapping version (never its author)
+         * @description Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 422 VERSION_OVERLAP when an approved version starts at or after it; the open approved version ends where this one starts.
+         */
+        post: operations["SourceStatusMappingsV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6912,12 +6993,17 @@ export interface components {
             basis: "gross" | "good";
             /** @example COMPLETED */
             sourceStatus: string;
+            /**
+             * @description SME R13: the source system whose status mapping decides release (default `import`)
+             * @example mes
+             */
+            sourceSystem?: string;
             approvedAtSource?: string;
             evidenceRef?: string;
             lines: components["schemas"]["ExternalReportLineDto"][];
         };
         ExternalReportCsvDto: {
-            /** @description CSV document (≤ 1 MB): externalReportId, externalRevision, localProductionDate, utcStart, utcEnd, basis, sourceStatus, unitId, productId and optionally siteId, timezone, approvedAtSource, evidenceRef, gross, good, reject, uom */
+            /** @description CSV document (≤ 1 MB): externalReportId, externalRevision, localProductionDate, utcStart, utcEnd, basis, sourceStatus, unitId, productId and optionally siteId, timezone, approvedAtSource, evidenceRef, sourceSystem, gross, good, reject, uom */
             csv: string;
         };
         RecalculatePeriodsDto: {
@@ -8235,6 +8321,34 @@ export interface components {
         ReleaseDataHoldDto: {
             /** @description What arrived (kept on the hold) */
             note?: string;
+        };
+        PostingDecisionDto: {
+            /**
+             * @description Financial posting date chosen by finance (YYYY-MM-DD)
+             * @example 2026-11-03
+             */
+            postingDate: string;
+            /** @enum {string} */
+            treatment: "correction" | "estimate_change" | "other_adjustment" | "no_posting";
+            note?: string;
+        };
+        SourceStatusEntryDto: {
+            /** @example AUTHORIZED */
+            status: string;
+            /** @description The status is the source’s authorised final (released) record */
+            released: boolean;
+        };
+        SourceStatusMappingCreateDto: {
+            /**
+             * @description `import` = API / file imports of external reports
+             * @example lims
+             */
+            sourceSystem: string;
+            /** @description UTC instant the version applies from */
+            effectiveFrom: string;
+            statuses: components["schemas"]["SourceStatusEntryDto"][];
+            /** @description The source workflow documentation it follows */
+            notes?: string;
         };
     };
     responses: never;
@@ -16989,6 +17103,117 @@ export interface operations {
             };
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RestatementV2Controller_get_v2: {
+        parameters: {
+            query?: {
+                /** @description Default: the latest revision that is not cancelled */
+                revision?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RestatementV2Controller_decide_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+                revision: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostingDecisionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SourceStatusMappingsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                sourceSystem?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SourceStatusMappingsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceStatusMappingCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SourceStatusMappingsV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;

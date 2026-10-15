@@ -134,6 +134,8 @@ import { RulesService } from '../rules/rules.service';
 import { withMasterDataStubs } from './master-data/master-data-v2.stubs';
 import { withReliabilityStubs } from './reliability/reliability-v2.stubs';
 import { withCloseStubs } from './close/close-v2.stubs';
+import { SourceStatusMappingsService } from '../periods/source-status-mappings.service';
+import { RestatementService } from '../reconciliation/restatement.service';
 import { withAdministrationStubs } from './administration/administration-v2.stubs';
 import { ActivitySummaryV2Service } from './activity-summary/activity-summary-v2.service';
 
@@ -296,6 +298,7 @@ class PlansModuleStub {}
     { provide: ActualsAdjustmentsService, useValue: {} },
     { provide: ExternalReportsService, useValue: {} },
     { provide: AccountingPoliciesService, useValue: {} },
+    { provide: SourceStatusMappingsService, useValue: {} },
   ],
   exports: [
     PeriodsService,
@@ -303,6 +306,7 @@ class PlansModuleStub {}
     ActualsAdjustmentsService,
     ExternalReportsService,
     AccountingPoliciesService,
+    SourceStatusMappingsService,
   ],
 })
 class PeriodsModuleStub {}
@@ -322,6 +326,7 @@ class AccountingModuleStub {}
     { provide: ApprovalService, useValue: {} },
     { provide: RevisionLifecycleService, useValue: {} },
     { provide: ChangeProposalsService, useValue: {} },
+    { provide: RestatementService, useValue: {} },
   ],
   exports: [
     DraftLinesService,
@@ -329,6 +334,7 @@ class AccountingModuleStub {}
     ApprovalService,
     RevisionLifecycleService,
     ChangeProposalsService,
+    RestatementService,
   ],
 })
 class ReconciliationModuleStub {}

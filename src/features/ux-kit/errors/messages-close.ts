@@ -23,5 +23,6 @@ export const CLOSE_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   INVALID_MONTH: { title: 'The month is not valid', text: 'Choose the month again.' },
   HOLD_OPEN: { title: 'The period already waits for data', text: 'Release that wait first, then start a new one.' },
   NO_OPEN_HOLD: { title: 'The period is not waiting for data', text: 'Reload to see its current state.' },
+  NOT_A_RESTATEMENT: { title: 'This revision restates nothing', text: 'Only a revision opened over an approved one has a restatement.' },
   PERIOD_APPROVED: { title: 'The period is already approved', text: 'A late value reaches an approved period through a change proposal.' },
 };

@@ -53,7 +53,8 @@ export class ExternalReportsV2Controller {
       'must name units and products of the tenant (422 INVALID_REFERENCE). Same id + revision with the same content ' +
       '→ `outcome: duplicate`; with other content → 409 REPORT_REVISION_CONFLICT. A higher revision supersedes the ' +
       'current one (never summed) and is a correction candidate; a lower one is stored superseded (`stale`). ' +
-      'Certified eligibility follows the status mapping (EXTERNAL_REPORT_CERTIFIED_STATUSES, default COMPLETED, RELEASED).',
+      'Certified eligibility follows the approved status mapping of the record’s source system in force at import ' +
+      '(SME R13, GET /v2/source-status-mappings; `sourceSystem` default `import`); the mapping version is kept on the record.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async create(
@@ -116,6 +117,7 @@ function draftOf(body: ExternalReportCreateDto): ExternalReportDraft {
     utcEnd: new Date(body.utcEnd),
     basis: body.basis,
     sourceStatus: body.sourceStatus,
+    sourceSystem: body.sourceSystem ?? null,
     approvedAtSource: body.approvedAtSource
       ? new Date(body.approvedAtSource)
       : null,

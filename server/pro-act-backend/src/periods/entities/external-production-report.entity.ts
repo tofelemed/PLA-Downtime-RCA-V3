@@ -77,6 +77,19 @@ export class ExternalProductionReport extends TenantScopedEntity {
   @Column({ name: 'source_status', type: 'varchar', length: 64 })
   sourceStatus: string;
 
+  /** SME R13: the source system whose status mapping decides release (`import` = API / file import) */
+  @Column({
+    name: 'source_system',
+    type: 'varchar',
+    length: 64,
+    default: 'import',
+  })
+  sourceSystem: string;
+
+  /** the approved `source_status_mappings` version that decided `certified_eligible` (null = none in force) */
+  @Column({ name: 'status_mapping_id', type: 'uuid', nullable: true })
+  statusMappingId: string | null;
+
   @Column({ name: 'certified_eligible', type: 'boolean' })
   certifiedEligible: boolean;
 

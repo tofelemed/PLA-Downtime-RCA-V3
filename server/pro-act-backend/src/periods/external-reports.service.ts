@@ -8,7 +8,8 @@ import {
   draftProblems,
   ExternalReportDraft,
   ExternalReportLine,
-  isCertifiedStatus,
+  IMPORT_SOURCE,
+  isReleasedStatus,
   reportsFromCsv,
 } from '../domain/actuals/period/external-report';
 import { RequestContext } from '../common/context/request-context';
@@ -20,17 +21,9 @@ import {
 } from '../profiles/profile-errors';
 import { periodScopeUnits } from './period-scope';
 import { ExternalProductionReport } from './entities/external-production-report.entity';
+import { SourceStatusMapping } from './entities/source-status-mapping.entity';
+import { SourceStatusMappingsService } from './source-status-mappings.service';
 import { requestRecalculation } from './period-recalc';
-
-/** Source statuses that make a record certified-eligible (ACT08 status mapping; D05 Q4 default). */
-export function certifiedStatuses(): string[] {
-  return (
-    process.env.EXTERNAL_REPORT_CERTIFIED_STATUSES ?? 'COMPLETED,RELEASED'
-  )
-    .split(',')
-    .map((status) => status.trim())
-    .filter((status) => status.length > 0);
-}
 
 export interface Importer {
   tenantId: string;
@@ -60,6 +53,7 @@ export class ExternalReportsService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly sites: SitesService,
+    private readonly mappings: SourceStatusMappingsService,
   ) {}
 
   /** A record of the caller's tenant; unit-limited callers see records with a line of their units. */
@@ -143,9 +137,15 @@ export class ExternalReportsService {
       importer.tenantId,
       draft.siteId ?? undefined,
     );
+    const mapping = await this.mappings.inForce(
+      manager,
+      importer.tenantId,
+      draft.sourceSystem ?? IMPORT_SOURCE,
+      new Date(),
+    );
     const report = await repo.save(
       repo.create({
-        ...reportRow(importer, draft, site),
+        ...reportRow(importer, draft, { site, mapping }),
         state: newer ? 'current' : 'superseded',
         supersededById: newer ? null : (current?.id ?? null),
       }),
@@ -234,11 +234,16 @@ async function lockedSiblings(
   });
 }
 
+/**
+ * The stored record: certified eligibility from the source's approved status mapping in force at import
+ * (SME R13), with the mapping version kept; source id, revision and release time come with the draft.
+ */
 function reportRow(
   importer: Importer,
   draft: ExternalReportDraft,
-  site: Site,
+  context: { site: Site; mapping: SourceStatusMapping | null },
 ): Partial<ExternalProductionReport> {
+  const { site, mapping } = context;
   return {
     tenantId: importer.tenantId,
     externalReportId: draft.externalReportId,
@@ -251,9 +256,11 @@ function reportRow(
     lines: draft.lines,
     basis: draft.basis,
     sourceStatus: draft.sourceStatus,
-    certifiedEligible: isCertifiedStatus(
+    sourceSystem: draft.sourceSystem ?? IMPORT_SOURCE,
+    statusMappingId: mapping?.id ?? null,
+    certifiedEligible: isReleasedStatus(
       draft.sourceStatus,
-      certifiedStatuses(),
+      mapping?.statuses ?? null,
     ),
     approvedAtSource: draft.approvedAtSource,
     evidenceRef: draft.evidenceRef,

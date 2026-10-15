@@ -207,6 +207,9 @@ export interface ExternalReportV2View {
   basis: string;
   lines: ExternalProductionReport['lines'];
   sourceStatus: string;
+  /** SME R13: source system, the status mapping version that decided eligibility, release time at source */
+  sourceSystem: string;
+  statusMappingId: string | null;
   certifiedEligible: boolean;
   approvedAtSource: string | null;
   evidenceRef: string | null;
@@ -232,6 +235,8 @@ export function toReportView(
     basis: report.basis,
     lines: report.lines,
     sourceStatus: report.sourceStatus,
+    sourceSystem: report.sourceSystem,
+    statusMappingId: report.statusMappingId,
     certifiedEligible: report.certifiedEligible,
     approvedAtSource: iso(report.approvedAtSource),
     evidenceRef: report.evidenceRef,

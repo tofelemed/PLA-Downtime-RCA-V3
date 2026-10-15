@@ -22,6 +22,8 @@ export interface ExternalReportDraft {
   utcEnd: Date;
   basis: 'gross' | 'good';
   sourceStatus: string;
+  /** SME R13: the source system whose status mapping applies (null / absent = `import`) */
+  sourceSystem?: string | null;
   approvedAtSource: Date | null;
   evidenceRef: string | null;
   lines: ExternalReportLine[];
@@ -32,13 +34,21 @@ export interface DraftProblem {
   message: string;
 }
 
-/** A source status is certified-eligible when the status-mapping policy lists it (case-insensitive). */
-export function isCertifiedStatus(
+/** The source system of an import without one (API / file import). */
+export const IMPORT_SOURCE = 'import';
+
+/**
+ * SME R13: a source status is released (certified-eligible) only when the source's approved status mapping
+ * names it as released (case-insensitive); an unmapped status, or no mapping at all, is not released.
+ */
+export function isReleasedStatus(
   status: string,
-  certifiedStatuses: readonly string[],
+  mapping: ReadonlyArray<{ status: string; released: boolean }> | null,
 ): boolean {
   const wanted = status.trim().toUpperCase();
-  return certifiedStatuses.some((s) => s.trim().toUpperCase() === wanted);
+  return (mapping ?? []).some(
+    (entry) => entry.released && entry.status.trim().toUpperCase() === wanted,
+  );
 }
 
 /**
@@ -100,7 +110,7 @@ const REPORT_COLUMNS = [
 /**
  * CSV import (one row per line; rows of the same report id + revision form one record, header values
  * taken from the first row). Required columns: REPORT_COLUMNS; optional: siteId, timezone,
- * approvedAtSource, evidenceRef, gross, good, reject, uom.
+ * approvedAtSource, evidenceRef, sourceSystem, gross, good, reject, uom.
  */
 export function reportsFromCsv(text: string): {
   reports: ExternalReportDraft[];
@@ -164,6 +174,7 @@ function rowOf(
     utcEnd,
     basis,
     sourceStatus: values.sourceStatus,
+    sourceSystem: optional('sourceSystem'),
     approvedAtSource: approvedAt,
     evidenceRef: optional('evidenceRef'),
     lines: [lineOf(values)],

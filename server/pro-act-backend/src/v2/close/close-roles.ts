@@ -19,3 +19,18 @@ export const MONTH_REOPENERS = [
   'manager_approver',
   'finance_approver',
 ] as const;
+
+/** SME R5: finance decides how a restatement is posted (posting date, treatment). */
+export const POSTING_DECIDERS = ['finance_approver'] as const;
+
+/**
+ * SME R13: source status mappings are drafted by integration admins or production accounting and approved
+ * by the source owner — production accounting for production reports (engineering default) — never the
+ * author.
+ */
+export const STATUS_MAPPING_AUTHORS = [
+  'integration_admin',
+  'production_accountant',
+] as const;
+
+export const SOURCE_OWNERS = ['production_accountant'] as const;

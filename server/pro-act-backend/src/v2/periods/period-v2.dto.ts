@@ -253,6 +253,15 @@ export class ExternalReportCreateDto {
   @MaxLength(64)
   sourceStatus: string;
 
+  @ApiPropertyOptional({
+    example: 'mes',
+    description:
+      'SME R13: the source system whose status mapping decides release (default `import`)',
+  })
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/)
+  sourceSystem?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @Matches(INSTANT, { message: `approvedAtSource ${INSTANT_MESSAGE}` })
@@ -277,7 +286,7 @@ export class ExternalReportCsvDto {
   @ApiProperty({
     description:
       'CSV document (≤ 1 MB): externalReportId, externalRevision, localProductionDate, utcStart, utcEnd, basis, ' +
-      'sourceStatus, unitId, productId and optionally siteId, timezone, approvedAtSource, evidenceRef, gross, good, reject, uom',
+      'sourceStatus, unitId, productId and optionally siteId, timezone, approvedAtSource, evidenceRef, sourceSystem, gross, good, reject, uom',
   })
   @IsString()
   @IsNotEmpty()

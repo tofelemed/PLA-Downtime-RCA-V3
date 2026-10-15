@@ -44,6 +44,8 @@ export interface Capabilities {
   canSignOffMonth: boolean;
   canReviewMonthMateriality: boolean;
   canReopenMonth: boolean;
+  /** SME R5: posting date and treatment of a restatement (finance approvers) */
+  canDecidePosting: boolean;
   /** bridge lines (SME R8: production accounting only) */
   canWriteBridges: boolean;
   canWriteCodes: boolean;
@@ -94,6 +96,7 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canSignOffMonth: may(ServerRoles.FINANCE_SIGNERS),
     canReviewMonthMateriality: may(ServerRoles.MATERIALITY_REVIEWERS),
     canReopenMonth: may(ServerRoles.MONTH_REOPENERS),
+    canDecidePosting: may(ServerRoles.POSTING_DECIDERS),
     canWriteBridges: may(ServerRoles.BRIDGE_WRITERS),
     canWriteCodes: may(ServerRoles.CODE_WRITERS),
     canAuthorRules: may(ServerRoles.RULE_AUTHORS),

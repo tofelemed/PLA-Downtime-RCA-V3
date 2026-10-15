@@ -2,7 +2,7 @@ import {
   compareRevisions,
   draftProblems,
   ExternalReportDraft,
-  isCertifiedStatus,
+  isReleasedStatus,
   reportsFromCsv,
 } from './external-report';
 import { externalLineCandidate } from './external-line-candidate';
@@ -42,11 +42,15 @@ const draft = (
 });
 
 describe('external daily-production records (ACT08)', () => {
-  it('maps statuses to certified eligibility case-insensitively', () => {
-    expect(isCertifiedStatus('completed', ['COMPLETED', 'RELEASED'])).toBe(
-      true,
-    );
-    expect(isCertifiedStatus('DRAFT', ['COMPLETED', 'RELEASED'])).toBe(false);
+  it('SME R13: only a status the source mapping releases is certified-eligible (case-insensitive)', () => {
+    const lims = [
+      { status: 'COMPLETED', released: false },
+      { status: 'AUTHORIZED', released: true },
+    ];
+    expect(isReleasedStatus('authorized', lims)).toBe(true);
+    expect(isReleasedStatus('COMPLETED', lims)).toBe(false);
+    expect(isReleasedStatus('RELEASED', lims)).toBe(false);
+    expect(isReleasedStatus('AUTHORIZED', null)).toBe(false);
   });
 
   it('orders numeric revisions; non-numeric ones are left to import order', () => {

@@ -10,6 +10,8 @@ import { DraftLinesService } from './draft-lines.service';
 import { ApprovalAction } from './entities/approval-action.entity';
 import { ApprovalSnapshot } from './entities/approval-snapshot.entity';
 import { PeriodChangeProposal } from './entities/period-change-proposal.entity';
+import { RestatementPosting } from './entities/restatement-posting.entity';
+import { RestatementService } from './restatement.service';
 import { ReconciliationLineSet } from './entities/reconciliation-line-set.entity';
 import { ReconciliationLine } from './entities/reconciliation-line.entity';
 import { LineSetWriter } from './line-set.writer';
@@ -30,6 +32,7 @@ import { SubmissionService } from './submission.service';
       ApprovalAction,
       ApprovalSnapshot,
       PeriodChangeProposal,
+      RestatementPosting,
       AuditEntry,
     ]),
     OutboxModule,
@@ -43,6 +46,7 @@ import { SubmissionService } from './submission.service';
     ApprovalService,
     RevisionLifecycleService,
     ChangeProposalsService,
+    RestatementService,
   ],
   exports: [
     LineSetWriter,
@@ -51,6 +55,7 @@ import { SubmissionService } from './submission.service';
     ApprovalService,
     RevisionLifecycleService,
     ChangeProposalsService,
+    RestatementService,
   ],
 })
 export class ReconciliationModule {}
