@@ -17,6 +17,7 @@ import {
   periodInScope,
   publishedRevision,
 } from '../../reconciliation/revision-access';
+import { bridgeReviewOf } from '../../reconciliation/bridge-review';
 import { loadCodingGate } from '../../reconciliation/coding-gate.loader';
 import { loadRevisionState } from '../../reconciliation/revision-state';
 import { reversibleKindsOf } from '../../periods/reconciliation-options';
@@ -182,6 +183,7 @@ export class ReconciliationV2Service {
       publishedRevision: published?.revision ?? null,
       openProposalId: open?.id ?? null,
       codingGate: await loadCodingGate(manager, state),
+      bridgeReview: await bridgeReviewOf(manager, state),
     });
   }
 

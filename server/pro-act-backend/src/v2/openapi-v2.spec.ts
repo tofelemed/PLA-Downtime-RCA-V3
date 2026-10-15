@@ -128,6 +128,7 @@ import { FeatureFlagsService } from '../feature-flags/feature-flags.service';
 import { ExportsModule } from '../exports/exports.module';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
+import { BridgeReviewService } from '../reconciliation/bridge-review.service';
 import { StopVerificationService } from './production-events/stop-verification.service';
 import { CodeMappingPreviewService } from '../code-library/code-mapping-preview.service';
 import { RuleClassificationService } from '../rules/rule-classification.service';
@@ -341,6 +342,7 @@ class AccountingModuleStub {}
     { provide: RevisionLifecycleService, useValue: {} },
     { provide: ChangeProposalsService, useValue: {} },
     { provide: RestatementService, useValue: {} },
+    { provide: BridgeReviewService, useValue: {} },
   ],
   exports: [
     DraftLinesService,
@@ -349,6 +351,7 @@ class AccountingModuleStub {}
     RevisionLifecycleService,
     ChangeProposalsService,
     RestatementService,
+    BridgeReviewService,
   ],
 })
 class ReconciliationModuleStub {}

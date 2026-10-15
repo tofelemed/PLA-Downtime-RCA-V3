@@ -25,6 +25,7 @@ import { Ctx } from '../../common/context/ctx.decorator';
 import { RequestContext } from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { ApprovalService } from '../../reconciliation/approval.service';
+import { BridgeReviewService } from '../../reconciliation/bridge-review.service';
 import { DraftLinesService } from '../../reconciliation/draft-lines.service';
 import { RevisionLifecycleService } from '../../reconciliation/revision-lifecycle.service';
 import { SubmissionService } from '../../reconciliation/submission.service';
@@ -67,6 +68,7 @@ export class ReconciliationV2Controller {
     private readonly submissions: SubmissionService,
     private readonly approvals: ApprovalService,
     private readonly lifecycle: RevisionLifecycleService,
+    private readonly bridgeReviews: BridgeReviewService,
   ) {}
 
   @Get(':id/reconciliation')
@@ -140,7 +142,8 @@ export class ReconciliationV2Controller {
     description:
       IDEMPOTENT +
       '403 SEPARATION_OF_DUTIES for the submitter (any role); 409 STALE_SUBMISSION when inputs changed after ' +
-      'submission or the hash differs.',
+      'submission or the hash differs; SME R8: 409 BRIDGE_REVIEW_REQUIRED while a bridge above the unit limit ' +
+      'waits for its second review, 403 SEPARATION_OF_DUTIES for the bridge reviewer.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async approve(
@@ -149,6 +152,31 @@ export class ReconciliationV2Controller {
     @Body() body: ApproveRevisionDto,
   ): Promise<ReconciliationV2View> {
     return this.reads.viewOf(ctx, await this.approvals.approve(ctx, id, body));
+  }
+
+  @Post(':id/bridge-review')
+  @HttpCode(HttpStatus.OK)
+  @Idempotent()
+  @Roles(...REVISION_APPROVERS)
+  @UseInterceptors(ETagInterceptor)
+  @ApiOperation({
+    summary:
+      'SME R8: second independent review of the bridges above the unit limit of the submitted revision',
+    description:
+      IDEMPOTENT +
+      'By a revision approver independent of the submission (403 SEPARATION_OF_DUTIES); the final approver must ' +
+      'be someone else. 409 BRIDGE_REVIEW_NOT_REQUIRED / BRIDGE_ALREADY_REVIEWED / STALE_SUBMISSION.',
+  })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  async bridgeReview(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: ApproveRevisionDto,
+  ): Promise<ReconciliationV2View> {
+    return this.reads.viewOf(
+      ctx,
+      await this.bridgeReviews.review(ctx, id, body),
+    );
   }
 
   @Post(':id/reject')

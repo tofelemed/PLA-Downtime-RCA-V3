@@ -10,6 +10,7 @@ import {
   manualDetailOf,
 } from '../../reconciliation/manual-proposal';
 import { CodingGateResult } from '../../domain/reconciliation/coding-gate';
+import { BridgeReviewState } from '../../reconciliation/bridge-review';
 import { RevisionState } from '../../reconciliation/revision-state';
 import {
   candidatesPart,
@@ -122,6 +123,8 @@ export interface ReconciliationV2View {
   openProposalId: string | null;
   /** SME D12: stop coding of the period against the policy's submission gate (live, not reviewed content) */
   codingGate: CodingGateResult;
+  /** SME R8: bridges above the unit limit and their second review of the current submission */
+  bridgeReview: BridgeReviewState;
 }
 
 export function toRevisionWorkflowView(
@@ -160,6 +163,7 @@ export function toReconciliationView(
     publishedRevision: number | null;
     openProposalId: string | null;
     codingGate: CodingGateResult;
+    bridgeReview: BridgeReviewState;
   },
 ): ReconciliationV2View {
   const { period, revision, tolerance } = state;
@@ -183,6 +187,7 @@ export function toReconciliationView(
     lines: linesPart(state),
     openProposalId: extra.openProposalId,
     codingGate: extra.codingGate,
+    bridgeReview: extra.bridgeReview,
   };
 }
 

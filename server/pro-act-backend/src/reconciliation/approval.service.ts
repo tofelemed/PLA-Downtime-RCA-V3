@@ -11,6 +11,7 @@ import {
   invalidTransition,
 } from '../profiles/profile-errors';
 import { ReconciliationSlaService } from '../close/reconciliation-sla.service';
+import { assertBridgeReviewed } from './bridge-review';
 import { rejectionOutcome } from './rejection-outcome';
 import { writeApprovedValuation } from '../valuation/approved-valuation';
 import { ApprovalSnapshot } from './entities/approval-snapshot.entity';
@@ -91,6 +92,7 @@ export class ApprovalService {
       if (contentHashOf(state) !== revision.submittedHash)
         throw staleSubmission('the reviewed content changed');
       if (approvalConflictOf(approver, state)) throw separationOfDuties();
+      await assertBridgeReviewed(manager, state, approver);
       await markApproved(manager, state, context, command);
       return manager.findOneByOrFail(AccountingRevision, { id: revision.id });
     });

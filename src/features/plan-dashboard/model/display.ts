@@ -135,7 +135,16 @@ export function approveGate(view: ReconciliationView, userId: string | null): Ac
   if (view.lines.some((line) => line.authorId === userId)) {
     return { allowed: false, reason: 'You wrote lines in this revision: another manager approver must approve it (separation of duties).', code: 'SEPARATION_OF_DUTIES' };
   }
-  return review;
+  return bridgeGate(view, userId) ?? review;
+}
+
+/** SME R8: a bridge above the unit limit waits for its second reviewer, who never approves it as well. */
+function bridgeGate(view: ReconciliationView, userId: string): ActionGate | null {
+  const bridge = view.bridgeReview;
+  if (!bridge?.required) return null;
+  if (!bridge.review) return { allowed: false, reason: 'A bridge is above the unit limit: a second independent reviewer reviews it before approval.', code: 'BRIDGE_REVIEW_REQUIRED' };
+  if (bridge.review.by === userId) return { allowed: false, reason: 'You reviewed the bridges: someone else approves the period (separation of duties).', code: 'SEPARATION_OF_DUTIES' };
+  return null;
 }
 
 const SERVICE_LABELS: Readonly<Record<string, string>> = {

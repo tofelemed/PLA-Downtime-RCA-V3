@@ -11,6 +11,8 @@ export const APPROVAL_ACTION_KINDS = [
   'cancel',
   'recompute',
   'stale',
+  /** SME R8: second independent review of bridges above the unit limit (in_review → in_review) */
+  'bridge_review',
 ] as const;
 export type ApprovalActionKind = (typeof APPROVAL_ACTION_KINDS)[number];
 

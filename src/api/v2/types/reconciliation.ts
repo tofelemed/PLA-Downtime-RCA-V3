@@ -137,6 +137,16 @@ export interface ReconciliationView {
   openProposalId: string | null;
   /** SME D12 / D13: stop coding of the period against the submission gate, and its verification */
   codingGate?: CodingGateView;
+  /** SME R8: bridges above the unit limit and their second review of the current submission */
+  bridgeReview?: BridgeReviewView;
+}
+
+/** SME R8 (backend `reconciliation/bridge-review.ts`). */
+export interface BridgeReviewView {
+  overLimit: 'second_review' | 'refuse';
+  findings: Array<{ ref: string; sliceId: string; quantity: string; limit: string; basis: 'absolute' | 'relative' }>;
+  required: boolean;
+  review: { by: string | null; at: string } | null;
 }
 
 /** One line of `PUT …/draft-lines` (DraftLineDto): only declared fields (forbidNonWhitelisted). */

@@ -2583,9 +2583,29 @@ export interface paths {
         put?: never;
         /**
          * Approve the submitted revision (snapshot, immutable afterwards)
-         * @description Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter (any role); 409 STALE_SUBMISSION when inputs changed after submission or the hash differs.
+         * @description Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter (any role); 409 STALE_SUBMISSION when inputs changed after submission or the hash differs; SME R8: 409 BRIDGE_REVIEW_REQUIRED while a bridge above the unit limit waits for its second review, 403 SEPARATION_OF_DUTIES for the bridge reviewer.
          */
         post: operations["ReconciliationV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-periods/{id}/bridge-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * SME R8: second independent review of the bridges above the unit limit of the submitted revision
+         * @description Requires `Idempotency-Key`. By a revision approver independent of the submission (403 SEPARATION_OF_DUTIES); the final approver must be someone else. 409 BRIDGE_REVIEW_NOT_REQUIRED / BRIDGE_ALREADY_REVIEWED / STALE_SUBMISSION.
+         */
+        post: operations["ReconciliationV2Controller_bridgeReview_v2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12799,6 +12819,31 @@ export interface operations {
         };
     };
     ReconciliationV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveRevisionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReconciliationV2Controller_bridgeReview_v2: {
         parameters: {
             query?: never;
             header: {
