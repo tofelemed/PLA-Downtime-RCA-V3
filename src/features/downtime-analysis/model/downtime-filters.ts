@@ -38,6 +38,10 @@ export interface DowntimeFilters {
   trendBy: TrendGroup;
   /** reason drill path from the root (ids); empty = level 1 */
   reasonPath: string[];
+  /** period selection applied by the server (downtime summary and breakdowns): empty = every period */
+  productIds: string[];
+  shiftNames: string[];
+  crewIds: string[];
 }
 
 /** A preset window ending `now`, with minute-stable bounds so a revisit hits the cached reports. */
@@ -68,6 +72,9 @@ export function parseFilters(params: URLSearchParams, now: number): DowntimeFilt
     metric: oneOf(['duration', 'frequency'] as const, params.get('metric'), 'duration'),
     trendBy: oneOf(TREND_GROUPS, params.get('trend'), 'day'),
     reasonPath: list(params.get('reasons')),
+    productIds: list(params.get('products')).sort(),
+    shiftNames: list(params.get('shifts')).sort(),
+    crewIds: list(params.get('crews')).sort(),
   };
 }
 
@@ -81,8 +88,29 @@ export function toSearchParams(filters: DowntimeFilters): URLSearchParams {
   if (filters.metric !== 'duration') params.set('metric', filters.metric);
   if (filters.trendBy !== 'day') params.set('trend', filters.trendBy);
   if (filters.reasonPath.length > 0) params.set('reasons', filters.reasonPath.join(','));
+  if (filters.productIds.length > 0) params.set('products', [...filters.productIds].sort().join(','));
+  if (filters.shiftNames.length > 0) params.set('shifts', [...filters.shiftNames].sort().join(','));
+  if (filters.crewIds.length > 0) params.set('crews', [...filters.crewIds].sort().join(','));
   return params;
 }
+
+/** The product, shift and crew selection of the downtime reports (only the lists that are set). */
+export interface PeriodSelection {
+  productIds?: string[];
+  shiftNames?: string[];
+  crewIds?: string[];
+}
+
+export function periodSelection(filters: DowntimeFilters): PeriodSelection {
+  const selection: PeriodSelection = {};
+  if (filters.productIds.length > 0) selection.productIds = [...filters.productIds].sort();
+  if (filters.shiftNames.length > 0) selection.shiftNames = [...filters.shiftNames].sort();
+  if (filters.crewIds.length > 0) selection.crewIds = [...filters.crewIds].sort();
+  return selection;
+}
+
+/** true when a product, shift or crew filter narrows the downtime reports. */
+export const hasPeriodSelection = (filters: DowntimeFilters) => Object.keys(periodSelection(filters)).length > 0;
 
 /** The window, units and run selection every report of the page shares (T24: one snapshot). */
 export interface ReportBase {
@@ -99,7 +127,7 @@ export function reportBase(filters: DowntimeFilters): ReportBase {
   return base;
 }
 
-export type DowntimeQuery = DowntimeReportQuery & ReportBase;
+export type DowntimeQuery = DowntimeReportQuery & ReportBase & PeriodSelection;
 
 export interface DowntimeQueryOptions {
   metric?: DowntimeMetric;
@@ -112,7 +140,7 @@ export interface DowntimeQueryOptions {
  * class, metric and micro-stop choice unless a widget overrides them. Unset options are left out.
  */
 export function downtimeQuery(filters: DowntimeFilters, groupBy: DowntimeGroupBy, options: DowntimeQueryOptions = {}): DowntimeQuery {
-  const query: DowntimeQuery = { ...reportBase(filters), groupBy };
+  const query: DowntimeQuery = { ...reportBase(filters), ...periodSelection(filters), groupBy };
   const metric = options.metric ?? filters.metric;
   const scheduleClass = options.scheduleClass ?? filters.scheduleClass;
   if (metric !== 'duration') query.metric = metric;

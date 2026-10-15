@@ -30,7 +30,7 @@ const viewOf = (value: string | null): ReportView => VIEWS.find((view) => view.k
 /**
  * Reports (plan 3.6 step 4): named units (always sent), periods by their plant dates, approved-only or
  * approved-else-draft revisions; views for OEE and downtime, reconciliation, loss value, the work summary
- * (RCA cases, tasks, audit activity) and asynchronous CSV exports of approved content. The view is in the
+ * (RCA cases, tasks, audit activity) and asynchronous CSV / PDF exports of approved content. The view is in the
  * URL (`?view=`), so Back and shared links keep it.
  */
 export function ReportsV2Page() {
@@ -93,6 +93,11 @@ function ReportsScreen() {
   );
 }
 
+const EXPORTS = [
+  { reportType: 'period_summary', label: 'Period summary', testId: 'export-period-summary' },
+  { reportType: 'loss_lines', label: 'Loss lines', testId: 'export-loss-lines' },
+] as const;
+
 function Exports({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useOeeReport(oeeQuery(scope, 'day', 'operational'), env.timezone);
@@ -100,11 +105,23 @@ function Exports({ scope }: { scope: AnalyticsScope }) {
   return (
     <div className="space-y-3" data-testid="report-exports">
       <p className="text-sm text-muted-foreground">
-        Exports contain approved revisions only (the latest approved revision of every period of these units and dates), prepared as CSV in the background; every row names its period,
-        revision and approval. PDF is not available yet.
+        Exports contain approved revisions only (the latest approved revision of every period of these units and dates), prepared in the background. CSV: every row names its
+        period, revision and approval. PDF: a printable report in the plant calendar, with money in your display currency.
       </p>
-      <ScopeExport request={exportRequestOf(scope, 'period_summary', provisional)} label="Period summary" timezone={env.timezone} testId="export-period-summary" />
-      <ScopeExport request={exportRequestOf(scope, 'loss_lines', provisional)} label="Loss lines" timezone={env.timezone} testId="export-loss-lines" />
+      {EXPORTS.map((entry) => (
+        <div key={entry.reportType} className="flex flex-wrap gap-4">
+          {(['csv', 'pdf'] as const).map((format) => (
+            <ScopeExport
+              key={format}
+              request={exportRequestOf(scope, entry.reportType, provisional)}
+              label={entry.label}
+              format={format}
+              timezone={env.timezone}
+              testId={format === 'csv' ? entry.testId : `${entry.testId}-pdf`}
+            />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

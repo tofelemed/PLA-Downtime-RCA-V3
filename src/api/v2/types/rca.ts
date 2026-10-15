@@ -152,8 +152,14 @@ export interface RcaCaseView extends RcaCaseSummaryView {
 /** Counts of the cases in scope (`GET /v2/rcas/summary`). */
 export interface RcaCaseSummaryCounts {
   total: number;
+  /** cases not closed */
+  open: number;
   overdue: number;
   critical: number;
+  /** open or in-progress actions past their due date */
+  overdueActions: number;
+  /** actions with a baseline and a verification window whose effectiveness result is not in yet */
+  effectivenessPending: number;
   byStatus: Array<{ status: string | null; count: number }>;
   asOf: string;
 }

@@ -42,6 +42,17 @@ export const SUMMARY_TILES: readonly TileSpec[] = [
   { metric: 'onstream_factor', title: 'Onstream factor', kind: 'ratio', note: 'Denominator: calendar time' },
 ];
 
+/**
+ * SME D15: the supplemental controllable view. Its own name and definition; the headline availability
+ * keeps external stops and stays on screen. The value is the server's KPI.
+ */
+export const CONTROLLABLE_TILE: TileSpec = {
+  metric: 'controllable_availability',
+  title: 'Controllable availability',
+  kind: 'ratio',
+  note: 'Supplemental view: run time ÷ scheduled time with stops classed external not counted as stops',
+};
+
 const REASONS: Readonly<Record<string, string>> = {
   no_data: 'No calculated periods',
   no_scheduled_time: 'No scheduled time',

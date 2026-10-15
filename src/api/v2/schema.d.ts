@@ -7500,11 +7500,10 @@ export interface components {
              */
             format: "csv" | "pdf";
             /**
-             * @description PDF only: the reporting currency money is printed in (USD by default). Ignored for CSV.
-             * @default USD
+             * @description PDF only: the reporting currency money is printed in (default USD). Ignored for CSV.
              * @enum {string}
              */
-            currency: "USD" | "IRR";
+            currency?: "USD" | "IRR";
             /**
              * @description `published`: the latest approved revision of every period overlapping [from, to) (needs from/to, optional unitIds). `revision_ids`: the named approved revisions (needs revisionIds only). Draft or in-review content is never exported.
              * @enum {string}

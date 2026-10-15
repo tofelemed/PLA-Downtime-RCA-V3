@@ -66,6 +66,8 @@ async function readBody(response: Response): Promise<unknown> {
   if (response.status === 204) return undefined;
   const type = response.headers.get('Content-Type') ?? '';
   if (type.includes('application/json')) return response.json().catch(() => undefined);
+  // binary files (PDF exports) stay bytes; text would corrupt them
+  if (type.includes('application/pdf')) return response.blob().catch(() => undefined);
   return response.text().catch(() => undefined);
 }
 

@@ -4,6 +4,7 @@ import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-se
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { WINDOW_PRESETS } from '@/features/downtime-analysis/model/downtime-filters';
 import { presetWindowOf, type AnalyticsScope } from '../model/analytics-scope';
+import { SiteFilter } from './site-filter';
 
 export interface AnalyticsFiltersProps {
   scope: AnalyticsScope;
@@ -12,7 +13,7 @@ export interface AnalyticsFiltersProps {
 
 export const SELECT_CLASS = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
 
-/** Scope filters shared by every view (server-side): units (sent when the list closes), window, ledger, approved only. */
+/** Scope filters shared by every view (server-side): site (selects its units), units (sent when the list closes), window, ledger, approved only. */
 export function AnalyticsFilters({ scope, onChange }: AnalyticsFiltersProps) {
   const env = useEventHubEnv();
   const choosePreset = (key: string) => {
@@ -21,6 +22,7 @@ export function AnalyticsFilters({ scope, onChange }: AnalyticsFiltersProps) {
   };
   return (
     <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Analytics scope" data-testid="analytics-filters">
+      <SiteFilter unitIds={scope.unitIds} onChange={(unitIds) => onChange({ unitIds })} />
       <MultiCheckSelect
         label="Units"
         testId="filter-units"

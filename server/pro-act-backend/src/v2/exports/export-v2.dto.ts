@@ -48,9 +48,7 @@ export class CreateExportDto {
 
   @ApiPropertyOptional({
     enum: PDF_CURRENCIES,
-    default: DEFAULT_PDF_CURRENCY,
-    description:
-      'PDF only: the reporting currency money is printed in (USD by default). Ignored for CSV.',
+    description: `PDF only: the reporting currency money is printed in (default ${DEFAULT_PDF_CURRENCY}). Ignored for CSV.`,
   })
   @IsOptional()
   @IsIn(PDF_CURRENCIES)

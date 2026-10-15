@@ -13,12 +13,13 @@ import { DASHBOARD_PRESETS, dashboardScope, presetKeyOf } from '../model/dashboa
 import { DashboardDowntime, DashboardTopAssets } from './dashboard-downtime';
 import { DashboardOee } from './dashboard-oee';
 import { LatestEvents } from './latest-events';
+import { RcaTiles } from './rca-tiles';
 import { ReconciliationTiles } from './reconciliation-tiles';
 
 /**
  * Dashboard (plan 3.6 step 3): every unit in the caller's scope over a rolling window — OEE with its policy
  * label (operational with its components, and the labelled reconciled tile, D04), downtime, the most
- * stopped assets, open and overdue reconciliations and the latest loss events. Every tile is a server
+ * stopped assets, open and overdue reconciliations, RCA cases and actions, and the latest loss events. Every tile is a server
  * snapshot of the same scope and appears as soon as its own figures arrive.
  */
 export function AnalyticsDashboard() {
@@ -84,6 +85,9 @@ function DashboardScreen() {
         </Section>
         <Section title="Reconciliation">
           <ReconciliationTiles scope={scope} />
+        </Section>
+        <Section title="Root cause analysis">
+          <RcaTiles />
         </Section>
         <Section title="Latest loss events" actions={<Link className="text-sm underline" to="/events">All events</Link>}>
           <LatestEvents scope={scope} />

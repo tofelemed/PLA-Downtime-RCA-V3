@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { KpiAggregateView } from '@/api/v2/types/reports';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -5,7 +6,8 @@ import { useCalendarPreference } from '@/lib/dates';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { labelOf } from '@/features/ux-kit/labels';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
-import { findMetric, formatCount, formatRatio, hasUnknownTime, reasonText, SUMMARY_TILES, type TileSpec } from '../model/kpi-display';
+import { CONTROLLABLE_TILE, findMetric, formatCount, formatRatio, hasUnknownTime, reasonText, SUMMARY_TILES, type TileSpec } from '../model/kpi-display';
+import { ControllableSwitch } from './controllable-switch';
 import { ReportCard } from './report-card';
 
 const QUALITY_LABELS: Readonly<Record<string, string>> = {
@@ -17,19 +19,29 @@ const QUALITY_LABELS: Readonly<Record<string, string>> = {
 
 /**
  * KPI summary (KPI05 / KPI06, DT04): the period KPIs of the scope from `GET /reports/downtime` — the
- * server's summed terms, shown with their labels, cohorts and null reasons; nothing is added up here.
+ * server's summed terms, shown with their labels, cohorts and null reasons; nothing is added up here. The
+ * switch adds the server's controllable availability (SME D15) beside the headline figures.
  */
 export function KpiSummary({ bundle }: { bundle: DowntimeBundleResult }) {
   const summary = bundle.data?.data.summary;
+  const [controllable, setControllable] = useState(false);
+  const tiles = controllable ? [...SUMMARY_TILES, CONTROLLABLE_TILE] : SUMMARY_TILES;
   return (
-    <ReportCard title="Downtime summary" testId="kpi-summary" query={bundle} response={bundle.data} showMeta={false}>
+    <ReportCard
+      title="Downtime summary"
+      testId="kpi-summary"
+      query={bundle}
+      response={bundle.data}
+      showMeta={false}
+      actions={<ControllableSwitch checked={controllable} onChange={setControllable} />}
+    >
       {hasUnknownTime(summary) && (
         <Alert className="mb-2" data-testid="unknown-lower-bound">
           <AlertDescription>Some stop time is not classed planned or unplanned yet: the planned / unplanned split is incomplete.</AlertDescription>
         </Alert>
       )}
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {SUMMARY_TILES.map((tile) => (
+        {tiles.map((tile) => (
           <KpiTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />
         ))}
       </dl>

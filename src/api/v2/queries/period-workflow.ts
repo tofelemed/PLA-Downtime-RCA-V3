@@ -165,16 +165,29 @@ export function useProposeCorrection() {
 export interface ExportRevisionInput {
   period: PeriodRef;
   revisionId: string;
+  /** csv (default) or pdf; a PDF prints money in `currency` (USD by default) */
+  format?: 'csv' | 'pdf';
+  currency?: 'USD' | 'IRR';
 }
 
 /** Export of an approved revision (2.9 `revision_ids`): approved content only, never a draft. */
 export function useExportApprovedRevision() {
-  return usePeriodCommand<ExportRevisionInput, JobAccepted>(({ revisionId }, key) =>
-    post('/exports', { reportType: 'loss_lines', format: 'csv', revisionSelector: 'revision_ids', revisionIds: [revisionId] }, key),
+  return usePeriodCommand<ExportRevisionInput, JobAccepted>(({ revisionId, format = 'csv', currency }, key) =>
+    post(
+      '/exports',
+      { reportType: 'loss_lines', format, revisionSelector: 'revision_ids', revisionIds: [revisionId], ...(format === 'pdf' && currency ? { currency } : {}) },
+      key,
+    ),
   );
 }
 
 /** Fetches the export file with the session (the download route is re-authorized) as text. */
 export async function downloadExportText(exportId: string): Promise<string> {
   return (await v2Request<string>({ method: 'GET', path: `/exports/${exportId}/download` })).data;
+}
+
+/** Fetches an export file as a Blob of its own type (CSV text or PDF bytes) for saving. */
+export async function downloadExportFile(exportId: string): Promise<Blob> {
+  const data = (await v2Request<Blob | string>({ method: 'GET', path: `/exports/${exportId}/download` })).data;
+  return typeof data === 'string' ? new Blob([data], { type: 'text/csv;charset=utf-8' }) : data;
 }
