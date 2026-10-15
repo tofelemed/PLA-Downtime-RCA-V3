@@ -6996,14 +6996,14 @@ export interface components {
              */
             impactCodeId?: string;
             /** @enum {string} */
-            basis: "contribution_margin" | "standard_cost" | "cost_per_hour" | "variable_cost" | "salvage_value" | "disposal_cost" | "downgrade_price_difference" | "rework_cost";
+            basis: "contribution_margin" | "standard_cost" | "cost_per_hour" | "variable_cost" | "salvage_value" | "disposal_cost" | "downgrade_price_difference" | "rework_cost" | "rework_yield";
             /** @example 42.5 */
             value: string;
             /**
-             * @description ISO 4217
+             * @description ISO 4217; required for money bases, omitted for rework_yield (a ratio: recovered per reworked quantity, 0 < value ≤ 1)
              * @example IRR
              */
-            currency: string;
+            currency?: string;
             /** @description Defaults to the profile quantityUom (must match it) or "h" for cost_per_hour */
             perUom?: string;
         };
@@ -11484,7 +11484,7 @@ export interface operations {
                 to?: string;
                 profileId?: string;
                 impactCodeId?: string;
-                basis?: "contribution_margin" | "standard_cost" | "cost_per_hour" | "variable_cost" | "salvage_value" | "disposal_cost" | "downgrade_price_difference" | "rework_cost";
+                basis?: "contribution_margin" | "standard_cost" | "cost_per_hour" | "variable_cost" | "salvage_value" | "disposal_cost" | "downgrade_price_difference" | "rework_cost" | "rework_yield";
                 state?: "draft" | "approved" | "retired";
             };
             header?: never;

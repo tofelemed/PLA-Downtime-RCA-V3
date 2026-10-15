@@ -111,6 +111,9 @@ export function rateCreateBody(values: RateFormValues, timezone: string): RateCr
   };
 }
 
+/** SME V2: bases that are a ratio, not money (no currency). */
+export const isRatioBasis = (basis: ValuationBasis) => basis === 'rework_yield';
+
 export interface ValuationFormValues {
   basis: ValuationBasis;
   value: string | null;
@@ -122,6 +125,11 @@ export interface ValuationFormValues {
 export function validateValuationForm(values: ValuationFormValues, timezone: string): FieldErrors {
   const errors = validityErrors(values.effectiveFrom, values.effectiveTo, timezone);
   if (!values.value) errors.value = 'Enter the value';
+  if (isRatioBasis(values.basis)) {
+    // SME V2: a rework yield is recovered per reworked quantity, 0 < yield ≤ 1 (the server checks it again)
+    if (values.value && !(Number(values.value) > 0 && Number(values.value) <= 1)) errors.value = 'Enter a yield above 0 and at most 1';
+    return errors;
+  }
   if (!CURRENCY.test(values.currency)) errors.currency = 'Use a three-letter currency code, e.g. USD';
   return errors;
 }
@@ -131,7 +139,7 @@ export function valuationCreateBody(profileId: string, values: ValuationFormValu
     profileId,
     basis: values.basis,
     value: values.value as string,
-    currency: values.currency,
+    ...(isRatioBasis(values.basis) ? {} : { currency: values.currency }),
     effectiveFrom: plantLocalToUtc(values.effectiveFrom, timezone) as string,
     effectiveTo: values.effectiveTo ? plantLocalToUtc(values.effectiveTo, timezone) : null,
   };

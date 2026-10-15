@@ -1,16 +1,7 @@
-import { ValuationBasis } from '../profiles/profile.types';
 import { unvaluedView, valuedView } from './currency-amounts';
+import { demandOf, part, Part, PartPrice, pricePart } from './economic-parts';
+import { reworkParts } from './rework-parts';
 import {
-  normUom,
-  RatePiece,
-  ratePieces,
-  ratesOf,
-  shareOf,
-  TIME_UNIFORM,
-} from './rate-pieces';
-import {
-  DemandStatusSnapshot,
-  EconomicComponent,
   EconomicRules,
   LineViewValuation,
   QualityDisposition,
@@ -21,28 +12,6 @@ import {
 
 const VIEW = 'economic_impact';
 
-/** One economic part of a line: a product value per tonne, its sign, and whether it may be absent. */
-interface Part {
-  component: EconomicComponent;
-  basis: ValuationBasis;
-  sign: 1 | -1;
-  required: boolean;
-  /** lost contribution: charged only for sales actually forgone (SME V3) */
-  forgoneSale: boolean;
-}
-
-const part = (
-  component: EconomicComponent,
-  basis: ValuationBasis,
-  options: Partial<Pick<Part, 'sign' | 'required' | 'forgoneSale'>> = {},
-): Part => ({
-  component,
-  basis,
-  sign: options.sign ?? 1,
-  required: options.required ?? true,
-  forgoneSale: options.forgoneSale ?? false,
-});
-
 const LOST_SALE = part('lost_contribution', 'contribution_margin', {
   forgoneSale: true,
 });
@@ -51,7 +20,8 @@ const LOST_SALE = part('lost_contribution', 'contribution_margin', {
  * SME V2 (14 Oct 2026), non-overlapping parts: output never made is lost contribution; scrap is the lost
  * contribution of an unrecovered sale plus the variable cost already spent, less salvage, plus disposal;
  * a downgrade sold is the net price difference plus incremental handling; successful rework is its
- * incremental cost only (the sale is recovered, so no contribution is lost).
+ * incremental cost, its yield loss and any contribution displaced at a constrained unit (2.8.0), never the
+ * lost contribution of the recovered sale.
  */
 const PARTS: Readonly<Record<QualityDisposition | 'unproduced', Part[]>> = {
   unproduced: [LOST_SALE],
@@ -65,10 +35,13 @@ const PARTS: Readonly<Record<QualityDisposition | 'unproduced', Part[]>> = {
     part('price_difference', 'downgrade_price_difference'),
     part('disposal', 'disposal_cost', { required: false }),
   ],
-  rework: [part('rework_cost', 'rework_cost')],
+  // successful rework: incremental cost, yield loss and displaced contribution (`rework-parts.ts`, 2.8.0)
+  rework: [],
 };
 
-type Plan = { parts: Part[]; notes: string[] } | { reason: string };
+type Plan =
+  | { parts: Part[]; notes: string[]; rework: boolean }
+  | { reason: string };
 
 /**
  * SME E3: a line whose quality class is itself a disposition (an approved lot disposition or a quality
@@ -96,94 +69,15 @@ function dispositionOf(
 }
 
 function planOf(line: ValuationLineInput, rules: EconomicRules): Plan {
-  if (line.kind !== 'quality') return { parts: PARTS.unproduced, notes: [] };
+  if (line.kind !== 'quality')
+    return { parts: PARTS.unproduced, notes: [], rework: false };
   const disposition = dispositionOf(line, rules);
   if (!disposition) return { reason: 'disposition_missing' };
-  return { parts: PARTS[disposition], notes: [`disposition_${disposition}`] };
-}
-
-const ms = (iso: string | null) => (iso === null ? Infinity : Date.parse(iso));
-
-function demandAt(
-  line: ValuationLineInput,
-  context: ValuationContext,
-): DemandStatusSnapshot | null {
-  const at = line.start.getTime();
-  return (
-    (context.demand ?? []).find(
-      (d) =>
-        d.productId === line.productId && ms(d.from) <= at && ms(d.to) > at,
-    ) ?? null
-  );
-}
-
-interface Demand {
-  /** whether forgone-sale parts are charged */
-  charged: boolean;
-  statusId?: string;
-  notes: string[];
-}
-
-/** SME V3: lost contribution only when demand was constrained (unless the policy charges all lost output). */
-function demandOf(
-  line: ValuationLineInput,
-  context: ValuationContext,
-  rules: EconomicRules,
-): Demand | { reason: string } {
-  if (rules.demandRule === 'all_lost_output')
-    return { charged: true, notes: [] };
-  const status = demandAt(line, context);
-  if (!status) return { reason: 'demand_status_missing' };
   return {
-    charged: status.constrained,
-    statusId: status.id,
-    notes: status.constrained ? [] : ['demand_not_constrained'],
+    parts: PARTS[disposition],
+    notes: [`disposition_${disposition}`],
+    rework: disposition === 'rework',
   };
-}
-
-function componentOf(
-  line: ValuationLineInput,
-  item: Part,
-  piece: RatePiece,
-): ValuationComponent {
-  const quantity = line.quantity.mul(shareOf(line, piece));
-  return {
-    rateVersionId: piece.rate.id,
-    rateVersion: piece.rate.version,
-    from: new Date(piece.from),
-    to: new Date(piece.to),
-    currency: piece.rate.currency,
-    unitValue: piece.rate.value,
-    quantity,
-    seconds: null,
-    amount: quantity.mul(piece.rate.value).mul(item.sign),
-    component: item.component,
-  };
-}
-
-const missingReason = (basis: ValuationBasis) =>
-  basis === 'contribution_margin' ? 'rate_missing' : `${basis}_missing`;
-
-type PartPrice =
-  | { components: ValuationComponent[]; note?: string }
-  | { reason: string };
-
-function pricePart(
-  line: ValuationLineInput,
-  item: Part,
-  context: ValuationContext,
-): PartPrice {
-  const profileId = line.profileId ?? '';
-  const rates = ratesOf(context, profileId, item.basis);
-  const found = ratePieces(line, rates, TIME_UNIFORM.has(line.kind));
-  if (!found || found.length === 0) {
-    if (item.required) return { reason: missingReason(item.basis) };
-    return { components: [], note: `no_${item.component}_rate` };
-  }
-  const uom = normUom(line.uom ?? '');
-  if (found.some((p) => normUom(p.rate.perUom) !== uom))
-    return { reason: 'uom_mismatch' };
-  return { components: found.map((p) => componentOf(line, item, p)) };
 }
 
 function precondition(
@@ -213,24 +107,44 @@ export function economicView(
   if (blocked || !rules) return unvaluedView(VIEW, blocked ?? '', currencies);
   const plan = planOf(line, rules);
   if ('reason' in plan) return unvaluedView(VIEW, plan.reason, currencies);
-  const needsDemand = plan.parts.some((p) => p.forgoneSale);
+  const priced = plan.rework
+    ? reworkParts(line, context, rules)
+    : standardParts(line, context, rules, plan.parts);
+  if ('reason' in priced) return unvaluedView(VIEW, priced.reason, currencies);
+  return {
+    ...valuedView(VIEW, priced.components, context),
+    ...(priced.demandStatusId ? { demandStatusId: priced.demandStatusId } : {}),
+    notes: [...plan.notes, ...priced.notes],
+  };
+}
+
+interface Priced {
+  components: ValuationComponent[];
+  notes: string[];
+  demandStatusId?: string;
+}
+
+/** Never-made output, scrap and downgrade: each part priced for the line's tonnes (forgone sales per V3). */
+function standardParts(
+  line: ValuationLineInput,
+  context: ValuationContext,
+  rules: EconomicRules,
+  parts: readonly Part[],
+): Priced | { reason: string } {
+  const needsDemand = parts.some((p) => p.forgoneSale);
   const demand = needsDemand
     ? demandOf(line, context, rules)
     : { charged: true, notes: [] };
-  if ('reason' in demand) return unvaluedView(VIEW, demand.reason, currencies);
-  const components: ValuationComponent[] = [];
-  const notes = [...plan.notes, ...demand.notes];
-  for (const item of plan.parts) {
+  if ('reason' in demand) return demand;
+  const out: Priced = { components: [], notes: [...demand.notes] };
+  for (const item of parts) {
     if (item.forgoneSale && !demand.charged) continue;
-    const priced = pricePart(line, item, context);
-    if ('reason' in priced)
-      return unvaluedView(VIEW, priced.reason, currencies);
-    components.push(...priced.components);
-    if (priced.note) notes.push(priced.note);
+    const priced: PartPrice = pricePart(line, item, context);
+    if ('reason' in priced) return priced;
+    out.components.push(...priced.components);
+    if (priced.note) out.notes.push(priced.note);
   }
-  return {
-    ...valuedView(VIEW, components, context),
-    ...(demand.statusId ? { demandStatusId: demand.statusId } : {}),
-    notes,
-  };
+  if ('statusId' in demand && demand.statusId)
+    out.demandStatusId = demand.statusId;
+  return out;
 }

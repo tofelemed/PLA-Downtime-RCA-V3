@@ -10,6 +10,7 @@ import { scopedQuery } from '../common/query/scoped-query';
 import { toDec } from '../domain/actuals/decimal';
 import {
   PRODUCT_VALUE_BASES,
+  RATIO_BASES,
   ValuationBasis,
 } from '../domain/profiles/profile.types';
 import { ProductionProfile } from './entities/production-profile.entity';
@@ -26,7 +27,8 @@ export interface NewValuationRate {
   impactCodeId?: string;
   basis: ValuationBasis;
   value: string;
-  currency: string;
+  /** absent for a ratio basis (`rework_yield`) */
+  currency?: string;
   perUom?: string;
   effectiveFrom: string;
   effectiveTo?: string | null;
@@ -55,12 +57,8 @@ export class ValuationRatesService {
   ): Promise<ValuationRate> {
     const owner = await this.ownerOf(context, input);
     this.assertWritable(context, owner.profileId);
-    const value = toDec(input.value);
-    if (value === null || value.isNegative()) {
-      throw invalid('INVALID_VALUE', 'value must be a decimal ≥ 0');
-    }
+    const currency = await this.currencyOf(owner.tenantId, input);
     const validity = validityOf(input);
-    await this.assertReportedCurrency(owner.tenantId, input.currency);
     return this.rates.manager.transaction(async (manager) => {
       const key = {
         profileId: owner.profileId,
@@ -73,7 +71,7 @@ export class ValuationRatesService {
           tenantId: owner.tenantId,
           ...key,
           value: input.value,
-          currency: input.currency,
+          currency,
           perUom: owner.perUom,
           effectiveFrom: validity.from,
           effectiveTo: validity.to,
@@ -84,6 +82,31 @@ export class ValuationRatesService {
         }),
       );
     });
+  }
+
+  /**
+   * The value's currency after checking the value: a money basis needs a reporting currency and a value
+   * ≥ 0; a ratio (`rework_yield`, SME V2) has none and lies in (0, 1].
+   */
+  private async currencyOf(
+    tenantId: string,
+    input: NewValuationRate,
+  ): Promise<string | null> {
+    const value = toDec(input.value);
+    if (RATIO_BASES.has(input.basis)) {
+      if (value === null || value.lte(0) || value.gt(1)) {
+        throw invalid('INVALID_VALUE', 'a rework yield is a decimal in (0, 1]');
+      }
+      if (input.currency) {
+        throw invalid('CURRENCY_NOT_ALLOWED', 'a rework yield has no currency');
+      }
+      return null;
+    }
+    if (value === null || value.isNegative()) {
+      throw invalid('INVALID_VALUE', 'value must be a decimal ≥ 0');
+    }
+    await this.assertReportedCurrency(tenantId, input.currency ?? '');
+    return input.currency ?? null;
   }
 
   /** D08 (2026-10-09): rates are entered in a reporting currency of the tenant's valuation policy (IRR or USD). */

@@ -11,6 +11,7 @@ import {
   IsUUID,
   Matches,
   MaxLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { RateTimebase } from '../../domain/actuals/actuals.types';
@@ -89,9 +90,14 @@ export class ValuationRateCreateDto extends EffectiveDto {
   @Matches(DECIMAL, { message: `value ${DECIMAL_MESSAGE}` })
   value: string;
 
-  @ApiProperty({ example: 'IRR', description: 'ISO 4217' })
+  @ApiPropertyOptional({
+    example: 'IRR',
+    description:
+      'ISO 4217; required for money bases, omitted for rework_yield (a ratio: recovered per reworked quantity, 0 < value ≤ 1)',
+  })
+  @ValidateIf((dto: ValuationRateCreateDto) => dto.basis !== 'rework_yield')
   @Matches(/^[A-Z]{3}$/, { message: 'currency must be an ISO 4217 code' })
-  currency: string;
+  currency?: string;
 
   @ApiPropertyOptional({
     description:

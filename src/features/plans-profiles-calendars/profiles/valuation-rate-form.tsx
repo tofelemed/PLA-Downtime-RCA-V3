@@ -8,12 +8,14 @@ import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { PlantDateTimeField } from '../components/plant-date-time-field';
 import { RefusalNotice } from '../components/refusal-notice';
-import { validateValuationForm, valuationCreateBody, type FieldErrors, type ValuationFormValues } from '../model/profile-form';
+import { isRatioBasis, validateValuationForm, valuationCreateBody, type FieldErrors, type ValuationFormValues } from '../model/profile-form';
 import { refusalOf } from '../model/refusal';
 
 /**
  * Bases a profile owns (per quantity); cost per hour belongs to impact codes. SME V2: the per-tonne product
- * values of the economic view (scrap cost, salvage, disposal, downgrade price difference, rework cost).
+ * values of the economic view (scrap cost, salvage, disposal, downgrade price difference, rework cost) and
+ * the rework yield — recovered per reworked quantity, a ratio without currency, used where no recovery is
+ * recorded.
  */
 const PROFILE_BASES: readonly ValuationBasis[] = [
   'contribution_margin',
@@ -23,6 +25,7 @@ const PROFILE_BASES: readonly ValuationBasis[] = [
   'disposal_cost',
   'downgrade_price_difference',
   'rework_cost',
+  'rework_yield',
 ];
 const BASES = PROFILE_BASES.map((value) => ({ value, label: VALUATION_BASIS_LABELS[value] }));
 /** Rates are entered in IRR or USD (the server refuses other currencies). */
@@ -44,6 +47,7 @@ export function ValuationRateForm({ profileId, uom, timezone, onDone }: Valuatio
   const create = useCreateValuationRate();
   const set = <K extends keyof ValuationFormValues>(key: K, value: ValuationFormValues[K]) => setValues((prev) => ({ ...prev, [key]: value }));
   const fieldError = (key: string) => errors[key] ?? refusalOf(create.error)?.fieldErrors[key];
+  const ratio = isRatioBasis(values.basis);
 
   const save = async () => {
     const found = validateValuationForm(values, timezone);
@@ -59,12 +63,18 @@ export function ValuationRateForm({ profileId, uom, timezone, onDone }: Valuatio
         <FormField id="basis" label="Basis">
           <NativeSelect id="basis" value={values.basis} options={BASES} onChange={(v) => set('basis', v as ValuationBasis)} />
         </FormField>
-        <FormField id="value" label={`Value per ${uom ?? 'unit (not set)'}`} error={fieldError('value')}>
+        <FormField id="value" label={ratio ? `Recovered ${uom ?? 'unit'} per ${uom ?? 'unit'} reworked (0–1)` : `Value per ${uom ?? 'unit (not set)'}`} error={fieldError('value')}>
           <DecimalInput id="value" value={values.value} onChange={(v) => set('value', v)} aria-label="Value" />
         </FormField>
-        <FormField id="currency" label="Currency" error={fieldError('currency')}>
-          <NativeSelect id="currency" value={values.currency} options={CURRENCIES} onChange={(v) => set('currency', v)} />
-        </FormField>
+        {ratio ? (
+          <p className="self-end text-xs text-muted-foreground" data-testid="yield-hint">
+            A ratio, no currency. Used only where a rework lot has no recorded recovery.
+          </p>
+        ) : (
+          <FormField id="currency" label="Currency" error={fieldError('currency')}>
+            <NativeSelect id="currency" value={values.currency} options={CURRENCIES} onChange={(v) => set('currency', v)} />
+          </FormField>
+        )}
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         <PlantDateTimeField id="valEffectiveFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />

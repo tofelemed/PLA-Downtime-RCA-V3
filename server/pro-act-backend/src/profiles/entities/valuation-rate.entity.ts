@@ -20,7 +20,8 @@ import { ProductionProfile } from './production-profile.entity';
 
 /**
  * Effective-dated money per quantity or per hour (spec §14.2 `valuation_rates`, VAL01, D08): a
- * profile's contribution margin or standard cost per `per_uom`, or an impact code's cost per hour.
+ * profile's contribution margin or standard cost per `per_uom`, or an impact code's cost per hour; SME V2
+ * product values per `per_uom` and the rework yield (recovered per reworked quantity, no currency).
  * Margin versions are kept (GE-style selectable versions); approved versions of one owner and basis
  * never overlap. Used by valuation (2.6).
  */
@@ -44,6 +45,14 @@ import { ProductionProfile } from './production-profile.entity';
 @Check(
   'CHK_valuation_rates_approved_at',
   `"state" <> 'approved' OR "approved_at" IS NOT NULL`,
+)
+@Check(
+  'CHK_valuation_rates_ratio_currency',
+  `("basis"::text = 'rework_yield') = ("currency" IS NULL)`,
+)
+@Check(
+  'CHK_valuation_rates_yield_range',
+  `"basis"::text <> 'rework_yield' OR ("value" > 0 AND "value" <= 1)`,
 )
 export class ValuationRate extends TenantScopedEntity {
   @Column({ name: 'profile_id', type: 'uuid', nullable: true })
@@ -77,9 +86,9 @@ export class ValuationRate extends TenantScopedEntity {
   })
   value: string;
 
-  /** ISO 4217 */
-  @Column({ name: 'currency', type: 'varchar', length: 3 })
-  currency: string;
+  /** ISO 4217; null only for a ratio basis (`rework_yield`, SME V2 2.8.0) */
+  @Column({ name: 'currency', type: 'varchar', length: 3, nullable: true })
+  currency: string | null;
 
   /** quantity unit for quantity bases (= the profile `quantity_uom`); `h` for cost per hour */
   @Column({ name: 'per_uom', type: 'varchar', length: 50 })

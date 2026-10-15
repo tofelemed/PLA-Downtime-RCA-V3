@@ -22,6 +22,7 @@ export const VALUATION_BASES = [
   'disposal_cost',
   'downgrade_price_difference',
   'rework_cost',
+  'rework_yield',
 ] as const;
 export type ValuationBasis = (typeof VALUATION_BASES)[number];
 
@@ -82,7 +83,8 @@ export interface ValuationRateView extends VersionFields {
   impactCodeId: string | null;
   basis: ValuationBasis;
   value: string;
-  currency: string;
+  /** null for the ratio basis `rework_yield` (recovered per reworked quantity, SME V2) */
+  currency: string | null;
   perUom: string;
 }
 

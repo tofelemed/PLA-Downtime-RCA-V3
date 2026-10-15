@@ -179,10 +179,13 @@ const VALUATION: ValuationContext = {
 const qualityLines = (lines: LossLineDraft[]) =>
   lines.filter((l) => l.ledger === 'capacity' && l.kind === 'quality');
 
-function economicUsd(line: LossLineDraft): string | null {
+function economicUsd(
+  line: LossLineDraft,
+  context: ValuationContext = VALUATION,
+): string | null {
   const [valuation] = valueRunLines(
     [line],
-    VALUATION,
+    context,
     new Map([['S', { profileId: PROFILE, productId: PRODUCT }]]),
   );
   const view = valuation.views.find((v) => v.view === 'economic_impact');
@@ -248,13 +251,40 @@ describe('QD01 good-output boundary and product disposition (SME E3)', () => {
     expect(actuals('100', 0, [L100, RECOVERY]).good).toBe(want('period1').good);
   });
 
-  it('rework variant: 5 t sent to rework are a rework-class loss valued at the rework cost only', () => {
+  it('rework variant: 5 t sent to rework and fully recovered through the same boundary cost the rework cost only', () => {
     const expected = want('reworkVariant');
     const rework = actuals('100', 0, [{ ...L100, dispositionClass: 'rework' }]);
     const [line] = qualityLines(
       computePeriodAccounting(accountingInput(0, rework)).lines,
     );
     expect(line.flags).toContain(expected.qualityClass);
-    expect(economicUsd(line)).toBe(expected.economicUsd);
+    // 2.8.0: the recorded recovery returns all 5 t (no yield loss); being remeasured, its reprocessing
+    // time is lost output of period 2's own ledger, so no displaced contribution is added here
+    const lots: ValuationContext = {
+      ...VALUATION,
+      reworkLots: [
+        {
+          id: 'L-100/rework',
+          productId: PRODUCT,
+          start: at(0).toISOString(),
+          end: at(8).toISOString(),
+          quantity: '5',
+          uom: 't',
+          recoveries: [
+            {
+              id: RECOVERY.id,
+              start: RECOVERY.start.toISOString(),
+              end: RECOVERY.end.toISOString(),
+              quantity: '5',
+              remeasured: true,
+              sameUnit: true,
+            },
+          ],
+        },
+      ],
+    };
+    expect(economicUsd(line, lots)).toBe(expected.economicUsd);
+    // without the recorded recovery the rework time is estimated at the planned rate: + 5 t × $300 displaced
+    expect(economicUsd(line)).toBe(expected.economicUsdUnrecorded);
   });
 });

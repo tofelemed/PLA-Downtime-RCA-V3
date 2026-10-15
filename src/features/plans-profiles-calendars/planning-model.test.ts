@@ -5,7 +5,7 @@ import { calendarCreateBody, definitionOf, draftOf, newCalendarDraft, validateCa
 import { offsetLabel, warningsByRow, warningsOf } from './model/calendar-preview';
 import { cycleOf, cycleText } from './model/crew-cycle';
 import { copiedPlanValues, emptyPlanForm, isOpenVersion, planCreateBody, sumMatchesHeader, validatePlanForm } from './model/plan-form';
-import { emptyProfileForm, profileCreateBody, rateCreateBody, validateProfileForm, validateRateForm, validateValuationForm } from './model/profile-form';
+import { emptyProfileForm, profileCreateBody, rateCreateBody, validateProfileForm, validateRateForm, validateValuationForm, valuationCreateBody } from './model/profile-form';
 import { plainFieldMessage, refusalOf } from './model/refusal';
 
 const TEHRAN = 'Asia/Tehran';
@@ -67,6 +67,15 @@ describe('profile and rate forms', () => {
     expect(validateRateForm({ ...rate, rate: null }, TEHRAN)).toEqual({ rate: 'Enter the rate' });
     expect(rateCreateBody(rate, TEHRAN)).toEqual({ rateKind: 'sustained', rate: '120.12345678', timebase: 'h', effectiveFrom: '2026-10-10T02:30:00.000Z', effectiveTo: null });
     expect(validateValuationForm({ basis: 'contribution_margin', value: '1', currency: 'usd', effectiveFrom: '2026-10-10T06:00', effectiveTo: '' }, TEHRAN)).toEqual({ currency: 'Use a three-letter currency code, e.g. USD' });
+  });
+
+  it('SME V2: a rework yield is a ratio in (0, 1] sent without a currency', () => {
+    const yieldForm = { basis: 'rework_yield' as const, value: '0.9', currency: 'usd', effectiveFrom: '2026-10-10T06:00', effectiveTo: '' };
+    expect(validateValuationForm(yieldForm, TEHRAN)).toEqual({});
+    expect(validateValuationForm({ ...yieldForm, value: '1.2' }, TEHRAN)).toEqual({ value: 'Enter a yield above 0 and at most 1' });
+    expect(validateValuationForm({ ...yieldForm, value: '0' }, TEHRAN)).toEqual({ value: 'Enter a yield above 0 and at most 1' });
+    expect(valuationCreateBody('p1', yieldForm, TEHRAN)).toEqual({ profileId: 'p1', basis: 'rework_yield', value: '0.9', effectiveFrom: '2026-10-10T02:30:00.000Z', effectiveTo: null });
+    expect(valuationCreateBody('p1', { ...yieldForm, basis: 'rework_cost', currency: 'USD' }, TEHRAN)).toMatchObject({ currency: 'USD' });
   });
 });
 
