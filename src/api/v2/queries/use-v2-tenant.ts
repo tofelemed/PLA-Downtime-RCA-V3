@@ -3,7 +3,7 @@ import { usePlantSelection } from '@/contexts/PlantSelectionContext';
 
 /**
  * Acting tenant of the v2 cache and client (CLAUDE.md): `plantSelection?.tenant?.id || session?.tenant?.id`.
- * Null while signed out or before a tenant is known; v2 queries stay disabled until then.
+ * Null while signed out or while the saved selection is restoring; v2 queries stay disabled until then.
  */
 export function resolveTenantId(
   selectionTenantId: string | undefined | null,
@@ -14,6 +14,7 @@ export function resolveTenantId(
 
 export function useV2TenantId(): string | null {
   const { session } = useAuth();
-  const { selection } = usePlantSelection();
+  const { selection, loading } = usePlantSelection();
+  if (loading) return null;
   return resolveTenantId(selection?.tenant?.id, session?.tenant?.id);
 }

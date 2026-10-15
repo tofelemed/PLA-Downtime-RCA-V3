@@ -32,7 +32,12 @@ export function ReconciliationSummary({ view }: { view: ReconciliationView }) {
               </dd>
             </div>
           ))}
-          {slice.flags.length > 0 && <p className="col-span-full text-xs text-muted-foreground">Status: {slice.flags.map((f) => labelOf(FLAG_LABELS, f)).join(', ')}</p>}
+          {slice.flags.length > 0 && (
+            <div className="col-span-full text-xs text-muted-foreground">
+              <dt className="inline">Status: </dt>
+              <dd className="inline">{slice.flags.map((f) => labelOf(FLAG_LABELS, f)).join(', ')}</dd>
+            </div>
+          )}
         </dl>
       ))}
       {view.slices.length === 0 && <p className="text-sm text-muted-foreground">No calculated slices yet (recompute the period).</p>}

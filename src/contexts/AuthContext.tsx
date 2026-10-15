@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import { authApi, AuthenticatedUser, LoginRequest, LoginResponse } from '../services/api/authApi';
 import { httpClient } from '../services/api/httpClient';
 import { v2Request } from '@/api/v2/client';
+import { readSessionOrganization } from '@/features/auth/read-session-organization';
 import type { DirectoryOrganization as Organization, DirectoryPlant as Tenant } from '@/api/v2/types/plant-directory';
 
 interface AuthTokens {
@@ -59,9 +60,8 @@ const withSessionGrants = async (user: AuthenticatedUser): Promise<Authenticated
   }
 };
 
-/** The session's organisation and plant from v2 (`GET /v2/organizations/:id`, `GET /v2/tenants/:id`), read as the home plant. */
-const readOrganization = async (id: string, tenantId: string | undefined): Promise<Organization> =>
-  (await v2Request<Organization>({ method: 'GET', path: `/organizations/${id}`, tenantId })).data;
+/** The session's organization directory and plant detail, read as the home plant. */
+const readOrganization = readSessionOrganization;
 
 const readPlant = async (id: string): Promise<Tenant> =>
   (await v2Request<Tenant>({ method: 'GET', path: `/tenants/${id}`, tenantId: id })).data;

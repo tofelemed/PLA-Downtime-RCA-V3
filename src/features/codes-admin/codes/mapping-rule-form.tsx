@@ -31,7 +31,7 @@ export function MappingRuleForm({ reasonId }: { reasonId: string }) {
   const save = () =>
     create
       .submit(kind === 'reason_to_impact' ? { ruleKind: kind, sourceCodeId: reasonId, targetCodeId: target } : { ruleKind: kind, sourceCodeId: reasonId, targetValue: target })
-      .then(() => setTarget(''))
+      .then(() => setTarget((current) => current === target ? '' : current))
       .catch(() => undefined);
   return (
     <div className="space-y-2">

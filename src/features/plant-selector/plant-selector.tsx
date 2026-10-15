@@ -53,7 +53,7 @@ export function PlantSelector() {
   const [open, setOpen] = useState(false);
   useDefaultSelection(directory);
 
-  if (loading || directory.isLoading) return <Skeleton className="h-5 w-40" aria-label="Loading plants" />;
+  if (loading || directory.isLoading) return <Skeleton className="h-5 w-40" role="status" aria-label="Loading plants" />;
   const crumbs = crumbsOf(selection, directory.organizations);
   const choose = (next: PlantSelection) => {
     setSelection(next);
@@ -62,13 +62,13 @@ export function PlantSelector() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="max-w-[28rem] gap-1 px-2" aria-label={`Plant: ${crumbs.map((c) => c.name).join(' › ') || 'none selected'}. Change plant`}>
+        <Button variant="ghost" size="sm" className="w-full max-w-[28rem] gap-1 px-2" aria-label={`Plant: ${crumbs.map((c) => c.name).join(' › ') || 'none selected'}. Change plant`}>
           {crumbs.length === 0 && <span className="text-muted-foreground">Select plant and unit</span>}
           {crumbs.map((crumb, index) => (
-            <span key={`${crumb.name}-${index}`} className="flex min-w-0 items-center gap-1 text-sm font-medium">
-              {index > 0 && <UiIcon.chevronRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />}
+            <span key={`${crumb.name}-${index}`} className={`${index < crumbs.length - 1 ? 'hidden sm:flex' : 'flex'} min-w-0 items-center gap-1 text-sm font-medium`}>
+              {index > 0 && <UiIcon.chevronRight className="hidden h-3.5 w-3.5 text-muted-foreground sm:block" aria-hidden />}
               <crumb.icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-              <span className="max-w-[9rem] truncate">{crumb.name}</span>
+              <span className="max-w-[9rem] truncate" data-testid={index === crumbs.length - 1 ? 'plant-current-label' : undefined}>{crumb.name}</span>
             </span>
           ))}
           <UiIcon.chevronDown className="h-4 w-4 text-muted-foreground" aria-hidden />
