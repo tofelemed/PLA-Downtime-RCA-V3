@@ -7,6 +7,7 @@ import { ERROR_MESSAGES } from './error-messages';
 import { fieldLabel } from './field-label';
 import { FriendlyErrorAlert } from './friendly-error-alert';
 import { friendlyToastContent } from './friendly-toast';
+import { PLANT_WIDE_POLICY_MESSAGES } from './messages-context';
 import { SupportReference } from './support-reference';
 
 const CORR = '7e1d2c3b-1234-4abc-8def-0123456789ab';
@@ -26,6 +27,17 @@ describe('describeError', () => {
     expect(friendly.message).toBe(ERROR_MESSAGES.UOM_MIXED.text);
     expect(friendly.reference).toEqual({ code: 'UOM_MIXED', status: 422, correlationId: CORR });
     expectNothingInternal(`${friendly.title} ${friendly.message}`);
+  });
+
+  it('a context map words a generic code for one kind of screen; elsewhere the generic text stays', () => {
+    const refusal = v2(403, 'TENANT_SCOPE_REQUIRED', 'This change is not limited to your units; a tenant-wide grant is required');
+    const inContext = describeError(refusal, PLANT_WIDE_POLICY_MESSAGES);
+    expect(inContext.title).toBe('A plant-wide policy needs an approver for the whole plant');
+    expect(inContext.message).toMatch(/Choose one of your units, or ask a plant-level approver/);
+    expect(inContext.reference?.code).toBe('TENANT_SCOPE_REQUIRED');
+    expectNothingInternal(`${inContext.title} ${inContext.message}`);
+    expect(describeError(refusal).title).toBe(ERROR_MESSAGES.TENANT_SCOPE_REQUIRED.title);
+    expect(describeError(v2(422, 'INVALID_POLICY', 'x'), PLANT_WIDE_POLICY_MESSAGES).title).toBe(ERROR_MESSAGES.INVALID_POLICY.title);
   });
 
   it('a start or end in the future asks for a time up to now (DT-09)', () => {

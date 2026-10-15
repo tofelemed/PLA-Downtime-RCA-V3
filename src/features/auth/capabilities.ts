@@ -16,6 +16,11 @@ export interface Capabilities {
   /** the analysis and planning screens (reports, plans, RCA, codes, finance, historian) */
   canViewAnalysis: boolean;
   canManageMasterData: boolean;
+  /**
+   * the Master data menu entry: master-data administrators, and the roles that write one of its
+   * reliability pages (stop policy, standby, work orders, unit state) — they see only those pages' links
+   */
+  canReachMasterData: boolean;
   canUseIntegrationConsole: boolean;
   /** user management, permissions, settings of the plant */
   canAdministerTenant: boolean;
@@ -74,7 +79,7 @@ const READ_ONLY_ROLES: ReadonlySet<string> = new Set(ServerRoles.READ_ONLY_ROLES
 const holdsAny = (roles: readonly string[], wanted: readonly string[]): boolean =>
   roles.some((role) => wanted.includes(role));
 
-type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
 
 /** The v2 write capabilities; a read-only plant gets none (the server's WriteAccessGuard runs first). */
 function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteCapabilities {
@@ -108,14 +113,18 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
 export function capabilitiesOf(roles: readonly string[]): Capabilities {
   const held = [...roles];
   const readOnly = !held.some((role) => !READ_ONLY_ROLES.has(role));
+  const writes = writeCapabilitiesOf(held, readOnly);
+  const canManageMasterData = holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'master_data_admin']);
   return {
-    ...writeCapabilitiesOf(held, readOnly),
+    ...writes,
     roles: held,
     isSuperAdmin: held.includes('SuperAdmin'),
     isReadOnly: readOnly,
     canViewOperations: held.length > 0,
     canViewAnalysis: held.some((role) => !OPERATIONS_ONLY_ROLES.has(role)),
-    canManageMasterData: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'master_data_admin']),
+    canManageMasterData,
+    canReachMasterData:
+      canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteWorkOrders || writes.canWriteStateMappings,
     canUseIntegrationConsole: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'integration_admin']),
     canAdministerTenant: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
     canUseAdminPanel: holdsAny(held, ['SuperAdmin', 'TenantAdmin']),

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useRecordMicroStopPolicy } from '@/api/v2/queries/reliability-policies';
 import type { MicroStopPolicyView } from '@/api/v2/types/reliability';
 import { Button } from '@/components/ui/button';
-import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { FriendlyErrorAlert, PLANT_WIDE_POLICY_MESSAGES } from '@/features/ux-kit/errors';
 import { useToast } from '@/hooks/use-toast';
 import { TextField } from '../../components/text-field';
 import { ClassThresholdsEditor } from './class-thresholds-editor';
@@ -40,7 +40,7 @@ export function MicroStopForm({ unitId, current }: MicroStopFormProps) {
       <ClassThresholdsEditor rows={draft.classes} onChange={(classes) => set({ classes })} error={errors.classes} />
       <TextField id="micro-trips" label="Trip reason codes" value={draft.tripCodes} onChange={(v) => set({ tripCodes: v })} hint="Comma separated. A process trip is always an availability event, never a micro-stop." multiline />
       <TextField id="micro-notes" label="Notes" value={draft.notes} onChange={(v) => set({ notes: v })} maxLength={1000} />
-      {failure !== null && <FriendlyErrorAlert error={failure} title="The server refused the micro-stop settings" />}
+      {failure !== null && <FriendlyErrorAlert error={failure} context={PLANT_WIDE_POLICY_MESSAGES} />}
       <Button type="submit" disabled={record.isPending}>Record new version (effective now)</Button>
     </form>
   );

@@ -35,14 +35,14 @@ function EvidenceFacts({ evidence, format }: { evidence: RepairEvidenceView; for
 export function RepairEvidencePanel({ eventId }: { eventId: string }) {
   const format = useReliabilityFormat();
   const evidence = useRepairEvidence(eventId);
-  const { canManageMasterData } = useCapabilities();
+  const { canManageMasterData, canWriteWorkOrders } = useCapabilities();
   return (
     <div className="space-y-3" data-testid="repair-panel">
       <DataState state={dataStateOf(evidence)} error={evidence.error} onRetry={() => void evidence.refetch()}>
         {evidence.data && <EvidenceFacts evidence={evidence.data} format={format} />}
       </DataState>
       <WorkOrderTable filters={{ eventId }} format={format} />
-      {canManageMasterData && <Link className="text-sm underline" to={`/master-data/work-orders?eventId=${eventId}`}>Open in work-order operations</Link>}
+      {(canManageMasterData || canWriteWorkOrders) && <Link className="text-sm underline" to={`/master-data/work-orders?eventId=${eventId}`}>Open in work-order operations</Link>}
     </div>
   );
 }

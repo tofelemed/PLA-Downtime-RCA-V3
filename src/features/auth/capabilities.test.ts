@@ -85,7 +85,7 @@ describe('capabilitiesOf', () => {
   });
 
   describe('v2 write capabilities mirror the server role sets', () => {
-    type WriteKey = Exclude<CapabilityKey, 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+    type WriteKey = Exclude<CapabilityKey, 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
     const PINS: ReadonlyArray<[WriteKey, readonly string[]]> = [
       ['canWritePlans', Roles.PLAN_WRITERS],
       ['canApprovePlans', Roles.PLAN_APPROVERS],

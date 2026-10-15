@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { FriendlyErrorAlert, PLANT_WIDE_POLICY_MESSAGES } from '@/features/ux-kit/errors';
 import { useToast } from '@/hooks/use-toast';
 import type { ReliabilityFormat } from '../shared/use-reliability-format';
 import { policyVersionLine } from './policy-version-line';
@@ -58,7 +58,7 @@ function ChoiceForm({ unitId, view, canWrite }: ChoiceFormProps) {
         ))}
       </RadioGroup>
       <p className="text-xs text-muted-foreground">A change applies from now on. Periods already calculated keep the version they were calculated with.</p>
-      {failure !== null && <FriendlyErrorAlert error={failure} title="The server refused the change" />}
+      {failure !== null && <FriendlyErrorAlert error={failure} context={PLANT_WIDE_POLICY_MESSAGES} />}
       {canWrite && (
         <Button type="button" disabled={record.isPending || choice === view.transitionAllowanceInPlan} onClick={() => void save()}>
           Record (effective from now)

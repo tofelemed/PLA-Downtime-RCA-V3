@@ -1,6 +1,6 @@
 import { looksLikeRawId } from '../labels/assert-no-raw-id';
 import { factsOf, type ErrorFacts } from './error-facts';
-import { ERROR_MESSAGES, NETWORK_MESSAGE, statusMessage } from './error-messages';
+import { ERROR_MESSAGES, NETWORK_MESSAGE, statusMessage, type ErrorMessage } from './error-messages';
 import { fieldLabel } from './field-label';
 
 /** What support needs to find a failed request; shown only behind "Copy support reference". */
@@ -69,18 +69,21 @@ function referenceOf(facts: ErrorFacts): SupportReferenceInfo | null {
 
 /**
  * Plain-language description of any failure (V2ApiError, v1 ApiError, network TypeError, Error, unknown)
- * for alerts and toasts. The code, status and correlation id only go to `reference`.
+ * for alerts and toasts. The code, status and correlation id only go to `reference`. `context` is a map
+ * of `messages-context.ts` that words a code for one kind of screen (a generic code like
+ * TENANT_SCOPE_REQUIRED means something specific on a plant-wide policy form); it wins over the generic map.
  */
-export function describeError(error: unknown): FriendlyError {
+export function describeError(error: unknown, context?: Readonly<Record<string, ErrorMessage>>): FriendlyError {
   const facts = factsOf(error);
+  const specific = facts.code ? context?.[facts.code] : undefined;
   if (facts.network) return { title: NETWORK_MESSAGE.title, message: NETWORK_MESSAGE.text, fieldMessages: [], reference: null };
   const fieldMessages = [
     ...facts.fieldErrors.map((entry) => fieldMessage(entry.field, entry.message)),
     ...facts.messageList.map(legacyFieldMessage),
   ];
   return {
-    title: refusalTitle(facts.code, facts.status),
-    message: messageOf(facts),
+    title: specific?.title ?? refusalTitle(facts.code, facts.status),
+    message: specific?.text ?? messageOf(facts),
     fieldMessages,
     reference: referenceOf(facts),
   };

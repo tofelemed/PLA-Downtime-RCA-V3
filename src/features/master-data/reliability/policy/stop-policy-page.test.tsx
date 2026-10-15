@@ -68,7 +68,9 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     expect(record).toBeDisabled();
     fireEvent.click(screen.getByLabelText(/Count the allowance against the plan/));
     fireEvent.click(record);
-    expect(await screen.findByText('The server refused the change')).toBeInTheDocument();
+    expect(await screen.findByText('A plant-wide policy needs an approver for the whole plant')).toBeInTheDocument();
+    expect(screen.getByText(/Choose one of your units, or ask a plant-level approver/)).toBeInTheDocument();
+    expect(screen.queryByText('Choose a plant first')).toBeNull();
   });
 
   it('a reader sees the settings without any way to record a version', async () => {

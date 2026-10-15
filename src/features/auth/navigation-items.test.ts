@@ -28,8 +28,9 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   // Integration
   Connectivity: ADMINS,
   'Enhanced Historian': NOT_OPERATOR,
-  // Administration
-  'Master Data': ADMINS,
+  // Administration: Master Data also for the writers of its reliability pages (Manager = manager_approver:
+  // stop and plan policy; Operator = operator: standby log); they see only those pages' links
+  'Master Data': [...ADMINS, 'Manager', 'Operator'],
   'Codes & Rules': NOT_OPERATOR,
   Finance: NOT_OPERATOR,
   'User Management': ADMINS,
@@ -81,9 +82,19 @@ describe('navigation items by capability', () => {
     expect(menuFor(charlotte)).toEqual([...menuFor(legacyUser('Analyst')), 'Master Data'].sort(byMenuOrder));
   });
 
-  it('an integration_admin (legacy Engineer) gains Connectivity and nothing else (the historian is a read screen)', () => {
+  it('an integration_admin (legacy Engineer) gains Connectivity, and Master Data for the unit state page', () => {
     const elena: RoleSubject = { ...legacyUser('Engineer'), scopes: [{ tenantId: HOME, role: 'production_engineer' }, { tenantId: HOME, role: 'integration_admin' }] };
-    expect(menuFor(elena)).toEqual([...menuFor(legacyUser('Engineer')), 'Connectivity'].sort(byMenuOrder));
+    expect(menuFor(elena)).toEqual([...menuFor(legacyUser('Engineer')), 'Connectivity', 'Master Data'].sort(byMenuOrder));
+  });
+
+  it('Master Data is listed for master-data admins and for every writer of one of its reliability pages', () => {
+    const roleSets = [['master_data_admin'], ['manager_approver'], ['reliability_engineer'], ['operator'], ['integration_admin'], ['production_engineer'], ['viewer']];
+    const listed = roleSets.map((roles) => visibleNavigationItems(capabilitiesOf(roles), FLAGS_ON).some((item) => item.name === 'Master Data'));
+    expect(listed).toEqual([true, true, true, true, true, false, false]);
+    for (const roles of roleSets) {
+      const c = capabilitiesOf(roles);
+      expect(c.canReachMasterData, roles.join()).toBe(c.canManageMasterData || c.canWriteOeePolicy || c.canWriteStandby || c.canWriteWorkOrders || c.canWriteStateMappings);
+    }
   });
 
   it.each([
@@ -109,6 +120,8 @@ describe('navigation items by capability', () => {
     const amara: RoleSubject = { ...legacyUser('Engineer'), scopes: [{ tenantId: HOME, role: 'reliability_engineer' }] };
     expect(menuFor(amara)).not.toContain('Audit Logs');
     expect(menuFor(amara)).toContain('Enhanced Historian');
+    // standby log and CMMS work orders
+    expect(menuFor(amara)).toContain('Master Data');
   });
 
   it('a viewer in another plant sees the read screens only', () => {
@@ -147,7 +160,8 @@ describe('navigation sections', () => {
     ['TenantAdmin', ['overview', 'production', 'reliability', 'integration', 'administration']],
     ['Manager', ['overview', 'production', 'reliability', 'integration', 'administration']],
     ['Engineer', ['overview', 'production', 'reliability', 'integration', 'administration']],
-    ['Operator', ['overview', 'production', 'reliability']],
+    // operators keep the standby log: Master Data (its standby page) brings the administration section
+    ['Operator', ['overview', 'production', 'reliability', 'administration']],
   ])('a %s sees only the sections that hold one of its items', (role, sections) => {
     expect(sectionsOf(role)).toEqual(sections);
   });
