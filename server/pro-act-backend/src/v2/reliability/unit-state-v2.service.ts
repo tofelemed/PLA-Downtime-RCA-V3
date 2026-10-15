@@ -18,6 +18,7 @@ import { UnitStateMapping } from '../../reliability/entities/unit-state-mapping.
 import { loadStateTimeline } from '../../reliability/unit-state/state-timeline.loader';
 import { CursorCodec, invalidCursor } from '../common/cursor-codec';
 import { invalidField } from '../master-data/common/master-data-errors';
+import { ANALOG_SIGNAL_TYPES, thresholdsOf } from './analog-thresholds-input';
 import { requestReliabilityRecalc } from './reliability-recalc';
 import { windowOf } from './reliability-v2-common';
 import {
@@ -88,7 +89,10 @@ export class UnitStateV2Service {
   ): Promise<UnitStateMapping> {
     const tenantId = requireTenantId(context);
     assertBodyUnitsInScope(context, [input.unitId], 'unitId');
-    await this.assertSignal(tenantId, input);
+    const thresholds = thresholdsOf(input.thresholds);
+    if (input.rules.length === 0 && !thresholds)
+      throw invalidField('rules', 'a mapping needs rules or analog thresholds');
+    await this.assertSignal(tenantId, input, thresholds !== null);
     const from = input.effectiveFrom
       ? new Date(input.effectiveFrom)
       : new Date();
@@ -119,10 +123,10 @@ export class UnitStateV2Service {
         [tenantId, input.unitId, from],
       );
       const saved = await manager.save(
-        manager.create(
-          UnitStateMapping,
-          rowOf(tenantId, context.userId, input, { from, version: next }),
-        ),
+        manager.create(UnitStateMapping, {
+          ...rowOf(tenantId, context.userId, input, { from, version: next }),
+          thresholds,
+        }),
       );
       // the state timeline of the unit changes from the new version on (coverage KPIs, SME D1 / D2)
       await requestReliabilityRecalc(
@@ -195,6 +199,7 @@ export class UnitStateV2Service {
   private async assertSignal(
     tenantId: string,
     input: UnitStateMappingCreateDto,
+    analog: boolean,
   ): Promise<void> {
     const rows = await this.manager.query<Array<{ semantic_type: string }>>(
       `SELECT "semantic_type" FROM "signals" WHERE "id" = $1 AND "tenant_id" = $2 AND "unit_id" = $3`,
@@ -202,8 +207,14 @@ export class UnitStateV2Service {
     );
     if (rows.length === 0)
       throw invalidField('signalId', 'signalId must be a signal of this unit');
-    if (rows[0].semantic_type !== 'state')
-      throw invalidField('signalId', 'signalId must be a state signal');
+    const type = rows[0].semantic_type;
+    if (analog ? !ANALOG_SIGNAL_TYPES.has(type) : type !== 'state')
+      throw invalidField(
+        'signalId',
+        analog
+          ? 'signalId must be a state, rate, level or other signal'
+          : 'signalId must be a state signal',
+      );
   }
 }
 

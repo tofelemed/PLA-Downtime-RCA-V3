@@ -7,6 +7,7 @@ export interface DayPeriodRow extends DayPeriod {
   localDate: string;
   shiftName: string | null;
   utcStart: Date;
+  utcEnd: Date;
   revisionId: string | null;
   revision: number | null;
 }
@@ -17,6 +18,7 @@ interface SqlRow {
   local_date: string;
   shift_name: string | null;
   utc_start: Date;
+  utc_end: Date;
   is_excluded: boolean;
   revision_id: string | null;
   revision: number | null;
@@ -34,7 +36,7 @@ export async function dayPeriods(
 ): Promise<DayPeriodRow[]> {
   const rows: SqlRow[] = await manager.query(
     `SELECT p."id", p."unit_id", to_char(p."local_date", 'YYYY-MM-DD') AS "local_date", p."shift_name",
-            p."utc_start", p."is_excluded", r."id" AS "revision_id", r."revision", r."submitted_by",
+            p."utc_start", p."utc_end", p."is_excluded", r."id" AS "revision_id", r."revision", r."submitted_by",
             CASE WHEN r."lifecycle" IS NULL THEN 'none'
                  WHEN r."lifecycle" = 'in_review' AND r."is_stale" THEN 'stale'
                  ELSE r."lifecycle"::text END AS "workflow"
@@ -54,6 +56,7 @@ export async function dayPeriods(
     localDate: r.local_date,
     shiftName: r.shift_name,
     utcStart: new Date(r.utc_start),
+    utcEnd: new Date(r.utc_end),
     isExcluded: r.is_excluded,
     revisionId: r.revision_id,
     revision: r.revision,

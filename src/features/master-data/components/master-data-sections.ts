@@ -47,6 +47,12 @@ export const MASTER_DATA_SECTIONS: readonly MasterDataSection[] = [
     visible: (c) => c.canManageMasterData || c.canWriteStandby,
   },
   {
+    to: '/master-data/unit-impact-rules',
+    label: 'Unit impact rules',
+    text: 'How a stop of one asset affects its unit, and which standby takes over',
+    visible: (c) => c.canManageMasterData || c.canWriteUnitImpactRules,
+  },
+  {
     to: '/master-data/work-orders',
     label: 'Work-order operations',
     text: 'CMMS operations behind mean active repair time',

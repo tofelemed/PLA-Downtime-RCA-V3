@@ -1,7 +1,8 @@
 import { secondsBetween } from '../actuals/decimal';
 import { Dec } from '../actuals/decimal';
 import { LossEvent, OverlapAllocation } from '../accounting/accounting.types';
-import { boundedEvent, causesOf } from '../accounting/segmentation';
+import { allocateCauses } from '../accounting/cause-allocator';
+import { boundedEvent } from '../accounting/segmentation';
 import { BoundedInterval } from '../time/interval-algebra';
 
 /** Seconds of the window charged to one cause event (Σ over all causes = union of the stops). */
@@ -42,9 +43,9 @@ function cutPoints(
 
 /**
  * Downtime time by cause inside a window (KPI05 breakdowns): the window is cut at every stop edge; each
- * piece is shared equally by the occurrences active in it (one cause per occurrence — its earliest active
- * event, as in the 2.5 cause allocation), so split events never add time and the per-cause seconds always
- * add up to the union of the stops. A planned stop's approved end is a cut too: time after it is the stop's
+ * piece is shared by the occurrences active in it through the plan 1.10 `CauseAllocator` the ledgers use
+ * (one cause per occurrence, first-out or equal share by policy), so split events never add time and the
+ * per-cause seconds always add up to the union of the stops. A planned stop's approved end is a cut too: time after it is the stop's
  * unplanned overrun (SME D4).
  */
 export function allocateDowntime(
@@ -64,7 +65,7 @@ export function allocateDowntime(
     });
     if (active.length === 0) continue;
     const seconds = secondsBetween(points[i], points[i + 1]);
-    for (const cause of causesOf(active, rule)) {
+    for (const cause of allocateCauses(active, rule)) {
       const plannedEnd = plannedEndOf(cause.event);
       const overrun = plannedEnd !== null && start >= plannedEnd;
       result.push({

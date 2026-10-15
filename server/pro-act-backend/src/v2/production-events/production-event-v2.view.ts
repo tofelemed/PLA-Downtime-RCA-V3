@@ -13,6 +13,7 @@ import { isOpenEvent } from '../../domain/events/open-event';
 import { durationSeconds } from '../../domain/time/interval-algebra';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { EventFacts } from '../../production-event/revisions/event-facts';
+import { ImpactBasis } from '../../domain/reliability/unit-impact';
 import { toDecimalString } from '../common/decimal-string.transformer';
 
 export interface EventClassificationView {
@@ -22,6 +23,8 @@ export interface EventClassificationView {
   impactMode: ImpactMode;
   /** decimal string 0..1 when `impactMode = fractional` */
   impactFraction: string | null;
+  /** plan 1.10: `stated` (manual override), `default`, `unit_rule` or `standby_takeover` */
+  impactBasis: ImpactBasis;
 }
 
 export interface EventStatesView {
@@ -187,6 +190,7 @@ export function toProductionEventV2View(
       oeeComponent: event.oeeComponent,
       impactMode: event.impactMode,
       impactFraction: toDecimalString(event.impactFraction),
+      impactBasis: event.impactBasis ?? 'default',
     },
     classificationBasis: event.classificationBasis ?? null,
     impactCodeId: event.impactCodeId ?? null,

@@ -104,6 +104,8 @@ const VALUATION_REASON_LABELS: Record<string, string> = {
   planned_rate_missing: 'No approved planning rate to turn recorded rework time into displaced output',
   fx_average_not_representative: 'Month too volatile for an average FX rate',
   hours_unverified: 'Manual downtime without evidenced event hours',
+  reversed_line_unvalued: 'The reversed line has no approved value (a reversal is never re-priced)',
+  reversed_line_currency_missing: 'The reversed line was not valued in this currency at its approval',
 };
 
 export function valuationReasonLabel(reason: string): string {

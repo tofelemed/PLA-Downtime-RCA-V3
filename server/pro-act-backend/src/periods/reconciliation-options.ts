@@ -29,6 +29,11 @@ export interface BridgeLimitsOption {
 /** Options of a `reconciliation_tolerance` body a version may state (older versions have none). */
 export interface ReconciliationOptions {
   submitGate?: SubmitGateOption;
+  /**
+   * SME D12 daily target: the same check over the whole production day before it is certified (pilot 99 %
+   * of stopped time coded by daily approval); `block` refuses the certification (422 CODING_INCOMPLETE).
+   */
+  dayGate?: SubmitGateOption;
   bridgeLimits?: BridgeLimitsOption;
   /** SME R9: loss kinds an evidence-backed `reversal` line may reverse */
   reversibleKinds?: string[];
@@ -51,6 +56,11 @@ export const SUBMIT_GATE_DEFAULT: SubmitGateOption = {
   mode: 'warn',
   codedRatioTarget: 0.95,
 };
+/** What a version without `dayGate` behaves like: `warn` at 99 % (SME D12 pilot daily target). */
+export const DAY_GATE_DEFAULT: SubmitGateOption = {
+  mode: 'warn',
+  codedRatioTarget: 0.99,
+};
 export const BRIDGE_LIMITS_DEFAULT: BridgeLimitsOption = {
   absolute: null,
   relative: null,
@@ -59,6 +69,7 @@ export const BRIDGE_LIMITS_DEFAULT: BridgeLimitsOption = {
 
 export const RECONCILIATION_OPTIONS_DEFAULT: Required<ReconciliationOptions> = {
   submitGate: SUBMIT_GATE_DEFAULT,
+  dayGate: DAY_GATE_DEFAULT,
   bridgeLimits: BRIDGE_LIMITS_DEFAULT,
   reversibleKinds: [...DEFAULT_REVERSIBLE_KINDS],
 };
@@ -89,16 +100,16 @@ function choice<T extends string>(
   return value as T;
 }
 
-function submitGate(value: unknown): SubmitGateOption {
-  const raw = record(value, 'submitGate');
+function codingGateOption(value: unknown, field: string): SubmitGateOption {
+  const raw = record(value, field);
   const target = raw.codedRatioTarget;
   if (typeof target !== 'number' || !(target >= 0 && target <= 1)) {
     throw new PolicyBodyError(
-      'submitGate.codedRatioTarget must be a ratio between 0 and 1',
+      `${field}.codedRatioTarget must be a ratio between 0 and 1`,
     );
   }
   return {
-    mode: choice(raw.mode, ['block', 'warn'], 'submitGate.mode'),
+    mode: choice(raw.mode, ['block', 'warn'], `${field}.mode`),
     codedRatioTarget: target,
   };
 }
@@ -159,7 +170,9 @@ export function reconciliationOptions(
 ): ReconciliationOptions {
   const options: ReconciliationOptions = {};
   if (value.submitGate !== undefined)
-    options.submitGate = submitGate(value.submitGate);
+    options.submitGate = codingGateOption(value.submitGate, 'submitGate');
+  if (value.dayGate !== undefined)
+    options.dayGate = codingGateOption(value.dayGate, 'dayGate');
   if (value.bridgeLimits !== undefined)
     options.bridgeLimits = bridgeLimits(value.bridgeLimits);
   if (value.reversibleKinds !== undefined)
@@ -169,6 +182,8 @@ export function reconciliationOptions(
 
 export const submitGateOf = (o: ReconciliationOptions): SubmitGateOption =>
   o.submitGate ?? SUBMIT_GATE_DEFAULT;
+export const dayGateOf = (o: ReconciliationOptions): SubmitGateOption =>
+  o.dayGate ?? DAY_GATE_DEFAULT;
 export const bridgeLimitsOf = (o: ReconciliationOptions): BridgeLimitsOption =>
   o.bridgeLimits ?? BRIDGE_LIMITS_DEFAULT;
 export const reversibleKindsOf = (o: ReconciliationOptions): string[] =>

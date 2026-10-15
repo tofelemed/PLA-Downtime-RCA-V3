@@ -21,6 +21,20 @@ const READY: DayView = {
   periods: [shift('A'), shift('B'), shift('C')],
   certification: null,
   rollup: [{ uom: 't', periods: 3, target: '3000', actual: '300', gap: '2700', attributed: '2700', residual: '0' }],
+  codingGate: {
+    mode: 'warn',
+    target: '0.99',
+    stops: 4,
+    coded: 3,
+    investigationPending: 0,
+    uncoded: 1,
+    codedRatio: '0.9',
+    codedSeconds: '3240',
+    stoppedSeconds: '3600',
+    passes: false,
+    issues: [{ code: 'CODING_COVERAGE_LOW', message: 'below', sliceId: null }],
+    verification: { verified: 0, unverified: 4, failureDetailed: 0, validated: 0, unvalidated: 0 },
+  },
 };
 
 describe('day certification panel (SME R2, owner decision 14 Oct)', () => {
@@ -54,6 +68,15 @@ describe('day certification panel (SME R2, owner decision 14 Oct)', () => {
     expect((await screen.findByTestId('day-rollup')).textContent).toContain('3 shifts');
     fireEvent.click(screen.getByTestId('day-certify'));
     await waitFor(() => expect(posts).toEqual(['/api/v2/production-days/u1/2026-10-08/certify']));
+  });
+
+  it('SME D12: the server’s daily coding verdict is shown with the daily target', async () => {
+    actAs('manager_approver', 'manager-1');
+    wrap();
+    const gate = await screen.findByTestId('day-coding-gate');
+    expect(gate.getAttribute('data-mode')).toBe('warn');
+    expect(gate.textContent).toContain('shown as a warning');
+    expect(gate.textContent).toContain('daily target 99');
   });
 
   it('a submitter of a shift cannot certify the day', async () => {

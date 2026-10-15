@@ -8,6 +8,7 @@ import {
   IsIn,
   IsInt,
   IsISO8601,
+  IsNumber,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -15,8 +16,10 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { ANALOG_STOP_STATES } from '../../domain/reliability/analog-state';
 import { PHYSICAL_STATES } from '../../domain/reliability/unit-state';
 import { ListQueryDto } from '../common/list-query.dto';
 
@@ -36,6 +39,61 @@ export class StateRuleDto {
   state: (typeof PHYSICAL_STATES)[number];
 }
 
+/** Plan 1.10 analog bands of a numeric signal value no rule matches (signal units). */
+export class AnalogThresholdsDto {
+  @ApiProperty({
+    example: 2,
+    description: 'Below this value the unit is stopped',
+  })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  stopBelow: number;
+
+  @ApiPropertyOptional({
+    type: Number,
+    example: 16,
+    nullable: true,
+    description:
+      'Below this value (and not stopped) the unit runs at a reduced rate; null = no reduced-rate band',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  reducedBelow?: number | null;
+
+  @ApiPropertyOptional({
+    example: 0.5,
+    default: 0,
+    minimum: 0,
+    description:
+      'A lower band is left only above its threshold + this hysteresis',
+  })
+  @IsOptional()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Min(0)
+  hysteresis?: number;
+
+  @ApiPropertyOptional({
+    enum: ANALOG_STOP_STATES,
+    default: 'internal_stop',
+    description: 'State of an analog stop (the signal does not tell the cause)',
+  })
+  @IsOptional()
+  @IsIn(ANALOG_STOP_STATES)
+  stopState?: (typeof ANALOG_STOP_STATES)[number];
+
+  @ApiPropertyOptional({
+    type: Number,
+    example: 20,
+    nullable: true,
+    description:
+      'Signal value at the full rate: a slowdown loses 1 − mean / rated of the rate; null = not quantified',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  ratedValue?: number | null;
+}
+
 export class UnitStateMappingCreateDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
@@ -50,14 +108,27 @@ export class UnitStateMappingCreateDto {
 
   @ApiProperty({
     type: [StateRuleDto],
-    description: 'Unmapped values are unknown time (data quality)',
+    description:
+      'Unmapped values are unknown time (data quality); may be empty with analog thresholds',
   })
   @IsArray()
-  @ArrayMinSize(1)
+  @ArrayMinSize(0)
   @ArrayMaxSize(200)
   @ValidateNested({ each: true })
   @Type(() => StateRuleDto)
   rules: StateRuleDto[];
+
+  @ApiPropertyOptional({
+    type: AnalogThresholdsDto,
+    nullable: true,
+    description:
+      'Plan 1.10 analog mapping: numeric values no rule matches are banded stopped / reduced rate / running (hysteresis); reduced-rate spans become slowdown events',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @ValidateNested()
+  @Type(() => AnalogThresholdsDto)
+  thresholds?: AnalogThresholdsDto | null;
 
   @ApiProperty({
     minimum: 1,

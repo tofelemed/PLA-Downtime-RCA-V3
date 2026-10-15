@@ -12,6 +12,7 @@
     "allowUnaccountedClassification": false,
     "unaccountedTargetOfShortfall": 0.02,
     "submitGate": { "mode": "warn", "codedRatioTarget": 0.95 },
+    "dayGate": { "mode": "warn", "codedRatioTarget": 0.99 },
     "bridgeLimits": { "absolute": null, "relative": null, "overLimit": "second_review" },
     "reversibleKinds": ["availability", "performance", "quality", "transition_allowance", "transition_excess", "gain", "bridge", "unaccounted_classified"]
   }

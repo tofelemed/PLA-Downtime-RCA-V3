@@ -373,6 +373,8 @@ function editableColumns(
     quantityUom: dto.quantityUom,
     cost: dto.cost,
     impactFraction: dto.impactFraction,
+    // plan 1.10: an impact a person states is the manual override unit impact rules never replace
+    impactBasis: dto.impactMode === undefined ? undefined : 'stated',
     investigationPending: dto.investigationPending,
     plannedEndTime: plannedEndColumn(dto.plannedEndTime),
     streamCode: dto.streamCode,

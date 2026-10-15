@@ -11,6 +11,7 @@ import {
   ResolvedPolicies,
 } from './accounting-policies.service';
 import { ActualsInputsLoader, PeriodInputs } from './actuals-inputs.loader';
+import { recordAuthorityTransitions } from './authority-transitions.recorder';
 import { ActualsResult } from './entities/actuals-result.entity';
 import { ActualsRun } from './entities/actuals-run.entity';
 import { PeriodProductSlice } from './entities/period-product-slice.entity';
@@ -136,6 +137,12 @@ export class ActualsRunnerService {
       stateReadiness: readinessOf(period, draft.results, draft.policies),
     });
     await recordComputed(manager, period, run.id, draft.supersedes);
+    // plan 1.10 step 5: fallback / return-to-primary banner events of the products whose authority moved
+    await recordAuthorityTransitions(manager, {
+      period,
+      runId: run.id,
+      supersededRunId: draft.supersedes,
+    });
     return run;
   }
 }

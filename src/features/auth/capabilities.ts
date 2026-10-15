@@ -92,6 +92,8 @@ export interface Capabilities {
   canWriteWorkOrders: boolean;
   /** SME D1 / D2: unit state mapping versions and staleness settings */
   canWriteStateMappings: boolean;
+  /** plan 1.10: draft unit impact rules (master data, reliability engineers, manager approvers) */
+  canWriteUnitImpactRules: boolean;
   /** SME R1 / R6: record delegations of approval roles (administrators for anyone, holders for themselves) */
   canDelegateApprovals: boolean;
   /** SME D13: verify stop coding as the unit's supervisor / validate failure detail as maintenance */
@@ -158,6 +160,7 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canWriteStandby: may(ServerRoles.STANDBY_WRITERS),
     canWriteWorkOrders: may(ServerRoles.WORK_ORDER_WRITERS),
     canWriteStateMappings: may(ServerRoles.STATE_MAPPING_WRITERS),
+    canWriteUnitImpactRules: may(ServerRoles.UNIT_IMPACT_RULE_WRITERS),
     canDelegateApprovals: may(ServerRoles.DELEGATION_WRITERS),
     canVerifyStops: may(ServerRoles.STOP_VERIFIERS),
     canValidateFailures: may(ServerRoles.FAILURE_VALIDATORS),
@@ -180,7 +183,7 @@ export function capabilitiesOf(roles: readonly string[]): Capabilities {
     canViewAnalysis: held.some((role) => !OPERATIONS_ONLY_ROLES.has(role)),
     canManageMasterData,
     canReachMasterData:
-      canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteWorkOrders || writes.canWriteStateMappings,
+      canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteWorkOrders || writes.canWriteStateMappings || writes.canWriteUnitImpactRules,
     canUseIntegrationConsole: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'integration_admin']),
     canAdministerTenant: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
     canUseAdminPanel: holdsAny(held, ['SuperAdmin', 'TenantAdmin']),

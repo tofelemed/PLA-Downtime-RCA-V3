@@ -23,6 +23,8 @@ import {
 } from '../periods/engine-policy-bodies';
 import { ReconciliationLineSet } from './entities/reconciliation-line-set.entity';
 import { ReconciliationLine } from './entities/reconciliation-line.entity';
+import { ReversedLineValue } from '../domain/valuation/reversal-valuation';
+import { reversedLineValues } from './reversed-line-values';
 
 /** Plan-ledger kinds of automatic candidates (residual lines are recomputed, never decided on). */
 const CANDIDATE_KINDS = ['availability', 'performance', 'quality'] as const;
@@ -50,6 +52,8 @@ export interface RevisionState {
   reconciliation: Reconciliation;
   /** SME V4: closed intervals (epoch ms) of the events manual downtime lines cite */
   eventSpans: ReadonlyMap<string, { from: number; to: number }>;
+  /** SME R9: approved value of the lines the reversal lines reverse, by approved line id; absent = none */
+  reversedValues?: ReadonlyMap<string, ReversedLineValue>;
 }
 
 /** Decimal from a stored numeric (string, or number when the pg type parser converted it). */
@@ -151,6 +155,11 @@ export async function loadRevisionState(
     order: { windowFrom: 'ASC', productId: 'ASC' },
   });
   const eventSpans = await eventSpansOf(manager, lines);
+  const reversedValues = await reversedLineValues(
+    manager,
+    period.tenantId,
+    lines,
+  );
   const partial = {
     period,
     revision,
@@ -163,6 +172,7 @@ export async function loadRevisionState(
     slices,
     tolerance,
     eventSpans,
+    reversedValues,
   };
   const reconciliation = reconcile({
     candidates: candidatesOf(candidateLines),

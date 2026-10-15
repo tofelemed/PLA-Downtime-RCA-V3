@@ -6,12 +6,14 @@ import { PublishedMessage } from '../common/outbox/outbox-transport';
 import { EventChangeNotifier } from '../production-event/revisions/event-change.notifier';
 import { IncidentGroupingService } from './incident-grouping.service';
 import { StopReconciliationService } from './stop-reconciliation.service';
+import { UnitImpactService } from './unit-impact.service';
 
 const CONSUMER = 'stop-events';
 
 /**
  * DT-04 / SME D5 triggers: every `EventChanged` / `EventRetracted` of a downtime event (manual entry, PI or
- * MQTT frame, user edit) reconciles duplicates and regroups incidents of its unit around the affected
+ * MQTT frame, user edit) first resolves its unit impact (plan 1.10 step 4: the unit impact rule of its
+ * asset, unless a person stated it), then reconciles duplicates and regroups incidents of its unit around the affected
  * interval, once per message (inbox). Serialized with the state engine by the same per-unit advisory lock.
  * The writes of a merge publish messages too; reprocessing them finds nothing new (idempotent), so the
  * chain ends after one round.
@@ -24,6 +26,7 @@ export class StopEventsConsumer implements OnModuleInit {
     private readonly reconciliation: StopReconciliationService,
     private readonly incidents: IncidentGroupingService,
     private readonly notifier: EventChangeNotifier,
+    private readonly impacts: UnitImpactService,
   ) {}
 
   onModuleInit(): void {
@@ -66,6 +69,11 @@ export class StopEventsConsumer implements OnModuleInit {
       start: new Date(payload.affectedFrom),
       end: payload.affectedTo ? new Date(payload.affectedTo) : null,
     };
+    const impacted = await this.impacts.resolveEvent(
+      manager,
+      message.tenantId,
+      message.aggregateId,
+    );
     const now = new Date();
     const messages = await this.reconciliation.reconcileUnit(
       manager,
@@ -74,6 +82,6 @@ export class StopEventsConsumer implements OnModuleInit {
       now,
     );
     await this.incidents.regroupUnit(manager, scope, window, now);
-    await this.notifier.recordIn(manager, messages);
+    await this.notifier.recordIn(manager, [...impacted, ...messages]);
   }
 }

@@ -9,6 +9,7 @@ import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { WORKFLOW_LABELS } from '../model/display';
+import { DayCodingGate } from './day-coding-gate';
 import type { GridWorkflowState } from '@/api/v2/types/period-overview';
 
 const STATE_LABELS: Record<DayView['state'], string> = { open: 'Shifts in progress', ready: 'Ready to certify', certified: 'Day certified' };
@@ -57,6 +58,7 @@ export function DayCertificationPanel({ unitId, localDate }: { unitId: string; l
         ))}
       </ul>
       <Rollup day={day} />
+      <DayCodingGate gate={day.codingGate} />
       {canCertifyDay && day.state === 'ready' && submitted && <p className="text-xs text-muted-foreground">You submitted a shift of this day; another manager certifies it.</p>}
       {day.certification?.state === 'reopened' && <p className="text-xs" data-testid="day-reopened">Reopened by a correction: {day.certification.reopenReason}</p>}
       {certify.error ? <FriendlyErrorAlert error={certify.error} /> : null}

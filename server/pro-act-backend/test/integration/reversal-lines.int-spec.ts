@@ -145,6 +145,25 @@ describe('reversal lines (SME R9)', () => {
     expect(body.items.find((i) => i.id === reversedId)?.remainingQuantity).toBe(
       '100',
     );
+    // valuation 2.8.1: the approved reversal carries −50/150 of A1's approved value per view and currency
+    const cells = await env.rows<{
+      view: string;
+      original: string | null;
+      reversal: string | null;
+      status: string;
+    }>(
+      `SELECT o."view"::text AS "view", o."amount"::text AS "original", r."amount"::text AS "reversal", r."status"
+         FROM approved_loss_line_valuations o
+         JOIN approved_loss_lines rl ON rl.period_id = $2 AND rl.kind = 'reversal'
+         JOIN approved_loss_line_valuations r ON r.approved_line_id = rl.id
+              AND r."view" = o."view" AND r.currency = o.currency
+        WHERE o.approved_line_id = $1`,
+      [reversedId, env.periodB1],
+    );
+    for (const c of cells) {
+      if (c.original === null) expect(c.reversal).toBeNull();
+      else expect(Number(c.reversal)).toBeCloseTo(-Number(c.original) / 3, 6);
+    }
     expect(await codeOf(env.periodC1, (v) => reversal(v, '-101'))).toBe(
       'REVERSAL_EXCEEDS',
     );

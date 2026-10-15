@@ -9,17 +9,28 @@ export interface EngineOwnedEvent {
   end: Date | null;
   occurrenceId: string;
   description: string | null;
+  /** plan 1.10 slowdowns: the stored fraction and whether a person stated the impact */
+  impactFraction?: string | null;
+  impactBasis?: string;
 }
 
-export interface DerivedWrite {
-  stop: DerivedStop;
+/** What the plan needs of a derived stop or slowdown: its key, start, occurrence and end. */
+export interface DerivedItem {
+  key: string;
+  start: Date;
+  occurrenceKey: string;
+  end: Date | null;
+}
+
+export interface DerivedWrite<T extends DerivedItem = DerivedStop> {
+  stop: T;
   occurrenceId: string;
   description: string;
 }
 
-export interface DerivedWritePlan {
-  create: Array<DerivedWrite & { id: string }>;
-  update: Array<DerivedWrite & { id: string }>;
+export interface DerivedWritePlan<T extends DerivedItem = DerivedStop> {
+  create: Array<DerivedWrite<T> & { id: string }>;
+  update: Array<DerivedWrite<T> & { id: string }>;
   retract: string[];
 }
 
@@ -59,8 +70,18 @@ export function planDerivedWrites(
   stops: readonly DerivedStop[],
   newId: () => string,
 ): DerivedWritePlan {
+  return planEngineWrites(existing, stops, { newId, describe: describeStop });
+}
+
+/** `planDerivedWrites` for any derived item (stops, plan 1.10 reduced-rate slowdowns). */
+export function planEngineWrites<T extends DerivedItem>(
+  existing: readonly EngineOwnedEvent[],
+  stops: readonly T[],
+  input: { newId: () => string; describe: (item: T) => string },
+): DerivedWritePlan<T> {
+  const { newId, describe } = input;
   const byKey = new Map(existing.map((e) => [e.key, e]));
-  const plan: DerivedWritePlan = { create: [], update: [], retract: [] };
+  const plan: DerivedWritePlan<T> = { create: [], update: [], retract: [] };
   const occurrenceOf = new Map<string, string>();
   for (const stop of stops) {
     const known = byKey.get(stop.key);
@@ -79,7 +100,7 @@ export function planDerivedWrites(
       id,
       stop,
       occurrenceId: occurrenceOf.get(stop.occurrenceKey) as string,
-      description: describeStop(stop),
+      description: describe(stop),
     };
     if (!known) {
       plan.create.push(write);

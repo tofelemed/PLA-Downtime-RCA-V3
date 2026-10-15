@@ -1,6 +1,7 @@
 import { DaySnapshot, DaySummary } from '../../close/day-certification.service';
 import { DayCertification } from '../../close/entities/day-certification.entity';
 import { DayRollup } from '../../domain/close/day-certification';
+import { CodingGateResult } from '../../domain/reconciliation/coding-gate';
 
 export interface DayCertificationV2View {
   id: string;
@@ -35,6 +36,8 @@ export interface DaySummaryV2View {
 /** `GET /v2/production-days/:unitId/:localDate`: the day with the roll-up of its approved shifts. */
 export interface DayV2View extends DaySummaryV2View {
   rollup: DayRollup[];
+  /** SME D12 daily target: the day's stop coding against `dayGate` (null = no period) */
+  codingGate: CodingGateResult | null;
 }
 
 function certificationView(
@@ -74,5 +77,9 @@ export function toDaySummaryView(day: DaySummary): DaySummaryV2View {
 }
 
 export function toDayView(day: DaySnapshot): DayV2View {
-  return { ...toDaySummaryView(day), rollup: day.rollup };
+  return {
+    ...toDaySummaryView(day),
+    rollup: day.rollup,
+    codingGate: day.codingGate,
+  };
 }

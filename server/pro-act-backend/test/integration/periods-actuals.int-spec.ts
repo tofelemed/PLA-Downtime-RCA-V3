@@ -144,6 +144,15 @@ describe('production periods and actuals results (plan 2.4)', () => {
       coverageRatio: '1',
     });
     expect(codes(actuals)).toContain('fallback_used');
+    // plan 1.10 step 5: the fallback banner event, once (a rerun with the same outcome publishes nothing)
+    const banner = () =>
+      env.rows<{ payload: { kind: string; used: { source: string } | null } }>(
+        `SELECT "payload" FROM "outbox" WHERE "type" = 'SourceFallbackActivated' AND "payload"->>'unitId' = $1`,
+        [env.world.unitA3],
+      );
+    expect(
+      (await banner()).map((r) => [r.payload.kind, r.payload.used?.source]),
+    ).toEqual([['activated', 'pi_counter']]);
   });
 
   it('T27 persisted: a drop without reset evidence is null with reset_unresolved, never 990 or 1010', async () => {

@@ -10,6 +10,12 @@ const IMPACTS: ReadonlyArray<[string, string]> = [
   ['none', 'No production impact (e.g. standby took over)'],
 ];
 
+/** Plan 1.10: an impact the server derived; choosing a value here makes it the person's (the override). */
+const DERIVED: Readonly<Record<string, string>> = {
+  unit_rule: 'Set by the unit impact rule of the asset. Choosing a value here overrides it.',
+  standby_takeover: 'Set because the standby took over in time. Choosing a value here overrides it.',
+};
+
 interface ImpactForm {
   values: EventFormValues;
   errors: FieldErrors;
@@ -30,6 +36,7 @@ export function ImpactFields({ form }: { form: ImpactForm }) {
         <select id="impactMode" className={SELECT_CLASS} value={values.impactMode || 'full_stop'} onChange={(e) => setField('impactMode', e.target.value)}>
           {IMPACTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
+        {DERIVED[values.impactBasis] && <p className="text-xs text-muted-foreground" data-testid="impact-basis">{DERIVED[values.impactBasis]}</p>}
       </div>
       {values.impactMode === 'fractional' && (
         <div className="space-y-1">

@@ -73,7 +73,16 @@ export async function stateConfigOf(
     staleAfterIntervals: mapping.staleAfterIntervals,
     heartbeat: mapping.isHeartbeat,
     acceptUncertain: rows[0]?.quality_policy?.acceptUncertain === true,
+    thresholds: mapping.thresholds ?? null,
   };
+}
+
+/** The mapping in force at the window start, its configuration, the samples and the timeline. */
+export interface StateInputs {
+  mapping: UnitStateMapping;
+  config: StateConfig;
+  samples: StateSample[];
+  segments: StateSegment[];
 }
 
 /**
@@ -86,6 +95,15 @@ export async function loadStateTimeline(
   scope: { tenantId: string; unitId: string },
   window: BoundedInterval,
 ): Promise<StateSegment[] | null> {
+  return (await loadStateInputs(manager, scope, window))?.segments ?? null;
+}
+
+/** `loadStateTimeline` with the samples and configuration (reduced-rate slowdowns need the values). */
+export async function loadStateInputs(
+  manager: EntityManager,
+  scope: { tenantId: string; unitId: string },
+  window: BoundedInterval,
+): Promise<StateInputs | null> {
   const mapping = await mappingInForce(manager, scope, window.start);
   if (!mapping) return null;
   const params = [scope.tenantId, mapping.signalId];
@@ -100,5 +118,11 @@ export async function loadStateTimeline(
     window.end,
   ]);
   const config = await stateConfigOf(manager, mapping);
-  return stateTimeline([...before, ...inside].map(toSample), config, window);
+  const samples = [...before, ...inside].map(toSample);
+  return {
+    mapping,
+    config,
+    samples,
+    segments: stateTimeline(samples, config, window),
+  };
 }

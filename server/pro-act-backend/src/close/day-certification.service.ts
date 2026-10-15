@@ -29,11 +29,14 @@ import { lockPeriod, requireUser } from '../reconciliation/revision-access';
 import { separationOfDuties } from '../reconciliation/workflow-errors';
 import { loadPeriodStates } from '../v2/period-overview/period-states';
 import { planFigures } from '../v2/period-overview/period-summary.view';
+import { CodingGateResult } from '../domain/reconciliation/coding-gate';
+import { assertCodingGate } from '../reconciliation/coding-gate.loader';
+import { loadDayCodingGate } from './day-coding-gate';
 import { dayPeriods, DayPeriodRow } from './day-periods';
 import { DayCertification } from './entities/day-certification.entity';
 
 /** A day of the list: its periods and state, without the roll-up. */
-export type DaySummary = Omit<DaySnapshot, 'rollup'>;
+export type DaySummary = Omit<DaySnapshot, 'rollup' | 'codingGate'>;
 
 export interface DaySnapshot {
   unitId: string;
@@ -44,13 +47,16 @@ export interface DaySnapshot {
   certification: DayCertification | null;
   /** the approved shift revisions rolled up per unit of measure */
   rollup: DayRollup[];
+  /** SME D12 daily target (`dayGate`, warn at 99 % by default); null = no period */
+  codingGate: CodingGateResult | null;
 }
 
 /**
  * Day certification (owner decision 14 Oct 2026, SME R2; phase R-E): shifts are prepared and approved per
  * period; one approval per production day of a unit certifies the roll-up of its approved shift revisions
  * — each quantity stays on its shift and is only summed. The certifier submitted none of the shifts
- * (403 SEPARATION_OF_DUTIES); a revise of a shift reopens the day (`day-reopen.ts`).
+ * (403 SEPARATION_OF_DUTIES); a revise of a shift reopens the day (`day-reopen.ts`). SME D12: the day's coding
+ * is checked against the daily target (`dayGate`); a `block` gate that fails refuses (422 CODING_INCOMPLETE).
  */
 @Injectable()
 export class DayCertificationService {
@@ -129,6 +135,7 @@ export class DayCertificationService {
       const certified = before.certification?.state === 'certified';
       const refusal = certifyRefusal(certifier, before.periods, certified);
       if (refusal) throw refusalError(refusal, before);
+      if (before.codingGate) assertCodingGate(before.codingGate);
       const row = await manager.save(
         manager.create(DayCertification, {
           ...key,
@@ -193,6 +200,7 @@ export class DayCertificationService {
       periods,
       certification,
       rollup: await this.rollupOf(manager, periods),
+      codingGate: await loadDayCodingGate(manager, key, periods),
     };
   }
 

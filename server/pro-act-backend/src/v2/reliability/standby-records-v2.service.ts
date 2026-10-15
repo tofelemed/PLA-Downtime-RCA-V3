@@ -9,6 +9,7 @@ import { scopedQuery } from '../../common/query/scoped-query';
 import { applyOverlapWindow } from '../../common/query/overlap-window';
 import { periodScopeUnits } from '../../periods/period-scope';
 import { StandbyRecord } from '../../reliability/entities/standby-record.entity';
+import { recordStandbyRunsChanged } from '../../stop-events/standby-runs-changed';
 import { keysetPage } from '../common/keyset-page';
 import {
   AssetRef,
@@ -145,6 +146,22 @@ export class StandbyRecordsV2Service {
           ),
         ],
         'standby_records_imported',
+      );
+      // plan 1.10 step 4: a standby run may be the takeover that holds a unit's output
+      await recordStandbyRunsChanged(
+        manager,
+        tenantId,
+        resolved.flatMap(({ row, asset }) =>
+          row.kind === 'run'
+            ? [
+                {
+                  assetId: asset.id,
+                  start: new Date(row.startedAt),
+                  end: row.endedAt ? new Date(row.endedAt) : null,
+                },
+              ]
+            : [],
+        ),
       );
       return view;
     });

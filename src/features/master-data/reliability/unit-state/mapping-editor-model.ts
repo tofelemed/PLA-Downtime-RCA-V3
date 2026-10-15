@@ -1,7 +1,9 @@
 import type { PhysicalState, StateRule, UnitStateMappingBody, UnitStateMappingView } from '@/api/v2/types/reliability';
+import { analogBody, analogDraftOf, type AnalogDraft, analogErrors, type AnalogErrors } from './analog-thresholds-model';
 
 export const STATE_LABELS: Readonly<Record<PhysicalState, string>> = {
   running: 'Running',
+  reduced_rate: 'Reduced rate (slowdown)',
   internal_stop: 'Stopped (internal)',
   planned_stop: 'Planned stop',
   starved: 'Starved (no input)',
@@ -22,6 +24,8 @@ export interface MappingDraft {
   isHeartbeat: boolean;
   effectiveFrom: string | null;
   notes: string;
+  /** plan 1.10 analog thresholds; null = rules only */
+  analog: AnalogDraft | null;
 }
 
 const EMPTY_RULE: StateRule = { match: '', state: 'running' };
@@ -31,6 +35,7 @@ export function draftOf(current: UnitStateMappingView | undefined): MappingDraft
   return {
     signalId: current?.signalId ?? '',
     rules: current ? current.rules.map((r) => ({ ...r })) : [{ ...EMPTY_RULE }],
+    analog: analogDraftOf(current?.thresholds),
     expectedIntervalSeconds: current ? String(current.expectedIntervalSeconds) : '',
     jitterSeconds: current ? String(current.jitterSeconds) : '0',
     staleAfterIntervals: current ? String(current.staleAfterIntervals) : '3',
@@ -54,13 +59,16 @@ const wholeNumber = (text: string, min: number, max: number): number | null => {
   return text.trim() !== '' && Number.isInteger(value) && value >= min && value <= max ? value : null;
 };
 
-export type MappingErrors = Partial<Record<'signalId' | 'rules' | 'expectedIntervalSeconds' | 'jitterSeconds' | 'staleAfterIntervals', string>>;
+export type MappingErrors = Partial<Record<'signalId' | 'rules' | 'expectedIntervalSeconds' | 'jitterSeconds' | 'staleAfterIntervals', string>> & { analog?: AnalogErrors };
 
-/** Field problems before sending (the server re-checks everything, including that the signal is a state signal). */
+/** Field problems before sending (the server re-checks everything, including the signal's type). */
 export function draftErrors(draft: MappingDraft): MappingErrors {
   const errors: MappingErrors = {};
   if (!draft.signalId) errors.signalId = 'Choose the state signal';
-  if (draft.rules.length === 0 || draft.rules.some((r) => !r.match.trim())) errors.rules = 'Every rule needs a signal value';
+  if (draft.rules.some((r) => !r.match.trim())) errors.rules = 'Every rule needs a signal value';
+  if (draft.rules.length === 0 && !draft.analog) errors.rules = 'Add a rule, or analog thresholds';
+  const analog = draft.analog ? analogErrors(draft.analog) : {};
+  if (Object.keys(analog).length > 0) errors.analog = analog;
   if (wholeNumber(draft.expectedIntervalSeconds, 1, 86400) === null) errors.expectedIntervalSeconds = 'Whole seconds from 1 to 86400';
   if (wholeNumber(draft.jitterSeconds, 0, 86400) === null) errors.jitterSeconds = 'Whole seconds from 0 to 86400';
   if (wholeNumber(draft.staleAfterIntervals, 1, 100) === null) errors.staleAfterIntervals = 'A whole number from 1 to 100';
@@ -77,6 +85,7 @@ export function bodyOf(unitId: string, draft: MappingDraft): UnitStateMappingBod
     jitterSeconds: Number(draft.jitterSeconds),
     staleAfterIntervals: Number(draft.staleAfterIntervals),
     isHeartbeat: draft.isHeartbeat,
+    ...(draft.analog ? { thresholds: analogBody(draft.analog) } : {}),
     ...(draft.effectiveFrom ? { effectiveFrom: draft.effectiveFrom } : {}),
     ...(draft.notes.trim() ? { notes: draft.notes.trim() } : {}),
   };

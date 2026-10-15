@@ -108,6 +108,7 @@ describe('capabilitiesOf', () => {
       ['canWriteStandby', Roles.STANDBY_WRITERS],
       ['canWriteWorkOrders', Roles.WORK_ORDER_WRITERS],
       ['canWriteStateMappings', Roles.STATE_MAPPING_WRITERS],
+      ['canWriteUnitImpactRules', Roles.UNIT_IMPACT_RULE_WRITERS],
       ['canWriteDispositions', Roles.DISPOSITION_WRITERS],
       ['canApproveDispositions', Roles.DISPOSITION_APPROVERS],
       ['canDelegateApprovals', Roles.DELEGATION_WRITERS],

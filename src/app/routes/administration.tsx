@@ -20,6 +20,7 @@ const FailureDictionary = lazyNamedWithPreload(() => import('@/features/master-d
 const PlantFlow = lazyNamedWithPreload(() => import('@/features/master-data/plant-flow/plant-flow-page'), 'PlantFlowPage');
 const StopPolicy = lazyNamedWithPreload(() => import('@/features/master-data/reliability/policy/stop-policy-page'), 'StopPolicyPage');
 const StandbyEquipment = lazyNamedWithPreload(() => import('@/features/master-data/reliability/standby/standby-page'), 'StandbyEquipmentPage');
+const UnitImpactRules = lazyNamedWithPreload(() => import('@/features/master-data/reliability/impact-rules/unit-impact-rules-page'), 'UnitImpactRulesPage');
 const WorkOrders = lazyNamedWithPreload(() => import('@/features/master-data/reliability/work-orders/work-orders-page'), 'WorkOrdersPage');
 const UnitState = lazyNamedWithPreload(() => import('@/features/master-data/reliability/unit-state/unit-state-page'), 'UnitStatePage');
 /** Codes and declarative admin rules (plan 3.8): libraries, code pages, rule pages. */
@@ -73,6 +74,7 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/master-data/plant-flow', element: <PlantFlow />, preload: PlantFlow.preload },
   { path: '/master-data/stop-policy', element: <StopPolicy />, preload: StopPolicy.preload },
   { path: '/master-data/standby-equipment', element: <StandbyEquipment />, preload: StandbyEquipment.preload },
+  { path: '/master-data/unit-impact-rules', element: <UnitImpactRules />, preload: UnitImpactRules.preload },
   { path: '/master-data/work-orders', element: <WorkOrders />, preload: WorkOrders.preload },
   { path: '/master-data/unit-state', element: <UnitState />, preload: UnitState.preload },
   { path: '/codes-admin', element: <CodesAdmin />, preload: CodesAdmin.preload },

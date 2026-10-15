@@ -38,6 +38,7 @@ import {
   SOURCE_KINDS,
   SourceKind,
 } from '../domain/events/event-classification';
+import { ImpactBasis } from '../domain/reliability/unit-impact';
 
 /** `[start, end)` in seconds; null while the event is open (spec §3.3). Postgres computes it. */
 export const DURATION_SECONDS_EXPRESSION =
@@ -51,6 +52,10 @@ export const DURATION_SECONDS_EXPRESSION =
 @Check(
   'CHK_production_events_impact_fraction',
   '"impact_fraction" IS NULL OR ("impact_fraction" >= 0 AND "impact_fraction" <= 1)',
+)
+@Check(
+  'CHK_production_events_impact_basis',
+  `"impact_basis" IN ('default', 'stated', 'unit_rule', 'standby_takeover')`,
 )
 @Check(
   'CHK_production_events_planned_end',
@@ -159,7 +164,9 @@ export class ProductionEvent {
   asset: Asset;
 
   /** SME D3: unit whose failure caused this stop (starved / blocked by another unit); null = this unit */
-  @Index('IDX_production_events_origin_unit', { where: '"origin_unit_id" IS NOT NULL' })
+  @Index('IDX_production_events_origin_unit', {
+    where: '"origin_unit_id" IS NOT NULL',
+  })
   @Column({ name: 'origin_unit_id', type: 'uuid', nullable: true })
   originUnitId: string | null;
 
@@ -243,7 +250,9 @@ export class ProductionEvent {
   plannedEndTime: Date | null;
 
   /** SME D3: asset whose failure caused this stop, when known */
-  @Index('IDX_production_events_origin_asset', { where: '"origin_asset_id" IS NOT NULL' })
+  @Index('IDX_production_events_origin_asset', {
+    where: '"origin_asset_id" IS NOT NULL',
+  })
   @Column({ name: 'origin_asset_id', type: 'uuid', nullable: true })
   originAssetId: string | null;
 
@@ -367,27 +376,57 @@ export class ProductionEvent {
   failureMode?: string;
 
   /** SME D8: `critical` / `degraded` count as functional failures, `incipient` does not; null = pending */
-  @Column({ name: 'failure_severity', type: 'varchar', length: 16, nullable: true })
+  @Column({
+    name: 'failure_severity',
+    type: 'varchar',
+    length: 16,
+    nullable: true,
+  })
   failureSeverity: string | null;
 
   /** SME E3: disposition of the tonnes a quality_loss event explains (downgrade / scrap / rework) */
-  @Column({ name: 'disposition_class', type: 'varchar', length: 32, nullable: true })
+  @Column({
+    name: 'disposition_class',
+    type: 'varchar',
+    length: 32,
+    nullable: true,
+  })
   dispositionClass: string | null;
 
   /** SME D11 (ISO 14224): maintainable item, e.g. mechanical seal */
-  @Column({ name: 'maintainable_item', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'maintainable_item',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   maintainableItem: string | null;
 
   /** SME D11 (ISO 14224): failure mechanism, e.g. wear */
-  @Column({ name: 'failure_mechanism', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'failure_mechanism',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   failureMechanism: string | null;
 
   /** SME D11 (ISO 14224): failure cause, e.g. inadequate flush */
-  @Column({ name: 'failure_cause', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'failure_cause',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   failureCause: string | null;
 
   /** SME D11 (ISO 14224): how the failure was detected, e.g. inspection */
-  @Column({ name: 'detection_method', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'detection_method',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   detectionMethod: string | null;
 
   /**
@@ -546,6 +585,18 @@ export class ProductionEvent {
     nullable: true,
   })
   impactFraction?: number | null;
+
+  /**
+   * Plan 1.10: where the impact comes from — `stated` by a person or source (the manual override), the
+   * `default` (downtime stops the unit), a `unit_rule` or a `standby_takeover` (`event_impacts` has the evidence)
+   */
+  @Column({
+    name: 'impact_basis',
+    type: 'varchar',
+    length: 24,
+    default: 'default',
+  })
+  impactBasis: ImpactBasis;
 
   @Column({
     name: 'physical_state',

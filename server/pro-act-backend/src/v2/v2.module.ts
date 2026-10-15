@@ -113,6 +113,8 @@ import { PlantModelModule } from '../plant-model/plant-model.module';
 import { BufferLevelsV2Controller } from './plant-model/buffer-levels-v2.controller';
 import { FlowRoutesV2Controller } from './plant-model/flow-routes-v2.controller';
 import { PlantFlowV2Service } from './plant-model/plant-flow-v2.service';
+import { UnitImpactRulesV2Controller } from './plant-model/unit-impact-rules-v2.controller';
+import { UnitImpactRulesV2Service } from './plant-model/unit-impact-rules-v2.service';
 import { SiteLossV2Controller } from './plant-model/site-loss-v2.controller';
 import { SiteLossV2Service } from './plant-model/site-loss-v2.service';
 import { StreamRunsV2Controller } from './plant-model/stream-runs-v2.controller';
@@ -273,6 +275,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     UnitStreamsV2Controller,
     StreamRunsV2Controller,
     FlowRoutesV2Controller,
+    UnitImpactRulesV2Controller,
     BufferLevelsV2Controller,
     SiteLossV2Controller,
     SourceAuthorityV2Controller,
@@ -325,6 +328,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     UncertaintyBudgetsV2Service,
     UnitStreamsV2Service,
     PlantFlowV2Service,
+    UnitImpactRulesV2Service,
     SiteLossV2Service,
     SourceAuthorityV2Service,
     SourceAuthorityDecisionsService,

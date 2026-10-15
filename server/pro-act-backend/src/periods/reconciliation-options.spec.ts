@@ -1,6 +1,7 @@
 import { PolicyBodyError } from './policy-bodies';
 import {
   bridgeLimitsOf,
+  dayGateOf,
   reconciliationOptions,
   reversibleKindsOf,
   submitGateOf,
@@ -23,6 +24,28 @@ describe('reconciliation options', () => {
       overLimit: 'second_review',
     });
     expect(reversibleKindsOf(options)).toContain('availability');
+    expect(dayGateOf(options)).toEqual({
+      mode: 'warn',
+      codedRatioTarget: 0.99,
+    });
+  });
+
+  it('D12 daily target: dayGate has the shape of the shift gate and is validated the same way', () => {
+    expect(
+      reconciliationOptions({
+        dayGate: { mode: 'block', codedRatioTarget: 0.99 },
+      }).dayGate,
+    ).toEqual({ mode: 'block', codedRatioTarget: 0.99 });
+    expect(() =>
+      reconciliationOptions({
+        dayGate: { mode: 'block', codedRatioTarget: 1.2 },
+      }),
+    ).toThrow('dayGate.codedRatioTarget must be a ratio between 0 and 1');
+    expect(() =>
+      reconciliationOptions({
+        dayGate: { mode: 'stop', codedRatioTarget: 0.99 },
+      }),
+    ).toThrow(PolicyBodyError);
   });
 
   it('R8 + E4: an absolute bridge limit may name the uncertainty budget that justifies it', () => {

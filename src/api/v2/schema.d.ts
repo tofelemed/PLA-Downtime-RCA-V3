@@ -2687,6 +2687,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/unit-impact-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List unit impact rule versions of the caller’s units (keyset on effectiveFrom, id) */
+        get: operations["UnitImpactRulesV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a draft unit impact rule version
+         * @description Requires `Idempotency-Key`. The unit in scope and the asset of that unit (422 INVALID_REFERENCE / ASSET_NOT_IN_UNIT); the standby another asset of the tenant (422 SAME_ASSET); `fractional` needs 0 < fraction ≤ 1 and the other modes none (422 INVALID_FRACTION).
+         */
+        post: operations["UnitImpactRulesV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/unit-impact-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one unit impact rule version; foreign ids are 404 */
+        get: operations["UnitImpactRulesV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/unit-impact-rules/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a draft unit impact rule version
+         * @description Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). The asset's stops starting in its validity are resolved again (worker).
+         */
+        post: operations["UnitImpactRulesV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/unit-impact-rules/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire a unit impact rule version (draft or approved)
+         * @description Requires `Idempotency-Key`. Stops that took their impact from a retired approved version go back to the default (full stop) unless another version is in force.
+         */
+        post: operations["UnitImpactRulesV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/buffer-levels": {
         parameters: {
             query?: never;
@@ -6443,7 +6521,7 @@ export interface paths {
         };
         /**
          * Stops the state engine would derive for a unit and window (nothing is written)
-         * @description Plan 1.10 rule preview from the unit’s state mapping and the settings in force at `to`. Unknown time is never a stop. Window ≤ 7 days (422 INVALID_RANGE).
+         * @description Plan 1.10 rule preview from the unit’s state mapping and the settings in force at `to`: stops and reduced-rate slowdowns (analog thresholds with hysteresis). Unknown time is never a stop. Window ≤ 7 days (422 INVALID_RANGE).
          */
         get: operations["StopEventPolicyV2Controller_preview_v2"];
         put?: never;
@@ -6794,7 +6872,7 @@ export interface paths {
         put?: never;
         /**
          * One approval certifies the day: the roll-up of its approved shift revisions (each quantity stays on its shift)
-         * @description Requires `Idempotency-Key`. 422 DAY_NOT_READY (details list the shifts not approved), 409 DAY_CERTIFIED, 403 SEPARATION_OF_DUTIES for a submitter of one of the shifts. A revise of a shift reopens the day.
+         * @description Requires `Idempotency-Key`. 422 DAY_NOT_READY (details list the shifts not approved), 409 DAY_CERTIFIED, 422 CODING_INCOMPLETE when the SME D12 daily coding gate (`dayGate`, warn at 99 % by default) is set to block and fails, 403 SEPARATION_OF_DUTIES for a submitter of one of the shifts. A revise of a shift reopens the day.
          */
         post: operations["ProductionDaysV2Controller_certify_v2"];
         delete?: never;
@@ -8344,6 +8422,44 @@ export interface components {
             drawRatePerHour?: Record<string, never> | null;
             notes?: Record<string, never> | null;
         };
+        UnitImpactRuleCreateDto: {
+            /** @example 2026-10-01T02:30:00Z */
+            effectiveFrom: string;
+            /**
+             * @description Exclusive end; absent or null = open-ended
+             * @example 2027-01-01T02:30:00Z
+             */
+            effectiveTo?: Record<string, never> | null;
+            /** Format: uuid */
+            unitId: string;
+            /**
+             * Format: uuid
+             * @description The equipment whose stops the rule classifies (an asset of the unit)
+             */
+            assetId: string;
+            /**
+             * @description full_stop = the unit stops; fractional = the unit loses `fraction` of its rate (one of several trains); none = output holds
+             * @enum {string}
+             */
+            mode: "full_stop" | "fractional" | "none";
+            /**
+             * @description Share of the unit rate lost, 0 < f ≤ 1; only (and required) with fractional
+             * @example 0.5
+             */
+            fraction?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description Installed standby whose successful start holds the output (SME D9 standby log runs)
+             */
+            standbyAssetId?: Record<string, never> | null;
+            /**
+             * @description A standby run starting at most this many seconds after the stop is a takeover
+             * @default 60
+             */
+            takeoverSeconds: number;
+            /** @example Two parallel extruder feed trains; one train = 50 % of the rate */
+            reason: string;
+        };
         BufferLevelCreateDto: {
             /** Format: uuid */
             fromUnitId: string;
@@ -9179,7 +9295,7 @@ export interface components {
              */
             delegateId: string;
             /** @enum {string} */
-            role: "manager_approver" | "production_accountant" | "finance_approver" | "quality_approver";
+            role: "manager_approver" | "production_accountant" | "finance_approver" | "quality_approver" | "metrology_approver";
             /** @enum {string} */
             scopeKind: "tenant" | "site" | "unit";
             /**
@@ -9799,7 +9915,36 @@ export interface components {
              */
             match: string;
             /** @enum {string} */
-            state: "running" | "internal_stop" | "planned_stop" | "starved" | "blocked" | "standby" | "not_scheduled";
+            state: "running" | "reduced_rate" | "internal_stop" | "planned_stop" | "starved" | "blocked" | "standby" | "not_scheduled";
+        };
+        AnalogThresholdsDto: {
+            /**
+             * @description Below this value the unit is stopped
+             * @example 2
+             */
+            stopBelow: number;
+            /**
+             * @description Below this value (and not stopped) the unit runs at a reduced rate; null = no reduced-rate band
+             * @example 16
+             */
+            reducedBelow?: number | null;
+            /**
+             * @description A lower band is left only above its threshold + this hysteresis
+             * @default 0
+             * @example 0.5
+             */
+            hysteresis: number;
+            /**
+             * @description State of an analog stop (the signal does not tell the cause)
+             * @default internal_stop
+             * @enum {string}
+             */
+            stopState: "internal_stop" | "starved" | "blocked";
+            /**
+             * @description Signal value at the full rate: a slowdown loses 1 − mean / rated of the rate; null = not quantified
+             * @example 20
+             */
+            ratedValue?: number | null;
         };
         UnitStateMappingCreateDto: {
             /** Format: uuid */
@@ -9809,8 +9954,10 @@ export interface components {
              * @description State signal of the unit (semantic type state)
              */
             signalId: string;
-            /** @description Unmapped values are unknown time (data quality) */
+            /** @description Unmapped values are unknown time (data quality); may be empty with analog thresholds */
             rules: components["schemas"]["StateRuleDto"][];
+            /** @description Plan 1.10 analog mapping: numeric values no rule matches are banded stopped / reduced rate / running (hysteresis); reduced-rate spans become slowdown events */
+            thresholds?: components["schemas"]["AnalogThresholdsDto"] | null;
             /** @description Expected sample interval of the source (s) */
             expectedIntervalSeconds: number;
             /**
@@ -14109,6 +14256,124 @@ export interface operations {
         };
     };
     FlowRoutesV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitImpactRulesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                unitId?: string;
+                assetId?: string;
+                state?: "draft" | "approved" | "retired";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitImpactRulesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitImpactRuleCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitImpactRulesV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitImpactRulesV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitImpactRulesV2Controller_retire_v2: {
         parameters: {
             query?: never;
             header: {

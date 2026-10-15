@@ -134,6 +134,7 @@ export class ProductionDaysV2Controller {
       'One approval certifies the day: the roll-up of its approved shift revisions (each quantity stays on its shift)',
     description:
       'Requires `Idempotency-Key`. 422 DAY_NOT_READY (details list the shifts not approved), 409 DAY_CERTIFIED, ' +
+      '422 CODING_INCOMPLETE when the SME D12 daily coding gate (`dayGate`, warn at 99 % by default) is set to block and fails, ' +
       '403 SEPARATION_OF_DUTIES for a submitter of one of the shifts. A revise of a shift reopens the day.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })

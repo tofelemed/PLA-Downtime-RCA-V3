@@ -68,7 +68,8 @@ export class StopEventPolicyV2Controller {
     summary:
       'Stops the state engine would derive for a unit and window (nothing is written)',
     description:
-      'Plan 1.10 rule preview from the unit’s state mapping and the settings in force at `to`. Unknown time is ' +
+      'Plan 1.10 rule preview from the unit’s state mapping and the settings in force at `to`: stops and reduced-rate ' +
+      'slowdowns (analog thresholds with hysteresis). Unknown time is ' +
       'never a stop. Window ≤ 7 days (422 INVALID_RANGE).',
   })
   preview(

@@ -63,7 +63,7 @@ export function useCreateTransitionStandard() {
 }
 
 /** Versioned master data with approve / retire commands (plan 2.2, LA-08). */
-export type VersionResource = 'profiles' | 'rates' | 'valuation-rates' | 'transition-standards' | 'unit-streams' | 'flow-routes';
+export type VersionResource = 'profiles' | 'rates' | 'valuation-rates' | 'transition-standards' | 'unit-streams' | 'flow-routes' | 'unit-impact-rules';
 
 export interface VersionTransition {
   resource: VersionResource;
