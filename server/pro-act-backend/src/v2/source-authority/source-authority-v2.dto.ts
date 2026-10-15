@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -24,6 +24,7 @@ import {
   SOURCE_CLASSES,
   SourceClass,
 } from '../../domain/actuals/period/period-actuals.types';
+import { toBooleanParam } from '../../common/dto/query-param.transformers';
 import { ListQueryDto } from '../common/list-query.dto';
 import {
   SOURCE_AUTHORITY_VERSION_STATES,
@@ -176,6 +177,15 @@ export class SourceAuthorityVersionListQueryDto extends ListQueryDto {
   @IsOptional()
   @IsUUID()
   unitId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'With unitId: the plant-wide versions as well (unitId null); alone: only the plant-wide versions',
+  })
+  @IsOptional()
+  @Transform(toBooleanParam)
+  @IsBoolean()
+  includeTenantWide?: boolean;
 
   @ApiPropertyOptional({ enum: SOURCE_AUTHORITY_VERSION_STATES })
   @IsOptional()

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { v2Request } from '../client';
 import type { ListResponse } from '../types/envelopes';
-import type { SourceAuthorityInForceView, SourceAuthorityVersionView } from '../types/source-authority';
+import type { SourceAuthorityDraftBody, SourceAuthorityInForceView, SourceAuthorityVersionView } from '../types/source-authority';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
 import { useV2Command } from './use-v2-command';
@@ -10,18 +10,19 @@ import { useV2TenantId } from './use-v2-tenant';
 /** Most versions a unit lists (a handful of changes a year). */
 const PAGE = 100;
 
-/** The source authority version in force for a unit (its own, else tenant-wide). */
+/** The source authority version in force for a unit (its own, else plant-wide); `null` = the plant-wide one. */
 export function useSourceAuthorityInForce(unitId: string | null) {
   const tenantId = useV2TenantId();
   return useQuery({
-    queryKey: v2Keys.detail(tenantId ?? '-', 'source-authority', unitId ?? '-'),
-    enabled: Boolean(tenantId && unitId),
+    queryKey: v2Keys.detail(tenantId ?? '-', 'source-authority', unitId ?? 'plant'),
+    enabled: Boolean(tenantId),
     staleTime: STALE_TIME['source-authority'],
-    queryFn: async ({ signal }) => (await v2Request<SourceAuthorityInForceView>({ method: 'GET', path: '/source-authority', query: { unitId: unitId ?? '' }, signal })).data,
+    queryFn: async ({ signal }) =>
+      (await v2Request<SourceAuthorityInForceView>({ method: 'GET', path: '/source-authority', query: unitId ? { unitId } : {}, signal })).data,
   });
 }
 
-/** The unit's own source authority versions, newest first: drafts, approved and rejected. */
+/** The unit's versions and the plant-wide ones, newest first: drafts, approved and rejected. */
 export function useSourceAuthorityVersions(unitId: string | null) {
   const tenantId = useV2TenantId();
   return useQuery({
@@ -29,7 +30,24 @@ export function useSourceAuthorityVersions(unitId: string | null) {
     enabled: Boolean(tenantId && unitId),
     staleTime: STALE_TIME['source-authority'],
     queryFn: async ({ signal }) =>
-      (await v2Request<ListResponse<SourceAuthorityVersionView>>({ method: 'GET', path: '/source-authority/versions', query: { unitId: unitId ?? '', limit: PAGE }, signal })).data,
+      (
+        await v2Request<ListResponse<SourceAuthorityVersionView>>({
+          method: 'GET',
+          path: '/source-authority/versions',
+          query: { unitId: unitId ?? '', includeTenantWide: true, limit: PAGE },
+          signal,
+        })
+      ).data,
+  });
+}
+
+/** Drafts a version from the one in force (integration admins, production accounting); it applies once approved. */
+export function useDraftSourceAuthorityVersion() {
+  const tenantId = useV2TenantId();
+  return useV2Command<SourceAuthorityDraftBody, SourceAuthorityVersionView>({
+    run: async ({ input, idempotencyKey }) => (await v2Request<SourceAuthorityVersionView>({ method: 'POST', path: '/source-authority/versions', body: input, idempotencyKey })).data,
+    changes: () => (tenantId ? { tenantId, entityType: 'source_authority' } : null),
+    retries: 0,
   });
 }
 

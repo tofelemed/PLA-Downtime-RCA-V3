@@ -40,14 +40,28 @@ export function PolicySources({ policy }: { policy: SourceAuthorityPolicyView })
   );
 }
 
-/** One source authority version: state, interval, ranked sources, who drafted and decided it. */
-export function VersionCard({ version, timezone }: { version: SourceAuthorityVersionView; timezone: string }) {
+/** Who drafted the version and who decided it, with the rejection reason. */
+function Decision({ version, timezone }: { version: SourceAuthorityVersionView; timezone: string }) {
   const users = useUserNames();
   const decidedBy = version.approvedBy ?? version.rejectedBy;
+  return (
+    <p className="text-xs text-muted-foreground">
+      Drafted by {users.nameOf(version.createdBy)} on <PlantTime iso={version.createdAt} tz={timezone} withDate />
+      {decidedBy && ` · ${version.state === 'rejected' ? 'rejected' : 'approved'} by ${users.nameOf(decidedBy)}`}
+      {version.rejectionReason && `: ${version.rejectionReason}`}
+    </p>
+  );
+}
+
+/** One source authority version: scope, state, interval, ranked sources, who drafted and decided it. */
+export function VersionCard({ version, timezone }: { version: SourceAuthorityVersionView; timezone: string }) {
   return (
     <article className="space-y-2 rounded-md border p-3 text-sm" data-testid="authority-version" data-state={version.state} data-in-force={version.inForce}>
       <header className="flex flex-wrap items-center gap-2">
         <h3 className="font-medium">Version {version.version}</h3>
+        <Badge variant="secondary" data-testid="authority-scope-badge">
+          {version.unitId ? 'This unit' : 'Whole plant'}
+        </Badge>
         <Badge variant={version.inForce ? 'default' : 'outline'}>{version.inForce ? 'In force' : (STATE_LABELS[version.state] ?? version.state)}</Badge>
         {version.state === 'approved' && (
           <span className="text-xs text-muted-foreground">
@@ -62,11 +76,7 @@ export function VersionCard({ version, timezone }: { version: SourceAuthorityVer
         )}
       </header>
       <PolicySources policy={version.policy} />
-      <p className="text-xs text-muted-foreground">
-        Drafted by {users.nameOf(version.createdBy)} on <PlantTime iso={version.createdAt} tz={timezone} withDate />
-        {decidedBy && ` · ${version.state === 'rejected' ? 'rejected' : 'approved'} by ${users.nameOf(decidedBy)}`}
-        {version.rejectionReason && `: ${version.rejectionReason}`}
-      </p>
+      <Decision version={version} timezone={timezone} />
       {version.notes && <p className="text-xs">{version.notes}</p>}
       <VersionActions version={version} />
     </article>

@@ -8836,6 +8836,15 @@
             }
           },
           {
+            "name": "includeTenantWide",
+            "required": false,
+            "in": "query",
+            "description": "With unitId: the plant-wide versions as well (unitId null); alone: only the plant-wide versions",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "state",
             "required": false,
             "in": "query",
