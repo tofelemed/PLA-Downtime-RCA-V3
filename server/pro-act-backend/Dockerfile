@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1
 # Pro-Act backend (NestJS + TypeORM/Postgres).
-# Debian (glibc) images are used because several dependencies ship native addons
-# (bcrypt); the full image in the build stage provides the
-# node-gyp toolchain in case a prebuilt binary is unavailable.
+# Debian (glibc) images provide a consistent build/runtime ABI. The full build
+# image includes the node-gyp toolchain for optional native dependencies.
 
 FROM node:24-bookworm AS build
 WORKDIR /app
