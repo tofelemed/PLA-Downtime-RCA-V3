@@ -19,6 +19,10 @@ export interface NewTransitionStandard {
   unitId: string;
   fromProductId: string;
   toProductId: string;
+  /** SME E1: null / absent = any catalyst family */
+  catalystFamily?: string | null;
+  /** SME E1: null / absent = any operating mode */
+  operatingMode?: string | null;
   referenceSeconds: string;
   referenceOffgradeQty?: string | null;
   offgradeUom?: string | null;
@@ -31,14 +35,22 @@ export interface NewTransitionStandard {
 
 const WHAT = 'transition standard';
 
+/** A blank context part is "any" (null), never an empty-string key. */
+const contextPart = (value: string | null | undefined) => value?.trim() || null;
+
+/** The version family (SME E1): unit × from × to × catalyst family × operating mode. */
 const keyOf = (row: {
   unitId: string;
   fromProductId: string;
   toProductId: string;
+  catalystFamily?: string | null;
+  operatingMode?: string | null;
 }) => ({
   unitId: row.unitId,
   fromProductId: row.fromProductId,
   toProductId: row.toProductId,
+  catalystFamily: contextPart(row.catalystFamily),
+  operatingMode: contextPart(row.operatingMode),
 });
 
 /** 422 unless the reference is a positive duration and the off-grade a quantity ≥ 0 with its unit. */
@@ -87,6 +99,8 @@ async function recordStandardChanges(
         unitId: row.unitId,
         fromProductId: row.fromProductId,
         toProductId: row.toProductId,
+        catalystFamily: row.catalystFamily,
+        operatingMode: row.operatingMode,
         effectiveFrom: row.effectiveFrom.toISOString(),
         effectiveTo: row.effectiveTo ? row.effectiveTo.toISOString() : null,
       },
@@ -95,8 +109,8 @@ async function recordStandardChanges(
 }
 
 /**
- * The grade-transition matrix (LA-08, SME Q9 / E1): one versioned entry per unit and directional
- * product change, drafted by master data and approved by another user (maker-checker, 403
+ * The grade-transition matrix (LA-08, SME Q9 / E1): one versioned entry per unit, directional
+ * product change, catalyst family and operating mode (null = any), drafted by master data and approved by another user (maker-checker, 403
  * SEPARATION_OF_DUTIES), never overlapping an approved version unless superseding it.
  */
 @Injectable()

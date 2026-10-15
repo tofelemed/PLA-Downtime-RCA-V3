@@ -37,9 +37,19 @@ describe('transition standard form (LA-08)', () => {
       TZ,
     );
     expect(Object.keys(body).sort()).toEqual(
-      ['effectiveFrom', 'effectiveTo', 'evidence', 'fromProductId', 'offgradeUom', 'referenceOffgradeQty', 'referenceSeconds', 'sampleCount', 'toProductId', 'unitId'].sort(),
+      ['catalystFamily', 'effectiveFrom', 'effectiveTo', 'evidence', 'fromProductId', 'offgradeUom', 'operatingMode', 'referenceOffgradeQty', 'referenceSeconds', 'sampleCount', 'toProductId', 'unitId'].sort(),
     );
     expect(body).toMatchObject({ referenceSeconds: '7560', sampleCount: 5, evidence: 'median of 5', referenceOffgradeQty: null, offgradeUom: null, effectiveTo: null });
     expect(body.effectiveFrom).toBe('2026-10-01T02:30:00.000Z');
+    expect(body).toMatchObject({ catalystFamily: null, operatingMode: null });
+  });
+
+  it('sends catalyst family and operating mode when given and refuses an invalid code (SME E1)', () => {
+    const values = { ...emptyTransitionStandardForm('u1'), fromProductId: 'p1', toProductId: 'p2', referenceHours: '2', effectiveFrom: '2026-10-01T06:00' };
+    const body = transitionStandardCreateBody({ ...values, catalystFamily: ' ziegler_natta ', operatingMode: 'swing' }, TZ);
+    expect(body).toMatchObject({ catalystFamily: 'ziegler_natta', operatingMode: 'swing' });
+    const errors = validateTransitionStandardForm({ ...values, catalystFamily: 'Z N' }, TZ);
+    expect(errors.catalystFamily).toBeDefined();
+    expect(errors.operatingMode).toBeUndefined();
   });
 });

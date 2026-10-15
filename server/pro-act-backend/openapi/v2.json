@@ -20908,6 +20908,18 @@
             "nullable": true,
             "description": "SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop"
           },
+          "catalystFamily": {
+            "type": "object",
+            "example": "ziegler_natta",
+            "nullable": true,
+            "description": "SME E1: catalyst family of a grade change (transition-standard key); grade_transition only"
+          },
+          "operatingMode": {
+            "type": "object",
+            "example": "normal",
+            "nullable": true,
+            "description": "SME E1: operating mode of a grade change; absent = the profile mode of the production context; grade_transition only"
+          },
           "dispositionClass": {
             "type": "string",
             "enum": [
@@ -21109,6 +21121,18 @@
             "format": "uuid",
             "nullable": true,
             "description": "SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop"
+          },
+          "catalystFamily": {
+            "type": "object",
+            "example": "ziegler_natta",
+            "nullable": true,
+            "description": "SME E1: catalyst family of a grade change (transition-standard key); grade_transition only"
+          },
+          "operatingMode": {
+            "type": "object",
+            "example": "normal",
+            "nullable": true,
+            "description": "SME E1: operating mode of a grade change; absent = the profile mode of the production context; grade_transition only"
           },
           "dispositionClass": {
             "type": "string",
@@ -22600,6 +22624,18 @@
             "type": "string",
             "format": "uuid",
             "description": "Product (grade) after the change; B→A is its own entry"
+          },
+          "catalystFamily": {
+            "type": "object",
+            "example": "ziegler_natta",
+            "nullable": true,
+            "description": "SME E1: catalyst family the entry applies to; absent / null = any (the most specific approved entry wins)"
+          },
+          "operatingMode": {
+            "type": "object",
+            "example": "normal",
+            "nullable": true,
+            "description": "SME E1: operating mode the entry applies to (as on production profiles); absent / null = any"
           },
           "referenceSeconds": {
             "type": "string",

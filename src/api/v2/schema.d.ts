@@ -6362,6 +6362,16 @@ export interface components {
              */
             recoveryOfEventId?: Record<string, never> | null;
             /**
+             * @description SME E1: catalyst family of a grade change (transition-standard key); grade_transition only
+             * @example ziegler_natta
+             */
+            catalystFamily?: Record<string, never> | null;
+            /**
+             * @description SME E1: operating mode of a grade change; absent = the profile mode of the production context; grade_transition only
+             * @example normal
+             */
+            operatingMode?: Record<string, never> | null;
+            /**
              * @description SME E3: disposition of the tonnes a quality_loss event explains (downgrade sold at a discount, scrap, rework); quality_loss only
              * @enum {string|null}
              */
@@ -6460,6 +6470,16 @@ export interface components {
              * @description SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop
              */
             recoveryOfEventId?: Record<string, never> | null;
+            /**
+             * @description SME E1: catalyst family of a grade change (transition-standard key); grade_transition only
+             * @example ziegler_natta
+             */
+            catalystFamily?: Record<string, never> | null;
+            /**
+             * @description SME E1: operating mode of a grade change; absent = the profile mode of the production context; grade_transition only
+             * @example normal
+             */
+            operatingMode?: Record<string, never> | null;
             /**
              * @description SME E3: disposition of the tonnes a quality_loss event explains (downgrade sold at a discount, scrap, rework); quality_loss only
              * @enum {string|null}
@@ -7182,6 +7202,16 @@ export interface components {
              * @description Product (grade) after the change; B→A is its own entry
              */
             toProductId: string;
+            /**
+             * @description SME E1: catalyst family the entry applies to; absent / null = any (the most specific approved entry wins)
+             * @example ziegler_natta
+             */
+            catalystFamily?: Record<string, never> | null;
+            /**
+             * @description SME E1: operating mode the entry applies to (as on production profiles); absent / null = any
+             * @example normal
+             */
+            operatingMode?: Record<string, never> | null;
             /**
              * @description Reference duration of the transition in seconds (> 0)
              * @example 7560

@@ -6,6 +6,17 @@ export interface GradeLinks {
   fromProductId?: string | null;
   toProductId?: string | null;
   recoveryOfEventId?: string | null;
+  /** SME E1: transition-standard context of a grade change */
+  catalystFamily?: string | null;
+  operatingMode?: string | null;
+}
+
+/** The effective grade-change fields of an event after a write. */
+export interface EffectiveGradeLinks {
+  fromProductId: string | null;
+  toProductId: string | null;
+  catalystFamily: string | null;
+  operatingMode: string | null;
 }
 
 function unprocessable(code: string, field: string, message: string) {
@@ -17,20 +28,21 @@ function unprocessable(code: string, field: string, message: string) {
 }
 
 /**
- * LA-08: a `grade_transition` names both products, and they differ; any other event names none
- * (422 INVALID_GRADE_CHANGE). Values are the effective ones after the write.
+ * LA-08: a `grade_transition` names both products, and they differ; any other event names none, and no
+ * catalyst family / operating mode either (SME E1) (422 INVALID_GRADE_CHANGE). Values are the effective
+ * ones after the write.
  */
 export function assertGradeChange(
   physicalType: string,
-  links: { fromProductId: string | null; toProductId: string | null },
+  links: EffectiveGradeLinks,
 ): void {
   const { fromProductId: from, toProductId: to } = links;
   if (physicalType !== 'grade_transition') {
-    if (from || to) {
+    if (from || to || links.catalystFamily || links.operatingMode) {
       throw unprocessable(
         'INVALID_GRADE_CHANGE',
-        'fromProductId',
-        'only a grade_transition names products',
+        from || to ? 'fromProductId' : 'catalystFamily',
+        'only a grade_transition names products, catalyst family or operating mode',
       );
     }
     return;
@@ -46,18 +58,26 @@ export function assertGradeChange(
 
 /** The effective links after a PATCH: the body where given, else the stored value. */
 export function effectiveLinks(
-  locked: Pick<ProductionEvent, 'fromProductId' | 'toProductId'>,
+  locked: EffectiveGradeLinks,
   dto: GradeLinks,
-): { fromProductId: string | null; toProductId: string | null } {
+): EffectiveGradeLinks {
+  const pick = (key: keyof EffectiveGradeLinks) =>
+    dto[key] === undefined ? locked[key] : (dto[key] ?? null);
   return {
-    fromProductId:
-      dto.fromProductId === undefined
-        ? locked.fromProductId
-        : dto.fromProductId,
-    toProductId:
-      dto.toProductId === undefined ? locked.toProductId : dto.toProductId,
+    fromProductId: pick('fromProductId'),
+    toProductId: pick('toProductId'),
+    catalystFamily: pick('catalystFamily'),
+    operatingMode: pick('operatingMode'),
   };
 }
+
+/** No grade-change fields (a new event's starting point). */
+export const NO_GRADE_LINKS: EffectiveGradeLinks = {
+  fromProductId: null,
+  toProductId: null,
+  catalystFamily: null,
+  operatingMode: null,
+};
 
 /** Columns of the links; `undefined` leaves a column untouched, `null` clears it. */
 export function gradeLinkColumns(dto: GradeLinks): Partial<ProductionEvent> {
@@ -67,5 +87,9 @@ export function gradeLinkColumns(dto: GradeLinks): Partial<ProductionEvent> {
   if (dto.toProductId !== undefined) columns.toProductId = dto.toProductId;
   if (dto.recoveryOfEventId !== undefined)
     columns.recoveryOfEventId = dto.recoveryOfEventId;
+  if (dto.catalystFamily !== undefined)
+    columns.catalystFamily = dto.catalystFamily;
+  if (dto.operatingMode !== undefined)
+    columns.operatingMode = dto.operatingMode;
   return columns;
 }

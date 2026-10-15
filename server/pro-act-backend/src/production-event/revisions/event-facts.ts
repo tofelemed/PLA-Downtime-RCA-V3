@@ -72,6 +72,8 @@ export const CODING_FIELDS = [
   'plannedEndTime',
   'fromProductId',
   'toProductId',
+  'catalystFamily',
+  'operatingMode',
   'recoveryOfEventId',
   'dispositionClass',
   'failureSeverity',

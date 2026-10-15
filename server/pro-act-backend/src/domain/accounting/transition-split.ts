@@ -23,21 +23,44 @@ export interface TransitionSplit {
 const ONE = new Dec(1);
 const atMostOne = (value: Dec) => (value.gt(ONE) ? ONE : value);
 
-/** The approved standard of the event's product change in force at its start, else null. */
+/** A key part of a standard matches when it is "any" (null) or equal to the change's value. */
+const partMatches = (
+  wanted: string | null | undefined,
+  actual: string | null | undefined,
+) => wanted == null || wanted === (actual ?? null);
+
+/**
+ * Specificity of a matching standard (SME E1): catalyst family outranks operating mode (the catalyst
+ * system sets the transition chemistry; DECISIONS D-E1), so catalyst-only beats mode-only on a tie.
+ */
+const specificity = (standard: TransitionStandard) =>
+  (standard.catalystFamily != null ? 2 : 0) +
+  (standard.operatingMode != null ? 1 : 0);
+
+/**
+ * The approved standard of the event's product change in force at its start, else null. The key is
+ * unit × from × to × catalyst family × operating mode (SME E1); a standard's null catalyst / mode means
+ * "any", and the most specific matching entry wins. Without context on either side this is the
+ * unit × from × to match of engine 2.5.5.
+ */
 export function standardFor(
   event: LossEvent,
   standards: readonly TransitionStandard[],
 ): TransitionStandard | null {
   const change = event.transition;
   if (!change) return null;
-  return (
-    standards.find(
-      (s) =>
-        s.fromProductId === change.fromProductId &&
-        s.toProductId === change.toProductId &&
-        s.from <= event.start &&
-        (s.to === null || s.to > event.start),
-    ) ?? null
+  const candidates = standards.filter(
+    (s) =>
+      s.fromProductId === change.fromProductId &&
+      s.toProductId === change.toProductId &&
+      partMatches(s.catalystFamily, change.catalystFamily) &&
+      partMatches(s.operatingMode, change.operatingMode) &&
+      s.from <= event.start &&
+      (s.to === null || s.to > event.start),
+  );
+  return candidates.reduce<TransitionStandard | null>(
+    (best, s) => (!best || specificity(s) > specificity(best) ? s : best),
+    null,
   );
 }
 

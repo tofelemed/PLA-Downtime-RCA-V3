@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   Min,
   ValidateIf,
@@ -25,6 +26,8 @@ import {
 import { FAILURE_SEVERITIES } from './failure-detail';
 
 const DECIMAL = { decimal_digits: '0,8' };
+/** SME E1: catalyst family / operating mode code (the shape of a profile's operating mode). */
+const CONTEXT_CODE = /^[A-Za-z0-9_.-]{1,64}$/;
 
 /**
  * Fields a user may set on a manual event and edit later (DT08). `null` clears a nullable field on
@@ -149,6 +152,32 @@ export class ProductionEventV2EditableDto {
   @ValidateIf((_, value) => value !== null)
   @IsUUID()
   recoveryOfEventId?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'ziegler_natta',
+    nullable: true,
+    description:
+      'SME E1: catalyst family of a grade change (transition-standard key); grade_transition only',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(CONTEXT_CODE, {
+    message: 'catalystFamily must be 1–64 letters, digits, _ . -',
+  })
+  catalystFamily?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'normal',
+    nullable: true,
+    description:
+      'SME E1: operating mode of a grade change; absent = the profile mode of the production context; grade_transition only',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(CONTEXT_CODE, {
+    message: 'operatingMode must be 1–64 letters, digits, _ . -',
+  })
+  operatingMode?: string | null;
 
   @ApiPropertyOptional({
     enum: EVENT_DISPOSITION_CLASSES,

@@ -66,6 +66,10 @@ export type LossEventType =
 export interface GradeChange {
   fromProductId: string;
   toProductId: string;
+  /** SME E1: catalyst family of the change (event, else unknown); absent / null = not recorded */
+  catalystFamily?: string | null;
+  /** SME E1: operating mode of the change (event, else the production context's profile mode) */
+  operatingMode?: string | null;
 }
 
 /**
@@ -78,6 +82,10 @@ export interface TransitionStandard {
   toProductId: string;
   referenceSeconds: string;
   referenceOffgradeQuantity: string | null;
+  /** SME E1: catalyst family the entry applies to; absent / null = any */
+  catalystFamily?: string | null;
+  /** SME E1: operating mode the entry applies to; absent / null = any */
+  operatingMode?: string | null;
   from: Date;
   to: Date | null;
 }

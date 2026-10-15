@@ -182,6 +182,24 @@ export class ProductionEvent {
   })
   toProduct?: Product;
 
+  /** SME E1: catalyst family of a grade transition (transition-standard key); null = not recorded */
+  @Column({
+    name: 'catalyst_family',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  catalystFamily: string | null;
+
+  /** SME E1: operating mode of a grade transition; null = the production context's (profile) mode */
+  @Column({
+    name: 'operating_mode',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  operatingMode: string | null;
+
   /** SME Q10: the stop a ramp-up / startup-quality event recovers from (its loss is charged to that stop) */
   @Index('IDX_production_events_recovery_of', {
     where: '"recovery_of_event_id" IS NOT NULL',
