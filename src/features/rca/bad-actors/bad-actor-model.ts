@@ -1,10 +1,9 @@
 import type { BadActorQuery } from '@/api/v2/queries/bad-actors';
 import type { BadActorGroupBy, BadActorRankBy, BadActorTriggerState } from '@/api/v2/types/bad-actors';
-import { utcToPlantLocal } from '@/lib/dates';
 
 /** Choices of the CA8 bad-actor review; ranking, window and trigger state are the server's. */
 export interface BadActorFilters {
-  /** `YYYY-MM` review month (plant clock) */
+  /** `YYYY-MM` review month in the plant calendar (Jalali on a Persian plant; the server reads it the same way) */
   month: string;
   groupBy: BadActorGroupBy;
   rankBy: BadActorRankBy;
@@ -38,11 +37,6 @@ export const VIEW_LABELS: Readonly<Record<string, string>> = {
 };
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
-
-/** The current month on the plant clock (`YYYY-MM`), the default review month. */
-export function currentPlantMonth(timeZone: string, now: Date = new Date()): string {
-  return utcToPlantLocal(now.toISOString(), timeZone).slice(0, 7);
-}
 
 export function filtersFromParams(params: URLSearchParams, fallbackMonth: string): BadActorFilters {
   const month = params.get('month') ?? '';

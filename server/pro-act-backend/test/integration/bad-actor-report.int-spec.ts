@@ -172,4 +172,28 @@ describe('bad-actor report (CA8)', () => {
     await env.get('reports/bad-actors?month=2027-3').expect(422);
     expect((await report('month=2027-03', env.adminB)).items).toEqual([]);
   });
+
+  it('a Persian plant names a Jalali month: 1405-12 (Esfand) ends at Farvardin 1, 00:00 Tehran = 2027-03-20T20:30Z', async () => {
+    await env.rows(
+      `UPDATE tenants SET calendar_system = 'persian', timezone = 'Asia/Tehran' WHERE id::text = $1`,
+      [env.world.tenantA],
+    );
+    try {
+      const data = (await report(
+        'month=1405-12&rankBy=stops',
+      )) as Report['data'] & { calendar: string };
+      expect(data).toMatchObject({
+        calendar: 'persian',
+        to: '2027-03-20T20:30:00.000Z',
+        from: '2026-12-20T20:30:00.000Z',
+      });
+      // the 21 March stop is already in Farvardin 1406: only the 20 March pump stop is in Esfand's window
+      expect(data.items.find((i) => i.assetId === pump)?.stops).toBe(1);
+    } finally {
+      await env.rows(
+        `UPDATE tenants SET calendar_system = 'gregorian', timezone = NULL WHERE id::text = $1`,
+        [env.world.tenantA],
+      );
+    }
+  });
 });

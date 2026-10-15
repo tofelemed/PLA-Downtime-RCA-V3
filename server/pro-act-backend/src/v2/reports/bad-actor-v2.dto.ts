@@ -27,7 +27,8 @@ export class BadActorReportQueryDto {
   @ApiProperty({
     example: '2027-03',
     description:
-      'Review month (YYYY-MM, plant time zone): the rolling window of the tenant RCA policy (CA8 pilot 90 days) ' +
+      'Review month (YYYY-MM in the plant calendar — a Persian plant names a Jalali month, e.g. 1405-07 = ' +
+      'Mehr 1405 — at local midnight in the plant time zone): the rolling window of the tenant RCA policy (CA8 pilot 90 days) ' +
       'ending at the end of this month',
   })
   @Matches(MONTH, { message: 'month must be YYYY-MM' })

@@ -46,7 +46,9 @@ export interface BadActorItemView {
 }
 
 export interface BadActorReportView {
+  /** `YYYY-MM` in the plant calendar (`calendar`: a Jalali month on a Persian plant) */
   month: string;
+  calendar: 'gregorian' | 'persian';
   from: string;
   to: string;
   windowDays: number;

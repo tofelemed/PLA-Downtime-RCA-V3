@@ -1,3 +1,4 @@
+import { ExportWorld } from './support/export-world';
 import { amountOf, ValuationWorld, viewOf } from './support/valuation-world';
 
 interface FxBody {
@@ -205,6 +206,16 @@ describe('provisional FX rates (SME V7)', () => {
       [approved.revision.id],
     );
     expect(total.n).toBeGreaterThan(0);
+    // the export of the approved period says so per row (SME V7)
+    const jobId = await env.exportDay();
+    await env.runExports();
+    const [row] = ExportWorld.records((await env.download(jobId)).text).filter(
+      (r) => r.period_id === env.periodA1,
+    );
+    expect(row).toMatchObject({
+      valuation_view: 'economic_impact',
+      fx_provisional: 'true',
+    });
   });
 
   it('the final rate wins: the approved period keeps its figures until its proposal is accepted, then $48 without the mark', async () => {

@@ -48,7 +48,9 @@ const UNKNOWN_ASSET: BadActorItemView['trigger'] = {
 };
 
 export interface BadActorReportView {
+  /** `YYYY-MM` in the plant calendar (`calendar`) */
   month: string;
+  calendar: 'gregorian' | 'persian';
   from: string;
   to: string;
   /** CA8 rolling window: the tenant RCA policy's cumulative window (pilot 90 days) */
@@ -125,6 +127,7 @@ export class BadActorReportV2Service {
     const stats = await periodStats(manager, scope);
     const data: BadActorReportView = {
       month: query.month,
+      calendar: window.calendar,
       from: window.from.toISOString(),
       to: window.to.toISOString(),
       windowDays,

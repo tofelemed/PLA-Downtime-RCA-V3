@@ -1,7 +1,12 @@
 import { EntityManager } from 'typeorm';
+import {
+  PlantCalendar,
+  plantMonthDates,
+} from '../../domain/calendar/plant-month';
 import { BadActorGroup } from '../../domain/rca/bad-actor';
 import { failureModeKeySql } from '../../domain/rca/failure-mode-key';
 import { LOSS_VALUE_KINDS } from '../../domain/valuation/reconciled-valuation';
+import { invalid } from '../../profiles/profile-errors';
 import { INCIDENT } from '../../rca-case/triggers/trigger-inputs';
 import { ReportScope } from './report-scope';
 import { params, SHOWN } from './report-sql';
@@ -243,16 +248,30 @@ export function assetsOf(
   );
 }
 
-/** The review window: `days` ending at the start of the month after `month` in the plant time zone. */
+/**
+ * The review window: `days` ending at the start of the month after `month` — a month of the plant
+ * calendar (tenant `calendar_system`: `1405-12` is Esfand on a Persian plant) — at local midnight in the
+ * plant time zone.
+ */
 export async function reviewWindow(
   manager: EntityManager,
   input: { tenantId: string; month: string; days: number },
-): Promise<{ from: Date; to: Date }> {
-  const [row] = await manager.query<Array<{ from: Date; to: Date }>>(
-    `SELECT ((($2::text || '-01')::timestamp + interval '1 month') AT TIME ZONE z."tz") - make_interval(days => $3::int) AS "from",
-            (($2::text || '-01')::timestamp + interval '1 month') AT TIME ZONE z."tz" AS "to"
-       FROM (SELECT COALESCE((SELECT t."timezone" FROM "tenants" t WHERE t."id"::text = $1::text), 'UTC') AS "tz") z`,
-    [input.tenantId, input.month, input.days],
+): Promise<{ from: Date; to: Date; calendar: PlantCalendar }> {
+  const [tenant] = await manager.query<
+    Array<{ tz: string; calendar: string | null }>
+  >(
+    `SELECT COALESCE(t."timezone", 'UTC') AS "tz", t."calendar_system" AS "calendar"
+       FROM "tenants" t WHERE t."id"::text = $1::text`,
+    [input.tenantId],
   );
-  return { from: new Date(row.from), to: new Date(row.to) };
+  const calendar: PlantCalendar =
+    tenant?.calendar === 'persian' ? 'persian' : 'gregorian';
+  const dates = plantMonthDates(input.month, calendar);
+  if (!dates) throw invalid('INVALID_MONTH', 'month must be YYYY-MM');
+  const [row] = await manager.query<Array<{ from: Date; to: Date }>>(
+    `SELECT ($1::date::timestamp AT TIME ZONE $2::text) - make_interval(days => $3::int) AS "from",
+            $1::date::timestamp AT TIME ZONE $2::text AS "to"`,
+    [dates.next, tenant?.tz ?? 'UTC', input.days],
+  );
+  return { from: new Date(row.from), to: new Date(row.to), calendar };
 }

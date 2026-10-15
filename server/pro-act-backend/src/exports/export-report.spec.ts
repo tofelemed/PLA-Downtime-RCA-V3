@@ -110,8 +110,22 @@ function valuation(): NonNullable<RenderSource['reviewed']['valuation']> {
     timeBasisRule: 'exclusive',
     fxPolicy: 'snapshot',
     lines: [
-      { source: 'candidate', id: 'line-a', sliceId: SLICE, kind: 'availability', quantity: '0', views: [view('0')] },
-      { source: 'line', id: 'manual-1', sliceId: SLICE, kind: 'availability', quantity: '150', views: [view('15000.125')] },
+      {
+        source: 'candidate',
+        id: 'line-a',
+        sliceId: SLICE,
+        kind: 'availability',
+        quantity: '0',
+        views: [view('0')],
+      },
+      {
+        source: 'line',
+        id: 'manual-1',
+        sliceId: SLICE,
+        kind: 'availability',
+        quantity: '150',
+        views: [view('15000.125')],
+      },
     ],
     slices: [
       {
@@ -205,6 +219,48 @@ describe('export report rows (plan 2.9, AN03)', () => {
       '0',
       'fx_rate_missing',
     ]);
+  });
+
+  it('SME V7: fx_provisional is true on rows whose value used a provisional FX rate, false otherwise', () => {
+    const valued = source();
+    const base = valuation();
+    const usd = {
+      currency: 'USD',
+      amount: '50',
+      reason: null,
+      fxRateIds: ['fx-p'],
+      provisional: true as const,
+    };
+    valued.reviewed.valuation = {
+      ...base,
+      lines: base.lines.map((line) =>
+        line.id === 'manual-1'
+          ? {
+              ...line,
+              views: line.views.map((v) => ({
+                ...v,
+                amounts: [v.amounts[0], usd],
+              })),
+            }
+          : line,
+      ),
+      slices: base.slices.map((t) => ({
+        ...t,
+        fxProvisionalLines: 1,
+        reasons: ['fx_rate_provisional'],
+      })),
+    };
+    const [summary] = reportRows('period_summary', valued);
+    expect(
+      summary[REPORT_COLUMNS.period_summary.indexOf('fx_provisional')],
+    ).toBe('true');
+    const rows = reportRows('loss_lines', valued);
+    const col = REPORT_COLUMNS.loss_lines.indexOf('fx_provisional');
+    expect(rows.map((r) => r[col])).toEqual(['false', 'true']);
+    const [plain] = reportRows('period_summary', source());
+    expect(plain[REPORT_COLUMNS.period_summary.indexOf('fx_provisional')]).toBe(
+      'false',
+    );
   });
 
   it('loss lines: candidates with their decision, and only lines carrying their own quantity', () => {

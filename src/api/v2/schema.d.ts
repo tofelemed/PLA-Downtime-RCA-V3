@@ -13031,7 +13031,7 @@ export interface operations {
     BadActorReportV2Controller_badActors_v2: {
         parameters: {
             query: {
-                /** @description Review month (YYYY-MM, plant time zone): the rolling window of the tenant RCA policy (CA8 pilot 90 days) ending at the end of this month */
+                /** @description Review month (YYYY-MM in the plant calendar — a Persian plant names a Jalali month, e.g. 1405-07 = Mehr 1405 — at local midnight in the plant time zone): the rolling window of the tenant RCA policy (CA8 pilot 90 days) ending at the end of this month */
                 month: string;
                 groupBy?: "asset" | "failure_mode";
                 /** @description quantity = approved lost quantity (D14, the unit of measure with the most approved loss); value = approved value of the policy default view in `currency` (unvalued groups last, never zero); stops = unplanned stops and failure work orders */
