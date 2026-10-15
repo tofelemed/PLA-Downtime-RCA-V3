@@ -88,6 +88,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^9.9.0",
     "@playwright/test": "^1.57.0",
     "@size-limit/file": "^14.2.0",
