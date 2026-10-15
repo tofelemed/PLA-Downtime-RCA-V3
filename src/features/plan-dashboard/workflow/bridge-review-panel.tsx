@@ -42,6 +42,12 @@ export function BridgeReviewPanel({ view }: { view: ReconciliationView }) {
           </li>
         ))}
       </ul>
+      {bridge.justification?.found && (
+        <p data-testid="bridge-justification">
+          Limit justified by the unit’s uncertainty budget: expanded uncertainty {decimal(bridge.justification.expandedUncertainty)} {bridge.justification.uom ?? ''}
+          {bridge.justification.reviewOverdue ? ' (budget review overdue)' : ''}
+        </p>
+      )}
       {bridge.review ? (
         <p data-testid="bridge-reviewed">Reviewed by {users.nameOf(bridge.review.by ?? '')}; another approver approves the period.</p>
       ) : (

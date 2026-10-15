@@ -70,7 +70,8 @@
           "properties": {
             "absolute": { "type": ["number", "null"], "minimum": 0 },
             "relative": { "type": ["number", "null"], "minimum": 0 },
-            "overLimit": { "type": "string", "enum": ["second_review", "refuse"], "default": "second_review" }
+            "overLimit": { "type": "string", "enum": ["second_review", "refuse"], "default": "second_review" },
+            "uncertaintyBudgetId": { "type": ["string", "null"], "format": "uuid", "description": "SME E4: the approved uncertainty budget of the unit whose expanded uncertainty justifies the absolute limit (shown with the findings); absolute must be set." }
           }
         },
         "reversibleKinds": {

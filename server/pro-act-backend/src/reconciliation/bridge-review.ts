@@ -7,6 +7,10 @@ import {
   BridgeLine,
 } from '../domain/reconciliation/bridge-limits';
 import { bridgeLimitsOf } from '../periods/reconciliation-options';
+import {
+  ToleranceJustification,
+  toleranceJustification,
+} from '../uncertainty/tolerance-justification';
 import { ApprovalAction } from './entities/approval-action.entity';
 import { ShapedLine } from './line-shape';
 import { decOf, RevisionState } from './revision-state';
@@ -19,6 +23,8 @@ export interface BridgeReviewState {
   /** a second independent review is needed before approval */
   required: boolean;
   review: { by: string | null; at: string } | null;
+  /** SME E4: the uncertainty budget behind the absolute limit (expanded uncertainty, evidence); null = none */
+  justification: ToleranceJustification | null;
 }
 
 const OWN_BRIDGE_ACTIONS = new Set(['manual', 'replace']);
@@ -90,10 +96,21 @@ export async function bridgeReviewOf(
   manager: EntityManager,
   state: RevisionState,
 ): Promise<BridgeReviewState> {
-  const { overLimit } = bridgeLimitsOf(state.tolerance.body);
+  const limits = bridgeLimitsOf(state.tolerance.body);
+  const { overLimit } = limits;
   const findings = revisionBridgeFindings(state);
   const review = await latestReview(manager, state);
+  const justification = await toleranceJustification(
+    manager,
+    state.period.tenantId,
+    {
+      ...state.tolerance.body,
+      value: limits.absolute ?? 0,
+      uncertaintyBudgetId: limits.uncertaintyBudgetId,
+    },
+  );
   return {
+    justification,
     overLimit,
     findings,
     required: overLimit === 'second_review' && findings.length > 0,

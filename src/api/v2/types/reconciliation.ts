@@ -115,7 +115,7 @@ export interface ToleranceView {
   /** SME D12: shift submission gate (absent in older versions = warn at 95 %) */
   submitGate?: { mode: 'block' | 'warn'; codedRatioTarget: number };
   /** SME R8: per-unit bridge limits (null = no limit) */
-  bridgeLimits?: { absolute: number | null; relative: number | null; overLimit: 'second_review' | 'refuse' };
+  bridgeLimits?: { absolute: number | null; relative: number | null; overLimit: 'second_review' | 'refuse'; uncertaintyBudgetId?: string };
   /** SME R9: kinds a reversal may reverse */
   reversibleKinds?: string[];
   /** SME E4: the uncertainty budget that justifies an absolute tolerance; absent = none stated */
@@ -167,6 +167,8 @@ export interface BridgeReviewView {
   findings: Array<{ ref: string; sliceId: string; quantity: string; limit: string; basis: 'absolute' | 'relative' }>;
   required: boolean;
   review: { by: string | null; at: string } | null;
+  /** SME E4: the uncertainty budget behind the absolute limit; null = none stated */
+  justification?: ToleranceJustificationView | null;
 }
 
 /** One line of `PUT …/draft-lines` (DraftLineDto): only declared fields (forbidNonWhitelisted). */

@@ -19,6 +19,11 @@ export interface BridgeLimitsOption {
   absolute: number | null;
   relative: number | null;
   overLimit: 'second_review' | 'refuse';
+  /**
+   * SME E4: the approved uncertainty budget of the unit whose expanded uncertainty justifies the absolute
+   * limit (shown with the findings, like the tolerance's justification); absent = none stated
+   */
+  uncertaintyBudgetId?: string;
 }
 
 /** Options of a `reconciliation_tolerance` body a version may state (older versions have none). */
@@ -98,6 +103,26 @@ function submitGate(value: unknown): SubmitGateOption {
   };
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function budgetRef(raw: Record<string, unknown>): {
+  uncertaintyBudgetId?: string;
+} {
+  const id = raw.uncertaintyBudgetId;
+  if (id === undefined || id === null) return {};
+  if (typeof id !== 'string' || !UUID.test(id)) {
+    throw new PolicyBodyError(
+      'bridgeLimits.uncertaintyBudgetId must be a uuid',
+    );
+  }
+  if (raw.absolute === null || raw.absolute === undefined) {
+    throw new PolicyBodyError(
+      'an uncertainty budget justifies an absolute bridge limit only',
+    );
+  }
+  return { uncertaintyBudgetId: id };
+}
+
 function bridgeLimits(value: unknown): BridgeLimitsOption {
   const raw = record(value, 'bridgeLimits');
   return {
@@ -108,6 +133,7 @@ function bridgeLimits(value: unknown): BridgeLimitsOption {
       ['second_review', 'refuse'],
       'bridgeLimits.overLimit',
     ),
+    ...budgetRef(raw),
   };
 }
 
