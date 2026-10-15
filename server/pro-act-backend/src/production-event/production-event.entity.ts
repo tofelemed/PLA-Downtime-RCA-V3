@@ -100,9 +100,13 @@ export const DURATION_SECONDS_EXPRESSION =
   'startTime',
 ])
 /** SME D13: unverified stops of a unit (period panels, bulk verify of a shift) */
-@Index('IDX_production_events_unverified_stops', ['tenantId', 'unitId', 'startTime'], {
-  where: `"physical_type" = 'downtime' AND "verified_at" IS NULL`,
-})
+@Index(
+  'IDX_production_events_unverified_stops',
+  ['tenantId', 'unitId', 'startTime'],
+  {
+    where: `"physical_type" = 'downtime' AND "verified_at" IS NULL`,
+  },
+)
 @Index('IDX_production_events_open_by_unit', ['tenantId', 'unitId'], {
   where: '"end_time" IS NULL',
 })
