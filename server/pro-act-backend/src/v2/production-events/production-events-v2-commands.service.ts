@@ -38,6 +38,10 @@ import { actorFromContext } from '../../production-event/revisions/revision-acto
 import { FailureDictionaryValidator } from '../../reliability/failure-dictionary/failure-dictionary.validator';
 import { RuleClassificationService } from '../../rules/rule-classification.service';
 import { EventReferencesValidator } from './event-references.validator';
+import {
+  assertDispositionClass,
+  dispositionColumns,
+} from './disposition-class';
 import { failureColumns } from './failure-detail';
 import { assertPlannedEnd, plannedEndColumn } from './planned-end';
 import {
@@ -96,6 +100,7 @@ export class ProductionEventsV2CommandService {
     assertImpact(fields, dto.impactFraction);
     assertPlannedEnd(fields.startTime, dto.plannedEndTime);
     assertGradeChange(fields.physicalType, effectiveLinks(NO_LINKS, dto));
+    assertDispositionClass(fields.physicalType, dto.dispositionClass ?? null);
     assertWrittenNotInFuture(fields, this.clock.now());
     const id = randomUUID();
     const event = this.events.create({
@@ -322,6 +327,12 @@ function patchColumns(
       : dto.plannedEndTime,
   );
   assertGradeChange(fields.physicalType, effectiveLinks(locked, dto));
+  assertDispositionClass(
+    fields.physicalType,
+    dto.dispositionClass === undefined
+      ? locked.dispositionClass
+      : dto.dispositionClass,
+  );
   return { ...editableColumns(dto), ...fields } as Partial<ProductionEvent>;
 }
 
@@ -371,6 +382,7 @@ function editableColumns(
       Object.entries(columns).filter(([, value]) => value !== undefined),
     ) as Partial<ProductionEvent>),
     ...gradeLinkColumns(dto),
+    ...dispositionColumns(dto),
   };
 }
 
