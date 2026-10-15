@@ -32,14 +32,14 @@ describe('master-data links by capability', () => {
     wrap(<MasterDataNav />);
     expect(linkNames()).toEqual([
       'Overview', 'Units', 'Assets', 'Products', 'Plant hierarchy', 'RCA templates', 'Cause library', 'Verification checklists',
-      'Failure dictionary', 'Plant flow', 'Stop and plan policy', 'Standby equipment', 'Work-order operations', 'Unit state', 'Codes & rules',
+      'Failure dictionary', 'Plant flow', 'Stop and plan policy', 'Standby equipment', 'Unit impact rules', 'Work-order operations', 'Unit state', 'Codes & rules',
     ]);
   });
 
   it('a reliability engineer sees only the pages it writes', () => {
     actAs('reliability_engineer');
     wrap(<MasterDataNav />);
-    expect(linkNames()).toEqual(['Overview', 'Standby equipment', 'Work-order operations']);
+    expect(linkNames()).toEqual(['Overview', 'Standby equipment', 'Unit impact rules', 'Work-order operations']);
   });
 
   it('the overview of an approver without master-data rights lists its pages instead of refusing', () => {
@@ -47,7 +47,7 @@ describe('master-data links by capability', () => {
     actAs('manager_approver');
     wrap(<MasterDataOverviewPage />);
     const pages = within(screen.getByRole('list', { name: 'Master data pages you can open' })).getAllByRole('link').map((l) => l.textContent);
-    expect(pages).toEqual(['Plant flow', 'Stop and plan policy', 'Standby equipment', 'Work-order operations', 'Unit state']);
+    expect(pages).toEqual(['Plant flow', 'Stop and plan policy', 'Standby equipment', 'Unit impact rules', 'Work-order operations', 'Unit state']);
     expect(screen.queryByText(/don't have permission/)).toBeNull();
   });
 

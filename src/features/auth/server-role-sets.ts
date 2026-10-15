@@ -42,6 +42,10 @@ export const SOURCE_AUTHORITY_APPROVERS = ['production_accountant'] as const;
 /** v2/administration/administration-roles.ts (SME R1 / R6: who records delegations of approval roles) */
 export const DELEGATION_WRITERS = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'manager_approver', 'production_accountant', 'finance_approver', 'quality_approver', 'metrology_approver'] as const;
 
+/** v2/plant-model/unit-impact-roles.ts (plan 1.10: unit impact rules, maker-checker) */
+export const UNIT_IMPACT_RULE_WRITERS = ['master_data_admin', 'manager_approver', 'reliability_engineer'] as const;
+export const UNIT_IMPACT_RULE_APPROVERS = ['manager_approver'] as const;
+
 /** v2/code-libraries/code-library-v2.controller.ts */
 export const CODE_WRITERS = ['master_data_admin', 'manager_approver'] as const;
 

@@ -33,6 +33,8 @@ const PINS: ReadonlyArray<[mirror: readonly string[], file: string, name: string
   [Mirror.SOURCE_AUTHORITY_WRITERS, 'v2/source-authority/source-authority-roles.ts', 'SOURCE_AUTHORITY_WRITERS'],
   [Mirror.SOURCE_AUTHORITY_APPROVERS, 'v2/source-authority/source-authority-roles.ts', 'SOURCE_AUTHORITY_APPROVERS'],
   [Mirror.DELEGATION_WRITERS, 'v2/administration/administration-roles.ts', 'DELEGATION_WRITERS'],
+  [Mirror.UNIT_IMPACT_RULE_WRITERS, 'v2/plant-model/unit-impact-roles.ts', 'UNIT_IMPACT_RULE_WRITERS'],
+  [Mirror.UNIT_IMPACT_RULE_APPROVERS, 'v2/plant-model/unit-impact-roles.ts', 'UNIT_IMPACT_RULE_APPROVERS'],
   [Mirror.CODE_WRITERS, 'v2/code-libraries/code-library-v2.controller.ts', 'CODE_WRITERS'],
   [Mirror.RULE_AUTHORS, 'v2/rules/rules-v2.controller.ts', 'RULE_AUTHORS'],
   [Mirror.RULE_APPROVERS, 'v2/rules/rules-v2.controller.ts', 'RULE_APPROVERS'],

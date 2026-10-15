@@ -6,6 +6,8 @@ export interface EventClassificationView {
   impactMode: string;
   /** decimal string */
   impactFraction: string | null;
+  /** plan 1.10: `stated` (a person's value, the override), `default`, `unit_rule` or `standby_takeover`; absent on older servers */
+  impactBasis?: string;
 }
 
 export interface EventStatesView {

@@ -30,6 +30,7 @@ const FIELD_LABEL: Readonly<Record<keyof EventFormValues, string>> = {
   description: 'Description',
   impactMode: 'Impact on production',
   impactPercent: 'Output lost (%)',
+  impactBasis: 'Impact set by',
   originUnitId: 'Caused by unit',
   originAssetId: 'Caused by asset',
   plannedEndLocal: 'Approved planned end',

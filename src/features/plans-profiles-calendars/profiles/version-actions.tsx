@@ -30,6 +30,7 @@ const NOUN: Record<VersionResource, string> = {
   'transition-standards': 'transition standard',
   'unit-streams': 'stream version',
   'flow-routes': 'flow route',
+  'unit-impact-rules': 'unit impact rule',
 };
 
 interface RetireButtonProps {

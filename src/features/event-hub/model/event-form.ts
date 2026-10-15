@@ -26,6 +26,8 @@ export interface EventFormValues extends FailureValues, QualityValues {
   impactMode: string;
   /** share of output lost while `fractional`, in percent */
   impactPercent: string;
+  /** plan 1.10, read only: where the stored impact comes from (a unit impact rule, a standby takeover) */
+  impactBasis: string;
   /** SME D3: unit / asset whose failure caused the stop ('' = this unit) */
   originUnitId: string;
   originAssetId: string;
@@ -47,6 +49,7 @@ export const EMPTY_FORM: EventFormValues = {
   description: '',
   impactMode: '',
   impactPercent: '',
+  impactBasis: '',
   originUnitId: '',
   originAssetId: '',
   plannedEndLocal: '',
@@ -66,6 +69,7 @@ export function formValuesOf(event: ProductionEventView, timezone: string): Even
     description: event.description ?? '',
     impactMode: event.classification.impactMode ?? '',
     impactPercent: event.classification.impactFraction ? String(Number(event.classification.impactFraction) * 100) : '',
+    impactBasis: event.classification.impactBasis ?? '',
     originUnitId: event.originUnitId ?? '',
     originAssetId: event.originAssetId ?? '',
     plannedEndLocal: utcToPlantLocal(event.plannedEndTime, timezone),
