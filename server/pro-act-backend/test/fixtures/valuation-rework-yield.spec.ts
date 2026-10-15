@@ -1,5 +1,6 @@
 import { Dec, formatDec } from '../../src/domain/actuals/decimal';
 import { ValuationBasis } from '../../src/domain/profiles/profile.types';
+import { componentAmounts } from '../../src/domain/valuation/component-amounts';
 import { valueLine } from '../../src/domain/valuation/value-line';
 import {
   loadLineValuation,
@@ -336,5 +337,65 @@ describe('SME V2 yield loss on rework (engine 2.8.0)', () => {
     expect(view?.components.map((c) => c.component)).toContain(
       'yield_loss_salvage',
     );
+  });
+});
+
+describe('VA-04 stored component amounts (the parts add up to the line)', () => {
+  it('per reporting currency: $600 + $300 + $700 − $50 + $20 + $3,000 = $4,570; IRR at 600,000 IRR/USD', () => {
+    const ctx = context({
+      policy: { ...context().policy, currencies: ['IRR', 'USD'] },
+      fx: [
+        {
+          id: 'fx-600',
+          version: 1,
+          fromCurrency: 'USD',
+          toCurrency: 'IRR',
+          rate: '600000',
+          from: '2027-03-01T00:00:00Z',
+          to: null,
+          provisional: true,
+        },
+      ],
+    });
+    const view = economic(ctx);
+    const usdParts = componentAmounts(view, 'USD', ctx);
+    expect(usdParts?.map((p) => [p.component, p.amount, p.quantity])).toEqual([
+      ['rework_cost', '600', '10'],
+      ['yield_loss_contribution', '300', '1'],
+      ['yield_loss_variable_cost', '700', '1'],
+      ['yield_loss_salvage', '-50', '1'],
+      ['yield_loss_disposal', '20', '1'],
+      ['displaced_contribution', '3000', '10'],
+    ]);
+    const total = (usdParts ?? []).reduce(
+      (s, p) => s.plus(p.amount ?? 0),
+      new Dec(0),
+    );
+    const line = view.amounts.find((a) => a.currency === 'USD');
+    expect(str(total)).toBe(str(line?.amount ?? null));
+    expect(str(total)).toBe('4570');
+    const irr = componentAmounts(view, 'IRR', ctx);
+    expect(irr?.[0]).toEqual({
+      component: 'rework_cost',
+      amount: '360000000',
+      quantity: '10',
+      provisional: true,
+    });
+  });
+
+  it('no FX rate → null amounts; other views and unvalued lines have no parts', () => {
+    const ctx = context({
+      policy: { ...context().policy, currencies: ['IRR', 'USD'] },
+    });
+    const view = economic(ctx);
+    expect(
+      componentAmounts(view, 'IRR', ctx)?.every((p) => p.amount === null),
+    ).toBe(true);
+    const margin = valueLine(REWORK, ctx).views.find(
+      (v) => v.view === 'contribution_margin',
+    );
+    expect(margin && componentAmounts(margin, 'USD', ctx)).toBeNull();
+    const unvalued = economic(context({ demand: [] }));
+    expect(componentAmounts(unvalued, 'USD', ctx)).toBeNull();
   });
 });

@@ -168,6 +168,11 @@ export function lossValueQuery(scope: AnalyticsScope): QueryOf<'/api/v2/reports/
   return { ...scopeBase(scope), groupBy: 'unit', metric: 'margin', ledger: scope.ledger };
 }
 
+/** VA-04: the economic view of the scope by component (server breakdown; nothing summed in the browser). */
+export function lossValueComponentsQuery(scope: AnalyticsScope): QueryOf<'/api/v2/reports/loss-value', 'get'> & ReportQueryBase {
+  return { ...scopeBase(scope), groupBy: 'component', metric: 'economic_impact', ledger: scope.ledger };
+}
+
 /** Repeat causes: stop occurrences per reason or asset, with the number of periods each recurs in. */
 export function repeatQuery(scope: AnalyticsScope, groupBy: 'reason' | 'asset'): DowntimeReportQuery & ReportQueryBase {
   return { ...scopeBase(scope), groupBy, metric: 'frequency' };

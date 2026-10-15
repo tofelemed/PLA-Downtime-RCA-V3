@@ -87,6 +87,32 @@ export interface LossValueQuery {
   approvedOnly: boolean;
 }
 
+/**
+ * VA-04: the economic view of a window broken down by component (`groupBy=component`), fetched only when
+ * asked (`query` null = idle); same window, ledger and approval rule as the loss-value tiles.
+ */
+export function useLossValueBreakdown(query: LossValueQuery | null) {
+  const tenantId = useV2TenantId();
+  return useQuery<AnalyticsResponse<LossValueReportView>>({
+    queryKey: v2Keys.list(tenantId ?? '-', 'reports', {
+      scope: { unitIds: query?.unitIds },
+      window: { from: query?.from, to: query?.to },
+      filters: { kind: 'loss-value', groupBy: 'component', ledger: query?.ledger },
+      revisionSelector: query?.approvedOnly ? 'approved' : 'shown',
+    }),
+    enabled: Boolean(tenantId && query),
+    staleTime: STALE_TIME.reports,
+    refetchOnWindowFocus: false,
+    queryFn: async ({ signal }) =>
+      (await v2Request<AnalyticsResponse<LossValueReportView>>({
+        method: 'GET',
+        path: '/reports/loss-value',
+        query: { ...stabilizeWindowParams(query as LossValueQuery), groupBy: 'component', metric: 'economic_impact' } as unknown as QueryParams,
+        signal,
+      })).data,
+  });
+}
+
 /** Loss value of a window (2.6 report): per kind and reporting currency, with valuation status and reasons. */
 export function useLossValue(query: LossValueQuery | null) {
   const tenantId = useV2TenantId();

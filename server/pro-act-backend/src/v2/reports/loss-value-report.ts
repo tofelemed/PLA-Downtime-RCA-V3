@@ -5,7 +5,9 @@ import {
   TotalsView,
   VIEW_LABELS,
 } from '../../domain/valuation/valuation.types';
+import { invalid } from '../../profiles/profile-errors';
 import { AnalyticsResponse } from '../common/response';
+import { ComponentGroupView, componentGroups } from './loss-value-components';
 import { reportEnvelope } from './kpi-reports-v2.view';
 import {
   defaultLossValueMetric,
@@ -53,6 +55,8 @@ export interface LossValueReportView {
   basis: string;
   groups: LossValueGroupView[];
   total: LossValueGroupView;
+  /** VA-04, `groupBy=component` only: the economic view by component (else null; `groups` is then empty) */
+  components: ComponentGroupView[] | null;
   calculationRunIds: string[];
 }
 
@@ -72,7 +76,7 @@ interface CellRow {
   reasons: string[][] | null;
 }
 
-const GROUPS: Readonly<Record<LossValueGroup, string>> = {
+const GROUPS: Readonly<Record<Exclude<LossValueGroup, 'component'>, string>> = {
   kind: `t."kind"::text`,
   unit: `s."unit_id"::text`,
   day: `s."local_date"::text`,
@@ -212,17 +216,29 @@ export async function lossValueReport(
 ): Promise<AnalyticsResponse<LossValueReportView>> {
   const request = await requestOf(manager, scope, query);
   const { view, ledger, groupBy } = request;
+  const byComponent = groupBy === 'component';
+  if (byComponent && view !== 'economic_impact') {
+    throw invalid(
+      'BREAKDOWN_NEEDS_ECONOMIC_VIEW',
+      'groupBy=component breaks down the economic_impact view only',
+    );
+  }
   const lossKinds = groupBy === 'kind' ? null : [...LOSS_VALUE_KINDS];
   const spec = { view, ledger, kinds: lossKinds };
-  const rows = await cells(manager, scope, {
-    ...spec,
-    groupSql: GROUPS[groupBy],
-  });
+  const rows = byComponent
+    ? []
+    : await cells(manager, scope, { ...spec, groupSql: GROUPS[groupBy] });
   const totalRows = await cells(manager, scope, {
     ...spec,
     kinds: [...LOSS_VALUE_KINDS],
     groupSql: `'total'`,
   });
+  const components = byComponent
+    ? await componentGroups(manager, scope, {
+        ledger,
+        kinds: [...LOSS_VALUE_KINDS],
+      })
+    : null;
   const stats = await periodStats(manager, scope);
   const total = groupView('total', totalRows);
   const data: LossValueReportView = {
@@ -234,6 +250,7 @@ export async function lossValueReport(
     basis: BASIS,
     groups: grouped(rows),
     total,
+    components,
     calculationRunIds: stats.runIds,
   };
   return reportEnvelope(data, {

@@ -2,6 +2,7 @@ import { EntityManager } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { LossLineDraft } from '../domain/accounting/accounting.types';
 import { Dec, formatDec } from '../domain/actuals/decimal';
+import { componentAmounts } from '../domain/valuation/component-amounts';
 import { valueLine } from '../domain/valuation/value-line';
 import {
   StoredLineValuation,
@@ -99,10 +100,14 @@ async function insertAll<T extends LossLineValuation | PeriodValuationTotal>(
 
 function lineRows(
   scope: RunScope,
-  lines: readonly LossLineDraft[],
-  ids: readonly string[],
-  valuations: readonly LineValuation[],
+  run: {
+    lines: readonly LossLineDraft[];
+    ids: readonly string[];
+    valuations: readonly LineValuation[];
+    context: ValuationContext;
+  },
 ): Array<QueryDeepPartialEntity<LossLineValuation>> {
+  const { lines, ids, valuations, context } = run;
   return valuations.flatMap((valuation, i) =>
     valuation.views.flatMap((view) =>
       view.amounts.map((amount) => ({
@@ -124,6 +129,8 @@ function lineRows(
         ],
         fxRateIds: amount.fxRateIds,
         valuationDate: valuation.valuationDate,
+        // VA-04: the economic parts in this currency (reports break the view down in SQL)
+        components: componentAmounts(view, amount.currency, context),
       })),
     ),
   );
@@ -171,12 +178,8 @@ export async function writeRunValuations(
     context: ValuationContext;
   },
 ): Promise<number> {
-  const { lines, ids, valuations, context } = run;
-  await insertAll(
-    manager,
-    LossLineValuation,
-    lineRows(scope, lines, ids, valuations),
-  );
+  const { lines, valuations, context } = run;
+  await insertAll(manager, LossLineValuation, lineRows(scope, run));
   const totals = valuationTotals(
     lines.map((line, i) => ({
       sliceId: line.sliceId,

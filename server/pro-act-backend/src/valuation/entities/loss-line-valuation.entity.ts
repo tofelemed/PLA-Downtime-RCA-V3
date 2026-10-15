@@ -7,6 +7,7 @@ import {
   VALUATION_VIEWS,
   ValuationView,
 } from '../../domain/valuation/valuation.types';
+import { StoredComponentAmount } from '../../domain/valuation/component-amounts';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
 
 export const LINE_VALUATION_STATUSES = ['valued', 'unvalued'] as const;
@@ -109,4 +110,8 @@ export class LossLineValuation extends TenantOwnedEntity {
 
   @Column({ name: 'valuation_date', type: 'timestamptz' })
   valuationDate: Date;
+
+  /** VA-04: economic view only — its components in this currency (null before valuation 2.8.0 / other views) */
+  @Column({ name: 'components', type: 'jsonb', nullable: true })
+  components: StoredComponentAmount[] | null;
 }

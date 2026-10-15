@@ -219,4 +219,52 @@ describe('valuation economic view (SME V1–V8)', () => {
       (margin.body as { data: { defaultView: boolean } }).data.defaultView,
     ).toBe(false);
   });
+  it('VA-04: groupBy=component breaks the economic view down; the parts add up to the total; other views refuse', async () => {
+    const window = 'from=2027-03-01T00:00:00Z&to=2027-03-02T00:00:00Z';
+    const response = await env
+      .get(
+        `reports/loss-value?${window}&ledger=capacity&unitIds=${env.world.unitA1}&groupBy=component`,
+      )
+      .expect(200);
+    const data = (
+      response.body as {
+        data: {
+          groups: unknown[];
+          total: {
+            currencies: Array<{ currency: string; amount: string | null }>;
+          };
+          components: Array<{
+            key: string;
+            currencies: Array<{
+              currency: string;
+              amount: string | null;
+              status: string;
+              lines: number;
+            }>;
+            quantities: Array<{ uom: string | null; quantity: string }>;
+          }>;
+        };
+      }
+    ).data;
+    expect(data.groups).toEqual([]);
+    const usd = (key: string) =>
+      data.components
+        .find((c) => c.key === key)
+        ?.currencies.find((c) => c.currency === 'USD');
+    // the stop of the world: 100 t never made on a sold-out product → lost contribution only
+    expect(usd('lost_contribution')).toMatchObject({
+      amount: '30000',
+      status: 'valued',
+    });
+    const parts = data.components
+      .flatMap((c) => c.currencies.filter((x) => x.currency === 'USD'))
+      .reduce((sum, c) => sum + Number(c.amount ?? 0), 0);
+    expect(parts).toBe(
+      Number(data.total.currencies.find((c) => c.currency === 'USD')?.amount),
+    );
+    const refused = await env
+      .get(`reports/loss-value?${window}&metric=margin&groupBy=component`)
+      .expect(422);
+    expect(codeOf(refused)).toBe('BREAKDOWN_NEEDS_ECONOMIC_VIEW');
+  });
 });
