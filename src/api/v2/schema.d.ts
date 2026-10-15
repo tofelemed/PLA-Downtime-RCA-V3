@@ -5826,6 +5826,223 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/stop-reconciliations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Duplicate-stop pairs of the caller’s units (newest first; keyset)
+         * @description A pair = one stop recorded twice (manual, PI / MQTT frame, state engine). `merged`: the evidence is superseded by the kept stop (best timing authority: state engine → source → import → manual) and filled its empty cause fields (`copied`); `suggested`: a person decides (same source, cause conflict, ambiguous); `rejected` / `undone` are never proposed again; `expired` no longer matches.
+         */
+        get: operations["StopReconciliationsV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/stop-reconciliations/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge a suggested duplicate
+         * @description Requires `Idempotency-Key`. The kept stop keeps its timing and its own causes; empty cause fields are filled from the evidence, which becomes superseded (revisions with the caller as actor). 409 INVALID_STATE when the pair is not suggested or a stop is no longer live; 404 outside the caller’s units.
+         */
+        post: operations["StopReconciliationsV2Controller_accept_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/stop-reconciliations/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a suggested duplicate (two different stops)
+         * @description Requires `Idempotency-Key`. The pair is never proposed again. 409 INVALID_STATE unless suggested / expired.
+         */
+        post: operations["StopReconciliationsV2Controller_reject_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/stop-reconciliations/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a duplicate merge
+         * @description Requires `Idempotency-Key`. The evidence is live again in its own occurrence, copied cause values still unchanged are cleared, the pair is never merged again automatically. 409 INVALID_STATE unless merged, or when the kept stop was split, merged or retracted since.
+         */
+        post: operations["StopReconciliationsV2Controller_undo_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/stop-incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Repeat-stop incidents of a unit overlapping the window (newest first; keyset)
+         * @description Stops of one asset and reason starting within the incident window after the previous one ended. Every stop stays its own event with its own duration (`stoppedSeconds` sums the stops, never the envelope); MTBF counts the incident once (KPI 2.7.8).
+         */
+        get: operations["StopIncidentsV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/stop-incidents/by-event/{eventId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The incident of an event’s stop occurrence (null = not a repeat stop)
+         * @description 404 for an event outside the caller’s scope.
+         */
+        get: operations["StopIncidentsV2Controller_forEvent_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/stop-incidents/new-failure-marks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark a stop as a new failure (function restored before it)
+         * @description Requires `Idempotency-Key`. SME D5: a verified repair before this stop; the grouping never joins it to the stop before it. Regroups the unit at once. 404 for an occurrence outside the caller’s scope.
+         */
+        post: operations["StopIncidentsV2Controller_mark_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/stop-incidents/new-failure-marks/{occurrenceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a "new failure" mark (the grouping may join the stop again) */
+        delete: operations["StopIncidentsV2Controller_clear_v2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/stop-event-policies/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stop-event settings in force now (unit override, else tenant-wide)
+         * @description Fields a version does not state are the pilot defaults: derive from state on, debounce 5 s, restart confirmation 10 s, duplicate tolerance 120 s, automatic merge on, incident window 120 s.
+         */
+        get: operations["StopEventPolicyV2Controller_current_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/stop-event-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record new stop-event settings as an approved oee_policy version, effective now
+         * @description Requires `Idempotency-Key`. Stated fields replace those in force; other oee_policy fields are kept. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). Already derived / merged / grouped stops keep their state; the new values apply from now on.
+         */
+        post: operations["StopEventPolicyV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/derived-stops/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stops the state engine would derive for a unit and window (nothing is written)
+         * @description Plan 1.10 rule preview from the unit’s state mapping and the settings in force at `to`. Unknown time is never a stop. Window ≤ 7 days (422 INVALID_RANGE).
+         */
+        get: operations["StopEventPolicyV2Controller_preview_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/month-closes/current": {
         parameters: {
             query?: never;
@@ -8964,6 +9181,38 @@ export interface components {
             isHeartbeat: boolean;
             /** @description Start of this version (default now) */
             effectiveFrom?: string;
+            notes?: string;
+        };
+        StopDecisionDto: {
+            reason: string;
+        };
+        NewFailureMarkDto: {
+            /**
+             * Format: uuid
+             * @description Stop occurrence that is a new failure (function restored before it)
+             */
+            occurrenceId: string;
+            /** @description e.g. the verified repair before this stop */
+            reason: string;
+        };
+        StopEventPolicyCreateDto: {
+            /**
+             * Format: uuid
+             * @description Unit override; absent = the tenant-wide version
+             */
+            unitId?: string;
+            /** @description Derive stop events from the unit state signal */
+            deriveFromState?: boolean;
+            /** @description DT02: shorter stop occurrences are chatter (pilot 5) */
+            debounceSeconds?: number;
+            /** @description DT02: shorter running between stops is not a restart (pilot 10) */
+            restartConfirmSeconds?: number;
+            /** @description DT-04: start / end difference of one stop recorded twice (pilot 120) */
+            duplicateToleranceSeconds?: number;
+            /** @description Merge unique cross-source duplicates automatically (false = suggest only) */
+            autoMergeDuplicates?: boolean;
+            /** @description SME D5: repeat stops of one asset and reason within this form one incident (pilot 120) */
+            incidentWindowSeconds?: number;
             notes?: string;
         };
         MonthCloseStepDto: {
@@ -17961,6 +18210,269 @@ export interface operations {
                 /** @description Window start, ISO 8601 (at most 31 days before `to`) */
                 from: string;
                 /** @description Window end (exclusive) */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopReconciliationsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Only pairs of this unit */
+                unitId?: string;
+                /** @description Only pairs with this event on either side */
+                eventId?: string;
+                /** @description Default: every state */
+                state?: "suggested" | "merged" | "rejected" | "undone" | "expired";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopReconciliationsV2Controller_accept_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopDecisionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopReconciliationsV2Controller_reject_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopDecisionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopReconciliationsV2Controller_undo_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopDecisionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopIncidentsV2Controller_list_v2: {
+        parameters: {
+            query: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                unitId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopIncidentsV2Controller_forEvent_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopIncidentsV2Controller_mark_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewFailureMarkDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopIncidentsV2Controller_clear_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                occurrenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopEventPolicyV2Controller_current_v2: {
+        parameters: {
+            query?: {
+                /** @description Unit override; absent = the tenant-wide version */
+                unitId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopEventPolicyV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopEventPolicyCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopEventPolicyV2Controller_preview_v2: {
+        parameters: {
+            query: {
+                unitId: string;
+                /** @description Window start, ISO 8601 (at most 7 days before `to`) */
+                from: string;
+                /** @description Window end (exclusive); a stop reaching it is reported open */
                 to: string;
             };
             header?: never;

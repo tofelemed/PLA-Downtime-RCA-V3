@@ -23,6 +23,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { RcaCaseModule } from './rca-case/rca-case.module';
 import { AuthTokensModule } from './auth/tokens/auth-tokens.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { StopEventsModule } from './stop-events/stop-events.module';
 
 registerPgTypeParsers();
 
@@ -73,6 +74,8 @@ registerPgTypeParsers();
     AuthTokensModule,
     // SLA escalation notifications, evaluated every 10 minutes (EXPERT_REVIEW Area 3)
     NotificationsModule,
+    // state-derived stop events, duplicate merges and repeat-stop incidents (plan 1.10, DT-04, SME D5)
+    StopEventsModule,
   ],
   providers: [WorkerHealthServer],
 })

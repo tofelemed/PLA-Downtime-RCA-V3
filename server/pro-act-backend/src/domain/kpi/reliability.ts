@@ -21,6 +21,8 @@ export interface FailureSpan {
   repairEnd: Date | null;
   /** SME D10: diagnosis + repair + test time minus waiting; absent = repairEnd − repairStart */
   activeRepairSeconds?: number | null;
+  /** SME D5: the repeat-stop incident the stop belongs to (counted once from its start); absent = none */
+  incident?: { id: string; start: Date } | null;
 }
 
 export interface ReliabilityInput {
@@ -72,12 +74,36 @@ function restoredIn(failures: readonly FailureSpan[], window: BoundedInterval) {
   );
 }
 
+/**
+ * SME D5 / S3: repeat stops of one incident count as one failure, at the incident's start (an incident
+ * that began in an earlier window was counted there); every stop keeps its own duration elsewhere.
+ */
+export function countedFailures(
+  failures: readonly FailureSpan[],
+): FailureSpan[] {
+  const byKey = new Map<string, FailureSpan>();
+  for (const failure of failures) {
+    const key = failure.incident
+      ? `i:${failure.incident.id}`
+      : `o:${failure.occurrenceId}`;
+    if (byKey.has(key)) continue;
+    byKey.set(
+      key,
+      failure.incident
+        ? { ...failure, start: failure.incident.start }
+        : failure,
+    );
+  }
+  return [...byKey.values()];
+}
+
 function mtbf(
   input: ReliabilityInput,
   failures: FailureSpan[],
   scope: KpiScope,
 ): KpiDraft {
-  const started = failures.filter(
+  const counted = countedFailures(failures);
+  const started = counted.filter(
     (f) => f.start >= input.window.start && f.start < input.window.end,
   );
   return ratioKpi(
@@ -85,7 +111,13 @@ function mtbf(
     {
       numerator: input.exposure,
       denominator: new Dec(started.length),
-      cohort: { exposureBasis: 'unit_run_time', failureDefinition: 'D13' },
+      cohort: {
+        exposureBasis: 'unit_run_time',
+        failureDefinition: 'D13',
+        ...(failures.length > counted.length
+          ? { repeatStopsInIncidents: failures.length - counted.length }
+          : {}),
+      },
     },
     'no_failures',
   );
@@ -166,7 +198,7 @@ function assetMtbf(
   return standbyMtbf(
     { window: input.window, asOf: input.asOf, scope },
     standby,
-    own,
+    countedFailures(own),
   );
 }
 

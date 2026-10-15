@@ -54,6 +54,11 @@ const FAILURES_SQL = `SELECT f."occurrence_id", f."asset_id", f."start_time", f.
  WHERE f."tenant_id" = $1 AND f."unit_id" = $2 AND f."occurrence_id" = ANY($3::uuid[])
  ORDER BY f."occurrence_id"`;
 
+/** SME D5: the repeat-stop incident of each failure occurrence (KPI 2.7.8 counts an incident once). */
+const INCIDENTS_SQL = `SELECT m."occurrence_id", i."id", i."start_time"
+  FROM "stop_incident_members" m JOIN "stop_incidents" i ON i."id" = m."incident_id"
+ WHERE m."tenant_id" = $1 AND m."occurrence_id" = ANY($2::uuid[])`;
+
 interface OccurrenceRow {
   occurrence_id: string;
   start_time: Date;
@@ -96,6 +101,7 @@ async function loadStopInputs(
     period.unitId,
     ids,
   ]);
+  const incidents = await incidentsOf(manager, period.tenantId, failures);
   return {
     occurrences: occurrences.map((o) => ({
       occurrenceId: o.occurrence_id,
@@ -113,9 +119,27 @@ async function loadStopInputs(
         source: f.source,
         repairStart: toDate(f.repair_start),
         repairEnd: toDate(f.repair_end),
+        incident: incidents.get(f.occurrence_id) ?? null,
       })),
     ),
   };
+}
+
+async function incidentsOf(
+  manager: EntityManager,
+  tenantId: string,
+  failures: readonly FailureRow[],
+): Promise<Map<string, { id: string; start: Date }>> {
+  const ids = [...new Set(failures.map((f) => f.occurrence_id))];
+  if (ids.length === 0) return new Map();
+  const rows: Array<{ occurrence_id: string; id: string; start_time: Date }> =
+    await manager.query(INCIDENTS_SQL, [tenantId, ids]);
+  return new Map(
+    rows.map((r) => [
+      r.occurrence_id,
+      { id: r.id, start: new Date(r.start_time) },
+    ]),
+  );
 }
 
 /** Hash material of the KPI inputs (they reach beyond the fingerprinted window events). */
@@ -136,6 +160,8 @@ export function kpiHashMaterial(inputs: KpiInputs): unknown {
       time(f.repairStart),
       time(f.repairEnd),
       f.activeRepairSeconds ?? null,
+      f.incident?.id ?? null,
+      time(f.incident?.start ?? null),
     ]),
     state:
       inputs.stateTimeline?.map((s) => [

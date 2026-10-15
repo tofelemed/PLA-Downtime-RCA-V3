@@ -68,6 +68,19 @@
           "items": { "type": "string" },
           "description": "SME D6: reason codes of process trips. A stop coded with one, or carrying a functional failure (failure severity critical / degraded), is an availability event whatever its length, never a micro-stop. Absent = none."
         },
+        "stopEvents": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Plan 1.10 / DT-04 / SME D5 (2026-10-15): stop events from the unit state engine and duplicate / repeat handling. Every field optional; absent = the pilot default.",
+          "properties": {
+            "deriveFromState": { "type": "boolean", "default": true, "description": "Derive downtime events from the unit's mapped state signal (internal stop, planned stop, starved, blocked, standby). Unknown time is never a stop." },
+            "debounceSeconds": { "type": "integer", "minimum": 0, "maximum": 86400, "default": 5, "description": "DT02: a stop occurrence shorter than this is chatter (no event)." },
+            "restartConfirmSeconds": { "type": "integer", "minimum": 0, "maximum": 86400, "default": 10, "description": "DT02: running shorter than this between two stop samples is not a restart." },
+            "duplicateToleranceSeconds": { "type": "integer", "minimum": 0, "maximum": 86400, "default": 120, "description": "DT-04: two overlapping stops of one unit / asset whose starts (and ends, when both closed) differ by at most this are one stop recorded twice." },
+            "autoMergeDuplicates": { "type": "boolean", "default": true, "description": "Merge a unique cross-source duplicate without cause conflict automatically (keep the timing authority, the other as evidence, reversible); false = suggest only." },
+            "incidentWindowSeconds": { "type": "integer", "minimum": 0, "maximum": 86400, "default": 120, "description": "SME D5: stops of one asset and reason starting within this after the previous one ended form one incident (counted once in MTBF; durations per stop)." }
+          }
+        },
         "idealTimeWeighting": {
           "type": "boolean",
           "default": true,

@@ -15,7 +15,7 @@ import { RcaLinksService } from '../rca-case/rca-links.service';
 import { RcaRecommendationsService } from '../rca-case/rca-recommendations.service';
 import { Global, INestApplication, Module } from '@nestjs/common';
 import { Clock, SystemClock } from '../common/clock/clock';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
@@ -141,6 +141,10 @@ import { RulesModule } from '../rules/rules.module';
 import { RulesService } from '../rules/rules.service';
 import { withMasterDataStubs } from './master-data/master-data-v2.stubs';
 import { withReliabilityStubs } from './reliability/reliability-v2.stubs';
+import { StopEventsModule } from '../stop-events/stop-events.module';
+import { StopEventDecisionsService } from '../stop-events/stop-event-decisions.service';
+import { StopEventSettingsService } from '../stop-events/stop-event-settings.service';
+import { STOP_EVENTS_V2_SERVICES } from './stop-events/stop-events-v2.module';
 import { withCloseStubs } from './close/close-v2.stubs';
 import { SourceStatusMappingsService } from '../periods/source-status-mappings.service';
 import { RestatementService } from '../reconciliation/restatement.service';
@@ -451,15 +455,37 @@ const KNOWLEDGE_SERVICES = [
 })
 class RcaKnowledgeModuleStub {}
 
+/** Stands in for the plan 1.10 stop-events module (state engine, duplicate merges, incidents). */
+const STOP_EVENT_SERVICES = [
+  StopEventSettingsService,
+  StopEventDecisionsService,
+];
+@Module({
+  providers: STOP_EVENT_SERVICES.map((provide) => ({ provide, useValue: {} })),
+  exports: STOP_EVENT_SERVICES,
+})
+class StopEventsModuleStub {}
+
 /** Committed contract of /api/v2 (plan 0.4 step 8b). Regenerate: `npm run openapi:v2:update`. */
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
+function withStopEventsV2Stubs(
+  builder: TestingModuleBuilder,
+): TestingModuleBuilder {
+  return STOP_EVENTS_V2_SERVICES.reduce<TestingModuleBuilder>(
+    (next, service) => next.overrideProvider(service).useValue({}),
+    builder,
+  );
+}
+
 async function generate(): Promise<string> {
-  const moduleRef = await withCloseStubs(
-    withReliabilityStubs(
-      withAdministrationStubs(
-        withMasterDataStubs(
-          Test.createTestingModule({ imports: [V2Module, ClockModuleStub] }),
+  const moduleRef = await withStopEventsV2Stubs(
+    withCloseStubs(
+      withReliabilityStubs(
+        withAdministrationStubs(
+          withMasterDataStubs(
+            Test.createTestingModule({ imports: [V2Module, ClockModuleStub] }),
+          ),
         ),
       ),
     ),
@@ -574,6 +600,8 @@ async function generate(): Promise<string> {
     .useModule(RcaCaseModuleStub)
     .overrideModule(RcaKnowledgeModule)
     .useModule(RcaKnowledgeModuleStub)
+    .overrideModule(StopEventsModule)
+    .useModule(StopEventsModuleStub)
     .compile();
   const app: INestApplication = configureHttpApp(
     moduleRef.createNestApplication(),

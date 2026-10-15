@@ -30,7 +30,7 @@ import { StateSegment } from '../reliability/unit-state';
 import { StandbyExposure } from './standby-mtbf';
 
 /** Bumped whenever a KPI rule changes (part of the calculation run's engine version and input hash). */
-export const KPI_ENGINE_VERSION = '2.7.7';
+export const KPI_ENGINE_VERSION = '2.7.8';
 
 export interface PeriodKpiInput {
   /** the accounting input of the same run (window, schedule, events, slices, policy, asOf) */

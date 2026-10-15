@@ -19659,6 +19659,553 @@
         ]
       }
     },
+    "/api/v2/stop-reconciliations": {
+      "get": {
+        "description": "A pair = one stop recorded twice (manual, PI / MQTT frame, state engine). `merged`: the evidence is superseded by the kept stop (best timing authority: state engine → source → import → manual) and filled its empty cause fields (`copied`); `suggested`: a person decides (same source, cause conflict, ambiguous); `rejected` / `undone` are never proposed again; `expired` no longer matches.",
+        "operationId": "StopReconciliationsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "description": "Only pairs of this unit",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": false,
+            "in": "query",
+            "description": "Only pairs with this event on either side",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "Default: every state",
+            "schema": {
+              "enum": [
+                "suggested",
+                "merged",
+                "rejected",
+                "undone",
+                "expired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Duplicate-stop pairs of the caller’s units (newest first; keyset)",
+        "tags": [
+          "v2 · Stop events"
+        ]
+      }
+    },
+    "/api/v2/stop-reconciliations/{id}/accept": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The kept stop keeps its timing and its own causes; empty cause fields are filled from the evidence, which becomes superseded (revisions with the caller as actor). 409 INVALID_STATE when the pair is not suggested or a stop is no longer live; 404 outside the caller’s units.",
+        "operationId": "StopReconciliationsV2Controller_accept_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StopDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Merge a suggested duplicate",
+        "tags": [
+          "v2 · Stop events"
+        ]
+      }
+    },
+    "/api/v2/stop-reconciliations/{id}/reject": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The pair is never proposed again. 409 INVALID_STATE unless suggested / expired.",
+        "operationId": "StopReconciliationsV2Controller_reject_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StopDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reject a suggested duplicate (two different stops)",
+        "tags": [
+          "v2 · Stop events"
+        ]
+      }
+    },
+    "/api/v2/stop-reconciliations/{id}/undo": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The evidence is live again in its own occurrence, copied cause values still unchanged are cleared, the pair is never merged again automatically. 409 INVALID_STATE unless merged, or when the kept stop was split, merged or retracted since.",
+        "operationId": "StopReconciliationsV2Controller_undo_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StopDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Undo a duplicate merge",
+        "tags": [
+          "v2 · Stop events"
+        ]
+      }
+    },
+    "/api/v2/stop-incidents": {
+      "get": {
+        "description": "Stops of one asset and reason starting within the incident window after the previous one ended. Every stop stays its own event with its own duration (`stoppedSeconds` sums the stops, never the envelope); MTBF counts the incident once (KPI 2.7.8).",
+        "operationId": "StopIncidentsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Repeat-stop incidents of a unit overlapping the window (newest first; keyset)",
+        "tags": [
+          "v2 · Stop events"
+        ]
+      }
+    },
+    "/api/v2/stop-incidents/by-event/{eventId}": {
+      "get": {
+        "description": "404 for an event outside the caller’s scope.",
+        "operationId": "StopIncidentsV2Controller_forEvent_v2",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The incident of an event’s stop occurrence (null = not a repeat stop)",
+        "tags": [
+          "v2 · Stop events"
+        ]
+      }
+    },
+    "/api/v2/stop-incidents/new-failure-marks": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. SME D5: a verified repair before this stop; the grouping never joins it to the stop before it. Regroups the unit at once. 404 for an occurrence outside the caller’s scope.",
+        "operationId": "StopIncidentsV2Controller_mark_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewFailureMarkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark a stop as a new failure (function restored before it)",
+        "tags": [
+          "v2 · Stop events"
+        ]
+      }
+    },
+    "/api/v2/stop-incidents/new-failure-marks/{occurrenceId}": {
+      "delete": {
+        "operationId": "StopIncidentsV2Controller_clear_v2",
+        "parameters": [
+          {
+            "name": "occurrenceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a \"new failure\" mark (the grouping may join the stop again)",
+        "tags": [
+          "v2 · Stop events"
+        ]
+      }
+    },
+    "/api/v2/stop-event-policies/current": {
+      "get": {
+        "description": "Fields a version does not state are the pilot defaults: derive from state on, debounce 5 s, restart confirmation 10 s, duplicate tolerance 120 s, automatic merge on, incident window 120 s.",
+        "operationId": "StopEventPolicyV2Controller_current_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "description": "Unit override; absent = the tenant-wide version",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stop-event settings in force now (unit override, else tenant-wide)",
+        "tags": [
+          "v2 · Stop events"
+        ]
+      }
+    },
+    "/api/v2/stop-event-policies": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Stated fields replace those in force; other oee_policy fields are kept. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). Already derived / merged / grouped stops keep their state; the new values apply from now on.",
+        "operationId": "StopEventPolicyV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StopEventPolicyCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record new stop-event settings as an approved oee_policy version, effective now",
+        "tags": [
+          "v2 · Stop events"
+        ]
+      }
+    },
+    "/api/v2/derived-stops/preview": {
+      "get": {
+        "description": "Plan 1.10 rule preview from the unit’s state mapping and the settings in force at `to`. Unknown time is never a stop. Window ≤ 7 days (422 INVALID_RANGE).",
+        "operationId": "StopEventPolicyV2Controller_preview_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Window start, ISO 8601 (at most 7 days before `to`)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Window end (exclusive); a stop reaching it is reported open",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stops the state engine would derive for a unit and window (nothing is written)",
+        "tags": [
+          "v2 · Stop events"
+        ]
+      }
+    },
     "/api/v2/month-closes/current": {
       "get": {
         "operationId": "MonthCloseV2Controller_current_v2",
@@ -27877,6 +28424,85 @@
           "rules",
           "expectedIntervalSeconds"
         ]
+      },
+      "StopDecisionDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "NewFailureMarkDto": {
+        "type": "object",
+        "properties": {
+          "occurrenceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Stop occurrence that is a new failure (function restored before it)"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "e.g. the verified repair before this stop"
+          }
+        },
+        "required": [
+          "occurrenceId",
+          "reason"
+        ]
+      },
+      "StopEventPolicyCreateDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unit override; absent = the tenant-wide version"
+          },
+          "deriveFromState": {
+            "type": "boolean",
+            "description": "Derive stop events from the unit state signal"
+          },
+          "debounceSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400,
+            "description": "DT02: shorter stop occurrences are chatter (pilot 5)"
+          },
+          "restartConfirmSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400,
+            "description": "DT02: shorter running between stops is not a restart (pilot 10)"
+          },
+          "duplicateToleranceSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400,
+            "description": "DT-04: start / end difference of one stop recorded twice (pilot 120)"
+          },
+          "autoMergeDuplicates": {
+            "type": "boolean",
+            "description": "Merge unique cross-source duplicates automatically (false = suggest only)"
+          },
+          "incidentWindowSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400,
+            "description": "SME D5: repeat stops of one asset and reason within this form one incident (pilot 120)"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        }
       },
       "MonthCloseStepDto": {
         "type": "object",
