@@ -374,6 +374,8 @@ function editableColumns(
     cost: dto.cost,
     impactFraction: dto.impactFraction,
     plannedEndTime: plannedEndColumn(dto.plannedEndTime),
+    streamCode: dto.streamCode,
+    lotCode: dto.lotCode,
     ...failureColumns(dto),
   };
   return {

@@ -4,6 +4,10 @@ import {
   selectAuthority,
 } from '../domain/actuals/period/authority';
 import { externalLineCandidate } from '../domain/actuals/period/external-line-candidate';
+import {
+  AttributedOutput,
+  attributeOutputs,
+} from '../domain/actuals/period/output-attribution';
 import { distributeOutputEvents } from '../domain/actuals/period/output-distribution';
 import {
   ActualsSource,
@@ -73,14 +77,7 @@ function candidatesOf(
 ): CandidateSet {
   const candidates: CandidateSet['candidates'] = {};
   const ambiguous: ActualsSource[] = [];
-  candidates.pi_output_ef = context.shared
-    ? unattributable('pi_output_ef', inputs.events.length > 0)
-    : distributeOutputEvents(
-        inputs.events,
-        window,
-        context.policies.coverageGate.allowProportionalEstimate,
-        inputs.stops,
-      );
+  candidates.pi_output_ef = outputCandidate(slice, window, inputs, context);
   const bySource = new Map<ActualsSource, SignalInput[]>();
   for (const input of inputs.signals) {
     const product = input.signal.productId;
@@ -181,6 +178,36 @@ function signalCandidateOf(
       detail: { versions: input.versions, used: input.signal.version },
     });
   }
+  return candidate;
+}
+
+/**
+ * Production-output candidate of a slice. SME E6: outputs attributed to a product (lot or stream) go
+ * to that product's slices only, so they stay usable when products share the window; unit-level
+ * outputs are attributable only to a slice that has the window to itself (§3.1, unchanged).
+ */
+function outputCandidate(
+  slice: PeriodProductSlice,
+  window: Window,
+  inputs: PeriodInputs,
+  context: { policies: ResolvedPolicies; shared: boolean },
+): SourceCandidate {
+  const attributed = attributeOutputs(inputs.events, inputs.streamRuns ?? []);
+  const own = attributed.filter((o) => o.productId === slice.productId);
+  const unit = attributed.filter((o) => o.productId === null);
+  const allow = context.policies.coverageGate.allowProportionalEstimate;
+  const distribute = (events: readonly AttributedOutput[]) =>
+    distributeOutputEvents(
+      events.map((o) => o.event),
+      window,
+      allow,
+      inputs.stops,
+    );
+  if (!context.shared) return distribute([...own, ...unit]);
+  if (own.length === 0) return unattributable('pi_output_ef', unit.length > 0);
+  const candidate = distribute(own);
+  if (unit.length > 0)
+    candidate.findings.push(unattributable('pi_output_ef', true).findings[0]);
   return candidate;
 }
 

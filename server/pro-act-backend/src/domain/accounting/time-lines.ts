@@ -32,13 +32,18 @@ interface RawEntry {
   label: string | null;
 }
 
-/** Quantity of a segment at the ledger's rate; null when no rate of that kind is in force. */
+/**
+ * Quantity of a segment at the ledger's rate, times the stream's capacity share when the unit has streams
+ * (SME E6); null when no rate of that kind is in force.
+ */
 export function segmentCapacity(
   segment: Segment,
   basis: RateBasis,
 ): Dec | null {
   const rate = basis === 'sustained' ? segment.sustained : segment.planning;
-  return rate ? ratePerSecond(rate).mul(segment.seconds) : null;
+  if (!rate) return null;
+  const capacity = ratePerSecond(rate).mul(segment.seconds);
+  return segment.capacityShare ? capacity.mul(segment.capacityShare) : capacity;
 }
 
 export function rateOf(segment: Segment, basis: RateBasis): RateVersion | null {

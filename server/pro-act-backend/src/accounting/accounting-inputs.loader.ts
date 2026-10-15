@@ -6,8 +6,10 @@ import {
   ScheduleSpan,
   SliceActualsInput,
   SliceInput,
+  StreamRun,
   TransitionStandard,
 } from '../domain/accounting/accounting.types';
+import { loadStreamRuns } from '../plant-model/stream-inputs.loader';
 import { sliceTarget } from '../domain/accounting/slice-target';
 import { RateTimebase } from '../domain/actuals/actuals.types';
 import { QualityClasses } from '../domain/actuals/period/quality-classes';
@@ -31,6 +33,8 @@ export interface AccountingInputs {
   asOf: Date;
   /** approved transition standards of the unit (LA-08) */
   transitionStandards: TransitionStandard[];
+  /** SME E6: the unit's stream runs over the period (empty = no streams) */
+  streamRuns: StreamRun[];
   fingerprint: InputFingerprint;
   /** occurrence extents and failure candidates of the KPI engine (plan 2.7) */
   kpi: KpiInputs;
@@ -100,6 +104,7 @@ interface FingerprintSource {
   instances: readonly InstanceRow[];
   rateIds: string[];
   standardIds: string[];
+  streamRunIds: string[];
   actualsRunId: string | null;
   /** set while the period is running and an open event is measured to it */
   asOf: Date | null;
@@ -133,6 +138,9 @@ function fingerprintOf(source: FingerprintSource): InputFingerprint {
       ].flatMap((v) => (v ? [v] : [])),
     ),
     transitionStandardIds: source.standardIds,
+    ...(source.streamRunIds.length > 0
+      ? { streamRunIds: source.streamRunIds }
+      : {}),
     asOf: source.asOf ? source.asOf.toISOString() : null,
   };
 }
@@ -218,12 +226,19 @@ export class AccountingInputsLoader {
     const openMeasured = running && events.some((e) => e.end_time === null);
     const standards = await loadTransitionStandards(manager, period, events);
     const modes = await loadContextModes(manager, slices, events);
+    const streams = await loadStreamRuns(manager, {
+      tenantId: period.tenantId,
+      unitId: period.unitId,
+      from: period.utcStart,
+      to: period.utcEnd,
+    });
     return {
       schedule: instances.map(toSpan),
       events: events.map((row) => toEvent(row, modes)),
       slices: sliceInputs.inputs,
       asOf,
       transitionStandards: standards,
+      streamRuns: streams.runs,
       kpi: await loadKpiInputs(manager, period),
       fingerprint: fingerprintOf({
         period,
@@ -232,6 +247,7 @@ export class AccountingInputsLoader {
         instances,
         rateIds: sliceInputs.rateIds,
         standardIds: sorted(standards.map((s) => s.id)),
+        streamRunIds: streams.ids,
         actualsRunId,
         asOf: openMeasured ? asOf : null,
       }),

@@ -14,6 +14,8 @@ export interface TransitionScope {
   window: BoundedInterval;
   standards: readonly TransitionStandard[];
   asOf: Date;
+  /** SME E6: share of a transition's declared off-grade that belongs to the slice's product; absent = 1 */
+  weight?: (event: LossEvent) => Dec;
 }
 
 interface Running {
@@ -49,7 +51,8 @@ function runningCapacity(
         continue;
       }
       known.quantity = known.quantity.plus(part);
-      known.end = segment.end;
+      // parallel stream segments (SME E6) may arrive out of end order
+      if (segment.end > known.end) known.end = segment.end;
       known.rateIds.add(rate.id);
     }
   }
@@ -98,6 +101,11 @@ function rateClaim(
   };
 }
 
+function weighted(claim: Claim | null, scope: TransitionScope): Claim | null {
+  if (!claim || !scope.weight) return claim;
+  return { ...claim, quantity: claim.quantity.mul(scope.weight(claim.event)) };
+}
+
 /**
  * Claims of grade transitions in a slice (LA-08): a transition loses the capacity of its running time
  * at the ledger's rate. The off-grade it declares (event quantity, prorated into the slice) is its
@@ -115,7 +123,7 @@ export function transitionClaims(
   for (const event of scope.events) {
     if (event.physicalType !== 'grade_transition') continue;
     const split = transitionSplit(event, scope.standards, scope.asOf);
-    const offGrade = quantityInside(event, scope.window);
+    const offGrade = weighted(quantityInside(event, scope.window), scope);
     if (offGrade && offGrade.quantity.gt(ZERO))
       quality.push({ ...offGrade, transition: split });
     const own = running.get(event.eventId);

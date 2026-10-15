@@ -45,6 +45,18 @@ export function hashOf(
       s.from.getTime(),
       s.to?.getTime() ?? null,
     ]),
+    // SME E6: a run's end or a stream's share can change under the same ids
+    ...(inputs.streamRuns.length > 0
+      ? {
+          streams: inputs.streamRuns.map((r) => [
+            r.streamId,
+            r.productId,
+            r.share,
+            r.start.getTime(),
+            r.end?.getTime() ?? null,
+          ]),
+        }
+      : {}),
     slices: inputs.slices.map((s) => [
       s.sliceId,
       s.window.start.getTime(),

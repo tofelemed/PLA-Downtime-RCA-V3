@@ -52,6 +52,9 @@ export interface ProductionEventV2View {
   /** SME E1: catalyst family / operating mode of a grade transition (null = not recorded) */
   catalystFamily: string | null;
   operatingMode: string | null;
+  /** SME E6: stream the event happened on (null = whole unit) and lot an output belongs to */
+  streamCode: string | null;
+  lotCode: string | null;
   /** SME Q10: the stop this ramp-up / startup-quality event recovers from */
   recoveryOfEventId: string | null;
   /** SME E3: disposition of a quality_loss event's tonnes (downgrade / scrap / rework); null = none */
@@ -130,6 +133,8 @@ export function toProductionEventV2View(
     toProductId: event.toProductId ?? null,
     catalystFamily: event.catalystFamily ?? null,
     operatingMode: event.operatingMode ?? null,
+    streamCode: event.streamCode ?? null,
+    lotCode: event.lotCode ?? null,
     recoveryOfEventId: event.recoveryOfEventId ?? null,
     dispositionClass: event.dispositionClass ?? null,
     failure: {

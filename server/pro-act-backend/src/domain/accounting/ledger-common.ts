@@ -3,6 +3,7 @@ import {
   Ledger,
   LedgerTotals,
   LossBasis,
+  LossEvent,
   LossKind,
   LossLineDraft,
   PeriodAccountingInput,
@@ -20,6 +21,7 @@ import {
   sumOf,
 } from './claims';
 import { ComponentResult, componentLines } from './component-lines';
+import { declaredWeight, hasStreams } from './streams';
 import { LineContext, RateBasis, rateOf, segmentCapacity } from './time-lines';
 import { transitionClaims, TransitionScope } from './transition-claims';
 
@@ -69,7 +71,28 @@ export function transitionScope(
     window: slice.window,
     standards: input.transitionStandards ?? [],
     asOf: input.asOf,
+    ...(hasStreams(input)
+      ? { weight: (event: LossEvent) => declaredWeight(input, slice, event) }
+      : {}),
   };
+}
+
+/**
+ * SME E6: declared quantities (measured slowdowns, quality events) of a unit with streams go to the
+ * products by `declaredWeight`, so concurrent slices never count the same tonnes twice.
+ */
+function weighed(
+  input: PeriodAccountingInput,
+  slice: SliceInput,
+  claims: Claim[],
+): Claim[] {
+  if (!hasStreams(input)) return claims;
+  return claims.flatMap((claim) => {
+    const weight = declaredWeight(input, slice, claim.event);
+    return weight.gt(ZERO)
+      ? [{ ...claim, quantity: claim.quantity.mul(weight) }]
+      : [];
+  });
 }
 
 /** Grade-transition claims of the slice at the ledger's rate (LA-08). */
@@ -90,7 +113,11 @@ export function ledgerClaims(ctx: SliceContext): {
   const split = splitDerates(
     [
       ...rateClaims(segments, line.basis),
-      ...measuredDerateClaims(input.events, slice.window),
+      ...weighed(
+        input,
+        slice,
+        measuredDerateClaims(input.events, slice.window),
+      ),
     ],
     input.policy.derateComponent,
   );
@@ -103,7 +130,11 @@ export function ledgerClaims(ctx: SliceContext): {
 /** Quality claims of the slice: declared quality events and the off-grade of grade transitions. */
 export function ledgerQualityClaims(ctx: SliceContext): Claim[] {
   return [
-    ...qualityClaims(ctx.input.events, ctx.slice.window),
+    ...weighed(
+      ctx.input,
+      ctx.slice,
+      qualityClaims(ctx.input.events, ctx.slice.window),
+    ),
     ...transitionsOf(ctx).quality,
   ];
 }

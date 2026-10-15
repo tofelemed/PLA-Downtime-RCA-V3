@@ -9,7 +9,7 @@ import { useV2Command } from './use-v2-command';
 import { useV2TenantId } from './use-v2-tenant';
 
 /** A baseline change: profiles, rates, and the periods / reports computed from them refresh. */
-function useBaselineCommand<TInput, TResult>(run: (input: TInput, idempotencyKey: string) => Promise<TResult>) {
+export function useBaselineCommand<TInput, TResult>(run: (input: TInput, idempotencyKey: string) => Promise<TResult>) {
   const tenantId = useV2TenantId();
   const notice = (): ChangeNotice | null => (tenantId ? { tenantId, entityType: 'production_profile', window: null } : null);
   return useV2Command<TInput, TResult>({ run: ({ input, idempotencyKey }) => run(input, idempotencyKey), changes: notice });
@@ -63,7 +63,7 @@ export function useCreateTransitionStandard() {
 }
 
 /** Versioned master data with approve / retire commands (plan 2.2, LA-08). */
-export type VersionResource = 'profiles' | 'rates' | 'valuation-rates' | 'transition-standards';
+export type VersionResource = 'profiles' | 'rates' | 'valuation-rates' | 'transition-standards' | 'unit-streams';
 
 export interface VersionTransition {
   resource: VersionResource;

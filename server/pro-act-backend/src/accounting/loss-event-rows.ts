@@ -24,6 +24,7 @@ export interface EventRow {
   to_product_id: string | null;
   catalyst_family: string | null;
   operating_mode: string | null;
+  stream_code: string | null;
   recovery_of_event_id: string | null;
   failure_severity: string | null;
   disposition_class: string | null;
@@ -37,7 +38,7 @@ export interface EventRow {
 export const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", e."start_time", e."end_time", e."schedule_class",
        e."oee_component", e."impact_mode", e."impact_fraction"::text AS "impact_fraction", e."quantity"::text AS "quantity",
        e."reason_code_id", e."impact_code_id", e."failure_mode", e."asset_id", e."planned_end_time", e."row_version",
-       e."from_product_id", e."to_product_id", e."catalyst_family", e."operating_mode", e."recovery_of_event_id",
+       e."from_product_id", e."to_product_id", e."catalyst_family", e."operating_mode", e."stream_code", e."recovery_of_event_id",
        e."failure_severity", e."disposition_class", a."asset_type", rc."code" AS "reason_code",
        r."id" AS "revision_id", r."revision"
   FROM "production_events" e
@@ -96,5 +97,6 @@ export function toEvent(
     reasonCode: row.reason_code,
     failureSeverity: row.failure_severity,
     dispositionClass: row.disposition_class,
+    streamId: row.stream_code,
   };
 }

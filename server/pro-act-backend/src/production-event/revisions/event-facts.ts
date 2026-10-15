@@ -74,6 +74,8 @@ export const CODING_FIELDS = [
   'toProductId',
   'catalystFamily',
   'operatingMode',
+  'streamCode',
+  'lotCode',
   'recoveryOfEventId',
   'dispositionClass',
   'failureSeverity',

@@ -28,6 +28,7 @@ const NOUN: Record<VersionResource, string> = {
   rates: 'rate version',
   'valuation-rates': 'valuation rate',
   'transition-standards': 'transition standard',
+  'unit-streams': 'stream version',
 };
 
 interface RetireButtonProps {

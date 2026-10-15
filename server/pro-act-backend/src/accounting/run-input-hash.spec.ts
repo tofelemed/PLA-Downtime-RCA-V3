@@ -39,6 +39,7 @@ function inputs(
     slices: [],
     asOf: end,
     transitionStandards: [],
+    streamRuns: [],
     fingerprint: {
       periodId: 'p1',
       window: { start: start.toISOString(), end: end.toISOString() },

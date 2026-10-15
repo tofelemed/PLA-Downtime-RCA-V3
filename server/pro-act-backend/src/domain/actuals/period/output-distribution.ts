@@ -24,6 +24,8 @@ export interface PeriodOutputEvent {
     quantity: string;
     rejects?: string | null;
   }> | null;
+  /** SME E6: a piece of an output split by time across a stream's product change (booked as estimated) */
+  estimated?: boolean;
 }
 
 interface Share {
@@ -154,9 +156,8 @@ function sharesOf(
   }
   const bounded = { start: event.start, end: event.end };
   if (inside(bounded, window)) {
-    return [
-      { quantity, rejects, rejectsKnown, basis: 'measured', observed: bounded },
-    ];
+    const basis = event.estimated ? 'estimated' : 'measured';
+    return [{ quantity, rejects, rejectsKnown, basis, observed: bounded }];
   }
   const share = split.allowProportional
     ? proportionalShare(bounded, window, { quantity, rejects }, split.stopped)

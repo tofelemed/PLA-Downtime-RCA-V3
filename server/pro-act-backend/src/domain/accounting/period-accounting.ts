@@ -16,7 +16,9 @@ import { segmentSlice } from './segmentation';
 // 2.5.6: oee_policy transitionAllowanceInPlan — a plan that deducts standard transition time has no allowance line
 // 2.5.7: SME E3 disposition classes — quality lines name their class (events, lot dispositions)
 // 2.5.8: SME E1 transition-standard key adds catalyst family and operating mode (most specific match wins)
-export const ACCOUNTING_ENGINE_VERSION = '2.5.8';
+// 2.6.0: SME E6 / LA-10 streams — a slice's capacity is its streams' share over the time they ran its product;
+//        stream events hit only that stream, declared quantities are assigned once (no streams = 2.5.8)
+export const ACCOUNTING_ENGINE_VERSION = '2.6.0';
 
 function computeSlices(
   input: PeriodAccountingInput,
@@ -29,7 +31,7 @@ function computeSlices(
     segmentCount: 0,
   };
   for (const slice of input.slices) {
-    const segments = segmentSlice(input, slice);
+    const segments = segmentSlice(input, slice, true);
     result.segmentCount += segments.length;
     result.issues.push(...checkShares(slice.sliceId, segments));
     for (const ledger of [

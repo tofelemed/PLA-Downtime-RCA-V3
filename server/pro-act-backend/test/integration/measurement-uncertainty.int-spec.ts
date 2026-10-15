@@ -168,7 +168,7 @@ describe('measurement-source hierarchy and uncertainty budgets (SME E7, E4)', ()
       `SELECT engine_version FROM actuals_runs WHERE period_id = $1 ORDER BY computed_at DESC LIMIT 1`,
       [detail.data.id],
     );
-    expect(runs[0].engine_version).toBe('2.4.3');
+    expect(runs[0].engine_version).toBe('2.4.4');
   });
 
   it('E7: the hierarchy API writes a version and refuses inconsistent ranks', async () => {

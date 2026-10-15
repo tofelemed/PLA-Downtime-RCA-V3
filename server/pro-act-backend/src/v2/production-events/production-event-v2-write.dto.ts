@@ -180,6 +180,30 @@ export class ProductionEventV2EditableDto {
   operatingMode?: string | null;
 
   @ApiPropertyOptional({
+    example: 'T1',
+    nullable: true,
+    description:
+      'SME E6: the stream (train / line) of the unit the event happened on; absent / null = the whole unit. An approved stream of the unit (422 INVALID_REFERENCE)',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(CONTEXT_CODE, { message: 'streamCode must be 1–64 letters, digits, _ . -' })
+  streamCode?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'L-2027-0412',
+    nullable: true,
+    description:
+      'SME E6: the production lot an output measurement belongs to (silo / packaging output keeps the grade the lot was made as)',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
+  lotCode?: string | null;
+
+  @ApiPropertyOptional({
     enum: EVENT_DISPOSITION_CLASSES,
     nullable: true,
     description:

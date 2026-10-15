@@ -8682,6 +8682,412 @@
         ]
       }
     },
+    "/api/v2/unit-streams": {
+      "get": {
+        "operationId": "UnitStreamsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "approved",
+                "retired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List unit stream versions (keyset on effectiveFrom, id)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. Unit of the tenant in scope (422 INVALID_REFERENCE); capacityShare in (0, 1] (422 INVALID_CAPACITY_SHARE).",
+        "operationId": "UnitStreamsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitStreamCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft unit stream version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/unit-streams/{id}": {
+      "get": {
+        "operationId": "UnitStreamsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one unit stream version; foreign ids are 404",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/unit-streams/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). 409 STREAM_SHARE_EXCEEDED when the unit's approved streams would provide more than its whole rate.",
+        "operationId": "UnitStreamsV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft unit stream version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/unit-streams/{id}/retire": {
+      "post": {
+        "operationId": "UnitStreamsV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a unit stream version (draft or approved)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/stream-runs": {
+      "get": {
+        "operationId": "StreamRunsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "streamCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "T1",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List stream runs overlapping [from, to) (keyset on startTime, id, newest first)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. The stream is approved and in force at startTime (422 INVALID_REFERENCE); runs of one stream never overlap (409 STREAM_RUN_OVERLAP); a lot code is made once (409 LOT_CODE_TAKEN).",
+        "operationId": "StreamRunsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StreamRunCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record a stream run",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/stream-runs/{id}": {
+      "patch": {
+        "description": "endTime after startTime (422 INVALID_INTERVAL); the same overlap and lot rules as create.",
+        "operationId": "StreamRunsV2Controller_update_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StreamRunPatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "End a stream run or correct its lot / notes",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
     "/api/v2/source-authority": {
       "get": {
         "operationId": "SourceAuthorityV2Controller_current_v2",
@@ -20920,6 +21326,18 @@
             "nullable": true,
             "description": "SME E1: operating mode of a grade change; absent = the profile mode of the production context; grade_transition only"
           },
+          "streamCode": {
+            "type": "object",
+            "example": "T1",
+            "nullable": true,
+            "description": "SME E6: the stream (train / line) of the unit the event happened on; absent / null = the whole unit. An approved stream of the unit (422 INVALID_REFERENCE)"
+          },
+          "lotCode": {
+            "type": "object",
+            "example": "L-2027-0412",
+            "nullable": true,
+            "description": "SME E6: the production lot an output measurement belongs to (silo / packaging output keeps the grade the lot was made as)"
+          },
           "dispositionClass": {
             "type": "string",
             "enum": [
@@ -21133,6 +21551,18 @@
             "example": "normal",
             "nullable": true,
             "description": "SME E1: operating mode of a grade change; absent = the profile mode of the production context; grade_transition only"
+          },
+          "streamCode": {
+            "type": "object",
+            "example": "T1",
+            "nullable": true,
+            "description": "SME E6: the stream (train / line) of the unit the event happened on; absent / null = the whole unit. An approved stream of the unit (422 INVALID_REFERENCE)"
+          },
+          "lotCode": {
+            "type": "object",
+            "example": "L-2027-0412",
+            "nullable": true,
+            "description": "SME E6: the production lot an output measurement belongs to (silo / packaging output keeps the grade the lot was made as)"
           },
           "dispositionClass": {
             "type": "string",
@@ -23436,6 +23866,111 @@
             "type": "string",
             "maxLength": 2000,
             "description": "Note on the new tolerance version"
+          }
+        }
+      },
+      "UnitStreamCreateDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "example": "2027-01-01T02:30:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = open-ended"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "T1",
+            "description": "Stream code, stable within the unit"
+          },
+          "name": {
+            "type": "string",
+            "example": "Train 1"
+          },
+          "capacityShare": {
+            "type": "string",
+            "example": "0.6",
+            "description": "Share of the unit's rate the stream provides, (0, 1]; Σ over the unit's approved streams ≤ 1 (409 STREAM_SHARE_EXCEEDED)"
+          },
+          "notes": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "effectiveFrom",
+          "unitId",
+          "code",
+          "name",
+          "capacityShare"
+        ]
+      },
+      "StreamRunCreateDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "streamCode": {
+            "type": "string",
+            "example": "T1",
+            "description": "An approved stream of the unit in force at startTime"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lotCode": {
+            "type": "object",
+            "example": "L-2027-0412",
+            "nullable": true,
+            "description": "Production lot made on this run (unique per tenant, 409 LOT_CODE_TAKEN)"
+          },
+          "startTime": {
+            "type": "string",
+            "example": "2027-03-01T06:00:00Z"
+          },
+          "endTime": {
+            "type": "object",
+            "example": "2027-03-01T14:00:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = still running"
+          },
+          "notes": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "unitId",
+          "streamCode",
+          "productId",
+          "startTime"
+        ]
+      },
+      "StreamRunPatchDto": {
+        "type": "object",
+        "properties": {
+          "endTime": {
+            "type": "object",
+            "nullable": true
+          },
+          "lotCode": {
+            "type": "object",
+            "nullable": true
+          },
+          "notes": {
+            "type": "object",
+            "nullable": true
           }
         }
       },

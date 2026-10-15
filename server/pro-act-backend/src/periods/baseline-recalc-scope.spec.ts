@@ -45,6 +45,27 @@ describe('baselineRecalcScope (LA-03)', () => {
     });
   });
 
+  it.each(['unit_stream', 'stream_run'])(
+    'a %s change (SME E6) recalculates its unit over its interval',
+    (subject) => {
+      const scope = baselineRecalcScope(
+        'stream-1',
+        {
+          subject,
+          unitId: 'unit-3',
+          effectiveFrom: FROM,
+          effectiveTo: '2027-02-01T00:00:00.000Z',
+        },
+        { profileUnits: units, importWindow: null },
+      );
+      expect(scope).toEqual({
+        unitIds: ['unit-3'],
+        from: new Date(FROM),
+        to: new Date('2027-02-01T00:00:00.000Z'),
+      });
+    },
+  );
+
   it('a rate change finds the unit through its profile; an open-ended rate covers every later period, future ones included', () => {
     const scope = baselineRecalcScope(
       'profile-2',

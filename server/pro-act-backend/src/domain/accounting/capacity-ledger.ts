@@ -28,6 +28,7 @@ import {
   totalOf,
 } from './ledger-common';
 import { classifiedQualityLines } from './quality-class-lines';
+import { hasStreams } from './streams';
 import { LineContext, timeLines } from './time-lines';
 
 interface Part {
@@ -144,10 +145,14 @@ function capacityTotals(
   slice: SliceInput,
   time: TimeTotals,
   running: Running,
+  streamed: boolean,
 ): LedgerTotals {
   const production = productionOf(slice);
   const flags = [...production.flags];
-  if (slice.concurrent) flags.push('concurrent_products');
+  // SME E6: with streams, concurrent products share the unit's capacity by stream (no double count)
+  if (streamed) flags.push('stream_capacity');
+  if (streamed && time.capacity.isZero()) flags.push('no_stream_run');
+  if (!streamed && slice.concurrent) flags.push('concurrent_products');
   if (running.gain.gt(ZERO)) flags.push('above_reference');
   if (running.overClaim.gt(ZERO)) flags.push('claim_exceeds_component');
   const good = production.good;
@@ -223,7 +228,12 @@ export function capacityLedger(
     .minus(timeTotals.exclusion)
     .minus(timeTotals.availability);
   const running = runningPart(ctx, { capacity: effective, claims });
-  const totals = capacityTotals(slice, timeTotals, running);
+  const totals = capacityTotals(
+    slice,
+    timeTotals,
+    running,
+    hasStreams(input),
+  );
   const lines = [...time, ...running.lines];
   if (totals.residual)
     lines.push(sliceLine('residual', totals.residual, slice, line));

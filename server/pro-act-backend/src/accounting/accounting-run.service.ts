@@ -353,6 +353,7 @@ function engineInput(
     slices: inputs.slices,
     asOf: inputs.asOf,
     transitionStandards: inputs.transitionStandards,
+    streamRuns: inputs.streamRuns,
     occurrences: inputs.kpi.occurrences,
     policy: {
       microStopSeconds: engine.oee.microStopSeconds,

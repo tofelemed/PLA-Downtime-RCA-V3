@@ -90,6 +90,20 @@ export interface TransitionStandard {
   to: Date | null;
 }
 
+/**
+ * SME E6 / LA-10: one stream (a parallel train or line of the unit) running one product over
+ * `[start, end)` (end null = still running) with the share of the unit's rate it provides there. The
+ * loader cuts runs at stream-version boundaries, so the share is constant over a run.
+ */
+export interface StreamRun {
+  streamId: string;
+  productId: string;
+  /** share of the unit's rate the stream provides, (0, 1] (decimal string) */
+  share: string;
+  start: Date;
+  end: Date | null;
+}
+
 /** A loss-explaining event revision effective at run time (evidence of ACC05). */
 export interface LossEvent {
   eventId: string;
@@ -127,6 +141,8 @@ export interface LossEvent {
   failureSeverity?: string | null;
   /** SME E3: disposition class of a `quality_loss` event (downgrade / scrap / rework); absent = none */
   dispositionClass?: string | null;
+  /** SME E6: the stream the event happened on; null / absent = the whole unit (every stream) */
+  streamId?: string | null;
 }
 
 /** The actuals of a slice (2.4 result of the run's actuals run). */
@@ -201,6 +217,11 @@ export interface PeriodAccountingInput {
   /** LA-08: the unit's approved transition standards overlapping the period; absent = none */
   transitionStandards?: readonly TransitionStandard[];
   /**
+   * SME E6 / LA-10: the unit's stream runs overlapping the period; absent / empty = no streams configured
+   * (every slice uses its whole window, the 2.5 behaviour)
+   */
+  streamRuns?: readonly StreamRun[];
+  /**
    * full extent of each stop occurrence over all its events, also those outside the window (DT-09):
    * a split child inside the window is a micro-stop only if the whole occurrence is short
    */
@@ -234,6 +255,10 @@ export interface Segment {
   derates: LossEvent[];
   /** grade transitions active in running time (they take the segment's capacity, LA-08) */
   transitions: SegmentCause[];
+  /** SME E6: share of the unit's rate this segment's stream gives the slice; absent = the whole unit (1) */
+  capacityShare?: Dec;
+  /** SME E6: the stream of the segment; absent = no streams configured */
+  streamId?: string;
 }
 
 export interface EvidenceDraft {

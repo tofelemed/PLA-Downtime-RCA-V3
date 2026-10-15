@@ -21,6 +21,8 @@ export interface EventReferences {
   fromProductId?: string | null;
   toProductId?: string | null;
   recoveryOfEventId?: string | null;
+  /** SME E6 */
+  streamCode?: string | null;
 }
 
 /**
@@ -74,6 +76,22 @@ export class EventReferencesValidator {
     }
     await this.assertOriginOwned(tenantId, refs);
     await this.assertGradeLinksOwned(tenantId, unitId, refs);
+    await this.assertStreamOwned(tenantId, unitId, refs.streamCode);
+  }
+
+  /** SME E6: a stream named on an event is an approved stream of the event's unit. */
+  private async assertStreamOwned(
+    tenantId: string,
+    unitId: string,
+    streamCode: string | null | undefined,
+  ): Promise<void> {
+    if (!streamCode) return;
+    const rows = await this.units.manager.query<unknown[]>(
+      `SELECT 1 FROM "unit_streams" WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "code" = $3
+          AND "state" = 'approved' LIMIT 1`,
+      [tenantId, unitId, streamCode],
+    );
+    if (rows.length === 0) throw invalidReference('streamCode');
   }
 
   /**
