@@ -10,10 +10,13 @@ import { cleanupIntegrationWorld, eventsOf, findConnection, jobsOf, seedIntegrat
  * create a PI connection → staged diagnostics all green → discover → sample → typed mapping preview
  * (TimeSpan "00:15:00" → 900 s) → limited job → quarantine "unknown unit" → bind via discovery → dry
  * run → replay → the event exists once → 7-day backfill (drained) → production job healthy; every stage
- * recorded. The PI endpoint is the backend's test simulator on an ephemeral localhost port started by
+ * recorded. The PI endpoint is the backend's test simulator on an ephemeral port (loopback by default) started by
  * this spec (never a real PI server). Also: job stop really stops (cursor unchanged, audit row), the
  * password never appears in an API response or browser storage, a non-writer gets 403 shown clearly
  * and does not see raw payloads. Data: new "E2E INT …" unit / connection; nothing existing changes.
+ *
+ * API in Docker (`docker-compose.devdb.yml`): run with `E2E_PI_SIM_HOST=host.docker.internal` so the
+ * simulator listens on all interfaces and the connection URL names the host (`test-utils/pi-simulator.ts`).
  */
 const MANAGER = { email: 'manager@acme.com', password: 'demo123' };
 const ENGINEER = { email: 'engineer@acme.com', password: 'demo123' };

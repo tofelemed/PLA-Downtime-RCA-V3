@@ -15,6 +15,13 @@ import { SimStreams } from './sim-streams';
 export const SIM_USERNAME = 'sim-reader';
 export const SIM_PASSWORD = 'sim-only-password';
 
+export interface SimListenOptions {
+  /** address to listen on; default `127.0.0.1` */
+  bindHost?: string;
+  /** host name advertised in `baseUrl`; default the bind address (loopback for `0.0.0.0`) */
+  publicHost?: string;
+}
+
 export interface LoggedRequest {
   method: string;
   path: string;
@@ -49,13 +56,21 @@ export class PiWebApiSimulator {
     return `${this.origin}/piwebapi`;
   }
 
-  async start(): Promise<this> {
+  /**
+   * Listens on an ephemeral port of `bindHost` (default loopback). `publicHost` is the host name put in
+   * `origin` / `baseUrl` (default `bindHost`, or loopback when binding all interfaces): a containerised
+   * API reaches a host-run simulator bound to `0.0.0.0` as `host.docker.internal`.
+   */
+  async start(options: SimListenOptions = {}): Promise<this> {
+    const bindHost = options.bindHost ?? '127.0.0.1';
+    const publicHost =
+      options.publicHost ?? (bindHost === '0.0.0.0' ? '127.0.0.1' : bindHost);
     this.server = http.createServer((req, res) => void this.handle(req, res));
     await new Promise<void>((resolve) =>
-      this.server!.listen(0, '127.0.0.1', resolve),
+      this.server!.listen(0, bindHost, resolve),
     );
     const { port } = this.server.address() as AddressInfo;
-    this.origin = `http://127.0.0.1:${port}`;
+    this.origin = `http://${publicHost}:${port}`;
     return this;
   }
 
