@@ -1,5 +1,5 @@
 import type { DowntimeGroupView, KpiAggregateView } from '@/api/v2/types/reports';
-import { reportBase, SCHEDULE_CLASSES, type DowntimeFilters, type DowntimeMetric, type ReportBase, type ScheduleClass } from './downtime-filters';
+import { periodSelection, reportBase, SCHEDULE_CLASSES, type DowntimeFilters, type DowntimeMetric, type PeriodSelection, type ReportBase, type ScheduleClass } from './downtime-filters';
 
 /** One breakdown of `GET /reports/downtime-bundle` (backend `DowntimeBundleItemView`). */
 export interface DowntimeBundleItem {
@@ -41,7 +41,7 @@ export function pageViews(filters: DowntimeFilters) {
 
 export type PageViews = ReturnType<typeof pageViews>;
 
-export interface DowntimeBundleQuery extends ReportBase {
+export interface DowntimeBundleQuery extends ReportBase, PeriodSelection {
   views: string[];
   includeMicroStops?: boolean;
 }
@@ -50,7 +50,7 @@ export interface DowntimeBundleQuery extends ReportBase {
 export function bundleQuery(filters: DowntimeFilters): DowntimeBundleQuery {
   const views = pageViews(filters);
   const tokens = [views.assetDuration, views.assetFrequency, views.crew, ...Object.values(views.trend)].filter((token): token is string => Boolean(token));
-  const query: DowntimeBundleQuery = { ...reportBase(filters), views: [...new Set(tokens)].sort() };
+  const query: DowntimeBundleQuery = { ...reportBase(filters), ...periodSelection(filters), views: [...new Set(tokens)].sort() };
   if (filters.includeMicroStops) query.includeMicroStops = true;
   return query;
 }

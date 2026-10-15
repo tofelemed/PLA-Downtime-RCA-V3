@@ -90,7 +90,7 @@ export class RcaCasesV2Controller {
   @Get('summary')
   @ApiOperation({
     summary:
-      'Counts of the cases of your scope by status, overdue and open critical',
+      'Counts of the cases of your scope: by status, open, overdue, open critical, overdue actions and pending effectiveness checks',
   })
   summary(@Ctx() ctx: RequestContext): Promise<RcaCaseSummaryV2View> {
     return this.commands.summary(ctx);

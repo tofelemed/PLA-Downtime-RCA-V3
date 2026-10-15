@@ -15,6 +15,8 @@ import { bearer } from './test-app';
 
 export interface ExportBody {
   id: string;
+  format: string;
+  presentation: Record<string, unknown> | null;
   state: string;
   status: string;
   unitIds: string[] | null;
@@ -145,7 +147,7 @@ export class ExportWorld extends ReconciliationWorld {
       status: response.status,
       text,
       hash: createHash('sha256').update(bytes).digest('hex'),
-      header: response.headers['x-content-sha256'] as string | undefined,
+      header: response.headers['x-content-sha256'],
       body,
     };
   }

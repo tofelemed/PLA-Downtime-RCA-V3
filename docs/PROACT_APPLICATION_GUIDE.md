@@ -1,41 +1,49 @@
-# ProAct — Application Guide
+# Traverse Forge — Application Guide
 
-What the application does, how each business process works, the actual logic behind the numbers, and how the system is built. It is written from the code as of October 2026, not from the original requirements, and it calls out where the code differs from what the screens suggest.
+What the application does, how each business process works, where the numbers come from, and how the system is built. It describes the v2 application as of 15 October 2026.
 
----
+**Name.** The product is called **Traverse Forge**. It was formerly called ProAct / Pro-Act. Code identifiers, packages, the database (`proact`) and service names still use the old name (owner decision, 14 Oct 2026).
 
-## 1. What ProAct is
+Sources of truth behind this guide: `plans/README.md` (phase status), `plans/DECISIONS.md` (dated decisions), `plans/EXPERT_REVIEW.md` (SME findings and answers), `plans/SPEC_ANALYSIS.md`.
 
-ProAct is a **production loss accounting and Root Cause Analysis (RCA)** platform for process plants (cement, oil & gas, etc.). The core loop is:
+## 1. What Traverse Forge is
+
+Traverse Forge is a **production loss accounting, downtime analytics and Root Cause Analysis (RCA)** platform for process plants. The pilot is an HDPE plant in Iran (units `unit100`–`unit500`, time zone Asia/Tehran).
 
 ```mermaid
 flowchart LR
-    A[Plan production<br/>target per unit] --> B[Capture events<br/>downtime, losses, alarms]
-    B --> C[Account for the gap<br/>planned vs actual]
-    C --> D[Investigate<br/>RCA + analysis tools]
-    D --> E[Act<br/>recommendations → tasks]
-    E --> F[Learn<br/>knowledge base, reports]
-    F --> A
+    A[Plan<br/>calendars, rates, plan versions] --> B[Capture<br/>events from PI, MQTT, operators]
+    B --> C[Account<br/>periods, actuals, two ledgers, loss lines]
+    C --> D[Reconcile and approve<br/>shift, day, month]
+    D --> E[Analyse<br/>OEE, downtime, value]
+    E --> F[Investigate and act<br/>RCA, actions, verification]
+    F --> G[Learn<br/>knowledge base]
+    G --> A
 ```
 
-1. **Plan:** define how much each unit should produce in a period.
-2. **Capture:** record what went wrong (downtime, rate loss, quality loss, limit breaches, equipment alerts), either typed in by hand or pulled automatically from AVEVA PI.
-3. **Account:** compare actual with plan and split the shortfall into categorised losses. Whatever can't be explained is "unaccounted loss".
-4. **Investigate:** significant events open an RCA case, either automatically by rule or by hand. The team works through 5-Why, Fishbone, FMEA and the other tools.
-5. **Act:** RCA recommendations become tracked tasks (and in future, CMMS work orders).
-6. **Learn:** closed RCAs feed a knowledge base that suggests similar past cases. Reports show OEE, losses, RCA and task status.
+Per shift period, the server computes what was planned, what the unit could have made, what it made, and which losses explain the gap. People review and approve those results; reports, KPIs and RCA triggers read the approved results.
+
+**Every business number is computed on the server.** The browser only displays results and never derives KPIs, money or losses.
 
 ### Who uses it
 
+Users have a legacy role on their account and may hold **scope roles** on a plant or unit. A legacy role maps to a scope role (D06): TenantAdmin and Manager → `manager_approver`, Analyst and Engineer → `production_engineer`, Operator → `operator`.
+
 | Role | Typical job |
 |---|---|
-| SuperAdmin | Everything, across all organisations |
-| OrgAdmin / TenantAdmin | Manage a company or a single plant: users, master data, settings |
-| Manager | Approves RCAs (but see §9: the menu currently hides RCA from Managers) |
-| Analyst / Engineer | Production plans, loss reconciliation, RCA investigations |
-| Operator | Data entry: logging events |
+| SuperAdmin, OrgAdmin | Everything; hold every scope role |
+| TenantAdmin / `manager_approver` | Plant management: approve periods, certify days, close months (quantities), approve RCA closure |
+| `production_accountant` | Prepare reconciliations, bridge lines, source status mappings, change proposals |
+| `production_engineer` | Plans, profiles, loss review, RCA investigation |
+| `reliability_engineer` | Reliability data, RCA |
+| `quality_approver` | Decide product dispositions (off-grade, scrap, rework) |
+| `finance_maintainer` / `finance_approver` | Author / approve valuation policies, valuation rates, FX rates; sign off and lock the month |
+| `integration_admin` | Connections, mappings, ingestion jobs, quarantine |
+| `master_data_admin` | Code libraries, units, assets, products |
+| `operator` | Log and code events |
+| `viewer` | Read only |
 
----
+**Separation of duties:** nobody approves their own work. Authors of loss lines, the submitter and the revise initiator cannot approve a period. This also applies to SuperAdmin and to users with two roles.
 
 ## 2. Core concepts
 
@@ -43,459 +51,411 @@ flowchart LR
 
 ```
 Organization (company)
- └─ Tenant  (= a plant / site; has a timezone)
-     └─ Unit   (production unit, e.g. Kiln 1; has capacity, UoM, ideal cycle time)
-         └─ Asset (equipment, e.g. ID Fan; has criticality, status, maintenance dates)
+ └─ Plant (= tenant; time zone, calendar system, digits, week start)
+     └─ Unit (production unit, e.g. unit100; profiles, rates, calendar)
+         └─ Asset (equipment; criticality, standby, failure data)
 ```
 
-Almost every record carries `tenantId` and `organizationId`.
+The header has a plant selector (organization → plant → unit). The frontend resolves the plant as `plantSelection?.tenant?.id || session?.tenant?.id`. Changing plant clears the query cache.
 
-**Plant selection.** The header has a plant selector (org → plant → unit). The choice is saved per user in `app-settings` under the key `plantSelection`. Pages scope their data with:
+### 2.2 Security and scope
 
-```ts
-const tenantId = plantSelection?.tenant?.id || session?.tenant?.id;
-```
+Scope comes from the caller's identity, never from a query parameter.
 
-Many screens show nothing until a plant is selected.
+- **Global guards** run on every route: throttling → `JwtAuthGuard` → `RolesGuard` → `ScopeGuard` → `WriteAccessGuard` → tenant binding. A route is protected unless marked `@Public()` and listed in the route-guard allowlist test.
+- **Public routes:** login, token refresh, logout, token validation, health and the app root. There is **no public self-registration**: `POST /auth/register` needs an admin role, a caller cannot grant a role above its own, and it is public only when `AUTH_ALLOW_PUBLIC_REGISTRATION=true` (local dev and e2e). The first SuperAdmin of an empty database comes from `npm run db:bootstrap-admin`.
+- **Request context:** the server builds a `RequestContext` (tenant, units, roles) from the token and the user's scopes. v2 queries start from `scopedQuery()`, so they only see the caller's plant and units.
+- **Row-level security:** Postgres policies `tenant_isolation` on every tenant table. Each request runs as `proact_rls_user` bound to its tenant, so a query bug cannot read another plant's rows.
+- **Tokens and channels:** 15-minute access token; 7-day refresh token, single-use and rotated, with reuse detection. The Socket.IO channel needs a JWT and sends to tenant and unit rooms only. Upload downloads need a token.
+- **Audit:** a global interceptor logs every mutating request. Audit records are kept 30 days.
 
-> **Note:** scoping is done by the client. The backend only filters by tenant when the caller passes `?tenantId=`. A `TenantGuard` exists but is not used on any controller. Unit filtering is mostly done in the browser.
+### 2.3 Plant settings (`/settings`)
 
-### 2.2 Master data (the code libraries)
-
-| Library | Purpose | Key fields |
+| Setting | Values | Notes |
 |---|---|---|
-| **Products** | What a unit makes | code, name, UoM, `standardCost` (cost per unit) |
-| **Impact codes** | What kind of loss this is, and what it costs | `category` = Availability / Performance / Quality, `costBasis` (perUnit / perHour), `costPerUnit`, `costPerHour`, severity |
-| **OEE codes** | Classifies events into OEE buckets | `impactType` = Availability / Performance / Quality |
-| **Reason codes** | Why it happened (operator-facing) | code, name, category (no hierarchy saved; see §9) |
-| **RCA cause codes** | Root-cause taxonomy | code, name, category |
-| **Verification status codes** | Status of evidence/actions | code, name |
-| **Plan templates** | Reusable plan settings | unit, products, schedule, plan basis |
-| **RCA templates** | Starting logic-tree structure for RCAs | name, type, template data |
+| Time zone | IANA zone, e.g. Asia/Tehran | Shown with its source. Shift calendars are in this zone. |
+| Calendar system | Gregorian / Persian (Jalali) | Display only |
+| Digits | Latin / Persian | Every displayed number follows it; the percent sign stays `%` |
+| Reporting week | Monday (ISO) / Saturday | **Saturday is the default for Iranian plants** (Asia/Tehran or Persian calendar) |
 
-**Impact codes matter most.** Their `category` decides which OEE component an event hits, and their cost settings drive the money values.
+A change applies on every screen at once. Server buckets, API values, CSV exports and identifiers stay ISO, Gregorian, UTC and Latin. Which days are worked (the Thursday–Friday weekend) belongs to the shift calendar.
 
----
+**Display currency:** money is shown in **USD by default**. Each user can switch to IRR. The browser only picks between currency values the server already computed; it never converts.
 
-## 3. Production planning
+### 2.4 Master data and code libraries
 
-### 3.1 What a plan is
-
-A **production plan** says "Unit X should produce N units of Product P between date A and date B".
-
-| Field | Meaning |
+| Library | Purpose |
 |---|---|
-| `unitId`, `productId` | Where and what (one product per plan) |
-| `startDate`, `endDate` | Plan window |
-| `plannedQuantity` | Target output |
-| `actualQuantity` | Achieved output (typed in, or synced from output events) |
-| `planBasis` | Time-based / Quantity-based / Demand-based |
-| `recurrence` | Daily, Weekly, Monthly, Quarterly, Yearly |
-| `usefulProductionTime` | Working hours by weekday, e.g. `{Monday: {start: "06:00", end: "14:00"}}` |
-| `dataEntryFrequency` | Hourly, Daily, Weekly, Monthly |
-| shift, crew, notes, comments | Context |
+| Units, assets, products | Hierarchy and what each unit makes (`/master-data`) |
+| Reason codes | Why a stop happened: a tree; operators pick a leaf with a searchable picker |
+| Impact codes, OEE codes | Which kind of loss and which OEE component |
+| Loss categories, failure code groups | Loss tree and failure grouping |
+| Failure dictionary | ISO 14224-style fields: equipment class, maintainable item, failure mode, mechanism, cause, detection |
+| RCA causes, templates, verification checklists | RCA taxonomy and starting structures |
 
-### 3.2 Two status tracks
+Codes are versioned and tenant-wide (`/codes-admin`). A retired code keeps its name and shows "(retired)". Default code mappings and declarative rules (for example `coding_default` on event create) are built and test-run against past data, then activated by a second person, with version diff and rollback.
 
-- **Operational status:** `Planned → Active → Completed` (or `Cancelled`). Changed by hand in a dropdown. Nothing changes it automatically.
-- **Approval workflow:** `Draft → Pending Review → Pending Approval → Approved` (or `Rejected` with a reason). Each step records who did it and when. Only SuperAdmin, OrgAdmin, TenantAdmin, Analyst and Engineer may act, and that check is enforced in the UI only.
+## 3. Planning
 
-### 3.3 Templates
+### 3.1 Calendars and shifts
 
-A plan template stores unit, products, schedule, plan basis and working hours. Creating a plan from a template pre-fills the plan form. The default planned quantity is a placeholder rate:
+A calendar version defines the plant day start, shifts (including across midnight), holidays and exclusions in the plant's IANA zone. A preview shows DST warnings. Publishing makes the version immutable and materialises shift instances (90 days ahead). Crews are attached to shifts.
 
-```
-plannedQuantity = Σ (weekly working hours) × 100      ← "assume 100 units/hour"
-```
+### 3.2 Production profiles and rates
 
-### 3.4 Actual output
+A profile holds effective-dated rates per unit and product:
+- **sustained (capacity) rate:** the approved sustainable capability, used by the capacity ledger.
+- **planning rate:** used by the plan ledger.
+- **valuation rates:** price per unit, in IRR or USD.
 
-On the Plan Dashboard:
+Rates are approved, superseded at a boundary and retired. Approved versions cannot overlap. Budget, forecast and MPC imports arrive as corrections. A back-dated rate or calendar change recomputes open periods and raises a change proposal for approved ones.
 
-```
-autoActual = Σ quantity of events where eventType = 'ProductionOutput' AND planId = plan.id
-```
+### 3.3 Plans, versions and periods
 
-This is written into `plan.actualQuantity` only when the user clicks **Sync**. Otherwise `actualQuantity` is typed in.
+- A plan belongs to a **scenario**; one scenario is the accounting baseline.
+- A plan has **versions** with sequential product slices (campaigns). Concurrent products are behind a flag and off (D14).
+- Period generation splits the target exactly over shift instances × approved rates. The remainder lands on the last eligible period. A plan with no eligible time is refused (422 `NO_ELIGIBLE_TIME`).
+- Approval is server-gated. Superseded periods are frozen.
+- There is no default rate anywhere; a missing profile is reported as `no_profile`.
 
----
+The planning screens are at `/planning` (plans, profiles, calendars).
 
-## 4. Events and downtime (Event Hub)
+## 4. Events
 
-### 4.1 Event types
+### 4.1 The event model
 
-Everything that happens on the plant is a **production event**. There is no separate "downtime" table: downtime is an event with a start and end time.
+Every stop, slowdown, quality loss, grade transition, output record and advisory is a **production event** on a unit (optionally an asset).
 
-| Event type | Meaning | Extra fields |
+- Times are UTC `timestamptz`, **half-open** `[start, end)`. An open event has no end; the server reports its elapsed time.
+- `durationSeconds` is derived by the database, in seconds. There are no other duration units.
+- Future start or end times are refused (422 `IN_FUTURE`, allowing 120 s clock skew).
+
+### 4.2 Classification axes
+
+Each event is classified on independent axes:
+
+| Axis | Values |
+|---|---|
+| Physical type | downtime, slowdown, quality_loss, production_output, advisory, grade_transition |
+| Schedule class | planned, unplanned, external, unknown |
+| OEE component | availability, performance, quality, idle, none |
+| Impact mode | full_stop, fractional, measured, none |
+
+Only a `full_stop` counts as stopped time. A `fractional` stop is a rate loss and is also reported as **equivalent downtime**. `none` is an equipment event without production loss (for example a standby took over).
+
+States are separate too: physical state (open, closed, superseded, retracted), coding state (uncoded, coded, reviewed) and RCA state (none, required, linked, completed). An event can carry an origin unit / asset (for starved or blocked stops), a planned end (maintenance overrun) and failure severity.
+
+### 4.3 Sources, source layer and user layer
+
+Events come from PI event frames, MQTT, imports or manual entry. Each event keeps two layers:
+- the **source layer:** facts as the source sent them, with every revision;
+- the **user layer:** coding and corrections by people.
+
+The effective value is the source overlaid by the current coding. A re-sync from PI keeps user work. When the source changes a field that a user overrode, a review item is raised and the override stays. Events are retracted, never hard-deleted.
+
+### 4.4 Event Hub (`/events`)
+
+Server filters with keyset paging and a virtualised list; current stops with elapsed time; a detail drawer with source vs effective values, revisions, review items and impacted periods. Operations: create, edit (end or duration), **split, merge, bulk code** (preview, then a job) and **close** ("Code and close"). Quick filters include "To code", "Possible duplicate stops" and repeat stops within 2 minutes. Edits use optimistic concurrency: a conflict (412) shows a review and keeps the draft.
+
+## 5. Loss accounting
+
+This answers **"We planned 10,000 t and made 8,700 t — where did the 1,300 t go?"** The engine runs on the server with exact decimals.
+
+### 5.1 Production periods and actuals
+
+A production period is one shift instance of one unit. Actuals are computed per period from the authoritative source (D05): PI output event frames first, then counters and rates, then certified daily external records. An output record that spans periods is split by counter readings, then rate integration, then running-time proration (stops excluded); the method is shown. Missing data stays null, never zero. Adjustments need an independent approver.
+
+**Product dispositions** keep first-pass good, wide-spec, downgrade, transition off-grade, scrap and rework apart. Accepted rework is not good output. Dispositions are decided by `quality_approver`.
+
+### 5.2 Calculation runs
+
+Each recalculation creates an immutable **calculation run** with an input fingerprint and content hash. A run is created only when the inputs change. If validation fails, the previous run stays current. Recalculation is a background job (202).
+
+### 5.3 The two ledgers
+
+| Ledger | Baseline | Question it answers |
 |---|---|---|
-| **ProductionLoss** | Lost production (stoppage, slowdown, off-spec) | quantity, cost, lossCategory, defectiveQuantity |
-| **ProductionOutput** | A production count | quantity, planId |
-| **IOW** | Integrity Operating Window breach (a process variable out of limits) | parameter, value, limit, limitType (High/Low), breachDuration |
-| **SOL** | Safe / Operating Limit violation | solType (Safety / Operational) |
-| **APM** | Asset Performance Management alert (equipment health) | apmType, recommendedAction |
-| **FailureWO** | Equipment failure work order | workOrderId, failureMode |
+| **Plan ledger** | The plan target, priced at the planned rate of each plan interval | Why did we miss the plan? |
+| **Capacity ledger** | Approved sustained rate over scheduled time | How much could the unit have made, and what took it away? |
 
-Common fields: `unitId` (required), `assetId`, `startTime`, `endTime`, `duration`, `severity` (Low / Medium / High / Critical), `impactCodeId`, `oeeCodeId`, `reasonCodeId`, `source` (Manual / PI / Simulated PI / CMMS), `operatorName`, `shift`, `crew`, `rcaId`, plus an `auditTrail` of field changes.
+The two ledgers are two views of one event and are never added together. Each is segmented at schedule, stop and rate boundaries.
 
-### 4.2 Where events come from
+- Losses stay gross. Recovery above the planned rate is a separate **gain** line.
+- Residuals are signed and never clamped. Overproduction, over-accounted and conflict cases are flagged.
+- Loss without a cause stays **unaccounted** (plan ledger) or **unexplained** (capacity ledger). It is not reported as slow running unless a rate measurement supports it.
+- Stops inside the schedule, planned or external, reduce availability. Only time outside the approved schedule is excluded.
+- Overlapping causes are allocated once by a policy rule (`first_out` default, or equal share).
+- Grade transitions use an approved transition matrix; only the overrun over the allowance is a loss.
+- A claim larger than the measurements support is flagged `claim_exceeds_component`. The run still completes, but approval is blocked until it is fixed.
 
-1. **Manual entry** in the Event Hub. New events are always created with status `Open`.
-2. **AVEVA PI event frames**, pulled on a schedule or on demand (see §7).
-3. **Simulate Events** button: 10 random events for demos. These use fake code IDs.
+### 5.4 Loss lines
 
-### 4.3 Event status lifecycle
+Each run produces **loss line candidates** with kind (exclusion, availability, performance, quality, bridge, unaccounted), quantity, reason, evidence and a deterministic key. The reconciliation editor accepts, adjusts, replaces or rejects them and adds manual lines (§6).
 
-```
-Open ──(endTime filled)──► Coded ──(RCA linked)──► RCA Required ──► Investigating / In Progress ──► Completed / Closed
-                                                                                             (Cancelled at any point)
-```
+### 5.5 Valuation
 
-Status rules run in the frontend when an event is edited. The defaults can be overridden and are stored in browser localStorage:
+Valuation runs inside the calculation run from a frozen, hashed context:
+- the approved `valuation_basis` policy (contribution margin default; standard cost and operational cost as separate views, never summed; an economic view for scrap, downgrade and rework);
+- approved valuation rates (IRR or USD);
+- approved, dated FX rates.
 
-- An event that has an `endTime` → **Coded**
-- An event that has an `rcaId` → **RCA Required**
-- APM with a `recommendedAction` → **Completed**
-- FailureWO with a `failureMode` and `endTime` → **Completed**
-- Closed, Completed and Cancelled events are never changed by the rules.
+Every valued loss is reported in **IRR and USD**. Without an approved FX rate the other currency is null with reason `fx_rate_missing`; it is never estimated. A finance-authorised **provisional FX rate** can fill dates until the final rate arrives; those values are flagged everywhere. The final rate revalues open periods and proposes changes for approved ones. A missing price gives an unvalued quantity, never zero. Nothing is valued before finance approves the policy. Demand-constrained lost sales are supported. Finance screens are at `/finance`.
 
-There is no "acknowledge" step.
+## 6. Reconciliation and approval
 
-### 4.4 Event cost (auto-filled in the form, can be overridden)
-
-1. ProductionLoss or Output linked to a plan: `cost = quantity × product.standardCost`
-2. Otherwise, impact code with `costBasis = perUnit`: `cost = quantity × costPerUnit`
-3. Impact code with `costBasis = perHour`: `cost = duration × costPerHour`
-
-### 4.5 What the backend does when an event is created
-
-1. Saves it.
-2. Broadcasts `productionEventCreated` over the websocket, so the Event Hub refreshes live.
-3. Runs the **RCA auto-trigger** (§6.2), which may open an RCA case and set the event to `RCA Required`.
-
-> **Known inconsistency:** the units of `duration` differ between screens. Some treat it as minutes, others as hours. Agree on one unit before relying on duration KPIs.
-
----
-
-## 5. Production loss accounting
-
-This answers the question **"We planned 10,000 t and made 8,700 t — where did the 1,300 t go?"**
-
-### 5.1 The loss record
-
-`ProductionLoss` is one row per plan per period:
-
-| Field | Meaning |
-|---|---|
-| `shortRangePlan` | Planned amount for the period |
-| `actual` | Produced amount |
-| `losses` | `max(0, planned − actual)` |
-| `unaccountedLoss` | The part of the loss not yet explained |
-| `action` | `Reconcile` / `RCA Required` / `Closed` |
-
-### 5.2 Reconciliation
-
-The user opens a loss and splits it into **loss categories**. Each category has an amount and is tagged with an impact code and an OEE code, for example "Kiln refractory failure — 600 t — Availability".
+### 6.1 Period workflow
 
 ```
-rule:        Σ category amounts ≤ total loss
-unaccounted = total loss − Σ category amounts
-action      = unaccounted > 0 ? 'Reconcile' : 'Closed'
+draft ──submit──► in_review ──approve──► approved ──revise / change proposal──► new draft revision
+                     └──reject (reason, failed lines, new due time)──► draft
 ```
 
-Reconciliation is done when every tonne of loss has an explanation.
+Each period has numbered **accounting revisions**. At most one is open (draft or in review); a draft can also be cancelled. An in-review revision whose inputs changed is marked **stale**.
 
-### 5.3 How the first "unaccounted" estimate is made
+- The period page (`/plans/:planId/periods/:periodId`) shows the plan and capacity ledgers, actuals provenance and the loss-line editor. Saves are atomic, with If-Match; a newer run shows a diff to rebase on.
+- Manual lines need a reason and evidence of the right type (event, work order, rate or totaliser evidence, lot disposition, inventory movement). A bridge line is only for `production_accountant`, needs a category (inventory, timing, measurement) and cannot be negative. One event's allocations never exceed its loss.
+- Tolerance is configurable; the default is zero.
+- Approval writes an approval snapshot and content hash. Approved revisions are immutable.
+- **SLA:** submit within 12 h and approve within 24 h after the production day ends; escalate at 48 h to production accounting and 72 h to plant management (in-app notifications). "Waiting for data" holds (lab, source, other) pause the clocks. The third rejection of a period escalates.
+- **My queue** (`/my-queue`) lists each user's due and overdue work.
 
-> **Simulated:** before reconciliation, the initial unaccounted value is a **hard-coded percentage estimate**, not a measurement:
-> `unaccounted = losses × pct`. The pct is 25% for Time-based, 35% for Quantity-based and 40% for Demand-based plans (30% default), then ×0.8 for Hourly data entry and ×1.2 for Monthly. The "calculate from production data" action uses a built-in fake event list.
+### 6.2 Day certification
 
-### 5.4 Money values (Plan Dashboard)
+A `manager_approver` who did not submit any of its shifts certifies each **production day** of a unit. Certification rolls up the approved shift revisions; each quantity stays on its shift. Revising a shift reopens the day.
 
-```
-Total loss value   = Σ losses × lossValuePerUnit           (default $100, set in dashboard config)
-Unaccounted value  = Σ unaccountedLoss × lossValuePerUnit
-Event costs        = Σ event.cost
-Cost per unit      = Σ losses × lossValuePerUnit / actualQuantity
+### 6.3 Month close (`/month-close`)
 
-Bottleneck risk    = 0.4 × (Σ losses / planned)
-                   + 0.3 × (Σ eventCost / 50,000)
-                   + 0.3 × (1 − OEE)                        → thresholds 0.3 / 0.6 / 0.8
-```
+One close per plant and financial month: **open → quantities closed → finance signed off → locked**.
+- Plant management (`manager_approver`) closes quantities, by working day 3.
+- Finance (`finance_approver`) signs off and locks, by working day 5. It is never the same person.
+- Working days come from the site calendar's holidays and the plant weekend. Iranian plants use Solar Hijri months.
+- Prerequisites: every period approved, every production day certified, no open change proposal.
+- A locked month refuses direct revision (409 `MONTH_LOCKED`).
 
-### 5.5 Loss visualisations
+### 6.4 Change proposals and restatement
 
-- **Plan Waterfall:** Planned → minus each loss category → Actual. Any remaining gap is shown as "Unaccounted Loss".
-- **Loss Pareto:** events grouped by impact code and ranked by duration. The Reports module has a proper Pareto with a cumulative-% line.
-- **Loss Trend:** duration by day, week or shift.
+Late data, a back-dated rate or a correction to an approved period creates a **change proposal**. It can also be raised by hand for a closing or locked month by production accounting or plant management, with reason and evidence; the proposer never decides it. An accepted proposal produces a new revision. The restatement view shows old vs new totals. The operational date stays the period date; finance sets the financial posting date and treatment.
 
----
+Per-source status mappings (`/connectivity/source-status`) say which source statuses count as released. The source owner approves them.
 
-## 6. Root Cause Analysis (RCA)
+## 7. KPIs
 
-### 6.1 The RCA case
+KPIs are computed inside the calculation run and stored in `kpi_results` with explicit numerator and denominator. A missing value is null with a reason and is shown as "Not available: <reason>". Multi-period values sum the stored terms, so A × P × Q = OEE across periods.
 
-An RCA case is linked to the event that triggered it (`eventId`) and holds:
+### 7.1 OEE
 
-- **Header:** title, description, priority, team lead, team members, target and actual close dates, root cause
-- **Team charter, event diagram and phase timeline:** stored as JSON
-- **Evidence:** photos, documents, time-series, notes. Each item has category, location, the logic-tree nodes it supports, and verified/severity/tags.
-- **Logic tree:** Root → Why/How → Cause nodes, each with question, answer, verified flag and linked evidence
-- **Recommendations:** title, priority, assignee, due date, status, estimated and actual cost
-- **Effectiveness metrics:** failure rate before and after, cost per incident, implementation cost, ROI, downtime reduction
-
-### 6.2 How an RCA gets opened
-
-**Automatically**, when a production event is **created**, not when one is updated. The checks run in this order:
-
-1. The event has a tenant, has no RCA yet, and no RCA already exists for it.
-2. The tenant's trigger config has `autoCreateRca = true`.
-3. **Global gates:** cost ≥ `minCostThresholdGlobal` and duration ≥ `minDurationThresholdGlobal` (if set).
-4. **Rules:** enabled rules for this event type (or `All`), highest priority first. The **first matching rule wins**. All conditions inside a rule must be true:
-   - severity is in `severities`, status is in `statuses`
-   - cost ≥ `minCost`, duration ≥ `minDuration`
-   - type-specific lists: IOW `qualityResults`, APM `apmTypes`, SOL `solTypes`
-   - `requiresImpactCode` / `requiresOEECode`
-
-When a rule matches, the backend creates an RCA with status `Draft`. The title is the event description, priority follows severity (Critical→Critical, High→High, otherwise Medium), and the event is set to `RCA Required`.
-
-**Manually**, from the "Create RCA" button in the Event Hub. The same rules decide whether the button is shown, but more leniently.
-
-Rules are configured in **RCA Settings → Triggers**.
-
-### 6.3 The six investigation phases (UI)
-
-```
-Definition → Data Collection → Analysis → Recommendations → Approval → Closure
-```
-
-| Phase | "Complete" when |
-|---|---|
-| Definition | title, description, team charter, at least 1 team member |
-| Data Collection | at least 1 evidence item |
-| Analysis | a logic tree exists |
-| Recommendations | at least 1 recommendation |
-| Approval | approved by SuperAdmin, OrgAdmin or Manager |
-| Closure | closed (only possible after approval) |
-
-The phase can only move forward. The completion checks drive a "review and advance" banner but don't block anything, and **none of this is enforced by the backend**.
-
-### 6.4 Analysis tools
-
-Each tool stores one record per RCA (`/api/rca-analysis/*`). Which tools are enabled, and their settings, is configured per tenant.
-
-| Tool | What you capture | Logic |
+| View | Definition | Label |
 |---|---|---|
-| **5-Why** | Problem; why levels (question, answer, justification, evidence); root cause | Must reach the minimum depth (default 5) |
-| **Fishbone (Ishikawa)** | Effect; causes under 6M categories (Man, Machine, Material, Method, Measurement, Environment) with likelihood H/M/L | Data entry and visualisation |
-| **FMEA** | Failure mode; effects (severity 1–10, detection 1–10); causes (occurrence 1–10) | `RPN = max(severity) × occurrence × max(detection)`; flagged when RPN ≥ 100 (configurable) |
-| **Fault Tree** | Top event; AND/OR gates, basic events, probabilities | Probabilities typed in by hand; no automatic calculation |
-| **Barrier Analysis** | Hazard; barriers (Prevention, Detection, Mitigation, Recovery) with effectiveness Strong / Moderate / Weak / Failed | Data entry |
-| **Change Analysis** | What changed (People, Equipment, Process, Materials, Environment, Management), when, and whether related | Data entry |
+| **Operational OEE** (ISO 22400-style) | A, P, Q with ideal-time weighting; good at the sustained rate as time ÷ scheduled time | Shown with its policy label and denominator |
+| **Reconciled PLA OEE** | Capacity-ledger good ÷ capacity | Labelled separately; never mixed with operational OEE |
 
-### 6.5 From recommendation to task
+Quality is first-pass conforming output.
 
-The **Create Task** button on a recommendation creates a task with `entityType = 'RCARecommendation'` that copies the assignee, priority and due date. Duplicates are detected by looking up tasks already linked to that recommendation. **Push to CMMS** is simulated: it only sets the recommendation to In Progress.
+### 7.2 Downtime and availability
 
-### 6.6 Knowledge base: learning from past RCAs
-
-Each knowledge-base entry is a summary of a past RCA: problem, symptoms, equipment category, root cause, contributing factors, recommendations, effectiveness, cost saved, keywords.
-
-When a new RCA is opened, **similar past cases** are suggested. The score is out of 100 and computed in the browser:
-
-| Match | Points |
+| KPI | Meaning |
 |---|---|
-| Same asset (or else same equipment category) | 30 (15) |
-| Shared title words (≥ 2) | up to 15 |
-| Same event type | 15 |
-| Same root-cause category | 15 |
-| Same unit | 10 |
-| Symptoms / impact codes / keywords | up to 20 / 15 / 20 |
+| `downtime_total`, `_planned`, `_unplanned` | Stopped time by schedule class (calendar window) |
+| `downtime_in_schedule` | Stopped time inside scheduled time; reconciles with scheduled availability |
+| `downtime_external` | Stops classed external (feed, utilities, blocked) |
+| `downtime_equivalent` | Lost quantity ÷ reference rate for fractional stops |
+| `downtime_maintenance_overrun` | Time beyond a planned maintenance end |
+| `coded_downtime_ratio` | Share of stopped time with a reason |
+| `stop_count`, `mean_stop_duration`, `microstop_time` | Occurrences; micro-stop thresholds per asset class |
+| `scheduled_availability` | Headline availability; external stops count against it (SME D15) |
+| `controllable_availability` | Supplemental view with stops classed external excluded, under its own name (SME D15). Shown by the "Show controllable view" switch on the Downtime summary and dashboard. |
+| `coverage`, `state_coverage`, availability bounds | How much of the time the data explains |
 
-Results scoring below 40 (configurable) are dropped, and the top 5 are shown. Each entry also has a quality score based on recurrence, how often it was referenced, helpful votes and completeness.
+### 7.3 Reliability
 
-> **Gap:** closing an RCA does not yet create a knowledge-base entry. Entries currently come only from the demo data seeders.
+MTBF counts confirmed functional failures inside the equipment boundary; with zero failures the exposure is shown, not an infinite MTBF. Without repair evidence, the measure is labelled **mean downtime to restore**. MTTR (mean active repair time) needs CMMS repair timestamps. Standby equipment has its own demand, failed-start and test counts. A monthly **bad-actor report** is at `/reliability/bad-actors`.
 
----
+## 8. Root Cause Analysis
 
-## 7. AVEVA PI integration (automatic event capture)
+### 8.1 The case
 
-PI event frames (e.g. "Production Loss", "IOW Deviation") become ProAct events without anyone typing them in.
+An RCA case (`/rca`) links to events, approved loss lines, work orders and occurrences. Each link stores an **evidence package** (event facts, revisions, signal trend window, codes, recurrence, approved impact). A case holds its team, evidence, logic tree, analysis tools and actions.
+
+### 8.2 Workflow
+
+```
+Draft ⇄ In Progress ⇄ Analysis ──investigation accepted──► Monitoring ──closure request──► Closure Review ──► Closed
+                                                               ▲                              │
+                                                               └────── rejected (note) ───────┘
+```
+
+All transitions are enforced by the server (422 `INVALID_TRANSITION` otherwise).
+- **Analysis → Monitoring** needs the root cause, the required method, a 5-Why with evidence per level, and complete FMEA scores.
+- From Monitoring the team is locked.
+- **Monitoring → Closure Review** needs every action done with evidence or cancelled, effectiveness verified, and residual risk written.
+- **Closure Review → Closed** needs an **independent approver**: a `manager_approver` who was never an investigator on the case. A closed case can be reopened with a note.
+
+### 8.3 Analysis tools
+
+5-Why, Fishbone (6M), FMEA (detection per cause, RPN and policy action priority; a missing score is incomplete), Fault Tree (top-event probability from AND/OR gates), Barrier Analysis, Change Analysis, plus the logic tree. Rules are checked on the server.
+
+### 8.4 Actions and effectiveness
+
+Each action has an owner, due date, evidence and a **verification window**. The server computes the baseline and counts unplanned, same-mode recurrences normalised by run time. The verdict is **effective**, **not effective** or **insufficient evidence**. Approved, claimed and realised benefits are kept apart.
+
+### 8.5 Triggers (SME D17)
+
+The `rca_policy` uses any-of triggers. Pilot values: stop ≥ 2 h, OR ≥ 1 % of daily planned tonnes, OR 3 same-mode incidents in 30 days, OR a bad-actor or cost limit. Limits are halved for critical assets, and safety markers override. A repeat does not fire again while a case is open on that asset and mode. By default a trigger **recommends** a case; the policy can switch to create. A provisional FX value never fires the money limit. Triggers are configured at `/events/rca-triggers`.
+
+### 8.6 Knowledge base (`/rca-knowledge-base`)
+
+Closing a case creates a knowledge entry. Similar past cases are suggested by the server on failure mode and text. The quality score rewards actions verified effective. Lessons are shared across the organisation.
+
+## 9. Integration
+
+Traverse Forge reads plant data; it does not write to PI or publish to MQTT.
 
 ```mermaid
-flowchart TD
-    S[Scheduler - every minute<br/>checks due pi_sync_jobs] --> P
-    M[Manual 'Pull events'] --> P
-    P[PIEventPullService] -->|GET eventframes + attributes<br/>PI Web API, Basic auth| PI[(AVEVA PI)]
-    P --> R[pi_events<br/>raw frames]
-    P --> MAP[Map template → event type<br/>attributes → fields<br/>text codes → code IDs]
-    MAP --> H{Hierarchy mapping<br/>finds a unit?}
-    H -- no --> U[unmapped_events<br/>for manual assignment]
-    H -- yes --> E[production_events<br/>source = PI, status = Open]
-    E --> T[RCA auto-trigger]
+flowchart LR
+    PI[(AVEVA PI Web API)] --> J[Ingestion jobs<br/>worker]
+    MQ[(MQTT broker<br/>owned by data engineering)] --> J
+    J --> RAW[Raw observations<br/>persisted before ack]
+    RAW --> MAP[Mapping<br/>templates, attributes, hierarchy]
+    MAP -->|ok| EV[Canonical events, signals]
+    MAP -->|fails| Q[Quarantine<br/>dry run, replay]
+    EV --> ACC[Period recalculation]
 ```
 
-1. **Connection:** PI Web API URL, credentials (encrypted at rest with AES-256-GCM) and the AF database or element to scan.
-2. **Pull window:** from the last watermark (or a lookback window, default 60 min) to now. Up to 500 frames per run. There is no paging, so anything over 500 is skipped.
-3. **Template → event type:** Production Loss → ProductionLoss, IOW Deviation → IOW, SOL Violation → SOL, APM Alert → APM, Failure WO → FailureWO, Production Output → ProductionOutput. Frames with no template become ProductionLoss. Each tenant can override this.
-4. **Attribute → field:** for example ReasonCode → `reasonCodeId`, Cost → `cost`, Duration → `duration`. Text codes are resolved against master data by exact code/name, then by substring.
-5. **Which unit?** Hierarchy mappings are tried in priority order: exact PI element ID, then wildcard pattern, then path containment, then connection default. If none match, the older `af_bindings` table is tried.
-6. **No unit found** → the frame goes to **unmapped events**, to be assigned by hand.
-7. **Unit found** → the production event is upserted using the PI WebId as `eventId`, so re-pulling updates it rather than duplicating it.
+- **PI:** event frames and actuals (signals, counters, rates, output frames) through the PI Web API. Connections have a write-only secret, staged diagnostics, discovery, a mapping preview and audited job control (start, pause, resume, drain, stop). Re-pulling a frame updates the same event. Built and tested against a PI Web API simulator.
+- **MQTT:** the data engineering team owns the feed (PI → MQTT). Traverse Forge only subscribes. Messages are persisted before acknowledgement and decoded by contract.
+- **Quarantine:** records that fail mapping wait in an inbox; a dry run shows the result before replay, or they are marked irrecoverable. Replay and backfill are bounded.
+- **Unit state:** a state mapping per unit (running, internal stop, planned maintenance, starved, blocked, standby, not scheduled) gives coverage and availability bounds.
 
-> **Caveats:** re-pulled events are updates, so they don't trigger RCAs, and the update resets status to `Open`.
+The integration console is at `/connectivity`.
 
----
+## 10. Screens
 
-## 8. OEE and reporting
-
-### 8.1 OEE
-
-**OEE = Availability × Performance × Quality.** It is computed in three different places, which can disagree:
-
-| Where | Formula | Trust level |
+| Screen | Route | What it shows |
 |---|---|---|
-| **Plan Dashboard** (per plan) | **A** = (planned time − downtime of Availability-class events) / planned time; **P** = actual output / planned quantity; **Q** = (actual − defective qty of Quality-class events) / actual. Each capped at 1. OEE = A^wA × P^wP × Q^wQ (weights default to 1). | Real arithmetic. Opening the dashboard saves the result into `oee_summaries`. |
-| **Reports** | Averages of the saved `oee_summaries` rows | As good as the Plan Dashboard values |
-| **Main Dashboard / PLA Dashboard** | Heuristic: A = 95 − downtime penalty, etc. Fixed 95/94/98 when there is no data. | Placeholder, not real OEE |
+| Dashboard | `/dashboard` | Tiles: operational and reconciled OEE with labels; downtime (with the controllable view switch); periods by reconciliation state; RCA counts (open cases, overdue actions, effectiveness pending); latest events |
+| Event Hub | `/events` | §4.4 |
+| Downtime Analysis | `/downtime` | §10.1 |
+| PLA Analytics | `/pla-analytics` | Window waterfall on both ledgers, loss tree (reason, impact, OEE, kind, unit × quantity or value view), trends, unaccounted / over-accounted trend, reconciliation status and age, actuals quality, repeat causes, top valued opportunities, OEE; site filter |
+| Reports | `/reports` | §10.2 |
+| Planning | `/planning` | Plans, profiles, calendars |
+| Plan dashboard | `/plans/:planId` | Period grid with server figures, residual and workflow state; waterfall; value tiles |
+| Month close, My queue | `/month-close`, `/my-queue` | §6 |
+| RCA, Knowledge base, Bad actors | `/rca`, `/rca-knowledge-base`, `/reliability/bad-actors` | §8, §7.3 |
+| Codes, Finance, Master data | `/codes-admin`, `/finance`, `/master-data` | §2.4, §5.5 |
+| Integration console | `/connectivity` | §9 |
+| Users, Permissions, Audit, Tasks, Admin | `/users`, `/permissions`, `/audit`, `/tasks`, `/admin` | Administration |
+| Plant settings | `/settings` | §2.3 |
 
-An event is classed as Availability, Performance or Quality by its impact code's `category`, falling back to the OEE code's `impactType`.
+### 10.1 Downtime Analysis filters
 
-> The Performance formula here is output vs plan, not the textbook ideal-cycle-time formula. `unit.idealCycleTime` isn't used yet.
+Filters live in the URL so a view can be shared:
+- **Units** and **window** (last 24 h, 7, 30 or 90 days, or a custom range);
+- **Schedule class** (all, planned, unplanned, external, unknown);
+- **Products, shifts and crews** (applied by the server to the periods);
+- micro-stops on or off; approved only; metric (duration or count); trend grouping (shift, day, week, month).
 
-### 8.2 Reports (`/reports`)
+The page shows the KPI summary, reliability per unit, a reason Pareto with drill-down to child codes and events, lost production by stop reason (quantity or value), trends stacked by schedule class, asset bad actors, crew and window comparisons and a stop timeline.
 
-These are server-side calculations: OEE summary and trend; production losses by category, severity and unit; top 10 events by cost; daily trend; Pareto with cumulative %; RCA counts by status and priority; tasks including overdue; audit activity; and a combined KPI dashboard. All can be filtered by tenant, date range and unit.
+### 10.2 Reports and exports
 
-### 8.3 Tasks and audit
+The Reports page defaults to **approved** content; provisional content is an explicit option. Exports are asynchronous jobs (`POST /v2/exports` → job → download):
 
-- **Tasks:** title, assignee, priority, status (Open / In Progress / Completed / Cancelled), due date. A task can be linked to any record (`entityType` + `entityId`), e.g. an RCA recommendation.
-- **Audit log:** every POST/PUT/PATCH/DELETE is logged automatically by a backend interceptor. Some pages also log manually, so some actions appear twice.
-
----
-
-## 9. Real, simulated and known issues
-
-| Area | State |
+| Format | Content |
 |---|---|
-| Hierarchy, master data, plans, events, tasks, reports | Working, backend-persisted |
-| Loss reconciliation | Working. The initial unaccounted estimate is a heuristic. |
-| Plan Dashboard OEE | Working (computed in the browser) |
-| Main/PLA Dashboard OEE | **Heuristic placeholder** |
-| RCA auto-trigger | Working (backend) |
-| **RCA save from the UI** | **Broken.** The frontend sends `teamMembers`, `tenantId`, `organizationId`, `targetCompletionDate` …; the backend expects `teamMemberIds`, `targetCloseDate` … and rejects unknown fields with HTTP 400. Evidence, recommendations, logic tree and approval/closure are never sent. **Verified on 2026-10-07.** |
-| RCA analysis tools | Working (backend CRUD) |
-| Knowledge base | Suggestions work; entries are only created by seeders |
-| PI integration | Real (PI Web API) |
-| MQTT | Real: v2 intake adapter (plan 1.8) on the integration console |
-| OPC UA, Modbus, BACnet, DNP3, EtherNet/IP, PROFINET, SCADA, CMMS | Not available. The simulated v1 connectivity module (`/api/connectivity`) was removed on 2026-10-14 (owner decision). |
-| Streaming engine | Runs in the browser; most sinks and aggregate steps are stubs |
+| **CSV** | Every column, ISO UTC times, both currencies; injection-safe cells; RFC 4180, UTF-8 BOM |
+| **PDF** | Rendered on the server; plant clock, calendar and digits; money in the chosen display currency (USD default, or IRR); up to 500 period revisions |
 
-**Security gaps** (fine for development, must be fixed before production):
+Both contain **approved content only**: the latest approved revision of each period in the window, or named approved revisions. Draft or in-review content is never exported. Revisions are pinned when the export is requested, so re-rendering gives the same sha256. Downloads are re-authorised and unit-scoped. Report types: `period_summary` and `loss_lines`.
 
-- JWT is checked per controller. Several controllers have no guard: unmapped events, RCA recommendations, dashboard configuration, evidence upload.
-- There is no tenant isolation on the server.
-- `POST /auth/register` is public and accepts any role, including SuperAdmin.
-- The realtime socket has no authentication and broadcasts every change to every client, across tenants.
-- `/pi-proxy/request` forwards requests to any URL the caller gives it.
+## 11. Known limits
 
-**Data/logic issues:**
+- **PDF fonts:** Persian names and digits need a TrueType font with Persian glyphs set in `EXPORT_PDF_FONT` (and optionally `EXPORT_PDF_FONT_BOLD`). Without it the PDF uses Helvetica: Persian digits fall back to Latin and other Persian characters print as `?`.
+- **Plant values still to supply** (EXPERT_REVIEW): grade-specific planned and sustained rates, calendars, the grade transition matrix, measurement boundaries, source hierarchy per unit, reconciliation tolerances, the role matrix and materiality bands, the close calendar, lab turnaround, micro-stop thresholds, state mapping and heartbeat semantics, standby logs, CMMS timestamps, the failure dictionary, critical assets and the RCA money limit, FX sources. Demo values are seeded where noted.
+- **Real PI certification** waits for the PI administrator's details (D02); tests run against a simulator.
+- **Not built:** Kafka source adapter (1.9); e-mail and SMS notifications (in-app only); webhook and CMMS delivery (D12); concurrent products (off, D14); cross-unit origin / consolidation model (SME Q13).
+- **Out of scope for now:** OPC UA, Modbus and other field protocols, REST/file/DB imports, CMMS enrichment, Weibull studies (Phase R2).
+- **Calendar display:** month buckets on Persian plants are labelled as date ranges, not Jalali month names; there is no right-to-left layout.
 
-- Duration units are inconsistent (minutes vs hours).
-- The reason-code hierarchy isn't saved.
-- The backend ignores the unit filter when a tenant filter is also sent.
-- Manual ProductionLoss events aren't linked to a plan.
-- Reconcile forms never leave Draft.
-- Plan approval, RCA approval and event status rules are enforced in the UI only.
-
----
-
-## 10. Architecture
+## 12. Architecture
 
 ```mermaid
 flowchart TB
     subgraph Browser["Browser — React SPA (Vite, :8070)"]
-        Pages[Pages: Dashboard, Production Plans, Event Hub,<br/>RCA, Knowledge Base, Reports, Connectivity, Admin]
-        Ctx[AuthContext · PlantSelectionContext]
-        MDS[MasterDataService facade<br/>+ client-side calculations: OEE, cost, status rules, KB similarity]
-        API[services/api/* → httpClient<br/>Bearer JWT from localStorage]
-        WS[Socket.IO client]
-        IDB[(IndexedDB — legacy,<br/>seeders only)]
-        Pages --> Ctx --> MDS --> API
+        Pages[Lazy routes: src/app/routes/*<br/>features/&lt;area&gt;/]
+        Q[TanStack Query + typed v2 client<br/>If-Match, idempotency keys]
+        WS[Socket.IO client<br/>tenant / unit rooms]
+        Pages --> Q
         Pages --> WS
     end
 
-    subgraph Backend["NestJS monolith (:4004, prefix /api)"]
-        Auth[Auth: JWT access 24h + refresh 7d]
-        Mods[~60 feature modules<br/>controller → service → TypeORM repository]
-        Audit[Global audit interceptor]
-        RT[RealtimeGateway + ScopedRealtimeGateway]
-        Cron[@nestjs/schedule: PI sync jobs every minute]
-        Rules[RCA trigger evaluator · PI event pull · reporting]
+    subgraph Backend["NestJS (:4004, prefix /api)"]
+        API[API process<br/>guards, DTO validation, v2 controllers]
+        W[Worker process<br/>jobs, schedulers, connectors]
+        D[Domain: accounting, KPI, valuation,<br/>reconciliation, RCA, rules]
+        API --> D
+        W --> D
     end
 
-    DB[(PostgreSQL 15<br/>DB 'proact' in docker instrumental-postgres)]
+    DB[(PostgreSQL 15 'proact'<br/>RLS tenant_isolation)]
     PI[(AVEVA PI Web API)]
-    PLC[(OPC UA / Modbus / MQTT …)]
+    MQ[(MQTT broker)]
 
-    API -- REST --> Mods
-    WS -- websocket --> RT
-    Mods --> DB
-    Rules --> PI
-    Mods -.mostly simulated.-> PLC
+    Q -- REST /api/v2 --> API
+    WS -- websocket --> API
+    D --> DB
+    W --> PI
+    W --> MQ
 ```
 
-### 10.1 Frontend (`src/`)
+### 12.1 Frontend (repo root, `src/`)
 
-- React 18, TypeScript, Vite, Tailwind, shadcn/ui, Recharts, React Flow (logic trees and diagrams).
-- `pages/` holds the routes. `components/` holds feature UIs (production-plans, rca, rca-analysis, historian, …).
-- `services/MasterDataService.ts` is the facade most pages call. `services/api/*Api.ts` are thin REST clients over `httpClient.ts`.
-- **A lot of business logic lives here:** OEE, cost auto-fill, loss estimates, event status rules, plan/RCA approvals, knowledge-base similarity.
+- React 18, TypeScript, Vite, Tailwind, shadcn/ui, TanStack Query, Recharts.
+- Routes in `src/app/routes/*.tsx`; features in `src/features/<area>/`. Routes and heavy components are lazy-loaded; long lists are virtualised.
+- A typed v2 client generated from the OpenAPI snapshot. The browser holds no business logic.
+- All date, time and number rendering goes through the plant preference helpers (time zone, calendar, digits, week start, display currency).
 
-### 10.2 Backend (`server/pro-act-backend/src/`)
+### 12.2 Backend (`server/pro-act-backend/src/`)
 
-- NestJS 11, TypeORM 0.3, class-validator. Swagger is at `/api`.
-- Each module is a folder: `entity` + `dto` + `service` + `controller`. Most are plain CRUD.
-- The real server-side logic is in `rca/rca-auto-create.service.ts` + `rca-trigger-evaluator.ts`, `integration/pi-event-pull.service.ts`, `hierarchy-mapping`, `pi-sync-job/pi-sync-scheduler.service.ts`, `reporting`, and `audit-log/audit-auto-log.interceptor.ts`.
-- The global `ValidationPipe` rejects unknown fields (`forbidNonWhitelisted`). This is why mismatched field names between frontend and backend cause 400 errors.
+- NestJS 11, TypeORM 0.3, class-validator; Swagger at `/api`.
+- One process image, two roles: `PROCESS_ROLE=api|worker|all` (default `all` outside Compose). The worker runs jobs, schedulers and connectors and has health probes on `:4005`.
+- Layering: controller → service → repository. Pure domain modules in `src/domain/` (accounting, actuals, KPI, valuation, reconciliation, RCA, events).
+- v2 API under `src/v2/`. The UI calls v2 only; `/api/auth/*` stays unversioned. Unused v1 endpoints are being retired.
+- The global `ValidationPipe` uses `whitelist + forbidNonWhitelisted`: an undeclared field returns 400.
+- Slow work runs as a job and returns 202. Domain events go through an outbox (`PeriodSubmitted`, `PeriodApproved`, `PeriodRestated`).
 
-### 10.3 Database
+### 12.3 Database
 
-- **PostgreSQL 15**, database `proact` on the shared `instrumental-postgres` container (host port 5432). It was migrated from MS SQL Server in October 2026.
-- The schema is generated from the TypeORM entities (`DB_SYNCHRONIZE=true`): about 80 tables.
-- The `.sql` scripts in `server/pro-act-backend/legacy/` (formerly `migrations/` and `database-setup/`) are the old SQL Server versions and are no longer used.
+- PostgreSQL 15, database `proact`. Schema from migrations in `src/database/migrations` (each with `down`); `synchronize` is off; the API applies pending migrations on boot.
+- UTC `timestamptz`, durations in seconds, money and quantities in `numeric`. Row-level security on every tenant table.
+- Retention: raw source observations 1 year, signal samples 90 days, audit 30 days; approved ledgers are never deleted.
 
----
+## 13. Running it locally
 
-## 11. Running it locally
+**Docker** (see `docs/DOCKER.md`):
 
 ```bash
-docker start instrumental-postgres          # Postgres on :5432 (DB: proact)
-
-cd server/pro-act-backend && npm run start:dev   # API on :4004 (PORT in .env)
-cd <repo root> && npm run dev                    # UI on http://localhost:8070
+cp .env.example .env          # set POSTGRES_PASSWORD, JWT_SECRET and JWT_REFRESH_SECRET
+docker compose up -d --build
+docker compose exec backend node dist/scripts/seed-demo-users.js
 ```
 
-| URL | What |
-|---|---|
-| http://localhost:8070 | Application |
-| http://localhost:4004/api | Swagger API docs |
-| http://localhost:4004/api/health | Health + DB check |
+**Dev servers:**
 
-**Login accounts.** All belong to org "Demo Org" and plant "Demo Plant" (unit "Kiln 1"). Recreate or reset them with `npm run db:seed-demo-users` in `server/pro-act-backend`.
+```bash
+cd server/pro-act-backend && npm ci --legacy-peer-deps && npm run start:dev   # API + worker on :4004 (PORT=4004 in .env)
+npm ci --legacy-peer-deps && npm run dev                                       # UI on http://localhost:8070 (repo root)
+```
+
+`npm run start:worker:dev` runs the worker alone. `npm run ci` runs lint, typecheck, unit and integration tests (add `-- --e2e` for the e2e smoke run). The app is at http://localhost:8070, Swagger at http://localhost:4004/api, health at http://localhost:4004/api/health.
+
+**Demo accounts** (org "Demo Org", plant "Demo Plant"; reset with `npm run db:seed-demo-users` in `server/pro-act-backend`):
 
 | Email | Password | Role |
 |---|---|---|
 | admin@acme.com | demo123 | SuperAdmin |
-| test@example.com | Test123!@# | SuperAdmin (used by the E2E tests) |
-| manager@acme.com | demo123 | TenantAdmin |
-| engineer@acme.com | demo123 | Engineer |
+| test@example.com | Test123!@# | SuperAdmin (used by the e2e tests) |
+| manager@acme.com | demo123 | TenantAdmin (`manager_approver`) |
+| engineer@acme.com | demo123 | Engineer (`production_engineer`) |
 | operator@acme.com | demo123 | Operator |
-| admin@proact.local | Admin123!@# | SuperAdmin |
 
-**How login works:**
-- `POST /api/auth/login` looks the user up by email (case-insensitive) and checks the bcrypt password hash. Inactive accounts are refused.
-- It returns a 24h access token carrying `{sub, email, role, tenantId, organizationId}` and a 7-day refresh token. The frontend stores both in `localStorage['proact_auth_state']`.
-- The frontend then loads the user's organization and plant to build the session, and refreshes the access token via `POST /api/auth/refresh` before it expires.
-- Roles only control which menu items appear (§9).
-
-Select the plant in the header after logging in. More realistic demo data can be loaded from the **Data Seeding** page.
+Select the plant in the header after logging in. Demo data comes only from isolated seeders, never from product code.

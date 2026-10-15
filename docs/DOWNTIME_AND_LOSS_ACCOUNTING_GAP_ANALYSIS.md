@@ -1,5 +1,7 @@
 # Downtime Analysis & Production Loss Accounting — End-to-End Gap Analysis
 
+> **Superseded by Phases 0–3; see [plans/EXPERT_REVIEW.md](../plans/EXPERT_REVIEW.md)** (current findings and status per area) and [plans/README.md](../plans/README.md) (phase checklist). This is the 7 October 2026 baseline of the v1 application, kept for history. Every gap below was closed by the v2 backend (period model, accounting engine, KPI engine, reconciliation, valuation, RCA workflow) or recorded as a decision in [plans/DECISIONS.md](../plans/DECISIONS.md); sections are marked **Superseded** where they no longer describe the application. The product is now **Traverse Forge**.
+
 **Scope:** two use cases, traced from AVEVA PI through ingestion, database, API and UI.
 **Date:** 7 October 2026, after the move to PostgreSQL.
 **Method:** code reading of the whole path (three parallel traces: ingestion, schema/API, UI), with the most consequential findings verified against the running app and database. Items marked **✔ verified** were confirmed by running a request or query; everything else is from reading the code.
@@ -9,6 +11,8 @@ Companion documents: [PROACT_APPLICATION_GUIDE.md](PROACT_APPLICATION_GUIDE.md) 
 ---
 
 ## 0. Verdict in one page
+
+> **Superseded.** downtime and loss accounting are computed on the server (KPI engine 2.7, accounting engine 2.5), no browser KPIs, no fabricated numbers; maturity per area in EXPERT_REVIEW.md.
 
 | | Downtime analysis | Production loss accounting |
 |---|---|---|
@@ -48,6 +52,8 @@ Industry baseline (ISO 22400 / OEE "six big losses" / typical PLA products such 
 ---
 
 ## 2. End-to-end flow today
+
+> **Superseded.** v2 flow is source mapping → raw observations → event write model → production periods → calculation runs → reconciliation → approval snapshots → reports / exports.
 
 ```mermaid
 flowchart LR
@@ -110,6 +116,8 @@ Where the logic lives today:
 
 ## 3. Data model: today vs needed
 
+> **Superseded.** the "do not exist" tables (periods, slices, calculation runs, loss lines, KPI results, approval snapshots, exports) exist; integrity gaps closed by migrations (DB-01…DB-05).
+
 ### 3.1 Tables that exist (relevant columns)
 
 **`production_events`** — the downtime/loss record
@@ -163,6 +171,8 @@ Where the logic lives today:
 
 ## 4. Ingestion from PI — what exists and what's missing
 
+> **Superseded.** PI Web API adapter, source mappings, quarantine and MQTT subscription (the feed is owned by data engineering) replace the v1 sync.
+
 ### 4.1 Exists [✓]
 - Event-frame pull per tenant connection, scoped to an AF database or element; Basic auth; credentials encrypted at rest.
 - Template → event type mapping with tenant overrides (`pi_mappings.mappingRules`).
@@ -200,6 +210,8 @@ Where the logic lives today:
 
 ## 5. API and server logic — what exists and what's missing
 
+> **Superseded.** `/api/v2` (OpenAPI snapshot `server/pro-act-backend/openapi/v2.json`) with tenant scope from identity, keyset pagination and 202 jobs.
+
 ### 5.1 Routes relevant to the two use cases
 
 | Controller | Routes | Filters | Verified issues |
@@ -229,6 +241,8 @@ Only `reporting/reporting.service.ts` computes anything:
 ---
 
 ## 6. UI — what exists and what's missing
+
+> **Superseded.** Event Hub v2, Downtime analysis, PLA analytics, Reports, Plan dashboard, Month close and RCA workspace read server snapshots only.
 
 ### 6.1 Downtime
 
@@ -260,6 +274,8 @@ Only `reporting/reporting.service.ts` computes anything:
 ---
 
 ## 7. Capability matrices
+
+> **Superseded.** see the area tables of EXPERT_REVIEW.md.
 
 Legend: ✓ exists · ◐ partial · ✗ missing · ⚠ simulated/fabricated
 
@@ -308,6 +324,8 @@ Legend: ✓ exists · ◐ partial · ✗ missing · ⚠ simulated/fabricated
 
 ## 8. Bugs that block the use cases today
 
+> **Superseded.** every bug listed was fixed in Phase 0 (data contract) or removed with the v1 screens.
+
 Fix these before building on top; all are small.
 
 | # | Bug | Verified | File |
@@ -334,6 +352,8 @@ Fix these before building on top; all are small.
 ---
 
 ## 9. Target design and build plan
+
+> **Superseded.** Phases 0–3 delivered (plans/README.md).
 
 The target follows the intent already written in `docs/microserviceSpecs.md` (ProductionProfile, PlanPeriods, ProductionData per period, losses linked to events with a reconciliation status, code hierarchy) — implemented inside the existing monolith, not as microservices.
 
@@ -417,6 +437,8 @@ The target follows the intent already written in `docs/microserviceSpecs.md` (Pr
 ---
 
 ## 10. Decisions needed from the product owner
+
+> **Superseded.** decided; see plans/DECISIONS.md (D01–D17 and the dated decision log).
 
 1. **Duration unit** — recommend **minutes** everywhere (`duration_minutes`), derived from start/end.
 2. **Period granularity** — shift, day, or both? Does a period span products (mix) or is it per unit × product?

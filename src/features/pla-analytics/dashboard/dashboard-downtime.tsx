@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDowntimeReport } from '@/api/v2/queries/reports';
 import type { DowntimeReportView } from '@/api/v2/types/reports';
@@ -7,7 +8,8 @@ import type { KpiAggregateView } from '@/api/v2/types/reports';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { NumberText } from '@/features/ux-kit/number-text';
 import { useCalendarPreference } from '@/lib/dates';
-import { findMetric, formatCount, formatRatio, reasonText, SUMMARY_TILES, type TileSpec } from '@/features/downtime-analysis/model/kpi-display';
+import { CONTROLLABLE_TILE, findMetric, formatCount, formatRatio, reasonText, SUMMARY_TILES, type TileSpec } from '@/features/downtime-analysis/model/kpi-display';
+import { ControllableSwitch } from '@/features/downtime-analysis/components/controllable-switch';
 import { AnalyticsCard } from '../components/analytics-card';
 import { repeatQuery, scopeToParams, type AnalyticsScope } from '../model/analytics-scope';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
@@ -39,10 +41,20 @@ export function DashboardDowntime({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useDowntimeReport(repeatQuery(scope, 'reason'), env.timezone);
   const summary = query.data?.data.summary;
+  const [controllable, setControllable] = useState(false);
+  const tiles = controllable ? [...DASHBOARD_TILES, CONTROLLABLE_TILE] : DASHBOARD_TILES;
+  const actions = (
+    <div className="flex flex-wrap items-center gap-3">
+      <ControllableSwitch checked={controllable} onChange={setControllable} testId="dashboard-controllable-switch" />
+      <Link className="text-sm underline" to="/downtime">
+        Downtime analysis
+      </Link>
+    </div>
+  );
   return (
-    <AnalyticsCard title="Downtime" testId="dashboard-downtime" query={query} response={query.data} actions={<Link className="text-sm underline" to="/downtime">Downtime analysis</Link>}>
+    <AnalyticsCard title="Downtime" testId="dashboard-downtime" query={query} response={query.data} actions={actions}>
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {DASHBOARD_TILES.map((tile) => (
+        {tiles.map((tile) => (
           <DowntimeTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />
         ))}
       </dl>

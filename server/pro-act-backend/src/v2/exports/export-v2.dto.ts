@@ -23,6 +23,11 @@ import {
   ExportReportType,
   ExportSelector,
 } from '../../exports/entities/export-job.entity';
+import {
+  DEFAULT_PDF_CURRENCY,
+  PDF_CURRENCIES,
+  PdfCurrency,
+} from '../../exports/pdf/pdf-model';
 import { LIST_LIMIT_MAX, ListQueryDto } from '../common/list-query.dto';
 
 /** `POST /exports` (§15.2): report, format, revision selector and its filters. */
@@ -33,10 +38,21 @@ export class CreateExportDto {
 
   @ApiProperty({
     enum: EXPORT_FORMATS,
-    description: 'CSV only in R1 (PDF: Phase 3)',
+    description:
+      '`csv`: every column, ISO UTC times, both reporting currencies. `pdf`: a printable report on the ' +
+      'plant clock, calendar and digits, money in `currency`; at most EXPORT_PDF_MAX_SOURCES (500) period ' +
+      'revisions (422 EXPORT_TOO_LARGE).',
   })
   @IsIn(EXPORT_FORMATS)
   format: ExportFormat;
+
+  @ApiPropertyOptional({
+    enum: PDF_CURRENCIES,
+    description: `PDF only: the reporting currency money is printed in (default ${DEFAULT_PDF_CURRENCY}). Ignored for CSV.`,
+  })
+  @IsOptional()
+  @IsIn(PDF_CURRENCIES)
+  currency?: PdfCurrency;
 
   @ApiProperty({
     enum: EXPORT_SELECTORS,

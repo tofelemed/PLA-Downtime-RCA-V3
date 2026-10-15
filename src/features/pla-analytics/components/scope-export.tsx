@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCreateExport } from '@/api/v2/queries/exports';
 import { useExportJob } from '@/api/v2/queries/period-overview';
-import { downloadExportText } from '@/api/v2/queries/period-workflow';
+import { downloadExportFile } from '@/api/v2/queries/period-workflow';
 import type { ExportRequest } from '@/api/v2/queries/reports';
 import { Button } from '@/components/ui/button';
 import { createLogger } from '@/lib/logger';
@@ -11,24 +11,19 @@ import { labelOf } from '@/features/ux-kit/labels';
 import { exportFileName, plantFileDay } from '@/features/ux-kit/format/export-file-name';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { saveBlob } from '@/features/ux-kit/save-blob';
+import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { EXPORT_STATE_LABELS } from '../model/display';
 
 const log = createLogger('plaAnalyticsExport');
-
-function saveText(text: string, name: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 export interface ScopeExportProps {
   /** the export of exactly the shown scope, or null while the figures are provisional */
   request: ExportRequest | null;
   label: string;
   timezone: string;
+  /** csv (default): every column; pdf: a printable report in the plant calendar and the display currency */
+  format?: 'csv' | 'pdf';
   testId?: string;
 }
 
@@ -36,10 +31,13 @@ const DISABLED_HINT = 'Exports contain approved figures only: tick “Approved o
 
 /**
  * Asynchronous export of the shown scope (2.9 job, AN03): queued with the page's window and units, polled
- * until done, then the CSV (header: generated time, status, revision and run per row) is downloaded. PDF is
- * not offered: the API renders CSV only (decision 2.9). Failures read in plain language.
+ * until done, then the file is downloaded: CSV (header: generated time, status, revision and run per row) or
+ * PDF (rendered on the server in the plant calendar, money in the user's display currency). Failures read
+ * in plain language.
  */
-export function ScopeExport({ request, label, timezone, testId = 'scope-export' }: ScopeExportProps) {
+export function ScopeExport({ request: base, label, timezone, format = 'csv', testId = 'scope-export' }: ScopeExportProps) {
+  const { currency } = useDisplayCurrency();
+  const request: ExportRequest | null = base && format === 'pdf' ? { ...base, format: 'pdf', currency } : base;
   const exporter = useCreateExport();
   const [jobId, setJobId] = useState<string | null>(null);
   const [failure, setFailure] = useState<unknown>(null);
@@ -57,7 +55,7 @@ export function ScopeExport({ request, label, timezone, testId = 'scope-export' 
   const download = async () => {
     if (!jobId) return;
     try {
-      saveText(await downloadExportText(jobId), exportFileName([request?.reportType ?? 'export', plantFileDay(request?.from, timezone, '')]));
+      saveBlob(await downloadExportFile(jobId), exportFileName([request?.reportType ?? 'export', plantFileDay(request?.from, timezone, '')], format));
     } catch (error) {
       setFailure(error);
     }
@@ -68,7 +66,7 @@ export function ScopeExport({ request, label, timezone, testId = 'scope-export' 
     <div className="space-y-1 text-sm" data-testid={testId} data-request={request ? JSON.stringify(request) : ''}>
       <Button size="sm" variant="outline" disabled={!request || exporter.isPending} title={request ? undefined : DISABLED_HINT} onClick={() => void start()} data-testid={`${testId}-start`}>
         <ActionIcon.export className="mr-1 h-4 w-4" aria-hidden="true" />
-        {label} (CSV)
+        {label} ({format.toUpperCase()})
       </Button>
       {!request && <p className="text-xs text-muted-foreground">Approved figures only.</p>}
       {data && (

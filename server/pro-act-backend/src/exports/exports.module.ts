@@ -10,9 +10,10 @@ import { ExportReadsService } from './export-reads.service';
 import { ExportRenderer } from './export-renderer';
 import { ExportRequestsService } from './export-requests.service';
 import { ExportStorage } from './export-storage';
+import { ExportPdfWriter } from './pdf/export-pdf';
 
 /**
- * Exports and downstream delivery of plan 2.9 (AN03, API04, WF03, D12): immutable CSV report exports
+ * Exports and downstream delivery of plan 2.9 (AN03, API04, WF03, D12): immutable CSV and PDF report exports
  * bound to approval snapshots (request → pinned sources → leased render job → private file store →
  * re-authorized download), and the delivery reconciliation of `PeriodApproved` messages. Domain-message
  * contracts are validated by the outbox relay (`common/domain-events`).
@@ -22,6 +23,7 @@ import { ExportStorage } from './export-storage';
   providers: [
     ExportStorage,
     ExportRenderer,
+    ExportPdfWriter,
     ExportReadsService,
     ExportRequestsService,
     ExportJobsService,

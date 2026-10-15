@@ -9,7 +9,10 @@ import {
 } from '../../periods/period-scope';
 import { WeekStart } from '../../domain/calendar/week-start';
 import { invalid, invalidReference } from '../../profiles/profile-errors';
-import { ReportWindowQueryDto } from './kpi-reports-v2.dto';
+import {
+  DowntimeSelectionQueryDto,
+  ReportWindowQueryDto,
+} from './kpi-reports-v2.dto';
 
 const MAX_DAYS = 400;
 const DAY_MS = 86_400_000;
@@ -25,6 +28,31 @@ export interface ReportScope {
   approvedOnly: boolean;
   /** the plant's first day of the week (week buckets, DT-10) */
   weekStart: WeekStart;
+  /** downtime page filters: only periods of these products, shifts or crews (absent = every period) */
+  selection?: PeriodSelection;
+}
+
+export interface PeriodSelection {
+  productIds?: string[];
+  shiftNames?: string[];
+  crewIds?: string[];
+}
+
+const distinct = (values: string[] | undefined) =>
+  values?.length ? [...new Set(values)].sort() : undefined;
+
+/** The period selection of a request (only lists that were given; none = undefined). */
+export function selectionOf(
+  query: Partial<DowntimeSelectionQueryDto>,
+): PeriodSelection | undefined {
+  const selection: PeriodSelection = {};
+  const productIds = distinct(query.productIds);
+  const shiftNames = distinct(query.shiftNames);
+  const crewIds = distinct(query.crewIds);
+  if (productIds) selection.productIds = productIds;
+  if (shiftNames) selection.shiftNames = shiftNames;
+  if (crewIds) selection.crewIds = crewIds;
+  return Object.keys(selection).length > 0 ? selection : undefined;
 }
 
 /**
@@ -35,7 +63,7 @@ export interface ReportScope {
 export async function resolveReportScope(
   manager: EntityManager,
   context: RequestContext,
-  query: ReportWindowQueryDto,
+  query: ReportWindowQueryDto & Partial<DowntimeSelectionQueryDto>,
 ): Promise<ReportScope> {
   const tenantId = requireTenantId(context);
   const from = new Date(query.from);
@@ -65,6 +93,7 @@ export async function resolveReportScope(
     to,
     approvedOnly: query.approvedOnly ?? false,
     weekStart: await tenantWeekStart(manager, tenantId),
+    selection: selectionOf(query),
   };
 }
 

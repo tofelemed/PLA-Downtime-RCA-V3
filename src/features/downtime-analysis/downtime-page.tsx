@@ -21,7 +21,7 @@ import { TrendPanel } from './components/trend-panel';
 import { useDowntimeBundle } from './hooks/use-downtime-bundle';
 import { useDowntimeFilters } from './hooks/use-downtime-filters';
 import { bundleQuery, pageViews } from './model/bundle-views';
-import { toSearchParams } from './model/downtime-filters';
+import { hasPeriodSelection, toSearchParams } from './model/downtime-filters';
 import type { DrillSelection } from './model/reason-drill';
 
 const StateTimeline = lazy(() => import('./components/state-timeline').then((module) => ({ default: module.StateTimeline })));
@@ -55,6 +55,12 @@ function DowntimeScreen() {
       <div className="space-y-6" data-testid="downtime-analysis">
         <DowntimeHeader filters={filters} bundle={bundle} />
         <DowntimeFiltersBar filters={filters} onChange={change} />
+        {hasPeriodSelection(filters) && (
+          <p className="text-xs text-muted-foreground" data-testid="period-selection-note">
+            Product, shift and crew filters keep whole periods: they narrow the summary, Pareto, trend, bad actors, crews and comparison; reliability and lost production
+            show every period of the units.
+          </p>
+        )}
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="min-w-0 space-y-6">
             <KpiSummary bundle={bundle} />

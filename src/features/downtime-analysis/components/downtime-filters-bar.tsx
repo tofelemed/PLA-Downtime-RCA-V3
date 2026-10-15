@@ -12,6 +12,7 @@ import {
   type ScheduleFilter,
   type TrendGroup,
 } from '../model/downtime-filters';
+import { PeriodSelectionFilters } from './period-selection-filters';
 
 export interface DowntimeFiltersBarProps {
   filters: DowntimeFilters;
@@ -22,7 +23,10 @@ const SELECT = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
 const label = (value: string) => labelOf(SCHEDULE_CLASS_LABELS, value);
 const trendLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
-/** Server-side filters of every widget (plan 3.3): units, window, schedule class, micro-stops, approval. */
+/**
+ * Server-side filters of every widget (plan 3.3): units, products / shifts / crews (period selection of the
+ * downtime summary and breakdowns), window, schedule class, micro-stops, approval.
+ */
 export function DowntimeFiltersBar({ filters, onChange }: DowntimeFiltersBarProps) {
   const env = useEventHubEnv();
   const choosePreset = (key: string) => {
@@ -39,6 +43,7 @@ export function DowntimeFiltersBar({ filters, onChange }: DowntimeFiltersBarProp
         onChange={(unitIds) => onChange({ unitIds: [...unitIds].sort() })}
         commitOnClose
       />
+      <PeriodSelectionFilters filters={filters} onChange={onChange} />
       <div className="flex items-center gap-2">
         <Label htmlFor="downtime-window">Window</Label>
         <select id="downtime-window" data-testid="downtime-window" className={SELECT} value="" onChange={(event) => choosePreset(event.target.value)}>

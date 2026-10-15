@@ -7,8 +7,10 @@ import {
   IsBoolean,
   IsIn,
   IsOptional,
+  IsString,
   IsUUID,
   Matches,
+  MaxLength,
 } from 'class-validator';
 import {
   toArrayParam,
@@ -109,7 +111,50 @@ export class OeeReportQueryDto extends ReportWindowQueryDto {
   policy?: (typeof OEE_POLICIES)[number];
 }
 
-export class DowntimeReportQueryDto extends ReportWindowQueryDto {
+/**
+ * Period selection of the downtime reports (Downtime page filters): only the periods of these shifts,
+ * crews or products are read (server-side; the stop time of a chosen period counts whole).
+ */
+export class DowntimeSelectionQueryDto extends ReportWindowQueryDto {
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Repeat for several products: only periods with a product slice of one of them (the whole period counts)',
+  })
+  @IsOptional()
+  @Transform(toArrayParam)
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  productIds?: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Repeat for several shifts: only periods whose shift name (calendar shift label) is one of them',
+  })
+  @IsOptional()
+  @Transform(toArrayParam)
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(100, { each: true })
+  shiftNames?: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Repeat for several crews: only periods whose shift instance was worked by one of them',
+  })
+  @IsOptional()
+  @Transform(toArrayParam)
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  crewIds?: string[];
+}
+
+export class DowntimeReportQueryDto extends DowntimeSelectionQueryDto {
   @ApiPropertyOptional({
     enum: DOWNTIME_GROUPS,
     default: 'reason',
@@ -192,7 +237,7 @@ export const BUNDLE_VIEW_PATTERN = new RegExp(
 export const MAX_BUNDLE_VIEWS = 12;
 
 /** `GET /reports/downtime-bundle`: several downtime breakdowns read from one run selection (T24). */
-export class DowntimeBundleQueryDto extends ReportWindowQueryDto {
+export class DowntimeBundleQueryDto extends DowntimeSelectionQueryDto {
   @ApiPropertyOptional({
     default: false,
     description:

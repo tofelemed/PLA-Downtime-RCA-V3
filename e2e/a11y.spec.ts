@@ -1,0 +1,116 @@
+import { test, expect, type Page } from '@playwright/test';
+import { authenticate } from './test-utils/api-helpers';
+import { loginViaUI } from './test-utils/auth-helpers';
+import { call } from './test-utils/downtime-world';
+
+/**
+ * Accessibility gate (owner 15 Oct, `@axe-core/playwright`): every main page is scanned with axe against
+ * WCAG 2.1 A / AA and the test fails on any serious or critical violation (moderate / minor ones are
+ * printed, not failed). Pages that need a record (event, period, RCA case) open the first one the
+ * manager can read; without one the scan is skipped with a note rather than failed.
+ */
+const MANAGER = { email: 'manager@acme.com', password: 'demo123' };
+const FLAGS = ['v2.eventHub', 'v2.downtimeAnalysis', 'v2.plaAnalytics', 'v2.planDashboard', 'v2.rca'];
+const BLOCKING = new Set(['serious', 'critical']);
+const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
+
+interface ListPage<T> {
+  items?: T[];
+}
+
+/** What the spec reads of an axe result (typed here so the e2e typecheck does not need the package types). */
+interface AxeViolation {
+  id: string;
+  impact?: string | null;
+  help: string;
+  nodes: Array<{ target: unknown[] }>;
+}
+
+interface AxeBuilderLike {
+  withTags(tags: string[]): AxeBuilderLike;
+  analyze(): Promise<{ violations: AxeViolation[] }>;
+}
+
+type AxeBuilderConstructor = new (options: { page: Page }) => AxeBuilderLike;
+
+/** The package name in a variable: loaded at run time (root devDependency @axe-core/playwright). */
+const AXE_MODULE = '@axe-core/playwright';
+
+async function axeBuilder(page: Page): Promise<AxeBuilderLike> {
+  const loaded = (await import(AXE_MODULE)) as { default?: unknown; AxeBuilder?: unknown };
+  const Builder = (loaded.AxeBuilder ?? loaded.default) as AxeBuilderConstructor | undefined;
+  if (typeof Builder !== 'function') throw new Error('@axe-core/playwright is not installed');
+  return new Builder({ page });
+}
+
+let token = '';
+
+async function firstId<T extends { id: string }>(path: string): Promise<T | null> {
+  const result = await call<ListPage<T>>(token, 'GET', path);
+  return result.status === 200 ? (result.body.items?.[0] ?? null) : null;
+}
+
+async function scan(page: Page, path: string, ready: string): Promise<void> {
+  await page.goto(path);
+  await expect(page.locator(ready).first()).toBeVisible({ timeout: 60_000 });
+  // let lazy cards and charts settle before the scan
+  await page.waitForLoadState('networkidle').catch(() => undefined);
+  const results = await (await axeBuilder(page)).withTags(WCAG).analyze();
+  const blocking = results.violations.filter((v) => v.impact && BLOCKING.has(v.impact));
+  const other = results.violations.filter((v) => !v.impact || !BLOCKING.has(v.impact));
+  if (other.length > 0) test.info().annotations.push({ type: 'a11y-minor', description: other.map((v) => `${v.id} (${v.nodes.length})`).join(', ') });
+  const summary = blocking.map((v) => ({ rule: v.id, impact: v.impact, help: v.help, targets: v.nodes.slice(0, 5).map((n) => n.target.map(String).join(' ')) }));
+  expect(summary, `serious / critical axe violations on ${path}`).toEqual([]);
+}
+
+test.describe('Accessibility of the main pages (axe, WCAG 2.1 AA, serious / critical fail)', () => {
+  test.beforeAll(async () => {
+    token = (await authenticate(MANAGER.email, MANAGER.password)).accessToken;
+    for (const flag of FLAGS) await call(token, 'PUT', `/v2/feature-flags/${flag}`, { enabled: true });
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await loginViaUI(page, MANAGER.email, MANAGER.password);
+  });
+
+  const STATIC_PAGES: ReadonlyArray<[string, string, string]> = [
+    ['Event Hub', '/events', 'main'],
+    ['Downtime', '/downtime', '[data-testid="downtime-analysis"]'],
+    ['PLA analytics', '/pla-analytics', '[data-testid="analytics-filters"]'],
+    ['Reports', '/reports', '[data-testid="reports-v2"]'],
+    ['Dashboard', '/dashboard', '[data-testid="analytics-dashboard"]'],
+    ['Month close', '/month-close', 'main'],
+    ['Master data', '/master-data', 'main'],
+  ];
+
+  for (const [name, path, ready] of STATIC_PAGES) {
+    test(`${name} (${path})`, async ({ page }) => {
+      test.setTimeout(120_000);
+      await scan(page, path, ready);
+    });
+  }
+
+  test('event page', async ({ page }) => {
+    const event = await firstId<{ id: string }>('/v2/production-events?limit=1&sort=-startTime');
+    test.skip(!event, 'no production event in the demo plant');
+    await scan(page, `/events/${event!.id}`, 'main');
+  });
+
+  test('Plan dashboard period', async ({ page }) => {
+    test.setTimeout(120_000);
+    const plan = await firstId<{ id: string }>('/v2/production-plans?limit=1');
+    test.skip(!plan, 'no production plan in the demo plant');
+    await page.goto(`/plans/${plan!.id}`);
+    const period = page.locator('a[href*="/periods/"]').first();
+    const hasPeriod = await period.isVisible({ timeout: 60_000 }).catch(() => false);
+    test.skip(!hasPeriod, 'the plan has no period link to open');
+    const href = await period.getAttribute('href');
+    await scan(page, href ?? `/plans/${plan!.id}`, 'main');
+  });
+
+  test('RCA case', async ({ page }) => {
+    const rca = await firstId<{ id: string }>('/v2/rcas?limit=1');
+    test.skip(!rca, 'no RCA case in the demo plant');
+    await scan(page, `/rca/${rca!.id}`, 'main');
+  });
+});

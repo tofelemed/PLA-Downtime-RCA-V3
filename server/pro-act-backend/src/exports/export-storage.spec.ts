@@ -46,6 +46,7 @@ describe('export storage (plan 2.9)', () => {
     `${tenant}/../${job}.csv`,
     `${tenant}/${job}.csv/../../x.csv`,
     `/${tenant}/${job}.csv`,
+    `${tenant}/${job}.exe`,
     `${tenant}\\${job}.csv`,
   ])('refuses the key %j (no traversal)', (key) => {
     expect(() => storage.pathOf(key)).toThrow(UnsafeStorageKeyError);
@@ -54,6 +55,8 @@ describe('export storage (plan 2.9)', () => {
   it('only builds keys from uuids', () => {
     expect(() => storage.keyOf('..', job)).toThrow(UnsafeStorageKeyError);
     expect(storage.keyOf(tenant, job)).toBe(`${tenant}/${job}.csv`);
+    expect(storage.keyOf(tenant, job, 'pdf')).toBe(`${tenant}/${job}.pdf`);
+    expect(storage.pathOf(`${tenant}/${job}.pdf`)).toContain(`${job}.pdf`);
   });
 
   it('refuses a root inside the publicly served uploads directory', () => {

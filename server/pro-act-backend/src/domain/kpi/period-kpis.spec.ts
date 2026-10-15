@@ -249,6 +249,36 @@ describe('DT-07: downtime within the schedule and external downtime', () => {
   });
 });
 
+describe('D15: controllable availability (external stops excluded, own name)', () => {
+  it('8 h shift losing 2 h to grid power: availability 75 %, controllable 100 %', () => {
+    const kpis = run(
+      input({
+        events: [event('grid', HOUR, 3 * HOUR, { scheduleClass: 'external' })],
+      }),
+    );
+    expect(str(period(kpis, 'scheduled_availability').value)).toBe('0.75');
+    const controllable = period(kpis, 'controllable_availability');
+    expect(str(controllable.value)).toBe('1');
+    expect(str(controllable.denominator)).toBe(String(8 * HOUR));
+    expect(controllable.cohort).toMatchObject({
+      excludes: 'stops classed external',
+    });
+  });
+
+  it('internal stops still reduce it', () => {
+    const kpis = run(
+      input({
+        events: [
+          event('u', 0, 2 * HOUR),
+          event('e', 4 * HOUR, 6 * HOUR, { scheduleClass: 'external' }),
+        ],
+      }),
+    );
+    expect(str(period(kpis, 'scheduled_availability').value)).toBe('0.5');
+    expect(str(period(kpis, 'controllable_availability').value)).toBe('0.75');
+  });
+});
+
 describe('KPI02 time model', () => {
   it('a 45 s micro-stop stays in R (performance), a 90 s stop is availability time', () => {
     const micro = run(input({ events: [event('m', 600, 645)] }));

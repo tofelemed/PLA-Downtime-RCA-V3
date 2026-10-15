@@ -3,6 +3,7 @@ import {
   ExportFilters,
   ExportJob,
 } from '../../exports/entities/export-job.entity';
+import { ExportPresentation } from '../../exports/pdf/pdf-model';
 
 /** An export job as v2 returns it (API04 status; the download link only while the file is available). */
 export interface ExportV2View {
@@ -11,6 +12,8 @@ export interface ExportV2View {
   format: string;
   revisionSelector: string;
   filters: ExportFilters;
+  /** PDF only: plant name, clock, calendar, digits and money currency the file is printed with */
+  presentation: ExportPresentation | null;
   /** content scope; null = tenant-wide */
   unitIds: string[] | null;
   /** exports contain approved content only */
@@ -52,6 +55,7 @@ export function toExportView(job: ExportJob, now = new Date()): ExportV2View {
     format: job.format,
     revisionSelector: job.revisionSelector,
     filters: job.filters,
+    presentation: job.presentation,
     unitIds: job.unitIds,
     status: 'approved',
     state: job.state,

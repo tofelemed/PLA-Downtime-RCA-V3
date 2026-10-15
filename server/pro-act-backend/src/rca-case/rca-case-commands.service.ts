@@ -14,11 +14,17 @@ import { RcaCaseV2View } from './rca-case.view';
 import { RcaCasesService } from './rca-cases.service';
 import { findCase, invalidBody, scopeOf } from './rca-scope';
 
-/** Counts of the cases in the caller's scope (the RCA list header). */
+/** Counts of the cases in the caller's scope (the RCA list header and the dashboard tiles). */
 export interface RcaCaseSummaryV2View {
   total: number;
+  /** cases not closed */
+  open: number;
   overdue: number;
   critical: number;
+  /** open or in-progress actions past their due date */
+  overdueActions: number;
+  /** actions with a baseline and a verification window whose effectiveness result is not in yet */
+  effectivenessPending: number;
   byStatus: Array<{ status: string | null; count: number }>;
   asOf: string;
 }
@@ -70,8 +76,12 @@ export class RcaCaseCommandsService {
     );
     const sum = (pick: (row: (typeof rows)[number]) => string) =>
       rows.reduce((total, row) => total + Number(pick(row)), 0);
+    const closed = rows.find((row) => row.status === 'Closed');
+    const actions = await this.actionCounts(scope.tenantId, scope.units);
     return {
       total: sum((row) => row.count),
+      open: sum((row) => row.count) - Number(closed?.count ?? 0),
+      ...actions,
       overdue: sum((row) => row.overdue),
       critical: sum((row) => row.critical),
       byStatus: rows.map((row) => ({
@@ -79,6 +89,25 @@ export class RcaCaseCommandsService {
         count: Number(row.count),
       })),
       asOf: new Date().toISOString(),
+    };
+  }
+
+  private async actionCounts(
+    tenantId: string,
+    units: string[] | null,
+  ): Promise<{ overdueActions: number; effectivenessPending: number }> {
+    const [row]: Array<{ overdue: number; pending: number }> =
+      await this.dataSource.query(
+        `SELECT count(*) FILTER (WHERE a.due_date < now() AND a.status::text IN ('open', 'in_progress'))::int AS overdue,
+                count(*) FILTER (WHERE a.baseline IS NOT NULL AND a.post_action IS NULL
+                                   AND a.verification_window_end IS NOT NULL AND a.status::text <> 'cancelled')::int AS pending
+           FROM "rca_actions" a JOIN "rcas" rca ON rca.id = a.rca_id
+          WHERE rca.tenant_id = $1 AND ($2::uuid[] IS NULL OR rca.unit_id = ANY($2::uuid[]))`,
+        [tenantId, units],
+      );
+    return {
+      overdueActions: row?.overdue ?? 0,
+      effectivenessPending: row?.pending ?? 0,
     };
   }
 
