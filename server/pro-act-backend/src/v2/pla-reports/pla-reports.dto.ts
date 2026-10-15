@@ -23,8 +23,16 @@ export const LOSS_TREE_METRICS = {
   margin: 'contribution_margin',
   standard_cost: 'standard_cost',
   operational_cost: 'cost_per_hour',
+  economic_impact: 'economic_impact',
 } as const;
 export type LossTreeMetric = keyof typeof LOSS_TREE_METRICS;
+
+/** SME V8: `value` = the default management view of the tenant's approved valuation policy. */
+export const LOSS_TREE_METRIC_PARAMS = [
+  ...Object.keys(LOSS_TREE_METRICS),
+  'value',
+] as const;
+export type LossTreeMetricParam = LossTreeMetric | 'value';
 
 /** Loss kinds of the tree: what lowers output (gains, residuals and tolerance adjustments stay apart). */
 export const LOSS_TREE_KINDS = [
@@ -58,15 +66,17 @@ export class LossTreeQueryDto extends ReportWindowQueryDto {
   groupBy?: LossTreeGroup;
 
   @ApiPropertyOptional({
-    enum: Object.keys(LOSS_TREE_METRICS),
+    enum: LOSS_TREE_METRIC_PARAMS,
     default: 'qty',
     description:
-      'qty = lost quantity per unit of measure; margin / standard_cost / operational_cost = that stored ' +
-      'valuation view per reporting currency (never added to each other; unvalued lines never count as zero)',
+      'qty = lost quantity per unit of measure; margin / standard_cost / operational_cost / economic_impact = ' +
+      'that stored valuation view per reporting currency (never added to each other; unvalued lines never ' +
+      'count as zero); value = the default view of the approved valuation policy (SME V8, economic impact ' +
+      'from policy version 3; contribution margin while none is approved)',
   })
   @IsOptional()
-  @IsIn(Object.keys(LOSS_TREE_METRICS))
-  metric?: LossTreeMetric;
+  @IsIn(LOSS_TREE_METRIC_PARAMS)
+  metric?: LossTreeMetricParam;
 
   @ApiPropertyOptional({ enum: LEDGERS, default: 'plan' })
   @IsOptional()

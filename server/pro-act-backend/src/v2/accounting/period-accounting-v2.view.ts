@@ -96,6 +96,8 @@ export interface ValuationTotalV2View {
   valuedLines: number;
   unvaluedLines: number;
   fxMissingLines: number;
+  /** SME V7: valued lines converted with a provisional FX rate */
+  fxProvisionalLines: number;
   unvaluedQuantity: string | null;
   unvaluedSeconds: string | null;
   fxRateIds: string[];
@@ -256,6 +258,7 @@ export function toValuationTotalView(
     valuedLines: total.valuedLines,
     unvaluedLines: total.unvaluedLines,
     fxMissingLines: total.fxMissingLines,
+    fxProvisionalLines: total.fxProvisionalLines,
     unvaluedQuantity: toDecimalString(total.unvaluedQuantity),
     unvaluedSeconds: toDecimalString(total.unvaluedSeconds),
     fxRateIds: total.fxRateIds,

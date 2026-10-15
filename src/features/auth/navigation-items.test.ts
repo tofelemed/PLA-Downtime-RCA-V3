@@ -23,6 +23,7 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   'Plans, Profiles & Calendars': NOT_OPERATOR,
   // Reliability
   'RCA Analysis': NOT_OPERATOR,
+  'Bad Actors': NOT_OPERATOR,
   'Knowledge Base': NOT_OPERATOR,
   Tasks: ALL,
   // Integration

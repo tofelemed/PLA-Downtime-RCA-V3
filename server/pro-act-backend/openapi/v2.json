@@ -9784,6 +9784,15 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "name": "provisional",
+            "required": false,
+            "in": "query",
+            "description": "SME V7: only provisional (true) or only final (false) rates",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -9802,7 +9811,7 @@
         ]
       },
       "post": {
-        "description": "Requires `Idempotency-Key`. FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 SAME_CURRENCY, INVALID_VALUE (rate ≤ 0).",
+        "description": "Requires `Idempotency-Key`. FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 SAME_CURRENCY, INVALID_VALUE (rate ≤ 0), PROVISIONAL_RATE_UNBOUNDED (a provisional rate without effectiveTo).",
         "operationId": "FxRatesV2Controller_create_v2",
         "parameters": [
           {
@@ -9871,7 +9880,7 @@
     },
     "/api/v2/fx-rates/{id}/approve": {
       "post": {
-        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite.",
+        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite. SME V7: final and provisional versions never overlap their own kind; a provisional draft is refused with 409 FINAL_RATE_EXISTS where an approved final rate covers part of its window. A final rate wins over a provisional one, so approving it revalues what the provisional rate valued.",
         "operationId": "FxRatesV2Controller_approve_v2",
         "parameters": [
           {
@@ -9911,7 +9920,7 @@
             "bearer": []
           }
         ],
-        "summary": "Approve a draft FX rate version",
+        "summary": "Approve a draft FX rate version (final or provisional)",
         "tags": [
           "v2 · Valuation"
         ]
@@ -10475,6 +10484,103 @@
         "summary": "Loss value of one view (margin, standard cost, operational cost) per group and reporting currency (IRR, USD)",
         "tags": [
           "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/reports/bad-actors": {
+      "get": {
+        "description": "CA8: the rolling window of the tenant RCA policy (pilot 90 days) ending at the end of `month` in the plant time zone. Approved lost quantity and value come from approved periods only (value in the policy default view, SME V8; null when not valued, never zero; fxProvisional when a provisional FX rate converted it); stops = unplanned stops and failure work orders. Ranked on the server, top `limit` (≤ 50). Each item carries the cumulative bad-actor trigger state of its asset (fired, over_threshold, below, off). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only.",
+        "operationId": "BadActorReportV2Controller_badActors_v2",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "query",
+            "description": "Review month (YYYY-MM, plant time zone): the rolling window of the tenant RCA policy (CA8 pilot 90 days) ending at the end of this month",
+            "schema": {
+              "example": "2027-03",
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "asset",
+              "enum": [
+                "asset",
+                "failure_mode"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "rankBy",
+            "required": false,
+            "in": "query",
+            "description": "quantity = approved lost quantity (D14, the unit of measure with the most approved loss); value = approved value of the policy default view in `currency` (unvalued groups last, never zero); stops = unplanned stops and failure work orders",
+            "schema": {
+              "default": "quantity",
+              "enum": [
+                "quantity",
+                "value",
+                "stops"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 5,
+              "type": "number"
+            }
+          },
+          {
+            "name": "currency",
+            "required": false,
+            "in": "query",
+            "description": "Currency of the value column and the value ranking",
+            "schema": {
+              "default": "USD",
+              "enum": [
+                "USD",
+                "IRR"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Monthly bad-actor review: top assets or asset failure modes by approved loss, approved value or stops",
+        "tags": [
+          "v2 · RCA"
         ]
       }
     },
@@ -13298,14 +13404,16 @@
             "name": "metric",
             "required": false,
             "in": "query",
-            "description": "qty = lost quantity per unit of measure; margin / standard_cost / operational_cost = that stored valuation view per reporting currency (never added to each other; unvalued lines never count as zero)",
+            "description": "qty = lost quantity per unit of measure; margin / standard_cost / operational_cost / economic_impact = that stored valuation view per reporting currency (never added to each other; unvalued lines never count as zero); value = the default view of the approved valuation policy (SME V8, economic impact from policy version 3; contribution margin while none is approved)",
             "schema": {
               "default": "qty",
               "enum": [
                 "qty",
                 "margin",
                 "standard_cost",
-                "operational_cost"
+                "operational_cost",
+                "economic_impact",
+                "value"
               ],
               "type": "string"
             }
@@ -21673,6 +21781,11 @@
             "type": "object",
             "description": "Where the rate comes from (free text)",
             "nullable": true
+          },
+          "provisional": {
+            "type": "boolean",
+            "default": false,
+            "description": "SME V7: an authorised provisional rate for dates whose final rate is not approved yet (effectiveTo required, 422 PROVISIONAL_RATE_UNBOUNDED). Converts only where no final rate covers the date; every value it produces is marked provisional and revalued when the final rate is approved."
           }
         },
         "required": [

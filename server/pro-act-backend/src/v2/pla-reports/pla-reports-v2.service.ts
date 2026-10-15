@@ -13,6 +13,7 @@ import {
   WaterfallV2View,
 } from '../period-overview/waterfall.view';
 import { reportEnvelope } from '../reports/kpi-reports-v2.view';
+import { defaultLossValueMetric } from '../reports/loss-value-default';
 import { ReportScope, resolveReportScope } from '../reports/report-scope';
 import { periodStats, policyVersions } from '../reports/report-sql';
 import { ReportWindowQueryDto } from '../reports/kpi-reports-v2.dto';
@@ -83,9 +84,13 @@ export class PlaReportsV2Service {
   ): Promise<AnalyticsResponse<LossTreeView>> {
     const manager = this.periods.manager;
     const scope = await resolveReportScope(manager, context, query);
+    const asked = query.metric ?? 'qty';
     const request = {
       groupBy: query.groupBy ?? 'reason',
-      metric: query.metric ?? 'qty',
+      metric:
+        asked === 'value'
+          ? await defaultLossValueMetric(manager, scope.tenantId)
+          : asked,
       ledger: query.ledger ?? 'plan',
       kinds: query.kinds,
     };
@@ -97,9 +102,12 @@ export class PlaReportsV2Service {
       ...request,
       limit: query.limit,
       calculationRunIds: stats.runIds,
+      defaultView: asked === 'value',
+      periods: stats.periods,
+      approvedPeriods: stats.approved,
     });
     const unvalued = data.totals.some(
-      (t) => t.status === 'unvalued' || t.status === 'mixed',
+      (t) => t.status === 'unvalued' || t.status === 'mixed' || t.fxProvisional,
     );
     return this.envelope(
       scope,

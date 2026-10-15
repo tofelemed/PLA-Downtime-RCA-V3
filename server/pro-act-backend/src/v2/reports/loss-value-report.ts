@@ -26,6 +26,8 @@ export interface CurrencyValueView {
   /** Σ of what was priced in this currency itself (no conversion) */
   nativeAmount: string;
   status: 'valued' | 'unvalued' | 'mixed';
+  /** SME V7: some amount was converted with an authorised provisional FX rate (reason fx_rate_provisional) */
+  fxProvisional: boolean;
   reasons: string[];
 }
 
@@ -63,6 +65,7 @@ interface CellRow {
   valued: number;
   unvalued: number;
   fx_missing: number;
+  fx_provisional: number;
   unvalued_quantity: string;
   unvalued_seconds: string;
   /** the `reasons` arrays of the contributing totals */
@@ -82,13 +85,13 @@ const BASIS =
 /** Valuation columns of one shown period: the approved reconciled totals (plan ledger), else the run's (VA-01). */
 const VALUATION_SOURCE = `JOIN LATERAL (
          SELECT a."kind", a."view", a."currency", a."uom", a."amount", a."native_amount", a."valued_lines",
-                a."unvalued_lines", a."fx_missing_lines", a."unvalued_quantity", a."unvalued_seconds", a."reasons"
+                a."unvalued_lines", a."fx_missing_lines", a."fx_provisional_lines", a."unvalued_quantity", a."unvalued_seconds", a."reasons"
            FROM "approved_valuation_totals" a
           WHERE $7::text = 'plan' AND s."lifecycle" = 'approved' AND a."revision_id" = s."revision_id"
             AND a."tenant_id" = $1
          UNION ALL
          SELECT r."kind", r."view", r."currency", r."uom", r."amount", r."native_amount", r."valued_lines",
-                r."unvalued_lines", r."fx_missing_lines", r."unvalued_quantity", r."unvalued_seconds", r."reasons"
+                r."unvalued_lines", r."fx_missing_lines", r."fx_provisional_lines", r."unvalued_quantity", r."unvalued_seconds", r."reasons"
            FROM "period_valuation_totals" r
           WHERE r."run_id" = s."run_id" AND r."tenant_id" = $1 AND r."ledger" = $7::loss_ledger
             AND NOT ($7::text = 'plan' AND s."lifecycle" = 'approved' AND EXISTS (
@@ -110,7 +113,7 @@ async function cells(
     `${SHOWN} SELECT ${spec.groupSql} AS "group_key", t."currency", t."uom",
             sum(t."amount")::text AS "amount", sum(t."native_amount")::text AS "native",
             sum(t."valued_lines")::int AS "valued", sum(t."unvalued_lines")::int AS "unvalued",
-            sum(t."fx_missing_lines")::int AS "fx_missing",
+            sum(t."fx_missing_lines")::int AS "fx_missing", sum(t."fx_provisional_lines")::int AS "fx_provisional",
             sum(t."unvalued_quantity")::text AS "unvalued_quantity", sum(t."unvalued_seconds")::text AS "unvalued_seconds",
             jsonb_agg(t."reasons") AS "reasons"
        FROM shown s
@@ -140,6 +143,7 @@ function currencyView(
         : formatDec(sum(rows.map((r) => r.amount))),
     nativeAmount: formatDec(sum(rows.map((r) => r.native))),
     status: valued === 0 ? 'unvalued' : missing === 0 ? 'valued' : 'mixed',
+    fxProvisional: rows.some((r) => r.fx_provisional > 0),
     reasons: [...new Set(rows.flatMap((r) => (r.reasons ?? []).flat()))].sort(),
   };
 }
@@ -236,7 +240,9 @@ export async function lossValueReport(
     scope,
     stats,
     policyVersions: await valuationPolicyVersions(manager, stats.runIds),
-    provisionalData: total.currencies.some((c) => c.status !== 'valued'),
+    provisionalData: total.currencies.some(
+      (c) => c.status !== 'valued' || c.fxProvisional,
+    ),
     notes: [...new Set(total.currencies.flatMap((c) => c.reasons))],
   });
 }

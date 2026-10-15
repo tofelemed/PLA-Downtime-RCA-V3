@@ -5,7 +5,9 @@
 import type { GridWorkflowState, ResidualState, WaterfallView } from './period-overview';
 
 export type LossTreeGroupBy = 'reason' | 'impact' | 'oee' | 'kind' | 'unit';
-export type LossTreeMetric = 'qty' | 'margin' | 'standard_cost' | 'operational_cost';
+export type LossTreeMetric = 'qty' | 'margin' | 'standard_cost' | 'operational_cost' | 'economic_impact';
+/** What the selector asks for: a metric, or `value` = the valuation policy's default view (SME V8). */
+export type LossTreeMetricParam = LossTreeMetric | 'value';
 export type LossTreeStatus = 'valued' | 'unvalued' | 'mixed' | 'quantity';
 
 export interface LossTreeGroupView {
@@ -19,6 +21,8 @@ export interface LossTreeGroupView {
   cumulativeShare: string | null;
   lines: number;
   status: LossTreeStatus;
+  /** SME V7: some amount was converted with an authorised provisional FX rate */
+  fxProvisional: boolean;
   reasons: string[];
 }
 
@@ -28,12 +32,22 @@ export interface LossTreeTotalView {
   lines: number;
   groups: number;
   status: LossTreeStatus;
+  fxProvisional: boolean;
   reasons: string[];
 }
 
 export interface LossTreeView {
   groupBy: LossTreeGroupBy;
+  /** the metric shown (`value` resolved by the server to the policy's default view) */
   metric: LossTreeMetric;
+  /** valuation view of a value metric; null for quantities */
+  view: string | null;
+  /** true when `metric=value` asked for the policy's default view */
+  defaultView: boolean;
+  /** SME V8 / R12: approved only when every shown period is approved */
+  valuationStatus: 'approved' | 'provisional';
+  approvedPeriods: number;
+  periods: number;
   ledger: 'plan' | 'capacity';
   basis: string;
   groups: LossTreeGroupView[];

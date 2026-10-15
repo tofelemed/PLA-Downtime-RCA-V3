@@ -165,10 +165,25 @@ export interface RcaEvidenceOptions {
 
 export type RcaAttachmentView = RcaEvidenceAttachment & { size: number };
 
+/** One currency of the approved impact (same valued / unvalued / mixed semantics as the loss-value report). */
+export interface ApprovedImpactValueView {
+  currency: string;
+  amount: string | null;
+  valuedLines: number;
+  unvaluedLines: number;
+  /** absent on evidence packages frozen before SME V7 / V8 */
+  provisionalLines?: number;
+  status?: 'valued' | 'unvalued' | 'mixed';
+  /** SME V7: converted (partly) with a provisional exchange rate */
+  fxProvisional?: boolean;
+}
+
 export interface ApprovedImpactView {
   lines: number;
   quantities: Array<{ kind: string; uom: string | null; quantity: string }>;
-  values: Array<{ currency: string; amount: string | null; valuedLines: number; unvaluedLines: number }>;
+  /** SME V8: valuation view of `values` (the policy default); absent on packages frozen before it (contribution margin) */
+  view?: 'contribution_margin' | 'standard_cost' | 'economic_impact';
+  values: ApprovedImpactValueView[];
   basis: string;
 }
 

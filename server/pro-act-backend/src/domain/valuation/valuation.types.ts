@@ -115,6 +115,8 @@ export interface FxRateSnapshot {
   rate: string;
   from: string;
   to: string | null;
+  /** SME V7: an authorised provisional rate (written only when true, so older run hashes are unchanged) */
+  provisional?: true;
 }
 
 /** SME V3: an approved demand status of a product over `[from, to)` (sold out = demand constrained). */
@@ -186,6 +188,8 @@ export interface CurrencyAmount {
   fxRateIds: string[];
   /** true when every component was priced in this currency (no conversion) */
   native: boolean;
+  /** SME V7: converted with an authorised provisional FX rate (present only when true) */
+  provisional?: true;
 }
 
 export interface LineViewValuation {

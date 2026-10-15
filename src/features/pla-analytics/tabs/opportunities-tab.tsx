@@ -1,11 +1,11 @@
 import { useLossTree } from '@/api/v2/queries/pla-analytics';
-import type { LossTreeMetric, LossTreeView } from '@/api/v2/types/pla-analytics';
+import type { LossTreeMetricParam, LossTreeView } from '@/api/v2/types/pla-analytics';
 import { Label } from '@/components/ui/label';
 import { entriesInCurrency } from '@/features/display-currency/money-format';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { lossTreeQuery, VALUE_METRICS, type AnalyticsScope } from '../model/analytics-scope';
-import { METRIC_LABELS } from '../model/display';
+import { METRIC_LABELS, shownMetricLabel } from '../model/display';
 import { AnalyticsCard } from '../components/analytics-card';
 import { SELECT_CLASS } from '../components/analytics-filters';
 import { LossTable } from '../components/loss-table';
@@ -30,7 +30,7 @@ export function OpportunitiesTab({ scope, onChange }: OpportunitiesTabProps) {
   const controls = (
     <div className="flex items-center gap-2">
       <Label htmlFor="value-metric">Value</Label>
-      <select id="value-metric" data-testid="value-metric" className={SELECT_CLASS} value={scope.valueMetric} onChange={(e) => onChange({ valueMetric: e.target.value as LossTreeMetric })}>
+      <select id="value-metric" data-testid="value-metric" className={SELECT_CLASS} value={scope.valueMetric} onChange={(e) => onChange({ valueMetric: e.target.value as LossTreeMetricParam })}>
         {VALUE_METRICS.map((m) => (
           <option key={m} value={m}>
             {METRIC_LABELS[m]}
@@ -41,7 +41,7 @@ export function OpportunitiesTab({ scope, onChange }: OpportunitiesTabProps) {
   );
   return (
     <AnalyticsCard
-      title={`Top ${TOP} opportunities · ${METRIC_LABELS[scope.valueMetric]}`}
+      title={`Top ${TOP} opportunities · ${shownMetricLabel(scope.valueMetric, data)}`}
       testId="pla-opportunities"
       query={query}
       response={query.data}

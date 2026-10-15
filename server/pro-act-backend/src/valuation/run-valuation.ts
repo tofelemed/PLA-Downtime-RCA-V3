@@ -107,6 +107,7 @@ function lineRows(
         native: amount.native,
         status: view.status,
         reason: amount.reason ?? view.reason,
+        provisional: amount.provisional === true,
         rateVersionIds: [
           ...new Set(view.components.map((c) => c.rateVersionId)),
         ],
@@ -136,6 +137,7 @@ function totalRow(
     valuedLines: total.valuedLines,
     unvaluedLines: total.unvaluedLines,
     fxMissingLines: total.fxMissingLines,
+    fxProvisionalLines: total.fxProvisionalLines,
     unvaluedQuantity: formatDec(total.unvaluedQuantity),
     unvaluedSeconds: formatDec(total.unvaluedSeconds),
     status: total.status,

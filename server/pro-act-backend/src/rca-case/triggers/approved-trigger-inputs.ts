@@ -20,13 +20,21 @@ export async function approvedCauseEvents(
   return rows.map((row) => row.id);
 }
 
-/** Approved value and lost quantity per unit of measure of one event (ledger, approved revisions only). */
+/**
+ * Approved value (the valuation policy's default view, SME V8) and lost quantity per unit of measure of
+ * one event (ledger, approved revisions only).
+ */
 export async function approvedEventFigures(
   manager: EntityManager,
   input: { tenantId: string; eventId: string },
 ): Promise<{
-  values: Array<{ currency: string; amount: string | null }>;
+  values: Array<{
+    currency: string;
+    amount: string | null;
+    provisional: boolean;
+  }>;
   lost: Array<{ uom: string | null; quantity: string }>;
+  valueView: string;
 }> {
   const impact = await approvedImpact(manager, input.tenantId, {
     eventIds: [input.eventId],
@@ -42,11 +50,13 @@ export async function approvedEventFigures(
     values: impact.values.map((value) => ({
       currency: value.currency,
       amount: value.amount,
+      provisional: value.fxProvisional,
     })),
     lost: [...byUom.entries()].map(([uom, quantity]) => ({
       uom,
       quantity: formatDec(quantity),
     })),
+    valueView: impact.view,
   };
 }
 

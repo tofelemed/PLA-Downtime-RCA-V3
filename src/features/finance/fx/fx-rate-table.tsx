@@ -3,6 +3,7 @@ import type { FxRateView } from '@/api/v2/types/valuation';
 import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { DataTable, type DataTableColumn, type DataTableEmpty, type DataTableStatus, type PagerModel } from '@/features/ux-kit/data-table';
 import { FX_RATE_TYPE_LABELS, labelOf } from '@/features/ux-kit/labels';
+import { ProvisionalRateBadge } from '../components/provisional-rate-badge';
 import { VersionStateBadge } from '../components/version-state-badge';
 
 export interface FxRateTableProps {
@@ -32,7 +33,16 @@ export function FxRateTable({ rates, pager, status, empty }: FxRateTableProps) {
     { id: 'rate', header: 'Rate', align: 'right', nowrap: true, cell: (rate) => <span className="font-mono text-xs" data-testid="fx-rate">1 {rate.fromCurrency} = {rate.rate} {rate.toCurrency}</span> },
     { id: 'valid', header: 'Valid', nowrap: true, cell: (rate) => dates.validity(rate.effectiveFrom, rate.effectiveTo) },
     { id: 'source', header: 'Source', cell: (rate) => rate.source ?? '—' },
-    { id: 'state', header: 'State', cell: (rate) => <VersionStateBadge state={rate.state} /> },
+    {
+      id: 'state',
+      header: 'State',
+      cell: (rate) => (
+        <span className="flex flex-wrap gap-1">
+          <VersionStateBadge state={rate.state} />
+          <ProvisionalRateBadge provisional={rate.provisional} />
+        </span>
+      ),
+    },
   ];
   return (
     <DataTable

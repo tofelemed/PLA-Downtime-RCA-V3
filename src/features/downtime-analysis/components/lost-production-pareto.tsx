@@ -8,7 +8,7 @@ import type { DowntimeFilters } from '../model/downtime-filters';
 import { LOST_PRODUCTION_METRICS, lostProductionQuery, type LostProductionMetric } from '../model/lost-production';
 import { ReportCard } from './report-card';
 
-const METRIC_TEXT: Record<LostProductionMetric, string> = { qty: 'Lost quantity', margin: 'Lost margin' };
+const METRIC_TEXT: Record<LostProductionMetric, string> = { qty: 'Lost quantity', value: 'Lost value' };
 
 /**
  * FE-08: what the stops cost in production — availability losses of the ledger per reason, as quantity

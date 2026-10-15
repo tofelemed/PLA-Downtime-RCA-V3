@@ -31,6 +31,7 @@ interface FxRow {
   rate: string;
   effective_from: Date;
   effective_to: Date | null;
+  provisional: boolean;
 }
 
 interface DemandRow {
@@ -58,7 +59,8 @@ const RATES_SQL = `SELECT "id", "version", COALESCE("profile_id", "impact_code_i
    AND ($6::text[] IS NULL OR "basis"::text = ANY($6::text[]))
  ORDER BY "id"`;
 
-const FX_SQL = `SELECT "id", "version", "from_currency", "to_currency", "rate"::text AS "rate", "effective_from", "effective_to"
+const FX_SQL = `SELECT "id", "version", "from_currency", "to_currency", "rate"::text AS "rate", "effective_from", "effective_to",
+       "provisional"
   FROM "fx_rates"
  WHERE "tenant_id" = $1 AND "state" = 'approved' AND "rate_type" = $4
    AND "effective_from" < $3 AND ("effective_to" IS NULL OR "effective_to" > $2)
@@ -104,6 +106,8 @@ function toFx(row: FxRow): FxRateSnapshot {
     rate: row.rate,
     from: new Date(row.effective_from).toISOString(),
     to: iso(row.effective_to),
+    // SME V7: only provisional rates carry the field, so contexts of final rates hash as before
+    ...(row.provisional ? { provisional: true as const } : {}),
   };
 }
 

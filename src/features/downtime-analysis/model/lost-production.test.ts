@@ -17,6 +17,6 @@ describe('lost production by stop reason (FE-08)', () => {
       kinds: ['availability'],
       limit: 20,
     });
-    expect(lostProductionQuery(filters, 'margin').metric).toBe('margin');
+    expect(lostProductionQuery(filters, 'value').metric).toBe('value');
   });
 });

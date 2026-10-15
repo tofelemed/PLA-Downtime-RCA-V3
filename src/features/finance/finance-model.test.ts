@@ -21,8 +21,15 @@ describe('FX rate form (mirrors the 422 fieldErrors of POST /fx-rates)', () => {
     expect(validateFxForm(values)).toEqual({});
     expect(fxCreateBody(values)).toEqual({
       rateType: 'economic', fromCurrency: 'USD', toCurrency: 'IRR', rate: '42000.0123456789',
-      effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: '2026-11-01T02:30:00.000Z', source: 'CBI',
+      effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: '2026-11-01T02:30:00.000Z', source: 'CBI', provisional: false,
     });
+  });
+
+  it('SME V7: a provisional rate needs an end date and is sent flagged', () => {
+    expect(validateFxForm(fx({ provisional: true }))).toEqual({ effectiveTo: 'A provisional rate needs an end date.' });
+    const bounded = fx({ provisional: true, effectiveTo: '2026-11-01T02:30:00.000Z' });
+    expect(validateFxForm(bounded)).toEqual({});
+    expect(fxCreateBody(bounded)).toMatchObject({ provisional: true, effectiveTo: '2026-11-01T02:30:00.000Z' });
   });
 
   it('flags the fields the API names: rate, toCurrency, effectiveFrom / effectiveTo', () => {

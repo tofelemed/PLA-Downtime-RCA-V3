@@ -1,8 +1,8 @@
 import type { LossTreeQuery } from '@/api/v2/queries/pla-analytics';
 import { reportBase, type DowntimeFilters } from './downtime-filters';
 
-/** What the lost-production card offers: lost quantity, or the commercial value of it. */
-export const LOST_PRODUCTION_METRICS = ['qty', 'margin'] as const;
+/** What the lost-production card offers: lost quantity, or its value in the policy's default view (SME V8). */
+export const LOST_PRODUCTION_METRICS = ['qty', 'value'] as const;
 export type LostProductionMetric = (typeof LOST_PRODUCTION_METRICS)[number];
 
 /**

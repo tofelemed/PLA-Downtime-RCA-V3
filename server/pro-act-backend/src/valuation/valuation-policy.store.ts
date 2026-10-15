@@ -3,7 +3,10 @@ import {
   parseValuationPolicy,
   VALUATION_POLICY_V3_BODY,
 } from '../domain/valuation/valuation-policy';
-import { ValuationPolicySnapshot } from '../domain/valuation/valuation.types';
+import {
+  DefaultBasis,
+  ValuationPolicySnapshot,
+} from '../domain/valuation/valuation.types';
 import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
 
 const KIND = 'valuation_basis';
@@ -82,4 +85,30 @@ export async function reportingCurrencies(
     order: { version: 'DESC' },
   });
   return newest ? snapshotOf(newest).currencies : [];
+}
+
+const DEFAULT_BASES: readonly DefaultBasis[] = [
+  'contribution_margin',
+  'standard_cost',
+  'economic_impact',
+];
+
+/**
+ * SME V8 (14 Oct 2026): the management value view the tenant's figures open on — the default basis of
+ * the newest approved tenant-wide valuation policy in force (the economic view from version 3);
+ * contribution margin while none is approved.
+ */
+export async function defaultValuationBasis(
+  manager: EntityManager,
+  tenantId: string,
+): Promise<DefaultBasis> {
+  const [row] = await manager.query<Array<{ basis: string | null }>>(
+    `SELECT "body"->>'defaultBasis' AS "basis" FROM "accounting_policies"
+      WHERE "tenant_id" = $1 AND "policy_kind" = 'valuation_basis' AND "scope_key" = 'tenant'
+        AND "approved_at" IS NOT NULL AND "effective_from" <= now()
+      ORDER BY "version" DESC LIMIT 1`,
+    [tenantId],
+  );
+  const basis = DEFAULT_BASES.find((b) => b === row?.basis);
+  return basis ?? 'contribution_margin';
 }

@@ -12,6 +12,16 @@ export interface LossTableProps {
   testId: string;
 }
 
+/** SME V7: the amount rests on a provisional exchange rate (said in words, revalued with the final rate). */
+function ProvisionalFxBadge({ show }: { show: boolean | undefined }) {
+  if (!show) return null;
+  return (
+    <Badge variant="outline" className="ml-1" data-testid="fx-provisional-mark" title="Converted with a provisional exchange rate; revalued when the final rate is approved">
+      provisional rate
+    </Badge>
+  );
+}
+
 const groupLabel = (group: LossTreeGroupView) => group.label ?? (group.key ? 'Unknown code' : 'Not coded');
 
 function columnsOf(metric: LossTreeMetric, groupTitle: string, format: NumberFormat): Array<DataTableColumn<LossTreeGroupView>> {
@@ -39,6 +49,7 @@ function columnsOf(metric: LossTreeMetric, groupTitle: string, format: NumberFor
               partly valued
             </Badge>
           )}
+          <ProvisionalFxBadge show={group.fxProvisional} />
         </>
       ),
     },
@@ -64,6 +75,7 @@ export function LossTable({ groups, total, metric, groupTitle, testId }: LossTab
       {total && (
         <p className="text-sm font-medium" data-testid="loss-total" data-amount={total.amount ?? ''} data-unit={total.unit ?? ''}>
           Total ({format.number(total.groups)} groups, {format.number(total.lines)} lines): {amountText(total, metric, format.digits)}
+          <ProvisionalFxBadge show={total.fxProvisional} />
         </p>
       )}
     </div>

@@ -31,6 +31,7 @@ function approvedRow(
     valuedLines: total.valuedLines,
     unvaluedLines: total.unvaluedLines,
     fxMissingLines: total.fxMissingLines,
+    fxProvisionalLines: total.fxProvisionalLines,
     unvaluedQuantity: formatDec(total.unvaluedQuantity),
     unvaluedSeconds: formatDec(total.unvaluedSeconds),
     status: total.status,

@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -26,6 +27,7 @@ import {
   QUALITY_DISPOSITIONS,
   QualityDisposition,
 } from '../../domain/valuation/valuation.types';
+import { toBooleanParam } from '../../common/dto/query-param.transformers';
 import { ListQueryDto } from '../common/list-query.dto';
 import {
   EffectiveDto,
@@ -76,6 +78,17 @@ export class FxRateCreateDto extends EffectiveDto {
   @IsString()
   @MaxLength(255)
   source?: string | null;
+
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'SME V7: an authorised provisional rate for dates whose final rate is not approved yet (effectiveTo ' +
+      'required, 422 PROVISIONAL_RATE_UNBOUNDED). Converts only where no final rate covers the date; every ' +
+      'value it produces is marked provisional and revalued when the final rate is approved.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  provisional?: boolean;
 }
 
 export class FxRateListQueryDto extends ListQueryDto {
@@ -98,6 +111,14 @@ export class FxRateListQueryDto extends ListQueryDto {
   @IsOptional()
   @IsIn(VERSION_STATES)
   state?: VersionState;
+
+  @ApiPropertyOptional({
+    description: 'SME V7: only provisional (true) or only final (false) rates',
+  })
+  @IsOptional()
+  @Transform(toBooleanParam)
+  @IsBoolean()
+  provisional?: boolean;
 }
 
 /** Body of POST /valuation-policies: a new (unapproved) `valuation_basis` version of the tenant. */

@@ -15,8 +15,9 @@ import { recordCandidates, TriggerResult } from './trigger-recorder';
 
 /**
  * D17 triggers on approved impact: when a period revision is approved or restated, every cause event of
- * its approved lines is checked against the money limit (approved contribution-margin value in the
- * policy currency; off while finance has not set it) and the share of the unit's daily planned quantity
+ * its approved lines is checked against the money limit (approved value of the valuation policy's default
+ * view — economic impact from version 3 — in the policy currency; off while finance has not set it;
+ * provisional-rate values wait for the final rate) and the share of the unit's daily planned quantity
  * (halved for critical assets). Each fires once per occurrence and policy version (a restatement does not
  * fire again); a same-problem firing links to the open case (CA8). Draft figures are never read.
  */

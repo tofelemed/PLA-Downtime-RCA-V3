@@ -56,4 +56,8 @@ export class ApprovedLossLineValuation extends TenantScopedEntity {
 
   @Column({ name: 'reason', type: 'varchar', length: 64, nullable: true })
   reason: string | null;
+
+  /** SME V7: the amount was converted with an authorised provisional FX rate */
+  @Column({ name: 'provisional', type: 'boolean', default: false })
+  provisional: boolean;
 }

@@ -12,12 +12,19 @@ import { decimalStringTransformer } from '../../v2/common/decimal-string.transfo
  * rate to_currency` over `[effective_from, effective_to)`, versioned per currency pair like master data
  * (draft → approved → retired, approved versions of a pair never overlap). Valuation converts with the
  * approved version in force on the valuation date and records its id; without one the amount is null.
+ * SME V7: a `provisional` version (authorised like any other) converts only where no final version
+ * covers the date, and every value it produces is marked provisional until the final rate is approved.
  */
 @Entity('fx_rates')
 @Exclusion(
   'EX_fx_rates_approved_no_overlap',
   `USING gist ("tenant_id" WITH =, "rate_type" WITH =, "from_currency" WITH =, "to_currency" WITH =, ` +
-    `tstzrange("effective_from", "effective_to", '[)') WITH &&) WHERE ("state" = 'approved')`,
+    `tstzrange("effective_from", "effective_to", '[)') WITH &&) WHERE ("state" = 'approved' AND NOT "provisional")`,
+)
+@Exclusion(
+  'EX_fx_rates_provisional_no_overlap',
+  `USING gist ("tenant_id" WITH =, "rate_type" WITH =, "from_currency" WITH =, "to_currency" WITH =, ` +
+    `tstzrange("effective_from", "effective_to", '[)') WITH &&) WHERE ("state" = 'approved' AND "provisional")`,
 )
 @Index('IDX_fx_rates_tenant_type_pair_from', [
   'tenantId',
@@ -89,6 +96,10 @@ export class FxRate extends TenantScopedEntity {
   /** where the rate comes from (e.g. central bank fixing, treasury) — free text, never interpreted */
   @Column({ name: 'source', type: 'text', nullable: true })
   source: string | null;
+
+  /** SME V7: an authorised provisional rate for dates whose final rate is not approved yet */
+  @Column({ name: 'provisional', type: 'boolean', default: false })
+  provisional: boolean;
 
   @Column({ name: 'approved_by', type: 'uuid', nullable: true })
   approvedBy: string | null;

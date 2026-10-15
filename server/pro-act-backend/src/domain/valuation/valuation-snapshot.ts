@@ -1,4 +1,5 @@
 import { Dec, formatDec } from '../actuals/decimal';
+import { provisionalMark } from './currency-amounts';
 import {
   EconomicComponent,
   LineValuation,
@@ -30,6 +31,8 @@ export interface StoredAmount {
   reason: string | null;
   fxRateIds: string[];
   native: boolean;
+  /** SME V7: converted with a provisional FX rate (only when true) */
+  provisional?: true;
 }
 
 export interface StoredView {
@@ -80,6 +83,7 @@ export function storeView(view: LineViewValuation): StoredView {
       reason: a.reason,
       fxRateIds: a.fxRateIds,
       native: a.native,
+      ...provisionalMark(a.provisional === true),
     })),
     ...extrasOf(view),
   };
@@ -134,6 +138,7 @@ function loadView(view: StoredView): LineViewValuation {
       reason: a.reason,
       fxRateIds: a.fxRateIds,
       native: a.native,
+      ...provisionalMark(a.provisional === true),
     })),
     ...extrasOf(view),
   };

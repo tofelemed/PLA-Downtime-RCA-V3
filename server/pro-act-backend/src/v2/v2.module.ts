@@ -115,6 +115,8 @@ import { ValuationModule } from '../valuation/valuation.module';
 import { DemandStatusesV2Controller } from './valuation/demand-statuses-v2.controller';
 import { FxRatesV2Controller } from './valuation/fx-rates-v2.controller';
 import { ValuationPoliciesV2Controller } from './valuation/valuation-policies-v2.controller';
+import { BadActorReportV2Controller } from './reports/bad-actor-v2.controller';
+import { BadActorReportV2Service } from './reports/bad-actor-v2.service';
 import { LossValueReportV2Controller } from './reports/loss-value-v2.controller';
 import { LossValueReportV2Service } from './reports/loss-value-v2.service';
 import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
@@ -246,6 +248,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     DemandStatusesV2Controller,
     ValuationPoliciesV2Controller,
     LossValueReportV2Controller,
+    BadActorReportV2Controller,
     FeatureFlagsV2Controller,
     RulesV2Controller,
     RcaCasesV2Controller,
@@ -281,6 +284,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     ReconciliationV2Service,
     KpiReportsV2Service,
     LossValueReportV2Service,
+    BadActorReportV2Service,
     PeriodOverviewService,
     PlaReportsV2Service,
     ActivitySummaryV2Service,

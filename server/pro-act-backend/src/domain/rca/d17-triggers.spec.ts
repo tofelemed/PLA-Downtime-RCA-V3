@@ -181,6 +181,32 @@ describe('D17 triggers on approved impact', () => {
     ).toEqual([]);
   });
 
+  it('SME V7: a value converted with a provisional FX rate never fires the money limit; the final one does', () => {
+    const finance = {
+      ...POLICY,
+      costThreshold: 3000,
+      costCurrency: 'USD' as const,
+    };
+    const provisional = impact({
+      lost: [],
+      values: [{ currency: 'USD', amount: '4000', provisional: true }],
+    });
+    expect(approved(provisional, finance)).toEqual([]);
+    const final = impact({
+      lost: [],
+      values: [{ currency: 'USD', amount: '4000', provisional: false }],
+    });
+    const [fired] = evaluateApprovedTriggers(final, {
+      policy: finance,
+      policyRef: REF,
+    });
+    expect(fired).toMatchObject({
+      trigger: 'cost',
+      idempotencyKey: 'policy:p1@2:cost:e1',
+      detail: { amount: '4000', currency: 'USD', threshold: 3000 },
+    });
+  });
+
   it('fires on approval with a per-occurrence key (a restatement does not fire twice)', () => {
     const [fired] = evaluateApprovedTriggers(impact(), {
       policy: POLICY,

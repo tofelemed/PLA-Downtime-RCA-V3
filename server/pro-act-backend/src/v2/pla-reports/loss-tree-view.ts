@@ -9,6 +9,8 @@ import {
   LossTreeView,
   statusOf,
 } from './loss-tree-report';
+import { LOSS_TREE_METRICS } from './pla-reports.dto';
+import { valuationStatusOf } from '../reports/loss-value-default';
 
 const ratio = (part: Dec | null, whole: Dec | null) =>
   part === null || whole === null || whole.isZero()
@@ -38,6 +40,7 @@ function totalOf(
       lines: sum((r) => r.lines),
       groups: rows.length,
       status: statusOf(counts, quantity),
+      fxProvisional: rows.some((r) => r.fx_provisional > 0),
       reasons: [...new Set(rows.flatMap((r) => r.reasons ?? []))].sort(),
     },
   };
@@ -72,6 +75,7 @@ function paretoOf(
       cumulativeShare: amount === null ? null : ratio(running, total),
       lines: row.lines,
       status: statusOf(row, input.quantity),
+      fxProvisional: row.fx_provisional > 0,
       reasons: [...(row.reasons ?? [])].sort(),
     };
   });
@@ -82,9 +86,17 @@ function paretoOf(
  * with share and cumulative share (Pareto), and the unit's total over every group; values follow VAL02 /
  * T45 (null when nothing is valued or an FX rate is missing, never 0). `limit` keeps the largest groups.
  */
+export interface LossTreeShown {
+  limit?: number;
+  calculationRunIds: string[];
+  defaultView: boolean;
+  periods: number;
+  approvedPeriods: number;
+}
+
 export function lossTreeView(
   cells: { rows: LossTreeCell[]; labels: Map<string, string> },
-  request: LossTreeRequest & { limit?: number; calculationRunIds: string[] },
+  request: LossTreeRequest & LossTreeShown,
 ): LossTreeView {
   const quantity = request.metric === 'qty';
   const units = [...new Set(cells.rows.map((r) => r.unit))].sort((a, b) =>
@@ -108,6 +120,14 @@ export function lossTreeView(
   return {
     groupBy: request.groupBy,
     metric: request.metric,
+    view: LOSS_TREE_METRICS[request.metric],
+    defaultView: request.defaultView,
+    valuationStatus: valuationStatusOf({
+      periods: request.periods,
+      approved: request.approvedPeriods,
+    }),
+    approvedPeriods: request.approvedPeriods,
+    periods: request.periods,
     ledger: request.ledger,
     basis: LOSS_TREE_BASIS,
     groups,

@@ -2835,7 +2835,7 @@ export interface paths {
         put?: never;
         /**
          * Create a draft FX rate version (1 fromCurrency = rate toCurrency)
-         * @description Requires `Idempotency-Key`. FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 SAME_CURRENCY, INVALID_VALUE (rate ≤ 0).
+         * @description Requires `Idempotency-Key`. FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 SAME_CURRENCY, INVALID_VALUE (rate ≤ 0), PROVISIONAL_RATE_UNBOUNDED (a provisional rate without effectiveTo).
          */
         post: operations["FxRatesV2Controller_create_v2"];
         delete?: never;
@@ -2871,8 +2871,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Approve a draft FX rate version
-         * @description FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite.
+         * Approve a draft FX rate version (final or provisional)
+         * @description FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite. SME V7: final and provisional versions never overlap their own kind; a provisional draft is refused with 409 FINAL_RATE_EXISTS where an approved final rate covers part of its window. A final rate wins over a provisional one, so approving it revalues what the provisional rate valued.
          */
         post: operations["FxRatesV2Controller_approve_v2"];
         delete?: never;
@@ -3049,6 +3049,26 @@ export interface paths {
          * @description Sums the stored valuation totals of the shown runs (approved revision, else the open draft — provisional); views are never added to each other; an amount is null when a contributing line has no approved FX rate (fx_rate_missing) or nothing is valued; unvalued quantities are listed per unit of measure. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days by period start.
          */
         get: operations["LossValueReportV2Controller_lossValue_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/reports/bad-actors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Monthly bad-actor review: top assets or asset failure modes by approved loss, approved value or stops
+         * @description CA8: the rolling window of the tenant RCA policy (pilot 90 days) ending at the end of `month` in the plant time zone. Approved lost quantity and value come from approved periods only (value in the policy default view, SME V8; null when not valued, never zero; fxProvisional when a provisional FX rate converted it); stops = unplanned stops and failure work orders. Ranked on the server, top `limit` (≤ 50). Each item carries the cumulative bad-actor trigger state of its asset (fired, over_threshold, below, off). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only.
+         */
+        get: operations["BadActorReportV2Controller_badActors_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6852,6 +6872,11 @@ export interface components {
             rate: string;
             /** @description Where the rate comes from (free text) */
             source?: Record<string, never> | null;
+            /**
+             * @description SME V7: an authorised provisional rate for dates whose final rate is not approved yet (effectiveTo required, 422 PROVISIONAL_RATE_UNBOUNDED). Converts only where no final rate covers the date; every value it produces is marked provisional and revalued when the final rate is approved.
+             * @default false
+             */
+            provisional: boolean;
         };
         DemandStatusCreateDto: {
             /** @example 2026-10-01T02:30:00Z */
@@ -12320,6 +12345,8 @@ export interface operations {
                 fromCurrency?: string;
                 toCurrency?: string;
                 state?: "draft" | "approved" | "retired";
+                /** @description SME V7: only provisional (true) or only final (false) rates */
+                provisional?: boolean;
             };
             header?: never;
             path?: never;
@@ -12646,6 +12673,34 @@ export interface operations {
                 ledger?: "plan" | "capacity";
                 /** @description kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only */
                 groupBy?: "kind" | "unit" | "day" | "month";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BadActorReportV2Controller_badActors_v2: {
+        parameters: {
+            query: {
+                /** @description Review month (YYYY-MM, plant time zone): the rolling window of the tenant RCA policy (CA8 pilot 90 days) ending at the end of this month */
+                month: string;
+                groupBy?: "asset" | "failure_mode";
+                /** @description quantity = approved lost quantity (D14, the unit of measure with the most approved loss); value = approved value of the policy default view in `currency` (unvalued groups last, never zero); stops = unplanned stops and failure work orders */
+                rankBy?: "quantity" | "value" | "stops";
+                limit?: number;
+                /** @description Currency of the value column and the value ranking */
+                currency?: "USD" | "IRR";
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read. */
+                unitIds?: string[];
             };
             header?: never;
             path?: never;
@@ -14022,8 +14077,8 @@ export interface operations {
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
                 groupBy?: "reason" | "impact" | "oee" | "kind" | "unit";
-                /** @description qty = lost quantity per unit of measure; margin / standard_cost / operational_cost = that stored valuation view per reporting currency (never added to each other; unvalued lines never count as zero) */
-                metric?: "qty" | "margin" | "standard_cost" | "operational_cost";
+                /** @description qty = lost quantity per unit of measure; margin / standard_cost / operational_cost / economic_impact = that stored valuation view per reporting currency (never added to each other; unvalued lines never count as zero); value = the default view of the approved valuation policy (SME V8, economic impact from policy version 3; contribution margin while none is approved) */
+                metric?: "qty" | "margin" | "standard_cost" | "operational_cost" | "economic_impact" | "value";
                 ledger?: "plan" | "capacity";
                 /** @description Largest groups per unit / currency only (top opportunities); totals always cover every group */
                 limit?: number;

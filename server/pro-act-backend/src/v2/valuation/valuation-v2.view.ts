@@ -15,6 +15,8 @@ export interface FxRateV2View {
   /** decimal string: units of toCurrency per 1 fromCurrency */
   rate: string;
   source: string | null;
+  /** SME V7: an authorised provisional rate (its values are marked provisional until the final one) */
+  provisional: boolean;
   version: number;
   state: string;
   effectiveFrom: string;
@@ -59,6 +61,7 @@ export function toFxRateView(rate: FxRate): FxRateV2View {
     toCurrency: rate.toCurrency,
     rate: value ? formatDec(value) : String(rate.rate),
     source: rate.source,
+    provisional: rate.provisional,
     version: rate.version,
     state: rate.state,
     effectiveFrom: rate.effectiveFrom.toISOString(),
