@@ -26,14 +26,20 @@ export async function loginViaUI(
   await page.fill('input#email', email);
   await page.fill('input#password', password);
   
-  // Click login button (button with "Sign In" text)
+  // A slow response is distinct from a rejected login; retain the status assertion.
+  const response = page.waitForResponse(
+    (entry) => entry.url().endsWith('/auth/login') && entry.request().method() === 'POST',
+    { timeout: 15000 },
+  );
   await page.click('button[type="submit"]:has-text("Sign In")');
+  const status = (await response).status();
+  if (status !== 200 && status !== 201) throw new Error(`Authentication request failed: HTTP ${status}`);
   
   // Wait for navigation to dashboard after successful login
   await page.waitForURL(/\/dashboard/, { timeout: 10000 });
   
-  // Verify we're logged in (check for header)
-  await page.waitForSelector('header', { timeout: 5000 });
+  // Wait for the authenticated shell; concurrent DB migration tests can delay session hydration.
+  await page.getByRole('banner').waitFor({ state: 'visible', timeout: 15000 });
 }
 
 /**

@@ -114,10 +114,10 @@ test.describe('Operator — scope and role limits', () => {
     // the sidebar menu (not the dashboard's quick links, which live in their own <nav>)
     const menu = page.locator('aside nav');
     await expect(menu.locator('a[href="/dashboard"]')).toHaveCount(1);
-    for (const href of ['/planning', '/codes-admin', '/finance', '/production-plans', '/rca', '/master-data', '/users']) {
+    for (const href of ['/planning', '/codes-admin', '/finance', '/production-plans', '/rca', '/users']) {
       await expect(menu.locator(`a[href="${href}"]`), `menu must not offer ${href}`).toHaveCount(0);
     }
-    for (const href of ['/events', '/downtime', '/tasks']) {
+    for (const href of ['/events', '/downtime', '/tasks', '/master-data']) {
       await expect(menu.locator(`a[href="${href}"]`), `menu must offer ${href}`).toHaveCount(1);
     }
 

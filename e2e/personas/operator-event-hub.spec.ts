@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { call } from '../test-utils/downtime-world';
 import {
   OPERATORS, MINUTE, LINE_1_CODE, codeReason, createEvent, getEvent, iso, loginOperator, openHub, plantLocal,
@@ -21,6 +21,12 @@ interface World {
 
 const world = {} as World;
 
+async function filterNamedEvents(page: Page, label: string): Promise<void> {
+  await page.getByRole('searchbox', { name: 'Search description or source id' }).fill(label);
+  // Search is debounced; navigation must retain the applied filter in its back link.
+  await expect(page).toHaveURL(new RegExp(`[?&]q=${label}(?:&|$)`));
+}
+
 test.describe('Operator — Event Hub v2', () => {
   test.beforeAll(async () => {
     world.liam = (await session(OPERATORS.liam)).token;
@@ -36,29 +42,24 @@ test.describe('Operator — Event Hub v2', () => {
     await openHub(page, world.unit.name);
     await expect(page.getByTestId('current-stops')).toBeVisible();
 
-    // a running stop of this unit, asked of the server: right after the unit filter changes, the panel
-    // still shows the previous (all-unit) result until its new query answers
-    const open = await call<ListBody<EventBody>>(world.liam, 'GET', `/v2/production-events?unitIds=${world.unit.id}&isOpen=true&limit=1`);
-    expect(open.status).toBe(200);
-    let stopId: string | null = open.body.items[0]?.id ?? null;
-    if (!stopId) {
-      // nothing is running on the line: record the stop through the UI (end empty = still running)
-      await page.getByRole('link', { name: 'New event' }).click();
-      const form = page.getByTestId('event-form');
-      await expect(form.locator('#unitId')).toHaveValue(world.unit.id);
-      const timezone = await plantTimezoneOf(form);
-      await fillPlantTime(form, 'Start', plantLocal(new Date(Date.now() - 40 * MINUTE), timezone));
-      await form.locator('#description').fill(label);
-      const created = page.waitForResponse((r) => r.url().endsWith('/v2/production-events') && r.request().method() === 'POST');
-      await form.getByRole('button', { name: 'Save' }).click();
-      const response = await created;
-      expect(response.status()).toBe(201);
-      stopId = ((await response.json()) as EventBody).id;
-      await expect(form).toBeHidden();
-      await backToList(page);
-    }
+    // Own a named stop so repeat campaigns do not edit another journey's fixture or assume page one.
+    // Record the stop through the UI (end empty = still running).
+    await page.getByRole('link', { name: 'New event' }).click();
+    const form = page.getByTestId('event-form');
+    await expect(form.locator('#unitId')).toHaveValue(world.unit.id);
+    const timezone = await plantTimezoneOf(form);
+    await fillPlantTime(form, 'Start', plantLocal(new Date(Date.now() - 40 * MINUTE), timezone));
+    await form.locator('#description').fill(label);
+    const created = page.waitForResponse((r) => r.url().endsWith('/v2/production-events') && r.request().method() === 'POST');
+    await form.getByRole('button', { name: 'Save' }).click();
+    const response = await created;
+    expect(response.status()).toBe(201);
+    const stopId = ((await response.json()) as EventBody).id;
+    await expect(form).toBeHidden();
+    await backToList(page);
     expect(stopId).toBeTruthy();
-    const id = stopId as string;
+    const id = stopId;
+    await filterNamedEvents(page, label);
 
     await expect(stop(page, id)).toBeVisible();
     await expect(stop(page, id).getByTestId('current-stop-elapsed')).toHaveText(/\d+:\d{2}/);
@@ -101,6 +102,7 @@ test.describe('Operator — Event Hub v2', () => {
     // persistence: reload, same filter, same values on screen and on the API
     await page.reload();
     await openHub(page, world.unit.name);
+    await filterNamedEvents(page, label);
     await expect(row(page, running!.id).getByTestId('event-reason')).toContainText(world.reasons[1].name);
     await expect(row(page, ended!.id).getByTestId('event-reason')).toContainText(world.reasons[0].name);
     await expect(row(page, running!.id).getByTestId('event-duration')).not.toContainText('Running');
@@ -154,6 +156,7 @@ test.describe('Operator — Event Hub v2', () => {
     const eventId = created.body.id;
     await loginOperator(page, OPERATORS.yuki);
     await openHub(page, world.unit.name);
+    await filterNamedEvents(page, label);
     await openEventRow(page, eventId);
     await page.getByTestId('event-detail').getByRole('button', { name: 'Edit / code' }).click();
     const form = page.getByTestId('event-form');
@@ -165,6 +168,7 @@ test.describe('Operator — Event Hub v2', () => {
     await expect(form).toBeHidden();
     await page.reload();
     await openHub(page, world.unit.name);
+    await filterNamedEvents(page, label);
     await openEventRow(page, eventId);
     await page.getByTestId('event-detail').getByRole('button', { name: 'Edit / code' }).click();
     const restored = page.getByTestId('event-form');

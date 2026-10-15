@@ -25,6 +25,7 @@ const jobRow = (page: Page, purpose: string) => page.locator(`[data-testid="job-
 async function createJob(page: Page, purpose: string, amount?: string): Promise<void> {
   await page.getByTestId('job-purpose').selectOption(purpose);
   if (amount) await page.fill('#job-amount', amount);
+  await expect(page.getByTestId('job-create-submit')).toBeEnabled({ timeout: 20_000 });
   await page.getByTestId('job-create-submit').click();
   await expect(jobRow(page, purpose)).toBeVisible({ timeout: 20_000 });
 }
@@ -49,6 +50,7 @@ test.describe('Integration admin — UX06 PI journey', () => {
 
     // 1. configure: Kafka is not available (D10), MQTT is selectable; PI with a write-only password
     await page.getByTestId('new-connection').click();
+    await expect(page.getByRole('radiogroup', { name: 'Source type' })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('source-type-mqtt')).toBeEnabled();
     await expect(page.getByTestId('source-type-kafka')).toBeDisabled();
     await page.getByTestId('source-type-pi_web_api').click();
@@ -82,7 +84,7 @@ test.describe('Integration admin — UX06 PI journey', () => {
     await record.getByTestId('sample-map').click();
     await expect(page.getByTestId('mapping-editor')).toHaveAttribute('data-template', 'Production Loss');
     await page.getByTestId('mapping-preview-run').click();
-    await expect(page.getByTestId('preview-diagnostics')).toContainText('DURATION_UNPARSEABLE');
+    await expect(page.getByTestId('preview-diagnostics')).toContainText('Duration is not a duration in minutes: 00:15:00');
     await page.getByTestId('unit-suppliedDurationSeconds').selectOption('timespan');
     await page.getByTestId('mapping-preview-run').click();
     await expect(page.locator('[data-testid="mapped-value"][data-field="suppliedDurationSeconds"]')).toHaveAttribute('data-value', '900');
@@ -135,7 +137,18 @@ test.describe('Integration admin — UX06 PI journey', () => {
     expect((await eventsByEventId(elena.token, world.unitId, world.recentFrame))[0].durationSeconds).toBe(900);
 
     // 7. bounded backfill of 7 days (drained: stops once caught up) brings the 3-day-old frame, no duplicates
-    await page.goto(`/connectivity/connections/${connectionId}?tab=jobs`);
+    await page.goto(`/connectivity/connections/${connectionId}?tab=discovery`);
+    // Scope, diagnostics and sampling describe this visit; persisted jobs and mappings remain server records.
+    await page.getByTestId('tab-diagnostics').click();
+    await page.getByTestId('run-diagnostics').click();
+    await expect(page.getByTestId('diagnostics-panel')).toHaveAttribute('data-health', 'connected', { timeout: 30_000 });
+    await page.getByTestId('tab-discovery').click();
+    await page.getByTestId('discover').click();
+    await page.getByTestId('af-database').selectOption('DB-HDPE');
+    await page.fill('#scope-template', 'Production Loss');
+    await page.getByTestId('sample-run').click();
+    await expect(page.locator(`[data-testid="sample-record"][data-source-id="${world.recentFrame}"]`)).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId('tab-jobs').click();
     await createJob(page, 'backfill', '7');
     await expect(jobRow(page, 'backfill')).toHaveAttribute('data-state', 'stopped', { timeout: 90_000 });
     await expect.poll(async () => (await eventsByEventId(elena.token, world.unitId, world.oldFrame)).length, { intervals: [2_000], timeout: 30_000 }).toBe(1);

@@ -21,8 +21,8 @@ export const OPERATORS = {
   amir: 'amir.rahimi@demo.acme.com',
 } as const;
 export const DEMO_PLANT_ID = '5f011848-1cb5-4b7c-b75a-8938b46260a9';
-export const LINE_1_CODE = 'DEMO-LINE-1';
-export const LINE_2_CODE = 'DEMO-LINE-2';
+export const LINE_1_CODE = 'unit100';
+export const LINE_2_CODE = 'unit200';
 export const PREFIX = 'P-OPS-';
 export const MINUTE = 60_000;
 
@@ -37,6 +37,7 @@ export interface ReasonCodeView {
   code: string;
   name: string;
   active: boolean;
+  parentId: string | null;
 }
 
 export interface EventBody {
@@ -75,13 +76,14 @@ export async function unitByCode(token: string, code: string): Promise<UnitView>
   return unit;
 }
 
-/** Two active reason codes of the plant (the seeded MECH-01 / ELEC-01 when present). */
+/** Two active leaf causes; grouping nodes cannot be selected in the reason picker. */
 export async function reasonPair(token: string): Promise<[ReasonCodeView, ReasonCodeView]> {
   const codes = await call<ListBody<ReasonCodeView>>(token, 'GET', '/v2/reason-codes?limit=200');
-  const active = codes.body.items.filter((code) => code.active);
+  const parents = new Set(codes.body.items.filter((code) => code.active).map((code) => code.parentId));
+  const active = codes.body.items.filter((code) => code.active && !parents.has(code.id));
   const pick = (wanted: string, fallback: number) => active.find((code) => code.code === wanted) ?? active[fallback];
-  const a = pick('MECH-01', 0);
-  const b = pick('ELEC-01', 1);
+  const a = pick('MECH-BRG', 0);
+  const b = pick('ELEC-MTR', 1);
   if (!a || !b || a.id === b.id) throw new Error('need two active reason codes in Demo Plant');
   return [a, b];
 }
@@ -98,11 +100,12 @@ export async function openHub(page: Page, unitName: string | null): Promise<void
   // first visit compiles the lazy page chunk on the dev server
   await expect(page.getByTestId('event-hub-v2')).toBeVisible({ timeout: 60_000 });
   if (unitName) await chooseUnit(page, 'filter-units', unitName);
+  await page.getByTestId('event-window').selectOption('preset:24');
 }
 
 export async function chooseUnit(page: Page, filterTestId: string, unitName: string): Promise<void> {
   await page.getByTestId(filterTestId).click();
-  await page.getByRole('checkbox', { name: unitName, exact: true }).click();
+  await page.getByRole('checkbox', { name: unitName, exact: true }).check();
   await page.keyboard.press('Escape');
   await expect(page.getByTestId(filterTestId)).toHaveAttribute('aria-label', /1 selected/);
 }

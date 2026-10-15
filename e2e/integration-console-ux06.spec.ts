@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
-import { call } from './test-utils/downtime-world';
+import { call, command } from './test-utils/downtime-world';
 import { cleanupIntegrationWorld, eventsOf, findConnection, jobsOf, seedIntegrationWorld, type IntegrationWorld } from './test-utils/integration-world';
 
 /**
@@ -12,7 +12,7 @@ import { cleanupIntegrationWorld, eventsOf, findConnection, jobsOf, seedIntegrat
  * run → replay → the event exists once → 7-day backfill (drained) → production job healthy; every stage
  * recorded. The PI endpoint is the backend's test simulator on an ephemeral port (loopback by default) started by
  * this spec (never a real PI server). Also: job stop really stops (cursor unchanged, audit row), the
- * password never appears in an API response or browser storage, a non-writer gets 403 shown clearly
+ * password never appears in an API response or browser storage, a non-writer has no diagnostics controls and gets API 403
  * and does not see raw payloads. Data: new "E2E INT …" unit / connection; nothing existing changes.
  *
  * API in Docker (`docker-compose.devdb.yml`): run with `E2E_PI_SIM_HOST=host.docker.internal` so the
@@ -38,6 +38,7 @@ async function openConsole(page: Page): Promise<void> {
 async function createJob(page: Page, purpose: string, amount?: string): Promise<void> {
   await page.getByTestId('job-purpose').selectOption(purpose);
   if (amount) await page.fill('#job-amount', amount);
+  await expect(page.getByTestId('job-create-submit')).toBeEnabled({ timeout: 20_000 });
   await page.getByTestId('job-create-submit').click();
   await expect(jobRow(page, purpose)).toBeVisible({ timeout: 20_000 });
 }
@@ -103,7 +104,7 @@ test.describe('Integration console — UX06 journey (plan 3.7)', () => {
     await record.getByTestId('sample-map').click();
     await expect(page.getByTestId('mapping-editor')).toHaveAttribute('data-template', 'Production Loss');
     await page.getByTestId('mapping-preview-run').click();
-    await expect(page.getByTestId('preview-diagnostics')).toContainText('DURATION_UNPARSEABLE');
+    await expect(page.getByTestId('preview-diagnostics')).toContainText('Duration is not a duration in minutes: 00:15:00');
     await page.getByTestId('unit-suppliedDurationSeconds').selectOption('timespan');
     await page.getByTestId('mapping-preview-run').click();
     await expect(page.locator('[data-testid="mapped-value"][data-field="suppliedDurationSeconds"]')).toHaveAttribute('data-value', '900');
@@ -156,7 +157,18 @@ test.describe('Integration console — UX06 journey (plan 3.7)', () => {
     expect((await eventsOf(manager, world.unitId, world.recentFrame))[0].durationSeconds).toBe(900);
 
     // 7. bounded backfill of 7 days (drained: stops once caught up) brings the 3-day-old frame, no duplicates
-    await page.goto(`/connectivity/connections/${connectionId}?tab=jobs`);
+    await page.goto(`/connectivity/connections/${connectionId}?tab=discovery`);
+    // Scope, diagnostics and sampling describe this visit; persisted jobs and mappings remain server records.
+    await page.getByTestId('tab-diagnostics').click();
+    await page.getByTestId('run-diagnostics').click();
+    await expect(page.getByTestId('diagnostics-panel')).toHaveAttribute('data-health', 'connected', { timeout: 30_000 });
+    await page.getByTestId('tab-discovery').click();
+    await page.getByTestId('discover').click();
+    await page.getByTestId('af-database').selectOption('DB-HDPE');
+    await page.fill('#scope-template', 'Production Loss');
+    await page.getByTestId('sample-run').click();
+    await expect(page.locator(`[data-testid="sample-record"][data-source-id="${world.recentFrame}"]`)).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId('tab-jobs').click();
     await createJob(page, 'backfill', '7');
     await expect(jobRow(page, 'backfill')).toHaveAttribute('data-state', 'stopped', { timeout: 90_000 });
     await expect.poll(async () => (await eventsOf(manager, world.unitId, world.oldFrame)).length, { timeout: 30_000 }).toBe(1);
@@ -179,15 +191,20 @@ test.describe('Integration console — UX06 journey (plan 3.7)', () => {
     expect(storage).not.toContain(world.password);
   });
 
-  test('a non-writer sees 403 refusals clearly and no raw payload', async ({ page }) => {
+  test('a non-writer cannot run diagnostics (hidden, API 403) and sees no raw payload', async ({ page }) => {
+    test.setTimeout(60_000);
     await loginViaUI(page, ENGINEER.email, ENGINEER.password);
     await openConsole(page);
     // the connection has its own page (the list is paged)
-    await page.goto(`/connectivity/connections/${(await findConnection(manager, world.connectionName))?.id ?? ''}`);
-    await page.getByTestId('tab-diagnostics').click();
-    await page.getByTestId('run-diagnostics').click();
-    await expect(page.getByTestId('refusal')).toHaveAttribute('data-kind', 'role');
-    await expect(page.getByTestId('refusal')).toContainText('integration administrator');
+    const connection = await findConnection(manager, world.connectionName);
+    expect(connection).toBeTruthy();
+    await page.goto(`/connectivity/connections/${connection!.id}`);
+    await expect(page.getByRole('heading', { name: world.connectionName, exact: true })).toBeVisible();
+    await expect(page.getByTestId('tab-diagnostics')).toHaveCount(0);
+    await expect(page.getByTestId('run-diagnostics')).toHaveCount(0);
+    const engineer = await authenticate(ENGINEER.email, ENGINEER.password);
+    const refused = await command<{ code: string }>(engineer.accessToken, `/v2/connections/${connection!.id}/test`, {});
+    expect([refused.status, refused.body.code]).toEqual([403, 'FORBIDDEN_ROLE']);
     await page.goto('/connectivity?tab=quarantine'); // the quarantine is a tab of the console, the connection has its own page
     await page.locator('#q-state').selectOption('resolved');
     await page.getByTestId('q-connection').selectOption({ label: world.connectionName });

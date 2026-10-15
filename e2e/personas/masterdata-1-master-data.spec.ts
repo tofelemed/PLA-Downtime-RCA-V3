@@ -65,11 +65,11 @@ test.describe('Master data admin — Master Data screen and user lists', () => {
     await openSection(page, '/master-data/units', 'Production units');
     await page.getByRole('link', { name: 'Add unit' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Create production unit' })).toBeVisible();
-    await expect(page.getByText('Plant: Demo Plant', { exact: true })).toBeVisible();
+    await expect(page.getByText('Plant: HDPE', { exact: true })).toBeVisible();
 
     // validation: an existing code is refused on the code field (server check, 409 MASTER_DATA_CODE_EXISTS)
     await page.locator('#name').fill(unit.name);
-    await page.locator('#code').fill('DEMO-LINE-1');
+    await page.locator('#code').fill('unit100');
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.getByText(/This code is already used/)).toBeVisible();
 

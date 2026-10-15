@@ -29,7 +29,7 @@ export const DEMO_PLANT = '5f011848-1cb5-4b7c-b75a-8938b46260a9';
 export const DEMO_PLANT_2 = '1c19bda6-1c5e-42ac-af59-e1bda46b804f';
 export const PREFIX = 'P-INT-';
 /** the demo MQTT placement (`db:seed-demo-mqtt`): `\\PIAF\HDPE\Polymer\Line1\Extruder1` → this unit */
-export const DEMO_UNIT_CODE = 'DEMO-EXTRUDER1';
+export const DEMO_UNIT_CODE = 'unit100';
 export const DEMO_EVENTS_CONNECTION = 'Demo: MQTT events (simulator)';
 export const MINUTE = 60_000;
 
@@ -86,7 +86,8 @@ export async function openConsole(page: Page): Promise<void> {
 /** Finds `locator` on a paged table (20 rows per page), pressing "Next page" until it shows. */
 export async function findOnPages(page: Page, locator: Locator): Promise<void> {
   await expect(async () => {
-    if ((await locator.count()) === 0) await page.getByRole('button', { name: 'Next page' }).first().click();
+    const next = page.getByRole('button', { name: 'Next page' }).first();
+    if ((await locator.count()) === 0 && (await next.count()) > 0 && await next.isEnabled()) await next.click();
     await expect(locator.first()).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 60_000 });
 }

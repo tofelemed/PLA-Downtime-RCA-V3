@@ -25,8 +25,8 @@ export const DEMO_HEADER = { 'X-Tenant-Id': DEMO.id };
 export { call, command, plantTrigger, selectPlant, type ApiErrorBody };
 
 /** The menus the two plants must offer (navigation-items.ts): operator at home, every read screen as viewer. */
-export const OPERATOR_MENU = ['/dashboard', '/pla-analytics', '/events', '/downtime', '/tasks'];
-export const OPERATOR_HIDDEN = ['/enhanced-historian', '/reports', '/planning', '/production-plans', '/rca', '/codes-admin', '/finance', '/users', '/master-data'];
+export const OPERATOR_MENU = ['/dashboard', '/pla-analytics', '/events', '/downtime', '/tasks', '/master-data'];
+export const OPERATOR_HIDDEN = ['/enhanced-historian', '/reports', '/planning', '/production-plans', '/rca', '/codes-admin', '/finance', '/users'];
 export const VIEWER_MENU = [
   '/dashboard', '/reports', '/pla-analytics', '/planning', '/events', '/downtime', '/rca',
   '/rca-knowledge-base', '/codes-admin', '/finance', '/tasks', '/enhanced-historian',
@@ -132,7 +132,7 @@ export async function openHub(page: Page, unitName: string | null): Promise<void
 
 export async function chooseUnit(page: Page, unitName: string, filterTestId = 'filter-units'): Promise<void> {
   await page.getByTestId(filterTestId).click();
-  await page.getByRole('checkbox', { name: unitName, exact: true }).click();
+  await page.getByRole('checkbox', { name: unitName, exact: true }).check();
   await page.keyboard.press('Escape');
   await expect(page.getByTestId(filterTestId)).toHaveAttribute('aria-label', /1 selected/);
 }

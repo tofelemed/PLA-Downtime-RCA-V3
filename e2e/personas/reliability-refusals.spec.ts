@@ -60,7 +60,7 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     expect(flags.body.items.find((item) => item.key === 'v2.rca')?.enabled).toBe(true);
   });
 
-  test('R3 (sebastian): the Engineer menu offers no feature-flag, master-data or user-management screen', async ({ page }) => {
+  test('R3 (sebastian): the Engineer menu offers standby equipment but no administrative screens', async ({ page }) => {
     await uiLogin(page, REL_USERS.sebastian);
     const nav = page.locator('nav').first();
     // collapsed, the sidebar's icon-only links carry no accessible name (UX observation); expand it first
@@ -68,7 +68,8 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     await expect(nav.getByRole('link', { name: 'RCA Analysis' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Knowledge Base' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Event Hub' })).toBeVisible();
-    await expect(nav.getByRole('link', { name: /Master Data|User Management|Admin Panel|Settings/ })).toHaveCount(0);
+    await expect(nav.getByRole('link', { name: 'Master Data' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: /User Management|Admin Panel|Settings/ })).toHaveCount(0);
   });
 
   test('V1 (leila): a new case needs a title; an action whose verification window ends before it starts is refused with the field error', async ({ page }) => {

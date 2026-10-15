@@ -76,11 +76,11 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
     await expect(bars(page).last()).toHaveAttribute('data-cumulative', '1');
     await expect(bars(page).last().getByTestId('pareto-cumulative')).toHaveText('Σ 100.0 %');
 
-    // bad actors: 60 + 60 min stops overlapping 30 min → allocated 45 + 45 min, labelled
+    // The default first-out policy gives the earlier cause 60 min, then the later cause 30 min.
     const actors = page.getByTestId('bad-actors');
     await expect(page.getByText(/^Allocated: overlapping stops/)).toBeVisible();
-    await expect(actors.locator(`[data-testid="bad-actor"][data-key="${world.assets.pump}"]`)).toHaveAttribute('data-value', '2700');
-    await expect(actors.locator(`[data-testid="bad-actor"][data-key="${world.assets.valve}"]`)).toHaveAttribute('data-value', '2700');
+    await expect(actors.locator(`[data-testid="bad-actor"][data-key="${world.assets.pump}"]`)).toHaveAttribute('data-value', '3600');
+    await expect(actors.locator(`[data-testid="bad-actor"][data-key="${world.assets.valve}"]`)).toHaveAttribute('data-value', '1800');
 
     // reliability: no failure-coded stops → MTBF null with exposure; no repair evidence → labelled restore column
     const reliability = page.getByTestId('reliability');
@@ -91,7 +91,7 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
     await bar(page, world.reasons.mechanical).click();
     await expect(page.getByTestId('pareto-breadcrumb')).toContainText('Mechanical');
     await expect(bars(page)).toHaveCount(2);
-    await expect(bar(page, world.reasons.bearing)).toHaveAttribute('data-value', '2700');
+    await expect(bar(page, world.reasons.bearing)).toHaveAttribute('data-value', '3600');
     await page.getByRole('radio', { name: 'Frequency' }).click();
     await expect(bar(page, world.reasons.bearing)).toHaveAttribute('data-value', '1');
     expect(new URL(page.url()).searchParams.get('reasons')).toBe(world.reasons.mechanical);

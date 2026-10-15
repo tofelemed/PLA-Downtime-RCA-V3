@@ -31,7 +31,8 @@ test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
 async function ensureClosedCase(): Promise<void> {
   const state = loadState();
-  if (state?.closed) {
+  const existing = state?.closed ? await call<{ status: string }>(leila.token, 'GET', `/v2/rcas/${state.caseId}`) : null;
+  if (state?.closed && existing?.status === 200 && existing.body.status === 'Closed') {
     caseId = state.caseId;
     caseTitle = state.caseTitle;
     rootCause = 'Coupling misalignment';

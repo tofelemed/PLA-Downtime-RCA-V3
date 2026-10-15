@@ -34,7 +34,7 @@ async function pickUnitInPlantSelector(page: Page, unitName: string): Promise<vo
   await expect(tree.getByText('Demo Org', { exact: true })).toBeVisible();
   // chevron buttons ("Expand <name>"); an open node stays open, its units may still be loading
   await expandTreeNode(tree, 'Demo Org');
-  await expandTreeNode(tree, 'Demo Plant');
+  await expandTreeNode(tree, 'HDPE');
   await tree.getByText(unitName, { exact: true }).click();
   await expect(plantSelector(page)).toContainText(unitName);
 }
@@ -120,7 +120,7 @@ test.describe('Operator — analytics, tasks and plant selection', () => {
 
   test('J8 logout / login keeps the plant selection per user and does not leak it to another user', async ({ page }) => {
     await loginOperator(page, OPERATORS.amir);
-    await expect(plantSelector(page)).toContainText('Demo Plant', { timeout: 30_000 });
+    await expect(plantSelector(page)).toContainText('HDPE', { timeout: 30_000 });
     await pickUnitInPlantSelector(page, world.line1.name);
     const amir = await session(OPERATORS.amir);
     const stored = await page.evaluate((key) => window.localStorage.getItem(key), `proact.plantSelection.${amir.userId}`);
@@ -135,7 +135,7 @@ test.describe('Operator — analytics, tasks and plant selection', () => {
     // another operator in the same browser starts from the default plant, not from Amir's unit
     await logoutViaHeader(page);
     await loginOperator(page, OPERATORS.ingrid);
-    await expect(plantSelector(page)).toContainText('Demo Plant', { timeout: 30_000 });
+    await expect(plantSelector(page)).toContainText('HDPE', { timeout: 30_000 });
     await expect(plantSelector(page)).not.toContainText(world.line1.name);
   });
 });

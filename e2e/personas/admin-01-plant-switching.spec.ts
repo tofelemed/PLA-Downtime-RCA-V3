@@ -90,7 +90,7 @@ test.describe('ADM-01 SuperAdmin plant switching', () => {
     // another SuperAdmin in the same browser starts from his own home plant, not from Helena's choice
     await signOut(page);
     await signIn(page, USERS.marcus);
-    await expect(plantTrigger(page)).toContainText('Demo Plant');
+    await expect(plantTrigger(page)).toContainText(PLANTS.demo.name);
     await expect(plantTrigger(page)).not.toContainText('Demo Plant 2');
   });
 
@@ -176,7 +176,7 @@ test.describe('ADM-02 OrgAdmin plant isolation', () => {
     await expect(tree.getByText('Partner Plant', { exact: true })).toBeVisible();
     await page.screenshot({ path: test.info().outputPath('adm-02b-lucas-selector.png') });
     await expect(tree.getByText('Demo Org', { exact: true })).toHaveCount(0);
-    await expect(tree.getByText('Demo Plant', { exact: true })).toHaveCount(0);
+    await expect(tree.getByText(PLANTS.demo.name, { exact: true })).toHaveCount(0);
     await expect(tree.getByText('Demo Plant 2', { exact: true })).toHaveCount(0);
   });
 

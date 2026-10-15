@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { PLANTS } from './support/admin-helpers';
 import { readFile } from 'node:fs/promises';
 import {
   DEMO, DEMO2, DEMO_HEADER, PARTNER, VIEWERS, apiLogin, call, command, loginAsViewerInDemoPlant, note, plantTrigger,
@@ -117,7 +118,7 @@ test.describe('Viewer — read-only-allowed routes, scope boundary, user lists',
     const tree = await openPlantTree(page);
     await expect(tree.getByText('Demo Org', { exact: true })).toBeVisible();
     await expandTreeNode(tree, 'Demo Org');
-    await expect(tree.getByText('Demo Plant', { exact: true })).toBeVisible();
+    await expect(tree.getByText(PLANTS.demo.name, { exact: true })).toBeVisible();
     await expect(tree.getByText('Demo Plant 2', { exact: true })).toBeVisible();
     await expect(tree.getByText('Partner Org', { exact: true })).toHaveCount(0);
     await expect(tree.getByText('Partner Plant', { exact: true })).toHaveCount(0);

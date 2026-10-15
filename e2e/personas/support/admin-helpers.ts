@@ -19,7 +19,7 @@ export interface Plant {
 }
 
 export const PLANTS = {
-  demo: { id: '5f011848-1cb5-4b7c-b75a-8938b46260a9', name: 'Demo Plant', org: 'Demo Org' },
+  demo: { id: '5f011848-1cb5-4b7c-b75a-8938b46260a9', name: 'HDPE', org: 'Demo Org' },
   demo2: { id: '1c19bda6-1c5e-42ac-af59-e1bda46b804f', name: 'Demo Plant 2', org: 'Demo Org' },
   partner: { id: 'd731498e-efd5-46f2-8bf0-64a4cf1fde3b', name: 'Partner Plant', org: 'Partner Org' },
 } as const satisfies Record<string, Plant>;
@@ -119,7 +119,7 @@ export async function signOut(page: Page): Promise<void> {
 
 /** The plant selector trigger in the header (a Radix popover trigger showing the breadcrumb). */
 export function plantTrigger(page: Page): Locator {
-  return page.locator('header button[aria-haspopup="dialog"]').first();
+  return page.getByRole('button', { name: /^Plant: .*\. Change plant$/ });
 }
 
 /**

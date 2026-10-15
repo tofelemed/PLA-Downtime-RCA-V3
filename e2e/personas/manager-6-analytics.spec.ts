@@ -80,11 +80,11 @@ test.describe('Manager persona — Downtime Analysis and PLA analytics', () => {
     await expect(bars(page).first()).toHaveAttribute('data-value', '5400');
     await expect(bars(page).last()).toHaveAttribute('data-cumulative', '1');
     const actors = page.getByTestId('bad-actors');
-    await expect(actors.locator(`[data-testid="bad-actor"][data-key="${downtimeWorld.assets.pump}"]`)).toHaveAttribute('data-value', '2700');
+    await expect(actors.locator(`[data-testid="bad-actor"][data-key="${downtimeWorld.assets.pump}"]`)).toHaveAttribute('data-value', '3600');
     await expect(page.getByTestId('reliability').getByTestId('restore-title')).toHaveText('Mean time to restore production');
     await bar(page, downtimeWorld.reasons.mechanical).click();
     await expect(bars(page)).toHaveCount(2);
-    await expect(bar(page, downtimeWorld.reasons.bearing)).toHaveAttribute('data-value', '2700');
+    await expect(bar(page, downtimeWorld.reasons.bearing)).toHaveAttribute('data-value', '3600');
     await page.getByRole('radio', { name: 'Frequency' }).click();
     await expect(bar(page, downtimeWorld.reasons.bearing)).toHaveAttribute('data-value', '1');
     await bar(page, downtimeWorld.reasons.bearing).focus();

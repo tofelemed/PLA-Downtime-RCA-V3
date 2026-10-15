@@ -81,6 +81,15 @@ test.describe('Accessibility of the main pages (axe, WCAG 2.1 AA, serious / crit
     ['Dashboard', '/dashboard', '[data-testid="analytics-dashboard"]'],
     ['Month close', '/month-close', 'main'],
     ['Master data', '/master-data', 'main'],
+    ['Planning', '/planning', '[data-testid="planning-page"]'],
+    ['Finance', '/finance', 'main'],
+    ['Uncertainty budgets', '/measurement-uncertainty', 'main'],
+    ['Source priority', '/connectivity/source-authority', 'main'],
+    ['Delegations', '/delegations', 'main'],
+    ['Connectivity', '/connectivity', '[data-testid="integration-console"]'],
+    ['Codes and rules', '/codes-admin', 'main'],
+    ['Tasks', '/tasks', 'main'],
+    ['Settings', '/settings', 'main'],
   ];
 
   for (const [name, path, ready] of STATIC_PAGES) {
@@ -98,14 +107,15 @@ test.describe('Accessibility of the main pages (axe, WCAG 2.1 AA, serious / crit
 
   test('Plan dashboard period', async ({ page }) => {
     test.setTimeout(120_000);
-    const plan = await firstId<{ id: string }>('/v2/production-plans?limit=1');
-    test.skip(!plan, 'no production plan in the demo plant');
+    const plans = await call<ListPage<{ id: string; name: string; version: { approvalState: string } }>>(token, 'GET', '/v2/production-plans?limit=200');
+    const plan = plans.body.items?.find((item) => item.name.startsWith('unit100') && item.version.approvalState === 'approved');
+    expect(plan, 'the approved HDPE monthly plan must be present').toBeDefined();
     await page.goto(`/plans/${plan!.id}`);
-    const period = page.locator('a[href*="/periods/"]').first();
-    const hasPeriod = await period.isVisible({ timeout: 60_000 }).catch(() => false);
-    test.skip(!hasPeriod, 'the plan has no period link to open');
-    const href = await period.getAttribute('href');
-    await scan(page, href ?? `/plans/${plan!.id}`, 'main');
+    const period = page.getByTestId('period-row').first();
+    await expect(period).toBeVisible({ timeout: 60_000 });
+    await period.click();
+    await expect(page).toHaveURL(/\/plans\/.+\/periods\/.+/);
+    await scan(page, new URL(page.url()).pathname, '[data-testid="period-detail"]');
   });
 
   test('RCA case', async ({ page }) => {

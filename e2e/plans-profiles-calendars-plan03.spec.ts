@@ -29,7 +29,7 @@ async function openTab(page: Page, tab: 'plans' | 'profiles' | 'calendars'): Pro
   // first visit compiles the lazy page chunk on the dev server
   await expect(page.getByTestId('planning-page')).toBeVisible({ timeout: 60_000 });
   await expect(page.getByTestId(`${tab}-tab`)).toBeVisible({ timeout: 60_000 });
-  const header = (await page.getByTestId('scope-header').textContent()) ?? '';
+  const header = (await page.getByTestId('scope-header').locator(':scope > div').first().textContent()) ?? '';
   timezone = /([A-Za-z_]+\/[A-Za-z_]+|UTC) \(/.exec(header)?.[1] ?? 'UTC';
 }
 
@@ -45,7 +45,7 @@ async function previewTargets(page: Page): Promise<string[]> {
 async function openPlan(page: Page): Promise<void> {
   await openTab(page, 'plans');
   await page.selectOption('#planUnitFilter', { label: world.planUnitName });
-  await page.getByTestId('plan-row').first().click();
+  await page.getByTestId('plan-row').filter({ hasText: `E2E PLAN ${world.suffix}` }).click();
   await expect(page.getByTestId('plan-detail')).toBeVisible();
 }
 

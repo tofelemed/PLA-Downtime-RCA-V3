@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { PLANTS } from './support/admin-helpers';
 import {
   DEMO, DEMO2, DEMO_HEADER, MINUTE, OPERATOR_HIDDEN, OPERATOR_MENU, VIEWERS, VIEWER_HIDDEN, VIEWER_MENU,
   apiLogin, call, chooseUnit, eventRow, expectMenu, note, openHub, plantLocal, plantTimezoneOf, plantTrigger,
@@ -156,7 +157,7 @@ test.describe('Viewer — home plant, plant switch, persistence', () => {
     await selectPlant(page, DEMO);
     await signOut(page);
     await uiLogin(page, VIEWERS.grace);
-    await expect(plantTrigger(page)).toContainText('Demo Plant');
+    await expect(plantTrigger(page)).toContainText(PLANTS.demo.name);
     await expect(plantTrigger(page)).not.toContainText('Demo Plant 2');
     await expect(readOnlyBadge(page)).toBeVisible();
     await page.reload();

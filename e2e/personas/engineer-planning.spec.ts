@@ -25,7 +25,7 @@ async function openTab(page: Page, tab: 'plans' | 'profiles' | 'calendars'): Pro
   await page.goto(`/planning?tab=${tab}`);
   await expect(page.getByTestId('planning-page')).toBeVisible({ timeout: 60_000 });
   await expect(page.getByTestId(`${tab}-tab`)).toBeVisible({ timeout: 60_000 });
-  const header = (await page.getByTestId('scope-header').textContent()) ?? '';
+  const header = (await page.getByTestId('scope-header').locator(':scope > div').first().textContent()) ?? '';
   timezone = /([A-Za-z_]+\/[A-Za-z_]+|UTC) \(/.exec(header)?.[1] ?? 'UTC';
 }
 
