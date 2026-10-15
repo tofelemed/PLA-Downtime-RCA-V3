@@ -133,6 +133,7 @@ test('month navigation shows blocked current prerequisites and server-defined mo
   expect(current.body.prerequisites.met).toBe(false);
   await signIn(page, ACCOUNTING_USERS.author);
   await page.goto('/month-close');
+  await expect(page.getByRole('tablist', { name: 'Month close sections' }).getByRole('tab', { name: 'Overview', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('close-prerequisites')).toHaveAttribute('data-met', 'false');
   await expect(page.getByTestId('step-close-quantities')).toBeDisabled();
   await expect(page.getByTestId('close-blocked')).toBeVisible();
@@ -145,6 +146,10 @@ test('month navigation shows blocked current prerequisites and server-defined mo
   await page.getByTestId('month-next').click();
   await expect(page.getByTestId('month-label')).toContainText(current.body.monthKey);
   await expect(page.getByTestId('close-prerequisites')).toHaveAttribute('data-met', 'false');
+  await page.getByTestId('close-count-periods').click();
+  await expect(page.getByRole('tab', { name: 'Periods', exact: true })).toHaveAttribute('aria-selected', 'true');
+  expect(new URL(page.url()).searchParams.get('month')).toBe(current.body.monthKey);
+  await expect(page.getByTestId('pending-periods')).toBeVisible();
 });
 
 test('correction evidence is required and an open month refuses the proposed correction without storing it', async ({ page }) => {

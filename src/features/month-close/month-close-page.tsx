@@ -1,24 +1,34 @@
+import { useLayoutEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useMonthClose } from '@/api/v2/queries/month-close';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
-import { CloseDeadlines } from './components/close-deadlines';
 import { CloseHistory } from './components/close-history';
 import { ClosePrerequisites } from './components/close-prerequisites';
-import { CloseSignOffs } from './components/close-sign-offs';
+import { CloseOverview } from './components/close-overview';
+import { CloseSectionNav } from './components/close-section-nav';
 import { MonthNav } from './components/month-nav';
+import { closeSearch, closeSection } from './model/close-section';
 
 function MonthCloseScreen() {
   const [params, setParams] = useSearchParams();
   const month = params.get('month') ?? 'current';
+  const section = closeSection(params.get('section'));
+  const requestedSection = useRef(section);
+  useLayoutEffect(() => { requestedSection.current = section; }, [section]);
   const query = useMonthClose(month);
   const view = query.data;
-  const select = (key: string) => setParams((next) => {
-    next.set('month', key);
-    return next;
-  });
+  const select = (key: string) => setParams((next) => closeSearch(next, 'month', key));
+  const selectSection = (value: string) => {
+    const nextSection = closeSection(value);
+    // Radix can activate on both mouse-down and focus before the URL commit rerenders.
+    if (requestedSection.current === nextSection) return;
+    requestedSection.current = nextSection;
+    setParams((next) => closeSearch(next, 'section', nextSection));
+  };
   return (
     <Page width="wide">
       <div className="space-y-6" data-testid="month-close">
@@ -29,12 +39,14 @@ function MonthCloseScreen() {
         />
         <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>
           {view && (
-            <>
-              <CloseDeadlines view={view} />
-              <ClosePrerequisites view={view} />
-              <CloseSignOffs view={view} />
-              <CloseHistory view={view} />
-            </>
+            <Tabs value={section} onValueChange={selectSection} className="min-w-0 space-y-5">
+              <CloseSectionNav />
+              <TabsContent value="overview"><CloseOverview key={view.monthKey} view={view} params={params} /></TabsContent>
+              {(['periods', 'days', 'proposals'] as const).map((part) => <TabsContent key={part} value={part}>
+                <ClosePrerequisites view={view} section={part} />
+              </TabsContent>)}
+              <TabsContent value="history"><CloseHistory view={view} /></TabsContent>
+            </Tabs>
           )}
         </DataState>
       </div>
@@ -50,5 +62,5 @@ function MonthCloseScreen() {
 export function MonthClosePage() {
   const tenantId = useV2TenantId();
   if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to close its month." />;
-  return <MonthCloseScreen />;
+  return <MonthCloseScreen key={tenantId} />;
 }

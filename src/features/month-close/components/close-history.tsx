@@ -5,17 +5,16 @@ import { CLOSE_ACTION_LABELS } from '../model/close-labels';
 
 /** The month's close steps, newest first (who, when, comment or reason). */
 export function CloseHistory({ view }: { view: MonthCloseView }) {
-  if (view.history.length === 0) return null;
   return (
-    <Section title="History" collapsible defaultOpen={false}>
-      <ol className="space-y-1 text-sm" data-testid="close-history">
+    <Section title="History" description="Recorded month-close steps, newest first.">
+      {view.history.length === 0 ? <p data-testid="close-history-empty">No month-close actions recorded.</p> : <ol className="space-y-2 text-sm break-words" data-testid="close-history">
         {view.history.map((h) => (
           <li key={h.id}>
             <PlantTime iso={h.createdAt} tz={view.deadlines.timezone} withDate /> — {CLOSE_ACTION_LABELS[h.action] ?? h.action} by {h.actor?.name ?? 'a user'}
             {h.reason ? `: ${h.reason}` : ''}
           </li>
         ))}
-      </ol>
+      </ol>}
     </Section>
   );
 }

@@ -24,6 +24,7 @@ test('the final locked month shows independent sign-offs and refuses a direct UI
   await expect(page.getByTestId('step-reopen')).toHaveCount(0);
   const proposal = previous.body.prerequisites.openProposals.find((item) => item.planId && item.manualReason?.includes('Demo:'));
   expect(proposal, 'seeded locked-month proposal with a plan link').toBeDefined();
+  await page.getByRole('tablist', { name: 'Month close sections' }).getByRole('tab', { name: 'Proposals', exact: true }).click();
   await page.getByTestId('open-proposals').locator(`a[href="/plans/${proposal!.planId}/periods/${proposal!.periodId}"]`).click();
   const before = await readReconciliation(author.token, proposal!.periodId);
   await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'approved');

@@ -58,7 +58,7 @@ export function CloseActions({ view }: { view: MonthCloseView }) {
           </StepConfirm>
         )}
       </div>
-      {steps.close && !view.prerequisites.met && <p className="text-sm text-muted-foreground" data-testid="close-blocked">Approve every period, certify every production day and settle open change proposals before closing the quantities.</p>}
+      {steps.close && !view.prerequisites.met && <p className="text-sm text-muted-foreground" data-testid="close-blocked">Resolve the blocking prerequisites shown above before closing the quantities.</p>}
       {steps.signOff && signedQuantities && <p className="text-sm text-muted-foreground" data-testid="close-sod">You closed the quantities; finance sign-off needs someone else.</p>}
       {problem}
     </div>

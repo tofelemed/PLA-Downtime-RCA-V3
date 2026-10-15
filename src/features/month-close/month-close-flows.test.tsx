@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
@@ -104,11 +105,13 @@ describe('month close screen (SME R1 / R4)', () => {
     await waitFor(() => expect(screen.getByTestId('close-state').textContent).toBe('Open'));
     expect(calls[0].url.pathname).toMatch(/\/v2\/month-closes\/1405-07$/);
     expect(screen.getByTestId('deadline-quantities').getAttribute('data-overdue')).toBe('true');
-    expect(screen.getByTestId('pending-periods').textContent).toContain('Demo unit 100');
-    expect(screen.getByTestId('pending-periods').textContent).toContain('Waiting for approval');
-    expect(screen.getByTestId('uncertified-days').textContent).toContain('Demo unit 100');
     expect((screen.getByTestId('step-close-quantities') as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByTestId('step-finance-sign-off')).toBeNull();
+    await userEvent.click(screen.getByRole('tab', { name: 'Periods' }));
+    expect(screen.getByTestId('pending-periods').textContent).toContain('Demo unit 100');
+    expect(screen.getByTestId('pending-periods').textContent).toContain('Waiting for approval');
+    await userEvent.click(screen.getByRole('tab', { name: 'Days' }));
+    expect(screen.getByTestId('uncertified-days').textContent).toContain('Demo unit 100');
   });
 
   it('finance signs off a closed month; the quantity signer is told someone else must', async () => {
@@ -152,10 +155,11 @@ describe('month close screen (SME R1 / R4)', () => {
     };
     reply = () => json(200, locked);
     renderPage();
+    expect((await screen.findByTestId('locked-note')).textContent).toContain('Propose a correction');
+    await userEvent.click(screen.getByRole('tab', { name: 'Proposals' }));
     const list = await screen.findByTestId('open-proposals');
     expect(list.textContent).toContain('Correction proposed');
     expect(list.textContent).toContain('Demo: lab re-test');
     expect(list.querySelector('a')?.getAttribute('href')).toBe('/plans/plan-1/periods/per-1');
-    expect(screen.getByTestId('locked-note').textContent).toContain('Propose a correction');
   });
 });
