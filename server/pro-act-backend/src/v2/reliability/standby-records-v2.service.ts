@@ -23,6 +23,7 @@ import {
   StandbyRecordsImportDto,
 } from './standby-v2.dto';
 import { StandbyImportV2View } from './standby-v2.view';
+import { AffectedSpan, requestReliabilityRecalc } from './reliability-recalc';
 
 /** Problem of one row, or null (asset known, interval and outcome consistent, event of the tenant). */
 function rowProblem(
@@ -115,8 +116,8 @@ export class StandbyRecordsV2Service {
       context,
       resolved.map((r) => r.asset.unitId),
     );
-    return this.manager.transaction((manager) =>
-      upsert(
+    return this.manager.transaction(async (manager) => {
+      const { view, replaced } = await upsert(
         manager,
         {
           tenantId,
@@ -124,8 +125,29 @@ export class StandbyRecordsV2Service {
           allowedUnits: periodScopeUnits(context),
         },
         resolved,
-      ),
-    );
+      );
+      // standby runs are the MTBF exposure of their asset (SME D9): old and new run spans are recalculated
+      await requestReliabilityRecalc(
+        manager,
+        context,
+        [
+          ...replaced,
+          ...resolved.flatMap(({ row, asset }) =>
+            row.kind === 'run'
+              ? [
+                  {
+                    unitId: asset.unitId,
+                    start: new Date(row.startedAt),
+                    end: row.endedAt ? new Date(row.endedAt) : null,
+                  },
+                ]
+              : [],
+          ),
+        ],
+        'standby_records_imported',
+      );
+      return view;
+    });
   }
 
   private async eventsOf(
@@ -182,7 +204,7 @@ async function upsert(
     allowedUnits: readonly string[] | null;
   },
   rows: ReadonlyArray<{ row: StandbyRecordRowDto; asset: AssetRef }>,
-): Promise<StandbyImportV2View> {
+): Promise<{ view: StandbyImportV2View; replaced: AffectedSpan[] }> {
   const repository = manager.getRepository(StandbyRecord);
   const refs = rows.flatMap((r) =>
     r.row.externalRef ? [r.row.externalRef] : [],
@@ -226,5 +248,12 @@ async function upsert(
   }
   for (let i = 0; i < inserts.length; i += 500)
     await repository.insert(inserts.slice(i, i + 500));
-  return { total: rows.length, created: inserts.length, updated };
+  // only runs are KPI inputs (demands and tests stay in the standby measures)
+  const replaced = existing
+    .filter((e) => e.recordKind === 'run')
+    .map((e) => ({ unitId: e.unitId, start: e.startedAt, end: e.endedAt }));
+  return {
+    view: { total: rows.length, created: inserts.length, updated },
+    replaced,
+  };
 }

@@ -27,9 +27,10 @@ import { reconciledOee } from './reconciled-oee';
 import { FailureSpan, reliability } from './reliability';
 import { stateKpis } from './state-kpis';
 import { StateSegment } from '../reliability/unit-state';
+import { StandbyExposure } from './standby-mtbf';
 
 /** Bumped whenever a KPI rule changes (part of the calculation run's engine version and input hash). */
-export const KPI_ENGINE_VERSION = '2.7.6';
+export const KPI_ENGINE_VERSION = '2.7.7';
 
 export interface PeriodKpiInput {
   /** the accounting input of the same run (window, schedule, events, slices, policy, asOf) */
@@ -42,6 +43,8 @@ export interface PeriodKpiInput {
   failures: readonly FailureSpan[];
   /** SME D1 / D2: the unit's state timeline; null / absent = no state mapping (no coverage KPIs) */
   stateTimeline?: readonly StateSegment[] | null;
+  /** SME D9: standby assets of the unit with their own runs (their MTBF exposure) */
+  standby?: readonly StandbyExposure[];
 }
 
 interface SliceTerms {
@@ -266,6 +269,7 @@ export function computePeriodKpis(input: PeriodKpiInput): KpiDraft[] {
         downtimeInput.events,
         accounting.policy,
       ),
+      standby: input.standby,
     }),
     coverageKpi(accounting.slices),
     ...(input.stateTimeline ? stateKpis(accounting, input.stateTimeline) : []),

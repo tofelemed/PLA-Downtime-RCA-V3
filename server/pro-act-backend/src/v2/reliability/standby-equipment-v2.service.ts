@@ -26,6 +26,21 @@ import {
   StandbyMetricsQueryDto,
 } from './standby-v2.dto';
 import { StandbyMetricsV2View } from './standby-v2.view';
+import { OPEN_ENDED } from '../../periods/period-recalc';
+import { requestReliabilityRecalc } from './reliability-recalc';
+
+/** A standby duty starting or ending changes the MTBF exposure of its asset from then on (SME D9). */
+const dutyChanged = (
+  manager: EntityManager,
+  context: RequestContext,
+  change: { unitId: string; from: Date },
+) =>
+  requestReliabilityRecalc(
+    manager,
+    context,
+    [{ unitId: change.unitId, start: change.from, end: OPEN_ENDED }],
+    'standby_duty_changed',
+  );
 
 const notFound = () =>
   new NotFoundException({
@@ -80,21 +95,26 @@ export class StandbyEquipmentV2Service {
         message: 'The asset is already registered as standby',
       });
     }
-    return this.manager.save(
-      this.manager.create(StandbyEquipment, {
-        tenantId,
-        assetId: asset.id,
-        unitId: asset.unitId,
-        evaluation: input.evaluation,
-        notes: input.notes?.trim() || null,
-        effectiveFrom: input.effectiveFrom
-          ? new Date(input.effectiveFrom)
-          : new Date(),
-        effectiveTo: null,
-        createdBy: context.userId,
-        updatedBy: context.userId,
-      }),
-    );
+    const from = input.effectiveFrom
+      ? new Date(input.effectiveFrom)
+      : new Date();
+    return this.manager.transaction(async (manager) => {
+      const saved = await manager.save(
+        manager.create(StandbyEquipment, {
+          tenantId,
+          assetId: asset.id,
+          unitId: asset.unitId,
+          evaluation: input.evaluation,
+          notes: input.notes?.trim() || null,
+          effectiveFrom: from,
+          effectiveTo: null,
+          createdBy: context.userId,
+          updatedBy: context.userId,
+        }),
+      );
+      await dutyChanged(manager, context, { unitId: asset.unitId, from });
+      return saved;
+    });
   }
 
   async retire(
@@ -121,9 +141,12 @@ export class StandbyEquipmentV2Service {
         'effectiveTo',
         'effectiveTo must be after the start of the duty',
       );
-    await this.manager.update(StandbyEquipment, row.id, {
-      effectiveTo: end,
-      updatedBy: context.userId,
+    await this.manager.transaction(async (manager) => {
+      await manager.update(StandbyEquipment, row.id, {
+        effectiveTo: end,
+        updatedBy: context.userId,
+      });
+      await dutyChanged(manager, context, { unitId: row.unitId, from: end });
     });
     return { ...row, effectiveTo: end };
   }

@@ -23,6 +23,13 @@ export function hashOf(
     valuation: policies.valuation.context,
     kpi: kpiHashMaterial(inputs.kpi),
     fingerprint: inputs.fingerprint,
+    // master data read through an event's ids (SME D6): the asset type picks the micro-stop threshold and
+    // the reason code marks a trip, so re-typing an asset or recoding a reason changes the inputs
+    classification: inputs.events.map((e) => [
+      e.eventId,
+      e.assetClass ?? null,
+      e.reasonCode ?? null,
+    ]),
     excluded: [period.isExcluded, period.exclusionKind],
     schedule: inputs.schedule.map((s) => [
       s.start.getTime(),
