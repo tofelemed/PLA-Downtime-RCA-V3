@@ -91,6 +91,7 @@ export class RequestContextFactory {
     return {
       ...context,
       tenantId: selected,
+      legacyRole: legacyApplies ? legacyRole : null,
       roles: mergeRoles(
         legacyApplies ? legacyRole : null,
         scopesIn(scopes, selected),

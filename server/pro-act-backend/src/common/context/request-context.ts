@@ -27,7 +27,7 @@ export interface RequestContext {
   /** tenant the request acts on: the token tenant, or a validated `X-Tenant-Id` selection */
   tenantId: string | null;
   organizationId: string | null;
-  /** role string on `users.role` (SuperAdmin, TenantAdmin, Engineer, ...) */
+  /** `users.role` only when it applies in the acting tenant; otherwise null */
   legacyRole: string | null;
   /** legacy role, its D06 mapping and every scope role; what `@Roles()` is matched against */
   roles: string[];
