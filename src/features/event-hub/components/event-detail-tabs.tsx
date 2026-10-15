@@ -16,15 +16,18 @@ import { StopLinksPanel } from '../stop-links/stop-links-panel';
 const TABS = ['details', 'history', 'review', 'evidence', 'repair', 'related', 'periods'] as const;
 type DetailTab = (typeof TABS)[number];
 
-const tabOf = (value: string | null): DetailTab => (TABS as readonly string[]).includes(value ?? '') ? (value as DetailTab) : 'details';
+function tabOf(value: string | null, isStop: boolean): DetailTab {
+  if (!isStop && (value === 'repair' || value === 'related')) return 'details';
+  return (TABS as readonly string[]).includes(value ?? '') ? (value as DetailTab) : 'details';
+}
 
 /** Tabs of the event page (Repair and Duplicates & repeats for stops only); the active one is in the URL (`?tab=history`), so Back and links work. */
 export function EventDetailTabs({ event }: { event: ProductionEventView }) {
   const [params, setParams] = useSearchParams();
-  const tab = tabOf(params.get('tab'));
+  const isStop = event.classification.physicalType === 'downtime';
+  const tab = tabOf(params.get('tab'), isStop);
   const history = useProductionEventHistory(event.id);
   const data = history.data;
-  const isStop = event.classification.physicalType === 'downtime';
   const openReviews = data?.reviewItems.filter((item) => item.state === 'open').length ?? 0;
   const choose = (value: string) => {
     const next = new URLSearchParams(params);

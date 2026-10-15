@@ -16,6 +16,7 @@ import { AttributeMainFields, AttributeRuleFields } from './attribute-fields';
 import { attributeFormOf, type AttributeFormValues, emptyAttributeForm, toAttributeInput, validateAttributeForm } from './attribute-form-model';
 
 const BACK = { to: '/admin?tab=attributes', label: 'Admin panel' };
+const backForLevel = (level: string) => ({ ...BACK, to: `${BACK.to}&level=${encodeURIComponent(level)}` });
 /** Types with rules of their own (text length / pattern, number limits, choices). */
 const RULED_TYPES: ReadonlySet<string> = new Set(['string', 'number', 'select']);
 
@@ -70,6 +71,7 @@ interface EditorProps {
 
 function AttributeEditor({ mode, view, initial, save }: EditorProps) {
   const navigate = useNavigate();
+  const back = backForLevel(initial.entityType);
   const { canManageMasterData } = useCapabilities();
   const feedback = useCommandFeedback();
   const [values, setValues] = useState(initial);
@@ -95,7 +97,7 @@ function AttributeEditor({ mode, view, initial, save }: EditorProps) {
     <Page>
       <PageHeader
         title={view ? view.displayName : 'Add custom attribute'}
-        back={BACK}
+        back={back}
         description={view ? `Applies to: ${labelOf(ATTRIBUTE_SCOPE_LABELS, view.scope)}` : undefined}
         actions={view?.editable && canManageMasterData && <DeleteAttribute view={view} />}
       />
@@ -119,7 +121,7 @@ function AttributeEditor({ mode, view, initial, save }: EditorProps) {
               {busy && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}
               {mode === 'create' ? 'Create attribute' : 'Save changes'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => navigate(BACK.to)} disabled={busy}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => navigate(back.to)} disabled={busy}>Cancel</Button>
           </div>
         )}
       </form>
@@ -140,7 +142,7 @@ function DeleteAttribute({ view }: { view: AttributeDefinitionView }) {
       destructive
       onConfirm={async () => {
         await feedback(() => remove.submit(view.id), 'Attribute deleted');
-        navigate(BACK.to);
+        navigate(backForLevel(view.entityType).to);
       }}
     />
   );
