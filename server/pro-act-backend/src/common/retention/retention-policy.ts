@@ -1,9 +1,10 @@
 /**
- * Data retention windows (DB-07), read from the environment only: unset or empty = keep forever. The
- * owner chose 30 days for both audit tables (2026-10-14); docker-compose passes
- * `AUDIT_REQUEST_LOG_RETENTION_DAYS` / `AUDIT_TRAIL_RETENTION_DAYS` = 30 by default, other runs set them in
- * `.env`. Raw retention is not decided (deferred 2026-10-11), so `RAW_RETENTION_DAYS` stays unset. A set
- * value must be a whole number of days ≥ 1; anything else is a configuration error and nothing is deleted.
+ * Data retention windows (DB-07), read from the environment only: unset or empty = keep forever. Owner
+ * decisions: 30 days for both audit tables (2026-10-14), raw source observations 1 year and signal samples
+ * 90 days (2026-10-15). docker-compose passes `AUDIT_REQUEST_LOG_RETENTION_DAYS` /
+ * `AUDIT_TRAIL_RETENTION_DAYS` = 30, `RAW_RETENTION_DAYS` = 365 and `SAMPLE_RETENTION_DAYS` = 90 by
+ * default; other runs set them in `.env`. A set value must be a whole number of days ≥ 1; anything else is
+ * a configuration error and nothing is deleted.
  */
 export interface RetentionPolicy {
   /** `audit_logs`, the request log of the global audit interceptor (by `timestamp`) */
@@ -12,6 +13,8 @@ export interface RetentionPolicy {
   auditTrailDays: number | null;
   /** monthly `raw_observations` partitions whose whole month is older than the window are dropped */
   rawDays: number | null;
+  /** monthly `measurement_samples` partitions whose whole month is older than the window are dropped */
+  sampleDays: number | null;
   /** rows deleted per statement */
   batchSize: number;
 }
@@ -42,6 +45,7 @@ export function readRetentionPolicy(
     requestLogDays: positiveInt(env, 'AUDIT_REQUEST_LOG_RETENTION_DAYS'),
     auditTrailDays: positiveInt(env, 'AUDIT_TRAIL_RETENTION_DAYS'),
     rawDays: positiveInt(env, 'RAW_RETENTION_DAYS'),
+    sampleDays: positiveInt(env, 'SAMPLE_RETENTION_DAYS'),
     batchSize: positiveInt(env, 'RETENTION_BATCH') ?? DEFAULT_BATCH,
   };
 }
@@ -49,4 +53,5 @@ export function readRetentionPolicy(
 export const isRetentionEnabled = (policy: RetentionPolicy) =>
   policy.requestLogDays !== null ||
   policy.auditTrailDays !== null ||
-  policy.rawDays !== null;
+  policy.rawDays !== null ||
+  policy.sampleDays !== null;
