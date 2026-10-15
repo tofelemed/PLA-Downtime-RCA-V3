@@ -4,6 +4,20 @@ How to use: for each item tick an option (`[x]`) or write under **Answer**. If y
 
 Legend — *Gate*: the sub-phase where the decision becomes irreversible without rework.
 
+### HDPE validation dataset — owner clarification, 15 October 2026
+
+The owner authorized cleanup of the local demonstration data, realistic HDPE
+seeding and full application/persona/UI testing. The final retained topology is
+one organization named **HDPE**, its **HDPE** plant, and **unit100 / Extruder1**
+plus **unit200 / Extruder2**; remove the other organizations and their child data.
+The schema's organization → plant → unit levels remain intact. Temporary extra
+plants are permitted only as test fixtures and are removed before handover.
+
+Engineering values are synthetic examples because no actual plant dataset or
+historian credentials were supplied. See `docs/HDPE_DEMO_GUIDE.md` for the declared
+assumptions and `plans/HDPE_E2E_VALIDATION.md` for execution/evidence. The owner also
+explicitly authorized sub-agents and browser testing during this validation run.
+
 ---
 
 ## A. Working agreements (needed before I start coding)
