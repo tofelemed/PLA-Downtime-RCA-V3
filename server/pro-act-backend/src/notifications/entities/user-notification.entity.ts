@@ -3,7 +3,11 @@ import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
 import { User } from '../../users/user.entity';
 
 /** `sla_reminder`: SME R3 due reminder of the preparer / checker; `sla_escalation`: R3 / R6 escalation */
-export const NOTIFICATION_KINDS = ['sla_reminder', 'sla_escalation'] as const;
+export const NOTIFICATION_KINDS = [
+  'sla_reminder',
+  'sla_escalation',
+  'source_fallback',
+] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 /**
@@ -28,7 +32,7 @@ export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 @Index('IDX_user_notifications_user', ['userId'])
 @Check(
   'CHK_user_notifications_kind',
-  `"kind" IN ('sla_reminder', 'sla_escalation')`,
+  `"kind" IN ('sla_reminder', 'sla_escalation', 'source_fallback')`,
 )
 export class UserNotification extends TenantScopedEntity {
   @Column({ name: 'user_id', type: 'uuid' })

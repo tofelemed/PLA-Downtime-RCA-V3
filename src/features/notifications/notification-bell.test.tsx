@@ -64,6 +64,19 @@ describe('notification text (SME R3 / R6)', () => {
     const approve = notificationText({ ...ESCALATION, kind: 'sla_reminder', detail: { ...detail, stage: 'approve', recipient: 'checker' } }, {});
     expect(approve.title).toBe('Approval due');
   });
+
+  it('plan 1.10 step 5: a fallback source in use, and the return to the primary with a conflict', () => {
+    const used = { rank: 2, source: 'pi_counter', sourceClass: null, boundary: null, label: 'PI counter FT-101' };
+    const detail = { ...ESCALATION.detail, kind: 'activated', sliceId: 's1', productId: 'p1', used, replaced: { rank: 1, source: 'pi_output_ef', sourceClass: null, boundary: null }, reason: 'primary_missing', conflict: null };
+    expect(notificationText({ ...ESCALATION, kind: 'source_fallback', detail }, {})).toEqual({
+      title: 'Fallback source in use',
+      body: 'Demo unit 100 · 2026-10-12 · B: actuals now come from PI counter FT-101',
+      href: '/plans/plan-1/periods/per-1',
+    });
+    const ended = notificationText({ ...ESCALATION, kind: 'source_fallback', detail: { ...detail, kind: 'ended', conflict: { tolerance: 0 } } }, {});
+    expect(ended.title).toBe('Primary source back');
+    expect(ended.body).toContain('the primary is kept');
+  });
 });
 
 describe('notification bell', () => {

@@ -4,7 +4,7 @@
  */
 export interface NotificationView {
   id: string;
-  kind: 'sla_reminder' | 'sla_escalation' | string;
+  kind: 'sla_reminder' | 'sla_escalation' | 'source_fallback' | string;
   entityType: string;
   entityId: string;
   detail: Record<string, unknown>;
@@ -42,4 +42,22 @@ export interface SlaReminderDetail {
   localDate: string;
   shiftName: string | null;
   remindedAt: string;
+}
+
+/** `detail` of a `source_fallback` notification (plan 1.10 step 5: the actuals' source moved to a substitute or back). */
+export interface SourceFallbackDetail {
+  kind: 'activated' | 'ended';
+  periodId: string;
+  unitId: string;
+  unitName: string | null;
+  planId: string | null;
+  localDate: string;
+  shiftName: string | null;
+  sliceId: string;
+  productId: string;
+  used: { rank: number; source: string; sourceClass: string | null; boundary: string | null; label: string } | null;
+  replaced: { rank: number; source: string; sourceClass: string | null; boundary: string | null } | null;
+  reason: string | null;
+  /** on return: the primary and the substitute differed beyond tolerance (the primary is kept) */
+  conflict: Record<string, unknown> | null;
 }
