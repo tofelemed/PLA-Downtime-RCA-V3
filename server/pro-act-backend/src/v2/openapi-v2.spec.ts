@@ -128,6 +128,7 @@ import { FeatureFlagsService } from '../feature-flags/feature-flags.service';
 import { ExportsModule } from '../exports/exports.module';
 import { buildV2Document } from './openapi-v2';
 import { V2Module } from './v2.module';
+import { StopVerificationService } from './production-events/stop-verification.service';
 import { CodeMappingPreviewService } from '../code-library/code-mapping-preview.service';
 import { RuleClassificationService } from '../rules/rule-classification.service';
 import { RuleCommandsService } from '../rules/rule-commands.service';
@@ -509,6 +510,8 @@ async function generate(): Promise<string> {
     .overrideProvider(getRepositoryToken(CalculationRun))
     .useValue({})
     .overrideProvider(ActivitySummaryV2Service)
+    .useValue({})
+    .overrideProvider(StopVerificationService)
     .useValue({})
     .overrideModule(ProductionEventModule)
     .useModule(ProductionEventModuleStub)

@@ -255,6 +255,67 @@
         ]
       }
     },
+    "/api/v2/production-events/verification": {
+      "post": {
+        "description": "Supervisor = manager_approver or production_engineer of the stop’s unit. Stops that do not qualify are skipped with the reason (NOT_FOUND, NOT_AUTHORIZED, NOT_A_STOP, NOT_CODED — neither a reason code nor \"investigation pending\", ALREADY_VERIFIED, OWN_CODING — the verifier entered the current coding). A later change of the coding clears the verification. 422 SELECTION_REQUIRED unless exactly one of eventIds / periodId.",
+        "operationId": "StopVerificationV2Controller_verify_v2",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyStopsV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify the coding of stops as their supervisor (SME D13)",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    },
+    "/api/v2/production-events/{id}/validate-failure": {
+      "post": {
+        "description": "Maintenance = reliability_engineer of the stop’s unit. Skipped with the reason: NO_FAILURE_DETAIL, NOT_VERIFIED (the supervisor verifies first), ALREADY_VALIDATED, OWN_CODING, NOT_AUTHORIZED, NOT_FOUND. A later change of the failure detail clears the validation.",
+        "operationId": "StopVerificationV2Controller_validate_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Validate the technical failure detail of a verified stop (SME D13, maintenance)",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    },
     "/api/v2/production-events": {
       "get": {
         "description": "Filters AND across parameters and OR within a repeated parameter; from/to is a half-open window with overlap semantics; pages are keyset-based on (startTime, id). The tenant comes from the identity.",
@@ -20395,6 +20456,25 @@
           "reason"
         ]
       },
+      "VerifyStopsV2Dto": {
+        "type": "object",
+        "properties": {
+          "eventIds": {
+            "maxItems": 1000,
+            "description": "Stops to verify (exclusive with periodId)",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "periodId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Bulk verify of a shift: every unverified stop overlapping the production period (exclusive with eventIds)"
+          }
+        }
+      },
       "CreateProductionEventV2Dto": {
         "type": "object",
         "properties": {
@@ -20549,6 +20629,10 @@
             "maxLength": 100,
             "nullable": true,
             "description": "SME D11: detection method"
+          },
+          "investigationPending": {
+            "type": "boolean",
+            "description": "SME D12: no specific reason yet — the stop is explicitly under investigation (meets the per-stop rule of the shift submission gate, not the coded-time target)"
           },
           "description": {
             "type": "object",
@@ -20751,6 +20835,10 @@
             "maxLength": 100,
             "nullable": true,
             "description": "SME D11: detection method"
+          },
+          "investigationPending": {
+            "type": "boolean",
+            "description": "SME D12: no specific reason yet — the stop is explicitly under investigation (meets the per-stop rule of the shift submission gate, not the coded-time target)"
           },
           "description": {
             "type": "object",

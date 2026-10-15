@@ -69,6 +69,10 @@ export const DURATION_SECONDS_EXPRESSION =
   `"failure_severity" IS NULL OR "failure_severity" IN ('critical', 'degraded', 'incipient')`,
 )
 @Check(
+  'CHK_production_events_verification',
+  '("verified_by" IS NULL) = ("verified_at" IS NULL) AND ("validated_by" IS NULL) = ("validated_at" IS NULL)',
+)
+@Check(
   'CHK_production_events_disposition_class',
   `"disposition_class" IS NULL OR ("physical_type" = 'quality_loss' AND "disposition_class" IN ('downgrade', 'scrap', 'rework'))`,
 )
@@ -95,6 +99,10 @@ export const DURATION_SECONDS_EXPRESSION =
   'reasonCodeId',
   'startTime',
 ])
+/** SME D13: unverified stops of a unit (period panels, bulk verify of a shift) */
+@Index('IDX_production_events_unverified_stops', ['tenantId', 'unitId', 'startTime'], {
+  where: `"physical_type" = 'downtime' AND "verified_at" IS NULL`,
+})
 @Index('IDX_production_events_open_by_unit', ['tenantId', 'unitId'], {
   where: '"end_time" IS NULL',
 })
@@ -347,6 +355,27 @@ export class ProductionEvent {
   /** SME D11 (ISO 14224): how the failure was detected, e.g. inspection */
   @Column({ name: 'detection_method', type: 'varchar', length: 100, nullable: true })
   detectionMethod: string | null;
+
+  /**
+   * SME D12: no specific reason is known yet and the stop is explicitly under investigation (satisfies the
+   * per-stop rule of the submission gate, never the coded-time target)
+   */
+  @Column({ name: 'investigation_pending', type: 'boolean', default: false })
+  investigationPending: boolean;
+
+  /** SME D13 stage 2: the supervisor who verified the coding, and when (cleared when the coding changes) */
+  @Column({ name: 'verified_by', type: 'uuid', nullable: true })
+  verifiedBy: string | null;
+
+  @Column({ name: 'verified_at', type: 'timestamptz', nullable: true })
+  verifiedAt: Date | null;
+
+  /** SME D13 stage 3: maintenance validated the technical failure detail (cleared when that detail changes) */
+  @Column({ name: 'validated_by', type: 'uuid', nullable: true })
+  validatedBy: string | null;
+
+  @Column({ name: 'validated_at', type: 'timestamptz', nullable: true })
+  validatedAt: Date | null;
 
   @Column({
     name: 'defective_quantity',

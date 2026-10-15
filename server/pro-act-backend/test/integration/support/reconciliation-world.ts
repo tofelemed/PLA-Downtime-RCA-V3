@@ -56,6 +56,8 @@ export interface ReconciliationBody {
     authorId: string | null;
   }>;
   openProposalId: string | null;
+  /** SME D12 / D13: stop coding of the period (see stop-coding-gate.int-spec) */
+  codingGate?: unknown;
 }
 
 /**

@@ -17,6 +17,7 @@ import {
   periodInScope,
   publishedRevision,
 } from '../../reconciliation/revision-access';
+import { loadCodingGate } from '../../reconciliation/coding-gate.loader';
 import { loadRevisionState } from '../../reconciliation/revision-state';
 import { keysetPage } from '../common/keyset-page';
 import { listResponse, ListResponse, ListScope } from '../common/response';
@@ -152,6 +153,7 @@ export class ReconciliationV2Service {
     return toReconciliationView(state, {
       publishedRevision: published?.revision ?? null,
       openProposalId: open?.id ?? null,
+      codingGate: await loadCodingGate(manager, state),
     });
   }
 

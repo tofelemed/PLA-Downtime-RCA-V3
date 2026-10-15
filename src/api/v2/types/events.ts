@@ -50,6 +50,15 @@ export interface ProductionEventView {
   };
   planId: string | null;
   reasonCodeId: string | null;
+  /** SME D12: explicitly under investigation (no specific reason yet) */
+  investigationPending?: boolean;
+  /** SME D13: supervisor verification of the coding, maintenance validation of the failure detail */
+  verification?: {
+    verifiedBy: string | null;
+    verifiedAt: string | null;
+    validatedBy: string | null;
+    validatedAt: string | null;
+  };
   rcaId: string | null;
   eventType: string | null;
   status: string | null;

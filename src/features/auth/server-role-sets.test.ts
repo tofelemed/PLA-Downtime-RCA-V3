@@ -25,6 +25,8 @@ const PINS: ReadonlyArray<[mirror: readonly string[], file: string, name: string
   [Mirror.CORRECTION_PROPOSERS, 'v2/periods/period-roles.ts', 'CORRECTION_PROPOSERS'],
   [Mirror.DISPOSITION_WRITERS, 'v2/quality-dispositions/disposition-roles.ts', 'DISPOSITION_WRITERS'],
   [Mirror.DISPOSITION_APPROVERS, 'v2/quality-dispositions/disposition-roles.ts', 'DISPOSITION_APPROVERS'],
+  [Mirror.STOP_VERIFIERS, 'v2/production-events/verification-roles.ts', 'STOP_VERIFIERS'],
+  [Mirror.FAILURE_VALIDATORS, 'v2/production-events/verification-roles.ts', 'FAILURE_VALIDATORS'],
   [Mirror.CODE_WRITERS, 'v2/code-libraries/code-library-v2.controller.ts', 'CODE_WRITERS'],
   [Mirror.RULE_AUTHORS, 'v2/rules/rules-v2.controller.ts', 'RULE_AUTHORS'],
   [Mirror.RULE_APPROVERS, 'v2/rules/rules-v2.controller.ts', 'RULE_APPROVERS'],

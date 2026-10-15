@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsDecimal,
   IsIn,
   IsISO8601,
@@ -237,6 +238,14 @@ export class ProductionEventV2EditableDto {
   @IsString()
   @MaxLength(100)
   detectionMethod?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'SME D12: no specific reason yet — the stop is explicitly under investigation (meets the per-stop rule of the shift submission gate, not the coded-time target)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  investigationPending?: boolean;
 
   @ApiPropertyOptional({ maxLength: 4000, nullable: true })
   @IsOptional()

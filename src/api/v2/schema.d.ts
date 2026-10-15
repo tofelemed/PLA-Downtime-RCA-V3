@@ -104,6 +104,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/production-events/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify the coding of stops as their supervisor (SME D13)
+         * @description Supervisor = manager_approver or production_engineer of the stop’s unit. Stops that do not qualify are skipped with the reason (NOT_FOUND, NOT_AUTHORIZED, NOT_A_STOP, NOT_CODED — neither a reason code nor "investigation pending", ALREADY_VERIFIED, OWN_CODING — the verifier entered the current coding). A later change of the coding clears the verification. 422 SELECTION_REQUIRED unless exactly one of eventIds / periodId.
+         */
+        post: operations["StopVerificationV2Controller_verify_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-events/{id}/validate-failure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate the technical failure detail of a verified stop (SME D13, maintenance)
+         * @description Maintenance = reliability_engineer of the stop’s unit. Skipped with the reason: NO_FAILURE_DETAIL, NOT_VERIFIED (the supervisor verifies first), ALREADY_VALIDATED, OWN_CODING, NOT_AUTHORIZED, NOT_FOUND. A later change of the failure detail clears the validation.
+         */
+        post: operations["StopVerificationV2Controller_validate_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/production-events": {
         parameters: {
             query?: never;
@@ -6153,6 +6193,15 @@ export interface components {
             /** @description Why the event is retracted (kept in the retraction revision) */
             reason: string;
         };
+        VerifyStopsV2Dto: {
+            /** @description Stops to verify (exclusive with periodId) */
+            eventIds?: string[];
+            /**
+             * Format: uuid
+             * @description Bulk verify of a shift: every unverified stop overlapping the production period (exclusive with eventIds)
+             */
+            periodId?: string;
+        };
         CreateProductionEventV2Dto: {
             /**
              * Format: date-time
@@ -6231,6 +6280,8 @@ export interface components {
             failureCause?: Record<string, never> | null;
             /** @description SME D11: detection method */
             detectionMethod?: Record<string, never> | null;
+            /** @description SME D12: no specific reason yet — the stop is explicitly under investigation (meets the per-stop rule of the shift submission gate, not the coded-time target) */
+            investigationPending?: boolean;
             description?: Record<string, never> | null;
             /** @example 12.5 */
             quantity?: Record<string, never> | null;
@@ -6330,6 +6381,8 @@ export interface components {
             failureCause?: Record<string, never> | null;
             /** @description SME D11: detection method */
             detectionMethod?: Record<string, never> | null;
+            /** @description SME D12: no specific reason yet — the stop is explicitly under investigation (meets the per-stop rule of the shift submission gate, not the coded-time target) */
+            investigationPending?: boolean;
             description?: Record<string, never> | null;
             /** @example 12.5 */
             quantity?: Record<string, never> | null;
@@ -8888,6 +8941,46 @@ export interface operations {
                 "application/json": components["schemas"]["RetractEventV2Dto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopVerificationV2Controller_verify_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyStopsV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopVerificationV2Controller_validate_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

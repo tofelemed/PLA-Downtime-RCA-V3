@@ -27,6 +27,10 @@ export const CORRECTION_PROPOSERS = ['production_accountant', 'manager_approver'
 export const DISPOSITION_WRITERS = ['operator', 'production_engineer', 'production_accountant', 'manager_approver', 'quality_approver'] as const;
 export const DISPOSITION_APPROVERS = ['quality_approver'] as const;
 
+/** v2/production-events/verification-roles.ts (SME D13: supervisor verifies, maintenance validates) */
+export const STOP_VERIFIERS = ['manager_approver', 'production_engineer'] as const;
+export const FAILURE_VALIDATORS = ['reliability_engineer'] as const;
+
 /** v2/code-libraries/code-library-v2.controller.ts */
 export const CODE_WRITERS = ['master_data_admin', 'manager_approver'] as const;
 

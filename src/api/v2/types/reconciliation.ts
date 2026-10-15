@@ -1,3 +1,4 @@
+import type { CodingGateView } from './stop-coding';
 /**
  * Reconciliation and approval views (backend `src/v2/reconciliation/reconciliation-v2.view.ts`, plan 2.8);
  * quantities are signed decimal strings, never numbers.
@@ -108,6 +109,12 @@ export interface ToleranceView {
   value: number;
   epsilon: number;
   allowUnaccountedClassification: boolean;
+  /** SME D12: shift submission gate (absent in older versions = warn at 95 %) */
+  submitGate?: { mode: 'block' | 'warn'; codedRatioTarget: number };
+  /** SME R8: per-unit bridge limits (null = no limit) */
+  bridgeLimits?: { absolute: number | null; relative: number | null; overLimit: 'second_review' | 'refuse' };
+  /** SME R9: kinds a reversal may reverse */
+  reversibleKinds?: string[];
 }
 
 export interface ReconciliationView {
@@ -125,6 +132,8 @@ export interface ReconciliationView {
   candidates: CandidateView[];
   lines: ReconciliationLineView[];
   openProposalId: string | null;
+  /** SME D12 / D13: stop coding of the period against the submission gate, and its verification */
+  codingGate?: CodingGateView;
 }
 
 /** One line of `PUT …/draft-lines` (DraftLineDto): only declared fields (forbidNonWhitelisted). */

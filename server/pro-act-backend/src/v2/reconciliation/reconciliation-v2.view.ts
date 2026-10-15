@@ -9,6 +9,7 @@ import {
   ManualProposalDetail,
   manualDetailOf,
 } from '../../reconciliation/manual-proposal';
+import { CodingGateResult } from '../../domain/reconciliation/coding-gate';
 import { RevisionState } from '../../reconciliation/revision-state';
 import {
   candidatesPart,
@@ -117,6 +118,8 @@ export interface ReconciliationV2View {
   candidates: CandidateV2View[];
   lines: ReconciliationLineV2View[];
   openProposalId: string | null;
+  /** SME D12: stop coding of the period against the policy's submission gate (live, not reviewed content) */
+  codingGate: CodingGateResult;
 }
 
 export function toRevisionWorkflowView(
@@ -151,7 +154,11 @@ export function toRevisionWorkflowView(
 /** The editor's view of a revision (ACC07): totals per slice, candidates with decisions, saved lines. */
 export function toReconciliationView(
   state: RevisionState,
-  extra: { publishedRevision: number | null; openProposalId: string | null },
+  extra: {
+    publishedRevision: number | null;
+    openProposalId: string | null;
+    codingGate: CodingGateResult;
+  },
 ): ReconciliationV2View {
   const { period, revision, tolerance } = state;
   return {
@@ -173,6 +180,7 @@ export function toReconciliationView(
     candidates: candidatesPart(state),
     lines: linesPart(state),
     openProposalId: extra.openProposalId,
+    codingGate: extra.codingGate,
   };
 }
 

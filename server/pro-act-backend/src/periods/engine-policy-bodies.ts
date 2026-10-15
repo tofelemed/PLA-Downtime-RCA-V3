@@ -1,4 +1,9 @@
 import { PolicyBodyError } from './policy-bodies';
+import {
+  RECONCILIATION_OPTIONS_DEFAULT,
+  ReconciliationOptions,
+  reconciliationOptions,
+} from './reconciliation-options';
 
 /** `oee_policy` body (contracts/policies/oee_policy.schema.json, D04). */
 export interface OeePolicy {
@@ -31,8 +36,11 @@ export interface OeePolicy {
   tripReasonCodes?: string[];
 }
 
-/** `reconciliation_tolerance` body (contracts/policies/reconciliation_tolerance.schema.json, D06). */
-export interface ReconciliationTolerance {
+/**
+ * `reconciliation_tolerance` body (contracts/policies/reconciliation_tolerance.schema.json, D06) with the
+ * SME D12 / R8 / R9 options of `reconciliation-options.ts` (15 Oct 2026; absent in older versions).
+ */
+export interface ReconciliationTolerance extends ReconciliationOptions {
   mode: 'zero' | 'percent' | 'absolute';
   value: number;
   epsilon: number;
@@ -68,6 +76,7 @@ export const RECONCILIATION_TOLERANCE_DEFAULT: ReconciliationTolerance = {
   epsilon: 0.000001,
   allowUnaccountedClassification: false,
   unaccountedTargetOfShortfall: 0.02,
+  ...RECONCILIATION_OPTIONS_DEFAULT,
 };
 
 function record(value: unknown): Record<string, unknown> {
@@ -200,5 +209,6 @@ export function parseReconciliationTolerance(
       value.unaccountedTargetOfShortfall,
       'unaccountedTargetOfShortfall',
     ),
+    ...reconciliationOptions(value),
   };
 }

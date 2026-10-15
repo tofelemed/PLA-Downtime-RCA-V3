@@ -10,6 +10,9 @@
     "value": 0,
     "epsilon": 0.000001,
     "allowUnaccountedClassification": false,
-    "unaccountedTargetOfShortfall": 0.02
+    "unaccountedTargetOfShortfall": 0.02,
+    "submitGate": { "mode": "warn", "codedRatioTarget": 0.95 },
+    "bridgeLimits": { "absolute": null, "relative": null, "overLimit": "second_review" },
+    "reversibleKinds": ["availability", "performance", "quality", "transition_allowance", "transition_excess", "gain", "bridge", "unaccounted_classified"]
   }
 }
