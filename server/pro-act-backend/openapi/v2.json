@@ -6322,7 +6322,8 @@
                 "salvage_value",
                 "disposal_cost",
                 "downgrade_price_difference",
-                "rework_cost"
+                "rework_cost",
+                "rework_yield"
               ],
               "type": "string"
             }
@@ -22136,7 +22137,8 @@
               "salvage_value",
               "disposal_cost",
               "downgrade_price_difference",
-              "rework_cost"
+              "rework_cost",
+              "rework_yield"
             ]
           },
           "value": {
@@ -22146,7 +22148,7 @@
           "currency": {
             "type": "string",
             "example": "IRR",
-            "description": "ISO 4217"
+            "description": "ISO 4217; required for money bases, omitted for rework_yield (a ratio: recovered per reworked quantity, 0 < value ≤ 1)"
           },
           "perUom": {
             "type": "string",
@@ -22156,8 +22158,7 @@
         "required": [
           "effectiveFrom",
           "basis",
-          "value",
-          "currency"
+          "value"
         ]
       },
       "TransitionStandardCreateDto": {

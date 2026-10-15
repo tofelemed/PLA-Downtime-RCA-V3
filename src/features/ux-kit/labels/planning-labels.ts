@@ -84,6 +84,7 @@ export const VALUATION_BASIS_LABELS: Readonly<Record<ValuationBasis, string>> = 
   disposal_cost: 'Disposal / handling cost',
   downgrade_price_difference: 'Downgrade price difference',
   rework_cost: 'Rework cost',
+  rework_yield: 'Rework yield (recovered per reworked)',
 };
 
 export const DEFAULT_BASIS_LABELS: Readonly<Record<DefaultBasis, string>> = {
