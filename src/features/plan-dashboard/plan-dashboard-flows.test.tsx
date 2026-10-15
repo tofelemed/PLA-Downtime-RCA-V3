@@ -132,13 +132,17 @@ describe('plan dashboard editor and workflow (plan 3.5)', () => {
     const inReview: ReconciliationView = { ...VIEW, revision: { ...VIEW.revision, lifecycle: 'in_review', submittedBy: 'someone-else', submittedHash: 'b'.repeat(64) } };
     const bar = (view: ReconciliationView) => wrap(<WorkflowBar view={view} shown="current" onShowCurrent={() => undefined} />);
 
-    it('canApprovePeriods: an engineer sees no approve / reject; a manager does', () => {
+    it('canApproveRevisions: an engineer sees no approve / reject; a manager and a production accountant do (SME R1)', () => {
       reply = () => json(200, { items: [] });
       actAs('Engineer');
       bar(inReview);
       expect(screen.queryByTestId('wf-approve')).toBeNull();
       expect(screen.queryByTestId('wf-reason')).toBeNull();
       actAs('Manager', 'user-me');
+      const manager = bar(inReview);
+      expect((screen.getByTestId('wf-approve') as HTMLButtonElement).disabled).toBe(false);
+      manager.unmount();
+      actAs('production_accountant', 'user-me');
       bar(inReview);
       expect((screen.getByTestId('wf-approve') as HTMLButtonElement).disabled).toBe(false);
     });

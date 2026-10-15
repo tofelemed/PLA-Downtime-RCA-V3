@@ -37,11 +37,11 @@ export interface Capabilities {
   canWriteCalendars: boolean;
   /** period accounting: draft lines, submit, cancel, recompute */
   canWritePeriods: boolean;
-  /** approve / reject adjustments and revisions, revise approved periods, decide change proposals */
-  canApprovePeriods: boolean;
+  /** approve / reject actuals adjustments (manager approvers only, `ADJUSTMENT_APPROVERS`) */
+  canApproveAdjustments: boolean;
   /**
    * approve / reject submitted revisions, revise approved periods, decide change proposals (production
-   * accounting too, SME R1); adjustments stay with `canApprovePeriods`
+   * accounting too, SME R1, `REVISION_APPROVERS`); adjustments stay with `canApproveAdjustments`
    */
   canApproveRevisions: boolean;
   /** SME R4: propose a correction of an approved period of a closing or locked month */
@@ -114,7 +114,7 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canApproveProfiles: may(ServerRoles.PROFILE_APPROVERS),
     canWriteCalendars: may(ServerRoles.CALENDAR_WRITERS),
     canWritePeriods: may(ServerRoles.PERIOD_WRITERS),
-    canApprovePeriods: may(ServerRoles.ADJUSTMENT_APPROVERS) && may(ServerRoles.REVISION_APPROVERS),
+    canApproveAdjustments: may(ServerRoles.ADJUSTMENT_APPROVERS),
     canApproveRevisions: may(ServerRoles.REVISION_APPROVERS),
     canProposeCorrections: may(ServerRoles.CORRECTION_PROPOSERS),
     canCloseMonthQuantities: may(ServerRoles.QUANTITY_CLOSERS),

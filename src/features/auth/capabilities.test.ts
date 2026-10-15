@@ -93,7 +93,8 @@ describe('capabilitiesOf', () => {
       ['canApproveProfiles', Roles.PROFILE_APPROVERS],
       ['canWriteCalendars', Roles.CALENDAR_WRITERS],
       ['canWritePeriods', Roles.PERIOD_WRITERS],
-      ['canApprovePeriods', Roles.REVISION_APPROVERS.filter((r) => (Roles.ADJUSTMENT_APPROVERS as readonly string[]).includes(r))],
+      ['canApproveAdjustments', Roles.ADJUSTMENT_APPROVERS],
+      ['canApproveRevisions', Roles.REVISION_APPROVERS],
       ['canWriteBridges', Roles.BRIDGE_WRITERS],
       ['canWriteCodes', Roles.CODE_WRITERS],
       ['canAuthorRules', Roles.RULE_AUTHORS],
@@ -120,7 +121,7 @@ describe('capabilitiesOf', () => {
 
     it('legacy roles count through their D06 mapping (TenantAdmin/Manager approve, Engineer/Analyst write plans)', () => {
       const manager = capabilitiesOf(effectiveRoles({ role: 'Manager' }, { tenantId: null }));
-      expect(manager.canApprovePlans && manager.canApprovePeriods && manager.canManageRcaPolicies).toBe(true);
+      expect(manager.canApprovePlans && manager.canApproveAdjustments && manager.canManageRcaPolicies).toBe(true);
       // SME V1: production managers use approved rates but never set them
       expect([manager.canMaintainValuation, manager.canApproveValuation]).toEqual([false, false]);
       // ISO 9001: lot dispositions are decided by Quality / Lab, never by production management
