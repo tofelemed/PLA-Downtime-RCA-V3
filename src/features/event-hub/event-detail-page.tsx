@@ -10,6 +10,7 @@ import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { EventDetailActions } from './components/event-detail-actions';
 import { EventDetailTabs } from './components/event-detail-tabs';
 import { EventSummary } from './components/event-summary';
+import { EventVerificationPanel } from './components/event-verification-panel';
 import { EventHubFrame } from './event-hub-frame';
 import { useBackTarget } from './hooks/use-back-target';
 import { useEventHubEnv } from './use-event-hub-env';
@@ -61,6 +62,11 @@ function EventBody({ event, timezone }: { event: ProductionEventView; timezone: 
       <Section title="Summary">
         <EventSummary event={event} />
       </Section>
+      {event.classification.physicalType === 'downtime' && event.verification && (
+        <Section title="Coding verification">
+          <EventVerificationPanel event={event} />
+        </Section>
+      )}
       <EventRcaPanel event={event} timezone={timezone} />
       <Section title="Details">
         <EventDetailTabs event={event} />

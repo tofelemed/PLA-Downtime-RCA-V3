@@ -2,6 +2,7 @@ import { Module, Type } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppSettingsModule } from '../../app-settings/app-settings.module';
 import { AuditLog } from '../../audit-log/audit-log.entity';
+import { RoleDelegation } from '../../auth/delegations/role-delegation.entity';
 import { UserScope } from '../../auth/scopes/user-scope.entity';
 import { Site } from '../../calendar/entities/site.entity';
 import { CustomAttributeDefinition } from '../../custom-attribute-definition/custom-attribute-definition.entity';
@@ -30,6 +31,8 @@ import { PlantsV2Controller } from './hierarchy/plants-v2.controller';
 import { TasksV2CommandsService } from './tasks/tasks-v2-commands.service';
 import { TasksV2Controller } from './tasks/tasks-v2.controller';
 import { TasksV2Service } from './tasks/tasks-v2.service';
+import { RoleDelegationsV2Controller } from './role-delegations/role-delegations-v2.controller';
+import { RoleDelegationsV2Service } from './role-delegations/role-delegations-v2.service';
 import { UserScopesV2Controller } from './user-scopes/user-scopes-v2.controller';
 import { UserScopesV2Service } from './user-scopes/user-scopes-v2.service';
 import { PlantUserDirectory } from './users/plant-user-directory';
@@ -46,6 +49,7 @@ export const ADMINISTRATION_V2_PROVIDERS = [
   UsersV2Service,
   UsersV2CommandsService,
   UserScopesV2Service,
+  RoleDelegationsV2Service,
   TasksV2Service,
   TasksV2CommandsService,
   AuditLogsV2Service,
@@ -63,6 +67,7 @@ export const ADMINISTRATION_V2_PROVIDERS = [
 export const ADMINISTRATION_V2_CONTROLLERS: Type<unknown>[] = [
   UsersV2Controller,
   UserScopesV2Controller,
+  RoleDelegationsV2Controller,
   TasksV2Controller,
   AuditLogsV2Controller,
   CustomAttributesV2Controller,
@@ -78,6 +83,7 @@ export const ADMINISTRATION_V2_CONTROLLERS: Type<unknown>[] = [
     TypeOrmModule.forFeature([
       User,
       UserScope,
+      RoleDelegation,
       Unit,
       Asset,
       Site,

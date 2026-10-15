@@ -374,6 +374,7 @@ function editableColumns(
     quantityUom: dto.quantityUom,
     cost: dto.cost,
     impactFraction: dto.impactFraction,
+    investigationPending: dto.investigationPending,
     plannedEndTime: plannedEndColumn(dto.plannedEndTime),
     ...failureColumns(dto),
   };

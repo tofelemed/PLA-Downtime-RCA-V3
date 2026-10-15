@@ -44,6 +44,8 @@ import { EventRelation } from '../event-operations/event-relation.entity';
 import { EventOperationsModule } from '../event-operations/event-operations.module';
 import { JobsV2Controller } from './jobs/jobs-v2.controller';
 import { ProductionEventOperationsV2Controller } from './production-events/production-event-operations-v2.controller';
+import { StopVerificationV2Controller } from './production-events/stop-verification-v2.controller';
+import { StopVerificationService } from './production-events/stop-verification.service';
 import { ProductionEventOperationsV2Service } from './production-events/production-event-operations-v2.service';
 import { IntakeModule } from '../intake/intake.module';
 import { IngestionException } from '../intake/entities/ingestion-exception.entity';
@@ -223,6 +225,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
   ],
   controllers: [
     ProductionEventOperationsV2Controller,
+    StopVerificationV2Controller,
     ProductionEventsV2Controller,
     EventReviewItemsV2Controller,
     SourceMappingsV2Controller,
@@ -289,6 +292,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     ProductionEventHistoryService,
     ProductionEventsV2CommandService,
     ProductionEventOperationsV2Service,
+    StopVerificationService,
     EventReferencesValidator,
     SourceMappingsV2Service,
     AttributeMappingsV2Service,

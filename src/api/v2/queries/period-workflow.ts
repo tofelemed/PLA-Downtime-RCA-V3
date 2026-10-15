@@ -95,6 +95,13 @@ export function useApproveRevision() {
   );
 }
 
+/** SME R8: the second independent review of bridges above the unit limit (same body as approve). */
+export function useBridgeReview() {
+  return usePeriodCommand<ApproveInput, ReconciliationView>(({ period, ...body }, key) =>
+    post(`/production-periods/${period.periodId}/bridge-review`, body, key),
+  );
+}
+
 export interface ReasonedInput {
   period: PeriodRef;
   action: 'reject' | 'cancel';

@@ -10,6 +10,7 @@
 import type { LucideIcon, LucideProps } from 'lucide-react';
 import {
   Activity,
+  Handshake,
   Bell,
   Siren,
   ArrowLeftRight,
@@ -184,6 +185,8 @@ export const EntityIcon = {
   team: Users,
   admin: UserCog,
   permission: KeyRound,
+  /** SME R1 / R6: an approval role handed to a delegate */
+  delegation: Handshake,
   audit: ScrollText,
   connection: Plug,
   integration: Cable,

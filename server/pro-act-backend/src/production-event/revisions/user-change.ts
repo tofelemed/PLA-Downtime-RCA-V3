@@ -1,6 +1,7 @@
 import { ConflictException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { assertRevision } from '../../common/concurrency/revision';
+import { verificationReset } from '../../domain/events/coding-verification';
 import { ProductionEvent } from '../production-event.entity';
 import { changeMessage, EventChangeMessage } from './event-change.notifier';
 import {
@@ -87,6 +88,8 @@ async function recordUserChange(
     : [];
   const updated = await writeEvent(manager, existing.id, {
     ...patch,
+    // SME D13: a changed coding / failure detail is no longer what the supervisor / maintenance confirmed
+    ...verificationReset(changed),
     currentCodingRevision: codingRevision,
     userOverrides: withOverrides(existing, overridden, codingRevision),
   });

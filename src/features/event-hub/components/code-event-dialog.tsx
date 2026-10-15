@@ -20,8 +20,13 @@ export function CodeEventDialog({ event, onClose, onDone }: CodeEventDialogProps
   const { dateTime } = usePlantFormat();
   const code = useCodeEvent(event);
   const [reasonCodeId, setReasonCodeId] = useState(event.reasonCodeId ?? '');
+  const [pending, setPending] = useState(event.investigationPending === true);
+  const changes = {
+    ...(reasonCodeId && reasonCodeId !== event.reasonCodeId ? { reasonCodeId } : {}),
+    ...(pending !== (event.investigationPending === true) ? { investigationPending: pending } : {}),
+  };
   const save = async () => {
-    if (await code.submit(reasonCodeId)) onDone();
+    if (await code.submit(changes)) onDone();
   };
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -33,10 +38,14 @@ export function CodeEventDialog({ event, onClose, onDone }: CodeEventDialogProps
           </DialogDescription>
         </DialogHeader>
         <ReasonCodeSelect id="code-reason" value={reasonCodeId} onChange={setReasonCodeId} allowEmpty={false} />
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" data-testid="code-investigation-pending" checked={pending} onChange={(e) => setPending(e.target.checked)} />
+          Investigation pending (no specific reason known yet)
+        </label>
         <CommandError error={code.error} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button disabled={!reasonCodeId || reasonCodeId === event.reasonCodeId || code.pending} onClick={() => void save()}>
+          <Button disabled={Object.keys(changes).length === 0 || (!reasonCodeId && !pending) || code.pending} onClick={() => void save()}>
             Save reason
           </Button>
         </DialogFooter>

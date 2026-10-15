@@ -52,6 +52,34 @@
           "default": 0.02,
           "description": "SME R7 (14 Oct 2026): improvement target for unexplained loss (positive residual, tolerance adjustments and classified Unaccounted lines) as a share of the shortfall (plan - actual). Reporting only, never the approval tolerance; absent or null = no target."
         },
+        "submitGate": {
+          "type": "object",
+          "required": ["mode", "codedRatioTarget"],
+          "additionalProperties": false,
+          "description": "SME D12 (15 Oct 2026): before a shift period is submitted every stop needs a specific reason or 'investigation pending' and the coded share of stopped time (coded_downtime_ratio) must reach codedRatioTarget. `warn` shows the result on the period page, `block` refuses the submission (422 CODING_INCOMPLETE). Absent = warn at 0.95.",
+          "properties": {
+            "mode": { "type": "string", "enum": ["block", "warn"], "default": "warn" },
+            "codedRatioTarget": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.95 }
+          }
+        },
+        "bridgeLimits": {
+          "type": "object",
+          "required": ["absolute", "relative", "overLimit"],
+          "additionalProperties": false,
+          "description": "SME R8 (15 Oct 2026): per-unit bridge limits (null = no limit). A bridge line above `absolute` (slice unit of measure) or `relative` x the slice plan target needs a second independent reviewer before approval (`second_review`) or is refused at save (`refuse`). Absent = no limit.",
+          "properties": {
+            "absolute": { "type": ["number", "null"], "minimum": 0 },
+            "relative": { "type": ["number", "null"], "minimum": 0 },
+            "overLimit": { "type": "string", "enum": ["second_review", "refuse"], "default": "second_review" },
+            "uncertaintyBudgetId": { "type": ["string", "null"], "format": "uuid", "description": "SME E4: the approved uncertainty budget of the unit whose expanded uncertainty justifies the absolute limit (shown with the findings); absolute must be set." }
+          }
+        },
+        "reversibleKinds": {
+          "type": "array",
+          "uniqueItems": true,
+          "description": "SME R9 (15 Oct 2026): loss kinds an evidence-backed `reversal` line may reverse (an approved line of an earlier period of the unit). Absent = every kind listed here.",
+          "items": { "type": "string", "enum": ["availability", "performance", "quality", "transition_allowance", "transition_excess", "gain", "bridge", "unaccounted_classified"] }
+        },
         "uncertaintyBudgetId": {
           "type": ["string", "null"],
           "format": "uuid",

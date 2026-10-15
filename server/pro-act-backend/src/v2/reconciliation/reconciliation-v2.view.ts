@@ -9,6 +9,8 @@ import {
   ManualProposalDetail,
   manualDetailOf,
 } from '../../reconciliation/manual-proposal';
+import { CodingGateResult } from '../../domain/reconciliation/coding-gate';
+import { BridgeReviewState } from '../../reconciliation/bridge-review';
 import { RevisionState } from '../../reconciliation/revision-state';
 import { ToleranceJustification } from '../../uncertainty/tolerance-justification';
 import {
@@ -85,6 +87,8 @@ export interface ReconciliationLineV2View {
   /** SME R11: the record a manual quantity rests on */
   evidenceType?: string;
   evidenceRef?: string;
+  /** SME R9: the approved line of an earlier period this reversal reverses */
+  reversesLineId?: string;
   reason: string | null;
   comment: string | null;
   authorId: string | null;
@@ -123,6 +127,10 @@ export interface ReconciliationV2View {
   candidates: CandidateV2View[];
   lines: ReconciliationLineV2View[];
   openProposalId: string | null;
+  /** SME D12: stop coding of the period against the policy's submission gate (live, not reviewed content) */
+  codingGate: CodingGateResult;
+  /** SME R8: bridges above the unit limit and their second review of the current submission */
+  bridgeReview: BridgeReviewState;
 }
 
 export function toRevisionWorkflowView(
@@ -160,6 +168,8 @@ export function toReconciliationView(
   extra: {
     publishedRevision: number | null;
     openProposalId: string | null;
+    codingGate: CodingGateResult;
+    bridgeReview: BridgeReviewState;
     justification?: ToleranceJustification | null;
   },
 ): ReconciliationV2View {
@@ -184,6 +194,8 @@ export function toReconciliationView(
     candidates: candidatesPart(state),
     lines: linesPart(state),
     openProposalId: extra.openProposalId,
+    codingGate: extra.codingGate,
+    bridgeReview: extra.bridgeReview,
   };
 }
 

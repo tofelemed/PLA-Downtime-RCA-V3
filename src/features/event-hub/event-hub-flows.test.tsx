@@ -156,10 +156,17 @@ describe('Event Hub v2 flows (plan 3.2)', () => {
   it('FE-06: the inline Code action sends only the reason code with If-Match', async () => {
     const { result } = renderHook(() => useCodeEvent(event(2)), { wrapper });
     responses.push(json(200, event(3, { reasonCodeId: 'r2' })));
-    await act(async () => expect(await result.current.submit('r2')).toBe(true));
+    await act(async () => expect(await result.current.submit({ reasonCodeId: 'r2' })).toBe(true));
     expect(calls[0].init.method).toBe('PATCH');
     expect(header(0, 'If-Match')).toBe('"2"');
     expect(body(0)).toEqual({ reasonCodeId: 'r2' });
+  });
+
+  it('SME D12: "investigation pending" is saved without a reason code', async () => {
+    const { result } = renderHook(() => useCodeEvent(event(2)), { wrapper });
+    responses.push(json(200, event(3, { investigationPending: true })));
+    await act(async () => expect(await result.current.submit({ investigationPending: true })).toBe(true));
+    expect(body(0)).toEqual({ investigationPending: true });
   });
 
   it('SME D13: "all matching" reads a server snapshot with the list filters and the window', async () => {

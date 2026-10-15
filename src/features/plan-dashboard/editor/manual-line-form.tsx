@@ -12,6 +12,7 @@ import { categoriesOf, evidenceTypesOf } from '../model/line-evidence';
 import { EvidencePicker } from './evidence-picker';
 import { LineEvidenceFields } from './line-evidence-fields';
 import { ReasonSelect } from './reason-select';
+import { ReversalFields } from './reversal-fields';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface ManualLineFormProps {
@@ -21,7 +22,7 @@ export interface ManualLineFormProps {
   onCancel: () => void;
 }
 
-const KINDS: ManualKind[] = ['availability', 'performance', 'quality', 'bridge', 'gain', 'unaccounted_classified'];
+const KINDS: ManualKind[] = ['availability', 'performance', 'quality', 'bridge', 'gain', 'unaccounted_classified', 'reversal'];
 const SELECT = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 
 /** A bridge is production accounting's (SME R8); an Unaccounted line only where the tolerance policy allows it (R7). */
@@ -36,6 +37,31 @@ function kindPatch(line: Omit<ManualDraft, 'uid'>, kind: ManualKind): Partial<Om
     classification: line.classification && categoriesOf(kind).includes(line.classification) ? line.classification : undefined,
     evidenceType: line.evidenceType && evidenceTypesOf(kind).includes(line.evidenceType) ? line.evidenceType : undefined,
   };
+}
+
+type LineInput = Omit<ManualDraft, 'uid'>;
+
+/** The evidence of a loss line: linked events, or an explicit cause without an event (coded or not). */
+function EventEvidence({ line, set, view, timezone }: { line: LineInput; set: (patch: Partial<LineInput>) => void; view: ReconciliationView; timezone: string }) {
+  return (
+    <>
+      <label className="flex items-center gap-2">
+        <Checkbox id="manualNoEvent" checked={line.missingEvent} onCheckedChange={(v) => set({ missingEvent: v === true, eventIds: v === true ? [] : line.eventIds })} />
+        <span>No event (cause without an event)</span>
+      </label>
+      {line.missingEvent ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ReasonSelect id="manualReason" value={line.reasonCodeId ?? ''} disabled={line.missingCode} onChange={(id) => set({ reasonCodeId: id || undefined })} />
+          <label className="flex items-center gap-2 pt-6">
+            <Checkbox id="manualMissingCode" checked={line.missingCode} onCheckedChange={(v) => set({ missingCode: v === true, reasonCodeId: v === true ? undefined : line.reasonCodeId })} />
+            <span>Reason code missing (blocks submission)</span>
+          </label>
+        </div>
+      ) : (
+        <EvidencePicker view={view} timezone={timezone} selected={line.eventIds} onChange={(eventIds) => set({ eventIds })} />
+      )}
+    </>
+  );
 }
 
 /** A manual line (ACC07): slice, kind, quantity (decimal text), evidence event(s) or an explicit "no event". */
@@ -70,23 +96,13 @@ export function ManualLineForm({ view, timezone, onAdd, onCancel }: ManualLineFo
         </div>
         <div className="space-y-1">
           <Label htmlFor="manualQuantity">Quantity ({view.slices.find((s) => s.sliceId === line.sliceId)?.uom ?? 'unit unknown'})</Label>
-          <DecimalInput id="manualQuantity" value={line.quantity} onChange={(q) => set({ quantity: q })} allowNegative={line.kind === 'gain'} />
+          <DecimalInput id="manualQuantity" value={line.quantity} onChange={(q) => set({ quantity: q })} allowNegative={line.kind === 'gain' || line.kind === 'reversal'} />
         </div>
       </div>
-      <label className="flex items-center gap-2">
-        <Checkbox id="manualNoEvent" checked={line.missingEvent} onCheckedChange={(v) => set({ missingEvent: v === true, eventIds: v === true ? [] : line.eventIds })} />
-        <span>No event (cause without an event)</span>
-      </label>
-      {line.missingEvent ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <ReasonSelect id="manualReason" value={line.reasonCodeId ?? ''} disabled={line.missingCode} onChange={(id) => set({ reasonCodeId: id || undefined })} />
-          <label className="flex items-center gap-2 pt-6">
-            <Checkbox id="manualMissingCode" checked={line.missingCode} onCheckedChange={(v) => set({ missingCode: v === true, reasonCodeId: v === true ? undefined : line.reasonCodeId })} />
-            <span>Reason code missing (blocks submission)</span>
-          </label>
-        </div>
+      {line.kind === 'reversal' ? (
+        <ReversalFields periodId={view.periodId} value={line.reversesLineId} onChange={(id) => set({ reversesLineId: id })} selectClass={SELECT} />
       ) : (
-        <EvidencePicker view={view} timezone={timezone} selected={line.eventIds} onChange={(eventIds) => set({ eventIds })} />
+        <EventEvidence line={line} set={set} view={view} timezone={timezone} />
       )}
       <LineEvidenceFields line={line} onChange={set} selectClass={SELECT} />
       <div className="space-y-1">

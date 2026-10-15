@@ -45,7 +45,7 @@ const productOfSlice = (detail: PeriodDetailView | undefined) => (sliceId: strin
  * recalculated) or rejects them with a reason.
  */
 export function AdjustmentsSection({ planId, periodId }: AdjustmentsSectionProps) {
-  const { canWritePeriods, canApprovePeriods } = useCapabilities();
+  const { canWritePeriods, canApproveAdjustments } = useCapabilities();
   const period = useProductionPeriod(periodId);
   const products = useProductNames();
   const users = useUserNames();
@@ -63,7 +63,7 @@ export function AdjustmentsSection({ planId, periodId }: AdjustmentsSectionProps
       <div data-testid="adjustments">
         <DataTable
           caption="Actuals adjustments"
-          columns={columnsOf({ products, users, productOf: productOfSlice(detail) }, canApprovePeriods)}
+          columns={columnsOf({ products, users, productOf: productOfSlice(detail) }, canApproveAdjustments)}
           rows={detail?.adjustments ?? []}
           getRowKey={(a) => a.id}
           status={{ isLoading: period.isLoading, isError: period.isError, error: period.error }}

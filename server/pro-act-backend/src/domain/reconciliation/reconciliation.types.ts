@@ -30,6 +30,7 @@ export const MANUAL_KINDS = [
   'bridge',
   'gain',
   'unaccounted_classified',
+  'reversal',
 ] as const;
 export type ManualKind = (typeof MANUAL_KINDS)[number];
 
@@ -38,6 +39,7 @@ export const SIGNED_LINE_KINDS: ReadonlySet<LossKind> = new Set([
   'bridge',
   'gain',
   'tolerance_adjustment',
+  'reversal',
 ]);
 
 /** An automatic plan-ledger candidate of the current calculation run (2.5 `loss_lines`, source auto). */

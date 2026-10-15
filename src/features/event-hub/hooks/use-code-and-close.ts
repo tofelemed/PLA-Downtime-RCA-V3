@@ -30,7 +30,8 @@ export function useCloseStop(event: ProductionEventView) {
 /** FE-06 inline "Code": only the reason code changes; the server applies the code's classification defaults. */
 export function useCodeEvent(event: ProductionEventView) {
   const patch = usePatchProductionEvent();
-  const submit = async (reasonCodeId: string): Promise<boolean> =>
-    (await patch.submit({ event, changes: { reasonCodeId } }).catch(() => null)) !== null;
+  /** a reason code, or SME D12 "investigation pending" while no specific reason is known yet */
+  const submit = async (changes: { reasonCodeId?: string; investigationPending?: boolean }): Promise<boolean> =>
+    (await patch.submit({ event, changes }).catch(() => null)) !== null;
   return { submit, error: patch.error, pending: patch.isPending };
 }

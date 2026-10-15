@@ -64,6 +64,15 @@ export interface ProductionEventV2View {
   };
   planId: string | null;
   reasonCodeId: string | null;
+  /** SME D12: explicitly under investigation (no specific reason yet) */
+  investigationPending: boolean;
+  /** SME D13: supervisor verification of the coding and maintenance validation of the failure detail */
+  verification: {
+    verifiedBy: string | null;
+    verifiedAt: string | null;
+    validatedBy: string | null;
+    validatedAt: string | null;
+  };
   rcaId: string | null;
   /** legacy v1 type label */
   eventType: string | null;
@@ -103,6 +112,9 @@ export interface ProductionEventV2View {
   overriddenFields?: string[];
 }
 
+const isoOrNull = (value: Date | string | null | undefined): string | null =>
+  value ? new Date(value).toISOString() : null;
+
 export function toProductionEventV2View(
   event: ProductionEvent,
   asOf: Date,
@@ -137,6 +149,13 @@ export function toProductionEventV2View(
     },
     planId: event.planId ?? null,
     reasonCodeId: event.reasonCodeId ?? null,
+    investigationPending: event.investigationPending ?? false,
+    verification: {
+      verifiedBy: event.verifiedBy ?? null,
+      verifiedAt: isoOrNull(event.verifiedAt),
+      validatedBy: event.validatedBy ?? null,
+      validatedAt: isoOrNull(event.validatedAt),
+    },
     rcaId: event.rcaId ?? null,
     eventType: event.eventType ?? null,
     status: event.status ?? null,

@@ -37,11 +37,11 @@ export interface Capabilities {
   canWriteCalendars: boolean;
   /** period accounting: draft lines, submit, cancel, recompute */
   canWritePeriods: boolean;
-  /** approve / reject adjustments and revisions, revise approved periods, decide change proposals */
-  canApprovePeriods: boolean;
+  /** approve / reject actuals adjustments (manager approvers only, `ADJUSTMENT_APPROVERS`) */
+  canApproveAdjustments: boolean;
   /**
    * approve / reject submitted revisions, revise approved periods, decide change proposals (production
-   * accounting too, SME R1); adjustments stay with `canApprovePeriods`
+   * accounting too, SME R1, `REVISION_APPROVERS`); adjustments stay with `canApproveAdjustments`
    */
   canApproveRevisions: boolean;
   /** SME R4: propose a correction of an approved period of a closing or locked month */
@@ -92,6 +92,11 @@ export interface Capabilities {
   canWriteWorkOrders: boolean;
   /** SME D1 / D2: unit state mapping versions and staleness settings */
   canWriteStateMappings: boolean;
+  /** SME R1 / R6: record delegations of approval roles (administrators for anyone, holders for themselves) */
+  canDelegateApprovals: boolean;
+  /** SME D13: verify stop coding as the unit's supervisor / validate failure detail as maintenance */
+  canVerifyStops: boolean;
+  canValidateFailures: boolean;
   /** v2 production events: any member whose role is not read-only (WriteAccessGuard) */
   canWriteEvents: boolean;
   /**
@@ -122,7 +127,7 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canApproveProfiles: may(ServerRoles.PROFILE_APPROVERS),
     canWriteCalendars: may(ServerRoles.CALENDAR_WRITERS),
     canWritePeriods: may(ServerRoles.PERIOD_WRITERS),
-    canApprovePeriods: may(ServerRoles.ADJUSTMENT_APPROVERS) && may(ServerRoles.REVISION_APPROVERS),
+    canApproveAdjustments: may(ServerRoles.ADJUSTMENT_APPROVERS),
     canApproveRevisions: may(ServerRoles.REVISION_APPROVERS),
     canProposeCorrections: may(ServerRoles.CORRECTION_PROPOSERS),
     canCloseMonthQuantities: may(ServerRoles.QUANTITY_CLOSERS),
@@ -153,6 +158,9 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canWriteStandby: may(ServerRoles.STANDBY_WRITERS),
     canWriteWorkOrders: may(ServerRoles.WORK_ORDER_WRITERS),
     canWriteStateMappings: may(ServerRoles.STATE_MAPPING_WRITERS),
+    canDelegateApprovals: may(ServerRoles.DELEGATION_WRITERS),
+    canVerifyStops: may(ServerRoles.STOP_VERIFIERS),
+    canValidateFailures: may(ServerRoles.FAILURE_VALIDATORS),
     canWriteEvents: !readOnly,
     canManagePlantSettings: may(PLANT_SETTINGS_WRITERS),
   };

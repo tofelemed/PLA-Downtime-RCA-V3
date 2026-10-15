@@ -36,6 +36,8 @@ import { actorOf, recordTransition } from './workflow-recorder';
 import { satisfiesRole } from '../auth/roles/role-model';
 import { BRIDGE_WRITERS } from '../v2/periods/period-roles';
 import { assertManualLineRules } from './line-evidence-rules';
+import { checkReversals } from './reversal-references';
+import { assertBridgesWithinLimit } from './bridge-review';
 
 /**
  * The atomic draft-lines command of §15.3 (plan 2.8 step 2): in one transaction, serialized with the
@@ -152,6 +154,8 @@ export class DraftLinesService {
       assertManualLineRules(input, index, { mayBridge: caller.mayBridge }),
     );
     const evidence = await checkReferences(manager, state.period, shaped);
+    await checkReversals(manager, state, shaped);
+    assertBridgesWithinLimit(state, shaped);
     const decisions = shaped.map(decisionOf);
     const issues = saveIssues(state, shaped, decisions);
     if (issues.length > 0) throw workflowIssues(issues);
@@ -199,6 +203,7 @@ function rowOf(
     classification: input.classification ?? null,
     evidenceType: input.evidenceType ?? null,
     evidenceRef: input.evidenceRef?.trim() || null,
+    reversesLineId: input.reversesLineId ?? null,
     reason: input.reason?.trim() || null,
     comment: input.comment ?? null,
     authorId: actorId,

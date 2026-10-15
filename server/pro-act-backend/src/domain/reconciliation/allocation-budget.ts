@@ -1,4 +1,5 @@
 import { Dec, formatDec, ZERO } from '../actuals/decimal';
+import { MEMO_KINDS } from '../accounting/accounting.types';
 import { sumOf } from '../accounting/claims';
 import {
   Candidate,
@@ -17,6 +18,8 @@ function contributionOf(
   line: DecisionLine,
   candidates: ReadonlyMap<string, Candidate>,
 ): Dec {
+  // SME R9: a reversal is outside this period's balance — it neither consumes nor frees the budget
+  if (line.kind && MEMO_KINDS.has(line.kind)) return ZERO;
   if (line.action === 'manual') return line.quantity ?? ZERO;
   const present = line.autoKey !== null && candidates.has(line.autoKey);
   if ((line.action === 'adjust' || line.action === 'replace') && present)

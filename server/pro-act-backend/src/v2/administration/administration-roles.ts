@@ -25,3 +25,17 @@ export const PLANT_CONFIG_WRITERS = [
   'OrgAdmin',
   'TenantAdmin',
 ] as const;
+
+/**
+ * SME R1 / R6 delegations of approval roles: plant administrators for anyone, holders of a delegable role
+ * for themselves (the service checks the delegator).
+ */
+export const DELEGATION_WRITERS = [
+  'SuperAdmin',
+  'OrgAdmin',
+  'TenantAdmin',
+  'manager_approver',
+  'production_accountant',
+  'finance_approver',
+  'quality_approver',
+] as const;

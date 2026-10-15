@@ -29,6 +29,8 @@ export interface DraftLineInput {
   /** SME R11: the record a quantity rests on when no event or approved adjustment backs it */
   evidenceType?: EvidenceType;
   evidenceRef?: string;
+  /** SME R9: the approved line (of an earlier period of the unit) a `reversal` line reverses */
+  reversesLineId?: string;
 }
 
 export interface DraftLinesCommand {

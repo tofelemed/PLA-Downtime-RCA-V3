@@ -67,6 +67,7 @@ export const LOSS_KIND_LABELS: Readonly<Record<LossLineKind, string>> = {
   gain: 'Gain',
   unaccounted_classified: 'Unaccounted (classified)',
   tolerance_adjustment: 'Tolerance adjustment',
+  reversal: 'Reversal of an earlier entry',
 };
 
 export const LEDGER_LABELS: Readonly<Record<LedgerKind, string>> = {

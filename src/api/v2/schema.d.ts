@@ -104,6 +104,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/production-events/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify the coding of stops as their supervisor (SME D13)
+         * @description Supervisor = manager_approver or production_engineer of the stop’s unit. Stops that do not qualify are skipped with the reason (NOT_FOUND, NOT_AUTHORIZED, NOT_A_STOP, NOT_CODED — neither a reason code nor "investigation pending", ALREADY_VERIFIED, OWN_CODING — the verifier entered the current coding). A later change of the coding clears the verification. 422 SELECTION_REQUIRED unless exactly one of eventIds / periodId.
+         */
+        post: operations["StopVerificationV2Controller_verify_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-events/{id}/validate-failure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate the technical failure detail of a verified stop (SME D13, maintenance)
+         * @description Maintenance = reliability_engineer of the stop’s unit. Skipped with the reason: NO_FAILURE_DETAIL, NOT_VERIFIED (the supervisor verifies first), ALREADY_VALIDATED, OWN_CODING, NOT_AUTHORIZED, NOT_FOUND. A later change of the failure detail clears the validation.
+         */
+        post: operations["StopVerificationV2Controller_validate_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/production-events": {
         parameters: {
             query?: never;
@@ -2756,9 +2796,29 @@ export interface paths {
         put?: never;
         /**
          * Approve the submitted revision (snapshot, immutable afterwards)
-         * @description Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter (any role); 409 STALE_SUBMISSION when inputs changed after submission or the hash differs.
+         * @description Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter (any role); 409 STALE_SUBMISSION when inputs changed after submission or the hash differs; SME R8: 409 BRIDGE_REVIEW_REQUIRED while a bridge above the unit limit waits for its second review, 403 SEPARATION_OF_DUTIES for the bridge reviewer.
          */
         post: operations["ReconciliationV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-periods/{id}/bridge-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * SME R8: second independent review of the bridges above the unit limit of the submitted revision
+         * @description Requires `Idempotency-Key`. By a revision approver independent of the submission (403 SEPARATION_OF_DUTIES); the final approver must be someone else. 409 BRIDGE_REVIEW_NOT_REQUIRED / BRIDGE_ALREADY_REVIEWED / STALE_SUBMISSION.
+         */
+        post: operations["ReconciliationV2Controller_bridgeReview_v2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2834,6 +2894,26 @@ export interface paths {
         };
         /** Workflow history of the period’s revisions, newest first (keyset) */
         get: operations["ReconciliationV2Controller_approvalActions_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-periods/{id}/reversible-lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SME R9: approved lines of the unit’s earlier periods (62 days) a reversal of this period may name, newest first (keyset)
+         * @description Lines of the published revision of each earlier period, of the kinds the tolerance policy allows to reverse, with what approved reversals already took back and what is left.
+         */
+        get: operations["ReconciliationV2Controller_reversible_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4624,6 +4704,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/role-delegations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Delegations of approval roles in the acting plant, newest first (keyset) */
+        get: operations["RoleDelegationsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Delegate an approval role for a limited time
+         * @description A plant administrator records a delegation for anyone, a holder of the role for themselves (403 DELEGATION_NOT_ALLOWED). 422: DELEGATOR_LACKS_ROLE (the delegator holds the role on the scope on their own), DELEGATE_NOT_MEMBER, SELF_DELEGATION, INVALID_INTERVAL, TOO_LONG (more than 90 days), ALREADY_ENDED, INVALID_SCOPE. While in force the delegate holds the role like a scope grant; separation of duties applies to the delegate.
+         */
+        post: operations["RoleDelegationsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/role-delegations/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End a delegation early (the delegator, the delegate or a plant administrator)
+         * @description 409 DELEGATION_OVER when it is already revoked or over.
+         */
+        post: operations["RoleDelegationsV2Controller_revoke_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/tasks": {
         parameters: {
             query?: never;
@@ -6366,6 +6487,15 @@ export interface components {
             /** @description Why the event is retracted (kept in the retraction revision) */
             reason: string;
         };
+        VerifyStopsV2Dto: {
+            /** @description Stops to verify (exclusive with periodId) */
+            eventIds?: string[];
+            /**
+             * Format: uuid
+             * @description Bulk verify of a shift: every unverified stop overlapping the production period (exclusive with eventIds)
+             */
+            periodId?: string;
+        };
         CreateProductionEventV2Dto: {
             /**
              * Format: date-time
@@ -6444,6 +6574,8 @@ export interface components {
             failureCause?: Record<string, never> | null;
             /** @description SME D11: detection method */
             detectionMethod?: Record<string, never> | null;
+            /** @description SME D12: no specific reason yet — the stop is explicitly under investigation (meets the per-stop rule of the shift submission gate, not the coded-time target) */
+            investigationPending?: boolean;
             description?: Record<string, never> | null;
             /** @example 12.5 */
             quantity?: Record<string, never> | null;
@@ -6543,6 +6675,8 @@ export interface components {
             failureCause?: Record<string, never> | null;
             /** @description SME D11: detection method */
             detectionMethod?: Record<string, never> | null;
+            /** @description SME D12: no specific reason yet — the stop is explicitly under investigation (meets the per-stop rule of the shift submission gate, not the coded-time target) */
+            investigationPending?: boolean;
             description?: Record<string, never> | null;
             /** @example 12.5 */
             quantity?: Record<string, never> | null;
@@ -7718,7 +7852,7 @@ export interface components {
              * @description manual and replace lines
              * @enum {string}
              */
-            kind?: "availability" | "performance" | "quality" | "bridge" | "gain" | "unaccounted_classified";
+            kind?: "availability" | "performance" | "quality" | "bridge" | "gain" | "unaccounted_classified" | "reversal";
             /** @description Decimal string, ≤ 8 decimals; negative only for bridge / gain */
             quantity?: string;
             /** @enum {string} */
@@ -7753,6 +7887,11 @@ export interface components {
             evidenceType?: "log" | "work_order" | "rate_record" | "totalizer" | "lot_sample" | "movement_record" | "measurement_record" | "investigation_note";
             /** @description Reference of that record (work order, sample, tag, …) */
             evidenceRef?: string;
+            /**
+             * Format: uuid
+             * @description SME R9: the approved line (published revision of an earlier period of the unit) a `reversal` line reverses; the reversal has the opposite sign and at most the quantity not yet reversed (422 REVERSAL_*)
+             */
+            reversesLineId?: string;
         };
         DraftLinesDto: {
             /** @description The draft revision number */
@@ -8399,6 +8538,42 @@ export interface components {
             role: "manager_approver" | "production_accountant" | "quality_approver" | "metrology_approver" | "finance_approver" | "finance_maintainer" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
             /** @description Limit the grant to this unit of the plant (omit for the whole plant) */
             unitId?: string;
+        };
+        CreateRoleDelegationDto: {
+            /**
+             * Format: uuid
+             * @description Who hands the role over (holds it on the scope)
+             */
+            delegatorId: string;
+            /**
+             * Format: uuid
+             * @description Who holds it meanwhile (an active member of the plant)
+             */
+            delegateId: string;
+            /** @enum {string} */
+            role: "manager_approver" | "production_accountant" | "finance_approver" | "quality_approver";
+            /** @enum {string} */
+            scopeKind: "tenant" | "site" | "unit";
+            /**
+             * Format: uuid
+             * @description The plant (tenant), site or unit id
+             */
+            scopeId: string;
+            /**
+             * Format: date-time
+             * @description Start (UTC, inclusive)
+             */
+            validFrom: string;
+            /**
+             * Format: date-time
+             * @description End (UTC, exclusive); at most 90 days after the start
+             */
+            validUntil: string;
+            /** @description Why (e.g. leave, plant shutdown cover) */
+            reason: string;
+        };
+        RevokeRoleDelegationDto: {
+            reason: string;
         };
         TaskSummaryView: {
             total: number;
@@ -9218,6 +9393,46 @@ export interface operations {
                 "application/json": components["schemas"]["RetractEventV2Dto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopVerificationV2Controller_verify_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyStopsV2Dto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StopVerificationV2Controller_validate_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -13345,6 +13560,31 @@ export interface operations {
             };
         };
     };
+    ReconciliationV2Controller_bridgeReview_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveRevisionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ReconciliationV2Controller_reject_v2: {
         parameters: {
             query?: never;
@@ -13421,6 +13661,35 @@ export interface operations {
         };
     };
     ReconciliationV2Controller_approvalActions_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReconciliationV2Controller_reversible_v2: {
         parameters: {
             query?: {
                 /** @description Opaque cursor returned as nextCursor by the previous page */
@@ -15972,6 +16241,79 @@ export interface operations {
         requestBody?: never;
         responses: {
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RoleDelegationsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description `in_force`: started, not ended, not revoked (now) */
+                state?: "in_force" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RoleDelegationsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRoleDelegationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RoleDelegationsV2Controller_revoke_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeRoleDelegationDto"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

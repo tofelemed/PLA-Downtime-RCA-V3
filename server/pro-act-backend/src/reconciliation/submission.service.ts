@@ -28,6 +28,7 @@ import {
   reconcileWith,
   RevisionState,
 } from './revision-state';
+import { assertCodingGate, loadCodingGate } from './coding-gate.loader';
 import { contentHashOf } from './reviewed-content';
 import { environmentIssues } from './submission-environment';
 import { contentChanged, runChanged, workflowIssues } from './workflow-errors';
@@ -52,7 +53,8 @@ export interface SubmitCommand {
  * review item), residuals within tolerance become labelled `tolerance_adjustment` lines in a new set, the
  * content gates pass (residual / over-accounting beyond tolerance, missing codes, changed baselines), and
  * the revision goes `in_review` with the sha256 of its reviewed content as submitted hash. Audited;
- * outbox `PeriodSubmitted`.
+ * outbox `PeriodSubmitted`. SME D12: a `block` coding gate refuses a shift whose stops are not all coded
+ * (or "investigation pending") or whose coded stop time is below target (422 CODING_INCOMPLETE).
  */
 @Injectable()
 export class SubmissionService {
@@ -92,6 +94,7 @@ export class SubmissionService {
       assertSeen(state, command);
       const blocking = await environmentIssues(manager, state, this.policies);
       if (blocking.length > 0) throw workflowIssues(blocking);
+      assertCodingGate(await loadCodingGate(manager, state));
       const final = await this.withTolerance(manager, state, submitter);
       const issues = [
         ...submissionIssues(

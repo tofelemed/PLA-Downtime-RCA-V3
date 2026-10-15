@@ -1,3 +1,4 @@
+import type { CodingGateView } from './stop-coding';
 /**
  * Reconciliation and approval views (backend `src/v2/reconciliation/reconciliation-v2.view.ts`, plan 2.8);
  * quantities are signed decimal strings, never numbers.
@@ -69,7 +70,8 @@ export interface LineEvidenceRef {
 }
 
 export type DraftAction = 'accept' | 'adjust' | 'replace' | 'reject' | 'manual';
-export type ManualKind = 'availability' | 'performance' | 'quality' | 'bridge' | 'gain' | 'unaccounted_classified';
+/** `reversal` (SME R9): evidence-backed reversal of an approved line of an earlier period of the unit */
+export type ManualKind = 'availability' | 'performance' | 'quality' | 'bridge' | 'gain' | 'unaccounted_classified' | 'reversal';
 /** SME R11: the record a manual quantity rests on when no event or approved adjustment backs it. */
 export type EvidenceType = 'log' | 'work_order' | 'rate_record' | 'totalizer' | 'lot_sample' | 'movement_record' | 'measurement_record' | 'investigation_note';
 
@@ -92,6 +94,8 @@ export interface ReconciliationLineView {
   missingEvent: boolean;
   /** SME R7 / R8: category of an Unaccounted or bridge line */
   classification?: string;
+  /** SME R9: the approved line of an earlier period a reversal reverses */
+  reversesLineId?: string;
   evidenceType?: EvidenceType;
   evidenceRef?: string;
   reason: string | null;
@@ -108,6 +112,12 @@ export interface ToleranceView {
   value: number;
   epsilon: number;
   allowUnaccountedClassification: boolean;
+  /** SME D12: shift submission gate (absent in older versions = warn at 95 %) */
+  submitGate?: { mode: 'block' | 'warn'; codedRatioTarget: number };
+  /** SME R8: per-unit bridge limits (null = no limit) */
+  bridgeLimits?: { absolute: number | null; relative: number | null; overLimit: 'second_review' | 'refuse'; uncertaintyBudgetId?: string };
+  /** SME R9: kinds a reversal may reverse */
+  reversibleKinds?: string[];
   /** SME E4: the uncertainty budget that justifies an absolute tolerance; absent = none stated */
   uncertaintyBudgetId?: string;
   /** SME E4: that budget's numbers and evidence; null / absent = no budget referenced */
@@ -145,6 +155,20 @@ export interface ReconciliationView {
   candidates: CandidateView[];
   lines: ReconciliationLineView[];
   openProposalId: string | null;
+  /** SME D12 / D13: stop coding of the period against the submission gate, and its verification */
+  codingGate?: CodingGateView;
+  /** SME R8: bridges above the unit limit and their second review of the current submission */
+  bridgeReview?: BridgeReviewView;
+}
+
+/** SME R8 (backend `reconciliation/bridge-review.ts`). */
+export interface BridgeReviewView {
+  overLimit: 'second_review' | 'refuse';
+  findings: Array<{ ref: string; sliceId: string; quantity: string; limit: string; basis: 'absolute' | 'relative' }>;
+  required: boolean;
+  review: { by: string | null; at: string } | null;
+  /** SME E4: the uncertainty budget behind the absolute limit; null = none stated */
+  justification?: ToleranceJustificationView | null;
 }
 
 /** One line of `PUT …/draft-lines` (DraftLineDto): only declared fields (forbidNonWhitelisted). */
@@ -165,6 +189,8 @@ export interface DraftLineInput {
   classification?: string;
   evidenceType?: EvidenceType;
   evidenceRef?: string;
+  /** SME R9: only on a `reversal` line */
+  reversesLineId?: string;
 }
 
 export interface ApprovalActionView {
@@ -216,4 +242,19 @@ export interface ManualProposalDetail {
   reason: string;
   evidenceType: EvidenceType;
   evidenceRef: string;
+}
+
+/** `GET /production-periods/{id}/reversible-lines` (SME R9): approved lines of earlier periods a reversal may name. */
+export interface ReversibleLineView {
+  id: string;
+  periodId: string;
+  localDate: string;
+  shiftName: string | null;
+  kind: string;
+  quantity: string;
+  uom: string | null;
+  reasonCodeId: string | null;
+  causeEventId: string | null;
+  reversedQuantity: string;
+  remainingQuantity: string;
 }

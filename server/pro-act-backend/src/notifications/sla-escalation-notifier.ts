@@ -10,26 +10,21 @@ import {
   escalationNotices,
 } from '../domain/close/escalation-notices';
 import { ReconciliationSlaPolicy } from '../domain/close/sla-policy';
+import {
+  HolderCache,
+  insertNotifications,
+  NotificationRow,
+  PeriodRef,
+  periodDetail,
+} from './notification-rows';
 import { roleHoldersOf } from './role-holders';
+import { dueReminderRows } from './sla-reminders';
 
-interface EscalatedRow {
-  id: string;
-  unit_id: string;
-  unit_name: string | null;
-  plan_id: string | null;
-  local_date: string;
-  shift_name: string | null;
+interface EscalatedRow extends PeriodRef {
   rev_id: string | null;
   escalation_level: number;
   rejection_escalated: boolean;
   rejections: number;
-}
-
-interface NotificationRow {
-  user_id: string;
-  dedupe_key: string;
-  entity_id: string;
-  detail: Record<string, unknown>;
 }
 
 /** Outbox type of the realtime hint: the client refetches its own notifications (no content is pushed). */
@@ -46,18 +41,15 @@ function detailOf(
     level: notice.level,
     afterHours: notice.afterHours,
     rejections: notice.rejections,
-    periodId: row.id,
-    unitId: row.unit_id,
-    unitName: row.unit_name,
-    planId: row.plan_id,
-    localDate: row.local_date,
-    shiftName: row.shift_name,
+    ...periodDetail(row),
     escalatedAt: asOf.toISOString(),
   };
 }
 
 /**
- * SLA escalation notifications (SME R3 / R6, EXPERT_REVIEW Area 3): for one plant, the ended, not approved
+ * SLA notifications (SME R3 / R6, EXPERT_REVIEW Area 3). Due reminders first: a period whose current stage
+ * is past due tells its preparer (submission) or its checkers (approval) once per stage and submission cycle
+ * (`sla_reminder`, see `dueReminderRows`). Escalations: for one plant, the ended, not approved
  * periods of the queue window that reached an escalation (48 h → production accounting, 72 h → plant
  * management, the 3rd rejection of a revision → production accounting, as the `reconciliation_sla` policy in
  * force says) give one in-app notification per holder of the escalation role in the plant — per period and
@@ -75,12 +67,24 @@ export class SlaEscalationNotifier {
   notify(tenantId: string, asOf: Date): Promise<number> {
     return this.dataSource.transaction(async (manager) => {
       const { policy } = await this.policies.sla(manager, tenantId, asOf);
+      const holders = new HolderCache((role, unitId) =>
+        roleHoldersOf(manager, { tenantId, role, unitId }),
+      );
+      const reminders = await dueReminderRows(manager, tenantId, {
+        asOf,
+        policy,
+        holders,
+      });
       const periods = await this.escalated(manager, tenantId, asOf, policy);
-      const rows = await this.rowsFor(manager, tenantId, periods, {
+      const escalations = await this.rowsFor(periods, {
         policy,
         asOf,
+        holders,
       });
-      const created = await this.insert(manager, tenantId, rows);
+      const created = await insertNotifications(manager, tenantId, [
+        ...reminders,
+        ...escalations,
+      ]);
       if (created > 0) {
         await enqueueOutbox(manager, [
           {
@@ -125,12 +129,9 @@ export class SlaEscalationNotifier {
 
   /** One row per notice and holder of its role for the period's unit (holders cached per role and unit). */
   private async rowsFor(
-    manager: EntityManager,
-    tenantId: string,
     periods: readonly EscalatedRow[],
-    at: { policy: ReconciliationSlaPolicy; asOf: Date },
+    at: { policy: ReconciliationSlaPolicy; asOf: Date; holders: HolderCache },
   ): Promise<NotificationRow[]> {
-    const holders = new Map<string, string[]>();
     const rows: NotificationRow[] = [];
     for (const period of periods) {
       const notices = escalationNotices(
@@ -144,19 +145,12 @@ export class SlaEscalationNotifier {
         at.policy,
       );
       for (const notice of notices) {
-        const key = `${notice.role}:${period.unit_id}`;
-        const users =
-          holders.get(key) ??
-          (await roleHoldersOf(manager, {
-            tenantId,
-            role: notice.role,
-            unitId: period.unit_id,
-          }));
-        holders.set(key, users);
+        const users = await at.holders.of(notice.role, period.unit_id);
         const detail = detailOf(period, notice, at.asOf);
         for (const userId of users) {
           rows.push({
             user_id: userId,
+            kind: 'sla_escalation',
             dedupe_key: notice.dedupeKey,
             entity_id: period.id,
             detail,
@@ -165,23 +159,5 @@ export class SlaEscalationNotifier {
       }
     }
     return rows;
-  }
-
-  private async insert(
-    manager: EntityManager,
-    tenantId: string,
-    rows: readonly NotificationRow[],
-  ): Promise<number> {
-    if (rows.length === 0) return 0;
-    const inserted: unknown[] = await manager.query(
-      `INSERT INTO "user_notifications" ("tenant_id", "row_version", "user_id", "kind", "dedupe_key",
-              "entity_type", "entity_id", "detail")
-       SELECT $1, 1, x."user_id", 'sla_escalation', x."dedupe_key", 'production_period', x."entity_id", x."detail"
-         FROM jsonb_to_recordset($2::jsonb) AS x("user_id" uuid, "dedupe_key" text, "entity_id" uuid, "detail" jsonb)
-       ON CONFLICT ("tenant_id", "user_id", "dedupe_key") DO NOTHING
-       RETURNING "id"`,
-      [tenantId, JSON.stringify(rows)],
-    );
-    return inserted.length;
   }
 }

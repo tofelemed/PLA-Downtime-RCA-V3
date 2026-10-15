@@ -40,6 +40,16 @@ const ALLOWED_EVIDENCE: Readonly<Record<ManualKind, readonly EvidenceType[]>> =
     gain: ['rate_record', 'totalizer', 'measurement_record'],
     bridge: ['movement_record', 'measurement_record'],
     unaccounted_classified: ['investigation_note'],
+    // SME R9: the record showing the earlier entry was wrong (a note alone is not proof)
+    reversal: [
+      'log',
+      'work_order',
+      'rate_record',
+      'totalizer',
+      'lot_sample',
+      'movement_record',
+      'measurement_record',
+    ],
   };
 
 const CATEGORIES: Partial<Record<ManualKind, readonly string[]>> = {
@@ -76,10 +86,11 @@ function assertCategory(
     );
 }
 
-/** An event or an approved adjustment backs a loss line; bridges and Unaccounted lines always need their own record. */
+/** An event or an approved adjustment backs a loss line; bridges, Unaccounted lines and reversals always need their own record. */
 const backedByRecord = (input: DraftLineInput, kind: ManualKind) =>
   kind !== 'bridge' &&
   kind !== 'unaccounted_classified' &&
+  kind !== 'reversal' &&
   ((input.eventIds?.length ?? 0) > 0 || Boolean(input.adjustmentId));
 
 function assertEvidence(
@@ -122,6 +133,23 @@ function assertBridge(
     );
 }
 
+/** SME R9: a reversal names the approved line it reverses; no other line does. */
+function assertReversalTarget(input: DraftLineInput, index: number) {
+  const reversal = input.action === 'manual' && input.kind === 'reversal';
+  if (reversal && !input.reversesLineId)
+    throw lineInvalid(
+      'REVERSAL_TARGET_REQUIRED',
+      index,
+      'a reversal names the approved line it reverses (reversesLineId)',
+    );
+  if (!reversal && input.reversesLineId)
+    throw lineInvalid(
+      'INVALID_LINE',
+      index,
+      'only a manual reversal line names reversesLineId',
+    );
+}
+
 /**
  * Rules of a manual line from the SME answers (14 Oct 2026): R7 an Unaccounted line names its category and
  * the investigation; R8 a bridge is production accounting's, with a category and a record; R9 no negative
@@ -133,6 +161,7 @@ export function assertManualLineRules(
   index: number,
   context: { mayBridge: boolean },
 ): void {
+  assertReversalTarget(input, index);
   const kind = input.kind;
   if (input.action !== 'manual' || !kind) return;
   assertCategory(input, index, kind);

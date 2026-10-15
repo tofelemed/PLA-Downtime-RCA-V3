@@ -4,7 +4,7 @@
  */
 export interface NotificationView {
   id: string;
-  kind: 'sla_escalation' | string;
+  kind: 'sla_reminder' | 'sla_escalation' | string;
   entityType: string;
   entityId: string;
   detail: Record<string, unknown>;
@@ -27,4 +27,19 @@ export interface SlaEscalationDetail {
   localDate: string;
   shiftName: string | null;
   escalatedAt: string;
+}
+
+/** `detail` of an `sla_reminder` notification (SME R3: the preparer / checker is told when a stage falls due). */
+export interface SlaReminderDetail {
+  reason: 'due';
+  stage: 'submit' | 'approve';
+  recipient: 'preparer' | 'checker';
+  dueAt: string;
+  periodId: string;
+  unitId: string;
+  unitName: string | null;
+  planId: string | null;
+  localDate: string;
+  shiftName: string | null;
+  remindedAt: string;
 }

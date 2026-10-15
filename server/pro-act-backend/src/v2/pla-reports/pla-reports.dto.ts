@@ -34,7 +34,10 @@ export const LOSS_TREE_METRIC_PARAMS = [
 ] as const;
 export type LossTreeMetricParam = LossTreeMetric | 'value';
 
-/** Loss kinds of the tree: what lowers output (gains, residuals and tolerance adjustments stay apart). */
+/**
+ * Loss kinds of the tree: what lowers output (gains, residuals, tolerance adjustments and SME R9 reversals
+ * — corrections of an earlier period, shown on the period — stay apart).
+ */
 export const LOSS_TREE_KINDS = [
   'schedule_exclusion',
   'availability',

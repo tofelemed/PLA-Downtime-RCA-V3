@@ -35,6 +35,8 @@ const FxRateDetail = lazyNamedWithPreload(() => import('@/features/finance/fx/fx
 const Users = lazyNamedWithPreload(() => import('@/features/users/users-page'), 'UsersPage');
 const UserForm = lazyNamedWithPreload(() => import('@/features/users/user-form-page'), 'UserFormPage');
 const Permissions = lazyNamedWithPreload(() => import('@/features/permissions/permissions-page'), 'PermissionsPage');
+/** SME R1 / R6: delegations of approval roles. */
+const Delegations = lazyNamedWithPreload(() => import('@/features/delegations/delegations-page'), 'DelegationsPage');
 const AdminPanel = lazyNamedWithPreload(() => import('@/features/admin/admin-page'), 'AdminPage');
 const OrganizationNew = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'OrganizationNewPage');
 const PlantNew = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'PlantNewPage');
@@ -83,6 +85,7 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/users/new', element: <UserForm />, preload: UserForm.preload },
   { path: '/users/:userId', element: <UserForm />, preload: UserForm.preload },
   { path: '/permissions', element: <Permissions />, preload: Permissions.preload },
+  { path: '/delegations', element: <Delegations />, preload: Delegations.preload },
   { path: '/admin', element: <AdminPanel />, preload: AdminPanel.preload },
   { path: '/admin/organizations/new', element: <OrganizationNew />, preload: OrganizationNew.preload },
   { path: '/admin/plants/new', element: <PlantNew />, preload: PlantNew.preload },

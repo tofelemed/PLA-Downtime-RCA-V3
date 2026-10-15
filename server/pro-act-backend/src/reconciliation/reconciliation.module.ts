@@ -5,6 +5,7 @@ import { AuditEntry } from '../common/audit/audit-entry.entity';
 import { OutboxModule } from '../common/outbox/outbox.module';
 import { PeriodsModule } from '../periods/periods.module';
 import { ApprovalService } from './approval.service';
+import { BridgeReviewService } from './bridge-review.service';
 import { ChangeProposalsService } from './change-proposals.service';
 import { DraftLinesService } from './draft-lines.service';
 import { ApprovalAction } from './entities/approval-action.entity';
@@ -47,6 +48,7 @@ import { SubmissionService } from './submission.service';
     RevisionLifecycleService,
     ChangeProposalsService,
     RestatementService,
+    BridgeReviewService,
   ],
   exports: [
     LineSetWriter,
@@ -56,6 +58,7 @@ import { SubmissionService } from './submission.service';
     RevisionLifecycleService,
     ChangeProposalsService,
     RestatementService,
+    BridgeReviewService,
   ],
 })
 export class ReconciliationModule {}

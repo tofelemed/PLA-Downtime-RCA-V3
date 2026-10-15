@@ -7,11 +7,13 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { AdjustmentsSection } from '../adjustments/adjustments-section';
+import { CodingGatePanel } from '../coding/coding-gate-panel';
 import { DispositionsSection } from '../dispositions/dispositions-section';
 import { LossLineEditor } from '../editor/loss-line-editor';
 import { PeriodDayPanel } from '../day/day-certification-panel';
 import { RestatementPanel } from '../restatement/restatement-panel';
 import { SlaPanel } from '../sla/sla-panel';
+import { BridgeReviewPanel } from '../workflow/bridge-review-panel';
 import { WorkflowBar } from '../workflow/workflow-bar';
 import { ActualsProvenance } from './actuals-provenance';
 import { DetailToolbar } from './detail-toolbar';
@@ -66,6 +68,8 @@ export function PeriodDetail({ planId, periodId, unitName, planLabel, timezone }
       <DispositionsSection planId={planId} periodId={periodId} timezone={timezone} />
       <LossLineEditor key={data.revision.id} view={data} timezone={timezone} readOnly={!editable} />
       <WorkflowBar view={data} shown={view} onShowCurrent={() => setView('current')} />
+      {view === 'current' && <BridgeReviewPanel view={data} />}
+      {view === 'current' && <CodingGatePanel view={data} />}
       {view === 'current' && <SlaPanel view={data} timezone={timezone} />}
       {data.revision.supersedesId && <RestatementPanel view={data} />}
       <PeriodDayPanel periodId={periodId} />

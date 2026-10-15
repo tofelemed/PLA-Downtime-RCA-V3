@@ -10,7 +10,7 @@ export function legacyRolesFor(role: string): string[] {
 
 /**
  * Active users who hold `role` for a unit of the plant: a scope grant of the role on the plant, the unit's
- * site or the unit, or a legacy home-plant role that maps to it. Global roles (SuperAdmin / OrgAdmin)
+ * site or the unit, a legacy home-plant role that maps to it, or a delegation of it in force (SME R1 / R6). Global roles (SuperAdmin / OrgAdmin)
  * satisfy every role for access but are not addressees of a role's work (they would get every
  * notification of every plant).
  */
@@ -27,7 +27,15 @@ export async function roleHoldersOf(
                              OR (s."scope_kind" = 'unit' AND s."scope_id" = $3::uuid)
                              OR (s."scope_kind" = 'site'
                                  AND s."scope_id" = (SELECT n."site_id" FROM "units" n WHERE n."id" = $3::uuid))))
-             OR (u."tenant_id" = $1 AND u."role" = ANY($4::text[])))
+             OR (u."tenant_id" = $1 AND u."role" = ANY($4::text[]))
+             -- SME R1 / R6: a delegate of the role in force now
+             OR EXISTS (SELECT 1 FROM "role_delegations" d
+                         WHERE d."delegate_id" = u."id" AND d."tenant_id" = $1 AND d."role" = $2
+                           AND d."revoked_at" IS NULL AND d."valid_from" <= now() AND d."valid_until" > now()
+                           AND (d."scope_kind" = 'tenant'
+                                OR (d."scope_kind" = 'unit' AND d."scope_id" = $3::uuid)
+                                OR (d."scope_kind" = 'site'
+                                    AND d."scope_id" = (SELECT n."site_id" FROM "units" n WHERE n."id" = $3::uuid)))))
       ORDER BY u."id"`,
     [input.tenantId, input.role, input.unitId, legacyRolesFor(input.role)],
   );

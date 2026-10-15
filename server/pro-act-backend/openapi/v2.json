@@ -255,6 +255,67 @@
         ]
       }
     },
+    "/api/v2/production-events/verification": {
+      "post": {
+        "description": "Supervisor = manager_approver or production_engineer of the stop’s unit. Stops that do not qualify are skipped with the reason (NOT_FOUND, NOT_AUTHORIZED, NOT_A_STOP, NOT_CODED — neither a reason code nor \"investigation pending\", ALREADY_VERIFIED, OWN_CODING — the verifier entered the current coding). A later change of the coding clears the verification. 422 SELECTION_REQUIRED unless exactly one of eventIds / periodId.",
+        "operationId": "StopVerificationV2Controller_verify_v2",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyStopsV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify the coding of stops as their supervisor (SME D13)",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    },
+    "/api/v2/production-events/{id}/validate-failure": {
+      "post": {
+        "description": "Maintenance = reliability_engineer of the stop’s unit. Skipped with the reason: NO_FAILURE_DETAIL, NOT_VERIFIED (the supervisor verifies first), ALREADY_VALIDATED, OWN_CODING, NOT_AUTHORIZED, NOT_FOUND. A later change of the failure detail clears the validation.",
+        "operationId": "StopVerificationV2Controller_validate_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Validate the technical failure detail of a verified stop (SME D13, maintenance)",
+        "tags": [
+          "v2 · Production Events"
+        ]
+      }
+    },
     "/api/v2/production-events": {
       "get": {
         "description": "Filters AND across parameters and OR within a repeated parameter; from/to is a half-open window with overlap semantics; pages are keyset-based on (startTime, id). The tenant comes from the identity.",
@@ -9429,7 +9490,7 @@
     },
     "/api/v2/production-periods/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter (any role); 409 STALE_SUBMISSION when inputs changed after submission or the hash differs.",
+        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter (any role); 409 STALE_SUBMISSION when inputs changed after submission or the hash differs; SME R8: 409 BRIDGE_REVIEW_REQUIRED while a bridge above the unit limit waits for its second review, 403 SEPARATION_OF_DUTIES for the bridge reviewer.",
         "operationId": "ReconciliationV2Controller_approve_v2",
         "parameters": [
           {
@@ -9470,6 +9531,54 @@
           }
         ],
         "summary": "Approve the submitted revision (snapshot, immutable afterwards)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/bridge-review": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. By a revision approver independent of the submission (403 SEPARATION_OF_DUTIES); the final approver must be someone else. 409 BRIDGE_REVIEW_NOT_REQUIRED / BRIDGE_ALREADY_REVIEWED / STALE_SUBMISSION.",
+        "operationId": "ReconciliationV2Controller_bridgeReview_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveRevisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "SME R8: second independent review of the bridges above the unit limit of the submitted revision",
         "tags": [
           "v2 · Reconciliation and approval"
         ]
@@ -9693,6 +9802,86 @@
           }
         ],
         "summary": "Workflow history of the period’s revisions, newest first (keyset)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/reversible-lines": {
+      "get": {
+        "description": "Lines of the published revision of each earlier period, of the kinds the tolerance policy allows to reverse, with what approved reversals already took back and what is left.",
+        "operationId": "ReconciliationV2Controller_reversible_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "-createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "SME R9: approved lines of the unit’s earlier periods (62 days) a reversal of this period may name, newest first (keyset)",
         "tags": [
           "v2 · Reconciliation and approval"
         ]
@@ -15272,6 +15461,160 @@
         "summary": "Revoke a grant",
         "tags": [
           "v2 · User scopes"
+        ]
+      }
+    },
+    "/api/v2/role-delegations": {
+      "get": {
+        "operationId": "RoleDelegationsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "-createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "`in_force`: started, not ended, not revoked (now)",
+            "schema": {
+              "default": "all",
+              "enum": [
+                "in_force",
+                "all"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delegations of approval roles in the acting plant, newest first (keyset)",
+        "tags": [
+          "v2 · Role delegations"
+        ]
+      },
+      "post": {
+        "description": "A plant administrator records a delegation for anyone, a holder of the role for themselves (403 DELEGATION_NOT_ALLOWED). 422: DELEGATOR_LACKS_ROLE (the delegator holds the role on the scope on their own), DELEGATE_NOT_MEMBER, SELF_DELEGATION, INVALID_INTERVAL, TOO_LONG (more than 90 days), ALREADY_ENDED, INVALID_SCOPE. While in force the delegate holds the role like a scope grant; separation of duties applies to the delegate.",
+        "operationId": "RoleDelegationsV2Controller_create_v2",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleDelegationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delegate an approval role for a limited time",
+        "tags": [
+          "v2 · Role delegations"
+        ]
+      }
+    },
+    "/api/v2/role-delegations/{id}/revoke": {
+      "post": {
+        "description": "409 DELEGATION_OVER when it is already revoked or over.",
+        "operationId": "RoleDelegationsV2Controller_revoke_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeRoleDelegationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "End a delegation early (the delegator, the delegate or a plant administrator)",
+        "tags": [
+          "v2 · Role delegations"
         ]
       }
     },
@@ -21095,6 +21438,25 @@
           "reason"
         ]
       },
+      "VerifyStopsV2Dto": {
+        "type": "object",
+        "properties": {
+          "eventIds": {
+            "maxItems": 1000,
+            "description": "Stops to verify (exclusive with periodId)",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "periodId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Bulk verify of a shift: every unverified stop overlapping the production period (exclusive with eventIds)"
+          }
+        }
+      },
       "CreateProductionEventV2Dto": {
         "type": "object",
         "properties": {
@@ -21249,6 +21611,10 @@
             "maxLength": 100,
             "nullable": true,
             "description": "SME D11: detection method"
+          },
+          "investigationPending": {
+            "type": "boolean",
+            "description": "SME D12: no specific reason yet — the stop is explicitly under investigation (meets the per-stop rule of the shift submission gate, not the coded-time target)"
           },
           "description": {
             "type": "object",
@@ -21451,6 +21817,10 @@
             "maxLength": 100,
             "nullable": true,
             "description": "SME D11: detection method"
+          },
+          "investigationPending": {
+            "type": "boolean",
+            "description": "SME D12: no specific reason yet — the stop is explicitly under investigation (meets the per-stop rule of the shift submission gate, not the coded-time target)"
           },
           "description": {
             "type": "object",
@@ -24005,7 +24375,8 @@
               "quality",
               "bridge",
               "gain",
-              "unaccounted_classified"
+              "unaccounted_classified",
+              "reversal"
             ],
             "description": "manual and replace lines"
           },
@@ -24089,6 +24460,11 @@
             "type": "string",
             "maxLength": 200,
             "description": "Reference of that record (work order, sample, tag, …)"
+          },
+          "reversesLineId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "SME R9: the approved line (published revision of an earlier period of the unit) a `reversal` line reverses; the reversal has the opposite sign and at most the quantity not yet reversed (422 REVERSAL_*)"
           }
         },
         "required": [
@@ -26281,6 +26657,82 @@
         },
         "required": [
           "role"
+        ]
+      },
+      "CreateRoleDelegationDto": {
+        "type": "object",
+        "properties": {
+          "delegatorId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Who hands the role over (holds it on the scope)"
+          },
+          "delegateId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Who holds it meanwhile (an active member of the plant)"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "manager_approver",
+              "production_accountant",
+              "finance_approver",
+              "quality_approver"
+            ]
+          },
+          "scopeKind": {
+            "type": "string",
+            "enum": [
+              "tenant",
+              "site",
+              "unit"
+            ]
+          },
+          "scopeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The plant (tenant), site or unit id"
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start (UTC, inclusive)"
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End (UTC, exclusive); at most 90 days after the start"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Why (e.g. leave, plant shutdown cover)"
+          }
+        },
+        "required": [
+          "delegatorId",
+          "delegateId",
+          "role",
+          "scopeKind",
+          "scopeId",
+          "validFrom",
+          "validUntil",
+          "reason"
+        ]
+      },
+      "RevokeRoleDelegationDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "TaskSummaryView": {
