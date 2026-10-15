@@ -9179,7 +9179,7 @@ export interface components {
              */
             delegateId: string;
             /** @enum {string} */
-            role: "manager_approver" | "production_accountant" | "finance_approver" | "quality_approver";
+            role: "manager_approver" | "production_accountant" | "finance_approver" | "quality_approver" | "metrology_approver";
             /** @enum {string} */
             scopeKind: "tenant" | "site" | "unit";
             /**

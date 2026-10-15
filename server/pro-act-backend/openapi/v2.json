@@ -28368,7 +28368,8 @@
               "manager_approver",
               "production_accountant",
               "finance_approver",
-              "quality_approver"
+              "quality_approver",
+              "metrology_approver"
             ]
           },
           "scopeKind": {

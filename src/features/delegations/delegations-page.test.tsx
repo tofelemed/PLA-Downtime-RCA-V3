@@ -60,6 +60,13 @@ describe('delegations page (SME R1 / R6)', () => {
     expect(screen.getByTestId('delegation-new')).toBeTruthy();
   });
 
+  it('a metrology approver may delegate their role (owner 15 Oct 2026)', async () => {
+    actAs('metrology_approver', 'metrology');
+    wrap(<DelegationsPage />);
+    await waitFor(() => expect(screen.getByText('Reza Deputy')).toBeTruthy());
+    expect(screen.getByTestId('delegation-new')).toBeTruthy();
+  });
+
   it('another member reads it but neither delegates nor revokes', async () => {
     actAs('production_engineer', 'someone');
     wrap(<DelegationsPage />);

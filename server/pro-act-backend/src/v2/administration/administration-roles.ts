@@ -38,4 +38,5 @@ export const DELEGATION_WRITERS = [
   'production_accountant',
   'finance_approver',
   'quality_approver',
+  'metrology_approver',
 ] as const;

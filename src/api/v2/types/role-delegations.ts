@@ -1,5 +1,5 @@
 /** SME R1 / R6 (backend `v2/administration/role-delegations`): time-boxed delegations of approval roles. */
-export type DelegableRole = 'manager_approver' | 'production_accountant' | 'finance_approver' | 'quality_approver';
+export type DelegableRole = 'manager_approver' | 'production_accountant' | 'finance_approver' | 'quality_approver' | 'metrology_approver';
 export type DelegationScopeKind = 'tenant' | 'site' | 'unit';
 
 export interface RoleDelegationView {

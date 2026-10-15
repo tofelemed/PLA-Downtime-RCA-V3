@@ -8,6 +8,7 @@ export const DELEGABLE_ROLES = [
   'production_accountant',
   'finance_approver',
   'quality_approver',
+  'metrology_approver',
 ] as const;
 export type DelegableRole = (typeof DELEGABLE_ROLES)[number];
 
@@ -29,7 +30,7 @@ export type DelegationScopeKind = (typeof DELEGATION_SCOPE_KINDS)[number];
 @Check('CHK_role_delegations_parties', '"delegate_id" <> "delegator_id"')
 @Check(
   'CHK_role_delegations_role',
-  `"role" IN ('manager_approver', 'production_accountant', 'finance_approver', 'quality_approver')`,
+  `"role" IN ('manager_approver', 'production_accountant', 'finance_approver', 'quality_approver', 'metrology_approver')`,
 )
 @Check(
   'CHK_role_delegations_scope_kind',

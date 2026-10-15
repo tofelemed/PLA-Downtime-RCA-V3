@@ -14,7 +14,7 @@ import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { roleLabel } from '@/features/ux-kit/labels/role-labels';
 import { useCalendarPreference } from '@/lib/dates';
 
-const DELEGABLE_ROLES: readonly DelegableRole[] = ['manager_approver', 'production_accountant', 'finance_approver', 'quality_approver'];
+const DELEGABLE_ROLES: readonly DelegableRole[] = ['manager_approver', 'production_accountant', 'finance_approver', 'quality_approver', 'metrology_approver'];
 
 export interface DelegationFormProps {
   /** a plant administrator records for anyone; a role holder only for themselves */
