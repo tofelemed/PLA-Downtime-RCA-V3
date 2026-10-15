@@ -1,4 +1,5 @@
 import { EntityManager, Not } from 'typeorm';
+import { requireUnitRole } from '../auth/roles/require-unit-role';
 import {
   AccountingRevision,
   RevisionLifecycle,
@@ -20,6 +21,7 @@ export async function periodInScope(
   manager: EntityManager,
   context: RequestContext,
   periodId: string,
+  requiredRoles?: readonly string[],
 ): Promise<ProductionPeriod> {
   const period = await scopedQuery(
     manager.getRepository(ProductionPeriod),
@@ -29,6 +31,8 @@ export async function periodInScope(
     .andWhere('p.id = :periodId', { periodId })
     .getOne();
   if (!period) throw notFound('Production period');
+  if (requiredRoles)
+    await requireUnitRole(manager, context, period.unitId, requiredRoles);
   return period;
 }
 

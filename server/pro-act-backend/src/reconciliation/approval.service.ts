@@ -6,6 +6,7 @@ import { RequestContext } from '../common/context/request-context';
 import { approvalConflict } from '../domain/reconciliation/separation-of-duties';
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
+import { REVISION_APPROVERS } from '../v2/periods/period-roles';
 import {
   invalidReference,
   invalidTransition,
@@ -181,7 +182,12 @@ export class ApprovalService {
     periodId: string,
     number: number,
   ): Promise<{ period: ProductionPeriod; revision: AccountingRevision }> {
-    const period = await periodInScope(manager, context, periodId);
+    const period = await periodInScope(
+      manager,
+      context,
+      periodId,
+      REVISION_APPROVERS,
+    );
     await lockPeriod(manager, period.id);
     const revision = await revisionNumbered(manager, period.id, number);
     if (revision.lifecycle !== 'in_review') {

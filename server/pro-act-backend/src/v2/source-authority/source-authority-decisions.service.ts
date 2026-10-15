@@ -1,6 +1,8 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { requireUnitRole } from '../../auth/roles/require-unit-role';
+import { requireTenantRole } from '../../auth/roles/require-tenant-role';
 import { appendAudit } from '../../common/audit/audit-trail';
 import {
   RequestContext,
@@ -17,6 +19,7 @@ import { assertTenantWideWriter } from '../../profiles/profile-scope';
 import { keysetPage } from '../common/keyset-page';
 import { listResponse, ListResponse } from '../common/response';
 import { SourceAuthorityVersionListQueryDto } from './source-authority-v2.dto';
+import { SOURCE_AUTHORITY_APPROVERS } from './source-authority-roles';
 import {
   lockScope,
   SOURCE_AUTHORITY_KIND,
@@ -167,7 +170,17 @@ export class SourceAuthorityDecisionsService {
     const tenantId = requireTenantId(context);
     return this.manager.transaction(async (manager) => {
       const found = await this.get(context, id, manager);
-      if (!found.unitId) assertTenantWideWriter(context, tenantId);
+      if (found.unitId) {
+        await requireUnitRole(
+          manager,
+          context,
+          found.unitId,
+          SOURCE_AUTHORITY_APPROVERS,
+        );
+      } else {
+        assertTenantWideWriter(context, tenantId);
+        requireTenantRole(context, SOURCE_AUTHORITY_APPROVERS);
+      }
       await lockScope(manager, tenantId, found.scopeKey);
       const draft = await manager.findOneByOrFail(AccountingPolicy, {
         id: found.id,

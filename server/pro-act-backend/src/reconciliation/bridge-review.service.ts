@@ -6,6 +6,7 @@ import { RequestContext } from '../common/context/request-context';
 import { approvalConflict } from '../domain/reconciliation/separation-of-duties';
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
 import { invalidTransition } from '../profiles/profile-errors';
+import { REVISION_APPROVERS } from '../v2/periods/period-roles';
 import { bridgeReviewOf } from './bridge-review';
 import { delegateDetail } from './delegate-detail';
 import {
@@ -46,7 +47,12 @@ export class BridgeReviewService {
   ): Promise<AccountingRevision> {
     const reviewer = requireUser(context);
     return this.dataSource.transaction(async (manager) => {
-      const period = await periodInScope(manager, context, periodId);
+      const period = await periodInScope(
+        manager,
+        context,
+        periodId,
+        REVISION_APPROVERS,
+      );
       await lockPeriod(manager, period.id);
       const revision = await revisionNumbered(
         manager,

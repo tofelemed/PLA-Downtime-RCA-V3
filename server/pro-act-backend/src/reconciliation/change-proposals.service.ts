@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { AccountingRevision } from '../accounting/entities/accounting-revision.entity';
+import { requireUnitRole } from '../auth/roles/require-unit-role';
 import { appendAudit } from '../common/audit/audit-trail';
 import { RequestContext } from '../common/context/request-context';
 import { scopedQuery } from '../common/query/scoped-query';
@@ -13,6 +14,7 @@ import {
 } from '../periods/period-restatement.port';
 import { SliceResolverService } from '../periods/slice-resolver.service';
 import { invalidTransition, notFound } from '../profiles/profile-errors';
+import { REVISION_APPROVERS } from '../v2/periods/period-roles';
 import { PeriodChangeProposal } from './entities/period-change-proposal.entity';
 import { LineSetWriter } from './line-set.writer';
 import {
@@ -161,6 +163,12 @@ export class ChangeProposalsService implements OnModuleInit {
       .setLock('pessimistic_write')
       .getOne();
     if (!proposal) throw notFound('Change proposal');
+    await requireUnitRole(
+      manager,
+      context,
+      proposal.unitId,
+      REVISION_APPROVERS,
+    );
     if (proposal.state !== 'open') {
       throw invalidTransition('change proposal', proposal.state, 'decided');
     }

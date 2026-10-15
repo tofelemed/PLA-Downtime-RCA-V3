@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { requireUnitRole } from '../../auth/roles/require-unit-role';
+import { requireTenantRole } from '../../auth/roles/require-tenant-role';
 import {
   RequestContext,
   requireTenantId,
@@ -16,6 +18,7 @@ import {
 import { invalid, invalidReference } from '../../profiles/profile-errors';
 import { assertTenantWideWriter } from '../../profiles/profile-scope';
 import { MeasurementHierarchyDto } from './source-authority-v2.dto';
+import { SOURCE_AUTHORITY_WRITERS } from './source-authority-roles';
 
 export const SOURCE_AUTHORITY_KIND = 'source_authority';
 /** No unit has this id: resolving with it reads the tenant-wide version only. */
@@ -72,9 +75,19 @@ export class SourceAuthorityV2Service {
     },
   ): Promise<AccountingPolicy> {
     const tenantId = requireTenantId(context);
-    if (!change.unitId) assertTenantWideWriter(context, tenantId);
+    if (!change.unitId) {
+      assertTenantWideWriter(context, tenantId);
+      requireTenantRole(context, SOURCE_AUTHORITY_WRITERS);
+    }
     return this.manager.transaction(async (manager) => {
       const base = await this.current(context, change.unitId, manager);
+      if (change.unitId)
+        await requireUnitRole(
+          manager,
+          context,
+          change.unitId,
+          SOURCE_AUTHORITY_WRITERS,
+        );
       const body = checked(
         withHierarchy(base.body, change.measurementHierarchy),
       );

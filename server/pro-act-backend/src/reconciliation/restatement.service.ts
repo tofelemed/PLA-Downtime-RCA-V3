@@ -11,6 +11,7 @@ import {
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { invalid } from '../profiles/profile-errors';
+import { POSTING_DECIDERS } from '../v2/close/close-roles';
 import {
   PostingTreatment,
   RestatementPosting,
@@ -71,7 +72,12 @@ export class RestatementService {
   ): Promise<Restatement> {
     const actor = requireUser(context);
     return this.dataSource.transaction(async (manager) => {
-      const period = await periodInScope(manager, context, periodId);
+      const period = await periodInScope(
+        manager,
+        context,
+        periodId,
+        POSTING_DECIDERS,
+      );
       await lockPeriod(manager, period.id);
       const current = await this.restatementOf(manager, period, revisionNumber);
       const values = {

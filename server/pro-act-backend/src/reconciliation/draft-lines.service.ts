@@ -33,8 +33,8 @@ import { contentHashOf } from './reviewed-content';
 import { saveIssues } from './save-issues';
 import { runChanged, workflowIssues } from './workflow-errors';
 import { actorOf, recordTransition } from './workflow-recorder';
-import { satisfiesRole } from '../auth/roles/role-model';
-import { BRIDGE_WRITERS } from '../v2/periods/period-roles';
+import { hasUnitRole } from '../auth/roles/require-unit-role';
+import { BRIDGE_WRITERS, PERIOD_WRITERS } from '../v2/periods/period-roles';
 import { assertManualLineRules } from './line-evidence-rules';
 import { checkReversals } from './reversal-references';
 import { assertBridgesWithinLimit } from './bridge-review';
@@ -69,8 +69,11 @@ export class DraftLinesService {
       assertRevision(state.revision.rowVersion, expectedVersion);
       const lines = await this.resolve(manager, state, command, {
         actorId,
-        mayBridge: BRIDGE_WRITERS.some((role) =>
-          satisfiesRole(context.roles, role),
+        mayBridge: await hasUnitRole(
+          manager,
+          context,
+          state.period.unitId,
+          BRIDGE_WRITERS,
         ),
       });
       const set = await this.writer.write(manager, {
@@ -95,7 +98,12 @@ export class DraftLinesService {
     periodId: string,
     command: DraftLinesCommand,
   ): Promise<RevisionState> {
-    const period = await periodInScope(manager, context, periodId);
+    const period = await periodInScope(
+      manager,
+      context,
+      periodId,
+      PERIOD_WRITERS,
+    );
     await lockPeriod(manager, period.id);
     const revision = await revisionNumbered(
       manager,

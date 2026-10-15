@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { closedMonthOf } from '../close/month-lock';
 import { RequestContext } from '../common/context/request-context';
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
+import { CORRECTION_PROPOSERS } from '../v2/periods/period-roles';
 import { PeriodChangeProposal } from './entities/period-change-proposal.entity';
 import { EvidenceType } from './line-evidence-rules';
 import { beforeOf, upsertProposal } from './proposal-writer';
@@ -84,7 +85,12 @@ export async function proposeCorrection(
   request: ManualProposalRequest,
   policies: AccountingPoliciesService,
 ): Promise<PeriodChangeProposal> {
-  const period = await periodInScope(manager, context, request.periodId);
+  const period = await periodInScope(
+    manager,
+    context,
+    request.periodId,
+    CORRECTION_PROPOSERS,
+  );
   await lockPeriod(manager, period.id);
   await closedMonthOf(manager, period);
   const approved = await publishedRevision(manager, period.id);

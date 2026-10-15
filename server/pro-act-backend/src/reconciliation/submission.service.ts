@@ -14,6 +14,7 @@ import {
 } from '../domain/reconciliation/tolerance';
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
 import { invalidTransition } from '../profiles/profile-errors';
+import { PERIOD_WRITERS } from '../v2/periods/period-roles';
 import { copyOf, LineDraft, LineSetWriter } from './line-set.writer';
 import {
   lockPeriod,
@@ -71,7 +72,12 @@ export class SubmissionService {
   ): Promise<AccountingRevision> {
     const submitter = requireUser(context);
     return this.dataSource.transaction(async (manager) => {
-      const period = await periodInScope(manager, context, periodId);
+      const period = await periodInScope(
+        manager,
+        context,
+        periodId,
+        PERIOD_WRITERS,
+      );
       await lockPeriod(manager, period.id);
       const revision = await revisionNumbered(
         manager,

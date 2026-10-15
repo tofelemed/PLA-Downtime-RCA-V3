@@ -5,6 +5,7 @@ import { AccountingRevision } from '../accounting/entities/accounting-revision.e
 import { RequestContext } from '../common/context/request-context';
 import { ActualsJobsService } from '../periods/actuals-jobs.service';
 import { invalidTransition } from '../profiles/profile-errors';
+import { PERIOD_WRITERS, REVISION_APPROVERS } from '../v2/periods/period-roles';
 import { LineSetWriter } from './line-set.writer';
 import {
   latestRevision,
@@ -43,7 +44,12 @@ export class RevisionLifecycleService {
   ): Promise<AccountingRevision> {
     requireUser(context);
     return this.dataSource.transaction(async (manager) => {
-      const period = await periodInScope(manager, context, periodId);
+      const period = await periodInScope(
+        manager,
+        context,
+        periodId,
+        REVISION_APPROVERS,
+      );
       await lockPeriod(manager, period.id);
       return reviseIn(
         manager,
@@ -61,7 +67,12 @@ export class RevisionLifecycleService {
   ): Promise<AccountingRevision> {
     requireUser(context);
     return this.dataSource.transaction(async (manager) => {
-      const period = await periodInScope(manager, context, periodId);
+      const period = await periodInScope(
+        manager,
+        context,
+        periodId,
+        PERIOD_WRITERS,
+      );
       await lockPeriod(manager, period.id);
       const revision = await revisionNumbered(
         manager,
@@ -87,7 +98,12 @@ export class RevisionLifecycleService {
     reason: string | null,
   ): Promise<void> {
     return this.dataSource.transaction(async (manager) => {
-      const period = await periodInScope(manager, context, periodId);
+      const period = await periodInScope(
+        manager,
+        context,
+        periodId,
+        PERIOD_WRITERS,
+      );
       await lockPeriod(manager, period.id);
       const revision = await latestRevision(manager, period.id);
       if (!revision || revision.lifecycle === 'approved') return;
