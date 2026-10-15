@@ -41,7 +41,13 @@ export function CloseSignOffs({ view }: { view: MonthCloseView }) {
         </ul>
         {view.state === 'locked' && (
           <p className="text-sm text-muted-foreground" data-testid="locked-note">
-            Approved periods of this month change only through a change proposal; the correction is marked “after close”.
+            Approved periods of this month change only through a change proposal; the correction is marked “after close”. Production
+            accounting or plant management propose one from the period page (“Propose a correction”); another approver decides it.
+          </p>
+        )}
+        {(view.state === 'quantities_closed' || view.state === 'finance_signed_off') && (
+          <p className="text-sm text-muted-foreground" data-testid="closing-note">
+            A correction can be proposed from the period page now; it is accepted after the month is reopened or locked.
           </p>
         )}
         <CloseActions view={view} />

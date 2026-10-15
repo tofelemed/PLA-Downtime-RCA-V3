@@ -151,12 +151,17 @@ async function saveProposal(
   draft: ProposalDraft,
   actor: Actor,
 ): Promise<PeriodChangeProposal> {
+  // a system change refreshing a manual proposal keeps what the user proposed (trigger, reason, evidence)
+  const manual: unknown = open?.detail?.manual;
   const values = {
-    trigger: draft.trigger,
+    trigger: open && manual ? open.trigger : draft.trigger,
     inputHash: draft.inputHash,
     before: draft.before,
     after: draft.after,
-    detail: draft.detail,
+    detail:
+      open && manual
+        ? { ...draft.detail, manual, systemTrigger: draft.trigger }
+        : draft.detail,
     affectedReports: await affectedReportsOf(manager, draft.approved.id),
     updatedBy: actor.userId,
   };

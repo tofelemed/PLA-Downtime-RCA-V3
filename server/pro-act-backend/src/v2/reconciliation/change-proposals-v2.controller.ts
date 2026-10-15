@@ -23,8 +23,14 @@ import { RequestContext } from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { ChangeProposalsService } from '../../reconciliation/change-proposals.service';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
-import { REVISION_APPROVERS } from '../periods/period-roles';
-import { ProposalDecisionDto } from './reconciliation-v2.dto';
+import {
+  CORRECTION_PROPOSERS,
+  REVISION_APPROVERS,
+} from '../periods/period-roles';
+import {
+  ManualProposalDto,
+  ProposalDecisionDto,
+} from './reconciliation-v2.dto';
 import { ReconciliationV2Service } from './reconciliation-v2.service';
 import {
   ChangeProposalV2View,
@@ -37,7 +43,7 @@ export interface ProposalDecisionV2View {
   revision: ReconciliationV2View | null;
 }
 
-/** Change proposals of approved periods (plan 2.8, WF04): read, accept (→ revise draft), dismiss. */
+/** Change proposals of approved periods (plan 2.8, WF04): propose (manual, SME R4), read, accept (→ revise draft), dismiss. */
 @ApiTags('v2 · Reconciliation and approval')
 @ApiBearerAuth()
 @UseGuards(TenantQueryParamGuard)
@@ -47,6 +53,26 @@ export class ChangeProposalsV2Controller {
     private readonly reads: ReconciliationV2Service,
     private readonly proposals: ChangeProposalsService,
   ) {}
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @Idempotent()
+  @Roles(...CORRECTION_PROPOSERS)
+  @ApiOperation({
+    summary:
+      'Propose a correction of an approved period of a closing or locked month (manual change proposal)',
+    description:
+      'Requires `Idempotency-Key`. Reason and evidence required; the proposer never decides it (403 SEPARATION_OF_DUTIES). ' +
+      '409 MONTH_OPEN (revise directly), PROPOSAL_OPEN, REVISION_MISMATCH, REVISION_OPEN; 404 out of scope.',
+  })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  async propose(
+    @Ctx() ctx: RequestContext,
+    @Body() body: ManualProposalDto,
+  ): Promise<ChangeProposalV2View> {
+    const created = await this.proposals.propose(ctx, body);
+    return this.reads.proposal(ctx, created.id);
+  }
 
   @Get(':id')
   @UseInterceptors(ETagInterceptor)

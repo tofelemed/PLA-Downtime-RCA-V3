@@ -44,6 +44,8 @@ export interface Capabilities {
    * accounting too, SME R1); adjustments stay with `canApprovePeriods`
    */
   canApproveRevisions: boolean;
+  /** SME R4: propose a correction of an approved period of a closing or locked month */
+  canProposeCorrections: boolean;
   /** SME R1 / R4 month close: plant management closes quantities, finance signs off and locks */
   canCloseMonthQuantities: boolean;
   canSignOffMonth: boolean;
@@ -53,6 +55,9 @@ export interface Capabilities {
   canDecidePosting: boolean;
   /** owner decision 14 Oct 2026 (SME R2): certify a production day (plant management) */
   canCertifyDay: boolean;
+  /** SME R13: draft source status mappings / approve them as the source owner (never the author) */
+  canWriteStatusMappings: boolean;
+  canApproveStatusMappings: boolean;
   /** bridge lines (SME R8: production accounting only) */
   canWriteBridges: boolean;
   /** SME E3: record lot dispositions and recovery movements (operators and production) */
@@ -111,12 +116,15 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canWritePeriods: may(ServerRoles.PERIOD_WRITERS),
     canApprovePeriods: may(ServerRoles.ADJUSTMENT_APPROVERS) && may(ServerRoles.REVISION_APPROVERS),
     canApproveRevisions: may(ServerRoles.REVISION_APPROVERS),
+    canProposeCorrections: may(ServerRoles.CORRECTION_PROPOSERS),
     canCloseMonthQuantities: may(ServerRoles.QUANTITY_CLOSERS),
     canSignOffMonth: may(ServerRoles.FINANCE_SIGNERS),
     canReviewMonthMateriality: may(ServerRoles.MATERIALITY_REVIEWERS),
     canReopenMonth: may(ServerRoles.MONTH_REOPENERS),
     canDecidePosting: may(ServerRoles.POSTING_DECIDERS),
     canCertifyDay: may(ServerRoles.DAY_CERTIFIERS),
+    canWriteStatusMappings: may(ServerRoles.STATUS_MAPPING_AUTHORS),
+    canApproveStatusMappings: may(ServerRoles.SOURCE_OWNERS),
     canWriteBridges: may(ServerRoles.BRIDGE_WRITERS),
     canWriteDispositions: may(ServerRoles.DISPOSITION_WRITERS),
     canApproveDispositions: may(ServerRoles.DISPOSITION_APPROVERS),

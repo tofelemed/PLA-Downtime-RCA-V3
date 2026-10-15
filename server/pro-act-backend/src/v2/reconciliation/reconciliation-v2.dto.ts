@@ -303,6 +303,43 @@ export class ProposalDecisionDto {
   reason: string;
 }
 
+/** SME R4: a user proposes a correction of an approved period of a closing or locked month. */
+export class ManualProposalDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  periodId: string;
+
+  @ApiProperty({
+    minimum: 1,
+    description: 'The published approved revision number to correct',
+  })
+  @IsInt()
+  @Min(1)
+  approvedRevision: number;
+
+  @ApiProperty({ description: 'What is wrong and what should change' })
+  @IsString()
+  @Matches(/\S/, { message: 'reason must not be blank' })
+  @Length(1, 2000)
+  reason: string;
+
+  @ApiProperty({
+    enum: EVIDENCE_TYPES,
+    description: 'The record the correction rests on',
+  })
+  @IsIn(EVIDENCE_TYPES)
+  evidenceType: EvidenceType;
+
+  @ApiProperty({
+    maxLength: 200,
+    description: 'Reference of that record (work order, sample, log entry, …)',
+  })
+  @IsString()
+  @Matches(/\S/, { message: 'evidenceRef must not be blank' })
+  @Length(1, 200)
+  evidenceRef: string;
+}
+
 export class RecomputeRequestDto {
   @ApiPropertyOptional({
     description:

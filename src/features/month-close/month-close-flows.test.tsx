@@ -138,4 +138,24 @@ describe('month close screen (SME R1 / R4)', () => {
     expect(post?.url.pathname).toMatch(/\/v2\/month-closes\/1405-07\/reopen$/);
     expect(post?.body).toEqual({ reason: 'Demo: late lab result' });
   });
+
+  it('a locked month lists a manual correction with its reason and a link to the period page', async () => {
+    actAs('finance_approver', 'finance-1');
+    const locked: MonthCloseView = {
+      ...VIEW,
+      state: 'locked',
+      prerequisites: {
+        ...VIEW.prerequisites,
+        openProposalCount: 1,
+        openProposals: [{ proposalId: 'cp-1', periodId: 'per-1', unitId: 'u1', localDate: '2026-10-20', trigger: 'manual_correction', planId: 'plan-1', manualReason: 'Demo: lab re-test', createdAt: '2026-10-27T06:00:00.000Z' }],
+      },
+    };
+    reply = () => json(200, locked);
+    renderPage();
+    const list = await screen.findByTestId('open-proposals');
+    expect(list.textContent).toContain('Correction proposed');
+    expect(list.textContent).toContain('Demo: lab re-test');
+    expect(list.querySelector('a')?.getAttribute('href')).toBe('/plans/plan-1/periods/per-1');
+    expect(screen.getByTestId('locked-note').textContent).toContain('Propose a correction');
+  });
 });

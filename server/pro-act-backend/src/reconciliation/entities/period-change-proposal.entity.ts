@@ -11,6 +11,8 @@ export const CHANGE_TRIGGERS = [
   'calendar_change',
   'source_retraction',
   'recalculation',
+  // a correction a user proposes for a period of a closing or locked month (SME R4)
+  'manual_correction',
 ] as const;
 export type ChangeTrigger = (typeof CHANGE_TRIGGERS)[number];
 

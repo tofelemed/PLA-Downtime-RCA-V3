@@ -27,6 +27,10 @@ export interface OpenProposalView {
   unitId: string;
   localDate: string;
   trigger: string;
+  /** the period's plan (link to the period page), null when none is selected */
+  planId: string | null;
+  /** SME R4: a manual correction's reason (null for a system proposal) */
+  manualReason: string | null;
   createdAt: string;
 }
 

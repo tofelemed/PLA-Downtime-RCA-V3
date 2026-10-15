@@ -1,4 +1,5 @@
-import type { MonthCloseView } from '@/api/v2/types/month-close';
+import { Link } from 'react-router-dom';
+import type { MonthCloseView, OpenProposalView } from '@/api/v2/types/month-close';
 import { Section } from '@/features/ux-kit/page-layout';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { PENDING_WORKFLOW_LABELS, PROPOSAL_TRIGGER_LABELS } from '../model/close-labels';
@@ -24,6 +25,16 @@ function PendingPeriods({ view }: { view: MonthCloseView }) {
   );
 }
 
+/** The proposal's period page, where it is accepted or dismissed (plain text when the period has no plan). */
+function ProposalLabel({ p, text }: { p: OpenProposalView; text: string }) {
+  if (!p.planId) return <>{text}</>;
+  return (
+    <Link className="underline underline-offset-2" to={`/plans/${p.planId}/periods/${p.periodId}`}>
+      {text}
+    </Link>
+  );
+}
+
 function OpenProposals({ view }: { view: MonthCloseView }) {
   const pref = useCalendarPreference();
   const { openProposals, openProposalCount } = view.prerequisites;
@@ -36,8 +47,9 @@ function OpenProposals({ view }: { view: MonthCloseView }) {
       </p>
       <ul className="space-y-0.5 text-sm" data-testid="open-proposals">
         {openProposals.map((p) => (
-          <li key={p.proposalId}>
-            {formatOperationalDate(p.localDate, pref)} — {PROPOSAL_TRIGGER_LABELS[p.trigger] ?? p.trigger}
+          <li key={p.proposalId} data-trigger={p.trigger}>
+            <ProposalLabel p={p} text={`${formatOperationalDate(p.localDate, pref)} — ${PROPOSAL_TRIGGER_LABELS[p.trigger] ?? p.trigger}`} />
+            {p.manualReason ? `: ${p.manualReason}` : ''}
           </li>
         ))}
       </ul>

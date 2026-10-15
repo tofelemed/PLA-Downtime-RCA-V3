@@ -20,6 +20,10 @@ export interface OpenProposal {
   unitId: string;
   localDate: string;
   trigger: string;
+  /** the plan the period belongs to (for a link to the period page), when selected */
+  planId: string | null;
+  /** SME R4: a manual correction's reason (null for a system proposal) */
+  manualReason: string | null;
   createdAt: string;
 }
 
@@ -121,10 +125,17 @@ async function openProposals(
     `SELECT count(*)::int AS "count" ${OPEN_PROPOSALS}`,
     paramsOf(month),
   );
-  const rows: Array<Record<string, string>> = count
+  const rows: Array<
+    Record<string, string> & {
+      plan_id: string | null;
+      manual_reason: string | null;
+    }
+  > = count
     ? await manager.query(
         `SELECT cp."id", cp."period_id", cp."unit_id", to_char(p."local_date", 'YYYY-MM-DD') AS "local_date",
-                cp."trigger"::text AS "trigger", cp."created_at"
+                cp."trigger"::text AS "trigger", cp."created_at",
+                (SELECT pv."plan_id"::text FROM "plan_versions" pv WHERE pv."id" = p."selected_plan_version_id") AS "plan_id",
+                cp."detail" -> 'manual' ->> 'reason' AS "manual_reason"
            ${OPEN_PROPOSALS} ORDER BY cp."created_at", cp."id" LIMIT ${PREREQUISITE_LIST_LIMIT}`,
         paramsOf(month),
       )
@@ -137,6 +148,8 @@ async function openProposals(
       unitId: r.unit_id,
       localDate: r.local_date,
       trigger: r.trigger,
+      planId: r.plan_id,
+      manualReason: r.manual_reason,
       createdAt: new Date(r.created_at).toISOString(),
     })),
   };

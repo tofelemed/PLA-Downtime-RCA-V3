@@ -15,6 +15,11 @@ import { SliceResolverService } from '../periods/slice-resolver.service';
 import { invalidTransition, notFound } from '../profiles/profile-errors';
 import { PeriodChangeProposal } from './entities/period-change-proposal.entity';
 import { LineSetWriter } from './line-set.writer';
+import {
+  assertNotProposer,
+  ManualProposalRequest,
+  proposeCorrection,
+} from './manual-proposal';
 import { beforeOf, upsertProposal } from './proposal-writer';
 import {
   lockPeriod,
@@ -60,9 +65,10 @@ export class ChangeProposalsService implements OnModuleInit {
     proposalId: string,
     reason: string,
   ): Promise<ProposalDecision> {
-    requireUser(context);
+    const actor = requireUser(context);
     return this.dataSource.transaction(async (manager) => {
       const proposal = await this.open(manager, context, proposalId);
+      assertNotProposer(proposal, actor);
       const period = await periodInScope(manager, context, proposal.periodId);
       await lockPeriod(manager, period.id);
       const approved = await manager.findOneByOrFail(AccountingRevision, {
@@ -89,6 +95,22 @@ export class ChangeProposalsService implements OnModuleInit {
     });
   }
 
+  /** A manual change proposal of a closing or locked month's approved period (SME R4). */
+  propose(
+    context: RequestContext,
+    request: ManualProposalRequest,
+  ): Promise<PeriodChangeProposal> {
+    const userId = requireUser(context);
+    return this.dataSource.transaction((manager) =>
+      proposeCorrection(
+        manager,
+        { ...context, userId },
+        request,
+        this.policies,
+      ),
+    );
+  }
+
   dismiss(
     context: RequestContext,
     proposalId: string,
@@ -97,6 +119,7 @@ export class ChangeProposalsService implements OnModuleInit {
     const actor = requireUser(context);
     return this.dataSource.transaction(async (manager) => {
       const proposal = await this.open(manager, context, proposalId);
+      assertNotProposer(proposal, actor);
       await manager.update(PeriodChangeProposal, proposal.id, {
         state: 'dismissed',
         resolvedBy: actor,

@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { v2Request } from '../client';
 import { ifMatchOf } from '../etag-cache';
 import type { JobAccepted } from '../types/envelopes';
-import type { DraftLineInput, ReconciliationView } from '../types/reconciliation';
+import type { ChangeProposalView, DraftLineInput, EvidenceType, ReconciliationView } from '../types/reconciliation';
 import { invalidateForChange, type ChangeNotice } from './invalidation';
 import { useV2Command } from './use-v2-command';
 import { useV2TenantId } from './use-v2-tenant';
@@ -144,6 +144,21 @@ export interface ProposalDecisionInput {
 export function useProposalDecision() {
   return usePeriodCommand<ProposalDecisionInput, unknown>(({ proposalId, decision, reason }, key) =>
     post(`/period-change-proposals/${proposalId}/${decision}`, { reason }, key),
+  );
+}
+
+export interface ProposeCorrectionInput {
+  period: PeriodRef;
+  approvedRevision: number;
+  reason: string;
+  evidenceType: EvidenceType;
+  evidenceRef: string;
+}
+
+/** SME R4: a manual change proposal of an approved period of a closing or locked month. */
+export function useProposeCorrection() {
+  return usePeriodCommand<ProposeCorrectionInput, ChangeProposalView>(({ period, ...body }, key) =>
+    post('/period-change-proposals', { periodId: period.periodId, ...body }, key),
   );
 }
 

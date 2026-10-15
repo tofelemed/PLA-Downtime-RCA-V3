@@ -5,6 +5,10 @@ import {
   AffectedReport,
   PeriodChangeProposal,
 } from '../../reconciliation/entities/period-change-proposal.entity';
+import {
+  ManualProposalDetail,
+  manualDetailOf,
+} from '../../reconciliation/manual-proposal';
 import { RevisionState } from '../../reconciliation/revision-state';
 import {
   candidatesPart,
@@ -222,6 +226,8 @@ export interface ChangeProposalV2View {
   resolvedAt: string | null;
   resolutionReason: string | null;
   createdRevisionId: string | null;
+  /** SME R4: who proposed a manual correction, its reason and evidence (null for a system proposal) */
+  manual: ManualProposalDetail | null;
   createdAt: string;
   updatedAt: string;
   rowVersion: number;
@@ -244,6 +250,7 @@ export function toProposalView(p: PeriodChangeProposal): ChangeProposalV2View {
     resolvedAt: iso(p.resolvedAt),
     resolutionReason: p.resolutionReason,
     createdRevisionId: p.createdRevisionId,
+    manual: manualDetailOf(p),
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
     rowVersion: p.rowVersion,

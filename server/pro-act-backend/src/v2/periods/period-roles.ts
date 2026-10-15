@@ -30,6 +30,15 @@ export const REVISION_APPROVERS = [
 ] as const;
 
 /**
+ * SME R4 (Area 3 leftover): production accounting and plant management propose a correction of an approved
+ * period of a closing or locked month; `REVISION_APPROVERS` other than the proposer decide it.
+ */
+export const CORRECTION_PROPOSERS = [
+  'production_accountant',
+  'manager_approver',
+] as const;
+
+/**
  * SME R8 (14 Oct 2026): manual bridge lines close a gap without naming a loss, so only production
  * accounting enters them (422 BRIDGE_NOT_ALLOWED for other writers).
  */

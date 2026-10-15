@@ -20,6 +20,8 @@ export const PERIOD_WRITERS = ['production_engineer', 'production_accountant', '
 export const ADJUSTMENT_APPROVERS = ['manager_approver'] as const;
 export const REVISION_APPROVERS = ['manager_approver', 'production_accountant'] as const;
 export const BRIDGE_WRITERS = ['production_accountant'] as const;
+/** SME R4: a manual change proposal of a closing or locked month */
+export const CORRECTION_PROPOSERS = ['production_accountant', 'manager_approver'] as const;
 
 /** v2/quality-dispositions/disposition-roles.ts (SME E3 lot dispositions) */
 export const DISPOSITION_WRITERS = ['operator', 'production_engineer', 'production_accountant', 'manager_approver', 'quality_approver'] as const;
@@ -51,6 +53,9 @@ export const MONTH_REOPENERS = ['manager_approver', 'finance_approver'] as const
 export const POSTING_DECIDERS = ['finance_approver'] as const;
 /** owner decision 14 Oct 2026 (SME R2): plant management certifies a production day */
 export const DAY_CERTIFIERS = ['manager_approver'] as const;
+/** SME R13: source status mappings are drafted by maintainers and approved by the source owner */
+export const STATUS_MAPPING_AUTHORS = ['integration_admin', 'production_accountant'] as const;
+export const SOURCE_OWNERS = ['production_accountant'] as const;
 
 /** v2/rca-policies/rca-policies-v2.controller.ts (`@Roles` on the write) */
 export const RCA_POLICY_WRITERS = ['manager_approver'] as const;

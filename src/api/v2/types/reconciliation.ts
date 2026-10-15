@@ -184,7 +184,16 @@ export interface ChangeProposalView {
   resolvedAt: string | null;
   resolutionReason: string | null;
   createdRevisionId: string | null;
+  /** SME R4: who proposed a manual correction, its reason and evidence (null for a system proposal) */
+  manual: ManualProposalDetail | null;
   createdAt: string;
   updatedAt: string;
   rowVersion: number;
+}
+
+export interface ManualProposalDetail {
+  proposedBy: string;
+  reason: string;
+  evidenceType: EvidenceType;
+  evidenceRef: string;
 }

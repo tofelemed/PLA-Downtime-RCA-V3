@@ -35,6 +35,7 @@ export const PROPOSAL_TRIGGER_LABELS: Record<string, string> = {
   calendar_change: 'Calendar changed',
   source_retraction: 'Source record withdrawn',
   recalculation: 'Recalculated',
+  manual_correction: 'Correction proposed',
 };
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];

@@ -41,6 +41,26 @@ export function monthCloseOn(
 }
 
 /**
+ * A manual change proposal is the correction path of a closed month only (SME R4): the month of the period
+ * must be closing or locked (409 MONTH_OPEN otherwise — an open month's period is revised directly).
+ */
+export async function closedMonthOf(
+  manager: EntityManager,
+  period: { tenantId: string; localDate: string },
+): Promise<MonthClose> {
+  await lockMonthCloses(manager, period.tenantId, 'shared');
+  const close = await monthCloseOn(manager, period.tenantId, period.localDate);
+  if (!close || close.state === 'open') {
+    throw new ConflictException({
+      code: 'MONTH_OPEN',
+      message:
+        'the month of this period is open; revise the period directly instead of proposing a correction',
+    });
+  }
+  return close;
+}
+
+/**
  * SME R4: approved periods of a closing month (quantities closed or finance signed off) do not change —
  * 409 MONTH_CLOSING, reopen the month first; those of a locked month change only through a change
  * proposal (409 MONTH_LOCKED for a direct revise), and the correction is marked `afterClose`.
