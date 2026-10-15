@@ -32,12 +32,14 @@ export const VIEW_LABELS: Readonly<Record<TotalsView, string>> = {
 };
 
 /**
+ * 2.8.1: SME R9 — a reversal line carries the reversed line's approved value with the opposite sign (same
+ * views, currencies and FX as approved), never re-priced (`reversal-valuation.ts`).
  * 2.8.0: SME V2 remainder — yield loss on rework (lost share valued like scrap; recorded recovery
  * movements first, the approved rework yield only where recovery is not recorded) and the contribution
  * displaced at a demand-constrained unit by rework time. 2.7.0: SME V7 provisional FX rates and the E3
  * line quality-class disposition.
  */
-export const VALUATION_ENGINE_VERSION = '2.8.0';
+export const VALUATION_ENGINE_VERSION = '2.8.1';
 
 /** SME V5: FX rate tables per purpose (never a market label such as "NIMA"; the source says where from). */
 export const FX_RATE_TYPES = ['economic', 'group_reporting', 'budget'] as const;

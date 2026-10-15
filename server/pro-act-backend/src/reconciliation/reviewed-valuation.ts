@@ -208,6 +208,9 @@ function reconcile(
         uom: l.uom,
         impactCodeId: l.impactCodeId,
         ...(hours?.has(l.id) ? { hours: hours.get(l.id) } : {}),
+        ...(l.kind === 'reversal' && l.reversesLineId
+          ? { reversed: state.reversedValues?.get(l.reversesLineId) ?? null }
+          : {}),
       })),
     slices: state.slices.map((s) => ({
       sliceId: s.id,

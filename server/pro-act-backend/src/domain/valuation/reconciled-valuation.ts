@@ -3,7 +3,12 @@ import { Dec } from '../actuals/decimal';
 import { CandidateState } from '../reconciliation/reconciliation.types';
 import { unvaluedView } from './currency-amounts';
 import { ManualHours } from './manual-line-hours';
-import { valueLine } from './value-line';
+import {
+  reversalValuation,
+  ReversedLineValue,
+  valuesReversalsAtApprovedValue,
+} from './reversal-valuation';
+import { valueLine, viewsOf } from './value-line';
 import {
   LineValuation,
   LineViewValuation,
@@ -47,6 +52,8 @@ export interface ReconciledOwnLine {
   impactCodeId: string | null;
   /** SME V4 (policy v3): verified hours of a manual downtime line, or why it has none */
   hours?: ManualHours;
+  /** SME R9: the approved line a `reversal` line reverses with its approved value; null = not found */
+  reversed?: ReversedLineValue | null;
 }
 
 export interface ReconciledSlice {
@@ -119,6 +126,12 @@ function ownLine(
 ): ReconciledLine | null {
   const slice = slices.get(line.sliceId);
   if (!slice || !line.kind || !line.quantity) return null;
+  if (
+    line.kind === 'reversal' &&
+    valuesReversalsAtApprovedValue(context.engineVersion)
+  ) {
+    return reversalLine(line, line.quantity, slice, context);
+  }
   const hours = line.hours;
   const valuation = valueLine(
     {
@@ -147,6 +160,40 @@ function ownLine(
     kind: line.kind,
     quantity: line.quantity,
     valuation,
+  };
+}
+
+/** SME R9 (2.8.1): a reversal carries the reversed line's approved value, opposite sign, never re-priced. */
+function reversalLine(
+  line: ReconciledOwnLine,
+  quantity: Dec,
+  slice: ReconciledSlice,
+  context: ValuationContext,
+): ReconciledLine {
+  const fallback = {
+    views: viewsOf(
+      {
+        kind: 'reversal',
+        quantity,
+        uom: line.uom ?? slice.uom,
+        start: slice.start,
+        end: slice.start,
+        seconds: null,
+        profileId: slice.profileId,
+        impactCodeId: line.impactCodeId,
+      },
+      context.policy,
+    ),
+    currencies: context.policy.currencies,
+    date: slice.start,
+  };
+  return {
+    source: 'line',
+    id: line.id,
+    sliceId: line.sliceId,
+    kind: 'reversal',
+    quantity,
+    valuation: reversalValuation(quantity, line.reversed ?? null, fallback),
   };
 }
 

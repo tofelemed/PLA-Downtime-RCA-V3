@@ -172,8 +172,8 @@ const parts = (view: LineViewValuation) =>
   view.components.map((c) => [c.component, str(c.quantity), str(c.amount)]);
 
 describe('SME V2 yield loss on rework (engine 2.8.0)', () => {
-  it('engine version is 2.8.0', () => {
-    expect(VALUATION_ENGINE_VERSION).toBe('2.8.0');
+  it('engine version is 2.8.1 (2.8.0 yield loss, 2.8.1 SME R9 reversals)', () => {
+    expect(VALUATION_ENGINE_VERSION).toBe('2.8.1');
   });
 
   it('no recovery recorded: the approved 0.9 yield loses 1 t valued like scrap; rework time displaces 10 t: $4,570', () => {
@@ -328,7 +328,7 @@ describe('SME V2 yield loss on rework (engine 2.8.0)', () => {
     const ctx = context();
     const valuation = valueLine(REWORK, ctx);
     const stored = storeLineValuation(valuation, ctx.policy, ctx.engineVersion);
-    expect(stored.engineVersion).toBe('2.8.0');
+    expect(stored.engineVersion).toBe(VALUATION_ENGINE_VERSION);
     const loaded = loadLineValuation(stored);
     const view = loaded?.views.find((v) => v.view === 'economic_impact');
     expect(view?.components.map((c) => c.component)).toContain(
