@@ -61,7 +61,10 @@ export class SourceAuthorityDecisionsService {
       context,
       unitProperty: 'unitId',
     }).andWhere('p.policyKind = :kind', { kind: SOURCE_AUTHORITY_KIND });
-    if (query.unitId) qb.andWhere('p.unitId = :unitId', query);
+    if (query.unitId && query.includeTenantWide)
+      qb.andWhere('(p.unitId = :unitId OR p.unitId IS NULL)', query);
+    else if (query.unitId) qb.andWhere('p.unitId = :unitId', query);
+    else if (query.includeTenantWide) qb.andWhere('p.unitId IS NULL');
     if (query.state === 'proposed')
       qb.andWhere('p.approvedAt IS NULL AND p.rejectedAt IS NULL');
     if (query.state === 'approved') qb.andWhere('p.approvedAt IS NOT NULL');

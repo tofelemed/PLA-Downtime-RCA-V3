@@ -12978,6 +12978,8 @@ export interface operations {
                 to?: string;
                 /** @description Versions of this unit only; absent = every scope the caller sees */
                 unitId?: string;
+                /** @description With unitId: the plant-wide versions as well (unitId null); alone: only the plant-wide versions */
+                includeTenantWide?: boolean;
                 state?: "proposed" | "approved" | "rejected";
             };
             header?: never;

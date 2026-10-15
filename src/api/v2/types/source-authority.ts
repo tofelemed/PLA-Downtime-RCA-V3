@@ -6,12 +6,20 @@
  */
 export type SourceAuthorityVersionState = 'proposed' | 'approved' | 'rejected';
 
+/** How a record at another boundary is brought to the slice boundary (SME E7). */
+export interface BoundaryAdjustmentView {
+  inventoryChangeAccounted: boolean;
+  lagSeconds: number;
+  evidenceRef: string;
+}
+
 export interface SourceHierarchyEntry {
   rank: number;
   sourceClass: string | null;
   source: string;
   signalSourceKey: string | null;
   boundary: string | null;
+  boundaryAdjustment?: BoundaryAdjustmentView | null;
 }
 
 export interface SourceAuthorityPolicyView {
@@ -52,4 +60,23 @@ export interface SourceAuthorityVersionView {
   rejectionReason: string | null;
   notes: string | null;
   policy: SourceAuthorityPolicyView;
+}
+
+/** `POST /source-authority/versions` (SourceAuthorityVersionDto): only declared fields. */
+export interface SourceAuthorityDraftBody {
+  /** absent = the plant-wide version */
+  unitId?: string;
+  measurementHierarchy: {
+    boundary: string;
+    conditions: string[];
+    entries: Array<{
+      rank: number;
+      sourceClass: string;
+      source: string;
+      signalSourceKey: string | null;
+      boundary: string;
+      boundaryAdjustment: BoundaryAdjustmentView | null;
+    }>;
+  } | null;
+  notes?: string;
 }

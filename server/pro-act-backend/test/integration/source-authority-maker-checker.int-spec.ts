@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { ActualsWorld } from './support/actuals-world';
 import { ApiError } from './support/plan-world';
+import { signToken } from './support/test-app';
 
 interface VersionBody {
   id: string;
@@ -159,5 +160,45 @@ describe('source authority maker-checker (owner, 15 Oct 2026)', () => {
     expect(ended.inForce).toBe(false);
     expect(ended.effectiveTo).not.toBeNull();
     expect((await inForce()).policyId).toBe(next.id);
+  });
+
+  it('a plant-wide draft is listed with the unit and approved by plant-wide production accounting', async () => {
+    const plantWide = (role: string) =>
+      signToken(env.app, {
+        userId: randomUUID(),
+        tenantId: env.world.tenantA,
+        role,
+      });
+    const author = plantWide('integration_admin');
+    const approver = plantWide('production_accountant');
+    const body = { ...hierarchy('FT-200.TOT'), unitId: undefined };
+    const unitOnly = await env
+      .post('source-authority/versions', body, integration)
+      .set('Idempotency-Key', randomUUID())
+      .expect(403);
+    expect((unitOnly.body as ApiError).code).toBe('TENANT_SCOPE_REQUIRED');
+    const proposed = (
+      await env
+        .post('source-authority/versions', body, author)
+        .set('Idempotency-Key', randomUUID())
+        .expect(201)
+    ).body as VersionBody & { unitId: string | null };
+    expect(proposed.unitId).toBeNull();
+    const listed = (
+      await env
+        .get(
+          `source-authority/versions?unitId=${env.world.unitA3}&includeTenantWide=true&state=proposed`,
+          approver,
+        )
+        .expect(200)
+    ).body as { items: Array<VersionBody & { unitId: string | null }> };
+    expect(listed.items.map((item) => item.id)).toContain(proposed.id);
+    const unitList = (
+      await env
+        .get(`source-authority/versions?unitId=${env.world.unitA3}`, approver)
+        .expect(200)
+    ).body as { items: VersionBody[] };
+    expect(unitList.items.map((item) => item.id)).not.toContain(proposed.id);
+    await decide(proposed.id, 'approve', approver).expect(200);
   });
 });
