@@ -75,6 +75,14 @@ export const createRule = (plant: PlantKey, expect: ProbeExpectation) =>
   create('POST rule', '/api/v2/rules', plant, expect);
 export const createPolicy = (plant: PlantKey, expect: ProbeExpectation) =>
   create('POST valuation policy', '/api/v2/valuation-policies', plant, expect);
+/** Quality / Lab decision on a disposition no plant has: guards pass → 4xx, never a write. */
+export const approveDisposition = (plant: PlantKey, expect: ProbeExpectation) =>
+  create(
+    'POST approve lot disposition',
+    '/api/v2/lot-dispositions/00000000-0000-4000-8000-000000000000/approve',
+    plant,
+    expect,
+  );
 export const approvePolicy = (plant: PlantKey, expect: ProbeExpectation) =>
   create(
     'POST approve valuation policy',

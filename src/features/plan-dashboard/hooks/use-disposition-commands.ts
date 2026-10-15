@@ -25,7 +25,7 @@ export function useProposeDisposition() {
   return useV2Command<DispositionProposal, LotDispositionView>({ run: ({ input, idempotencyKey }) => post('/lot-dispositions', input, idempotencyKey), changes });
 }
 
-/** A manager approver who is not the author approves (the periods are recalculated) or rejects with a reason. */
+/** A Quality / Lab approver who is not the author approves (the periods are recalculated) or rejects with a reason. */
 export function useDecideDisposition(decision: 'approve' | 'reject') {
   const changes = usePeriodNotice();
   return useV2Command<DispositionDecision, LotDispositionView>({

@@ -6,7 +6,7 @@ import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { useDecideDisposition } from '../hooks/use-disposition-commands';
 import { ReasonConfirm } from '../workflow/reason-confirm';
 
-/** Approve or reject a proposed lot disposition: manager approvers only, never its author. */
+/** Approve or reject a proposed lot disposition: Quality / Lab approvers only, never its author. */
 export function DispositionActions({ disposition }: { disposition: LotDispositionView }) {
   const approve = useDecideDisposition('approve');
   const reject = useDecideDisposition('reject');

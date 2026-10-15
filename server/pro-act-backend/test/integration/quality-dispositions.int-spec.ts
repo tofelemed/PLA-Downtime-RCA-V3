@@ -31,12 +31,16 @@ interface DispositionBody {
  * interval — 300 t made in shift A with 15 t downgraded is 285 t first-pass good and one downgrade quality
  * line — and a recovery of 10 t reprocessed through the meter in shift B is recovered output, not new gross,
  * while shift A keeps its first-pass defect. A quality_loss event names its disposition class.
+ * Only a Quality / Lab approver (`quality_approver`, ISO 9001 owner decision) who is not the author decides.
  */
 describe('lot dispositions and the good-output boundary (SME E3)', () => {
   const env = new AccountingWorld();
   let periodA = '';
   let periodB = '';
   let downgradeId = '';
+  /** Quality / Lab approvers of unit A1: `quality` decides; `lab` records one of its own. */
+  let quality = '';
+  let lab = '';
 
   const body = (extra: Record<string, unknown> = {}) => ({
     unitId: env.world.unitA1,
@@ -51,16 +55,19 @@ describe('lot dispositions and the good-output boundary (SME E3)', () => {
     evidenceRef: 'LIMS-0301-A',
     ...extra,
   });
-  const propose = async (extra: Record<string, unknown> = {}) =>
+  const propose = async (
+    extra: Record<string, unknown> = {},
+    token = env.admin,
+  ) =>
     (
       await env
-        .post('lot-dispositions', body(extra))
+        .post('lot-dispositions', body(extra), token)
         .set('Idempotency-Key', randomUUID())
         .expect(201)
     ).body as DispositionBody;
   const approve = (id: string) =>
     env
-      .post(`lot-dispositions/${id}/approve`, {}, env.approver)
+      .post(`lot-dispositions/${id}/approve`, {}, quality)
       .set('Idempotency-Key', randomUUID());
   const refused = async (extra: Record<string, unknown>) =>
     (
@@ -84,6 +91,8 @@ describe('lot dispositions and the good-output boundary (SME E3)', () => {
 
   beforeAll(async () => {
     await env.start();
+    quality = await env.unitUser(env.world.unitA1, 'quality_approver');
+    lab = await env.unitUser(env.world.unitA1, 'quality_approver');
     await env.approvedPlan(env.world.unitA1);
     await env.materialize([env.world.unitA1]);
     periodA = await env.periodId(env.world.unitA1, A);
@@ -98,11 +107,13 @@ describe('lot dispositions and the good-output boundary (SME E3)', () => {
     const proposed = await propose();
     downgradeId = proposed.id;
     expect(proposed).toMatchObject({ state: 'proposed', quantity: '15' });
-    const own = await env
-      .post(`lot-dispositions/${downgradeId}/approve`, {})
-      .set('Idempotency-Key', randomUUID())
-      .expect(403);
-    expect((own.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
+    for (const manager of [env.admin, env.approver]) {
+      const refusedRole = await env
+        .post(`lot-dispositions/${downgradeId}/approve`, {}, manager)
+        .set('Idempotency-Key', randomUUID())
+        .expect(403);
+      expect((refusedRole.body as ApiError).code).toBe('FORBIDDEN_ROLE');
+    }
     await approve(downgradeId).expect(200);
     await env.settle();
     const result = await actuals(periodA);
@@ -147,11 +158,7 @@ describe('lot dispositions and the good-output boundary (SME E3)', () => {
       'INVALID_REFERENCE',
     );
     await env
-      .post(
-        `lot-dispositions/${scrap.id}/reject`,
-        { reason: 'twice' },
-        env.approver,
-      )
+      .post(`lot-dispositions/${scrap.id}/reject`, { reason: 'twice' }, quality)
       .set('Idempotency-Key', randomUUID())
       .expect(409);
   });
@@ -246,5 +253,26 @@ describe('lot dispositions and the good-output boundary (SME E3)', () => {
     expect(lines.find((l) => l.causeEventId === id)?.flags).toContain(
       'quality_class:scrap',
     );
+  });
+
+  it('a quality approver records a disposition but never decides it; another quality approver does', async () => {
+    const own = await propose(
+      { dispositionClass: 'scrap', quantity: '1' },
+      lab,
+    );
+    const self = await env
+      .post(`lot-dispositions/${own.id}/approve`, {}, lab)
+      .set('Idempotency-Key', randomUUID())
+      .expect(403);
+    expect((self.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
+    const rejected = await env
+      .post(
+        `lot-dispositions/${own.id}/reject`,
+        { reason: 'lab retest' },
+        quality,
+      )
+      .set('Idempotency-Key', randomUUID())
+      .expect(200);
+    expect(rejected.body).toMatchObject({ state: 'rejected' });
   });
 });

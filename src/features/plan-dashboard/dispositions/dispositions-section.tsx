@@ -54,7 +54,7 @@ export function DispositionsSection({ planId, periodId, timezone }: Dispositions
     </Button>
   );
   return (
-    <Section title="Product dispositions" headingLevel={3} actions={record || undefined} description="Lab and quality decisions on the lots made in this period; they count once a manager approver approves them.">
+    <Section title="Product dispositions" headingLevel={3} actions={record || undefined} description="Lab and quality decisions on the lots made in this period; they count once a Quality / Lab approver approves them.">
       <div data-testid="dispositions">
         <DataTable
           caption="Product dispositions"

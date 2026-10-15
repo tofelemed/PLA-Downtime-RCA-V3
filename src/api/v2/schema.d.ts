@@ -2308,8 +2308,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Approve a proposed disposition (independent approver); the periods of its production interval are recalculated
-         * @description Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 RECOVERY_EXCEEDS_DISPOSITION / INVALID_SUPERSEDE when the linked disposition changed since.
+         * Approve a proposed disposition (Quality / Lab approver, never the author); the periods of its production interval are recalculated
+         * @description Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 RECOVERY_EXCEEDS_DISPOSITION / INVALID_SUPERSEDE when the linked disposition changed since.
          */
         post: operations["LotDispositionsV2Controller_approve_v2"];
         delete?: never;
@@ -2328,8 +2328,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reject a proposed disposition with a reason (independent approver)
-         * @description Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.
+         * Reject a proposed disposition with a reason (Quality / Lab approver, never the author)
+         * @description Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.
          */
         post: operations["LotDispositionsV2Controller_reject_v2"];
         delete?: never;
@@ -7603,7 +7603,7 @@ export interface components {
             /** @description Exact e-mail of a user of the plant's organization (instead of `userId`) */
             email?: string;
             /** @enum {string} */
-            role: "manager_approver" | "production_accountant" | "finance_approver" | "finance_maintainer" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
+            role: "manager_approver" | "production_accountant" | "quality_approver" | "finance_approver" | "finance_maintainer" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
             /** @description Limit the grant to this unit of the plant (omit for the whole plant) */
             unitId?: string;
         };

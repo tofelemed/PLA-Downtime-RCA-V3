@@ -3,7 +3,8 @@
  * lot, a melt-index downgrade, a contaminated purge scrapped, a lot sent to rework and the recovery of
  * that rework two shifts later (reprocessed through the same extruder, so no new output), plus one
  * downgrade still waiting for approval. Quantities are illustrative, not plant data; every lot code starts
- * with "DEMO-" and every evidence / note says "Demo". Recorded by an operator, approved by a manager.
+ * with "DEMO-" and every evidence / note says "Demo". Recorded by an operator, approved by the Quality / Lab
+ * approver (ISO 9001: the disposition decision is independent of production).
  */
 import { loadPeriods, LoadedPeriod } from './period-loader';
 import { ShowcaseContext } from './showcase-context';
@@ -166,7 +167,7 @@ async function recordOne(
   );
   if (!spec.approve) return;
   await ctx
-    .approverOtherThan(ctx.personaOf(operator))
+    .qualityApproverOtherThan(ctx.personaOf(operator))
     .post(
       `/v2/lot-dispositions/${created.id}/approve`,
       { reason: 'Demo: lab certificate checked' },

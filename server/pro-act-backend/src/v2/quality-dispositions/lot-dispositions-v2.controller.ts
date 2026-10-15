@@ -103,9 +103,9 @@ export class LotDispositionsV2Controller {
   @Roles(...DISPOSITION_APPROVERS)
   @ApiOperation({
     summary:
-      'Approve a proposed disposition (independent approver); the periods of its production interval are recalculated',
+      'Approve a proposed disposition (Quality / Lab approver, never the author); the periods of its production interval are recalculated',
     description:
-      'Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not ' +
+      'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not ' +
       'proposed; 422 RECOVERY_EXCEEDS_DISPOSITION / INVALID_SUPERSEDE when the linked disposition changed since.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
@@ -125,9 +125,9 @@ export class LotDispositionsV2Controller {
   @Roles(...DISPOSITION_APPROVERS)
   @ApiOperation({
     summary:
-      'Reject a proposed disposition with a reason (independent approver)',
+      'Reject a proposed disposition with a reason (Quality / Lab approver, never the author)',
     description:
-      'Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.',
+      'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async reject(

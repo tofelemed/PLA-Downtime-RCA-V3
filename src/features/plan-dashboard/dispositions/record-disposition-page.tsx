@@ -22,11 +22,11 @@ export function RecordDispositionPage() {
     <Page>
       <PageHeader
         title="Record a product disposition"
-        description={detail ? <>Period <PlantTime iso={detail.utcStart} tz={zone.timezone} withDate /> → <PlantTime iso={detail.utcEnd} tz={zone.timezone} withDate />. A manager approver who is not you approves it.</> : undefined}
+        description={detail ? <>Period <PlantTime iso={detail.utcStart} tz={zone.timezone} withDate /> → <PlantTime iso={detail.utcEnd} tz={zone.timezone} withDate />. A Quality / Lab approver who is not you approves it.</> : undefined}
         back={{ to: back, label: 'Period' }}
       />
       {!canWriteDispositions ? (
-        <DataState state="no-permission" detail="Operators, production engineers and manager approvers record dispositions." />
+        <DataState state="no-permission" detail="Operators, production engineers, production accountants, manager approvers and Quality / Lab approvers record dispositions." />
       ) : state === 'ready' && detail ? (
         <DispositionForm period={detail} timezone={zone.timezone} backTo={back} onSaved={() => navigate(back)} />
       ) : (
