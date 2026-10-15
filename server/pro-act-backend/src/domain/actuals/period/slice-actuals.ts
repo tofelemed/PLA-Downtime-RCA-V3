@@ -12,6 +12,13 @@ import {
   SourceCandidate,
   Window,
 } from './period-actuals.types';
+import {
+  AlignedDispositions,
+  alignDispositions,
+  LotDispositionInput,
+  nonConforming,
+  qualityClassesOf,
+} from './quality-classes';
 
 export interface SliceActualsInput {
   window: Window;
@@ -20,6 +27,8 @@ export interface SliceActualsInput {
   adjustments: readonly ApprovedAdjustment[];
   /** the slice's quantity unit (profile); units are never converted */
   uom: string | null;
+  /** SME E3: approved lot dispositions and recovery movements of the slice's product overlapping it */
+  dispositions?: readonly LotDispositionInput[];
 }
 
 interface Components {
@@ -31,21 +40,35 @@ interface Components {
 }
 
 /**
- * Actuals of one product slice (ACT01, ACT05–ACT07): the selected source's quantity plus approved
- * adjustments as a separate component. Basis gross: `good = gross − reject + rework_accepted` (D05;
- * rejects unknown → reject null and good = gross, flagged `rejects_not_measured`); basis good (only good
- * known): gross null, so no quality factor is ever invented. Coverage = accepted seconds ÷ window
- * (approved substitutions count when the gate says so); missing data is null, never zero.
+ * Actuals of one product slice (ACT01, ACT05–ACT07, SME E3): the selected source's quantity plus approved
+ * adjustments as a separate component. Basis gross: `good = gross − reject` — first-pass good; approved
+ * rework acceptance and recovery movements are recovered output reported apart, never added back (E3:
+ * rework does not erase the first-pass defect). Rejects unknown → the approved lot dispositions classify
+ * them (`rejects_from_dispositions`), else reject null and good = gross, flagged `rejects_not_measured`.
+ * Recovered material measured again at the boundary leaves gross and good (no output counted twice).
+ * Basis good (only good known): gross null, so no quality factor is ever invented. Coverage = accepted
+ * seconds ÷ window (approved substitutions count when the gate says so); missing data is null, never zero.
  */
 export function computeSliceActuals(input: SliceActualsInput): SliceActuals {
   const findings = [...input.selection.findings];
   const source = usableSource(input.selection.selected, input.uom, findings);
+  const aligned = alignDispositions(
+    input.dispositions ?? [],
+    input.window,
+    input.uom ?? source?.uom ?? null,
+    findings,
+  );
   const components = applyAdjustments(
     baseComponents(source),
     input.adjustments,
+    { aligned, findings },
+  );
+  const classified = findings.some(
+    (f) => f.code === 'rejects_from_dispositions',
   );
   if (source && source.basis === 'gross' && source.reject === null) {
-    findings.push({ code: 'rejects_not_measured', severity: 'info' });
+    if (!classified)
+      findings.push({ code: 'rejects_not_measured', severity: 'info' });
   }
   const coverage = coverageOf(input, source);
   const main =
@@ -67,6 +90,11 @@ export function computeSliceActuals(input: SliceActualsInput): SliceActuals {
     findings: [...findings, ...(source?.findings ?? [])],
     coverage: coverage.seconds,
     adjustmentIds: input.adjustments.map((adjustment) => adjustment.id),
+    qualityClasses: qualityClassesOf(aligned, {
+      good: components.good,
+      reject: components.reject,
+      reworkAccepted: components.rework,
+    }),
   };
 }
 
@@ -117,10 +145,61 @@ function baseComponents(source: SourceCandidate | null): Components {
   };
 }
 
-/** Adds approved adjustments per component, then derives good on a gross basis. */
+const plus = (a: Dec | null, b: Dec | null) =>
+  a === null ? b : b === null ? a : a.plus(b);
+const minus = (a: Dec | null, b: Dec) => (a === null ? null : a.minus(b));
+
+/**
+ * Rejects of the slice: measured ones (source and approved reject adjustments) stay authoritative and the
+ * dispositions break them down (classes beyond them → `dispositions_exceed_rejects`, a problem); when
+ * none are measured, the approved first-pass defects of the slice's lots are its rejects.
+ */
+function rejectOf(
+  measured: Dec | null,
+  aligned: AlignedDispositions | null,
+  findings: PeriodFinding[],
+): Dec | null {
+  if (!aligned) return measured;
+  const defects = nonConforming(aligned);
+  if (measured === null) {
+    if (defects.lte(ZERO)) return null;
+    findings.push({ code: 'rejects_from_dispositions', severity: 'info' });
+    return defects;
+  }
+  if (defects.gt(measured)) {
+    findings.push({
+      code: 'dispositions_exceed_rejects',
+      severity: 'problem',
+      detail: { rejects: formatDec(measured), classified: formatDec(defects) },
+    });
+  }
+  return measured;
+}
+
+/** Recovered material measured again at the boundary (E3): it leaves gross and good, with a finding. */
+function reprocessedOf(
+  aligned: AlignedDispositions | null,
+  findings: PeriodFinding[],
+): Dec {
+  const reprocessed = aligned?.reprocessedInput ?? ZERO;
+  if (reprocessed.gt(ZERO)) {
+    findings.push({
+      code: 'reprocessed_input_excluded',
+      severity: 'info',
+      detail: { quantity: formatDec(reprocessed) },
+    });
+  }
+  return reprocessed;
+}
+
+/**
+ * Adds approved adjustments per component and the lot dispositions, then derives first-pass good on a
+ * gross basis (`gross − reject + good adjustments`; rework acceptance is recovered output, not good).
+ */
 function applyAdjustments(
   base: Components,
   adjustments: readonly ApprovedAdjustment[],
+  lots: { aligned: AlignedDispositions | null; findings: PeriodFinding[] },
 ): Components {
   const sum = (kind: ApprovedAdjustment['kind']): Dec | null => {
     const rows = adjustments.filter((adjustment) => adjustment.kind === kind);
@@ -128,22 +207,24 @@ function applyAdjustments(
       ? null
       : rows.reduce((total, row) => total.plus(row.quantity), ZERO);
   };
-  const plus = (a: Dec | null, b: Dec | null) =>
-    a === null ? b : b === null ? a : a.plus(b);
-  const gross = base.basis === 'gross' ? plus(base.gross, sum('gross')) : null;
-  const reject = plus(base.reject, sum('reject'));
-  const rework = sum('rework');
+  const reprocessed = reprocessedOf(lots.aligned, lots.findings);
+  const gross =
+    base.basis === 'gross'
+      ? minus(plus(base.gross, sum('gross')), reprocessed)
+      : null;
+  const reject = rejectOf(
+    plus(base.reject, sum('reject')),
+    lots.aligned,
+    lots.findings,
+  );
   const goodAdjustment = sum('good');
   const good =
     base.basis === 'good'
-      ? plus(plus(base.good, goodAdjustment), rework)
+      ? minus(plus(base.good, goodAdjustment), reprocessed)
       : gross === null
         ? null
-        : plus(
-            gross.minus(reject ?? ZERO).plus(rework ?? ZERO),
-            goodAdjustment,
-          );
-  return { gross, good, reject, rework, basis: base.basis };
+        : plus(gross.minus(reject ?? ZERO), goodAdjustment);
+  return { gross, good, reject, rework: sum('rework'), basis: base.basis };
 }
 
 function coverageOf(

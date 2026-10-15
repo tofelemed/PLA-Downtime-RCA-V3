@@ -21,6 +21,10 @@ export const ADJUSTMENT_APPROVERS = ['manager_approver'] as const;
 export const REVISION_APPROVERS = ['manager_approver', 'production_accountant'] as const;
 export const BRIDGE_WRITERS = ['production_accountant'] as const;
 
+/** v2/quality-dispositions/disposition-roles.ts (SME E3 lot dispositions) */
+export const DISPOSITION_WRITERS = ['operator', 'production_engineer', 'production_accountant', 'manager_approver'] as const;
+export const DISPOSITION_APPROVERS = ['manager_approver'] as const;
+
 /** v2/code-libraries/code-library-v2.controller.ts */
 export const CODE_WRITERS = ['master_data_admin', 'manager_approver'] as const;
 

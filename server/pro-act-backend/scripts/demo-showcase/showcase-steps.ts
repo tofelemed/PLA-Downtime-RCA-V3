@@ -6,6 +6,7 @@
 import { seedAccounting } from './seed-accounting';
 import { seedCalendars } from './seed-calendar';
 import { seedCodeLibraries } from './seed-codes';
+import { seedDispositions } from './seed-dispositions';
 import { seedIntegration } from './seed-integration';
 import { recalculate, seedEvents } from './seed-events';
 import { closeStaleStops, seedOpenStops } from './seed-open-stops';
@@ -72,6 +73,13 @@ const STEPS: readonly Step[] = [
     always: false,
     kinds: PLANTS,
     run: seedRcaFailureStops,
+  },
+  // Demo lot dispositions (SME E3) before the recalculation, so the actuals carry their classes
+  {
+    name: 'dispositions',
+    always: false,
+    kinds: ['full'],
+    run: seedDispositions,
   },
   { name: 'recalculate', always: false, kinds: PLANTS, run: recalculate },
   { name: 'accounting', always: false, kinds: PLANTS, run: seedAccounting },

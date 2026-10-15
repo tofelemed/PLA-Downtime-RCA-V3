@@ -51,6 +51,8 @@ export interface ProductionEventV2View {
   toProductId: string | null;
   /** SME Q10: the stop this ramp-up / startup-quality event recovers from */
   recoveryOfEventId: string | null;
+  /** SME E3: disposition of a quality_loss event's tonnes (downgrade / scrap / rework); null = none */
+  dispositionClass: string | null;
   /** SME D8 / D11: failure detail (ISO 14224); null = not determined yet */
   failure: {
     mode: string | null;
@@ -124,6 +126,7 @@ export function toProductionEventV2View(
     fromProductId: event.fromProductId ?? null,
     toProductId: event.toProductId ?? null,
     recoveryOfEventId: event.recoveryOfEventId ?? null,
+    dispositionClass: event.dispositionClass ?? null,
     failure: {
       mode: event.failureMode ?? null,
       severity: event.failureSeverity ?? null,

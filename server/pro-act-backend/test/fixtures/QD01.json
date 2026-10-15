@@ -1,0 +1,41 @@
+{
+  "id": "QD01",
+  "title": "HDPE good-output boundary: a 100 t lot with 5 t downgraded (first-pass quality 95 %), and a rework round trip that recovers the 5 t without 105 t of net product",
+  "kind": "numerical",
+  "spec_ref": "SME E3 (good-output boundary and product disposition), V2 (downgrade / rework valuation), EXPERT_REVIEW Q14",
+  "owner_subphase": "2.4 / 2.5",
+  "tolerance": "0.000001",
+  "inputs": {
+    "shift": "8 h per period, one product slice, sustained and planning rate 12.5 t/h, target 100 t",
+    "period1": "meter gross 100 t, rejects not measured; lot L-100 produced 00:00-08:00 (lab release 10:00), approved disposition 5 t downgrade",
+    "period2": "meter gross 105 t = 100 t fresh + 5 t of L-100 reprocessed through the same boundary (recovery movement, remeasured)",
+    "prices": "intended $1,000/t, downgrade sold at $800/t (price difference $200/t), rework cost $60/t; no impact code, no default disposition"
+  },
+  "expected": {
+    "period1": {
+      "gross": "100",
+      "reject": "5",
+      "good": "95",
+      "firstPassQuality": "0.95",
+      "qualityLoss": "5",
+      "qualityClass": "quality_class:downgrade",
+      "economicUsd": "1000"
+    },
+    "period2": {
+      "gross": "100",
+      "good": "100",
+      "recovered": "5",
+      "reprocessedInput": "5",
+      "qualityLoss": "0",
+      "firstPassQuality": "1"
+    },
+    "bothPeriods": {
+      "freshGross": "200",
+      "goodPlusRecovered": "200"
+    },
+    "reworkVariant": {
+      "qualityClass": "quality_class:rework",
+      "economicUsd": "300"
+    }
+  }
+}

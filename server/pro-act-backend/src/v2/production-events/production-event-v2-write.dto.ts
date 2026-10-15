@@ -18,6 +18,10 @@ import {
   PHYSICAL_TYPES,
   SCHEDULE_CLASSES,
 } from '../../domain/events/event-classification';
+import {
+  EVENT_DISPOSITION_CLASSES,
+  EventDispositionClass,
+} from './disposition-class';
 import { FAILURE_SEVERITIES } from './failure-detail';
 
 const DECIMAL = { decimal_digits: '0,8' };
@@ -145,6 +149,17 @@ export class ProductionEventV2EditableDto {
   @ValidateIf((_, value) => value !== null)
   @IsUUID()
   recoveryOfEventId?: string | null;
+
+  @ApiPropertyOptional({
+    enum: EVENT_DISPOSITION_CLASSES,
+    nullable: true,
+    description:
+      'SME E3: disposition of the tonnes a quality_loss event explains (downgrade sold at a discount, scrap, rework); quality_loss only',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsIn(EVENT_DISPOSITION_CLASSES)
+  dispositionClass?: EventDispositionClass | null;
 
   @ApiPropertyOptional({
     format: 'date-time',

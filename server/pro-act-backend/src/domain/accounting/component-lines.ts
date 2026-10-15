@@ -1,4 +1,5 @@
 import { Dec, ZERO } from '../actuals/decimal';
+import { qualityClassFlag } from '../actuals/period/quality-classes';
 import { BoundedInterval } from '../time/interval-algebra';
 import { LossBasis, LossKind, LossLineDraft } from './accounting.types';
 import { autoKey } from './auto-key';
@@ -58,6 +59,10 @@ function claimLine(
       ...(claim.rateVersionIds.length > 1 ? ['several_rate_versions'] : []),
       ...(claim.pooled ? [PRODUCT_RUN_SHARE] : []),
       ...(event.recoveryOfEventId ? [TRIP_RECOVERY] : []),
+      // SME E3: a quality event names the disposition of the tonnes it explains
+      ...(input.kind === 'quality' && event.dispositionClass
+        ? [qualityClassFlag(event.dispositionClass)]
+        : []),
     ],
     evidence: [
       {

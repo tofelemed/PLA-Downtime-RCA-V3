@@ -2260,6 +2260,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/lot-dispositions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List lot dispositions (production interval overlapping [from, to); keyset on productionStart, id, newest first) */
+        get: operations["LotDispositionsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Propose a lot disposition or recovery movement
+         * @description Requires `Idempotency-Key`. 422 INVALID_REFERENCE (unit, product, event or linked disposition outside the caller’s scope), INVALID_QUANTITY, INVALID_RANGE (empty or future interval), INVALID_RECOVERY, NOT_RECOVERABLE, UOM_MISMATCH, RECOVERY_EXCEEDS_DISPOSITION, INVALID_SUPERSEDE.
+         */
+        post: operations["LotDispositionsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/lot-dispositions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One lot disposition; foreign or out-of-scope ids are 404 */
+        get: operations["LotDispositionsV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/lot-dispositions/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a proposed disposition (independent approver); the periods of its production interval are recalculated
+         * @description Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 RECOVERY_EXCEEDS_DISPOSITION / INVALID_SUPERSEDE when the linked disposition changed since.
+         */
+        post: operations["LotDispositionsV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/lot-dispositions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a proposed disposition with a reason (independent approver)
+         * @description Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.
+         */
+        post: operations["LotDispositionsV2Controller_reject_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/external-production-reports": {
         parameters: {
             query?: never;
@@ -5672,6 +5750,11 @@ export interface components {
              */
             recoveryOfEventId?: Record<string, never> | null;
             /**
+             * @description SME E3: disposition of the tonnes a quality_loss event explains (downgrade sold at a discount, scrap, rework); quality_loss only
+             * @enum {string|null}
+             */
+            dispositionClass?: "downgrade" | "scrap" | "rework" | null;
+            /**
              * Format: date-time
              * @description SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun
              */
@@ -5765,6 +5848,11 @@ export interface components {
              * @description SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop
              */
             recoveryOfEventId?: Record<string, never> | null;
+            /**
+             * @description SME E3: disposition of the tonnes a quality_loss event explains (downgrade sold at a discount, scrap, rework); quality_loss only
+             * @enum {string|null}
+             */
+            dispositionClass?: "downgrade" | "scrap" | "rework" | null;
             /**
              * Format: date-time
              * @description SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun
@@ -6717,6 +6805,61 @@ export interface components {
         };
         AdjustmentRejectDto: {
             reason: string;
+        };
+        LotDispositionCreateDto: {
+            /** Format: uuid */
+            unitId: string;
+            /**
+             * Format: uuid
+             * @description Product (grade) of the lot
+             */
+            productId: string;
+            /** @example L-2027-0301-A */
+            lotCode: string;
+            /**
+             * @description wide_spec = intentional wide-spec grade (good, reported apart); downgrade, transition_off_grade, scrap, rework = first-pass defects; recovered = reprocessed material of an earlier disposition coming back as saleable output (needs recoveryOfId)
+             * @enum {string}
+             */
+            dispositionClass: "wide_spec" | "downgrade" | "transition_off_grade" | "scrap" | "rework" | "recovered";
+            /**
+             * @description Quantity > 0, decimal string
+             * @example 5
+             */
+            quantity: string;
+            /** @example t */
+            uom: string;
+            /**
+             * Format: date-time
+             * @description Start of the production interval of the lot (of the reprocessing for a recovery); the actuals are aligned to it, not to the lab release
+             */
+            productionStart: string;
+            /**
+             * Format: date-time
+             * @description Exclusive end
+             */
+            productionEnd: string;
+            /** Format: date-time */
+            labReleasedAt?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description recovered only: the approved downgrade, transition off-grade or rework this quantity recovers
+             */
+            recoveryOfId?: Record<string, never> | null;
+            /** @description recovered only: the reprocessed material passed this unit’s production meter again (it is then no new output) */
+            remeasured?: boolean;
+            /**
+             * Format: uuid
+             * @description Production event of the unit the disposition comes from
+             */
+            productionEventId?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description Approved disposition of the same unit and product this one corrects; it becomes superseded on approval
+             */
+            supersedesId?: Record<string, never> | null;
+            reason?: Record<string, never> | null;
+            /** @description Lab certificate, sample id or document reference */
+            evidenceRef?: Record<string, never> | null;
         };
         ExternalReportLineDto: {
             /** Format: uuid */
@@ -11615,6 +11758,130 @@ export interface operations {
         };
     };
     ActualsAdjustmentsV2Controller_reject_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustmentRejectDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LotDispositionsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                unitId?: string;
+                productId?: string;
+                lotCode?: string;
+                dispositionClass?: "wide_spec" | "downgrade" | "transition_off_grade" | "scrap" | "rework" | "recovered";
+                state?: "proposed" | "approved" | "rejected" | "superseded";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LotDispositionsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LotDispositionCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LotDispositionsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LotDispositionsV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustmentApproveDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LotDispositionsV2Controller_reject_v2: {
         parameters: {
             query?: never;
             header: {

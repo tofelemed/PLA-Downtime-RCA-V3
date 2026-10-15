@@ -53,6 +53,10 @@ export function computePeriodActuals(
           .filter((adjustment) => adjustment.sliceId === slice.id)
           .map(approvedOf),
         uom: slice.quantityUom,
+        // SME E3 / E6: a lot belongs to one product, so it is attributable even when products share the window
+        dispositions: (inputs.dispositions ?? []).filter(
+          (lot) => lot.productId === slice.productId,
+        ),
       }),
     );
   }

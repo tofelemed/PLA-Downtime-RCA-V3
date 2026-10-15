@@ -73,6 +73,7 @@ export const CODING_FIELDS = [
   'fromProductId',
   'toProductId',
   'recoveryOfEventId',
+  'dispositionClass',
   'failureSeverity',
   'maintainableItem',
   'failureMechanism',

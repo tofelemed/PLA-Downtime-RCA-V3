@@ -41,6 +41,10 @@ export interface Capabilities {
   canApprovePeriods: boolean;
   /** bridge lines (SME R8: production accounting only) */
   canWriteBridges: boolean;
+  /** SME E3: record lot dispositions and recovery movements (operators and production) */
+  canWriteDispositions: boolean;
+  /** SME E3: approve / reject them (manager approvers, never the author) */
+  canApproveDispositions: boolean;
   canWriteCodes: boolean;
   canAuthorRules: boolean;
   canApproveRules: boolean;
@@ -93,6 +97,8 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canWritePeriods: may(ServerRoles.PERIOD_WRITERS),
     canApprovePeriods: may(ServerRoles.ADJUSTMENT_APPROVERS) && may(ServerRoles.REVISION_APPROVERS),
     canWriteBridges: may(ServerRoles.BRIDGE_WRITERS),
+    canWriteDispositions: may(ServerRoles.DISPOSITION_WRITERS),
+    canApproveDispositions: may(ServerRoles.DISPOSITION_APPROVERS),
     canWriteCodes: may(ServerRoles.CODE_WRITERS),
     canAuthorRules: may(ServerRoles.RULE_AUTHORS),
     canApproveRules: may(ServerRoles.RULE_APPROVERS),
