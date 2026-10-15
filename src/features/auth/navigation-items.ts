@@ -128,6 +128,8 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   },
   { name: 'User Management', href: '/users', icon: EntityIcon.team, section: 'administration', capability: 'canAdministerTenant', description: 'Users and their access' },
   { name: 'Permissions', href: '/permissions', icon: EntityIcon.permission, section: 'administration', capability: 'canAdministerTenant', description: 'Roles and permissions' },
+  // SME R1 / R6: administrators record delegations for anyone, approval-role holders for themselves
+  { name: 'Delegations', href: '/delegations', icon: EntityIcon.delegation, section: 'administration', capability: 'canDelegateApprovals', description: 'Approval roles handed to a delegate for an absence' },
   // the page's gate: TenantAdmin gets the plant-level tabs, the application-wide ones stay SuperAdmin-only
   { name: 'Admin Panel', href: '/admin', icon: EntityIcon.admin, section: 'administration', capability: 'canUseAdminPanel', description: 'Administration tools' },
   { name: 'Audit Logs', href: '/audit', icon: EntityIcon.audit, section: 'administration', capability: 'canViewAuditLogs', description: 'Who changed what, and when' },

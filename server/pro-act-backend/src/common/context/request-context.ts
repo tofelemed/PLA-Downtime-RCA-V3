@@ -12,6 +12,9 @@ export interface ScopeGrant {
   id: string;
   role: string;
   tenantId: string;
+  /** SME R1 / R6: held through this time-boxed delegation (absent = the user's own grant) */
+  delegationId?: string;
+  delegatorId?: string;
 }
 
 /**

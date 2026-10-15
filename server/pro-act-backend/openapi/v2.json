@@ -15178,6 +15178,160 @@
         ]
       }
     },
+    "/api/v2/role-delegations": {
+      "get": {
+        "operationId": "RoleDelegationsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "-createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "`in_force`: started, not ended, not revoked (now)",
+            "schema": {
+              "default": "all",
+              "enum": [
+                "in_force",
+                "all"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delegations of approval roles in the acting plant, newest first (keyset)",
+        "tags": [
+          "v2 · Role delegations"
+        ]
+      },
+      "post": {
+        "description": "A plant administrator records a delegation for anyone, a holder of the role for themselves (403 DELEGATION_NOT_ALLOWED). 422: DELEGATOR_LACKS_ROLE (the delegator holds the role on the scope on their own), DELEGATE_NOT_MEMBER, SELF_DELEGATION, INVALID_INTERVAL, TOO_LONG (more than 90 days), ALREADY_ENDED, INVALID_SCOPE. While in force the delegate holds the role like a scope grant; separation of duties applies to the delegate.",
+        "operationId": "RoleDelegationsV2Controller_create_v2",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleDelegationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delegate an approval role for a limited time",
+        "tags": [
+          "v2 · Role delegations"
+        ]
+      }
+    },
+    "/api/v2/role-delegations/{id}/revoke": {
+      "post": {
+        "description": "409 DELEGATION_OVER when it is already revoked or over.",
+        "operationId": "RoleDelegationsV2Controller_revoke_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeRoleDelegationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "End a delegation early (the delegator, the delegate or a plant administrator)",
+        "tags": [
+          "v2 · Role delegations"
+        ]
+      }
+    },
     "/api/v2/tasks": {
       "get": {
         "description": "Filters: statuses, priorities, assignedToMe or assigneeId, linkType + linkId, q (title, description), overdue, from/to on the due date (half-open). Names are resolved on the server.",
@@ -26207,6 +26361,82 @@
         },
         "required": [
           "role"
+        ]
+      },
+      "CreateRoleDelegationDto": {
+        "type": "object",
+        "properties": {
+          "delegatorId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Who hands the role over (holds it on the scope)"
+          },
+          "delegateId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Who holds it meanwhile (an active member of the plant)"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "manager_approver",
+              "production_accountant",
+              "finance_approver",
+              "quality_approver"
+            ]
+          },
+          "scopeKind": {
+            "type": "string",
+            "enum": [
+              "tenant",
+              "site",
+              "unit"
+            ]
+          },
+          "scopeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The plant (tenant), site or unit id"
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start (UTC, inclusive)"
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End (UTC, exclusive); at most 90 days after the start"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Why (e.g. leave, plant shutdown cover)"
+          }
+        },
+        "required": [
+          "delegatorId",
+          "delegateId",
+          "role",
+          "scopeKind",
+          "scopeId",
+          "validFrom",
+          "validUntil",
+          "reason"
+        ]
+      },
+      "RevokeRoleDelegationDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "TaskSummaryView": {

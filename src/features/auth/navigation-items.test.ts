@@ -43,6 +43,8 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   Finance: NOT_OPERATOR,
   'User Management': ADMINS,
   Permissions: ADMINS,
+  // SME R1 / R6: administrators for anyone, approval-role holders (Manager = manager_approver) for themselves
+  Delegations: [...ADMINS, 'Manager'],
   'Admin Panel': ['SuperAdmin', 'TenantAdmin'],
   'Audit Logs': ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager'],
   // plant settings follow the server's tenant-setting write rule (TenantAdmin / manager_approver)

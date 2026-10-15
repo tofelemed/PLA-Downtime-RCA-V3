@@ -7,6 +7,7 @@ import { approvalConflict } from '../domain/reconciliation/separation-of-duties'
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
 import { invalidTransition } from '../profiles/profile-errors';
 import { bridgeReviewOf } from './bridge-review';
+import { delegateDetail } from './delegate-detail';
 import {
   lockPeriod,
   periodInScope,
@@ -101,7 +102,10 @@ export class BridgeReviewService {
         actor: actorOf(context),
         reason: command.comment ?? null,
         submittedHash: revision.submittedHash,
-        detail: { findings: current.findings },
+        detail: {
+          findings: current.findings,
+          ...(await delegateDetail(manager, context, period.unitId)),
+        },
       });
       return manager.findOneByOrFail(AccountingRevision, { id: revision.id });
     });

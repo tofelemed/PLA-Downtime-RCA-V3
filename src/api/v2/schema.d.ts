@@ -4646,6 +4646,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/role-delegations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Delegations of approval roles in the acting plant, newest first (keyset) */
+        get: operations["RoleDelegationsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Delegate an approval role for a limited time
+         * @description A plant administrator records a delegation for anyone, a holder of the role for themselves (403 DELEGATION_NOT_ALLOWED). 422: DELEGATOR_LACKS_ROLE (the delegator holds the role on the scope on their own), DELEGATE_NOT_MEMBER, SELF_DELEGATION, INVALID_INTERVAL, TOO_LONG (more than 90 days), ALREADY_ENDED, INVALID_SCOPE. While in force the delegate holds the role like a scope grant; separation of duties applies to the delegate.
+         */
+        post: operations["RoleDelegationsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/role-delegations/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End a delegation early (the delegator, the delegate or a plant administrator)
+         * @description 409 DELEGATION_OVER when it is already revoked or over.
+         */
+        post: operations["RoleDelegationsV2Controller_revoke_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/tasks": {
         parameters: {
             query?: never;
@@ -8434,6 +8475,42 @@ export interface components {
             role: "manager_approver" | "production_accountant" | "quality_approver" | "finance_approver" | "finance_maintainer" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
             /** @description Limit the grant to this unit of the plant (omit for the whole plant) */
             unitId?: string;
+        };
+        CreateRoleDelegationDto: {
+            /**
+             * Format: uuid
+             * @description Who hands the role over (holds it on the scope)
+             */
+            delegatorId: string;
+            /**
+             * Format: uuid
+             * @description Who holds it meanwhile (an active member of the plant)
+             */
+            delegateId: string;
+            /** @enum {string} */
+            role: "manager_approver" | "production_accountant" | "finance_approver" | "quality_approver";
+            /** @enum {string} */
+            scopeKind: "tenant" | "site" | "unit";
+            /**
+             * Format: uuid
+             * @description The plant (tenant), site or unit id
+             */
+            scopeId: string;
+            /**
+             * Format: date-time
+             * @description Start (UTC, inclusive)
+             */
+            validFrom: string;
+            /**
+             * Format: date-time
+             * @description End (UTC, exclusive); at most 90 days after the start
+             */
+            validUntil: string;
+            /** @description Why (e.g. leave, plant shutdown cover) */
+            reason: string;
+        };
+        RevokeRoleDelegationDto: {
+            reason: string;
         };
         TaskSummaryView: {
             total: number;
@@ -15990,6 +16067,79 @@ export interface operations {
         requestBody?: never;
         responses: {
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RoleDelegationsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description `in_force`: started, not ended, not revoked (now) */
+                state?: "in_force" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RoleDelegationsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRoleDelegationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RoleDelegationsV2Controller_revoke_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeRoleDelegationDto"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -36,6 +36,9 @@ export const BUDGET_WRITERS = ['production_engineer', 'integration_admin', 'prod
 export const BUDGET_APPROVERS = ['production_accountant'] as const;
 export const TOLERANCE_ADOPTERS = ['production_accountant', 'manager_approver'] as const;
 
+/** v2/administration/administration-roles.ts (SME R1 / R6: who records delegations of approval roles) */
+export const DELEGATION_WRITERS = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'manager_approver', 'production_accountant', 'finance_approver', 'quality_approver'] as const;
+
 /** v2/code-libraries/code-library-v2.controller.ts */
 export const CODE_WRITERS = ['master_data_admin', 'manager_approver'] as const;
 

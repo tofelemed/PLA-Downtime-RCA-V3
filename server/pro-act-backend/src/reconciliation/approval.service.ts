@@ -12,6 +12,7 @@ import {
 } from '../profiles/profile-errors';
 import { ReconciliationSlaService } from '../close/reconciliation-sla.service';
 import { assertBridgeReviewed } from './bridge-review';
+import { delegateDetail } from './delegate-detail';
 import { rejectionOutcome } from './rejection-outcome';
 import { writeApprovedValuation } from '../valuation/approved-valuation';
 import { ApprovalSnapshot } from './entities/approval-snapshot.entity';
@@ -127,7 +128,11 @@ export class ApprovalService {
         comment: command.reason,
         updatedBy: reviewer,
       });
-      const detail = { failedLines, ...outcome.detail };
+      const detail = {
+        failedLines,
+        ...outcome.detail,
+        ...(await delegateDetail(manager, context, period.unitId)),
+      };
       await recordTransition(manager, {
         revision,
         action: 'reject',
@@ -250,7 +255,10 @@ async function markApproved(
     reason: command.comment ?? null,
     submittedHash: revision.submittedHash,
     afterHash: snapshot.contentHash,
-    detail: { snapshotId: snapshot.id },
+    detail: {
+      snapshotId: snapshot.id,
+      ...(await delegateDetail(manager, context, period.unitId)),
+    },
   });
   await publishApproval(manager, state, snapshot, approver);
 }

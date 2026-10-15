@@ -89,6 +89,8 @@ export interface Capabilities {
   canWriteWorkOrders: boolean;
   /** SME D1 / D2: unit state mapping versions and staleness settings */
   canWriteStateMappings: boolean;
+  /** SME R1 / R6: record delegations of approval roles (administrators for anyone, holders for themselves) */
+  canDelegateApprovals: boolean;
   /** SME D13: verify stop coding as the unit's supervisor / validate failure detail as maintenance */
   canVerifyStops: boolean;
   canValidateFailures: boolean;
@@ -151,6 +153,7 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canWriteStandby: may(ServerRoles.STANDBY_WRITERS),
     canWriteWorkOrders: may(ServerRoles.WORK_ORDER_WRITERS),
     canWriteStateMappings: may(ServerRoles.STATE_MAPPING_WRITERS),
+    canDelegateApprovals: may(ServerRoles.DELEGATION_WRITERS),
     canVerifyStops: may(ServerRoles.STOP_VERIFIERS),
     canValidateFailures: may(ServerRoles.FAILURE_VALIDATORS),
     canWriteEvents: !readOnly,
