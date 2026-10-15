@@ -1,27 +1,43 @@
 import { EntityManager } from 'typeorm';
+import { DefaultBasis } from '../domain/valuation/valuation.types';
 import { LOSS_VALUE_KINDS } from '../domain/valuation/reconciled-valuation';
+import { defaultValuationBasis } from '../valuation/valuation-policy.store';
+
+/** One reporting currency of the approved impact (same status semantics as the loss-value report). */
+export interface ApprovedImpactValue {
+  currency: string;
+  /** decimal string; null when any line is not valued or lacks an FX rate (never estimated, D08) */
+  amount: string | null;
+  valuedLines: number;
+  unvaluedLines: number;
+  /** SME V7: valued lines converted with an authorised provisional FX rate */
+  provisionalLines: number;
+  status: 'valued' | 'unvalued' | 'mixed';
+  /** SME V7: the amount includes provisional-rate conversions (revalued when the final rate is approved) */
+  fxProvisional: boolean;
+}
 
 /** Approved historical loss of a set of events or loss lines (RCA02 / RCA03), from the ledger only. */
 export interface ApprovedImpact {
   /** active loss lines of the latest approved revision of their period */
   lines: number;
   quantities: Array<{ kind: string; uom: string | null; quantity: string }>;
-  /**
-   * contribution-margin value per reporting currency; `amount` null when any line is not valued or
-   * lacks an FX rate (never estimated, D08)
-   */
-  values: Array<{
-    currency: string;
-    amount: string | null;
-    valuedLines: number;
-    unvaluedLines: number;
-  }>;
+  /** SME V8: the valuation view of `values` — the default basis of the tenant's approved policy */
+  view: DefaultBasis;
+  values: ApprovedImpactValue[];
   basis: string;
 }
 
-export const APPROVED_IMPACT_BASIS =
+const BASIS_WORDS: Readonly<Record<DefaultBasis, string>> = {
+  contribution_margin: 'contribution margin view',
+  standard_cost: 'standard cost view',
+  economic_impact:
+    'economic impact view (lost contribution on unrecovered sales + incremental costs)',
+};
+
+export const approvedImpactBasis = (view: DefaultBasis) =>
   'approved plan lines of the latest approved revision of each period (decided quantities, loss kinds ' +
-  'only); contribution margin view; draft and in-review figures are never included';
+  `only); ${BASIS_WORDS[view]} (the policy default, SME V8); draft and in-review figures are never included`;
 
 /**
  * Loss kinds that lower output — the same set as the loss-value report (VA-01): schedule exclusions are
@@ -57,20 +73,60 @@ const APPROVED_LINES = (filter: 'event' | 'line') => `
      WHERE c."run_id" = (SELECT ar."current_run_id" FROM "accounting_revisions" ar WHERE ar."id" = ${LATEST('c."period_id"')})
        AND NOT EXISTS (SELECT 1 FROM "approved_loss_lines" x WHERE x."revision_id" = ${LATEST('c."period_id"')}))`;
 
+const VALUES_SQL = (filter: 'event' | 'line') => `${APPROVED_LINES(filter)}
+       SELECT v."currency",
+              CASE WHEN bool_and(v."status" = 'valued' AND v."amount" IS NOT NULL) THEN sum(v."amount")::text END AS "amount",
+              count(*) FILTER (WHERE v."status" = 'valued' AND v."amount" IS NOT NULL)::int AS "valued",
+              count(*) FILTER (WHERE NOT (v."status" = 'valued' AND v."amount" IS NOT NULL))::int AS "unvalued",
+              count(*) FILTER (WHERE v."status" = 'valued' AND v."amount" IS NOT NULL AND v."provisional")::int AS "provisional"
+         FROM approved a
+         JOIN LATERAL (
+           SELECT lv."currency", lv."amount", lv."status"::text AS "status", lv."provisional" FROM "loss_line_valuations" lv
+            WHERE a."origin" = 'run' AND lv."tenant_id" = $1 AND lv."loss_line_id" = a."id" AND lv."view" = $4::valuation_view
+           UNION ALL
+           SELECT av."currency", av."amount", av."status", av."provisional" FROM "approved_loss_line_valuations" av
+            WHERE a."origin" = 'approved' AND av."tenant_id" = $1 AND av."approved_line_id" = a."id"
+              AND av."view" = $4::valuation_view
+         ) v ON true
+        GROUP BY 1 ORDER BY 1`;
+
+interface ValueRow {
+  currency: string;
+  amount: string | null;
+  valued: number;
+  unvalued: number;
+  provisional: number;
+}
+
+function valueOf(row: ValueRow): ApprovedImpactValue {
+  return {
+    currency: row.currency,
+    amount: row.amount,
+    valuedLines: row.valued,
+    unvaluedLines: row.unvalued,
+    provisionalLines: row.provisional,
+    status:
+      row.valued === 0 ? 'unvalued' : row.unvalued === 0 ? 'valued' : 'mixed',
+    fxProvisional: row.provisional > 0,
+  };
+}
+
+/**
+ * Approved impact of events or lines: quantities per kind and unit of measure, and the value of one
+ * valuation view per currency — by default the policy's default basis (SME V8: economic impact from
+ * policy version 3, contribution margin while none is approved).
+ */
 export async function approvedImpact(
   manager: EntityManager,
   tenantId: string,
-  target: { eventIds?: string[]; lineIds?: string[] },
+  target: { eventIds?: string[]; lineIds?: string[]; view?: DefaultBasis },
 ): Promise<ApprovedImpact> {
   const filter = target.lineIds ? 'line' : 'event';
   const ids = target.lineIds ?? target.eventIds ?? [];
-  const empty = {
-    lines: 0,
-    quantities: [],
-    values: [],
-    basis: APPROVED_IMPACT_BASIS,
-  };
-  if (ids.length === 0) return empty;
+  const view = target.view ?? (await defaultValuationBasis(manager, tenantId));
+  const basis = approvedImpactBasis(view);
+  if (ids.length === 0)
+    return { lines: 0, quantities: [], view, values: [], basis };
   const params = [tenantId, ids, LOSS_KINDS];
   const quantities: Array<{
     kind: string;
@@ -83,29 +139,10 @@ export async function approvedImpact(
          FROM approved a GROUP BY 1, 2 ORDER BY 1, 2`,
     params,
   );
-  const values: Array<{
-    currency: string;
-    amount: string | null;
-    valued: number;
-    unvalued: number;
-  }> = await manager.query(
-    `${APPROVED_LINES(filter)}
-       SELECT v."currency",
-              CASE WHEN bool_and(v."status" = 'valued' AND v."amount" IS NOT NULL) THEN sum(v."amount")::text END AS "amount",
-              count(*) FILTER (WHERE v."status" = 'valued' AND v."amount" IS NOT NULL)::int AS "valued",
-              count(*) FILTER (WHERE NOT (v."status" = 'valued' AND v."amount" IS NOT NULL))::int AS "unvalued"
-         FROM approved a
-         JOIN LATERAL (
-           SELECT lv."currency", lv."amount", lv."status"::text AS "status" FROM "loss_line_valuations" lv
-            WHERE a."origin" = 'run' AND lv."tenant_id" = $1 AND lv."loss_line_id" = a."id" AND lv."view" = 'contribution_margin'
-           UNION ALL
-           SELECT av."currency", av."amount", av."status" FROM "approved_loss_line_valuations" av
-            WHERE a."origin" = 'approved' AND av."tenant_id" = $1 AND av."approved_line_id" = a."id"
-              AND av."view" = 'contribution_margin'
-         ) v ON true
-        GROUP BY 1 ORDER BY 1`,
-    params,
-  );
+  const values: ValueRow[] = await manager.query(VALUES_SQL(filter), [
+    ...params,
+    view,
+  ]);
   return {
     lines: quantities.reduce((sum, row) => sum + row.lines, 0),
     quantities: quantities.map(({ kind, uom, quantity }) => ({
@@ -113,12 +150,8 @@ export async function approvedImpact(
       uom,
       quantity,
     })),
-    values: values.map((row) => ({
-      currency: row.currency,
-      amount: row.amount,
-      valuedLines: row.valued,
-      unvaluedLines: row.unvalued,
-    })),
-    basis: APPROVED_IMPACT_BASIS,
+    view,
+    values: values.map(valueOf),
+    basis,
   };
 }

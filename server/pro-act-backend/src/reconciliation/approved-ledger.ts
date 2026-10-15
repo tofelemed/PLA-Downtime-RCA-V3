@@ -59,6 +59,7 @@ function valuationRows(
       amount: amount.amount === null ? null : formatDec(amount.amount),
       status: view.status,
       reason: amount.reason ?? view.reason,
+      provisional: amount.provisional === true,
       createdBy: scope.approver,
     })),
   );

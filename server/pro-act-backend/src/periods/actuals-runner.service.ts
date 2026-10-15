@@ -21,7 +21,8 @@ import {
 import { computePeriodActuals } from './period-actuals.compute';
 
 /** Bumped when the period engine's rules change (recorded on every run). */
-export const ACTUALS_ENGINE_VERSION = '2.4.1';
+// 2.4.2: SME E3 — lot dispositions classify rejects; rework acceptance and recovery are not first-pass good
+export const ACTUALS_ENGINE_VERSION = '2.4.2';
 
 /** Message type: a period has a new actuals run (2.5 / realtime consumers). */
 export const PERIOD_ACTUALS_COMPUTED = 'PeriodActualsComputed';
@@ -207,6 +208,7 @@ function resultRow(
     exceptions: actuals.findings,
     coverage: actuals.coverage,
     adjustmentIds: actuals.adjustmentIds,
+    qualityClasses: actuals.qualityClasses ?? null,
     computedAt,
   };
 }
@@ -262,6 +264,8 @@ function hashOf(
     stops: inputs.stops.map((s) => [s.start, s.end]),
     adjustments: inputs.adjustments.map((a) => a.id),
     reports: inputs.reportLines.map((l) => [l.reportId, l.productId]),
+    // approved rows are immutable; a correction is a new id that supersedes the old one
+    dispositions: (inputs.dispositions ?? []).map((d) => d.id),
   };
   return createHash('sha256').update(JSON.stringify(material)).digest('hex');
 }

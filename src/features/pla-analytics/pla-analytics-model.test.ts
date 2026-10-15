@@ -14,7 +14,7 @@ import {
   trendQuery,
   waterfallQuery,
 } from './model/analytics-scope';
-import { ageText, amountText, kpiText, notValuedReason } from './model/display';
+import { ageText, amountText, kpiText, notValuedReason, shownMetricLabel } from './model/display';
 import { oeeRows, residualRows, trendUnits } from './model/series';
 import { bucketLabel } from './model/buckets';
 import { dashboardScope, presetKeyOf } from './model/dashboard-scope';
@@ -62,6 +62,15 @@ describe('PLA analytics scope (plan 3.6, T24)', () => {
     expect(lossTreeQuery({ ...scope(), lossGroupBy: 'impact', lossMetric: 'margin' })).toMatchObject({ groupBy: 'impact', metric: 'margin', ledger: 'capacity' });
     expect(lossTreeQuery(scope(), { metric: 'standard_cost', groupBy: 'reason', limit: 10 })).toMatchObject({ metric: 'standard_cost', limit: 10 });
     expect(oeeQuery(scope(), 'week', 'reconciled')).toMatchObject({ groupBy: 'week', policy: 'reconciled' });
+  });
+
+  it('SME V8: the value view opens on the policy default (`value`); economic impact is selectable; the heading names the resolved view', () => {
+    expect(parseScope(new URLSearchParams(), 0).valueMetric).toBe('value');
+    expect(parseScope(new URLSearchParams('metric=economic_impact'), 0).lossMetric).toBe('economic_impact');
+    expect(lossTreeQuery(scope(), { metric: scope().valueMetric })).toMatchObject({ metric: 'value' });
+    expect(shownMetricLabel('value', { metric: 'economic_impact', defaultView: true })).toBe('Economic impact (policy default)');
+    expect(shownMetricLabel('value', undefined)).toBe('Value (policy default view)');
+    expect(shownMetricLabel('margin', { metric: 'margin', defaultView: false })).toBe('Contribution margin');
   });
 
   it('T24: the export carries the page window and units, approved content only', () => {

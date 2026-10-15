@@ -1,18 +1,17 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { join } from 'node:path';
 import { call, command } from './downtime-world';
+import { startPiSimulator } from './pi-simulator';
 
 /**
  * Plan 3.7 UX06 world: the backend's PI Web API test simulator (fake account, never a real PI server)
  * run as a child process (`server/pro-act-backend/test/simulators/pi-web-api/run-simulator.ts`) on an
- * ephemeral 127.0.0.1 port that the local API on :4004 reaches, with one AF element and two Production
+ * ephemeral port that the API on :4004 reaches (see `pi-simulator.ts`: `E2E_PI_SIM_HOST` for a Docker API), with one AF element and two Production
  * Loss frames of 15 min ("00:15:00"): one 90 min ago (limited job) and one 3 days ago (only the 7-day
  * backfill reads it). A new unit "E2E INT …" is the binding target. Nothing existing is changed;
  * `cleanup` stops the E2E jobs, deactivates the E2E connection and stops the simulator.
  */
 const MINUTE = 60_000;
-const BACKEND = join(process.cwd(), 'server', 'pro-act-backend');
 
 export interface IntegrationWorld {
   suffix: string;
@@ -28,34 +27,6 @@ export interface IntegrationWorld {
   oldFrame: string;
 }
 
-interface Ready {
-  baseUrl: string;
-  username: string;
-  password: string;
-}
-
-function startSimulator(scenario: unknown): Promise<{ child: ChildProcess; ready: Ready }> {
-  // one fixed command line (no user input); the scenario travels in the environment
-  const child = spawn('npx ts-node -T test/simulators/pi-web-api/run-simulator.ts', {
-    cwd: BACKEND,
-    env: { ...process.env, PI_SIM_SCENARIO: JSON.stringify(scenario) },
-    shell: true,
-    stdio: ['pipe', 'pipe', 'inherit'],
-  });
-  return new Promise((resolve, reject) => {
-    let output = '';
-    const timer = setTimeout(() => reject(new Error(`simulator did not start: ${output}`)), 60_000);
-    child.stdout?.on('data', (chunk: Buffer) => {
-      output += chunk.toString();
-      const line = output.split('\n').find((entry) => entry.startsWith('READY '));
-      if (!line) return;
-      clearTimeout(timer);
-      resolve({ child, ready: JSON.parse(line.slice('READY '.length)) as Ready });
-    });
-    child.on('exit', (code) => reject(new Error(`simulator exited (${code}): ${output}`)));
-  });
-}
-
 export async function seedIntegrationWorld(token: string, tenantId: string): Promise<IntegrationWorld> {
   const suffix = randomUUID().slice(0, 8);
   const elementPath = `\\\\SIM-AF\\HDPE\\E2E\\Line-${suffix}`;
@@ -63,7 +34,7 @@ export async function seedIntegrationWorld(token: string, tenantId: string): Pro
   const recentFrame = `EF-E2E-${suffix}-recent`;
   const oldFrame = `EF-E2E-${suffix}-old`;
   const attributes = { Duration: '00:15:00', Quantity: 3, Description: `E2E INT stop ${suffix}` };
-  const { child, ready } = await startSimulator({
+  const { child, ready } = await startPiSimulator({
     elements: [{ path: elementPath, webId: elementWebId }],
     frames: [
       { webId: recentFrame, startMinutesAgo: 90, endMinutesAgo: 75, elementWebId, attributes },

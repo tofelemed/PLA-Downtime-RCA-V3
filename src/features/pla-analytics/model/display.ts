@@ -1,4 +1,4 @@
-import type { LossTreeGroupBy, LossTreeGroupView, LossTreeMetric, LossTreeTotalView, TrendGroup } from '@/api/v2/types/pla-analytics';
+import type { LossTreeGroupBy, LossTreeGroupView, LossTreeMetric, LossTreeMetricParam, LossTreeTotalView, TrendGroup } from '@/api/v2/types/pla-analytics';
 import type { KpiAggregateView } from '@/api/v2/types/reports';
 import { formatRatio, reasonText } from '@/features/downtime-analysis/model/kpi-display';
 import { valuationReasonLabel } from '@/features/plan-dashboard/model/display';
@@ -52,12 +52,20 @@ export const LOSS_GROUP_LABELS: Record<LossTreeGroupBy, string> = {
   unit: 'Unit',
 };
 
-export const METRIC_LABELS: Record<LossTreeMetric, string> = {
+export const METRIC_LABELS: Record<LossTreeMetricParam, string> = {
   qty: 'Lost quantity',
+  value: 'Value (policy default view)',
+  economic_impact: 'Economic impact',
   margin: 'Contribution margin',
   standard_cost: 'Standard cost',
   operational_cost: 'Operational cost (per hour of downtime)',
 };
+
+/** The heading of a loss view: the resolved metric, marked when it is the policy's default view (SME V8). */
+export function shownMetricLabel(asked: LossTreeMetricParam, data: { metric: LossTreeMetric; defaultView: boolean } | undefined): string {
+  if (!data) return METRIC_LABELS[asked];
+  return data.defaultView ? `${METRIC_LABELS[data.metric]} (policy default)` : METRIC_LABELS[data.metric];
+}
 
 export const TREND_LABELS: Record<TrendGroup, string> = { shift: 'Shift', day: 'Day', week: 'Week', month: 'Month' };
 

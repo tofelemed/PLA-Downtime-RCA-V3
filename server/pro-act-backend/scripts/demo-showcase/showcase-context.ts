@@ -105,6 +105,7 @@ export class ShowcaseContext {
       ...cast.reliability,
       ...cast.finance,
       ...cast.financeApprovers,
+      ...cast.quality,
     ]);
     for (const persona of personas) {
       const session = new PersonaSession(
@@ -147,6 +148,14 @@ export class ShowcaseContext {
     );
     if (approvers.length === 0)
       throw new Error(`no finance approver other than ${persona}`);
+    return this.session(approvers[index % approvers.length]);
+  }
+
+  /** ISO 9001: a Quality / Lab approver other than `persona` (separation of duties). */
+  qualityApproverOtherThan(persona: string, index = 0): PersonaSession {
+    const approvers = this.scenario.cast.quality.filter((m) => m !== persona);
+    if (approvers.length === 0)
+      throw new Error(`no quality approver other than ${persona}`);
     return this.session(approvers[index % approvers.length]);
   }
 

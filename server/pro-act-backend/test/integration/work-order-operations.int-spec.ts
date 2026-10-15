@@ -95,6 +95,18 @@ describe('CMMS work-order operations (SME D10)', () => {
       `SELECT DISTINCT "event_id" FROM "work_order_operations" WHERE "work_order_id" = 'WO-4000123'`,
     );
     expect(linked.event_id).toBe(stopId);
+    const evidence = await env
+      .get(`work-order-operations/repair-evidence?eventId=${stopId}`)
+      .expect(200);
+    expect(evidence.body).toMatchObject({
+      eventId: stopId,
+      operations: 3,
+      activeOperations: 3,
+      openOperations: 0,
+      waitingSeconds: 1800,
+      activeRepairSeconds: 3 * 3600,
+      reason: null,
+    });
     await env.settle();
     const mttr = await metric('mttr');
     expect(Number(mttr.value)).toBe(3 * 3600);
@@ -174,5 +186,16 @@ describe('CMMS work-order operations (SME D10)', () => {
       [otherStop],
     );
     expect(linked[0].n).toBe(0);
+    const none = await env
+      .get(`work-order-operations/repair-evidence?eventId=${otherStop}`)
+      .expect(200);
+    expect(none.body).toMatchObject({
+      operations: 0,
+      activeRepairSeconds: null,
+      reason: 'no_operations',
+    });
+    await env
+      .get(`work-order-operations/repair-evidence?eventId=${otherStop}`, scoped)
+      .expect(404);
   });
 });

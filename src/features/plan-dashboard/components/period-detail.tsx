@@ -7,6 +7,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { AdjustmentsSection } from '../adjustments/adjustments-section';
+import { DispositionsSection } from '../dispositions/dispositions-section';
 import { LossLineEditor } from '../editor/loss-line-editor';
 import { PeriodDayPanel } from '../day/day-certification-panel';
 import { RestatementPanel } from '../restatement/restatement-panel';
@@ -62,6 +63,7 @@ export function PeriodDetail({ planId, periodId, unitName, planLabel, timezone }
       <LedgerComparison accounting={accounting.data ?? null} ledger={ledger} />
       <ActualsProvenance periodId={periodId} timezone={timezone} />
       <AdjustmentsSection planId={planId} periodId={periodId} />
+      <DispositionsSection planId={planId} periodId={periodId} timezone={timezone} />
       <LossLineEditor key={data.revision.id} view={data} timezone={timezone} readOnly={!editable} />
       <WorkflowBar view={data} shown={view} onShowCurrent={() => setView('current')} />
       {view === 'current' && <SlaPanel view={data} timezone={timezone} />}

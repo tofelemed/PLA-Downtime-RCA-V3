@@ -102,6 +102,9 @@ import { ReconciliationV2Controller } from './reconciliation/reconciliation-v2.c
 import { ChangeProposalsV2Controller } from './reconciliation/change-proposals-v2.controller';
 import { ReconciliationV2Service } from './reconciliation/reconciliation-v2.service';
 import { ActualsAdjustmentsV2Controller } from './periods/actuals-adjustments-v2.controller';
+import { QualityDispositionsModule } from '../quality-dispositions/quality-dispositions.module';
+import { LotDispositionsV2Controller } from './quality-dispositions/lot-dispositions-v2.controller';
+import { LotDispositionsV2Service } from './quality-dispositions/lot-dispositions-v2.service';
 import { ActualsJobsV2Controller } from './periods/actuals-jobs-v2.controller';
 import { ExternalReportsV2Controller } from './periods/external-reports-v2.controller';
 import { PeriodsV2Service } from './periods/periods-v2.service';
@@ -115,6 +118,8 @@ import { ValuationModule } from '../valuation/valuation.module';
 import { DemandStatusesV2Controller } from './valuation/demand-statuses-v2.controller';
 import { FxRatesV2Controller } from './valuation/fx-rates-v2.controller';
 import { ValuationPoliciesV2Controller } from './valuation/valuation-policies-v2.controller';
+import { BadActorReportV2Controller } from './reports/bad-actor-v2.controller';
+import { BadActorReportV2Service } from './reports/bad-actor-v2.service';
 import { LossValueReportV2Controller } from './reports/loss-value-v2.controller';
 import { LossValueReportV2Service } from './reports/loss-value-v2.service';
 import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
@@ -191,6 +196,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     ProfilesModule,
     PlansModule,
     PeriodsModule,
+    QualityDispositionsModule,
     AccountingModule,
     ReconciliationModule,
     ExportsModule,
@@ -236,6 +242,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     PlanGenerationJobsV2Controller,
     ProductionPeriodsV2Controller,
     ActualsAdjustmentsV2Controller,
+    LotDispositionsV2Controller,
     ExternalReportsV2Controller,
     ActualsJobsV2Controller,
     PeriodAccountingV2Controller,
@@ -248,6 +255,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     DemandStatusesV2Controller,
     ValuationPoliciesV2Controller,
     LossValueReportV2Controller,
+    BadActorReportV2Controller,
     FeatureFlagsV2Controller,
     RulesV2Controller,
     RcaCasesV2Controller,
@@ -279,10 +287,12 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     TransitionStandardsV2Service,
     PlansV2Service,
     PeriodsV2Service,
+    LotDispositionsV2Service,
     PeriodAccountingV2Service,
     ReconciliationV2Service,
     KpiReportsV2Service,
     LossValueReportV2Service,
+    BadActorReportV2Service,
     PeriodOverviewService,
     PlaReportsV2Service,
     ActivitySummaryV2Service,

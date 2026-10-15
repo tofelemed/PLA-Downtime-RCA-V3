@@ -1,12 +1,12 @@
-import { spawn, type ChildProcess } from 'node:child_process';
-import { join } from 'node:path';
+import { type ChildProcess } from 'node:child_process';
 import { authenticate } from '../../test-utils/api-helpers';
 import { call } from '../../test-utils/downtime-world';
 import { PREFIX } from './integration-world';
+import { startPiSimulator } from '../../test-utils/pi-simulator';
 
 /**
  * UX06 world of the integration admin persona: the backend's PI Web API test simulator (fake account,
- * never a real PI server) as a child process on an ephemeral 127.0.0.1 port the local API reaches, with
+ * never a real PI server) as a child process on an ephemeral port the API reaches (see `pi-simulator.ts`: `E2E_PI_SIM_HOST` for a Docker API), with
  * one AF element and two "Production Loss" frames of 15 min ("00:15:00"): one 90 min ago (limited job)
  * and one 3 days ago (only the 7-day backfill reads it). A new unit `P-INT-PI-…` is the binding target;
  * the v1 units API refuses master data to an integration admin, so the unit is created by the demo
@@ -14,7 +14,6 @@ import { PREFIX } from './integration-world';
  * process stops with the spec (it is a process, not data), so the production job created in the journey
  * reports its endpoint unreachable once the run is over.
  */
-const BACKEND = join(process.cwd(), 'server', 'pro-act-backend');
 const SETUP_MANAGER = { email: 'manager@acme.com', password: 'demo123' };
 
 export interface PiWorld {
@@ -29,34 +28,6 @@ export interface PiWorld {
   elementPath: string;
   recentFrame: string;
   oldFrame: string;
-}
-
-interface Ready {
-  baseUrl: string;
-  username: string;
-  password: string;
-}
-
-function startSimulator(scenario: unknown): Promise<{ child: ChildProcess; ready: Ready }> {
-  // one fixed command line (no user input); the scenario travels in the environment
-  const child = spawn('npx ts-node -T test/simulators/pi-web-api/run-simulator.ts', {
-    cwd: BACKEND,
-    env: { ...process.env, PI_SIM_SCENARIO: JSON.stringify(scenario) },
-    shell: true,
-    stdio: ['pipe', 'pipe', 'inherit'],
-  });
-  return new Promise((resolve, reject) => {
-    let output = '';
-    const timer = setTimeout(() => reject(new Error(`simulator did not start: ${output}`)), 60_000);
-    child.stdout?.on('data', (chunk: Buffer) => {
-      output += chunk.toString();
-      const line = output.split('\n').find((entry) => entry.startsWith('READY '));
-      if (!line) return;
-      clearTimeout(timer);
-      resolve({ child, ready: JSON.parse(line.slice('READY '.length)) as Ready });
-    });
-    child.on('exit', (code) => reject(new Error(`simulator exited (${code}): ${output}`)));
-  });
 }
 
 /** The unit as the persona if the API lets it, else as the demo manager approver (setup only). */
@@ -77,7 +48,7 @@ export async function seedPiWorld(personaToken: string, tenantId: string, suffix
   const recentFrame = `EF-P-INT-${suffix}-recent`;
   const oldFrame = `EF-P-INT-${suffix}-old`;
   const attributes = { Duration: '00:15:00', Quantity: 3, Description: `${PREFIX}PI stop ${suffix}` };
-  const { child, ready } = await startSimulator({
+  const { child, ready } = await startPiSimulator({
     elements: [{ path: elementPath, webId: elementWebId }],
     frames: [
       { webId: recentFrame, startMinutesAgo: 90, endMinutesAgo: 75, elementWebId, attributes },

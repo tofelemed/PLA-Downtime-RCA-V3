@@ -12,6 +12,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 
 const { FxRateForm } = await import('./fx/fx-rate-form');
 const { FxVersionActions } = await import('./fx/fx-version-actions');
+const { FxRateTable } = await import('./fx/fx-rate-table');
 const { PolicyApprove } = await import('./policies/policy-approve');
 const { PolicyTable } = await import('./policies/policy-table');
 const { PoliciesTab } = await import('./policies/policies-tab');
@@ -34,7 +35,7 @@ const POLICY: ValuationPolicyView = {
 };
 
 const FX: FxRateView = {
-  id: 'f2', rateType: 'economic', fromCurrency: 'USD', toCurrency: 'IRR', rate: '2690000', source: 'CBI', version: 2, state: 'draft', effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: null,
+  id: 'f2', rateType: 'economic', fromCurrency: 'USD', toCurrency: 'IRR', rate: '2690000', source: 'CBI', provisional: false, version: 2, state: 'draft', effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: null,
   createdBy: 'author-1', approvedBy: null, approvedAt: null, rowVersion: 1, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z',
 };
 
@@ -77,7 +78,26 @@ describe('finance — exchange rates and valuation policy commands', () => {
     await waitFor(() => expect(screen.getByTestId('field-error-rate').textContent).toMatch(/at most 10 decimals/));
     expect(posts()[0].url.pathname).toMatch(/\/v2\/fx-rates$/);
     expect(posts()[0].headers.get('Idempotency-Key')).toBeTruthy();
-    expect(posts()[0].body).toEqual({ rateType: 'economic', fromCurrency: 'USD', toCurrency: 'IRR', rate: '585000.1234567891', effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: null, source: null });
+    expect(posts()[0].body).toEqual({ rateType: 'economic', fromCurrency: 'USD', toCurrency: 'IRR', rate: '585000.1234567891', effectiveFrom: '2026-10-01T02:30:00.000Z', effectiveTo: null, source: null, provisional: false });
+  });
+
+  it('SME V7: a provisional rate needs an end date before it is sent, then goes out flagged; the table says Provisional', async () => {
+    reply = (call) => (call.method === 'POST' ? json(201, { ...FX, provisional: true }) : json(200, { items: [], nextCursor: null }));
+    wrap(<FxRateForm timezone={TZ} onSaved={() => undefined} onCancel={() => undefined} />);
+    fireEvent.change(screen.getByLabelText('Rate'), { target: { value: '600000' } });
+    fireEvent.change(screen.getByLabelText(`Valid from (${TZ}) date`), { target: { value: '2026-10-01' } });
+    fireEvent.change(screen.getByLabelText(`Valid from (${TZ}) time`), { target: { value: '00:00' } });
+    fireEvent.click(screen.getByTestId('fx-provisional'));
+    fireEvent.click(screen.getByTestId('fx-save'));
+    await waitFor(() => expect(screen.getByTestId('field-error-effectiveTo').textContent).toMatch(/provisional rate needs an end date/));
+    expect(posts()).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText('Valid until (optional) date'), { target: { value: '2026-11-01' } });
+    fireEvent.change(screen.getByLabelText('Valid until (optional) time'), { target: { value: '00:00' } });
+    fireEvent.click(screen.getByTestId('fx-save'));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(posts()[0].body).toMatchObject({ provisional: true, rate: '600000' });
+    wrap(<FxRateTable rates={[{ ...FX, provisional: true }, { ...FX, id: 'f3' }]} />);
+    expect(screen.getAllByTestId('fx-provisional-badge')).toHaveLength(1);
   });
 
   it('a rate the browser refuses never reaches the server (same currency, zero rate)', async () => {

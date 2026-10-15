@@ -8,6 +8,8 @@ import type { MasterDataSummaryView } from '../api/master-data-types';
 import { useMasterDataSummary } from '../api/use-master-data-summary';
 import { MasterDataLayout } from '../components/master-data-layout';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { useCapabilities } from '@/features/auth/use-capabilities';
+import { ReachablePagesOverview } from './reachable-pages-overview';
 
 interface Tile {
   to: string;
@@ -60,8 +62,16 @@ function TileGrid({ tiles, summary, loading }: { tiles: readonly Tile[]; summary
   );
 }
 
-/** `/master-data`: active record counts of the selected plant and the way into each section. */
+/**
+ * `/master-data`: active record counts of the selected plant and the way into each section; a user who
+ * only writes some reliability pages gets the list of those pages instead.
+ */
 export function MasterDataOverviewPage() {
+  const { canManageMasterData } = useCapabilities();
+  return canManageMasterData ? <PlantRecordsOverview /> : <ReachablePagesOverview />;
+}
+
+function PlantRecordsOverview() {
   const summary = useMasterDataSummary();
   return (
     <MasterDataLayout title="Master data" description="Reference data of the selected plant: units, assets, products and RCA settings.">

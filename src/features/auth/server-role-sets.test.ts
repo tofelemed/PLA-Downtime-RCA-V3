@@ -22,6 +22,8 @@ const PINS: ReadonlyArray<[mirror: readonly string[], file: string, name: string
   [Mirror.PERIOD_WRITERS, 'v2/periods/period-roles.ts', 'PERIOD_WRITERS'],
   [Mirror.ADJUSTMENT_APPROVERS, 'v2/periods/period-roles.ts', 'ADJUSTMENT_APPROVERS'],
   [Mirror.REVISION_APPROVERS, 'v2/periods/period-roles.ts', 'REVISION_APPROVERS'],
+  [Mirror.DISPOSITION_WRITERS, 'v2/quality-dispositions/disposition-roles.ts', 'DISPOSITION_WRITERS'],
+  [Mirror.DISPOSITION_APPROVERS, 'v2/quality-dispositions/disposition-roles.ts', 'DISPOSITION_APPROVERS'],
   [Mirror.CODE_WRITERS, 'v2/code-libraries/code-library-v2.controller.ts', 'CODE_WRITERS'],
   [Mirror.RULE_AUTHORS, 'v2/rules/rules-v2.controller.ts', 'RULE_AUTHORS'],
   [Mirror.RULE_APPROVERS, 'v2/rules/rules-v2.controller.ts', 'RULE_APPROVERS'],
@@ -35,6 +37,9 @@ const PINS: ReadonlyArray<[mirror: readonly string[], file: string, name: string
   [Mirror.MONTH_REOPENERS, 'v2/close/close-roles.ts', 'MONTH_REOPENERS'],
   [Mirror.POSTING_DECIDERS, 'v2/close/close-roles.ts', 'POSTING_DECIDERS'],
   [Mirror.DAY_CERTIFIERS, 'v2/close/close-roles.ts', 'DAY_CERTIFIERS'],
+  [Mirror.STANDBY_WRITERS, 'v2/reliability/reliability-roles.ts', 'STANDBY_WRITERS'],
+  [Mirror.WORK_ORDER_WRITERS, 'v2/reliability/reliability-roles.ts', 'WORK_ORDER_WRITERS'],
+  [Mirror.STATE_MAPPING_WRITERS, 'v2/reliability/reliability-roles.ts', 'STATE_MAPPING_WRITERS'],
   [Mirror.AUDIT_READERS, 'audit-log/audit-roles.ts', 'AUDIT_READERS'],
   [Mirror.READ_ONLY_ROLES, 'auth/guards/write-access.guard.ts', 'READ_ONLY_ROLES'],
 ];
@@ -58,6 +63,14 @@ describe('server role sets mirror', () => {
     const text = readFileSync(join(SERVER, 'v2/rca-policies/rca-policies-v2.controller.ts'), 'utf8');
     const roles = [...text.matchAll(/@Roles\(([^)]*)\)/g)].map((m) => m[1].replace(/'/g, '').split(/,\s*/));
     expect(roles).toEqual([[...Mirror.RCA_POLICY_WRITERS]]);
+  });
+
+  it('micro-stop and transition-allowance policies are written by manager approvers only', () => {
+    for (const file of ['v2/reliability/micro-stop-policy-v2.controller.ts', 'v2/reliability/transition-allowance-v2.controller.ts']) {
+      const text = readFileSync(join(SERVER, file), 'utf8');
+      const roles = [...text.matchAll(/@Roles\(([^)]*)\)/g)].map((m) => m[1].replace(/'/g, '').split(/,\s*/));
+      expect(roles).toEqual([[...Mirror.OEE_POLICY_WRITERS]]);
+    }
   });
 
   it('valuation policies, FX rates and valuation rates use the finance sets (SME V1)', () => {

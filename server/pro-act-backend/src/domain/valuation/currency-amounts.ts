@@ -36,6 +36,7 @@ export function inCurrency(
   const conversion = conversionOf(context);
   let total = new Dec(0);
   const fxRateIds: string[] = [];
+  let provisional = false;
   for (const c of components) {
     const pair = { from: c.currency, to: currency };
     const converted = convert(c.amount, pair, c.from, conversion);
@@ -49,12 +50,25 @@ export function inCurrency(
       };
     }
     total = total.plus(converted.amount);
+    provisional = provisional || converted.provisional;
     converted.fxRateIds.forEach((id) => {
       if (!fxRateIds.includes(id)) fxRateIds.push(id);
     });
   }
   const native = components.every((c) => c.currency === currency);
-  return { currency, amount: total, reason: null, fxRateIds, native };
+  return {
+    currency,
+    amount: total,
+    reason: null,
+    fxRateIds,
+    native,
+    ...provisionalMark(provisional),
+  };
+}
+
+/** SME V7 mark of an amount: the field exists only when true, so stored shapes and hashes stay as they were. */
+export function provisionalMark(provisional: boolean): { provisional?: true } {
+  return provisional ? { provisional: true } : {};
 }
 
 /** A view that cannot be valued: the reason in every currency, amounts null (never a zero). */

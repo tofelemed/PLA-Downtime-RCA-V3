@@ -67,6 +67,10 @@ export const DURATION_SECONDS_EXPRESSION =
   'CHK_production_events_failure_severity',
   `"failure_severity" IS NULL OR "failure_severity" IN ('critical', 'degraded', 'incipient')`,
 )
+@Check(
+  'CHK_production_events_disposition_class',
+  `"disposition_class" IS NULL OR ("physical_type" = 'quality_loss' AND "disposition_class" IN ('downgrade', 'scrap', 'rework'))`,
+)
 @Index('IDX_production_events_tenant_unit_start', [
   'tenantId',
   'unitId',
@@ -322,6 +326,10 @@ export class ProductionEvent {
   /** SME D8: `critical` / `degraded` count as functional failures, `incipient` does not; null = pending */
   @Column({ name: 'failure_severity', type: 'varchar', length: 16, nullable: true })
   failureSeverity: string | null;
+
+  /** SME E3: disposition of the tonnes a quality_loss event explains (downgrade / scrap / rework) */
+  @Column({ name: 'disposition_class', type: 'varchar', length: 32, nullable: true })
+  dispositionClass: string | null;
 
   /** SME D11 (ISO 14224): maintainable item, e.g. mechanical seal */
   @Column({ name: 'maintainable_item', type: 'varchar', length: 100, nullable: true })

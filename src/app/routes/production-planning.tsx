@@ -22,6 +22,7 @@ const MonthClose = lazyNamedWithPreload(() => import('@/features/month-close/mon
 /** "My queue" of the reconciliation workflow (EXPERT_REVIEW Area 3, phase R-C). */
 const MyQueue = lazyNamedWithPreload(() => import('@/features/month-close/my-queue-page'), 'MyQueuePage');
 const ProposeAdjustment = lazyNamedWithPreload(() => import('@/features/plan-dashboard/adjustments/propose-adjustment-page'), 'ProposeAdjustmentPage');
+const RecordDisposition = lazyNamedWithPreload(() => import('@/features/plan-dashboard/dispositions/record-disposition-page'), 'RecordDispositionPage');
 
 /**
  * Planning routes of the production area (owned by the planning track; spread into `PRODUCTION_ROUTES`).
@@ -43,6 +44,7 @@ export const PLANNING_ROUTES: readonly AppRoute[] = [
   { path: '/plans/:planId', element: <PlanDashboard />, preload: PlanDashboard.preload },
   { path: '/plans/:planId/periods/:periodId', element: <PeriodPage />, preload: PeriodPage.preload },
   { path: '/plans/:planId/periods/:periodId/adjustments/new', element: <ProposeAdjustment />, preload: ProposeAdjustment.preload },
+  { path: '/plans/:planId/periods/:periodId/dispositions/new', element: <RecordDisposition />, preload: RecordDisposition.preload },
   { path: '/month-close', element: <MonthClose />, preload: MonthClose.preload },
   { path: '/my-queue', element: <MyQueue />, preload: MyQueue.preload },
 ];

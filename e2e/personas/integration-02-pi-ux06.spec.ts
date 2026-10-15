@@ -10,6 +10,9 @@ import { apiLogin, eventsByEventId, findConnection, INT_USERS, findOnPages, jobs
  * event exists once → 7-day backfill (drained) → production job healthy; every stage recorded. The PI
  * endpoint is the backend's simulator on an ephemeral port. Everything created (unit, connection,
  * mapping, jobs, events) is kept; the password never appears in a response or in browser storage.
+ *
+ * API in Docker (`docker-compose.devdb.yml`): run with `E2E_PI_SIM_HOST=host.docker.internal` so the
+ * simulator listens on all interfaces and the connection URL names the host (`test-utils/pi-simulator.ts`).
  */
 const suffix = newSuffix();
 let elena: IntSession;

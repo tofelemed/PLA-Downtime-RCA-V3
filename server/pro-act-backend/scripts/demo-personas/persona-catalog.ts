@@ -5,6 +5,7 @@
  */
 import { LegacyRole, mapLegacyRole } from '../../src/auth/roles/role-model';
 import {
+  approveDisposition,
   approvePolicy,
   createConnection,
   createEvent,
@@ -84,6 +85,11 @@ export function personaEmail(name: string): string {
 
 function tenantScope(plant: PlantKey, role: string): PersonaScope {
   return { plant, kind: 'tenant', role };
+}
+
+/** Tenant scopes of `role` in Demo Plant and Demo Plant 2. */
+function inBothDemoPlants(role: string): PersonaScope[] {
+  return [tenantScope('demoPlant', role), tenantScope('demoPlant2', role)];
 }
 
 interface UserOptions {
@@ -232,6 +238,7 @@ export const DEMO_PERSONAS: Persona[] = [
     probes: [
       setFlag('demoPlant', 'allowed'),
       editAuditLog('demoPlant', 'FORBIDDEN_ROLE'),
+      approveDisposition('demoPlant', 'FORBIDDEN_ROLE'),
     ],
   },
   {
@@ -349,10 +356,7 @@ export const DEMO_PERSONAS: Persona[] = [
     actingPlant: 'demoPlant',
     users: ['Mina Sadeghi', 'Thomas Keller'].map((name) =>
       user(name, 'Analyst', 'demoPlant', {
-        extraScopes: [
-          tenantScope('demoPlant', 'finance_maintainer'),
-          tenantScope('demoPlant2', 'finance_maintainer'),
-        ],
+        extraScopes: inBothDemoPlants('finance_maintainer'),
       }),
     ),
     probes: [
@@ -366,15 +370,27 @@ export const DEMO_PERSONAS: Persona[] = [
     actingPlant: 'demoPlant',
     users: ['Reza Karimi', 'Sofia Lindqvist'].map((name) =>
       user(name, 'Analyst', 'demoPlant', {
-        extraScopes: [
-          tenantScope('demoPlant', 'finance_approver'),
-          tenantScope('demoPlant2', 'finance_approver'),
-        ],
+        extraScopes: inBothDemoPlants('finance_approver'),
       }),
     ),
     probes: [
       approvePolicy('demoPlant', 'allowed'),
       createPolicy('demoPlant', 'FORBIDDEN_ROLE'),
+    ],
+  },
+  // ISO 9001 (owner, 15 Oct 2026): Quality / Lab decides lot dispositions, independent of production
+  {
+    key: 'qualityApprover',
+    label: 'quality_approver',
+    actingPlant: 'demoPlant',
+    users: [
+      user('Parisa Rahimi', 'Analyst', 'demoPlant', {
+        extraScopes: inBothDemoPlants('quality_approver'),
+      }),
+    ],
+    probes: [
+      approveDisposition('demoPlant', 'allowed'),
+      setFlag('demoPlant', 'FORBIDDEN_ROLE'),
     ],
   },
 ];

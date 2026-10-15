@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import {
   RequestContext,
   requireTenantId,
@@ -33,6 +33,8 @@ export interface NewFxRate {
   effectiveFrom: string;
   effectiveTo?: string | null;
   source?: string | null;
+  /** SME V7: an authorised provisional rate for dates whose final rate is missing (bounded window) */
+  provisional?: boolean;
 }
 
 export interface FxRateFilter {
@@ -40,16 +42,50 @@ export interface FxRateFilter {
   fromCurrency?: string;
   toCurrency?: string;
   state?: VersionState;
+  provisional?: boolean;
   cursor?: string;
   limit: number;
 }
 
 const WHAT = 'FX rate';
 
+/** SME V7: a provisional rate only fills dates without an approved final rate of the same table and pair. */
+async function assertNoFinalRate(
+  manager: EntityManager,
+  rate: FxRate,
+): Promise<void> {
+  const covering = await manager
+    .createQueryBuilder(FxRate, 'f')
+    .where('f.tenantId = :tenantId AND f.rateType = :rateType', {
+      tenantId: rate.tenantId,
+      rateType: rate.rateType,
+    })
+    .andWhere('f.fromCurrency = :fromCurrency AND f.toCurrency = :toCurrency', {
+      fromCurrency: rate.fromCurrency,
+      toCurrency: rate.toCurrency,
+    })
+    .andWhere(`f.state = 'approved' AND f.provisional = false`)
+    .andWhere('f.effectiveFrom < :to', {
+      to: rate.effectiveTo ?? new Date(8.64e15),
+    })
+    .andWhere('(f.effectiveTo IS NULL OR f.effectiveTo > :from)', {
+      from: rate.effectiveFrom,
+    })
+    .getMany();
+  if (covering.length === 0) return;
+  throw new ConflictException({
+    code: 'FINAL_RATE_EXISTS',
+    message:
+      'an approved final FX rate already covers part of this window: a provisional rate only fills missing dates',
+    details: { finalRateIds: covering.map((f) => f.id) },
+  });
+}
+
 /**
  * The approved, dated FX rate table (plan 2.6, D08 2026-10-09): versions per currency pair, drafted and
  * approved like master data (no overlap between approved versions of a pair; `supersede` closes the
- * predecessor at the new `from`). Rates apply to every unit of the tenant, so every write needs a
+ * predecessor at the new `from`); SME V7 provisional versions are authorised the same way and flagged.
+ * Rates apply to every unit of the tenant, so every write needs a
  * tenant-wide grant (403 `TENANT_SCOPE_REQUIRED`); reads are open to any tenant member.
  */
 @Injectable()
@@ -69,6 +105,13 @@ export class FxRatesService {
       throw invalid('INVALID_VALUE', 'rate must be a decimal > 0');
     }
     const validity = validityOf(input);
+    const provisional = input.provisional === true;
+    if (provisional && validity.to === null) {
+      throw invalid(
+        'PROVISIONAL_RATE_UNBOUNDED',
+        'a provisional FX rate covers a bounded window: effectiveTo is required',
+      );
+    }
     return this.rates.manager.transaction(async (manager) => {
       const key = {
         tenantId,
@@ -85,6 +128,7 @@ export class FxRatesService {
           effectiveTo: validity.to,
           version,
           state: 'draft',
+          provisional,
           source: input.source?.trim() || null,
           createdBy: context.userId,
           updatedBy: context.userId,
@@ -106,6 +150,10 @@ export class FxRatesService {
     if (query.toCurrency)
       qb.andWhere('f.toCurrency = :to', { to: query.toCurrency });
     if (query.state) qb.andWhere('f.state = :state', { state: query.state });
+    if (query.provisional !== undefined)
+      qb.andWhere('f.provisional = :provisional', {
+        provisional: query.provisional,
+      });
     return keysetPage(qb, {
       alias: 'f',
       property: 'effectiveFrom',
@@ -125,7 +173,10 @@ export class FxRatesService {
 
   /**
    * Approves a draft; SME V7: the periods the rate values are queued for revaluation with the approval
-   * (returned, so the caller sees what it triggered — late rates never change figures silently).
+   * (returned, so the caller sees what it triggered — late rates never change figures silently). Final
+   * and provisional versions are separate families (each never overlaps itself); a provisional draft is
+   * refused (409 `FINAL_RATE_EXISTS`) where an approved final rate already covers part of its window. A
+   * final rate approved over a provisional one replaces it in the revaluation it queues.
    */
   async approve(
     context: RequestContext,
@@ -135,6 +186,11 @@ export class FxRatesService {
     const rate = await this.get(context, id);
     assertTenantWideWriter(context, rate.tenantId);
     return this.rates.manager.transaction(async (manager) => {
+      // final and provisional approvals of one pair are serialised, so the check below cannot race
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `fx_rates_pair:${rate.tenantId}:${rate.rateType}:${rate.fromCurrency}:${rate.toCurrency}`,
+      ]);
+      if (rate.provisional) await assertNoFinalRate(manager, rate);
       const result = await approveVersion(
         manager,
         FxRate,
@@ -145,6 +201,7 @@ export class FxRatesService {
             rateType: rate.rateType,
             fromCurrency: rate.fromCurrency,
             toCurrency: rate.toCurrency,
+            provisional: String(rate.provisional),
           },
           supersede,
           actorId: context.userId,

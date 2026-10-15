@@ -39,6 +39,9 @@ const FIELD_LABEL: Readonly<Record<keyof EventFormValues, string>> = {
   failureMechanism: 'Failure mechanism',
   failureCause: 'Failure cause',
   detectionMethod: 'Detection method',
+  quantity: 'Quantity',
+  quantityUom: 'Unit of quantity',
+  dispositionClass: 'Disposition',
 };
 
 /**

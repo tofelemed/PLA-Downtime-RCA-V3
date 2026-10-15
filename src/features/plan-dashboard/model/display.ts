@@ -92,6 +92,7 @@ export function formatMoney(value: CurrencyValueView, digits?: DigitSystem): str
 const VALUATION_REASON_LABELS: Record<string, string> = {
   policy_unapproved: 'Valuation policy not approved by finance',
   fx_rate_missing: 'No approved FX rate for the date',
+  fx_rate_provisional: 'Converted with a provisional FX rate (revalued when the final rate is approved)',
   rate_missing: 'No approved valuation rate',
   uom_mismatch: 'Rate unit differs from the loss unit',
   demand_status_missing: 'No approved demand status for the product (lost sale unknown)',

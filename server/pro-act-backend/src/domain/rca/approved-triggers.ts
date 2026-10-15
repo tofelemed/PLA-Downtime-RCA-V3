@@ -6,8 +6,18 @@ import { occurrenceOf, TriggerCandidate } from './rca-triggers';
 export interface ApprovedEventImpact {
   eventId: string;
   occurrenceId: string | null;
-  /** contribution-margin value per currency; amount null while any line is unvalued (never estimated) */
-  values: ReadonlyArray<{ currency: string; amount: string | null }>;
+  /**
+   * approved value per currency in the policy's default view (SME V8: economic impact from valuation
+   * policy version 3); amount null while any line is unvalued (never estimated); `provisional` when an
+   * authorised provisional FX rate converted some of it (SME V7)
+   */
+  values: ReadonlyArray<{
+    currency: string;
+    amount: string | null;
+    provisional?: boolean;
+  }>;
+  /** the valuation view of `values` (recorded on a cost firing) */
+  valueView?: string;
   /** approved lost quantity per unit of measure (loss kinds only) */
   lost: ReadonlyArray<{ uom: string | null; quantity: string }>;
   /** the unit's planned quantity of the event's operational day per unit of measure */
@@ -42,7 +52,11 @@ function candidate(
   };
 }
 
-/** D17 money limit (finance): the approved value in the policy currency; never halved, null = off. */
+/**
+ * D17 money limit (finance): the approved value in the policy currency; never halved, null = off. A value
+ * resting on a provisional FX rate is not final money (SME V7): it waits for the final rate, whose
+ * restatement then fires once under the same per-occurrence key.
+ */
 function costCandidate(
   impact: ApprovedEventImpact,
   context: ApprovedContext,
@@ -50,7 +64,7 @@ function costCandidate(
   const { costThreshold, costCurrency } = context.policy;
   if (costThreshold === null || !costCurrency) return null;
   const value = impact.values.find((entry) => entry.currency === costCurrency);
-  if (!value?.amount) return null;
+  if (!value?.amount || value.provisional) return null;
   if (new Dec(value.amount).lt(new Dec(costThreshold))) return null;
   return candidate(impact, context, {
     trigger: 'cost',
@@ -58,6 +72,7 @@ function costCandidate(
       amount: value.amount,
       currency: costCurrency,
       threshold: costThreshold,
+      ...(impact.valueView ? { view: impact.valueView } : {}),
     },
   });
 }

@@ -47,6 +47,8 @@ export interface PersonaCast {
   finance: readonly string[];
   /** SME V1: finance approvers, never the author of what they approve */
   financeApprovers: readonly string[];
+  /** ISO 9001: Quality / Lab approvers decide lot dispositions, never ones they recorded */
+  quality: readonly string[];
 }
 
 export interface PlantScenario {
@@ -120,6 +122,7 @@ const DEMO_PLANT: PlantScenario = {
     reliability: ['viktor.petrov', 'amara.diallo', 'sebastian.vogel'],
     finance: ['mina.sadeghi', 'thomas.keller'],
     financeApprovers: ['reza.karimi', 'sofia.lindqvist'],
+    quality: ['parisa.rahimi'],
   },
   products: HDPE_PRODUCTS,
   units: [
@@ -220,6 +223,7 @@ const DEMO_PLANT_2: PlantScenario = {
     reliability: ['isabel.moreno'],
     finance: ['mina.sadeghi'],
     financeApprovers: ['reza.karimi'],
+    quality: ['parisa.rahimi'],
   },
   products: PP_PRODUCTS,
   units: [
@@ -262,6 +266,7 @@ const PARTNER_PLANT: PlantScenario = {
     reliability: ['lucas.ferreira'],
     finance: ['lucas.ferreira'],
     financeApprovers: ['lucas.ferreira'],
+    quality: ['lucas.ferreira'],
   },
   products: [],
   units: [],

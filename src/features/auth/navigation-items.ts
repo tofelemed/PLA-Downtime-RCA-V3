@@ -92,12 +92,13 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     description: 'Close the plant month: approvals, quantity close, finance sign-off and lock',
   },
   { name: 'RCA Analysis', href: '/rca', icon: EntityIcon.rcaCase, section: 'reliability', capability: 'canViewAnalysis', description: 'Root cause investigations' },
+  { name: 'Bad Actors', href: '/reliability/bad-actors', icon: EntityIcon.badActor, section: 'reliability', capability: 'canViewAnalysis', description: 'Monthly top assets and failure modes by approved loss' },
   { name: 'Knowledge Base', href: '/rca-knowledge-base', icon: EntityIcon.knowledge, section: 'reliability', capability: 'canViewAnalysis', description: 'Closed investigations and lessons learned' },
   { name: 'Tasks', href: '/tasks', icon: EntityIcon.task, section: 'reliability', capability: 'canViewOperations', description: 'Assign and track action items' },
   { name: 'Connectivity', href: '/connectivity', icon: EntityIcon.connection, section: 'integration', capability: 'canUseIntegrationConsole', description: 'Connections, ingestion jobs and mappings' },
   // listed for integration roles; the page reads signals and their samples, which every plant member may read
   { name: 'Enhanced Historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canViewAnalysis', description: 'Time series of plant signals' },
-  { name: 'Master Data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canManageMasterData', description: 'Plant hierarchy, units, assets and products' },
+  { name: 'Master Data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canReachMasterData', description: 'Plant hierarchy, units, assets, products and reliability plant data' },
   {
     name: 'Codes & Rules',
     href: '/codes-admin',

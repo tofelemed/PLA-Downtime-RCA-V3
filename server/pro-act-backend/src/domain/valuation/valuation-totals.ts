@@ -1,5 +1,6 @@
 import { Ledger, LossKind } from '../accounting/accounting.types';
 import { Dec } from '../actuals/decimal';
+import { provisionalMark } from './currency-amounts';
 import {
   INDEPENDENT_VIEW,
   LineValuation,
@@ -36,12 +37,17 @@ export interface ValuationTotal {
   valuedLines: number;
   unvaluedLines: number;
   fxMissingLines: number;
+  /** SME V7: valued lines converted with a provisional FX rate (their amounts are in `amount`) */
+  fxProvisionalLines: number;
   unvaluedQuantity: Dec;
   unvaluedSeconds: Dec;
   status: TotalStatus;
   reasons: string[];
   fxRateIds: string[];
 }
+
+/** SME V7 reason on a total or report whose amount includes provisional-rate conversions. */
+export const FX_PROVISIONAL = 'fx_rate_provisional';
 
 type Slot = { view: TotalsView; valuation: LineViewValuation };
 
@@ -67,6 +73,7 @@ function combined(
         reason: unvalued?.reason ?? (amount ? null : 'fx_rate_missing'),
         fxRateIds: [...new Set([...a.fxRateIds, ...(b?.fxRateIds ?? [])])],
         native: a.native && Boolean(b?.native),
+        ...provisionalMark(Boolean(a.provisional || b?.provisional)),
       };
     }),
   };
@@ -102,6 +109,7 @@ function emptyTotal(
     valuedLines: 0,
     unvaluedLines: 0,
     fxMissingLines: 0,
+    fxProvisionalLines: 0,
     unvaluedQuantity: new Dec(0),
     unvaluedSeconds: new Dec(0),
     status: 'valued',
@@ -142,6 +150,10 @@ function accumulate(
     return;
   }
   total.amount = (total.amount ?? new Dec(0)).plus(amount.amount);
+  if (amount.provisional) {
+    total.fxProvisionalLines += 1;
+    addReason(total, FX_PROVISIONAL);
+  }
   amount.fxRateIds.forEach((id) => {
     if (!total.fxRateIds.includes(id)) total.fxRateIds.push(id);
   });
@@ -168,7 +180,8 @@ function finish(total: ValuationTotal): ValuationTotal {
  * Views are never added to each other (VAL02) — the only sum across views is the `independent_components`
  * row for impact codes the policy marks independent; kinds are never netted (gains and residuals keep
  * their own rows). Missing prices keep their quantity (`unvaluedQuantity`, T38); a missing FX rate makes
- * the currency total null (`fx_rate_missing`) while `nativeAmount` keeps the per-currency sum (T45).
+ * the currency total null (`fx_rate_missing`) while `nativeAmount` keeps the per-currency sum (T45); a
+ * provisional-rate conversion is summed but counted (`fxProvisionalLines`, reason `fx_rate_provisional`, V7).
  */
 export function valuationTotals(
   lines: readonly TotalsLine[],

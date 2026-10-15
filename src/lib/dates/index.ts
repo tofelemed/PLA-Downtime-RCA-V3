@@ -34,3 +34,4 @@ export {
   jalaliToIsoDate,
 } from './jalali';
 export { nextPlantDayUtc, plantLocalToUtc, startOfPlantDayUtc, utcToPlantLocal } from './zoned-time';
+export { currentPlantMonth, monthNames, parsePlantMonth, plantMonthOf, shiftPlantMonth } from './plant-month';

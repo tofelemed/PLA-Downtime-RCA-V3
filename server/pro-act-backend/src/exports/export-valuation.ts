@@ -6,6 +6,7 @@ import {
   ReviewedAmount,
   ReviewedValuation,
 } from '../reconciliation/reviewed-valuation';
+import { FX_PROVISIONAL } from '../domain/valuation/valuation-totals';
 import { CsvValue } from './csv';
 
 /**
@@ -22,10 +23,11 @@ export const VALUATION_COLUMNS = [
   'currency_2',
   'valuation_status',
   'valuation_reason',
+  'fx_provisional',
 ];
 
 export const VALUATION_HEADER =
-  'per row (valuation_view, value_n / currency_n, valuation_status); values rounded to the currency minor units for presentation (IRR 0, USD 2), totals computed from unrounded values';
+  'per row (valuation_view, value_n / currency_n, valuation_status, fx_provisional = true when a value used a provisional FX rate, SME V7); values rounded to the currency minor units for presentation (IRR 0, USD 2), totals computed from unrounded values';
 
 /**
  * Presentation rounding of a stored 8-dp amount: half-even to the currency's minor units, fixed digits
@@ -44,7 +46,16 @@ export function presentMoney(
 
 /** Snapshots approved before plan 2.6 (or of runs without a valuation context) are unvalued. */
 export function unvaluedCells(): CsvValue[] {
-  return [null, null, null, null, null, UNVALUED.status, UNVALUED.reason];
+  return [
+    null,
+    null,
+    null,
+    null,
+    null,
+    UNVALUED.status,
+    UNVALUED.reason,
+    'false',
+  ];
 }
 
 function currencyCells(
@@ -62,6 +73,10 @@ function currencyCells(
   ];
 }
 
+/** SME V7: `true` when a value of the row was converted with a provisional FX rate. */
+const provisionalCell = (provisional: boolean): CsvValue =>
+  provisional ? 'true' : 'false';
+
 /** Cells of a period-summary row: the slice's loss value in the default view. */
 export function sliceValuationCells(
   valuation: ReviewedValuation | undefined,
@@ -77,9 +92,14 @@ export function sliceValuationCells(
       ...currencyCells(valuation, []),
       'valued',
       null,
+      provisionalCell(false),
     ];
   }
   const reasons = [...new Set(totals.flatMap((t) => t.reasons))].sort();
+  const provisional = totals.some(
+    (t) =>
+      (t.fxProvisionalLines ?? 0) > 0 || t.reasons.includes(FX_PROVISIONAL),
+  );
   const status = totals.every((t) => t.status === 'valued')
     ? 'valued'
     : totals.every((t) => t.status === 'unvalued')
@@ -90,6 +110,7 @@ export function sliceValuationCells(
     ...currencyCells(valuation, totals),
     status,
     reasons.length > 0 ? reasons.join(';') : null,
+    provisionalCell(provisional),
   ];
 }
 
@@ -109,6 +130,7 @@ export function lineValuationCells(
       ...currencyCells(valuation, []),
       'unvalued',
       'not_valued',
+      provisionalCell(false),
     ];
   }
   const amounts: ReviewedAmount[] = view.amounts;
@@ -120,5 +142,6 @@ export function lineValuationCells(
     ...currencyCells(valuation, amounts),
     view.status,
     reasons.length > 0 ? reasons.join(';') : null,
+    provisionalCell(amounts.some((a) => a.provisional === true)),
   ];
 }

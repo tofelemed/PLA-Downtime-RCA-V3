@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLossTree } from '@/api/v2/queries/pla-analytics';
-import type { LossTreeGroupBy, LossTreeMetric, LossTreeView } from '@/api/v2/types/pla-analytics';
+import type { LossTreeGroupBy, LossTreeMetricParam, LossTreeView } from '@/api/v2/types/pla-analytics';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LEDGER_LABELS } from '@/features/ux-kit/labels';
@@ -11,7 +11,7 @@ import { AnalyticsCard } from '../components/analytics-card';
 import { SELECT_CLASS } from '../components/analytics-filters';
 import { LossTable } from '../components/loss-table';
 import { LOSS_GROUPS, LOSS_METRICS, lossTreeQuery, type AnalyticsScope } from '../model/analytics-scope';
-import { LOSS_GROUP_LABELS, METRIC_LABELS } from '../model/display';
+import { LOSS_GROUP_LABELS, METRIC_LABELS, shownMetricLabel } from '../model/display';
 import { downtimeLink, LOSS_LINES_NOTE } from '../model/links';
 
 const LossTreemap = lazy(() => import('../charts/loss-treemap').then((m) => ({ default: m.LossTreemap })));
@@ -33,7 +33,7 @@ function LossTreeControls({ scope, onChange }: LossTreeTabProps) {
         ))}
       </select>
       <Label htmlFor="loss-metric">Metric</Label>
-      <select id="loss-metric" data-testid="loss-metric" className={SELECT_CLASS} value={scope.lossMetric} onChange={(e) => onChange({ lossMetric: e.target.value as LossTreeMetric })}>
+      <select id="loss-metric" data-testid="loss-metric" className={SELECT_CLASS} value={scope.lossMetric} onChange={(e) => onChange({ lossMetric: e.target.value as LossTreeMetricParam })}>
         {LOSS_METRICS.map((m) => (
           <option key={m} value={m}>
             {METRIC_LABELS[m]}
@@ -46,7 +46,7 @@ function LossTreeControls({ scope, onChange }: LossTreeTabProps) {
 
 /**
  * Loss tree (AN02): the shown runs' loss lines per reason, impact, OEE component, kind or unit, as lost
- * quantity or one valuation view (margin, standard cost, operational cost — never added together), largest
+ * quantity or one valuation view (policy default, economic impact, margin, standard cost, operational cost — never added together), largest
  * first with the cumulative share; grouping and metric go to the server (`groupBy`, `metric`).
  */
 export function LossTreeTab({ scope, onChange }: LossTreeTabProps) {
@@ -55,7 +55,7 @@ export function LossTreeTab({ scope, onChange }: LossTreeTabProps) {
   const data = query.data?.data;
   return (
     <AnalyticsCard
-      title={`${METRIC_LABELS[scope.lossMetric]} by ${LOSS_GROUP_LABELS[scope.lossGroupBy].toLowerCase()} · ${LEDGER_LABELS[scope.ledger].toLowerCase()}`}
+      title={`${shownMetricLabel(scope.lossMetric, data)} by ${LOSS_GROUP_LABELS[scope.lossGroupBy].toLowerCase()} · ${LEDGER_LABELS[scope.ledger].toLowerCase()}`}
       testId="pla-loss-tree"
       query={query}
       response={query.data}

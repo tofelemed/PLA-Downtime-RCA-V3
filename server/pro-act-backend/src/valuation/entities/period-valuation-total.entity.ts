@@ -111,6 +111,10 @@ export class PeriodValuationTotal extends TenantOwnedEntity {
   @Column({ name: 'fx_missing_lines', type: 'int' })
   fxMissingLines: number;
 
+  /** SME V7: valued lines whose amount used a provisional FX rate */
+  @Column({ name: 'fx_provisional_lines', type: 'int', default: 0 })
+  fxProvisionalLines: number;
+
   @Column(quantity('unvalued_quantity'))
   unvaluedQuantity: string;
 

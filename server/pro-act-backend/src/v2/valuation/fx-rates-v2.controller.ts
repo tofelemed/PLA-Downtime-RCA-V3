@@ -43,6 +43,11 @@ const REVALUATION =
   'SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole ' +
   'months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite.';
 
+const PROVISIONAL =
+  'SME V7: final and provisional versions never overlap their own kind; a provisional draft is refused with ' +
+  '409 FINAL_RATE_EXISTS where an approved final rate covers part of its window. A final rate wins over a ' +
+  'provisional one, so approving it revalues what the provisional rate valued.';
+
 /** The approved, dated FX rate table of plan 2.6 (D08: IRR and USD; VAL03). */
 @ApiTags('v2 · Valuation')
 @ApiBearerAuth()
@@ -80,7 +85,9 @@ export class FxRatesV2Controller {
   @ApiOperation({
     summary:
       'Create a draft FX rate version (1 fromCurrency = rate toCurrency)',
-    description: `Requires \`Idempotency-Key\`. ${TENANT_WIDE}422 SAME_CURRENCY, INVALID_VALUE (rate ≤ 0).`,
+    description:
+      `Requires \`Idempotency-Key\`. ${TENANT_WIDE}422 SAME_CURRENCY, INVALID_VALUE (rate ≤ 0), ` +
+      'PROVISIONAL_RATE_UNBOUNDED (a provisional rate without effectiveTo).',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async create(
@@ -95,8 +102,8 @@ export class FxRatesV2Controller {
   @Idempotent()
   @Roles(...FINANCE_APPROVERS)
   @ApiOperation({
-    summary: 'Approve a draft FX rate version',
-    description: `${TENANT_WIDE}${APPROVE_DESCRIPTION} ${REVALUATION}`,
+    summary: 'Approve a draft FX rate version (final or provisional)',
+    description: `${TENANT_WIDE}${APPROVE_DESCRIPTION} ${REVALUATION} ${PROVISIONAL}`,
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async approve(

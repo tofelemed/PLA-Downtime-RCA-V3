@@ -25,6 +25,8 @@ export interface LossTreeGroupView {
   cumulativeShare: string | null;
   lines: number;
   status: 'valued' | 'unvalued' | 'mixed' | 'quantity';
+  /** SME V7: some amount was converted with an authorised provisional FX rate (reason fx_rate_provisional) */
+  fxProvisional: boolean;
   reasons: string[];
 }
 
@@ -34,12 +36,22 @@ export interface LossTreeTotalView {
   lines: number;
   groups: number;
   status: LossTreeGroupView['status'];
+  fxProvisional: boolean;
   reasons: string[];
 }
 
 export interface LossTreeView {
   groupBy: LossTreeGroup;
+  /** the metric shown (`value` resolves to the policy's default view) */
   metric: LossTreeMetric;
+  /** the valuation view of a value metric; null for quantities */
+  view: string | null;
+  /** SME V8: true when `metric=value` asked for the policy's default management view */
+  defaultView: boolean;
+  /** SME V8 / R12: `approved` only when every shown period is approved, else provisional figures */
+  valuationStatus: 'approved' | 'provisional';
+  approvedPeriods: number;
+  periods: number;
   ledger: Ledger;
   basis: string;
   groups: LossTreeGroupView[];
@@ -58,6 +70,7 @@ interface CellRow {
   valued: number;
   unvalued: number;
   fx_missing: number;
+  fx_provisional: number;
   reasons: string[] | null;
 }
 
@@ -118,7 +131,8 @@ async function quantityCells(
 ): Promise<CellRow[]> {
   return manager.query<CellRow[]>(
     `${SHOWN} SELECT ${spec.groupSql} AS "group_key", l."uom" AS "unit", sum(l."quantity")::text AS "amount",
-            count(*)::int AS "lines", 0 AS "valued", 0 AS "unvalued", 0 AS "fx_missing", NULL AS "reasons"
+            count(*)::int AS "lines", 0 AS "valued", 0 AS "unvalued", 0 AS "fx_missing", 0 AS "fx_provisional",
+            NULL AS "reasons"
        ${LINES}
       GROUP BY 1, 2`,
     [...params(scope), spec.ledger, spec.kinds],
@@ -141,14 +155,16 @@ async function valueCells(
             count(*) FILTER (WHERE v."status" = 'valued')::int AS "valued",
             count(*) FILTER (WHERE v."status" IS DISTINCT FROM 'valued')::int AS "unvalued",
             count(*) FILTER (WHERE v."status" = 'valued' AND v."amount" IS NULL)::int AS "fx_missing",
-            array_remove(array_agg(DISTINCT COALESCE(v."reason", CASE WHEN v."id" IS NULL THEN 'not_valued' END)), NULL) AS "reasons"
+            count(*) FILTER (WHERE v."status" = 'valued' AND v."amount" IS NOT NULL AND v."provisional")::int AS "fx_provisional",
+            array_remove(array_agg(DISTINCT COALESCE(v."reason",
+              CASE WHEN v."id" IS NULL THEN 'not_valued' WHEN v."provisional" THEN 'fx_rate_provisional' END)), NULL) AS "reasons"
        ${LINES}
        LEFT JOIN LATERAL (
-         SELECT lv."id", lv."currency", lv."amount", lv."status"::text AS "status", lv."reason"
+         SELECT lv."id", lv."currency", lv."amount", lv."status"::text AS "status", lv."reason", lv."provisional"
            FROM "loss_line_valuations" lv
           WHERE l."origin" = 'run' AND lv."loss_line_id" = l."line_id" AND lv."view" = $8::valuation_view
          UNION ALL
-         SELECT av."id", av."currency", av."amount", av."status", av."reason"
+         SELECT av."id", av."currency", av."amount", av."status", av."reason", av."provisional"
            FROM "approved_loss_line_valuations" av
           WHERE l."origin" = 'approved' AND av."approved_line_id" = l."line_id" AND av."view" = $8::valuation_view
        ) v ON true
@@ -191,6 +207,7 @@ async function labelsOf(
 
 export interface LossTreeRequest {
   groupBy: LossTreeGroup;
+  /** resolved metric (never `value`) */
   metric: LossTreeMetric;
   ledger: Ledger;
   /** loss kinds to include; every kind of the tree when absent */

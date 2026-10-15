@@ -8,6 +8,11 @@ import {
   StoppedSpan,
 } from '../domain/actuals/period/output-distribution';
 import { ActualsSource } from '../domain/actuals/period/period-actuals.types';
+import {
+  DispositionClass,
+  LotDispositionInput,
+} from '../domain/actuals/period/quality-classes';
+import { Dec } from '../domain/actuals/decimal';
 import { Signal } from '../signals/entities/signal.entity';
 import { SampleStore } from '../signals/sample-store';
 import { ActualsAdjustment } from './entities/actuals-adjustment.entity';
@@ -29,6 +34,20 @@ export const OUTPUT_EVENTS_SQL = `SELECT "id", "canonical_id", "current_source_r
    AND tstzrange("start_time", "end_time", '[)') && tstzrange($3, $4, '[)')
  ORDER BY "start_time", "id"`;
 
+/**
+ * SME E3: approved lot dispositions and recovery movements of a unit whose production interval overlaps
+ * the period ($3, $4) — superseded, proposed and rejected rows are not evidence.
+ */
+export const LOT_DISPOSITIONS_SQL = `SELECT "id", "product_id", "production_start", "production_end", "disposition_class",
+       "quantity"::text AS "quantity", "uom", "remeasured"
+  FROM "lot_dispositions"
+ WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "state" = 'approved'
+   AND "production_start" < $4 AND "production_end" > $3
+ ORDER BY "production_start", "id"`;
+
+/** A lot disposition of the period's unit with the product it belongs to. */
+export type PeriodLotDisposition = LotDispositionInput & { productId: string };
+
 /** Samples read per signal for one period at most (more → `too_many_samples`, not quantified). */
 export const PERIOD_SAMPLE_CAP = 50_000;
 
@@ -49,6 +68,8 @@ export interface PeriodInputs {
   signals: SignalInput[];
   adjustments: ActualsAdjustment[];
   reportLines: Array<ExternalLineInput & { unitId: string; productId: string }>;
+  /** SME E3: approved lot dispositions of the unit overlapping the period; absent = none */
+  dispositions?: PeriodLotDisposition[];
 }
 
 /**
@@ -66,17 +87,50 @@ export class ActualsInputsLoader {
     manager: EntityManager,
     period: ProductionPeriod,
   ): Promise<PeriodInputs> {
-    const [events, signals, adjustments, reportLines] = await Promise.all([
-      this.events(manager, period),
-      this.signals(manager, period),
-      manager.find(ActualsAdjustment, {
-        where: { periodId: period.id, state: 'approved' },
-        order: { decidedAt: 'ASC', id: 'ASC' },
-      }),
-      this.reportLines(manager, period),
-    ]);
+    const [events, signals, adjustments, reportLines, dispositions] =
+      await Promise.all([
+        this.events(manager, period),
+        this.signals(manager, period),
+        manager.find(ActualsAdjustment, {
+          where: { periodId: period.id, state: 'approved' },
+          order: { decidedAt: 'ASC', id: 'ASC' },
+        }),
+        this.reportLines(manager, period),
+        this.dispositions(manager, period),
+      ]);
     const stops = await this.stopsUnder(manager, period, events);
-    return { events, stops, signals, adjustments, reportLines };
+    return { events, stops, signals, adjustments, reportLines, dispositions };
+  }
+
+  private async dispositions(
+    manager: EntityManager,
+    period: ProductionPeriod,
+  ): Promise<PeriodLotDisposition[]> {
+    const rows: Array<{
+      id: string;
+      product_id: string;
+      production_start: Date;
+      production_end: Date;
+      disposition_class: DispositionClass;
+      quantity: string;
+      uom: string;
+      remeasured: boolean;
+    }> = await manager.query(LOT_DISPOSITIONS_SQL, [
+      period.tenantId,
+      period.unitId,
+      period.utcStart,
+      period.utcEnd,
+    ]);
+    return rows.map((row) => ({
+      id: row.id,
+      productId: row.product_id,
+      start: new Date(row.production_start),
+      end: new Date(row.production_end),
+      dispositionClass: row.disposition_class,
+      quantity: new Dec(row.quantity),
+      uom: row.uom,
+      remeasured: row.remeasured,
+    }));
   }
 
   /** Stops of the unit overlapping the output events that cross the period boundary (none when none do). */

@@ -19,6 +19,8 @@ export interface FxFormValues {
   effectiveFrom: string | null;
   effectiveTo: string | null;
   source: string;
+  /** SME V7: a provisional rate for dates whose final rate is not approved yet (needs an end) */
+  provisional: boolean;
 }
 
 /** FX rates carry up to 10 decimals (numeric(24,10)); the DecimalInput scale of this form. */
@@ -29,7 +31,7 @@ const ZERO = /^0+(\.0+)?$/;
 const SOURCE_MAX = 255;
 
 /** D08 Q2: the reporting currencies, USD → IRR first. */
-export const emptyFxForm = (): FxFormValues => ({ rateType: 'economic', fromCurrency: 'USD', toCurrency: 'IRR', rate: null, effectiveFrom: null, effectiveTo: null, source: '' });
+export const emptyFxForm = (): FxFormValues => ({ rateType: 'economic', fromCurrency: 'USD', toCurrency: 'IRR', rate: null, effectiveFrom: null, effectiveTo: null, source: '', provisional: false });
 
 function rateError(rate: string | null): string | null {
   if (!rate) return 'Enter the rate.';
@@ -46,6 +48,7 @@ export function validateFxForm(values: FxFormValues): FieldErrors {
   const rate = rateError(values.rate);
   if (rate) errors.rate = rate;
   if (values.source.trim().length > SOURCE_MAX) errors.source = `Use at most ${SOURCE_MAX} characters.`;
+  if (values.provisional && !values.effectiveTo && !errors.effectiveTo) errors.effectiveTo = 'A provisional rate needs an end date.';
   return errors;
 }
 
@@ -58,5 +61,6 @@ export function fxCreateBody(values: FxFormValues): FxRateCreateBody {
     effectiveFrom: values.effectiveFrom as string,
     effectiveTo: values.effectiveTo,
     source: values.source.trim() || null,
+    provisional: values.provisional,
   };
 }

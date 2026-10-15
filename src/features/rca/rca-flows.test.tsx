@@ -133,6 +133,27 @@ describe('RCA flows (v2 case workspace)', () => {
     expect(screen.getByTestId('outcome-realized').textContent).toContain('Realign: 2 recurrences');
   });
 
+  it('SME V7 / V8: the approved impact names its view (economic impact) and a provisional exchange rate', async () => {
+    const outcome: RcaOutcomeView = {
+      rcaId: 'c1',
+      approvedHistoricalLoss: {
+        lines: 1,
+        quantities: [{ kind: 'availability', uom: 't', quantity: '50' }],
+        view: 'economic_impact',
+        values: [{ currency: 'USD', amount: '50', valuedLines: 1, unvaluedLines: 0, provisionalLines: 1, status: 'valued', fxProvisional: true }],
+        basis: 'b',
+      },
+      claimedAvoided: [],
+      realized: [],
+      note: 'separate',
+    };
+    reply = () => json(200, outcome);
+    wrap(<OutcomePanel rcaId="c1" />);
+    await screen.findByTestId('approved-impact');
+    expect(screen.getByTestId('approved-impact-view').textContent).toContain('Economic impact');
+    expect(screen.getByTestId('approved-impact-provisional').textContent).toMatch(/provisional exchange rate/);
+  });
+
   it('saves the definition with If-Match and only the declared scalar fields', async () => {
     reply = (call) => (call.method === 'PATCH' ? json(200, { ...CASE, rowVersion: 5 }) : overviewGet(call));
     wrap(<OverviewPage />);

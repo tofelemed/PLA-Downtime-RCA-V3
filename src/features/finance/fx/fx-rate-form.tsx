@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useCreateFxRate } from '@/api/v2/queries/valuation';
 import type { FxRateType, FxRateView } from '@/api/v2/types/valuation';
@@ -60,6 +62,15 @@ export function FxRateForm({ timezone, onSaved, onCancel }: FxRateFormProps) {
       <FinanceField id="effectiveTo" label="Valid until" withLabel={false} hint="Optional; the rate applies up to, not including, this time." error={fieldError('effectiveTo')}>
         <DateTimeInput label="Valid until (optional)" value={values.effectiveTo} timeZone={timezone} calendar={calendar} onChange={(iso) => set('effectiveTo', iso)} />
       </FinanceField>
+      <div className="flex items-start gap-2 rounded-md border p-3">
+        <Checkbox id="fxProvisional" checked={values.provisional} onCheckedChange={(on) => set('provisional', on === true)} data-testid="fx-provisional" />
+        <div className="space-y-1">
+          <Label htmlFor="fxProvisional">Provisional rate</Label>
+          <p className="text-xs text-muted-foreground">
+            Only for dates without an approved final rate. Values it converts are marked provisional and are revalued when the final rate is approved. Needs an end date.
+          </p>
+        </div>
+      </div>
       <FinanceField id="fxSource" label="Source (optional)" error={fieldError('source')}>
         <Input id="fxSource" value={values.source} placeholder="e.g. CBI official fixing, treasury, exchange market" onChange={(e) => set('source', e.target.value)} />
       </FinanceField>

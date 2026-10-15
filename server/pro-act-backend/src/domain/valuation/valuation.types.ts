@@ -30,7 +30,8 @@ export const VIEW_LABELS: Readonly<Record<TotalsView, string>> = {
     'Margin + time cost of independent cost components only',
 };
 
-export const VALUATION_ENGINE_VERSION = '2.6.0';
+/** 2.7.0: SME V7 provisional FX rates (a final rate wins; provisional conversions are marked) and the E3 line quality-class disposition */
+export const VALUATION_ENGINE_VERSION = '2.7.0';
 
 /** SME V5: FX rate tables per purpose (never a market label such as "NIMA"; the source says where from). */
 export const FX_RATE_TYPES = ['economic', 'group_reporting', 'budget'] as const;
@@ -115,6 +116,8 @@ export interface FxRateSnapshot {
   rate: string;
   from: string;
   to: string | null;
+  /** SME V7: an authorised provisional rate (written only when true, so older run hashes are unchanged) */
+  provisional?: true;
 }
 
 /** SME V3: an approved demand status of a product over `[from, to)` (sold out = demand constrained). */
@@ -152,6 +155,8 @@ export interface ValuationLineInput {
   impactCodeId: string | null;
   /** product of the slice (demand status, SME V3); absent outside the economic view */
   productId?: string | null;
+  /** SME E3: disposition class of a quality line (`quality_class:*` flag); absent = unclassified */
+  qualityClass?: string | null;
 }
 
 /** Economic-view parts (SME V2): non-overlapping, so they add up to the line's economic impact. */
@@ -186,6 +191,8 @@ export interface CurrencyAmount {
   fxRateIds: string[];
   /** true when every component was priced in this currency (no conversion) */
   native: boolean;
+  /** SME V7: converted with an authorised provisional FX rate (present only when true) */
+  provisional?: true;
 }
 
 export interface LineViewValuation {

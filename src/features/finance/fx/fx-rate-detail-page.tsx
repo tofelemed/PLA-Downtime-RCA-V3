@@ -8,11 +8,11 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { Fact } from '../components/fact';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { ProvisionalRateBadge } from '../components/provisional-rate-badge';
 import { VersionStateBadge } from '../components/version-state-badge';
 import { FxVersionActions } from './fx-version-actions';
 
 const BACK = { to: '/finance?tab=fx', label: 'Exchange rates' };
-
 
 function RatePage({ rate }: { rate: FxRateView & WithRevaluation }) {
   const dates = usePlantDates();
@@ -21,10 +21,21 @@ function RatePage({ rate }: { rate: FxRateView & WithRevaluation }) {
       <PageHeader
         title={`${rate.fromCurrency} → ${rate.toCurrency}, version ${rate.version}`}
         back={BACK}
-        description={<VersionStateBadge state={rate.state} />}
+        description={
+          <span className="flex flex-wrap gap-1">
+            <VersionStateBadge state={rate.state} />
+            <ProvisionalRateBadge provisional={rate.provisional} />
+          </span>
+        }
         actions={<FxVersionActions rate={rate} />}
       />
       <RevaluationQueued revaluation={rate.revaluation} />
+      {rate.provisional && (
+        <p className="rounded-md border border-amber-500/60 p-3 text-sm" data-testid="fx-provisional-note">
+          Provisional rate: it converts only dates without an approved final rate, and every value it converts is shown as provisional. Approving the final rate revalues those
+          figures; approved periods get a change proposal.
+        </p>
+      )}
       <Section title="Rate">
         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Fact label="Rate">

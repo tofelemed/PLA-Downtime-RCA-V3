@@ -36,19 +36,19 @@ function sumOf(deltas: readonly AdjustmentDelta[], kind: AdjustmentKind) {
 
 /**
  * The slice's actuals once `deltas` are added, by the rules of `applyAdjustments` (slice-actuals.ts):
- * gross basis → gross += gross deltas, reject += reject deltas and good = gross − reject + rework + good
- * deltas (linear, so it is applied to the current good); good basis → good += good and rework deltas,
- * gross stays unknown.
+ * gross basis → gross += gross deltas, reject += reject deltas and good = gross − reject + good deltas
+ * (linear, so it is applied to the current good); good basis → good += good deltas, gross stays unknown.
+ * Rework acceptance is recovered output, never first-pass good (SME E3), so it changes neither.
  */
 export function projectActuals(
   now: SliceActualsNow,
   deltas: readonly AdjustmentDelta[],
 ): SliceActualsNow {
-  const [gross, reject, rework, good] = (
-    ['gross', 'reject', 'rework', 'good'] as const
-  ).map((kind) => sumOf(deltas, kind));
+  const [gross, reject, good] = (['gross', 'reject', 'good'] as const).map(
+    (kind) => sumOf(deltas, kind),
+  );
   if (now.basis === 'good') {
-    return { ...now, good: plus(plus(now.good, good), rework) };
+    return { ...now, good: plus(now.good, good) };
   }
   const nextGross = plus(now.gross, gross);
   const nextReject = plus(now.reject, reject);
@@ -57,14 +57,10 @@ export function projectActuals(
       ? now.good
           .plus(gross ?? ZERO)
           .minus(reject ?? ZERO)
-          .plus(rework ?? ZERO)
           .plus(good ?? ZERO)
       : nextGross === null
         ? null
-        : nextGross
-            .minus(nextReject ?? ZERO)
-            .plus(rework ?? ZERO)
-            .plus(good ?? ZERO);
+        : nextGross.minus(nextReject ?? ZERO).plus(good ?? ZERO);
   return {
     basis: 'gross',
     gross: nextGross,

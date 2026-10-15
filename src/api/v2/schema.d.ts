@@ -2260,6 +2260,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/lot-dispositions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List lot dispositions (production interval overlapping [from, to); keyset on productionStart, id, newest first) */
+        get: operations["LotDispositionsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Propose a lot disposition or recovery movement
+         * @description Requires `Idempotency-Key`. 422 INVALID_REFERENCE (unit, product, event or linked disposition outside the caller’s scope), INVALID_QUANTITY, INVALID_RANGE (empty or future interval), INVALID_RECOVERY, NOT_RECOVERABLE, UOM_MISMATCH, RECOVERY_EXCEEDS_DISPOSITION, INVALID_SUPERSEDE.
+         */
+        post: operations["LotDispositionsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/lot-dispositions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One lot disposition; foreign or out-of-scope ids are 404 */
+        get: operations["LotDispositionsV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/lot-dispositions/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a proposed disposition (Quality / Lab approver, never the author); the periods of its production interval are recalculated
+         * @description Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 RECOVERY_EXCEEDS_DISPOSITION / INVALID_SUPERSEDE when the linked disposition changed since.
+         */
+        post: operations["LotDispositionsV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/lot-dispositions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a proposed disposition with a reason (Quality / Lab approver, never the author)
+         * @description Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.
+         */
+        post: operations["LotDispositionsV2Controller_reject_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/external-production-reports": {
         parameters: {
             query?: never;
@@ -2835,7 +2913,7 @@ export interface paths {
         put?: never;
         /**
          * Create a draft FX rate version (1 fromCurrency = rate toCurrency)
-         * @description Requires `Idempotency-Key`. FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 SAME_CURRENCY, INVALID_VALUE (rate ≤ 0).
+         * @description Requires `Idempotency-Key`. FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). 422 SAME_CURRENCY, INVALID_VALUE (rate ≤ 0), PROVISIONAL_RATE_UNBOUNDED (a provisional rate without effectiveTo).
          */
         post: operations["FxRatesV2Controller_create_v2"];
         delete?: never;
@@ -2871,8 +2949,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Approve a draft FX rate version
-         * @description FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite.
+         * Approve a draft FX rate version (final or provisional)
+         * @description FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite. SME V7: final and provisional versions never overlap their own kind; a provisional draft is refused with 409 FINAL_RATE_EXISTS where an approved final rate covers part of its window. A final rate wins over a provisional one, so approving it revalues what the provisional rate valued.
          */
         post: operations["FxRatesV2Controller_approve_v2"];
         delete?: never;
@@ -3049,6 +3127,26 @@ export interface paths {
          * @description Sums the stored valuation totals of the shown runs (approved revision, else the open draft — provisional); views are never added to each other; an amount is null when a contributing line has no approved FX rate (fx_rate_missing) or nothing is valued; unvalued quantities are listed per unit of measure. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days by period start.
          */
         get: operations["LossValueReportV2Controller_lossValue_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/reports/bad-actors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Monthly bad-actor review: top assets or asset failure modes by approved loss, approved value or stops
+         * @description CA8: the rolling window of the tenant RCA policy (pilot 90 days) ending at the end of `month` in the plant time zone. Approved lost quantity and value come from approved periods only (value in the policy default view, SME V8; null when not valued, never zero; fxProvisional when a provisional FX rate converted it); stops = unplanned stops and failure work orders. Ranked on the server, top `limit` (≤ 50). Each item carries the cumulative bad-actor trigger state of its asset (fired, over_threshold, below, off). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only.
+         */
+        get: operations["BadActorReportV2Controller_badActors_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5320,6 +5418,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/transition-allowance-policies/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Transition-allowance option in force now (unit override, else tenant-wide)
+         * @description unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE). A version written before the option existed reads `loss`.
+         */
+        get: operations["TransitionAllowanceV2Controller_current_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/transition-allowance-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the transition-allowance option as an approved oee_policy version, effective now
+         * @description Requires `Idempotency-Key`. Version n+1 of the scope; other oee_policy fields are kept from the version in force; periods already calculated keep the version they used. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED).
+         */
+        post: operations["TransitionAllowanceV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/standby-equipment": {
         parameters: {
             query?: never;
@@ -5424,6 +5562,26 @@ export interface paths {
         };
         /** Operations of the caller scope (keyset on startedAt; from / to overlap, eventIds, assetIds) */
         get: operations["WorkOrderOperationsV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/work-order-operations/repair-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active-repair evidence of one stop: active repair vs waiting, as mean active repair time counts it
+         * @description Diagnosis, repair and test operations linked to the stop (any revision), overlaps once, minus waiting. `activeRepairSeconds` null with reason `no_operations` (the KPI then names the restore time) or `operation_open` (an operation still runs). 404 for a stop outside the caller’s units.
+         */
+        get: operations["WorkOrderOperationsV2Controller_repairEvidence_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5961,6 +6119,11 @@ export interface components {
              */
             recoveryOfEventId?: Record<string, never> | null;
             /**
+             * @description SME E3: disposition of the tonnes a quality_loss event explains (downgrade sold at a discount, scrap, rework); quality_loss only
+             * @enum {string|null}
+             */
+            dispositionClass?: "downgrade" | "scrap" | "rework" | null;
+            /**
              * Format: date-time
              * @description SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun
              */
@@ -6054,6 +6217,11 @@ export interface components {
              * @description SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop
              */
             recoveryOfEventId?: Record<string, never> | null;
+            /**
+             * @description SME E3: disposition of the tonnes a quality_loss event explains (downgrade sold at a discount, scrap, rework); quality_loss only
+             * @enum {string|null}
+             */
+            dispositionClass?: "downgrade" | "scrap" | "rework" | null;
             /**
              * Format: date-time
              * @description SME D4: approved end of a planned stop's window; time after it counts as unplanned maintenance overrun
@@ -7007,6 +7175,61 @@ export interface components {
         AdjustmentRejectDto: {
             reason: string;
         };
+        LotDispositionCreateDto: {
+            /** Format: uuid */
+            unitId: string;
+            /**
+             * Format: uuid
+             * @description Product (grade) of the lot
+             */
+            productId: string;
+            /** @example L-2027-0301-A */
+            lotCode: string;
+            /**
+             * @description wide_spec = intentional wide-spec grade (good, reported apart); downgrade, transition_off_grade, scrap, rework = first-pass defects; recovered = reprocessed material of an earlier disposition coming back as saleable output (needs recoveryOfId)
+             * @enum {string}
+             */
+            dispositionClass: "wide_spec" | "downgrade" | "transition_off_grade" | "scrap" | "rework" | "recovered";
+            /**
+             * @description Quantity > 0, decimal string
+             * @example 5
+             */
+            quantity: string;
+            /** @example t */
+            uom: string;
+            /**
+             * Format: date-time
+             * @description Start of the production interval of the lot (of the reprocessing for a recovery); the actuals are aligned to it, not to the lab release
+             */
+            productionStart: string;
+            /**
+             * Format: date-time
+             * @description Exclusive end
+             */
+            productionEnd: string;
+            /** Format: date-time */
+            labReleasedAt?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description recovered only: the approved downgrade, transition off-grade or rework this quantity recovers
+             */
+            recoveryOfId?: Record<string, never> | null;
+            /** @description recovered only: the reprocessed material passed this unit’s production meter again (it is then no new output) */
+            remeasured?: boolean;
+            /**
+             * Format: uuid
+             * @description Production event of the unit the disposition comes from
+             */
+            productionEventId?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description Approved disposition of the same unit and product this one corrects; it becomes superseded on approval
+             */
+            supersedesId?: Record<string, never> | null;
+            reason?: Record<string, never> | null;
+            /** @description Lab certificate, sample id or document reference */
+            evidenceRef?: Record<string, never> | null;
+        };
         ExternalReportLineDto: {
             /** Format: uuid */
             unitId: string;
@@ -7212,6 +7435,11 @@ export interface components {
             rate: string;
             /** @description Where the rate comes from (free text) */
             source?: Record<string, never> | null;
+            /**
+             * @description SME V7: an authorised provisional rate for dates whose final rate is not approved yet (effectiveTo required, 422 PROVISIONAL_RATE_UNBOUNDED). Converts only where no final rate covers the date; every value it produces is marked provisional and revalued when the final rate is approved.
+             * @default false
+             */
+            provisional: boolean;
         };
         DemandStatusCreateDto: {
             /** @example 2026-10-01T02:30:00Z */
@@ -7735,7 +7963,7 @@ export interface components {
             /** @description Exact e-mail of a user of the plant's organization (instead of `userId`) */
             email?: string;
             /** @enum {string} */
-            role: "manager_approver" | "production_accountant" | "finance_approver" | "finance_maintainer" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
+            role: "manager_approver" | "production_accountant" | "quality_approver" | "finance_approver" | "finance_maintainer" | "production_engineer" | "reliability_engineer" | "integration_admin" | "master_data_admin" | "operator" | "viewer";
             /** @description Limit the grant to this unit of the plant (omit for the whole plant) */
             unitId?: string;
         };
@@ -8241,6 +8469,19 @@ export interface components {
             };
             /** @description Reason codes of process trips: always availability events, never micro-stops */
             tripReasonCodes?: string[];
+            notes?: string;
+        };
+        TransitionAllowanceCreateDto: {
+            /**
+             * Format: uuid
+             * @description Unit override; absent = the tenant-wide version
+             */
+            unitId?: string;
+            /**
+             * @description `planned`: the plan target already allows for standard grade transitions — only the overrun counts against the plan, the allowance is shown as information. `loss`: the plan does not deduct transitions — the allowance is a plan-ledger loss line.
+             * @enum {string}
+             */
+            transitionAllowanceInPlan: "planned" | "loss";
             notes?: string;
         };
         StandbyEquipmentCreateDto: {
@@ -11978,6 +12219,130 @@ export interface operations {
             };
         };
     };
+    LotDispositionsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                unitId?: string;
+                productId?: string;
+                lotCode?: string;
+                dispositionClass?: "wide_spec" | "downgrade" | "transition_off_grade" | "scrap" | "rework" | "recovered";
+                state?: "proposed" | "approved" | "rejected" | "superseded";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LotDispositionsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LotDispositionCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LotDispositionsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LotDispositionsV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustmentApproveDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LotDispositionsV2Controller_reject_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustmentRejectDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ExternalReportsV2Controller_create_v2: {
         parameters: {
             query?: never;
@@ -12732,6 +13097,8 @@ export interface operations {
                 fromCurrency?: string;
                 toCurrency?: string;
                 state?: "draft" | "approved" | "retired";
+                /** @description SME V7: only provisional (true) or only final (false) rates */
+                provisional?: boolean;
             };
             header?: never;
             path?: never;
@@ -13058,6 +13425,34 @@ export interface operations {
                 ledger?: "plan" | "capacity";
                 /** @description kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only */
                 groupBy?: "kind" | "unit" | "day" | "month";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BadActorReportV2Controller_badActors_v2: {
+        parameters: {
+            query: {
+                /** @description Review month (YYYY-MM in the plant calendar — a Persian plant names a Jalali month, e.g. 1405-07 = Mehr 1405 — at local midnight in the plant time zone): the rolling window of the tenant RCA policy (CA8 pilot 90 days) ending at the end of this month */
+                month: string;
+                groupBy?: "asset" | "failure_mode";
+                /** @description quantity = approved lost quantity (D14, the unit of measure with the most approved loss); value = approved value of the policy default view in `currency` (unvalued groups last, never zero); stops = unplanned stops and failure work orders */
+                rankBy?: "quantity" | "value" | "stops";
+                limit?: number;
+                /** @description Currency of the value column and the value ranking */
+                currency?: "USD" | "IRR";
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read. */
+                unitIds?: string[];
             };
             header?: never;
             path?: never;
@@ -14434,8 +14829,8 @@ export interface operations {
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
                 groupBy?: "reason" | "impact" | "oee" | "kind" | "unit";
-                /** @description qty = lost quantity per unit of measure; margin / standard_cost / operational_cost = that stored valuation view per reporting currency (never added to each other; unvalued lines never count as zero) */
-                metric?: "qty" | "margin" | "standard_cost" | "operational_cost";
+                /** @description qty = lost quantity per unit of measure; margin / standard_cost / operational_cost / economic_impact = that stored valuation view per reporting currency (never added to each other; unvalued lines never count as zero); value = the default view of the approved valuation policy (SME V8, economic impact from policy version 3; contribution margin while none is approved) */
+                metric?: "qty" | "margin" | "standard_cost" | "operational_cost" | "economic_impact" | "value";
                 ledger?: "plan" | "capacity";
                 /** @description Largest groups per unit / currency only (top opportunities); totals always cover every group */
                 limit?: number;
@@ -16634,6 +17029,49 @@ export interface operations {
             };
         };
     };
+    TransitionAllowanceV2Controller_current_v2: {
+        parameters: {
+            query?: {
+                /** @description Unit override; absent = the tenant-wide version */
+                unitId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TransitionAllowanceV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionAllowanceCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     StandbyV2Controller_list_v2: {
         parameters: {
             query?: {
@@ -16803,6 +17241,26 @@ export interface operations {
                 eventIds?: string[];
                 /** @description Operations on these assets (repeat) */
                 assetIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkOrderOperationsV2Controller_repairEvidence_v2: {
+        parameters: {
+            query: {
+                /** @description The stop (production event) */
+                eventId: string;
             };
             header?: never;
             path?: never;

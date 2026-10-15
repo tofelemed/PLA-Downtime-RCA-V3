@@ -85,7 +85,7 @@ describe('capabilitiesOf', () => {
   });
 
   describe('v2 write capabilities mirror the server role sets', () => {
-    type WriteKey = Exclude<CapabilityKey, 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+    type WriteKey = Exclude<CapabilityKey, 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
     const PINS: ReadonlyArray<[WriteKey, readonly string[]]> = [
       ['canWritePlans', Roles.PLAN_WRITERS],
       ['canApprovePlans', Roles.PLAN_APPROVERS],
@@ -103,8 +103,14 @@ describe('capabilitiesOf', () => {
       ['canManageRcaPolicies', Roles.RCA_POLICY_WRITERS],
       ['canMaintainValuation', Roles.FINANCE_MAINTAINERS],
       ['canApproveValuation', Roles.FINANCE_APPROVERS],
+      ['canWriteOeePolicy', Roles.OEE_POLICY_WRITERS],
+      ['canWriteStandby', Roles.STANDBY_WRITERS],
+      ['canWriteWorkOrders', Roles.WORK_ORDER_WRITERS],
+      ['canWriteStateMappings', Roles.STATE_MAPPING_WRITERS],
+      ['canWriteDispositions', Roles.DISPOSITION_WRITERS],
+      ['canApproveDispositions', Roles.DISPOSITION_APPROVERS],
     ];
-    const SCOPE_ROLES = ['manager_approver', 'production_accountant', 'finance_approver', 'finance_maintainer', 'production_engineer', 'reliability_engineer', 'integration_admin', 'master_data_admin', 'operator', 'viewer'];
+    const SCOPE_ROLES = ['manager_approver', 'production_accountant', 'quality_approver', 'finance_approver', 'finance_maintainer', 'production_engineer', 'reliability_engineer', 'integration_admin', 'master_data_admin', 'operator', 'viewer'];
 
     it.each(PINS)('%s: exactly the scope roles of its server set, plus the global admins', (key, set) => {
       for (const role of SCOPE_ROLES) expect([role, capabilitiesOf([role])[key]]).toEqual([role, set.includes(role)]);
@@ -117,6 +123,8 @@ describe('capabilitiesOf', () => {
       expect(manager.canApprovePlans && manager.canApprovePeriods && manager.canManageRcaPolicies).toBe(true);
       // SME V1: production managers use approved rates but never set them
       expect([manager.canMaintainValuation, manager.canApproveValuation]).toEqual([false, false]);
+      // ISO 9001: lot dispositions are decided by Quality / Lab, never by production management
+      expect([manager.canWriteDispositions, manager.canApproveDispositions]).toEqual([true, false]);
       const engineer = capabilitiesOf(effectiveRoles({ role: 'Engineer' }, { tenantId: null }));
       expect([engineer.canWritePlans, engineer.canWritePeriods, engineer.canApprovePlans, engineer.canWriteCodes]).toEqual([true, true, false, false]);
     });

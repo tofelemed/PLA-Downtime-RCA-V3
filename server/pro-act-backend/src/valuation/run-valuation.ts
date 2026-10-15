@@ -34,6 +34,14 @@ function lostSeconds(line: LossLineDraft): Dec | null {
   return new Dec(ms).div(1000).mul(share);
 }
 
+const CLASS_FLAG = 'quality_class:';
+
+/** SME E3: the disposition class a quality line names (`quality_class:<class>`), else null. */
+function qualityClassOf(flags: readonly string[]): string | null {
+  const flag = flags.find((f) => f.startsWith(CLASS_FLAG));
+  return flag ? flag.slice(CLASS_FLAG.length) : null;
+}
+
 /** Profile and product of a slice (the product only matters to the economic view, SME V3). */
 export interface SliceOwner {
   profileId: string | null;
@@ -58,7 +66,10 @@ export function valueRunLines(
         profileId: profiles.get(line.sliceId)?.profileId ?? null,
         impactCodeId: line.cause?.impactCodeId ?? null,
         ...(context.policy.economic
-          ? { productId: profiles.get(line.sliceId)?.productId ?? null }
+          ? {
+              productId: profiles.get(line.sliceId)?.productId ?? null,
+              qualityClass: qualityClassOf(line.flags),
+            }
           : {}),
       },
       context,
@@ -107,6 +118,7 @@ function lineRows(
         native: amount.native,
         status: view.status,
         reason: amount.reason ?? view.reason,
+        provisional: amount.provisional === true,
         rateVersionIds: [
           ...new Set(view.components.map((c) => c.rateVersionId)),
         ],
@@ -136,6 +148,7 @@ function totalRow(
     valuedLines: total.valuedLines,
     unvaluedLines: total.unvaluedLines,
     fxMissingLines: total.fxMissingLines,
+    fxProvisionalLines: total.fxProvisionalLines,
     unvaluedQuantity: formatDec(total.unvaluedQuantity),
     unvaluedSeconds: formatDec(total.unvaluedSeconds),
     status: total.status,

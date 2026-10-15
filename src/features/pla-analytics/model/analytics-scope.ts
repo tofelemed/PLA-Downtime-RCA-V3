@@ -8,7 +8,7 @@ import type {
 import type { DowntimeReportQuery, ExportRequest, OeeReportQuery, ReportQueryBase } from '@/api/v2/queries/reports';
 import type { QueryOf } from '@/api/v2/schema-types';
 import type { LedgerKind } from '@/api/v2/types/period-overview';
-import type { LossTreeGroupBy, LossTreeMetric, TrendGroup } from '@/api/v2/types/pla-analytics';
+import type { LossTreeGroupBy, LossTreeMetricParam, TrendGroup } from '@/api/v2/types/pla-analytics';
 import { HOUR_MS, rollingWindow } from '@/api/v2/queries/time-window';
 import { DEFAULT_PRESET } from '@/features/downtime-analysis/model/downtime-filters';
 
@@ -32,8 +32,9 @@ export const presetWindowOf = (hours: number, now: number = Date.now()) => rolli
 
 export const TREND_GROUPS: readonly TrendGroup[] = ['shift', 'day', 'week', 'month'];
 export const LOSS_GROUPS: readonly LossTreeGroupBy[] = ['reason', 'impact', 'oee', 'kind', 'unit'];
-export const LOSS_METRICS: readonly LossTreeMetric[] = ['qty', 'margin', 'standard_cost', 'operational_cost'];
-export const VALUE_METRICS: readonly LossTreeMetric[] = ['margin', 'standard_cost', 'operational_cost'];
+/** SME V8: `value` opens on the valuation policy's default view (economic impact from policy version 3). */
+export const LOSS_METRICS: readonly LossTreeMetricParam[] = ['qty', 'value', 'economic_impact', 'margin', 'standard_cost', 'operational_cost'];
+export const VALUE_METRICS: readonly LossTreeMetricParam[] = ['value', 'economic_impact', 'margin', 'standard_cost', 'operational_cost'];
 export type OeePolicy = 'operational' | 'reconciled';
 
 /**
@@ -52,8 +53,8 @@ export interface AnalyticsScope {
   tab: PlaTab;
   trendBy: TrendGroup;
   lossGroupBy: LossTreeGroupBy;
-  lossMetric: LossTreeMetric;
-  valueMetric: LossTreeMetric;
+  lossMetric: LossTreeMetricParam;
+  valueMetric: LossTreeMetricParam;
   /** physical type of the loss events listed under Losses */
   eventType: LossEventType;
 }
@@ -92,7 +93,7 @@ export function parseScope(params: URLSearchParams, now: number, defaults: Scope
     trendBy: oneOf(TREND_GROUPS, params.get('trend'), 'day'),
     lossGroupBy: oneOf(LOSS_GROUPS, params.get('lossBy'), 'reason'),
     lossMetric: oneOf(LOSS_METRICS, params.get('metric'), 'qty'),
-    valueMetric: oneOf(VALUE_METRICS, params.get('value'), 'margin'),
+    valueMetric: oneOf(VALUE_METRICS, params.get('value'), 'value'),
     eventType: oneOf(LOSS_EVENT_TYPES, params.get('events'), 'all'),
   };
 }
@@ -104,7 +105,7 @@ const DEFAULTS: Partial<Record<keyof AnalyticsScope, string>> = {
   trendBy: 'day',
   lossGroupBy: 'reason',
   lossMetric: 'qty',
-  valueMetric: 'margin',
+  valueMetric: 'value',
   eventType: 'all',
 };
 const PARAM: Partial<Record<keyof AnalyticsScope, string>> = {
@@ -143,7 +144,7 @@ export function scopeBase(scope: AnalyticsScope): ReportQueryBase {
 
 export const waterfallQuery = (scope: AnalyticsScope, ledger = scope.ledger): ScopeWaterfallQuery => ({ ...scopeBase(scope), ledger });
 
-export function lossTreeQuery(scope: AnalyticsScope, options: { metric?: LossTreeMetric; groupBy?: LossTreeGroupBy; limit?: number } = {}): LossTreeQuery {
+export function lossTreeQuery(scope: AnalyticsScope, options: { metric?: LossTreeMetricParam; groupBy?: LossTreeGroupBy; limit?: number } = {}): LossTreeQuery {
   const query: LossTreeQuery = {
     ...scopeBase(scope),
     groupBy: options.groupBy ?? scope.lossGroupBy,

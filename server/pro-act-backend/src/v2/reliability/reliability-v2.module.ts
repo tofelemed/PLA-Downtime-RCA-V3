@@ -6,9 +6,13 @@ import { FailureDictionaryV2Controller } from './failure-dictionary-v2.controlle
 import { FailureDictionaryV2Service } from './failure-dictionary-v2.service';
 import { MicroStopPolicyV2Controller } from './micro-stop-policy-v2.controller';
 import { MicroStopPolicyV2Service } from './micro-stop-policy-v2.service';
+import { OeePolicyVersionsService } from './oee-policy-versions.service';
+import { RepairEvidenceV2Service } from './repair-evidence-v2.service';
 import { StandbyEquipmentV2Service } from './standby-equipment-v2.service';
 import { StandbyRecordsV2Service } from './standby-records-v2.service';
 import { StandbyV2Controller } from './standby-v2.controller';
+import { TransitionAllowanceV2Controller } from './transition-allowance-v2.controller';
+import { TransitionAllowanceV2Service } from './transition-allowance-v2.service';
 import { UnitStateV2Controller } from './unit-state-v2.controller';
 import { UnitStateV2Service } from './unit-state-v2.service';
 import { WorkOrderOperationsV2Controller } from './work-order-operations-v2.controller';
@@ -18,22 +22,26 @@ import { WorkOrderOperationsV2Service } from './work-order-operations-v2.service
 export const RELIABILITY_V2_SERVICES = [
   FailureDictionaryV2Service,
   FailureDictionaryImportV2Service,
+  OeePolicyVersionsService,
   MicroStopPolicyV2Service,
+  TransitionAllowanceV2Service,
   StandbyEquipmentV2Service,
   StandbyRecordsV2Service,
   WorkOrderOperationsV2Service,
+  RepairEvidenceV2Service,
   UnitStateV2Service,
 ];
 
 /**
- * Reliability resources on `/api/v2` (SME D1 / D2 / D6 / D9 / D10 / D11). Imported by `V2Module` and
- * included in the v2 OpenAPI document (`openapi-v2.ts`).
+ * Reliability resources on `/api/v2` (SME D1 / D2 / D6 / D9 / D10 / D11; transition allowance 2.5.6).
+ * Imported by `V2Module` and included in the v2 OpenAPI document (`openapi-v2.ts`).
  */
 @Module({
   imports: [ReliabilityModule, PeriodsModule],
   controllers: [
     FailureDictionaryV2Controller,
     MicroStopPolicyV2Controller,
+    TransitionAllowanceV2Controller,
     StandbyV2Controller,
     WorkOrderOperationsV2Controller,
     UnitStateV2Controller,

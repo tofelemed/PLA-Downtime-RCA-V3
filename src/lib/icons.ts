@@ -10,6 +10,7 @@
 import type { LucideIcon, LucideProps } from 'lucide-react';
 import {
   Activity,
+  Siren,
   ArrowLeftRight,
   Banknote,
   BookOpen,
@@ -176,6 +177,7 @@ export const EntityIcon = {
   calendar: CalendarCog,
   rcaCase: Microscope,
   knowledge: BookOpen,
+  badActor: Siren,
   task: ListChecks,
   user: User,
   team: Users,

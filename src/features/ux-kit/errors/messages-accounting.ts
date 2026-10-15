@@ -79,6 +79,8 @@ export const ACCOUNTING_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   EXPORT_CANCELLED: { title: 'The export was cancelled' },
 
   VERSION_OVERLAP: { title: 'Another version already covers these dates', text: 'Change the dates or retire the other version first.' },
+  FINAL_RATE_EXISTS: { title: 'A final rate already covers these dates', text: 'A provisional rate only fills dates that have no approved final rate.' },
+  PROVISIONAL_RATE_UNBOUNDED: { title: 'A provisional rate needs an end date', text: 'Enter the date until which the provisional rate applies.' },
   PLAN_OVERLAP: { title: 'Another plan already covers these dates', text: 'Change the dates or the unit.' },
   CAMPAIGN_OVERLAP: { title: 'Another campaign already covers these dates', text: 'Change the dates.' },
   VERSION_NOT_DRAFT: { title: 'Only a draft can be changed', text: 'Create a new version to make changes.' },

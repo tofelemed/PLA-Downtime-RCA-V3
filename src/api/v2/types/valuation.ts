@@ -17,6 +17,8 @@ export interface FxRateView extends VersionFields {
   /** decimal string: units of toCurrency per 1 fromCurrency */
   rate: string;
   source: string | null;
+  /** SME V7: an authorised provisional rate; values it converts are marked provisional until the final one */
+  provisional: boolean;
 }
 
 /** SME V7: what an approval queued (the server recalculates the periods it values on the worker). */

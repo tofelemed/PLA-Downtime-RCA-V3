@@ -4,12 +4,12 @@ import type { LossTreeGroupView, LossTreeView } from '@/api/v2/types/pla-analyti
 import { LostProductionBody } from './lost-production-pareto';
 
 const group = (key: string, unit: string, amount: string | null, cumulativeShare: string | null): LossTreeGroupView => ({
-  key, label: `${key.toUpperCase()} name`, unit, amount, share: null, cumulativeShare, lines: 1, status: amount === null ? 'unvalued' : 'valued', reasons: [],
+  key, label: `${key.toUpperCase()} name`, unit, amount, share: null, cumulativeShare, lines: 1, status: amount === null ? 'unvalued' : 'valued', fxProvisional: false, reasons: [],
 });
 
 const view = (groups: LossTreeGroupView[], units: string[]): LossTreeView => ({
-  groupBy: 'reason', metric: 'margin', ledger: 'plan', basis: 'b', groups, truncated: 0, calculationRunIds: [],
-  totals: units.map((unit) => ({ unit, amount: null, lines: 1, groups: 1, status: 'valued', reasons: [] })),
+  groupBy: 'reason', metric: 'margin', view: 'contribution_margin', defaultView: false, valuationStatus: 'approved', approvedPeriods: 1, periods: 1, ledger: 'plan', basis: 'b', groups, truncated: 0, calculationRunIds: [],
+  totals: units.map((unit) => ({ unit, amount: null, lines: 1, groups: 1, status: 'valued', fxProvisional: false, reasons: [] })),
 });
 
 describe('LostProductionBody (FE-08)', () => {

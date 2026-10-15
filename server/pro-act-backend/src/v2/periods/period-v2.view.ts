@@ -2,6 +2,7 @@ import {
   PeriodFinding,
   SourceSegment,
 } from '../../domain/actuals/period/period-actuals.types';
+import { QualityClasses } from '../../domain/actuals/period/quality-classes';
 import { ActualsAdjustment } from '../../periods/entities/actuals-adjustment.entity';
 import { ActualsJob } from '../../periods/entities/actuals-job.entity';
 import { ActualsResult } from '../../periods/entities/actuals-result.entity';
@@ -29,6 +30,11 @@ export interface SliceActualsV2View {
   measuredQty: string | null;
   estimatedQty: string | null;
   qualityState: string;
+  /**
+   * SME E3: first-pass good, wide-spec, downgrade, transition off-grade, scrap, rework, unclassified and
+   * recovered quantities of the slice; null = no disposition or rework acceptance recorded
+   */
+  qualityClasses: QualityClasses | null;
 }
 
 export interface SliceActualsDetailV2View extends SliceActualsV2View {
@@ -115,6 +121,7 @@ export function toSummary(result: ActualsResult): SliceActualsV2View {
     measuredQty: decimalView(result.measuredQty),
     estimatedQty: decimalView(result.estimatedQty),
     qualityState: result.qualityState,
+    qualityClasses: result.qualityClasses ?? null,
   };
 }
 

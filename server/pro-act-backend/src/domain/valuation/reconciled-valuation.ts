@@ -157,6 +157,7 @@ function merge(parts: readonly ValuationTotal[]): ValuationTotal {
   const valued = parts.reduce((n, t) => n + t.valuedLines, 0);
   const unvalued = parts.reduce((n, t) => n + t.unvaluedLines, 0);
   const fxMissing = parts.reduce((n, t) => n + t.fxMissingLines, 0);
+  const fxProvisional = parts.reduce((n, t) => n + t.fxProvisionalLines, 0);
   const status =
     valued === 0 ? 'unvalued' : unvalued + fxMissing === 0 ? 'valued' : 'mixed';
   return {
@@ -168,6 +169,7 @@ function merge(parts: readonly ValuationTotal[]): ValuationTotal {
     valuedLines: valued,
     unvaluedLines: unvalued,
     fxMissingLines: fxMissing,
+    fxProvisionalLines: fxProvisional,
     unvaluedQuantity: sum((t) => t.unvaluedQuantity),
     unvaluedSeconds: sum((t) => t.unvaluedSeconds),
     status,

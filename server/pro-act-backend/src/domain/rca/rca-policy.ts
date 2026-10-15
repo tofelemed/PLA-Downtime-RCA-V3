@@ -57,7 +57,7 @@ export interface ConsequenceRule {
 export interface RcaPolicy extends RcaRules {
   /** unplanned downtime at or above this fires; 0 disables */
   durationThresholdSeconds: number;
-  /** approved valued impact (contribution margin) at or above this fires; null disables (finance sets it) */
+  /** approved valued impact (policy default view, SME V8) at or above this fires; null disables (finance sets it) */
   costThreshold: number | null;
   costCurrency: (typeof COST_CURRENCIES)[number] | null;
   /** approved lost quantity at or above this share of the unit's daily planned quantity fires; null off */

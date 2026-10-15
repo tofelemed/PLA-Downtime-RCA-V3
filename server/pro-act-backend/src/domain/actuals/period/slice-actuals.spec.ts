@@ -121,11 +121,12 @@ describe('computeSliceActuals (ACT01, ACT05–ACT07)', () => {
       adjustment({ quantity: new Dec(10), basis: 'estimated' }),
       adjustment({ id: 'adj-2', kind: 'rework', quantity: new Dec(2) }),
     ]);
+    // SME E3: accepted rework is recovered output, not first-pass good (2.4.2; was 67)
     expect(result).toMatchObject({
       gross: '70',
       reject: '5',
       reworkAccepted: '2',
-      good: '67',
+      good: '65',
       method: 'mixed',
       measuredQty: '60',
       estimatedQty: '10',

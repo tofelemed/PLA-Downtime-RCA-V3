@@ -17,7 +17,7 @@ import { assetFailures } from '../rca-recurrence';
 const DAY_MS = 86_400_000;
 
 /** Unplanned stops and failure work orders that are live (CA8 incidents; planned stops never count). */
-const INCIDENT = `e."physical_state" IN ('open', 'closed') AND (e."event_type" = 'FailureWO'
+export const INCIDENT = `e."physical_state" IN ('open', 'closed') AND (e."event_type" = 'FailureWO'
   OR (e."physical_type" = 'downtime' AND e."schedule_class" = 'unplanned'))`;
 
 /** The trigger's view of a stored event (confirmed values only). */

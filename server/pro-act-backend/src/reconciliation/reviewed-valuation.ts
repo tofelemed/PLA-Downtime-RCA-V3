@@ -1,4 +1,5 @@
 import { Dec, formatDec } from '../domain/actuals/decimal';
+import { provisionalMark } from '../domain/valuation/currency-amounts';
 import {
   reconciledValuation,
   ReconciledCandidate,
@@ -23,6 +24,8 @@ export interface ReviewedAmount {
   amount: string | null;
   reason: string | null;
   fxRateIds: string[];
+  /** SME V7: provisional-rate conversion (only when true, so earlier content hashes are unchanged) */
+  provisional?: true;
 }
 
 export interface ReviewedLineValuation {
@@ -54,6 +57,8 @@ export interface ReviewedValueTotal {
   valuedLines: number;
   unvaluedLines: number;
   fxMissingLines: number;
+  /** SME V7: only when some line used a provisional FX rate (earlier content hashes unchanged) */
+  fxProvisionalLines?: number;
   fxRateIds: string[];
 }
 
@@ -88,6 +93,7 @@ function lineView(line: ReconciledLine): ReviewedLineValuation {
         amount: a.amount === null ? null : formatDec(a.amount),
         reason: a.reason,
         fxRateIds: a.fxRateIds,
+        ...provisionalMark(a.provisional === true),
       })),
       // economic view only (policy v3), so older reviewed content keeps its exact shape and hash
       ...(v.notes ? { notes: v.notes } : {}),
@@ -109,6 +115,9 @@ function totalView(total: ValuationTotal): ReviewedValueTotal {
     valuedLines: total.valuedLines,
     unvaluedLines: total.unvaluedLines,
     fxMissingLines: total.fxMissingLines,
+    ...(total.fxProvisionalLines > 0
+      ? { fxProvisionalLines: total.fxProvisionalLines }
+      : {}),
     fxRateIds: total.fxRateIds,
   };
 }
