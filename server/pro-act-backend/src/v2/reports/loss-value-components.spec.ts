@@ -133,7 +133,8 @@ describe('VA-04 economic view by component (loss-value groupBy=component)', () =
       ['u1'],
       SCOPE.from,
       SCOPE.to,
-      false,
+      // the shared report selection (jsonb): approvedOnly, plus shift / crew / product filters when given
+      JSON.stringify({ approvedOnly: false }),
       'economic_impact',
       'plan',
       ['quality'],
