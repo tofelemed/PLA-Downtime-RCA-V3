@@ -2,6 +2,7 @@ import { Dec, secondsBetween } from '../actuals/decimal';
 import { BoundedInterval } from '../time/interval-algebra';
 import { KpiDraft, KpiScope, MDTR_LABEL } from './kpi.types';
 import { ratioKpi, sum, unavailable } from './kpi-values';
+import { StandbyExposure, standbyMtbf } from './standby-mtbf';
 
 export type FailureSource =
   | 'failure_work_order'
@@ -31,6 +32,8 @@ export interface ReliabilityInput {
   microStopSeconds: number;
   /** SME D6: threshold per stop occurrence (asset class, trips at 0); absent occurrences use the unit's */
   microStopSecondsByOccurrence?: ReadonlyMap<string, number>;
+  /** SME D9: standby assets of the unit with their own runs; their MTBF uses that running time */
+  standby?: readonly StandbyExposure[];
 }
 
 const lengthOf = (start: Date, end: Date) =>
@@ -152,10 +155,26 @@ function mttr(
   );
 }
 
+/** Asset MTBF: a standby asset's own running time (SME D9), else the unit's run time. */
+function assetMtbf(
+  input: ReliabilityInput,
+  own: FailureSpan[],
+  scope: KpiScope & { assetId: string },
+): KpiDraft {
+  const standby = input.standby?.find((s) => s.assetId === scope.assetId);
+  if (!standby) return mtbf(input, own, scope);
+  return standbyMtbf(
+    { window: input.window, asOf: input.asOf, scope },
+    standby,
+    own,
+  );
+}
+
 /**
- * Reliability measures of KPI07 / KPI08 for the unit and for every asset with a failure in the window:
- * MTBF = operating exposure / eligible failures starting in the window (null with exposure and count when
- * there is none), mean downtime to restore over completed outages, MTTR only with repair evidence.
+ * Reliability measures of KPI07 / KPI08 for the unit and for every asset with a failure in the window or
+ * registered as standby: MTBF = operating exposure / eligible failures starting in the window (null with
+ * exposure and count when there is none) — the unit's run time, or a standby asset's own running time —
+ * mean downtime to restore over completed outages, MTTR only with repair evidence.
  */
 export function reliability(input: ReliabilityInput): KpiDraft[] {
   const eligible = eligibleFailures(input);
@@ -166,13 +185,16 @@ export function reliability(input: ReliabilityInput): KpiDraft[] {
     mttr(input, eligible, unit),
   ];
   const assets = [
-    ...new Set(eligible.flatMap((f) => (f.assetId ? [f.assetId] : []))),
+    ...new Set([
+      ...eligible.flatMap((f) => (f.assetId ? [f.assetId] : [])),
+      ...(input.standby ?? []).map((s) => s.assetId),
+    ]),
   ].sort();
   for (const assetId of assets) {
     const own = eligible.filter((f) => f.assetId === assetId);
-    const scope: KpiScope = { level: 'asset', assetId };
+    const scope = { level: 'asset' as const, assetId };
     results.push(
-      mtbf(input, own, scope),
+      assetMtbf(input, own, scope),
       restoreMean(input, own, scope),
       mttr(input, own, scope),
     );
