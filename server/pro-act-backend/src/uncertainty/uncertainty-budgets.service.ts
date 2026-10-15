@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { requireUnitRole } from '../auth/roles/require-unit-role';
 import {
   RequestContext,
   requireTenantId,
@@ -12,6 +13,10 @@ import {
   notFound,
 } from '../profiles/profile-errors';
 import { ProfileReferences } from '../profiles/profile-references';
+import {
+  BUDGET_APPROVERS,
+  BUDGET_WRITERS,
+} from '../v2/uncertainty/uncertainty-roles';
 import { UncertaintyBudget } from './entities/uncertainty-budget.entity';
 import {
   checkDates,
@@ -59,6 +64,12 @@ export class UncertaintyBudgetsService {
   ): Promise<UncertaintyBudget> {
     const author = requireUser(context);
     await this.references.assertUnit(context, input.unitId);
+    await requireUnitRole(
+      this.rows.manager,
+      context,
+      input.unitId,
+      BUDGET_WRITERS,
+    );
     const dates = checkDates(input);
     const computed = computeBudget(input);
     return this.rows.save(
@@ -124,6 +135,12 @@ export class UncertaintyBudgetsService {
   ): Promise<UncertaintyBudget> {
     const decider = requireUser(context);
     const row = await this.get(context, id);
+    await requireUnitRole(
+      this.rows.manager,
+      context,
+      row.unitId,
+      BUDGET_APPROVERS,
+    );
     if (row.authorId === decider) {
       throw new ForbiddenException({
         code: 'SEPARATION_OF_DUTIES',

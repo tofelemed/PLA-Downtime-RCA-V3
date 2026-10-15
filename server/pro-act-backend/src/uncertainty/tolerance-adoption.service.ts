@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
+import { requireUnitRole } from '../auth/roles/require-unit-role';
 import { Clock } from '../common/clock/clock';
 import { RequestContext } from '../common/context/request-context';
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
@@ -11,6 +12,7 @@ import {
 import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
 import { PolicyBodyError } from '../periods/policy-bodies';
 import { invalid } from '../profiles/profile-errors';
+import { TOLERANCE_ADOPTERS } from '../v2/uncertainty/uncertainty-roles';
 import { UncertaintyBudget } from './entities/uncertainty-budget.entity';
 import {
   ToleranceJustification,
@@ -56,6 +58,12 @@ export class ToleranceAdoptionService {
   ): Promise<AdoptedTolerance> {
     const user = requireUser(context);
     const budget = await this.budgets.get(context, budgetId);
+    await requireUnitRole(
+      this.manager,
+      context,
+      budget.unitId,
+      TOLERANCE_ADOPTERS,
+    );
     const now = this.clock.now();
     assertAdoptable(budget, user, now);
     return this.manager.transaction(async (manager) => {
