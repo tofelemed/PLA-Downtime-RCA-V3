@@ -67,7 +67,7 @@ export function PlantSelector() {
           {crumbs.map((crumb, index) => (
             <span key={`${crumb.name}-${index}`} className={`${index < crumbs.length - 1 ? 'hidden sm:flex' : 'flex'} min-w-0 items-center gap-1 text-sm font-medium`}>
               {index > 0 && <UiIcon.chevronRight className="hidden h-3.5 w-3.5 text-muted-foreground sm:block" aria-hidden />}
-              <crumb.icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              <crumb.icon className="hidden h-4 w-4 shrink-0 text-muted-foreground sm:block" aria-hidden />
               <span className="max-w-[9rem] truncate" data-testid={index === crumbs.length - 1 ? 'plant-current-label' : undefined}>{crumb.name}</span>
             </span>
           ))}
