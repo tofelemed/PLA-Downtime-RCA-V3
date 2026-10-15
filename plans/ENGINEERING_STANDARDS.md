@@ -62,7 +62,7 @@ Applies to every sub-phase in `plans/`. These are checkable rules; CI and 3.11 v
 - Lighthouse CI budgets on Event Hub, Plan Dashboard, Downtime Analysis: performance ≥ 85, LCP < 2.5 s (LAN profile); `web-vitals` reported to metrics in production.
 
 ## Code quality (summarised in CLAUDE.md; enforced by lint/CI)
-- Files ≤ 400 lines (hard stop 500), functions ≤ 40 lines and ≤ 4 parameters, React components ≤ 150 lines, nesting ≤ 3 with early returns — unless splitting makes the code harder to follow. `eslint` `max-lines`, `max-lines-per-function`, `max-params`, `max-depth`, `complexity` rules enforce this.
+- Files ≤ 400 lines (hard stop 500), functions ≤ 40 lines and ≤ 4 parameters, React components ≤ 150 lines, nesting ≤ 3 with early returns — unless splitting makes the code harder to follow. `eslint` `max-lines`, `max-lines-per-function`, `max-params`, `max-depth`, `complexity` rules check this in the frontend `eslint.config.js` (400 lines; 40 per function, 150 in `.tsx` for components; 4 parameters; depth 3; complexity 10) as **warnings**, because about 1,250 pre-existing warnings would otherwise break CI. `npm run lint:changed` (`scripts/lint-changed.mjs`) lints only the files changed against the main branch (committed, staged, unstaged and untracked; `LINT_BASE` overrides the base), each with its own project config (frontend at the root, backend in `server/pro-act-backend`); it fails on errors and prints the size warnings of the touched files so they can be split while there. The full `npm run lint` stays non-blocking for these rules.
 - TypeScript strict; no `any` (use `unknown` + narrowing); named exports; no commented-out code, unused imports or stray `console.log` (`no-console` except logger).
 - Layering: controller → service → repository; DTO validation at the boundary; standard error envelope; config only via env.
 - Tests accompany logic: fixtures for mathematics, integration tests with real Postgres for queries, e2e for journeys.
@@ -79,5 +79,5 @@ Applies to every sub-phase in `plans/`. These are checkable rules; CI and 3.11 v
 | Bundle budget | `size-limit`/visualizer in CI | 3.1 |
 | Lazy routes | static check: `pages/*` imported via `React.lazy` | 3.1 |
 | Virtualization | code review checklist for lists > 100 rows | 3.x |
-| Size/style rules | eslint rules fail CI | 0.3 |
+| Size/style rules | eslint size rules warn; `npm run lint:changed` fails on errors in touched files | 0.3 |
 | Load targets | k6 + Lighthouse CI | 3.11 |

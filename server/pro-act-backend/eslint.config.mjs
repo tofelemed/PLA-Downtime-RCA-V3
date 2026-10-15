@@ -28,7 +28,9 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'warn'
+      '@typescript-eslint/no-unsafe-argument': 'warn',
+      // Windows checkouts (core.autocrlf) have CRLF; the repository stores LF either way
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
 );

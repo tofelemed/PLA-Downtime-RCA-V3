@@ -10,6 +10,7 @@
     "build:analyze": "vite build --mode analyze",
     "size": "size-limit",
     "lint": "eslint .",
+    "lint:changed": "node scripts/lint-changed.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json",
     "api:types": "openapi-typescript server/pro-act-backend/openapi/v2.json -o src/api/v2/schema.d.ts",
     "api:types:check": "openapi-typescript server/pro-act-backend/openapi/v2.json -o src/api/v2/schema.d.ts --check",
@@ -22,6 +23,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
+    "test:a11y": "playwright test e2e/a11y.spec.ts",
     "test:all": "npm run test:run && npm run test:e2e",
     "ci": "node scripts/ci.mjs"
   },

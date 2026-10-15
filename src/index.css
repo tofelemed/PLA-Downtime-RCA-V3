@@ -24,12 +24,14 @@ All colors MUST be HSL.
     --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* WCAG AA: ≥ 4.5:1 on white (5.7) and on --muted (5.2); was 46.9 % (4.3 on --muted) */
+    --muted-foreground: 215.4 16.3% 42%;
 
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
-    --destructive: 0 84.2% 60.2%;
+    /* WCAG AA: error text on white 5.3:1 and white button text 5.1:1; was 60.2 % (3.8 / 3.6) */
+    --destructive: 0 70% 48%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;

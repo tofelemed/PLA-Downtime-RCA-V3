@@ -41,6 +41,28 @@ export default tseslint.config(
     },
   },
   {
+    // size and complexity limits (plans/ENGINEERING_STANDARDS.md "Code quality", CLAUDE.md): warnings, so
+    // the pre-existing oversized files do not break CI; `npm run lint:changed` shows them for touched files
+    files: ["**/*.{ts,tsx}"],
+    rules: {
+      "max-lines": ["warn", { max: 400, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": ["warn", { max: 40, skipBlankLines: true, skipComments: true, IIFEs: true }],
+      complexity: ["warn", { max: 10 }],
+      "max-params": ["warn", { max: 4 }],
+      "max-depth": ["warn", { max: 3 }],
+    },
+  },
+  {
+    // React components may run to 150 lines (CLAUDE.md "Size limits")
+    files: ["**/*.tsx"],
+    rules: { "max-lines-per-function": ["warn", { max: 150, skipBlankLines: true, skipComments: true }] },
+  },
+  {
+    // generated primitives, generated API types and test suites (long describe blocks) are exempt
+    files: ["src/components/ui/**/*.{ts,tsx}", "src/api/v2/schema.d.ts", "**/*.test.{ts,tsx}", "e2e/**/*.ts"],
+    rules: { "max-lines": "off", "max-lines-per-function": "off", complexity: "off" },
+  },
+  {
     // the registry itself and the generated shadcn primitives may import lucide-react directly
     files: ["src/lib/icons.ts", "src/components/ui/**/*.{ts,tsx}"],
     rules: { "@typescript-eslint/no-restricted-imports": "off" },

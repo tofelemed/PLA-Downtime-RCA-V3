@@ -231,7 +231,7 @@ describe('RCA workspace (analysis tools, evidence files, case commands)', () => 
       expect(after.teamCharter).toBe('Stop the trips');
       expect(after.evidence[0]).toMatchObject({
         ...evidence,
-        timeSeries: expect.objectContaining({ streams: 'P101.VIB' }),
+        timeSeries: expect.objectContaining({ streams: 'P101.VIB' }) as unknown,
       });
       expect(after.eventDiagram.nodes[0]).toMatchObject({
         id: 'e1',

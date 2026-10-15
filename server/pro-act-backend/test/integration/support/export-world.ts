@@ -147,7 +147,7 @@ export class ExportWorld extends ReconciliationWorld {
       status: response.status,
       text,
       hash: createHash('sha256').update(bytes).digest('hex'),
-      header: response.headers['x-content-sha256'] as string | undefined,
+      header: response.headers['x-content-sha256'],
       body,
     };
   }
