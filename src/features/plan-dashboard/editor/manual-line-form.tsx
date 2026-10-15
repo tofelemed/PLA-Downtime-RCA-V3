@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -20,6 +19,8 @@ export interface ManualLineFormProps {
   timezone: string;
   onAdd: (line: Omit<ManualDraft, 'uid'>) => void;
   onCancel: () => void;
+  line: Omit<ManualDraft, 'uid'>;
+  onChange: (line: Omit<ManualDraft, 'uid'>) => void;
 }
 
 const KINDS: ManualKind[] = ['availability', 'performance', 'quality', 'bridge', 'gain', 'unaccounted_classified', 'reversal'];
@@ -65,10 +66,9 @@ function EventEvidence({ line, set, view, timezone }: { line: LineInput; set: (p
 }
 
 /** A manual line (ACC07): slice, kind, quantity (decimal text), evidence event(s) or an explicit "no event". */
-export function ManualLineForm({ view, timezone, onAdd, onCancel }: ManualLineFormProps) {
+export function ManualLineForm({ view, timezone, onAdd, onCancel, line, onChange }: ManualLineFormProps) {
   const { number } = useNumberFormat();
-  const [line, setLine] = useState<Omit<ManualDraft, 'uid'>>({ sliceId: view.slices[0]?.sliceId ?? '', kind: 'availability', quantity: null, eventIds: [], missingEvent: false, missingCode: false });
-  const set = (patch: Partial<Omit<ManualDraft, 'uid'>>) => setLine((current) => ({ ...current, ...patch }));
+  const set = (patch: Partial<Omit<ManualDraft, 'uid'>>) => onChange({ ...line, ...patch });
   const kinds = kindsFor(view, useCapabilities().canWriteBridges);
   const problems = manualProblems({ ...line, uid: 'new' });
   return (

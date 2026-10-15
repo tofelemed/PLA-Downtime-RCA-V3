@@ -1,10 +1,11 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLotDispositions } from '@/api/v2/queries/lot-dispositions';
 import { useProductionPeriod } from '@/api/v2/queries/production-periods';
 import type { LotDispositionView } from '@/api/v2/types/periods';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { DataState } from '@/features/ux-kit/data-state';
 import { DISPOSITION_CLASS_LABELS, DISPOSITION_STATE_LABELS } from '@/features/ux-kit/disposition-labels';
 import { labelOf, useProductNames, useUserNames, type NameResolver } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
@@ -40,6 +41,7 @@ function columnsOf(names: { products: NameResolver; users: NameResolver }, timez
  * actuals (first-pass good never includes recovered material); rejected and corrected rows stay listed.
  */
 export function DispositionsSection({ planId, periodId, timezone }: DispositionsSectionProps) {
+  const { search } = useLocation();
   const { canWriteDispositions, canApproveDispositions } = useCapabilities();
   const period = useProductionPeriod(periodId);
   const detail = period.data?.data;
@@ -47,7 +49,7 @@ export function DispositionsSection({ planId, periodId, timezone }: Dispositions
   const names = { products: useProductNames(), users: useUserNames() };
   const record = canWriteDispositions && (
     <Button asChild size="sm" variant="outline" data-testid="disposition-record">
-      <Link to={`/plans/${planId}/periods/${periodId}/dispositions/new`}>
+      <Link to={`/plans/${planId}/periods/${periodId}/dispositions/new${search}`}>
         <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
         Record disposition
       </Link>
@@ -56,7 +58,7 @@ export function DispositionsSection({ planId, periodId, timezone }: Dispositions
   return (
     <Section title="Product dispositions" headingLevel={3} actions={record || undefined} description="Lab and quality decisions on the lots made in this period; they count once a Quality / Lab approver approves them.">
       <div data-testid="dispositions">
-        <DataTable
+        {list.isSuccess && list.data.items.length === 0 ? <DataState state="empty" detail="No dispositions recorded for this period." /> : <DataTable
           caption="Product dispositions"
           columns={columnsOf(names, timezone, canApproveDispositions)}
           rows={list.data?.items ?? []}
@@ -64,7 +66,7 @@ export function DispositionsSection({ planId, periodId, timezone }: Dispositions
           status={{ isLoading: list.isLoading, isError: list.isError, error: list.error }}
           empty={{ text: 'No dispositions recorded for this period.' }}
           density="compact"
-        />
+        />}
       </div>
     </Section>
   );

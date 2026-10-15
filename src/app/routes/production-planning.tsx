@@ -44,7 +44,7 @@ export const PLANNING_ROUTES: readonly AppRoute[] = [
   { path: '/planning/calendars/new', element: <NewCalendarVersion />, preload: NewCalendarVersion.preload },
   { path: '/planning/calendars/:versionId/edit', element: <CalendarVersion />, preload: CalendarVersion.preload },
   { path: '/plans/:planId', element: <PlanDashboard />, preload: PlanDashboard.preload },
-  { path: '/plans/:planId/periods/:periodId', element: <PeriodPage />, preload: PeriodPage.preload },
+  { path: '/plans/:planId/periods/:periodId/*', element: <PeriodPage />, preload: PeriodPage.preload },
   { path: '/plans/:planId/periods/:periodId/adjustments/new', element: <ProposeAdjustment />, preload: ProposeAdjustment.preload },
   { path: '/plans/:planId/periods/:periodId/dispositions/new', element: <RecordDisposition />, preload: RecordDisposition.preload },
   { path: '/month-close', element: <MonthClose />, preload: MonthClose.preload },

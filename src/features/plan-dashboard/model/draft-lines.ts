@@ -45,6 +45,8 @@ export interface DraftState {
   decisions: Record<string, CandidateDecision>;
   manual: ManualDraft[];
   dirty: boolean;
+  /** In-progress manual entry belongs to the workspace draft, not an unmounted form. */
+  pendingManual?: Omit<ManualDraft, 'uid'> | null;
 }
 
 /** Which editor row a payload line index (`details.issues[].line`) belongs to. */

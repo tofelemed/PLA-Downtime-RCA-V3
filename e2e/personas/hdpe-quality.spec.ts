@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openPeriodSection } from '../test-utils/period-sections';
 import { randomUUID } from 'node:crypto';
 import { apiLogin, call, command, signIn, signOut, selectPlant, PLANTS } from './support/admin-helpers';
 import type { LotDispositionView, ProductionPeriodView } from '../../src/api/v2/types/periods';
@@ -47,6 +48,8 @@ test('accountant records a lab downgrade with evidence; only Quality can decide 
   const response = await created;
   expect(response.status(), await response.text()).toBe(201);
   dispositionId = ((await response.json()) as LotDispositionView).id;
+  await expect(page).toHaveURL(`${path}/actuals`);
+  await openPeriodSection(page, 'Actuals & quality');
   const row = page.getByRole('row').filter({ has: page.getByTestId('disposition-row').filter({ hasText: LOT }) });
   await expect(row).toContainText('DEMO-LIMS-MFR-025');
   await expect(row.getByTestId('disposition-row')).toHaveAttribute('data-state', 'proposed');
@@ -59,6 +62,7 @@ test('accountant records a lab downgrade with evidence; only Quality can decide 
 test('Quality approves the recorded lot in the UI and the decision survives reload', async ({ page }) => {
   await signIn(page, QUALITY);
   await page.goto(path);
+  await openPeriodSection(page, 'Actuals & quality');
   const row = page.getByRole('row').filter({ has: page.getByTestId('disposition-row').filter({ hasText: LOT }) });
   const decided = page.waitForResponse((r) => r.url().endsWith(`/lot-dispositions/${dispositionId}/approve`) && r.request().method() === 'POST');
   await row.getByTestId('disposition-approve').click();
@@ -85,6 +89,7 @@ test('Quality cannot approve its own lot and a viewer cannot record dispositions
   expect(refused.status).toBe(403);
   await signIn(page, QUALITY);
   await page.goto(path);
+  await openPeriodSection(page, 'Actuals & quality');
   const row = page.getByRole('row').filter({ has: page.getByTestId('disposition-row').filter({ hasText: `${LOT}-SELF` }) });
   await expect(row.getByTestId('disposition-approve')).toBeDisabled();
   await signOut(page);

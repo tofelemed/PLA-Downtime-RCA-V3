@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openPeriodSection } from '../test-utils/period-sections';
 import type { MonthCloseView } from '../../src/api/v2/types/month-close';
 import { apiLogin, call, signIn } from './support/admin-helpers';
 import { ACCOUNTING_USERS, readReconciliation, reviseThroughUi } from './support/hdpe-accounting-world';
@@ -26,6 +27,7 @@ test('the final locked month shows independent sign-offs and refuses a direct UI
   await page.getByTestId('open-proposals').locator(`a[href="/plans/${proposal!.planId}/periods/${proposal!.periodId}"]`).click();
   const before = await readReconciliation(author.token, proposal!.periodId);
   await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'approved');
+  await openPeriodSection(page, 'Review & close');
   expect(await reviseThroughUi(page, 'Demo: verify the locked month refuses direct revision')).toBe(409);
   await expect(page.getByRole('alertdialog').getByTestId('workflow-problem')).toHaveAttribute('data-code', 'MONTH_LOCKED');
   const after = await readReconciliation(author.token, proposal!.periodId);

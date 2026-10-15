@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import type { ReconciliationView } from '../../../src/api/v2/types/reconciliation';
 import type { DayView } from '../../../src/api/v2/types/production-day';
 import { seedDashboardWorld, type DashboardWorld } from '../../test-utils/dashboard-world';
+import { openPeriodSection } from '../../test-utils/period-sections';
 import { apiLogin, call, command, type ApiSession } from './admin-helpers';
 
 export const ACCOUNTING_USERS = {
@@ -75,6 +76,7 @@ export async function readDay(world: AccountingWorld): Promise<DayView> {
 export async function openAccountingPeriod(page: Page, world: AccountingWorld, periodId = world.fixture.periods.a): Promise<void> {
   await page.goto(`/plans/${world.fixture.planId}/periods/${periodId}`);
   await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', /.+/, { timeout: 60_000 });
+  await openPeriodSection(page, 'Review & close');
   await expect(page.getByTestId('day-certification')).toBeVisible({ timeout: 60_000 });
 }
 

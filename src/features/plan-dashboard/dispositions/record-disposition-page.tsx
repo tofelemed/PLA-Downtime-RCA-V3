@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useProductionPeriod } from '@/api/v2/queries/production-periods';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
@@ -12,10 +12,11 @@ import { DispositionForm } from './disposition-form';
 export function RecordDispositionPage() {
   const { planId = '', periodId = null } = useParams();
   const navigate = useNavigate();
+  const { search } = useLocation();
   const { canWriteDispositions } = useCapabilities();
   const zone = usePlantTimezone();
   const period = useProductionPeriod(periodId);
-  const back = `/plans/${planId}/periods/${periodId ?? ''}`;
+  const back = `/plans/${planId}/periods/${periodId ?? ''}/actuals${search}`;
   const state = dataStateOf(period);
   const detail = period.data?.data;
   return (
@@ -23,7 +24,7 @@ export function RecordDispositionPage() {
       <PageHeader
         title="Record a product disposition"
         description={detail ? <>Period <PlantTime iso={detail.utcStart} tz={zone.timezone} withDate /> → <PlantTime iso={detail.utcEnd} tz={zone.timezone} withDate />. A Quality / Lab approver who is not you approves it.</> : undefined}
-        back={{ to: back, label: 'Period' }}
+        back={{ to: back, label: 'Actuals & quality' }}
       />
       {!canWriteDispositions ? (
         <DataState state="no-permission" detail="Operators, production engineers, production accountants, manager approvers and Quality / Lab approvers record dispositions." />

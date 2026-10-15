@@ -1,5 +1,6 @@
 import { test, expect, type Browser, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
+import { openPeriodSection } from '../test-utils/period-sections';
 import { call, command } from '../test-utils/downtime-world';
 import { reconciliation, saveLines } from '../test-utils/dashboard-world';
 import { AISHA, MATEO, NOAH, SETUP_MANAGER, apiSession, type Session } from './support/engineer-users';
@@ -37,12 +38,13 @@ async function openPeriod(page: Page, periodId: string): Promise<void> {
 
 /** A second session of the same engineer that never hears the realtime channel (a tab left open). */
 async function staleTab(browser: Browser, user: { email: string; password: string }, periodId: string): Promise<Page> {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const context = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
   await page.routeWebSocket(/socket\.io/, () => undefined);
   await page.route(/socket\.io/, (route) => route.abort());
   await loginViaUI(page, user.email, user.password);
   await openPeriod(page, periodId);
+  await openPeriodSection(page, 'Review & close');
   return page;
 }
 
@@ -70,10 +72,12 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', /.+/, { timeout: 60_000 });
     await expect(figure(page, 'residual')).toHaveAttribute('data-value', '10');
     await expect(page.getByTestId('waterfall')).toHaveAttribute('data-closes', 'true');
+    await openPeriodSection(page, 'Actuals & quality');
     await page.getByTestId('actuals-provenance').locator('summary').click();
     await expect(page.getByTestId('provenance-slice')).toContainText('coverage');
     expect(writes).toEqual([]); // KPI03: opening the dashboard writes nothing
 
+    await openPeriodSection(page, 'Reconciliation');
     await page.getByTestId('add-manual-line').click();
     await page.selectOption('#manualKind', 'quality'); // restart scrap after the stop: the stop's 90 t downtime loss is already claimed (SME R10)
     await page.fill('#manualQuantity', '10');
@@ -85,6 +89,7 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     // a stale tab of the same engineer still shows the draft after this tab submits
     const stale = await staleTab(browser, NOAH, world.periods.a);
     await expect(stale.getByTestId('wf-submit')).toBeEnabled();
+    await openPeriodSection(page, 'Review & close');
     await page.getByTestId('wf-submit').click();
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
     await page.screenshot({ path: test.info().outputPath('engineer-period-submitted.png') });
@@ -105,6 +110,7 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     const noahApi = await apiSession(NOAH);
     const review = await call<{ revision: { revision: number; submittedHash: string | null } }>(noahApi.token, 'GET', `/v2/production-periods/${world.periods.a}/reconciliation`);
     expectRefused(await command(noahApi.token, `/v2/production-periods/${world.periods.a}/approve`, { revision: review.body.revision.revision, submittedHash: review.body.revision.submittedHash ?? '' }), 'FORBIDDEN_ROLE');
+    await openPeriodSection(page, 'History & exports');
     await expect(page.getByTestId('revision-history').locator('[data-action="submit"]')).toBeVisible();
     const view = await call<{ revision: { lifecycle: string }; lines: unknown[] }>((await apiSession(NOAH)).token, 'GET', `/v2/production-periods/${world.periods.a}/reconciliation`);
     expect(view.body.revision.lifecycle).toBe('in_review');
@@ -137,6 +143,7 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
 
     await loginViaUI(page, NOAH.email, NOAH.password);
     await openPeriod(page, world.periods.b);
+    await openPeriodSection(page, 'Actuals & quality');
     const proposed = page.getByTestId('adjustments').locator('tr', { has: page.locator('[data-testid="adjustment-row"][data-state="proposed"]') });
     await expect(proposed).toContainText('-5', { timeout: 60_000 });
     await expect(proposed).toContainText('Waiting for approval');
@@ -156,10 +163,12 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     // the history names the submitter, never by id; the user directory (GET /users/assignable) may not list
     // the submitter for this viewer, which reads "Unknown user" (known gap B2 in docs/UI_GUIDELINES.md §5)
     const noah = await apiSession(NOAH);
+    await openPeriodSection(page, 'History & exports');
     const submitLine = page.getByTestId('revision-history').locator('tr', { has: page.locator('[data-action="submit"]') });
     await expect(submitLine).toContainText(new RegExp(`${NOAH.name}|Unknown user`));
     await expect(submitLine).not.toContainText(noah.userId.slice(0, 8));
     // an engineer is not an approver: no Approve / Reject / gate is offered, and the server still refuses
+    await openPeriodSection(page, 'Review & close');
     await expect(page.getByTestId('workflow-bar')).toBeVisible();
     await expectHidden(page.getByTestId('wf-approve'));
     await expectHidden(page.getByTestId('wf-reject'));
@@ -171,6 +180,7 @@ test.describe('Engineer — period accounting (UX05), adjustments and shared vis
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
     await page.screenshot({ path: test.info().outputPath('engineer-approve-refused.png') });
     await openPeriod(page, world.periods.b);
+    await openPeriodSection(page, 'Actuals & quality');
     await expect(page.getByTestId('adjustments').locator('[data-testid="adjustment-row"][data-state="proposed"]')).toHaveCount(1, { timeout: 60_000 });
   });
 });

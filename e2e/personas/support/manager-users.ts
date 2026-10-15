@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Browser, Page } from '@playwright/test';
+import { test, type Browser, type Page } from '@playwright/test';
 import { authenticate } from '../../test-utils/api-helpers';
 import { loginViaUI } from '../../test-utils/auth-helpers';
 
@@ -61,7 +61,7 @@ export async function sessionOf(user: PersonaUser): Promise<Session> {
 
 /** A fresh browser context signed in through the real login form. */
 export async function asUser(browser: Browser, user: PersonaUser): Promise<Page> {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const context = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
   await loginViaUI(page, user.email, user.password);
   return page;

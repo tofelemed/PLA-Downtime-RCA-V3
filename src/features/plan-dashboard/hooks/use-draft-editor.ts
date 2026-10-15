@@ -6,6 +6,7 @@ import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { draftFromView, DraftState, LineRef, rebaseDraft, toPayload } from '../model/draft-lines';
 import { workflowProblemOf, WorkflowProblem } from '../model/workflow-errors';
+import type { RetainedPeriodDraft } from '../model/retained-period-drafts';
 
 export const serverKeyOf = (view: ReconciliationView) => `${view.revision.id}:${view.rowVersion}:${view.baseRunId ?? '-'}`;
 
@@ -27,6 +28,8 @@ export interface DraftEditor {
   rebase: () => Promise<void>;
   dismissProblem: () => void;
   discard: () => void;
+  base: Pick<RetainedPeriodDraft, 'rowVersion' | 'baseRunId'>;
+  restore: (snapshot: RetainedPeriodDraft) => void;
 }
 
 /**
@@ -70,18 +73,21 @@ export function useDraftEditor(view: ReconciliationView): DraftEditor {
   const [draft, setDraftState] = useState<DraftState>(() => draftFromView(view));
   const [refs, setRefs] = useState<LineRef[]>([]);
   const [problem, setProblem] = useState<WorkflowProblem | null>(null);
+  const [restoredBase, setRestoredBase] = useState<(Pick<RetainedPeriodDraft, 'rowVersion' | 'baseRunId'> & { serverKey: string }) | null>(null);
   const sync = useServerSync(view, draft, setDraftState);
+  const base = restoredBase?.serverKey === serverKeyOf(view) ? restoredBase : { rowVersion: view.rowVersion, baseRunId: view.baseRunId };
 
   const save = async () => {
-    if (!view.baseRunId) return;
+    if (!base.baseRunId || draft.pendingManual) return;
     const payload = toPayload(draft, view.candidates);
     setRefs(payload.refs);
     setProblem(null);
     try {
-      const saved = await command.submit({ period: periodRefOf(view), revision: view.revision.revision, rowVersion: view.rowVersion, baseRunId: view.baseRunId, lines: payload.lines });
+      const saved = await command.submit({ period: periodRefOf(view), revision: view.revision.revision, rowVersion: base.rowVersion, baseRunId: base.baseRunId, lines: payload.lines });
       queryClient.setQueryData(reconciliationKey(tenantId, view.periodId), saved);
       setDraftState(draftFromView(saved));
       sync.accept(saved);
+      setRestoredBase(null);
     } catch (error) {
       setProblem(workflowProblemOf(error));
     }
@@ -89,6 +95,11 @@ export function useDraftEditor(view: ReconciliationView): DraftEditor {
 
   return {
     draft,
+    base,
+    restore: (snapshot) => {
+      setDraftState(snapshot.draft);
+      setRestoredBase({ rowVersion: snapshot.rowVersion, baseRunId: snapshot.baseRunId, serverKey: serverKeyOf(view) });
+    },
     setDraft: (next) => setDraftState((state) => next(state)),
     refs,
     problem,
@@ -96,12 +107,23 @@ export function useDraftEditor(view: ReconciliationView): DraftEditor {
     dropped: sync.dropped,
     save,
     rebase: async () => {
+      setRestoredBase(null);
       sync.setRebasing(true);
       setProblem(null);
       await queryClient.invalidateQueries({ queryKey: reconciliationKey(tenantId, view.periodId) });
+      const latest = queryClient.getQueryData<ReconciliationView>(reconciliationKey(tenantId, view.periodId));
+      // A restored draft may already have the latest server view loaded. Its key need not change.
+      if (latest) {
+        const rebased = rebaseDraft(draft, latest);
+        setDraftState(rebased.state);
+        sync.accept(latest);
+        sync.setDropped(rebased.dropped);
+        sync.setRebasing(false);
+      }
     },
     dismissProblem: () => setProblem(null),
     discard: () => {
+      setRestoredBase(null);
       setDraftState(draftFromView(view));
       setProblem(null);
       sync.setDropped(null);

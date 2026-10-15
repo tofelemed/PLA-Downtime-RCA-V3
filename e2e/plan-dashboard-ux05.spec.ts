@@ -1,6 +1,7 @@
 import { test, expect, type Browser, type Page } from '@playwright/test';
 import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
+import { openPeriodSection } from './test-utils/period-sections';
 import { call, command } from './test-utils/downtime-world';
 import { pickReasonCode } from './personas/support/event-hub-ui';
 import { ensureApprover, reconciliation, saveLines, seedDashboardWorld, type DashboardWorld } from './test-utils/dashboard-world';
@@ -42,7 +43,7 @@ async function openPeriod(page: Page, periodId: string): Promise<void> {
 }
 
 async function asUser(browser: Browser, user: { email: string; password: string }): Promise<Page> {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const context = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
   await loginViaUI(page, user.email, user.password);
   return page;
@@ -85,10 +86,12 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await expect(bars.last()).toHaveAttribute('data-end', '570');
     await expect(page.locator('[data-testid="waterfall-bar"][data-key="unaccounted"]')).toHaveAttribute('data-delta', '-10');
     await expect(page.getByTestId('waterfall')).not.toContainText('MT');
+    await openPeriodSection(page, 'Actuals & quality');
     await page.getByTestId('actuals-provenance').locator('summary').click();
     await expect(page.getByTestId('provenance-slice')).toContainText('coverage');
     expect(writes).toEqual([]); // KPI03: opening the dashboard writes nothing
 
+    await openPeriodSection(page, 'Reconciliation');
     await page.getByTestId('ledger-capacity').click();
     await expect(page.getByTestId('waterfall')).toHaveAttribute('data-ledger', 'capacity');
     await expect(page.getByTestId('waterfall')).toHaveAttribute('data-closes', 'true');
@@ -101,10 +104,11 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await page.getByTestId('manual-line-add').click();
     await page.getByTestId('save-lines').click();
     await expect(figure(page, 'residual')).toHaveAttribute('data-value', '0');
+    await openPeriodSection(page, 'Review & close');
     await page.getByTestId('wf-submit').click();
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
     await page.screenshot({ path: test.info().outputPath('plan-dashboard-engineer.png') });
-    await page.goBack();
+    await openGrid(page);
     await expect(marker(page, world.periods.a)).toHaveAttribute('data-residual-state', 'balanced', { timeout: 60_000 });
     await expect(marker(page, world.periods.a)).toHaveAttribute('data-workflow', 'in_review');
   });
@@ -113,9 +117,11 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     await loginViaUI(page, MANAGER.email, MANAGER.password);
     await openPeriod(page, world.periods.a);
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
+    await openPeriodSection(page, 'Review & close');
     await expect(page.getByTestId('approve-gate')).toHaveCount(0);
     await page.getByTestId('wf-approve').click();
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'approved');
+    await openPeriodSection(page, 'History & exports');
     await expect(page.getByTestId('revision-history').locator('[data-action="approve"]')).toBeVisible();
     await page.getByTestId('export-start').click();
     await expect(page.getByTestId('export-job')).toHaveAttribute('data-state', 'completed', { timeout: 60_000 });
@@ -132,6 +138,7 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
     const submitter = await asUser(browser, MANAGER);
     await openPeriod(submitter, world.periods.b);
     await expect(figure(submitter, 'residual')).toHaveAttribute('data-value', '0');
+    await openPeriodSection(submitter, 'Review & close');
     await submitter.getByTestId('wf-submit').click();
     await expect(submitter.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
     await expect(submitter.getByTestId('wf-approve')).toBeDisabled();
@@ -142,6 +149,7 @@ test.describe('Plan Dashboard — UX05 period accounting journeys (plan 3.5)', (
 
     const approver = await asUser(browser, APPROVER);
     await openPeriod(approver, world.periods.b);
+    await openPeriodSection(approver, 'Review & close');
     await approver.getByTestId('wf-approve').click();
     await expect(approver.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'approved');
   });

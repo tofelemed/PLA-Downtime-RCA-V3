@@ -36,7 +36,7 @@ export function EvidencePicker({ view, timezone, selected, onChange }: EvidenceP
     { id: 'description', header: 'Description', cell: (e) => e.description ?? '—' },
   ];
   return (
-    <fieldset className="space-y-1" data-testid="evidence-picker">
+    <fieldset className="min-w-0 space-y-1" data-testid="evidence-picker">
       <legend className="text-xs font-medium">Evidence events overlapping the period</legend>
       <DataTable
         caption="Events overlapping the period"

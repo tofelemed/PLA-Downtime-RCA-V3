@@ -15,6 +15,7 @@ import { PROTECTED_ROUTES } from "./app/routes";
 import { V2SessionBridge } from "./features/v2-foundation/v2-session-bridge";
 import { RealtimeBridge } from "./features/v2-foundation/realtime-bridge";
 import { SessionRecovery } from "./features/auth/session-recovery";
+import { PeriodDraftBoundary } from "./features/plan-dashboard/period-draft-boundary";
 
 const queryClient = createAppQueryClient();
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -77,6 +78,7 @@ const App = () => (
           <DisplayCurrencyProvider>
             <CalendarPreferenceProvider>
               <V2SessionBridge />
+              <PeriodDraftBoundary />
               <RealtimeBridge />
               <BrowserRouter>
                 <AppRoutes />

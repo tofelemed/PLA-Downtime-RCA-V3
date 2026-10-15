@@ -19,7 +19,7 @@ export interface Plant {
 }
 
 export const PLANTS = {
-  demo: { id: '5f011848-1cb5-4b7c-b75a-8938b46260a9', name: 'HDPE', org: 'Demo Org' },
+  demo: { id: '5f011848-1cb5-4b7c-b75a-8938b46260a9', name: 'HDPE', org: process.env.HDPE_ONLY === '1' ? 'HDPE' : 'Demo Org' },
   demo2: { id: '1c19bda6-1c5e-42ac-af59-e1bda46b804f', name: 'Demo Plant 2', org: 'Demo Org' },
   partner: { id: 'd731498e-efd5-46f2-8bf0-64a4cf1fde3b', name: 'Partner Plant', org: 'Partner Org' },
 } as const satisfies Record<string, Plant>;
@@ -156,9 +156,13 @@ export async function expandTreeNode(tree: Locator, name: string): Promise<void>
 /** Selects a plant: expands its organisation and clicks the plant name. */
 export async function selectPlant(page: Page, plant: Plant): Promise<void> {
   const tree = await openPlantTree(page);
-  await expect(tree.getByText(plant.org, { exact: true })).toBeVisible();
-  await expandTreeNode(tree, plant.org);
-  const plantLabel = tree.getByText(plant.name, { exact: true });
+  const organization = tree.getByRole('list', { name: 'Plants', exact: true }).locator(':scope > li')
+    .filter({ has: page.locator(':scope > div').getByText(plant.org, { exact: true }) });
+  const organizationRow = organization.locator(':scope > div');
+  await expect(organizationRow.getByText(plant.org, { exact: true })).toBeVisible();
+  await expandTreeNode(organizationRow, plant.org);
+  // A plant and its organization may share a name; select only a direct child plant row.
+  const plantLabel = organization.locator(':scope > ul > li > div').getByText(plant.name, { exact: true });
   await plantLabel.click();
   await expect(tree).toBeHidden();
   await expect(plantTrigger(page)).toContainText(plant.name);

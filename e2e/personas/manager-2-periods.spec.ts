@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
+import { openPeriodSection } from '../test-utils/period-sections';
 import { reconciliation } from '../test-utils/dashboard-world';
 import { api, ok, post } from './support/manager-api';
 import { asUser, MANAGERS, PREFIX, sessionOf, type Session } from './support/manager-users';
@@ -77,6 +78,7 @@ test.describe('Manager persona — period accounting and adjustments (Plan Dashb
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', /.+/, { timeout: 60_000 });
     await expect(figure(page, 'residual')).toHaveAttribute('data-value', '0');
     await expect(page.getByTestId('waterfall')).toHaveAttribute('data-closes', 'true');
+    await openPeriodSection(page, 'Review & close');
     await page.getByTestId('wf-submit').click();
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
     await expect(page.getByTestId('wf-approve')).toBeDisabled();
@@ -91,9 +93,11 @@ test.describe('Manager persona — period accounting and adjustments (Plan Dashb
     await loginViaUI(page, MANAGERS.fatima.email, MANAGERS.fatima.password);
     await openPeriod(page, world.periods.a);
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
+    await openPeriodSection(page, 'Review & close');
     await expect(page.getByTestId('approve-gate')).toHaveCount(0);
     await page.getByTestId('wf-approve').click();
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'approved');
+    await openPeriodSection(page, 'History & exports');
     await expect(page.getByTestId('revision-history').locator('[data-action="approve"]')).toBeVisible();
     await page.getByTestId('export-start').click();
     await expect(page.getByTestId('export-job')).toHaveAttribute('data-state', 'completed', { timeout: 60_000 });
@@ -117,21 +121,26 @@ test.describe('Manager persona — period accounting and adjustments (Plan Dashb
     const author = await asUser(browser, MANAGERS.erik);
     await openPeriod(author, world.periods.c);
     await expect(figure(author, 'residual')).toHaveAttribute('data-value', '150');
+    await openPeriodSection(author, 'Review & close');
     await author.getByTestId('wf-submit').click();
     await expect(author.getByTestId('workflow-problem')).toHaveAttribute('data-code', 'RESIDUAL_UNEXPLAINED');
     await expect(author.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'draft');
     await saveLines(erik.token, world.periods.c, ['150'], false);
     await author.reload();
+    await openPeriodSection(author, 'Reconciliation');
     await expect(figure(author, 'residual')).toHaveAttribute('data-value', '0', { timeout: 60_000 });
+    await openPeriodSection(author, 'Review & close');
     await author.getByTestId('wf-submit').click();
     await expect(author.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'in_review');
 
     const approver = await asUser(browser, MANAGERS.laura);
     await openPeriod(approver, world.periods.c);
+    await openPeriodSection(approver, 'Review & close');
     await approver.getByTestId('wf-reject').click();
     await approver.getByTestId('wf-reason').fill(`${PREFIX}rejected: the 150 t line needs an event`);
     await approver.getByRole('button', { name: 'Return revision' }).click();
     await expect(approver.getByTestId('period-detail')).not.toHaveAttribute('data-lifecycle', 'in_review');
+    await openPeriodSection(approver, 'History & exports');
     await expect(approver.getByTestId('revision-history').locator('[data-action="reject"]')).toBeVisible();
     const view = await api<{ revision: { lifecycle: string } }>(erik.token, 'GET', `/v2/production-periods/${world.periods.c}/reconciliation`);
     expect(view.body.revision.lifecycle).not.toBe('in_review');
@@ -156,6 +165,7 @@ test.describe('Manager persona — period accounting and adjustments (Plan Dashb
     // the second one is rejected in the period workspace: the reason is a required field of the dialog
     await loginViaUI(page, MANAGERS.fatima.email, MANAGERS.fatima.password);
     await openPeriod(page, world.periods.b);
+    await openPeriodSection(page, 'Actuals & quality');
     const pending = page.getByTestId('adjustments').locator('tr', { has: page.locator('[data-testid="adjustment-row"][data-state="proposed"]') });
     await expect(pending).toHaveCount(1, { timeout: 60_000 });
     await pending.getByTestId('adjustment-reject').click();

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
@@ -28,14 +27,15 @@ function evidenceText(line: ManualDraft, number: NumberFormat['number']): string
 /** Manual lines of the draft (reason, kind, quantity, evidence) and the form that adds one. */
 export function ManualLines({ view, draft, setDraft, issues, readOnly, timezone }: ManualLinesProps) {
   const { number } = useNumberFormat();
-  const [adding, setAdding] = useState(false);
+  const pending = draft.pendingManual;
+  const start = () => setDraft((current) => ({ ...current, dirty: true, pendingManual: { sliceId: view.slices[0]?.sliceId ?? '', kind: 'availability', quantity: null, eventIds: [], missingEvent: false, missingCode: false } }));
   const uomOf = (sliceId: string) => view.slices.find((s) => s.sliceId === sliceId)?.uom ?? null;
   return (
     <div className="space-y-2" data-testid="manual-lines">
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-medium uppercase text-muted-foreground">Manual lines</h4>
-        {!readOnly && !adding && (
-          <Button variant="outline" size="sm" data-testid="add-manual-line" onClick={() => setAdding(true)} disabled={!view.slices.length}>
+        {!readOnly && !pending && (
+          <Button variant="outline" size="sm" data-testid="add-manual-line" onClick={start} disabled={!view.slices.length}>
             Add manual line
           </Button>
         )}
@@ -57,14 +57,15 @@ export function ManualLines({ view, draft, setDraft, issues, readOnly, timezone 
         </div>
       ))}
       {!draft.manual.length && <p className="text-sm text-muted-foreground">No manual lines.</p>}
-      {adding && (
+      {pending && !readOnly && (
         <ManualLineForm
           view={view}
           timezone={timezone}
-          onCancel={() => setAdding(false)}
+          line={pending}
+          onChange={(line) => setDraft((current) => ({ ...current, dirty: true, pendingManual: line }))}
+          onCancel={() => setDraft((current) => ({ ...current, pendingManual: null }))}
           onAdd={(line) => {
-            setDraft((s) => addManual(s, line));
-            setAdding(false);
+            setDraft((s) => ({ ...addManual(s, line), pendingManual: null }));
           }}
         />
       )}

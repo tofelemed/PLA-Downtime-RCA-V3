@@ -36,6 +36,7 @@ export function LedgerComparison({ accounting, ledger }: LedgerComparisonProps) 
   return (
     <div className="space-y-2" data-testid="ledger-comparison">
       <h3 className="text-sm font-medium">Run ledgers (plan vs capacity)</h3>
+      <p className="text-xs text-muted-foreground">Calculated totals before loss-line decisions. The reconciliation figures above include saved decisions and manual lines.</p>
       {slices.map((sliceId) => {
         const plan = totals.find((t) => t.sliceId === sliceId && t.ledger === 'plan');
         const capacity = totals.find((t) => t.sliceId === sliceId && t.ledger === 'capacity');

@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useProductionPeriod } from '@/api/v2/queries/production-periods';
 import type { PeriodAdjustmentView, PeriodDetailView } from '@/api/v2/types/periods';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { DataState } from '@/features/ux-kit/data-state';
 import { labelOf, useProductNames, useUserNames, type NameResolver } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { Quantity } from '@/features/ux-kit/quantity';
@@ -45,6 +46,7 @@ const productOfSlice = (detail: PeriodDetailView | undefined) => (sliceId: strin
  * recalculated) or rejects them with a reason.
  */
 export function AdjustmentsSection({ planId, periodId }: AdjustmentsSectionProps) {
+  const { search } = useLocation();
   const { canWritePeriods, canApproveAdjustments } = useCapabilities();
   const period = useProductionPeriod(periodId);
   const products = useProductNames();
@@ -52,7 +54,7 @@ export function AdjustmentsSection({ planId, periodId }: AdjustmentsSectionProps
   const detail = period.data?.data;
   const propose = canWritePeriods && (
     <Button asChild size="sm" variant="outline" data-testid="adjustment-propose">
-      <Link to={`/plans/${planId}/periods/${periodId}/adjustments/new`}>
+      <Link to={`/plans/${planId}/periods/${periodId}/adjustments/new${search}`}>
         <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
         Propose adjustment
       </Link>
@@ -61,7 +63,7 @@ export function AdjustmentsSection({ planId, periodId }: AdjustmentsSectionProps
   return (
     <Section title="Actuals adjustments" headingLevel={3} actions={propose || undefined} description="Corrections of the measured output; they count once a manager approver approves them.">
       <div data-testid="adjustments">
-        <DataTable
+        {period.isSuccess && detail?.adjustments.length === 0 ? <DataState state="empty" detail="No adjustments for this period." /> : <DataTable
           caption="Actuals adjustments"
           columns={columnsOf({ products, users, productOf: productOfSlice(detail) }, canApproveAdjustments)}
           rows={detail?.adjustments ?? []}
@@ -69,7 +71,7 @@ export function AdjustmentsSection({ planId, periodId }: AdjustmentsSectionProps
           status={{ isLoading: period.isLoading, isError: period.isError, error: period.error }}
           empty={{ text: 'No adjustments for this period.' }}
           density="compact"
-        />
+        />}
       </div>
     </Section>
   );

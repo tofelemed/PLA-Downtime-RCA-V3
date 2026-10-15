@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openPeriodSection } from '../test-utils/period-sections';
 import type { MonthCloseView } from '../../src/api/v2/types/month-close';
 import type { PeriodSlaDetailView, QueueItemView } from '../../src/api/v2/types/period-sla';
 import type { ChangeProposalView } from '../../src/api/v2/types/reconciliation';
@@ -30,6 +31,7 @@ test('accountant queue agrees with the server and opens the selected period', as
   await row.click();
   await expect(page).toHaveURL(new RegExp(`/plans/${selected!.planId}/periods/${selected!.periodId}$`));
   await expect(page.getByTestId('period-detail')).toBeVisible();
+  await openPeriodSection(page, 'Review & close');
   await expect(page.getByTestId('sla-panel')).toBeVisible();
   const read = await readReconciliation(world.accountant.token, selected!.periodId);
   await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', read.revision.lifecycle);
@@ -88,6 +90,7 @@ test('workflow and revision filters query the server; a different manager approv
   const marker = page.locator(`[data-testid="period-row"][data-period-id="${world.fixture.periods.a}"]`);
   await expect(marker).toBeVisible();
   await marker.click();
+  await openPeriodSection(page, 'Review & close');
   await expect(page.getByTestId('wf-approve')).toBeEnabled();
   await page.getByTestId('wf-approve').click();
   await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'approved');
@@ -151,6 +154,7 @@ test('correction evidence is required and an open month refuses the proposed cor
   expect(before.status).toBe(200);
   await signIn(page, ACCOUNTING_USERS.accountant);
   await openAccountingPeriod(page, world, periodId);
+  await openPeriodSection(page, 'History & exports');
   await page.getByTestId('propose-correction').click();
   const dialog = page.getByRole('alertdialog');
   await expect(dialog.getByRole('button', { name: 'Propose correction', exact: true })).toBeDisabled();
@@ -172,9 +176,11 @@ test('a viewer reads the accounting data but has no hold, submit, approve, revis
   await signIn(page, ACCOUNTING_USERS.viewer);
   await selectPlant(page, PLANTS.demo);
   await openAccountingPeriod(page, world);
-  for (const id of ['hold-open', 'hold-release', 'wf-submit', 'wf-approve', 'wf-revise', 'propose-correction', 'day-certify']) {
+  for (const id of ['hold-open', 'hold-release', 'wf-submit', 'wf-approve', 'wf-revise', 'day-certify']) {
     await expect(page.getByTestId(id)).toHaveCount(0);
   }
+  await openPeriodSection(page, 'History & exports');
+  await expect(page.getByTestId('propose-correction')).toHaveCount(0);
   const viewer = await apiLogin(ACCOUNTING_USERS.viewer);
   const view = await readReconciliation(viewer.token, world.fixture.periods.a, PLANTS.demo.id);
   const denied = await command<{ code: string }>(viewer.token, `/v2/production-periods/${world.fixture.periods.a}/submit`, {
