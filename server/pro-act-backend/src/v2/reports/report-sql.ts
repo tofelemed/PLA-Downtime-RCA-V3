@@ -8,7 +8,8 @@ import { ReportScope } from './report-scope';
 /**
  * Periods of the report (start in [from, to), tenant and units) with the run each one shows: the latest
  * approved revision's run, else (unless approvedOnly) the open revision's run. $1 tenant, $2 units,
- * $3 from, $4 to, $5 approvedOnly.
+ * $3 from, $4 to, $5 the selection (jsonb: `approvedOnly`, and when given `shiftNames`, `crewIds`,
+ * `productIds` — the downtime page filters; a product keeps the periods with a slice of it).
  */
 export const SHOWN = `WITH shown AS (
   SELECT p."id" AS "period_id", p."unit_id", p."local_date", p."shift_name", si."crew_id",
@@ -17,9 +18,18 @@ export const SHOWN = `WITH shown AS (
     LEFT JOIN "shift_instances" si ON si."id" = p."shift_instance_id"
     LEFT JOIN LATERAL (SELECT ar."id", ar."current_run_id", ar."lifecycle" FROM "accounting_revisions" ar
                         WHERE ar."period_id" = p."id" AND ar."current_run_id" IS NOT NULL
-                          AND (ar."lifecycle" = 'approved' OR (NOT $5 AND ar."lifecycle" IN ('draft', 'in_review')))
+                          AND (ar."lifecycle" = 'approved'
+                               OR (NOT ($5::jsonb->>'approvedOnly')::boolean AND ar."lifecycle" IN ('draft', 'in_review')))
                         ORDER BY (ar."lifecycle" = 'approved') DESC, ar."revision" DESC LIMIT 1) cur ON true
-   WHERE p."tenant_id" = $1 AND p."unit_id" = ANY($2::uuid[]) AND p."utc_start" >= $3 AND p."utc_start" < $4)`;
+   WHERE p."tenant_id" = $1 AND p."unit_id" = ANY($2::uuid[]) AND p."utc_start" >= $3 AND p."utc_start" < $4
+     AND (NOT ($5::jsonb ? 'shiftNames')
+          OR p."shift_name" IN (SELECT jsonb_array_elements_text($5::jsonb->'shiftNames')))
+     AND (NOT ($5::jsonb ? 'crewIds')
+          OR si."crew_id"::text IN (SELECT jsonb_array_elements_text($5::jsonb->'crewIds')))
+     AND (NOT ($5::jsonb ? 'productIds') OR EXISTS (
+          SELECT 1 FROM "period_product_slices" ps
+           WHERE ps."period_id" = p."id" AND ps."tenant_id" = p."tenant_id"
+             AND ps."product_id"::text IN (SELECT jsonb_array_elements_text($5::jsonb->'productIds')))))`;
 
 /** Site-local grouping keys (AN03): the period's stored operational date and shift label, never UTC. */
 export const TIME_GROUPS: Readonly<Record<string, string>> = {
@@ -41,7 +51,7 @@ export const params = (scope: ReportScope) => [
   scope.unitIds,
   scope.from,
   scope.to,
-  scope.approvedOnly,
+  JSON.stringify({ approvedOnly: scope.approvedOnly, ...scope.selection }),
 ];
 
 export interface PeriodStats {
@@ -124,7 +134,11 @@ function toTerms(row: TermsRow): GroupTerms {
  * has availability but no performance / quality / OEE, so counting it in A alone would break A × P × Q =
  * OEE over several periods. The reconciled family follows `reconciled_oee` the same way.
  */
-const OEE_FAMILY: readonly KpiMetric[] = ['availability', 'performance', 'quality'];
+const OEE_FAMILY: readonly KpiMetric[] = [
+  'availability',
+  'performance',
+  'quality',
+];
 const RECONCILED_FAMILY: readonly KpiMetric[] = [
   'reconciled_availability',
   'reconciled_performance',

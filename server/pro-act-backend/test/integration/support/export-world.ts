@@ -15,6 +15,8 @@ import { bearer } from './test-app';
 
 export interface ExportBody {
   id: string;
+  format: string;
+  presentation: Record<string, unknown> | null;
   state: string;
   status: string;
   unitIds: string[] | null;

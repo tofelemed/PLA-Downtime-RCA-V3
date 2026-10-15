@@ -58,7 +58,7 @@ function positionAfter(cursor: string | undefined): number {
 }
 
 /**
- * Report exports (plan 2.9, §15.2 `/exports`, API04, AN03): immutable CSV files bound to approved
+ * Report exports (plan 2.9, §15.2 `/exports`, API04, AN03): immutable CSV or PDF files bound to approved
  * revisions pinned at request time. Any tenant member may export what it can read; a unit-limited caller
  * names units of its scope (a tenant-wide export needs a tenant-wide grant, 403). Status, sources,
  * cancellation and download are scoped like the content (404 otherwise); the download is re-authorized
@@ -172,7 +172,7 @@ export class ExportsV2Controller {
   }
 
   @Get(':id/download')
-  @ApiProduces('text/csv')
+  @ApiProduces('text/csv', 'application/pdf')
   @ApiOperation({
     summary: 'Download the export file (streamed; re-authorized now)',
     description:
@@ -188,9 +188,10 @@ export class ExportsV2Controller {
     res.setHeader('X-Content-SHA256', job.contentHash ?? '');
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    const pdf = job.format === 'pdf';
     return new StreamableFile(stream, {
-      type: 'text/csv; charset=utf-8',
-      disposition: `attachment; filename="proact-${job.reportType}-${job.id}.csv"`,
+      type: pdf ? 'application/pdf' : 'text/csv; charset=utf-8',
+      disposition: `attachment; filename="proact-${job.reportType}-${job.id}.${job.format}"`,
       length: job.sizeBytes ?? undefined,
     });
   }

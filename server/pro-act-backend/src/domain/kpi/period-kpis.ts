@@ -29,7 +29,7 @@ import { stateKpis } from './state-kpis';
 import { StateSegment } from '../reliability/unit-state';
 
 /** Bumped whenever a KPI rule changes (part of the calculation run's engine version and input hash). */
-export const KPI_ENGINE_VERSION = '2.7.6';
+export const KPI_ENGINE_VERSION = '2.7.7';
 
 export interface PeriodKpiInput {
   /** the accounting input of the same run (window, schedule, events, slices, policy, asOf) */
@@ -207,6 +207,23 @@ function scheduledTerms(
   return timeTerms(segmentSlice(everyStop, periodSlice(window)));
 }
 
+/**
+ * SME D15: S and D of the controllable view, counting every stop inside the schedule except stops classed
+ * external (feed, utilities, blocking); external time stays in S, so the denominator is the same.
+ */
+function controllableTerms(
+  input: PeriodAccountingInput,
+  window: BoundedInterval,
+): TimeTerms {
+  return scheduledTerms(
+    {
+      ...input,
+      events: input.events.filter((e) => e.scheduleClass !== 'external'),
+    },
+    window,
+  );
+}
+
 /** Occurrences of stops only: those seen in the window only through no-impact or partial events drop out (SME Q5). */
 function stoppingOccurrences(input: PeriodKpiInput): OccurrenceSpan[] {
   const downtime = input.accounting.events.filter(
@@ -243,6 +260,7 @@ export function computePeriodKpis(input: PeriodKpiInput): KpiDraft[] {
     microOccurrences: new Set(classified.microStops.map((e) => e.occurrenceId)),
     occurrences: stoppingOccurrences(input),
     scheduled: scheduledTerms(accounting, window),
+    controllable: controllableTerms(accounting, window),
     overlapAllocation: accounting.policy.overlapAllocation,
   };
   const downtime = downtimeMeasures(downtimeInput);

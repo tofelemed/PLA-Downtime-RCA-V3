@@ -26,8 +26,10 @@ import {
   ExportReportType,
   ExportSelector,
 } from './entities/export-job.entity';
+import { presentationOf } from './export-presentation';
 import { ExportReadsService } from './export-reads.service';
 import { namedRevisionUnits, pinNamed, pinPublished } from './export-sources';
+import { PdfCurrency } from './pdf/pdf-model';
 
 const DAY_MS = 86_400_000;
 
@@ -39,6 +41,8 @@ export interface ExportRequest {
   to?: string;
   unitIds?: string[];
   revisionIds?: string[];
+  /** PDF only: the reporting currency money is printed in (USD by default) */
+  currency?: PdfCurrency;
 }
 
 /** What a validated request pins and records. */
@@ -59,6 +63,19 @@ function countsOf(accepted: number): ExportCounts {
     rejected: 0,
     pending: accepted,
   };
+}
+
+/** A PDF is laid out in memory, so it holds far fewer period revisions than a streamed CSV. */
+function assertExportSize(format: ExportFormat, accepted: number): void {
+  const max =
+    format === 'pdf'
+      ? envInt('EXPORT_PDF_MAX_SOURCES', 500)
+      : envInt('EXPORT_MAX_SOURCES', 50_000);
+  if (accepted <= max) return;
+  throw invalid(
+    'EXPORT_TOO_LARGE',
+    `the ${format.toUpperCase()} export would contain ${accepted} period revisions; narrow the window or units (max ${max})`,
+  );
 }
 
 function invalidSelector(message: string) {
@@ -86,6 +103,10 @@ export class ExportRequestsService {
     const userId = requireUser(context);
     const plan = await this.plan(context, tenantId, body);
     return this.dataSource.transaction(async (manager) => {
+      const presentation =
+        body.format === 'pdf'
+          ? await presentationOf(manager, tenantId, body.currency)
+          : null;
       const job = await manager.save(
         manager.create(ExportJob, {
           tenantId,
@@ -93,6 +114,7 @@ export class ExportRequestsService {
           format: body.format,
           revisionSelector: body.revisionSelector,
           filters: plan.filters,
+          presentation,
           unitIds: plan.unitIds,
           requestedBy: userId,
           state: 'queued',
@@ -101,13 +123,7 @@ export class ExportRequestsService {
         }),
       );
       const accepted = await plan.pin(manager, { tenantId, jobId: job.id });
-      const max = envInt('EXPORT_MAX_SOURCES', 50_000);
-      if (accepted > max) {
-        throw invalid(
-          'EXPORT_TOO_LARGE',
-          `the export would contain ${accepted} period revisions; narrow the window or units (max ${max})`,
-        );
-      }
+      assertExportSize(body.format, accepted);
       await manager.update(ExportJob, job.id, { counts: countsOf(accepted) });
       await this.audit(manager, job, context, 'export.requested');
       return manager.findOneByOrFail(ExportJob, { id: job.id });
@@ -245,6 +261,7 @@ export class ExportRequestsService {
         correlationId: context.correlationId,
         detail: {
           reportType: job.reportType,
+          format: job.format,
           revisionSelector: job.revisionSelector,
           unitIds: job.unitIds,
         },

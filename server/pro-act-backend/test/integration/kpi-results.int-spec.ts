@@ -271,6 +271,38 @@ describe('KPI results of calculation runs (plan 2.7)', () => {
       expect(planned.body.data.total).toBe('0');
     });
 
+    it('filters periods by shift, crew and product on the server; reports controllable availability (D15)', async () => {
+      const [{ shift_name: shift }] = await env.rows<{ shift_name: string }>(
+        `SELECT shift_name FROM production_periods WHERE id = $1`,
+        [periodA],
+      );
+      const total = async (extra: string) =>
+        (
+          await env
+            .get(
+              `reports/downtime?${window}${env.world.unitA3}&groupBy=oee${extra}`,
+            )
+            .expect(200)
+        ).body as {
+          data: {
+            total: string;
+            summary: Array<{ metric: string; value: string | null }>;
+          };
+        };
+      const report = async (extra: string) => (await total(extra)).data;
+      const byShift = await report(`&shiftNames=${encodeURIComponent(shift)}`);
+      expect(byShift.total).toBe('3600');
+      expect(byShift.summary.map((s) => s.metric)).toContain(
+        'controllable_availability',
+      );
+      expect((await report('&shiftNames=no-such-shift')).total).toBe('0');
+      expect((await report(`&crewIds=${randomUUID()}`)).total).toBe('0');
+      expect((await report(`&productIds=${randomUUID()}`)).total).toBe('0');
+      await env
+        .get(`reports/downtime?${window}${env.world.unitA3}&crewIds=x`)
+        .expect(422);
+    });
+
     it('reliability per unit and asset: MTBF from exposure / failures, MTTR null without repair evidence', async () => {
       const response = await env
         .get(

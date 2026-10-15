@@ -24,6 +24,7 @@ export const KPI_METRICS = [
   'carry_in_count',
   'mean_stop_duration',
   'scheduled_availability',
+  'controllable_availability',
   'onstream_factor',
   'mtbf',
   'mttr',

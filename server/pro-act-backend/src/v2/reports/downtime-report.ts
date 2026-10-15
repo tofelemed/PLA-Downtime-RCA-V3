@@ -42,6 +42,7 @@ const SUMMARY_METRICS: readonly KpiMetric[] = [
   'carry_in_count',
   'mean_stop_duration',
   'scheduled_availability',
+  'controllable_availability',
   'onstream_factor',
 ];
 

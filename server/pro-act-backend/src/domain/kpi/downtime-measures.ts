@@ -26,6 +26,8 @@ export interface DowntimeInput {
   occurrences: readonly OccurrenceSpan[];
   /** S and D with every stop inside the schedule counted (scheduled availability) */
   scheduled: TimeTerms;
+  /** S and D without stops classed external (SME D15 controllable view); absent = not reported */
+  controllable?: TimeTerms;
   /** how overlapping stops share time (SME Q11), as in the ledgers */
   overlapAllocation?: OverlapAllocation;
 }
@@ -156,6 +158,30 @@ function countKpis(input: DowntimeInput): KpiDraft[] {
   ];
 }
 
+/**
+ * SME D15 controllable availability: scheduled availability with stops classed external excluded from the
+ * stop time (same scheduled-time denominator). A supplemental view under its own name; the headline
+ * availability keeps external stops.
+ */
+function controllableKpis(input: DowntimeInput): KpiDraft[] {
+  const terms = input.controllable;
+  if (!terms) return [];
+  return [
+    ratioKpi(
+      { metric: 'controllable_availability', scope: PERIOD },
+      {
+        numerator: terms.scheduled.minus(terms.stopped),
+        denominator: terms.scheduled,
+        cohort: {
+          denominator: 'scheduled_time',
+          excludes: 'stops classed external',
+        },
+      },
+      'no_scheduled_time',
+    ),
+  ];
+}
+
 /** Scheduled availability (own denominator: scheduled time) and onstream factor (calendar time). */
 function availabilityKpis(input: DowntimeInput, total: Dec): KpiDraft[] {
   const { scheduled, window } = input;
@@ -170,6 +196,7 @@ function availabilityKpis(input: DowntimeInput, total: Dec): KpiDraft[] {
       },
       'no_scheduled_time',
     ),
+    ...controllableKpis(input),
     ratioKpi(
       { metric: 'onstream_factor', scope: PERIOD },
       {

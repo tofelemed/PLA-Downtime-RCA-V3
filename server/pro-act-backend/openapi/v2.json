@@ -9766,6 +9766,42 @@
             }
           },
           {
+            "name": "productIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several products: only periods with a product slice of one of them (the whole period counts)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "shiftNames",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several shifts: only periods whose shift name (calendar shift label) is one of them",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "crewIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several crews: only periods whose shift instance was worked by one of them",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
             "name": "groupBy",
             "required": false,
             "in": "query",
@@ -9896,6 +9932,42 @@
             "schema": {
               "default": false,
               "type": "boolean"
+            }
+          },
+          {
+            "name": "productIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several products: only periods with a product slice of one of them (the whole period counts)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "shiftNames",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several shifts: only periods whose shift name (calendar shift label) is one of them",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "crewIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several crews: only periods whose shift instance was worked by one of them",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
@@ -11668,7 +11740,7 @@
             "bearer": []
           }
         ],
-        "summary": "Counts of the cases of your scope by status, overdue and open critical",
+        "summary": "Counts of the cases of your scope: by status, open, overdue, open critical, overdue actions and pending effectiveness checks",
         "tags": [
           "v2 · RCA"
         ]
@@ -23283,9 +23355,19 @@
           "format": {
             "type": "string",
             "enum": [
-              "csv"
+              "csv",
+              "pdf"
             ],
-            "description": "CSV only in R1 (PDF: Phase 3)"
+            "description": "`csv`: every column, ISO UTC times, both reporting currencies. `pdf`: a printable report on the plant clock, calendar and digits, money in `currency`; at most EXPORT_PDF_MAX_SOURCES (500) period revisions (422 EXPORT_TOO_LARGE)."
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "IRR"
+            ],
+            "default": "USD",
+            "description": "PDF only: the reporting currency money is printed in (USD by default). Ignored for CSV."
           },
           "revisionSelector": {
             "type": "string",

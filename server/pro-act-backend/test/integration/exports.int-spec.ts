@@ -3,7 +3,8 @@ import { join } from 'path';
 import { ExportJob } from '../../src/exports/entities/export-job.entity';
 import { ExportJobsService } from '../../src/exports/export-jobs.service';
 import { ExportRenderer } from '../../src/exports/export-renderer';
-import { ApiError } from './support/plan-world';
+import { NEXT_DAY } from './support/actuals-world';
+import { ApiError, DAY1 } from './support/plan-world';
 import { ExportWorld } from './support/export-world';
 
 /**
@@ -86,6 +87,47 @@ describe('report exports (plan 2.9)', () => {
     });
     expect(first.product_name).toBe(`'=HYPERLINK("http://evil.example","x")`);
     expect((await env.exportJob(jobId)).downloadCount).toBe(1);
+  });
+
+  it('exports the published revisions as PDF: plant presentation pinned (USD by default), PDF bytes, hash', async () => {
+    const jobId = await env.exportDay({ format: 'pdf' });
+    const queued = await env.exportJob(jobId);
+    expect(queued).toMatchObject({
+      format: 'pdf',
+      presentation: { currency: 'USD', calendar: 'gregorian', digits: 'latin' },
+    });
+    expect(await env.runExports()).toBe(1);
+    const done = await env.exportJob(jobId);
+    expect(done).toMatchObject({ state: 'completed', rowCount: 2 });
+    const file = await env.download(jobId);
+    expect(file.status).toBe(200);
+    expect(file.text.startsWith('%PDF-')).toBe(true);
+    expect(file.hash).toBe(done.contentHash);
+    const irr = await env.exportJob(
+      await env.exportDay({ format: 'pdf', currency: 'IRR' }),
+    );
+    expect(irr.presentation).toMatchObject({ currency: 'IRR' });
+    await env.runExports();
+  });
+
+  it('refuses a PDF larger than EXPORT_PDF_MAX_SOURCES (422 EXPORT_TOO_LARGE)', async () => {
+    process.env.EXPORT_PDF_MAX_SOURCES = '1';
+    try {
+      const response = await env.requestExport({
+        reportType: 'period_summary',
+        format: 'pdf',
+        revisionSelector: 'published',
+        from: DAY1,
+        to: NEXT_DAY,
+        unitIds: [env.world.unitA1],
+      });
+      expect([response.status, (response.body as ApiError).code]).toEqual([
+        422,
+        'EXPORT_TOO_LARGE',
+      ]);
+    } finally {
+      delete process.env.EXPORT_PDF_MAX_SOURCES;
+    }
   });
 
   it('loss-line export lists the manual line and sanitizes its user-entered reason', async () => {
@@ -228,7 +270,8 @@ describe('report exports (plan 2.9)', () => {
         },
         'REVISION_NOT_APPROVED',
       ],
-      [{ format: 'pdf' }, 'VALIDATION_FAILED'],
+      [{ format: 'xlsx' }, 'VALIDATION_FAILED'],
+      [{ format: 'pdf', currency: 'EUR' }, 'VALIDATION_FAILED'],
     ];
     for (const [change, code] of cases) {
       const body = {

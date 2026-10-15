@@ -3422,7 +3422,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Counts of the cases of your scope by status, overdue and open critical */
+        /** Counts of the cases of your scope: by status, open, overdue, open critical, overdue actions and pending effectiveness checks */
         get: operations["RcaCasesV2Controller_summary_v2"];
         put?: never;
         post?: never;
@@ -7495,10 +7495,16 @@ export interface components {
             /** @enum {string} */
             reportType: "period_summary" | "loss_lines";
             /**
-             * @description CSV only in R1 (PDF: Phase 3)
+             * @description `csv`: every column, ISO UTC times, both reporting currencies. `pdf`: a printable report on the plant clock, calendar and digits, money in `currency`; at most EXPORT_PDF_MAX_SOURCES (500) period revisions (422 EXPORT_TOO_LARGE).
              * @enum {string}
              */
-            format: "csv";
+            format: "csv" | "pdf";
+            /**
+             * @description PDF only: the reporting currency money is printed in (USD by default). Ignored for CSV.
+             * @default USD
+             * @enum {string}
+             */
+            currency: "USD" | "IRR";
             /**
              * @description `published`: the latest approved revision of every period overlapping [from, to) (needs from/to, optional unitIds). `revision_ids`: the named approved revisions (needs revisionIds only). Draft or in-review content is never exported.
              * @enum {string}
@@ -13125,6 +13131,12 @@ export interface operations {
                 unitIds?: string[];
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
+                /** @description Repeat for several products: only periods with a product slice of one of them (the whole period counts) */
+                productIds?: string[];
+                /** @description Repeat for several shifts: only periods whose shift name (calendar shift label) is one of them */
+                shiftNames?: string[];
+                /** @description Repeat for several crews: only periods whose shift instance was worked by one of them */
+                crewIds?: string[];
                 /** @description `reasonChild` = the reason codes one level below `parentReasonId` (Pareto drill-down, plan 3.3) */
                 groupBy?: "reason" | "reasonLevel1" | "reasonChild" | "impact" | "oee" | "asset" | "shift" | "crew" | "day" | "week" | "month";
                 /** @description duration = seconds (allocated, adds up to the union); frequency = stop occurrences starting in the window */
@@ -13160,6 +13172,12 @@ export interface operations {
                 unitIds?: string[];
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
+                /** @description Repeat for several products: only periods with a product slice of one of them (the whole period counts) */
+                productIds?: string[];
+                /** @description Repeat for several shifts: only periods whose shift name (calendar shift label) is one of them */
+                shiftNames?: string[];
+                /** @description Repeat for several crews: only periods whose shift instance was worked by one of them */
+                crewIds?: string[];
                 /** @description Include micro-stops (shorter than the oee_policy threshold) in every view; default availability stops only */
                 includeMicroStops?: boolean;
                 /** @description Repeat for each view: `<groupBy>[:<metric>][:<scheduleClass>]` with groupBy one of reason, reasonLevel1, impact, oee, asset, shift, crew, day, week, month; metric duration (default) or frequency; no class = every class. Duplicate tokens are answered once (first kept). */

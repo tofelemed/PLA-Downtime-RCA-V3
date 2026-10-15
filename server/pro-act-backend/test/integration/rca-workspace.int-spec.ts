@@ -304,16 +304,32 @@ describe('RCA workspace (analysis tools, evidence files, case commands)', () => 
       const notOverdue = (await env.get('rcas?overdue=false').expect(200))
         .body as { items: Array<{ id: string }> };
       expect(notOverdue.items.map((item) => item.id)).not.toContain(overdue.id);
+      await env.rows(
+        `INSERT INTO rca_actions (tenant_id, rca_id, title, due_date, row_version)
+         VALUES ($1, $2, 'Overdue action', now() - interval '2 days', 1)`,
+        [env.world.tenantA, overdue.id],
+      );
+      await env.rows(
+        `INSERT INTO rca_actions (tenant_id, rca_id, title, baseline, verification_window_start, verification_window_end, row_version)
+         VALUES ($1, $2, 'Awaiting effectiveness', '{"value": 1}', now(), now() + interval '30 days', 1)`,
+        [env.world.tenantA, overdue.id],
+      );
       const summary = (await env.get('rcas/summary').expect(200)).body as {
         total: number;
+        open: number;
         overdue: number;
         critical: number;
+        overdueActions: number;
+        effectivenessPending: number;
       };
       expect(summary.overdue).toBeGreaterThanOrEqual(1);
       expect(summary.critical).toBeGreaterThanOrEqual(1);
+      expect(summary.open).toBeGreaterThanOrEqual(1);
+      expect(summary.overdueActions).toBeGreaterThanOrEqual(1);
+      expect(summary.effectivenessPending).toBeGreaterThanOrEqual(1);
       const tenantB = (await env.get('rcas/summary', env.adminB).expect(200))
-        .body as { total: number };
-      expect(tenantB.total).toBe(0);
+        .body as { total: number; overdueActions: number };
+      expect(tenantB).toMatchObject({ total: 0, overdueActions: 0 });
     });
 
     it('deletes an unreferenced case with If-Match and refuses a linked one', async () => {

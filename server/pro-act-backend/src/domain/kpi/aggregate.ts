@@ -11,6 +11,7 @@ const RATIO_METRICS: ReadonlySet<KpiMetric> = new Set<KpiMetric>([
   'reconciled_quality',
   'reconciled_oee',
   'scheduled_availability',
+  'controllable_availability',
   'onstream_factor',
   'coded_downtime_ratio',
 ]);
