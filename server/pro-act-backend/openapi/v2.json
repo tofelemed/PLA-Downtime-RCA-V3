@@ -21889,7 +21889,7 @@
     },
     "/api/v2/derived-stops/preview": {
       "get": {
-        "description": "Plan 1.10 rule preview from the unit’s state mapping and the settings in force at `to`. Unknown time is never a stop. Window ≤ 7 days (422 INVALID_RANGE).",
+        "description": "Plan 1.10 rule preview from the unit’s state mapping and the settings in force at `to`: stops and reduced-rate slowdowns (analog thresholds with hysteresis). Unknown time is never a stop. Window ≤ 7 days (422 INVALID_RANGE).",
         "operationId": "StopEventPolicyV2Controller_preview_v2",
         "parameters": [
           {
@@ -30560,6 +30560,7 @@
             "type": "string",
             "enum": [
               "running",
+              "reduced_rate",
               "internal_stop",
               "planned_stop",
               "starved",
@@ -30572,6 +30573,48 @@
         "required": [
           "match",
           "state"
+        ]
+      },
+      "AnalogThresholdsDto": {
+        "type": "object",
+        "properties": {
+          "stopBelow": {
+            "type": "number",
+            "example": 2,
+            "description": "Below this value the unit is stopped"
+          },
+          "reducedBelow": {
+            "type": "number",
+            "example": 16,
+            "nullable": true,
+            "description": "Below this value (and not stopped) the unit runs at a reduced rate; null = no reduced-rate band"
+          },
+          "hysteresis": {
+            "type": "number",
+            "example": 0.5,
+            "default": 0,
+            "minimum": 0,
+            "description": "A lower band is left only above its threshold + this hysteresis"
+          },
+          "stopState": {
+            "type": "string",
+            "enum": [
+              "internal_stop",
+              "starved",
+              "blocked"
+            ],
+            "default": "internal_stop",
+            "description": "State of an analog stop (the signal does not tell the cause)"
+          },
+          "ratedValue": {
+            "type": "number",
+            "example": 20,
+            "nullable": true,
+            "description": "Signal value at the full rate: a slowdown loses 1 − mean / rated of the rate; null = not quantified"
+          }
+        },
+        "required": [
+          "stopBelow"
         ]
       },
       "UnitStateMappingCreateDto": {
@@ -30587,11 +30630,20 @@
             "description": "State signal of the unit (semantic type state)"
           },
           "rules": {
-            "description": "Unmapped values are unknown time (data quality)",
+            "description": "Unmapped values are unknown time (data quality); may be empty with analog thresholds",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/StateRuleDto"
             }
+          },
+          "thresholds": {
+            "nullable": true,
+            "description": "Plan 1.10 analog mapping: numeric values no rule matches are banded stopped / reduced rate / running (hysteresis); reduced-rate spans become slowdown events",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AnalogThresholdsDto"
+              }
+            ]
           },
           "expectedIntervalSeconds": {
             "type": "number",

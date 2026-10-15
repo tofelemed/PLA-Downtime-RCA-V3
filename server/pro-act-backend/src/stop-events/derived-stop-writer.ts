@@ -1,5 +1,6 @@
 import { EntityManager } from 'typeorm';
 import {
+  DerivedItem,
   DerivedWrite,
   DerivedWritePlan,
   EngineOwnedEvent,
@@ -25,7 +26,8 @@ export interface UnitScope {
   unitId: string;
 }
 
-const ENGINE_OWNED_SQL = `SELECT e."id", e."event_id", e."physical_state", e."end_time", e."occurrence_id", e."description"
+const ENGINE_OWNED_SQL = `SELECT e."id", e."event_id", e."physical_state", e."end_time", e."occurrence_id", e."description",
+       e."impact_fraction", e."impact_basis"
   FROM "production_events" e
  WHERE e."tenant_id" = $1 AND e."unit_id" = $2 AND e."source_kind" = 'derived'
    AND e."event_id" LIKE $3 AND e."start_time" >= $4 AND e."start_time" < $5`;
@@ -37,6 +39,8 @@ interface OwnedRow {
   end_time: Date | null;
   occurrence_id: string;
   description: string | null;
+  impact_fraction: string | number | null;
+  impact_basis: string;
 }
 
 /**
@@ -66,10 +70,13 @@ export async function loadEngineOwned(
       end: row.end_time ? new Date(row.end_time) : null,
       occurrenceId: row.occurrence_id,
       description: row.description,
+      impactFraction:
+        row.impact_fraction === null ? null : String(row.impact_fraction),
+      impactBasis: row.impact_basis,
     }));
 }
 
-const sourceFacts = (write: DerivedWrite) => ({
+export const sourceFacts = (write: DerivedWrite<DerivedItem>) => ({
   startTime: write.stop.start,
   endTime: write.stop.end,
   eventType: 'ProductionLoss',

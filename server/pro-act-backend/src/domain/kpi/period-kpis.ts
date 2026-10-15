@@ -31,7 +31,8 @@ import { StandbyExposure } from './standby-mtbf';
 
 /** Bumped whenever a KPI rule changes (part of the calculation run's engine version and input hash). */
 // 2.7.9: standby MTBF on own running time, controllable availability and incidents counted once (SME D9 / D15 / D5) together
-export const KPI_ENGINE_VERSION = '2.7.9';
+// 2.7.10: plan 1.10 reduced-rate state counts as running time in the state coverage / availability bounds
+export const KPI_ENGINE_VERSION = '2.7.10';
 
 export interface PeriodKpiInput {
   /** the accounting input of the same run (window, schedule, events, slices, policy, asOf) */

@@ -43,20 +43,25 @@ export function useUnitStateCoverage(query: CoverageQuery | null) {
   });
 }
 
-/** State signals of one unit (the mapping's source), every page followed. */
-export function useUnitStateSignals(unitId: string) {
+/** Signal types an analog mapping may band (server `v2/reliability/analog-thresholds-input.ts`). */
+const ANALOG_SIGNAL_TYPES: ReadonlySet<string> = new Set(['state', 'rate', 'level', 'other']);
+
+/** State signals of one unit (the mapping's source; with `analog` every type a threshold mapping may band), every page followed. */
+export function useUnitStateSignals(unitId: string, analog = false) {
+  const semanticType = analog ? undefined : 'state';
   const list = useV2InfiniteList<SignalView>({
     resource: 'signals',
     path: '/signals',
-    query: { unitId, semanticType: 'state', limit: 200 },
-    key: { scope: { unitIds: [unitId] }, filters: { semanticType: 'state' } },
+    query: { unitId, ...(semanticType ? { semanticType } : {}), limit: 200 },
+    key: { scope: { unitIds: [unitId] }, filters: { semanticType: semanticType ?? 'analog' } },
     enabled: Boolean(unitId),
   });
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = list;
   useEffect(() => {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-  return { ...list, items: flattenPages(list.data?.pages) };
+  const items = flattenPages(list.data?.pages).filter((s) => !analog || ANALOG_SIGNAL_TYPES.has(s.semanticType));
+  return { ...list, items };
 }
 
 /** A new mapping version from effectiveFrom; the previous version ends there. */

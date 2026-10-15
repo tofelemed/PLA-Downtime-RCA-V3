@@ -92,8 +92,14 @@ describe('unit impact rules (plan 1.10 step 4)', () => {
         })
         .expect(201)
     ).body as RuleBody;
-    expect(draft).toMatchObject({ state: 'draft', version: 1, fraction: '0.5' });
-    const own = await env.post(`unit-impact-rules/${draft.id}/approve`, {}).expect(403);
+    expect(draft).toMatchObject({
+      state: 'draft',
+      version: 1,
+      fraction: '0.5',
+    });
+    const own = await env
+      .post(`unit-impact-rules/${draft.id}/approve`, {})
+      .expect(403);
     expect((own.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
     await env
       .post(`unit-impact-rules/${draft.id}/approve`, {}, env.approver)
@@ -119,7 +125,11 @@ describe('unit impact rules (plan 1.10 step 4)', () => {
       impactMode: 'full_stop',
       impactBasis: 'stated',
     });
-    const evidence = await env.rows<{ event_id: string; basis: string; rule_id: string | null }>(
+    const evidence = await env.rows<{
+      event_id: string;
+      basis: string;
+      rule_id: string | null;
+    }>(
       `SELECT "event_id", "basis", "rule_id" FROM "event_impacts" WHERE "event_id" = ANY($1::uuid[])`,
       [[derived, stated]],
     );
@@ -132,7 +142,9 @@ describe('unit impact rules (plan 1.10 step 4)', () => {
   });
 
   it('retiring the rule returns its stops to a full stop', async () => {
-    await env.post(`unit-impact-rules/${ruleId}/retire`, {}, env.approver).expect(200);
+    await env
+      .post(`unit-impact-rules/${ruleId}/retire`, {}, env.approver)
+      .expect(200);
     await env.settle();
     expect((await event(derived)).classification).toMatchObject({
       impactMode: 'full_stop',

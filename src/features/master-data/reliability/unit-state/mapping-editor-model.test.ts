@@ -34,6 +34,17 @@ describe('unit state mapping editor (SME D1 / D2)', () => {
     expect(draftErrors({ ...draft, staleAfterIntervals: '0' }).staleAfterIntervals).toBe('A whole number from 1 to 100');
   });
 
+  it('plan 1.10: an analog mapping needs no rule and sends its thresholds (hysteresis, rated value)', () => {
+    const draft = { ...draftOf(CURRENT), rules: [], analog: { stopBelow: '2', reducedBelow: '16', hysteresis: '0.5', ratedValue: '20', stopState: 'internal_stop' as const } };
+    expect(draftErrors(draft)).toEqual({});
+    expect(bodyOf('u1', draft).thresholds).toEqual({ stopBelow: 2, reducedBelow: 16, hysteresis: 0.5, stopState: 'internal_stop', ratedValue: 20 });
+    expect(draftErrors({ ...draft, analog: { ...draft.analog, reducedBelow: '1' } }).analog).toEqual({ reducedBelow: 'A number above the stop threshold' });
+    expect(draftErrors({ ...draft, analog: null }).rules).toBe('Add a rule, or analog thresholds');
+    expect(draftOf({ ...CURRENT, thresholds: { stopBelow: 2, reducedBelow: null, hysteresis: 0, stopState: 'starved', ratedValue: null } }).analog).toEqual({
+      stopBelow: '2', reducedBelow: '', hysteresis: '0', ratedValue: '', stopState: 'starved',
+    });
+  });
+
   it('the default window is whole plant days ending after today', () => {
     const range = lastPlantDays(7, 'Asia/Tehran', new Date('2026-10-15T10:00:00Z'));
     expect(range).toEqual({ from: '2026-10-08T20:30:00.000Z', to: '2026-10-15T20:30:00.000Z' });

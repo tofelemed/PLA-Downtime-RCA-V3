@@ -6,6 +6,11 @@ import {
   requireTenantId,
 } from '../../common/context/request-context';
 import {
+  DerivedSlowdown,
+  deriveSlowdowns,
+  describeSlowdown,
+} from '../../domain/reliability/derived-slowdowns';
+import {
   DerivedStop,
   deriveStops,
 } from '../../domain/reliability/derived-stops';
@@ -15,7 +20,7 @@ import {
   StopEventOptions,
   stopEventSettings,
 } from '../../periods/stop-event-options';
-import { loadStateTimeline } from '../../reliability/unit-state/state-timeline.loader';
+import { loadStateInputs } from '../../reliability/unit-state/state-timeline.loader';
 import { StopEventSettingsService } from '../../stop-events/stop-event-settings.service';
 import {
   OeePolicyVersionsService,
@@ -54,7 +59,35 @@ export interface DerivedStopPreviewV2View {
     endTime: string | null;
     description: string;
   }>;
+  /** plan 1.10 reduced-rate spans the engine would record as slowdown (performance) events */
+  slowdowns: Array<{
+    key: string;
+    startTime: string;
+    endTime: string | null;
+    meanValue: number | null;
+    fraction: string | null;
+    description: string;
+  }>;
 }
+
+const stopView = (s: DerivedStop) => ({
+  key: s.key,
+  occurrenceKey: s.occurrenceKey,
+  state: s.state,
+  scheduleClass: s.scheduleClass,
+  startTime: s.start.toISOString(),
+  endTime: s.end?.toISOString() ?? null,
+  description: describeStop(s),
+});
+
+const slowdownView = (s: DerivedSlowdown) => ({
+  key: s.key,
+  startTime: s.start.toISOString(),
+  endTime: s.end?.toISOString() ?? null,
+  meanValue: s.meanValue,
+  fraction: s.fraction,
+  description: describeSlowdown(s),
+});
 
 const toView = ({ row, body }: PolicyInForce): StopEventPolicyV2View => ({
   ...stopEventSettings(body),
@@ -121,23 +154,24 @@ export class StopEventPolicyV2Service {
       scope,
       window.end,
     );
-    const timeline = await loadStateTimeline(this.manager, scope, window);
+    const inputs = await loadStateInputs(this.manager, scope, window);
+    const timeline = inputs?.segments ?? null;
     const stops = timeline ? deriveStops(timeline, settings, window.end) : [];
+    const slowdowns = inputs
+      ? deriveSlowdowns(inputs.segments, inputs.samples, {
+          config: settings,
+          ratedValue: inputs.config.thresholds?.ratedValue ?? null,
+          liveEdge: window.end,
+        })
+      : [];
     return {
       unitId: query.unitId,
       from: window.start.toISOString(),
       to: window.end.toISOString(),
       mapped: timeline !== null,
       settings,
-      stops: stops.map((s) => ({
-        key: s.key,
-        occurrenceKey: s.occurrenceKey,
-        state: s.state,
-        scheduleClass: s.scheduleClass,
-        startTime: s.start.toISOString(),
-        endTime: s.end?.toISOString() ?? null,
-        description: describeStop(s),
-      })),
+      stops: stops.map(stopView),
+      slowdowns: slowdowns.map(slowdownView),
     };
   }
 }

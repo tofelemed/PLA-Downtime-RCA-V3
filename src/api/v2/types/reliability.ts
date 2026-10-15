@@ -129,6 +129,9 @@ export interface RepairEvidenceView {
 
 export type PhysicalState = Schemas['StateRuleDto']['state'];
 
+/** Plan 1.10 analog bands of a numeric signal (`unit_state_mappings.thresholds`). */
+export type AnalogThresholds = Schemas['AnalogThresholdsDto'];
+
 export interface StateRule {
   match: string;
   state: PhysicalState;
@@ -141,6 +144,8 @@ export interface UnitStateMappingView {
   signalId: string;
   version: number;
   rules: StateRule[];
+  /** plan 1.10 analog thresholds; null / absent = rules only */
+  thresholds?: AnalogThresholds | null;
   expectedIntervalSeconds: number;
   jitterSeconds: number;
   staleAfterIntervals: number;

@@ -6521,7 +6521,7 @@ export interface paths {
         };
         /**
          * Stops the state engine would derive for a unit and window (nothing is written)
-         * @description Plan 1.10 rule preview from the unit’s state mapping and the settings in force at `to`. Unknown time is never a stop. Window ≤ 7 days (422 INVALID_RANGE).
+         * @description Plan 1.10 rule preview from the unit’s state mapping and the settings in force at `to`: stops and reduced-rate slowdowns (analog thresholds with hysteresis). Unknown time is never a stop. Window ≤ 7 days (422 INVALID_RANGE).
          */
         get: operations["StopEventPolicyV2Controller_preview_v2"];
         put?: never;
@@ -9915,7 +9915,36 @@ export interface components {
              */
             match: string;
             /** @enum {string} */
-            state: "running" | "internal_stop" | "planned_stop" | "starved" | "blocked" | "standby" | "not_scheduled";
+            state: "running" | "reduced_rate" | "internal_stop" | "planned_stop" | "starved" | "blocked" | "standby" | "not_scheduled";
+        };
+        AnalogThresholdsDto: {
+            /**
+             * @description Below this value the unit is stopped
+             * @example 2
+             */
+            stopBelow: number;
+            /**
+             * @description Below this value (and not stopped) the unit runs at a reduced rate; null = no reduced-rate band
+             * @example 16
+             */
+            reducedBelow?: number | null;
+            /**
+             * @description A lower band is left only above its threshold + this hysteresis
+             * @default 0
+             * @example 0.5
+             */
+            hysteresis: number;
+            /**
+             * @description State of an analog stop (the signal does not tell the cause)
+             * @default internal_stop
+             * @enum {string}
+             */
+            stopState: "internal_stop" | "starved" | "blocked";
+            /**
+             * @description Signal value at the full rate: a slowdown loses 1 − mean / rated of the rate; null = not quantified
+             * @example 20
+             */
+            ratedValue?: number | null;
         };
         UnitStateMappingCreateDto: {
             /** Format: uuid */
@@ -9925,8 +9954,10 @@ export interface components {
              * @description State signal of the unit (semantic type state)
              */
             signalId: string;
-            /** @description Unmapped values are unknown time (data quality) */
+            /** @description Unmapped values are unknown time (data quality); may be empty with analog thresholds */
             rules: components["schemas"]["StateRuleDto"][];
+            /** @description Plan 1.10 analog mapping: numeric values no rule matches are banded stopped / reduced rate / running (hysteresis); reduced-rate spans become slowdown events */
+            thresholds?: components["schemas"]["AnalogThresholdsDto"] | null;
             /** @description Expected sample interval of the source (s) */
             expectedIntervalSeconds: number;
             /**

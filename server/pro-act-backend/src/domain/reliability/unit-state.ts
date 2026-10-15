@@ -1,8 +1,18 @@
 import { BoundedInterval } from '../time/interval-algebra';
+import {
+  AnalogBand,
+  analogBand,
+  AnalogThresholds,
+  analogValue,
+} from './analog-state';
 
-/** SME D1: the physical states of a unit (one primary bucket at every instant). */
+/**
+ * SME D1: the physical states of a unit (one primary bucket at every instant). `reduced_rate` (DT01, plan
+ * 1.10) is running below the reduced-rate threshold: running time whose loss is performance, never a stop.
+ */
 export const PHYSICAL_STATES = [
   'running',
+  'reduced_rate',
   'internal_stop',
   'planned_stop',
   'starved',
@@ -38,6 +48,8 @@ export interface StateConfig {
   heartbeat: boolean;
   /** the signal's quality policy: uncertain samples count only when accepted */
   acceptUncertain: boolean;
+  /** plan 1.10 analog mapping: a numeric value no rule matches is banded by thresholds; absent = none */
+  thresholds?: AnalogThresholds | null;
 }
 
 export interface StateSample {
@@ -62,13 +74,29 @@ export function staleLimitSeconds(config: StateConfig): number {
   );
 }
 
+type SampleState = Pick<StateSegment, 'state' | 'unknownReason'> & {
+  /** the analog band, when thresholds decided the state */
+  band: AnalogBand | null;
+};
+
+const bandStates = (
+  t: AnalogThresholds,
+): Readonly<Record<AnalogBand, PhysicalState>> => ({
+  stopped: t.stopState,
+  reduced_rate: 'reduced_rate',
+  running: 'running',
+});
+
+/** A rule match wins; else a numeric value is banded by the thresholds (with the previous band). */
 function stateOf(
   sample: StateSample,
   config: StateConfig,
-): Pick<StateSegment, 'state' | 'unknownReason'> {
+  previous: AnalogBand | null,
+): SampleState {
   const unknown = (unknownReason: UnknownReason) => ({
     state: 'unknown' as const,
     unknownReason,
+    band: null,
   });
   if (sample.quality === 'bad' || sample.quality === 'missing') {
     return unknown('bad_quality');
@@ -78,9 +106,12 @@ function stateOf(
   }
   const value = sample.value?.trim().toLowerCase();
   const rule = config.rules.find((r) => r.match.trim().toLowerCase() === value);
-  return rule
-    ? { state: rule.state, unknownReason: null }
-    : unknown('unmapped');
+  if (rule) return { state: rule.state, unknownReason: null, band: null };
+  const thresholds = config.thresholds;
+  const numeric = analogValue(sample.value);
+  if (!thresholds || numeric === null) return unknown('unmapped');
+  const band = analogBand(numeric, thresholds, previous);
+  return { state: bandStates(thresholds)[band], unknownReason: null, band };
 }
 
 function push(segments: StateSegment[], next: StateSegment): void {
@@ -104,7 +135,9 @@ const earlier = (a: Date, b: Date) => (a < b ? a : b);
 /**
  * The unit's state timeline over the window from its samples (SME D1 / D2): each sample's mapped state
  * holds until the next sample, a heartbeat sample only up to the stale limit; bad quality is unknown at
- * once; time before the first sample is unknown (`no_data`). Gaps are never filled. `samples` may start
+ * once; time before the first sample is unknown (`no_data`). Gaps are never filled. With analog thresholds,
+ * the band of each numeric sample depends on the previous sample's band (hysteresis); the bands of samples
+ * before the window are carried in, a non-analog sample resets it. `samples` may start
  * before the window (the last sample before it decides the state at the window start).
  */
 export function stateTimeline(
@@ -116,7 +149,10 @@ export function stateTimeline(
   const segments: StateSegment[] = [];
   const limitMs = staleLimitSeconds(config) * 1000;
   let cursor = window.start;
+  let band: AnalogBand | null = null;
   sorted.forEach((sample, i) => {
+    const mapped = stateOf(sample, config, band);
+    band = mapped.band;
     const next = sorted[i + 1]?.at ?? window.end;
     const until = earlier(next, window.end);
     if (until <= window.start || sample.at >= window.end) return;
@@ -136,7 +172,8 @@ export function stateTimeline(
     push(segments, {
       start: from,
       end: later(known, from),
-      ...stateOf(sample, config),
+      state: mapped.state,
+      unknownReason: mapped.unknownReason,
     });
     push(segments, {
       start: later(known, from),

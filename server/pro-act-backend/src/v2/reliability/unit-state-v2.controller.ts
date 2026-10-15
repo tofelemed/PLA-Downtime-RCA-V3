@@ -1,3 +1,4 @@
+import { AnalogThresholds } from '../../domain/reliability/analog-state';
 import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -34,6 +35,8 @@ export interface UnitStateMappingV2View {
   signalId: string;
   version: number;
   rules: StateRule[];
+  /** plan 1.10 analog thresholds; null = rules only */
+  thresholds: AnalogThresholds | null;
   expectedIntervalSeconds: number;
   jitterSeconds: number;
   staleAfterIntervals: number;
@@ -51,6 +54,7 @@ const toView = (m: UnitStateMapping): UnitStateMappingV2View => ({
   signalId: m.signalId,
   version: m.version,
   rules: m.rules,
+  thresholds: m.thresholds ?? null,
   expectedIntervalSeconds: m.expectedIntervalSeconds,
   jitterSeconds: m.jitterSeconds,
   staleAfterIntervals: m.staleAfterIntervals,

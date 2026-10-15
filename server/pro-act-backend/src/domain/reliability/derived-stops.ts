@@ -1,8 +1,14 @@
 import { ScheduleClass } from '../events/event-classification';
 import { PhysicalState, StateSegment } from './unit-state';
 
-/** SME D1 states that stop the unit; running and not scheduled never produce a stop event. */
-export type StopState = Exclude<PhysicalState, 'running' | 'not_scheduled'>;
+/**
+ * SME D1 states that stop the unit; running, reduced rate (a slowdown, `derived-slowdowns.ts`) and not
+ * scheduled never produce a stop event.
+ */
+export type StopState = Exclude<
+  PhysicalState,
+  'running' | 'reduced_rate' | 'not_scheduled'
+>;
 
 /**
  * Schedule class of a derived stop by state (plan 1.10, SME D1 / D3 / D4): an internal stop is
@@ -18,8 +24,12 @@ export const STOP_SCHEDULE_CLASS: Readonly<Record<StopState, ScheduleClass>> = {
   standby: 'planned',
 };
 
-const isStopState = (state: StateSegment['state']): state is StopState =>
-  state !== 'unknown' && state !== 'running' && state !== 'not_scheduled';
+/** Running states: running and reduced rate (the unit produces; a reduced rate loses performance). */
+export const isRunningState = (state: StateSegment['state']): boolean =>
+  state === 'running' || state === 'reduced_rate';
+
+export const isStopState = (state: StateSegment['state']): state is StopState =>
+  state !== 'unknown' && !isRunningState(state) && state !== 'not_scheduled';
 
 /** DT02 pilot defaults: a stop must last 5 s (debounce); a restart must hold 10 s (confirmation). */
 export interface StopDerivationConfig {
@@ -77,8 +87,8 @@ function coalesce(pieces: readonly Piece[]): Piece[] {
 }
 
 /**
- * DT02 restart confirmation: running shorter than the confirmation between two stop states is not a
- * restart — the stop continues through it (the confirmation delay itself is never added to a stop).
+ * DT02 restart confirmation: running (or reduced rate) shorter than the confirmation between two stop states
+ * is not a restart — the stop continues through it (the confirmation delay itself is never added to a stop).
  */
 function absorbUnconfirmedRestarts(
   pieces: Piece[],
@@ -89,7 +99,7 @@ function absorbUnconfirmedRestarts(
       const before = pieces[i - 1];
       const after = pieces[i + 1];
       const blip =
-        piece.state === 'running' &&
+        isRunningState(piece.state) &&
         piece.end - piece.start < confirmMs &&
         before !== undefined &&
         after !== undefined &&

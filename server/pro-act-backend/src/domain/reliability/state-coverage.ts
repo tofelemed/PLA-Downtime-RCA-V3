@@ -4,6 +4,7 @@ import { StateSegment } from './unit-state';
 /** Known-data coverage and availability bounds over the scheduled time (SME D2). */
 export interface StateCoverage {
   scheduledSeconds: number;
+  /** running time, reduced rate included (plan 1.10: a reduced rate is a performance loss, not a stop) */
   runningSeconds: number;
   /** known not running: every known state but running (starved / blocked stay in the unit's availability, D3) */
   knownStoppedSeconds: number;
@@ -29,6 +30,8 @@ const overlapSeconds = (a: BoundedInterval, b: BoundedInterval) =>
 
 const ratio = (n: number, d: number) => (d > 0 ? n / d : null);
 
+const RUNNING: ReadonlySet<string> = new Set(['running', 'reduced_rate']);
+
 /**
  * Coverage and availability bounds of a unit (SME D2 worked example: 8 h scheduled, 6 h known running,
  * 1 h known stopped, 1 h unknown → availability between 75 % and 87.5 %, coverage 87.5 %, 85.7 % only on
@@ -50,10 +53,11 @@ export function stateCoverage(
       }
     }
   }
-  const running = secondsByState.running ?? 0;
+  const running =
+    (secondsByState.running ?? 0) + (secondsByState.reduced_rate ?? 0);
   const unknown = secondsByState.unknown ?? 0;
   const knownStopped = Object.entries(secondsByState)
-    .filter(([state]) => state !== 'running' && state !== 'unknown')
+    .filter(([state]) => !RUNNING.has(state) && state !== 'unknown')
     .reduce((sum, [, seconds]) => sum + seconds, 0);
   // time of the schedule the timeline does not reach is unknown too
   const missing = Math.max(

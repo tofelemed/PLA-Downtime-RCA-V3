@@ -1,5 +1,6 @@
 import { Check, Column, Entity, Index } from 'typeorm';
 import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { AnalogThresholds } from '../../domain/reliability/analog-state';
 import { StateRule } from '../../domain/reliability/unit-state';
 
 /**
@@ -38,6 +39,13 @@ export class UnitStateMapping extends TenantScopedEntity {
 
   @Column({ name: 'rules', type: 'jsonb' })
   rules: StateRule[];
+
+  /**
+   * Plan 1.10 analog mapping: a numeric value no rule matches is banded — stopped / reduced rate / running
+   * — by thresholds with hysteresis; reduced-rate spans become slowdown events. Null = rules only.
+   */
+  @Column({ name: 'thresholds', type: 'jsonb', nullable: true })
+  thresholds: AnalogThresholds | null;
 
   @Column({ name: 'expected_interval_seconds', type: 'int' })
   expectedIntervalSeconds: number;

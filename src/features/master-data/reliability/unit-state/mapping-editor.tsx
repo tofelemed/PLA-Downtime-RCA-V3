@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { TextField } from '../../components/text-field';
 import { SELECT_CLASS } from '../shared/use-asset-lookup';
 import { bodyOf, draftErrors, draftOf, withoutRule, withRule, withRuleChange, type MappingDraft, type MappingErrors } from './mapping-editor-model';
+import { AnalogFields } from './analog-fields';
 import { StateRulesEditor } from './state-rules-editor';
 
 interface FieldsProps {
@@ -33,10 +34,10 @@ function StalenessFields({ draft, errors, set }: FieldsProps) {
 }
 
 function SignalField({ unitId, draft, errors, set }: FieldsProps & { unitId: string }) {
-  const signals = useUnitStateSignals(unitId);
+  const signals = useUnitStateSignals(unitId, draft.analog !== null);
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="map-signal">State signal</Label>
+      <Label htmlFor="map-signal">{draft.analog ? 'State or analog signal' : 'State signal'}</Label>
       <select id="map-signal" className={SELECT_CLASS} value={draft.signalId} onChange={(e) => set({ signalId: e.target.value })}>
         <option value="">{signals.isLoading ? 'Loading signals…' : 'Choose a state signal'}</option>
         {signals.items.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.sourceKey}) · version {s.version}</option>)}
@@ -71,6 +72,7 @@ export function MappingEditor({ unitId, current, timezone }: { unitId: string; c
     <form className="max-w-3xl space-y-4" onSubmit={(e) => { e.preventDefault(); void save(); }}>
       <SignalField unitId={unitId} {...fields} />
       <StateRulesEditor rules={draft.rules} error={shown.rules} onAdd={() => setDraft(withRule)} onRemove={(i) => setDraft((d) => withoutRule(d, i))} onChange={(i, c) => setDraft((d) => withRuleChange(d, i, c))} />
+      <AnalogFields analog={draft.analog} errors={shown.analog} onChange={(analog) => set({ analog })} />
       <StalenessFields {...fields} />
       <DateTimeInput label="Effective from (empty = now)" value={draft.effectiveFrom} timeZone={timezone} onChange={(v) => set({ effectiveFrom: v })} />
       <TextField id="map-notes" label="Notes" value={draft.notes} onChange={(v) => set({ notes: v })} multiline maxLength={1000} />
