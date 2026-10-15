@@ -5320,6 +5320,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/transition-allowance-policies/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Transition-allowance option in force now (unit override, else tenant-wide)
+         * @description unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE). A version written before the option existed reads `loss`.
+         */
+        get: operations["TransitionAllowanceV2Controller_current_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/transition-allowance-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the transition-allowance option as an approved oee_policy version, effective now
+         * @description Requires `Idempotency-Key`. Version n+1 of the scope; other oee_policy fields are kept from the version in force; periods already calculated keep the version they used. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED).
+         */
+        post: operations["TransitionAllowanceV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/standby-equipment": {
         parameters: {
             query?: never;
@@ -5424,6 +5464,26 @@ export interface paths {
         };
         /** Operations of the caller scope (keyset on startedAt; from / to overlap, eventIds, assetIds) */
         get: operations["WorkOrderOperationsV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/work-order-operations/repair-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active-repair evidence of one stop: active repair vs waiting, as mean active repair time counts it
+         * @description Diagnosis, repair and test operations linked to the stop (any revision), overlaps once, minus waiting. `activeRepairSeconds` null with reason `no_operations` (the KPI then names the restore time) or `operation_open` (an operation still runs). 404 for a stop outside the caller’s units.
+         */
+        get: operations["WorkOrderOperationsV2Controller_repairEvidence_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7881,6 +7941,19 @@ export interface components {
             };
             /** @description Reason codes of process trips: always availability events, never micro-stops */
             tripReasonCodes?: string[];
+            notes?: string;
+        };
+        TransitionAllowanceCreateDto: {
+            /**
+             * Format: uuid
+             * @description Unit override; absent = the tenant-wide version
+             */
+            unitId?: string;
+            /**
+             * @description `planned`: the plan target already allows for standard grade transitions — only the overrun counts against the plan, the allowance is shown as information. `loss`: the plan does not deduct transitions — the allowance is a plan-ledger loss line.
+             * @enum {string}
+             */
+            transitionAllowanceInPlan: "planned" | "loss";
             notes?: string;
         };
         StandbyEquipmentCreateDto: {
@@ -16224,6 +16297,49 @@ export interface operations {
             };
         };
     };
+    TransitionAllowanceV2Controller_current_v2: {
+        parameters: {
+            query?: {
+                /** @description Unit override; absent = the tenant-wide version */
+                unitId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TransitionAllowanceV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionAllowanceCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     StandbyV2Controller_list_v2: {
         parameters: {
             query?: {
@@ -16393,6 +16509,26 @@ export interface operations {
                 eventIds?: string[];
                 /** @description Operations on these assets (repeat) */
                 assetIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkOrderOperationsV2Controller_repairEvidence_v2: {
+        parameters: {
+            query: {
+                /** @description The stop (production event) */
+                eventId: string;
             };
             header?: never;
             path?: never;
