@@ -55,7 +55,7 @@ export function ActionForm({ rcaId }: { rcaId: string }) {
     if (created) setForm(EMPTY_ACTION_FORM);
   };
   return (
-    <fieldset className="grid gap-3 rounded border p-3 md:grid-cols-3" data-testid="action-form">
+    <fieldset className="grid min-w-0 gap-3 rounded border p-3 md:grid-cols-3" data-testid="action-form">
       <legend className="px-1 text-sm font-medium">New action (owner: you)</legend>
       <TextInput id="action-title" label="Action" value={form.title} onChange={(title) => set({ title })} />
       <NativeChoice id="action-type" label="Type of action" value={form.actionType} options={TYPE_OPTIONS} onChange={(value) => set({ actionType: asActionType(value) })} />

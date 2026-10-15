@@ -19,7 +19,10 @@ export function ActionsTab({ rcaId }: { rcaId: string }) {
           ))}
         </ul>
       </DataState>
-      {canWriteRca && <ActionForm rcaId={rcaId} />}
+      {canWriteRca && <details className="rounded border p-3" data-testid="new-action-disclosure">
+        <summary className="cursor-pointer text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Add action</summary>
+        <div className="mt-3"><ActionForm rcaId={rcaId} /></div>
+      </details>}
     </div>
   );
 }

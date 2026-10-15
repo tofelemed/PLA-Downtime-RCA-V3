@@ -114,6 +114,7 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     resume();
     await uiLogin(page, REL_USERS.viktor);
     await openCase(page, world.caseId);
+    await page.getByTestId('edit-definition').click();
     await page.locator('#edit-description').fill(`${PREFIX}problem: pump P-101 tripped repeatedly after the coupling change`);
     await page.locator('#edit-root-cause').fill('Coupling misalignment');
     await page.getByTestId('save-case').click();
@@ -147,6 +148,7 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await page.getByTestId('tool-logic-tree').click();
     await expect(page.getByTestId('logic-tree')).toContainText('High vibration');
     await page.getByTestId('tab-overview').click();
+    await page.getByTestId('edit-definition').click();
     await expect(page.locator('#edit-root-cause')).toHaveValue('Coupling misalignment');
     const saved = await call<{ rootCause: string; recommendations: unknown[]; evidence: unknown[]; logicTree: Array<{ parentId: string | null }> }>(
       viktor.token,
@@ -196,6 +198,7 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await expect(page.getByRole('heading', { name: caseTitle, level: 1 })).toBeVisible();
     await page.getByTestId('tab-actions').click();
     await expect(page.getByTestId('rec')).toContainText('Realign the coupling');
+    await page.getByTestId('new-action-disclosure').locator('summary').click();
     const form = page.getByTestId('action-form');
     await form.locator('#action-title').fill(`${PREFIX}action-amara-${suffix}`);
     await form.locator('#action-due').fill(day(14));
@@ -219,6 +222,7 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     resume();
     await uiLogin(page, REL_USERS.viktor);
     await openCase(page, world.caseId, 'actions');
+    await page.getByTestId('new-action-disclosure').locator('summary').click();
     const form = page.getByTestId('action-form');
     const realign = `Realign coupling ${suffix}.${test.info().retry}`; // unique per attempt: a retry adds to the same case
     const seal = `Replace seal kit ${suffix}.${test.info().retry}`;
@@ -233,6 +237,7 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     const action = page.getByTestId('action-row').filter({ hasText: realign });
     await expect(action.getByTestId('verification-status')).toHaveText('Verification due');
     await action.getByTestId('verify-action').click();
+    await action.getByTestId('action-details').locator(':scope > summary').click();
     await expect(action.getByTestId('realized')).toBeVisible();
     await expect(action.getByTestId('verification-status')).toHaveText('Verified');
     await expect(action.getByTestId('verdict-badge')).toBeVisible();
@@ -263,7 +268,7 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await expect(page.getByTestId('case-status')).toHaveText('Closure Review');
     await expect(page.getByTestId('workflow-move-closed')).toHaveCount(0); // viktor investigated: not independent
 
-    const managerContext = await browser.newContext();
+    const managerContext = await browser.newContext({ baseURL: test.info().project.use.baseURL });
     const manager = await managerContext.newPage();
     await uiLogin(manager, MANAGERS.jonas.email);
     await openCase(manager, world.caseId);

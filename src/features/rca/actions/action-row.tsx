@@ -24,7 +24,7 @@ function StatusControls({ action }: { action: RcaActionView }) {
   const setStatus = (status: (typeof STATUSES)[number]) => void update.submit({ action, body: { status } }).catch(() => null);
   return (
     <div className="space-y-1">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <select
           className="rounded border bg-background px-2 py-1 text-sm"
           aria-label={`Status of ${action.title}`}
@@ -82,16 +82,21 @@ export function ActionRow({ action }: { action: RcaActionView }) {
         <StatusControls action={action} />
       </div>
       <Meta action={action} />
-      <ActionCompletion key={action.rowVersion} action={action} canWrite={canWriteRca} />
-      <ActionBaseline action={action} />
-      <ActionVerdict action={action} />
-      {realized && (
+      <details className="rounded border p-2" data-testid="action-details">
+        <summary className="cursor-pointer font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Evidence & effectiveness</summary>
+        <div className="mt-3 space-y-3">
+          <ActionCompletion key={action.rowVersion} action={action} canWrite={canWriteRca} />
+          <ActionBaseline action={action} />
+          <ActionVerdict action={action} />
+          {realized && (
         <p data-testid="realized">
           Realized: expected {decimal(realized.expected, 2)}, observed {decimal(realized.observed, 2)}, difference{' '}
           <strong>{decimal(realized.difference, 2)}</strong> (
           {labelOf(RCA_BASELINE_METRIC_LABELS, realized.metric).toLowerCase()})
         </p>
-      )}
+          )}
+        </div>
+      </details>
     </li>
   );
 }

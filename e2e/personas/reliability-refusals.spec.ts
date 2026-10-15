@@ -88,6 +88,7 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     await expect(page.getByTestId('case-status')).toHaveText('Draft');
 
     await page.getByTestId('tab-actions').click();
+    await page.getByTestId('new-action-disclosure').locator('summary').click();
     const form = page.getByTestId('action-form');
     await form.locator('#action-title').fill(`${PREFIX}bad-window-${suffix}`);
     await form.locator('#action-window-start').fill(day(-5));
@@ -114,6 +115,7 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     await uiLogin(page, REL_USERS.leila);
     await openCase(page, found.body.items[0].id);
     await expect(page.getByRole('heading', { name: `${PREFIX}validation-${suffix}`, level: 1 })).toBeVisible({ timeout: 30_000 }); // the case title is the page heading
+    await page.getByTestId('edit-definition').click();
     await expect(page.locator('#edit-description')).toHaveValue('Case opened to exercise the validation errors of the action form');
     await page.getByTestId('tab-actions').click();
     await expect(page.getByTestId('action-row')).toHaveCount(0); // the refused actions were never stored

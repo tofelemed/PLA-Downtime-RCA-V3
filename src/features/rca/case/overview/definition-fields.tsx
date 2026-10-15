@@ -29,7 +29,7 @@ function TextArea({ id, label, value, hint, onChange }: { id: string; label: str
 /** Title, consequence class, priority, target date, unit, problem, team charter and root cause of the case. */
 export function DefinitionFields({ form, onChange, readOnly }: DefinitionFieldsProps) {
   return (
-    <fieldset disabled={readOnly} className="grid gap-4 md:grid-cols-2" data-testid="case-editor">
+    <fieldset disabled={readOnly} className="grid min-w-0 gap-4 md:grid-cols-2" data-testid="case-editor">
       <div className="space-y-1 md:col-span-2">
         <Label htmlFor="edit-title">Title</Label>
         <Input id="edit-title" value={form.title} maxLength={255} onChange={(e) => onChange({ title: e.target.value })} />

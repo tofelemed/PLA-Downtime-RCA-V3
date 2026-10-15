@@ -9,7 +9,7 @@ function Fact({ label, children, testId }: { label: string; children: ReactNode;
   return (
     <>
       <dt className="text-muted-foreground">{label}</dt>
-      <dd data-testid={testId}>{children}</dd>
+      <dd className="mb-2 min-w-0 break-words sm:mb-0" data-testid={testId}>{children}</dd>
     </>
   );
 }
@@ -28,7 +28,7 @@ export function WorkflowFacts({ rca, readiness }: { rca: RcaCaseView; readiness:
   const requested = who(rca.closureRequestedBy, rca.closureRequestedAt);
   const approved = who(rca.closureApprovedBy, rca.closureApprovedAt);
   return (
-    <dl className="grid grid-cols-[12rem_1fr] gap-x-4 gap-y-1 text-sm" data-testid="workflow-facts">
+    <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-[12rem_minmax(0,1fr)]" data-testid="workflow-facts">
       <Fact label="Effectiveness" testId="workflow-verdict">
         {verdictText(rca, readiness)}
       </Fact>

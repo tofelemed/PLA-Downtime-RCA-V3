@@ -14,6 +14,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 const { EventCaseSection } = await import('./pages/event-case-section');
 const { OutcomePanel } = await import('./outcome-panel');
 const { OverviewPage } = await import('./case/overview/overview-page');
+const { DefinitionPage } = await import('./case/definition/definition-page');
 const { FiveWhyTool } = await import('./case/analysis/tools/five-why/five-why-tool');
 const { RecommendationBadges } = await import('./components/recommendation-badges');
 
@@ -156,7 +157,7 @@ describe('RCA flows (v2 case workspace)', () => {
 
   it('saves the definition with If-Match and only the declared scalar fields', async () => {
     reply = (call) => (call.method === 'PATCH' ? json(200, { ...CASE, rowVersion: 5 }) : overviewGet(call));
-    wrap(<OverviewPage />);
+    wrap(<DefinitionPage />);
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Pump trips (P-101)' } });
     fireEvent.click(screen.getByTestId('save-case'));
     await screen.findByText('Saved.');
@@ -265,7 +266,8 @@ describe('RCA flows (v2 case workspace)', () => {
       wrap(<OverviewPage />, true);
       expect(screen.queryByTestId('save-case')).toBeNull();
       expect(screen.queryByTestId('workflow-moves')).toBeNull();
-      expect(screen.getByLabelText('Title')).toBeDisabled();
+      expect(screen.queryByTestId('edit-definition')).toBeNull();
+      expect(screen.getByText(CASE.description!)).toBeVisible();
     });
   });
 });

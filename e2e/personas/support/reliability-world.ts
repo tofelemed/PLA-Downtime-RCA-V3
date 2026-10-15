@@ -73,7 +73,8 @@ export interface RelState {
   closed: boolean;
 }
 
-const STATE_FILE = join(tmpdir(), 'proact-personas', 'reliability-state.json');
+const stateScope = process.env.HDPE_UI_RUN?.replace(/[^a-z0-9-]/gi, '');
+const STATE_FILE = join(tmpdir(), 'proact-personas', stateScope ? `reliability-state-${stateScope}.json` : 'reliability-state.json');
 
 export function saveState(state: RelState): void {
   mkdirSync(dirname(STATE_FILE), { recursive: true });

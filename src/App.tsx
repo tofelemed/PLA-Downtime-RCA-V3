@@ -16,6 +16,7 @@ import { V2SessionBridge } from "./features/v2-foundation/v2-session-bridge";
 import { RealtimeBridge } from "./features/v2-foundation/realtime-bridge";
 import { SessionRecovery } from "./features/auth/session-recovery";
 import { PeriodDraftBoundary } from "./features/plan-dashboard/period-draft-boundary";
+import { RcaDraftBoundary } from "./features/rca/rca-draft-boundary";
 
 const queryClient = createAppQueryClient();
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -79,6 +80,7 @@ const App = () => (
             <CalendarPreferenceProvider>
               <V2SessionBridge />
               <PeriodDraftBoundary />
+              <RcaDraftBoundary />
               <RealtimeBridge />
               <BrowserRouter>
                 <AppRoutes />

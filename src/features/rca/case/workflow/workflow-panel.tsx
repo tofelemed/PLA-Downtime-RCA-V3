@@ -44,9 +44,9 @@ export function WorkflowPanel() {
       <DataState state={dataStateOf(readiness)} error={readiness.error} onRetry={() => readiness.refetch()}>
         {readiness.data && (
           <div className="space-y-4" data-testid="workflow-panel">
-            <p className="flex items-center gap-2 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               Status <Badge data-testid="workflow-status">{readiness.data.status}</Badge>
-            </p>
+            </div>
             <WorkflowFacts rca={rca} readiness={readiness.data} />
             <Gates readiness={readiness.data} />
             <ApproverNote readiness={readiness.data} />

@@ -11,6 +11,7 @@ import { normalizeCase } from '../model/normalize-case';
 import { CaseHeader } from './case-header';
 import { CaseNav } from './case-nav';
 import { OverviewPage } from './overview/overview-page';
+import { useRcaDraftOwner } from './definition/use-definition-draft';
 
 const named = <T,>(load: () => Promise<T>, name: keyof T) =>
   lazy(async () => ({ default: (await load())[name] as unknown as ComponentType }));
@@ -23,6 +24,7 @@ const AnalysisToolPage = named(() => import('./analysis/analysis-tool-page'), 'A
 const ActionsPage = named(() => import('./actions/actions-page'), 'ActionsPage');
 const RecommendationFormPage = named(() => import('./actions/recommendation-form-page'), 'RecommendationFormPage');
 const LinksPage = named(() => import('./links/links-page'), 'LinksPage');
+const DefinitionPage = named(() => import('./definition/definition-page'), 'DefinitionPage');
 
 function CaseRoutes() {
   const { basePath } = useCaseWorkspace();
@@ -30,6 +32,7 @@ function CaseRoutes() {
     <Suspense fallback={<DataState state="loading" />}>
       <Routes>
         <Route index element={<OverviewPage />} />
+        <Route path="definition" element={<DefinitionPage />} />
         <Route path="evidence" element={<EvidenceListPage />} />
         <Route path="evidence/new" element={<EvidenceFormPage />} />
         <Route path="evidence/:evidenceId" element={<EvidenceDetailPage />} />
@@ -74,8 +77,9 @@ function Workspace({ caseId }: { caseId: string }) {
 /** `/rca/:caseId/*`: one case with its sub-pages (overview, evidence, analysis, actions, links). */
 export function CaseWorkspacePage() {
   const tenantId = useV2TenantId();
+  const owner = useRcaDraftOwner();
   const { caseId } = useParams();
   if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to see its RCA cases." />;
   if (!caseId) return <Navigate to="/rca" replace />;
-  return <Workspace key={caseId} caseId={caseId} />;
+  return <Workspace key={`${owner}:${caseId}`} caseId={caseId} />;
 }

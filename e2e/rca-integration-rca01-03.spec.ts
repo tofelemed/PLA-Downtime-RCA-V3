@@ -101,6 +101,7 @@ test.describe('RCA integration — RCA01–03 (plan 3.9)', () => {
     await page.setViewportSize({ width: 1024, height: 768 }); // tablet (UX07)
     await loginViaUI(page, MANAGER.email, MANAGER.password);
     await openCase(page);
+    await page.getByTestId('edit-definition').click();
     await page.locator('#edit-root-cause').fill('Coupling misalignment');
     await page.getByTestId('save-case').click();
     await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
@@ -134,6 +135,7 @@ test.describe('RCA integration — RCA01–03 (plan 3.9)', () => {
     await loginViaUI(page, MANAGER.email, MANAGER.password);
     await openCase(page, 'actions');
     const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+    await page.getByTestId('new-action-disclosure').locator('summary').click();
     const form = page.getByTestId('action-form');
     await form.locator('#action-title').fill('Realign coupling');
     await form.locator('#action-window-start').fill(day(-20));
@@ -146,6 +148,7 @@ test.describe('RCA integration — RCA01–03 (plan 3.9)', () => {
     const action = page.getByTestId('action-row').first();
     await expect(action.getByTestId('verification-status')).toHaveText('Verification due');
     await action.getByTestId('verify-action').click();
+    await action.getByTestId('action-details').locator(':scope > summary').click();
     await expect(action.getByTestId('realized')).toBeVisible();
     await expect(action.getByTestId('verdict-badge')).toBeVisible();
 

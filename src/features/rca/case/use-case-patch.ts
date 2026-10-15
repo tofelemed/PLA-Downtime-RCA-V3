@@ -22,8 +22,8 @@ export function useCasePatch() {
   const update = useUpdateRcaCase();
   const client = useQueryClient();
   const tenantId = useV2TenantId();
-  const save = async (body: CasePatch | RcaCasePatch): Promise<RcaCaseView> => {
-    const result = await update.submit({ rca, body: asContract(body) });
+  const save = async (body: CasePatch | RcaCasePatch, rowVersion = rca.rowVersion): Promise<RcaCaseView> => {
+    const result = await update.submit({ rca: { id: rca.id, rowVersion }, body: asContract(body) });
     client.setQueryData(v2Keys.detail(tenantId ?? '-', 'rca-cases', rca.id, undefined), result);
     return result;
   };
