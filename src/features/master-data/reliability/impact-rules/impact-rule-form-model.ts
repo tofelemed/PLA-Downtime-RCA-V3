@@ -62,7 +62,7 @@ export function validateImpactRuleForm(values: ImpactRuleFormValues, timezone: s
 }
 
 /** 50 % → "0.5" (at most 8 decimals, the stored scale). */
-const fractionOf = (percent: string) => String(Number((Number(percent) / 100).toFixed(8)));
+const fractionOf = (percent: string) => String(Math.round(Number(percent) * 1e6) / 1e8);
 
 export function impactRuleCreateBody(values: ImpactRuleFormValues, timezone: string): UnitImpactRuleCreateBody {
   return {
