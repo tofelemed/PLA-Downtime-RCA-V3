@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
-import { satisfiesRole } from '../auth/roles/role-model';
+import { requireTenantRole } from '../auth/roles/require-tenant-role';
 import { appendAudit } from '../common/audit/audit-trail';
 import {
   RequestContext,
@@ -18,6 +18,12 @@ import {
 } from '../domain/close/month-close-machine';
 import { assertTenantWide } from '../periods/period-scope';
 import { requireUser } from '../reconciliation/revision-access';
+import {
+  FINANCE_SIGNERS,
+  MATERIALITY_REVIEWERS,
+  MONTH_REOPENERS,
+  QUANTITY_CLOSERS,
+} from '../v2/close/close-roles';
 import { MonthCloseAction } from './entities/month-close-action.entity';
 import { MonthClose } from './entities/month-close.entity';
 import {
@@ -52,6 +58,13 @@ export interface MonthCloseCommand {
 }
 
 const HISTORY_LIMIT = 50;
+const ACTION_ROLES: Record<CloseAction, readonly string[]> = {
+  close_quantities: QUANTITY_CLOSERS,
+  review_materiality: MATERIALITY_REVIEWERS,
+  sign_off_finance: FINANCE_SIGNERS,
+  lock: FINANCE_SIGNERS,
+  reopen: MONTH_REOPENERS,
+};
 
 /**
  * Month close of a plant (SME R1 / R4, phase R-B). Reads never write a row (a month without one is open);
@@ -85,6 +98,7 @@ export class MonthCloseService {
     const actor = requireUser(context);
     const tenantId = requireTenantId(context);
     assertTenantWide(context, 'A month close');
+    requireTenantRole(context, ACTION_ROLES[command.action]);
     return this.dataSource.transaction(async (manager) => {
       await lockMonthCloses(manager, tenantId, 'exclusive');
       const now = new Date();
@@ -189,8 +203,13 @@ export class MonthCloseService {
   ): void {
     if (action !== 'review_materiality') return;
     const roles = snapshot.context.policy.policy.materiality.reviewerRoles;
-    if (roles.some((role) => satisfiesRole(context.roles, role))) return;
-    throw notMaterialityReviewer(roles);
+    try {
+      requireTenantRole(context, roles);
+    } catch (error) {
+      if (error instanceof ForbiddenException)
+        throw notMaterialityReviewer(roles);
+      throw error;
+    }
   }
 
   private async record(

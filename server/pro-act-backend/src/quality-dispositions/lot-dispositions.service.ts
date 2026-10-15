@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
+import { requireUnitRole } from '../auth/roles/require-unit-role';
 import { Clock } from '../common/clock/clock';
 import {
   RequestContext,
@@ -17,6 +18,10 @@ import {
   notFound,
 } from '../profiles/profile-errors';
 import { ProfileReferences } from '../profiles/profile-references';
+import {
+  DISPOSITION_APPROVERS,
+  DISPOSITION_WRITERS,
+} from '../v2/quality-dispositions/disposition-roles';
 import {
   LotDisposition,
   LotDispositionState,
@@ -98,6 +103,12 @@ export class LotDispositionsService {
   ): Promise<LotDisposition> {
     const author = requireUser(context);
     await this.references.assertUnit(context, input.unitId);
+    await requireUnitRole(
+      this.rows.manager,
+      context,
+      input.unitId,
+      DISPOSITION_WRITERS,
+    );
     await this.references.assertProduct(context, input.productId);
     const uom = input.uom.trim();
     const shape = checkShape(input, this.clock.now());
@@ -171,6 +182,12 @@ export class LotDispositionsService {
   ): Promise<LotDisposition> {
     const decider = requireUser(context);
     const row = await this.get(context, id);
+    await requireUnitRole(
+      this.rows.manager,
+      context,
+      row.unitId,
+      DISPOSITION_APPROVERS,
+    );
     if (row.authorId === decider) {
       throw new ForbiddenException({
         code: 'SEPARATION_OF_DUTIES',
