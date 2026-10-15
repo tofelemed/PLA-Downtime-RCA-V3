@@ -74,7 +74,12 @@ export class ChangeProposalsService implements OnModuleInit {
       const revision = await reviseIn(
         manager,
         context,
-        { period, approvedRevision: approved.revision, reason },
+        {
+          period,
+          approvedRevision: approved.revision,
+          reason,
+          via: 'proposal',
+        },
         { writer: this.writer, jobs: this.jobs },
       );
       const updated = await manager.findOneByOrFail(PeriodChangeProposal, {

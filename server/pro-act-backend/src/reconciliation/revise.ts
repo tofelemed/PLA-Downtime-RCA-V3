@@ -6,6 +6,7 @@ import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { periodScopeUnits } from '../periods/period-scope';
 import { RequestContext } from '../common/context/request-context';
 import { appendAudit } from '../common/audit/audit-trail';
+import { correctionAllowed, CorrectionPath } from '../close/month-lock';
 import { PeriodChangeProposal } from './entities/period-change-proposal.entity';
 import { ReconciliationLine } from './entities/reconciliation-line.entity';
 import { copyOf, LineSetWriter } from './line-set.writer';
@@ -22,6 +23,8 @@ export interface ReviseRequest {
   period: ProductionPeriod;
   approvedRevision: number;
   reason: string;
+  /** SME R4: a locked month's periods change only through a change proposal (default `direct`) */
+  via?: CorrectionPath;
 }
 
 export interface ReviseDeps {
@@ -128,7 +131,7 @@ async function queueRun(
 async function createDraft(
   manager: EntityManager,
   context: RequestContext,
-  request: ReviseRequest,
+  request: ReviseRequest & { afterClose: boolean },
   approved: AccountingRevision,
 ): Promise<AccountingRevision> {
   const { period } = request;
@@ -143,6 +146,7 @@ async function createDraft(
       revision: next,
       lifecycle: 'draft',
       supersedesId: approved.id,
+      afterClose: request.afterClose,
       inputHash: null,
       currentRunId: null,
       currentLineSetId: null,
@@ -166,7 +170,17 @@ export async function reviseIn(
 ): Promise<AccountingRevision> {
   const { period } = request;
   const approved = await revisable(manager, request);
-  const draft = await createDraft(manager, context, request, approved);
+  const { afterClose } = await correctionAllowed(
+    manager,
+    period,
+    request.via ?? 'direct',
+  );
+  const draft = await createDraft(
+    manager,
+    context,
+    { ...request, afterClose },
+    approved,
+  );
   const setId = await copyDecisions(manager, approved, draft, {
     writer: deps.writer,
     actorId: context.userId,
@@ -186,6 +200,7 @@ export async function reviseIn(
     detail: {
       supersedesId: approved.id,
       supersedesRevision: approved.revision,
+      ...(afterClose ? { afterClose } : {}),
     },
   });
   await resolveProposals(manager, approved, draft, context);

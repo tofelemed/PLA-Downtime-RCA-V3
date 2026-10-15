@@ -5493,6 +5493,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/month-closes/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The month close of the month containing today (plant time) */
+        get: operations["MonthCloseV2Controller_current_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/month-closes/{month}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Month close: state, working-day deadlines and overdue flags, sign-offs, prerequisites (periods not approved, open change proposals), materiality findings and history
+         * @description Read-only; a month never acted on is open. 422 INVALID_MONTH for a malformed key.
+         */
+        get: operations["MonthCloseV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/month-closes/{month}/close-quantities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Plant management closes the month’s quantities
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 422 CLOSE_PREREQUISITES (details list the periods not approved and the open change proposals). Fixes whether the materiality review is required.
+         */
+        post: operations["MonthCloseV2Controller_closeQuantities_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/month-closes/{month}/materiality-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extra review of a month above a materiality threshold
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 403 MATERIALITY_REVIEWER without a reviewer role of the policy, SEPARATION_OF_DUTIES for the quantity signer; 409 MATERIALITY_REVIEW_NOT_REQUIRED.
+         */
+        post: operations["MonthCloseV2Controller_reviewMateriality_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/month-closes/{month}/finance-sign-off": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finance signs the month off
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 403 SEPARATION_OF_DUTIES for the quantity signer or the materiality reviewer; 409 MATERIALITY_REVIEW_REQUIRED; 422 CLOSE_PREREQUISITES.
+         */
+        post: operations["MonthCloseV2Controller_signOffFinance_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/month-closes/{month}/lock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lock the signed-off month: its approved periods change only through change proposals (after close)
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 422 CLOSE_PREREQUISITES.
+         */
+        post: operations["MonthCloseV2Controller_lock_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/month-closes/{month}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen a month whose quantities are closed or finance signed off (clears every sign-off)
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; a locked month is never reopened.
+         */
+        post: operations["MonthCloseV2Controller_reopen_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7994,6 +8131,14 @@ export interface components {
             /** @description Start of this version (default now) */
             effectiveFrom?: string;
             notes?: string;
+        };
+        MonthCloseStepDto: {
+            /** @description Sign-off comment, kept on the history */
+            comment?: string;
+        };
+        MonthCloseReopenDto: {
+            /** @description Why the month is reopened (every sign-off is cleared) */
+            reason: string;
         };
     };
     responses: never;
@@ -16496,6 +16641,173 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MonthCloseV2Controller_current_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MonthCloseV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MonthCloseV2Controller_closeQuantities_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MonthCloseStepDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MonthCloseV2Controller_reviewMateriality_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MonthCloseStepDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MonthCloseV2Controller_signOffFinance_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MonthCloseStepDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MonthCloseV2Controller_lock_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MonthCloseStepDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MonthCloseV2Controller_reopen_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MonthCloseReopenDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {

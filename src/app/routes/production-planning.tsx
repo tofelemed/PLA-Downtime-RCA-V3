@@ -17,6 +17,8 @@ const NewCalendarVersion = lazyNamedWithPreload(() => import('@/features/plans-p
 /** Period accounting of a plan: the period grid, one period's workspace and the adjustment form. */
 const PlanDashboard = lazyNamedWithPreload(() => import('@/features/plan-dashboard/plan-dashboard-page'), 'PlanDashboardPage');
 const PeriodPage = lazyNamedWithPreload(() => import('@/features/plan-dashboard/period-page'), 'PeriodPage');
+/** Month close of the plant (EXPERT_REVIEW Area 3, phase R-B). */
+const MonthClose = lazyNamedWithPreload(() => import('@/features/month-close/month-close-page'), 'MonthClosePage');
 const ProposeAdjustment = lazyNamedWithPreload(() => import('@/features/plan-dashboard/adjustments/propose-adjustment-page'), 'ProposeAdjustmentPage');
 
 /**
@@ -39,4 +41,5 @@ export const PLANNING_ROUTES: readonly AppRoute[] = [
   { path: '/plans/:planId', element: <PlanDashboard />, preload: PlanDashboard.preload },
   { path: '/plans/:planId/periods/:periodId', element: <PeriodPage />, preload: PeriodPage.preload },
   { path: '/plans/:planId/periods/:periodId/adjustments/new', element: <ProposeAdjustment />, preload: ProposeAdjustment.preload },
+  { path: '/month-close', element: <MonthClose />, preload: MonthClose.preload },
 ];

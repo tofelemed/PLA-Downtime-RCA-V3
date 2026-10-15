@@ -56,7 +56,7 @@ function ReviewButtons({ view, actions, busy }: { view: ReconciliationView; acti
  * are required fields of the confirmation dialogs; the server decides and its refusals are shown.
  */
 export function WorkflowBar({ view, shown, onShowCurrent }: WorkflowBarProps) {
-  const { canWritePeriods: write, canApprovePeriods: decide } = useCapabilities();
+  const { canWritePeriods: write, canApproveRevisions: decide } = useCapabilities();
   const userId = useCurrentUserId();
   const actions = useWorkflowActions(view);
   const lifecycle = view.revision.lifecycle;

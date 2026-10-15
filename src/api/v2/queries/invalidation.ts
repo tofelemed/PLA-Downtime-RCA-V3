@@ -14,8 +14,8 @@ export interface ChangeNotice {
 /** Resources whose cached results may depend on an entity type (event → events, periods, reports). */
 export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> = {
   production_event: ['production-events', 'production-periods', 'period-accounting', 'reports', 'rca-recommendations'],
-  production_period: ['production-periods', 'period-accounting', 'reports'],
-  production_period_window: ['production-periods', 'period-accounting', 'reports'],
+  production_period: ['production-periods', 'period-accounting', 'reports', 'close'],
+  production_period_window: ['production-periods', 'period-accounting', 'reports', 'close'],
   production_plan: ['plans', 'production-periods', 'period-accounting', 'reports'],
   production_profile: ['profiles', 'production-periods', 'period-accounting', 'reports'],
   rate_import: ['profiles', 'production-periods', 'period-accounting', 'reports'],
@@ -48,6 +48,7 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   product: ['products', 'master-data'],
   rca_settings: ['rca-settings', 'master-data'],
   reliability: ['reliability'],
+  month_close: ['close', 'production-periods', 'period-accounting'],
 };
 
 /** Resources to refresh for an entity type; an unknown type refreshes the whole tenant (safe default). */

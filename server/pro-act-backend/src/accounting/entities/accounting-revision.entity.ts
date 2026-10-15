@@ -118,6 +118,10 @@ export class AccountingRevision extends TenantScopedEntity {
   @Column({ name: 'stale_reason', type: 'text', nullable: true })
   staleReason: string | null;
 
+  /** SME R4: opened through a change proposal of a locked month (a controlled correction after close) */
+  @Column({ name: 'after_close', type: 'boolean', default: false })
+  afterClose: boolean;
+
   /** the latest workflow comment or reason (submit, approve, reject, revise, cancel) */
   @Column({ name: 'comment', type: 'text', nullable: true })
   comment: string | null;

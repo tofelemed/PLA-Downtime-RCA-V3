@@ -29,6 +29,10 @@ const PINS: ReadonlyArray<[mirror: readonly string[], file: string, name: string
   [Mirror.INTEGRATION_WRITERS, 'v2/intake/intake-roles.ts', 'INTEGRATION_WRITERS'],
   [Mirror.FINANCE_MAINTAINERS, 'v2/valuation/valuation-roles.ts', 'FINANCE_MAINTAINERS'],
   [Mirror.FINANCE_APPROVERS, 'v2/valuation/valuation-roles.ts', 'FINANCE_APPROVERS'],
+  [Mirror.QUANTITY_CLOSERS, 'v2/close/close-roles.ts', 'QUANTITY_CLOSERS'],
+  [Mirror.FINANCE_SIGNERS, 'v2/close/close-roles.ts', 'FINANCE_SIGNERS'],
+  [Mirror.MATERIALITY_REVIEWERS, 'v2/close/close-roles.ts', 'MATERIALITY_REVIEWERS'],
+  [Mirror.MONTH_REOPENERS, 'v2/close/close-roles.ts', 'MONTH_REOPENERS'],
   [Mirror.AUDIT_READERS, 'audit-log/audit-roles.ts', 'AUDIT_READERS'],
   [Mirror.READ_ONLY_ROLES, 'auth/guards/write-access.guard.ts', 'READ_ONLY_ROLES'],
 ];

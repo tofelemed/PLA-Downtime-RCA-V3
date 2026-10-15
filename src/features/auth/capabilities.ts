@@ -34,6 +34,16 @@ export interface Capabilities {
   canWritePeriods: boolean;
   /** approve / reject adjustments and revisions, revise approved periods, decide change proposals */
   canApprovePeriods: boolean;
+  /**
+   * approve / reject submitted revisions, revise approved periods, decide change proposals (production
+   * accounting too, SME R1); adjustments stay with `canApprovePeriods`
+   */
+  canApproveRevisions: boolean;
+  /** SME R1 / R4 month close: plant management closes quantities, finance signs off and locks */
+  canCloseMonthQuantities: boolean;
+  canSignOffMonth: boolean;
+  canReviewMonthMateriality: boolean;
+  canReopenMonth: boolean;
   /** bridge lines (SME R8: production accounting only) */
   canWriteBridges: boolean;
   canWriteCodes: boolean;
@@ -79,6 +89,11 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canWriteCalendars: may(ServerRoles.CALENDAR_WRITERS),
     canWritePeriods: may(ServerRoles.PERIOD_WRITERS),
     canApprovePeriods: may(ServerRoles.ADJUSTMENT_APPROVERS) && may(ServerRoles.REVISION_APPROVERS),
+    canApproveRevisions: may(ServerRoles.REVISION_APPROVERS),
+    canCloseMonthQuantities: may(ServerRoles.QUANTITY_CLOSERS),
+    canSignOffMonth: may(ServerRoles.FINANCE_SIGNERS),
+    canReviewMonthMateriality: may(ServerRoles.MATERIALITY_REVIEWERS),
+    canReopenMonth: may(ServerRoles.MONTH_REOPENERS),
     canWriteBridges: may(ServerRoles.BRIDGE_WRITERS),
     canWriteCodes: may(ServerRoles.CODE_WRITERS),
     canAuthorRules: may(ServerRoles.RULE_AUTHORS),

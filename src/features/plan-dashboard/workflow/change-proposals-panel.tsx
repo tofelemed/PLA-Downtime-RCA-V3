@@ -64,7 +64,7 @@ function Proposal({ p, timezone, decide }: { p: ChangeProposalView; timezone: st
  * dismiss keeps the approval. Only manager approvers decide, so only they see the decision controls.
  */
 export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelProps) {
-  const { canApprovePeriods } = useCapabilities();
+  const { canApproveRevisions } = useCapabilities();
   const proposals = useChangeProposals(view.periodId);
   const decision = useProposalDecision();
   const [problem, setProblem] = useState<WorkflowProblem | null>(null);
@@ -82,7 +82,7 @@ export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelPro
       <div className="space-y-2 text-sm" data-testid="change-proposals">
         {items.length === 0 && <p className="text-muted-foreground">No proposals: the approved figures match the current inputs.</p>}
         {items.map((p) => (
-          <Proposal key={p.id} p={p} timezone={timezone} decide={canApprovePeriods ? decide : null} />
+          <Proposal key={p.id} p={p} timezone={timezone} decide={canApproveRevisions ? decide : null} />
         ))}
         {problem && <EditorProblem problem={problem} />}
       </div>

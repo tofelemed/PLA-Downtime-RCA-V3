@@ -36,6 +36,8 @@ export interface RevisionWorkflowV2View {
   rejectReason: string | null;
   cancelledBy: string | null;
   cancelledAt: string | null;
+  /** SME R4: a correction opened through a change proposal of a locked month */
+  afterClose: boolean;
   comment: string | null;
 }
 
@@ -137,6 +139,7 @@ export function toRevisionWorkflowView(
     rejectReason: r.rejectReason,
     cancelledBy: r.cancelledBy,
     cancelledAt: iso(r.cancelledAt),
+    afterClose: r.afterClose,
     comment: r.comment,
   };
 }

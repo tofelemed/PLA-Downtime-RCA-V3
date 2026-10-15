@@ -1,0 +1,52 @@
+import {
+  ConflictException,
+  ForbiddenException,
+  HttpException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import { MonthCloseRefusal } from '../domain/close/month-close-machine';
+import { MonthPrerequisites } from './month-prerequisites';
+
+const MESSAGES: Readonly<Record<MonthCloseRefusal, string>> = {
+  INVALID_TRANSITION: 'the month is not in a state that allows this step',
+  CLOSE_PREREQUISITES:
+    'every period of the month must be approved and no change proposal may be open',
+  SEPARATION_OF_DUTIES:
+    'finance signs off independently of the quantity close and of the materiality review',
+  MATERIALITY_REVIEW_REQUIRED:
+    'the month reaches a materiality threshold; the extra review comes before the finance sign-off',
+  MATERIALITY_REVIEW_NOT_REQUIRED:
+    'the month reaches no materiality threshold; no extra review is needed',
+};
+
+/** A refused month close step as the API error (403 segregation, 422 prerequisites, 409 otherwise). */
+export function monthCloseRefused(
+  refusal: MonthCloseRefusal,
+  state: string,
+  prerequisites: MonthPrerequisites,
+): HttpException {
+  const body = { code: refusal, message: MESSAGES[refusal] };
+  if (refusal === 'SEPARATION_OF_DUTIES') return new ForbiddenException(body);
+  if (refusal === 'CLOSE_PREREQUISITES') {
+    return new UnprocessableEntityException({
+      ...body,
+      details: {
+        pendingCount: prerequisites.pendingCount,
+        pending: prerequisites.pending,
+        openProposalCount: prerequisites.openProposalCount,
+        openProposals: prerequisites.openProposals,
+      },
+    });
+  }
+  return new ConflictException({ ...body, details: { state } });
+}
+
+/** 403 MATERIALITY_REVIEWER: the caller holds none of the policy's reviewer roles. */
+export function notMaterialityReviewer(
+  roles: readonly string[],
+): ForbiddenException {
+  return new ForbiddenException({
+    code: 'MATERIALITY_REVIEWER',
+    message: `the materiality review needs one of the roles ${roles.join(', ')}`,
+  });
+}

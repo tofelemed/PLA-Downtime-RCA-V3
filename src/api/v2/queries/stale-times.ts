@@ -51,4 +51,6 @@ export const STALE_TIME: Readonly<Record<V2Resource, number>> = {
   'rca-settings': 5 * MINUTE,
   'master-data': 5 * MINUTE,
   reliability: 5 * MINUTE,
+  // month close and reconciliation SLA (EXPERT_REVIEW Area 3): refreshed by their steps and period changes
+  close: 30_000,
 };

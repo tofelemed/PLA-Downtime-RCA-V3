@@ -43,7 +43,8 @@ export type V2Resource =
   | 'assets'
   | 'rca-settings'
   | 'master-data'
-  | 'reliability';
+  | 'reliability'
+  | 'close';
 
 export interface V2Window {
   from?: string;

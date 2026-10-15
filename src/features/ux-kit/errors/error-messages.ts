@@ -2,6 +2,7 @@ import type { ErrorMessage } from './error-message';
 import { ACCOUNTING_MESSAGES } from './messages-accounting';
 import { ADMIN_MESSAGES } from './messages-admin';
 import { ADMINISTRATION_MESSAGES } from './messages-administration';
+import { CLOSE_MESSAGES } from './messages-close';
 import { CODES_FINANCE_MESSAGES } from './messages-codes-finance';
 import { COMMON_MESSAGES } from './messages-common';
 import { MASTER_DATA_MESSAGES } from './messages-master-data';
@@ -17,6 +18,7 @@ export type { ErrorMessage } from './error-message';
 export const ERROR_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   ...COMMON_MESSAGES,
   ...ACCOUNTING_MESSAGES,
+  ...CLOSE_MESSAGES,
   ...ADMIN_MESSAGES,
   ...ADMINISTRATION_MESSAGES,
   ...MASTER_DATA_MESSAGES,

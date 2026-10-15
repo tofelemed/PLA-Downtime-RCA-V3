@@ -21,6 +21,8 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   'Downtime Analysis': ALL,
   'Production Loss Analysis': ALL,
   'Plans, Profiles & Calendars': NOT_OPERATOR,
+  // EXPERT_REVIEW Area 3 (phase R-B): month close, readable by the analysis roles
+  'Month Close': NOT_OPERATOR,
   // Reliability
   'RCA Analysis': NOT_OPERATOR,
   'Knowledge Base': NOT_OPERATOR,

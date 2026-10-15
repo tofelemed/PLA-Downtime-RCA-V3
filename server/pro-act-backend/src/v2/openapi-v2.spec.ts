@@ -133,6 +133,7 @@ import { RulesModule } from '../rules/rules.module';
 import { RulesService } from '../rules/rules.service';
 import { withMasterDataStubs } from './master-data/master-data-v2.stubs';
 import { withReliabilityStubs } from './reliability/reliability-v2.stubs';
+import { withCloseStubs } from './close/close-v2.stubs';
 import { withAdministrationStubs } from './administration/administration-v2.stubs';
 import { ActivitySummaryV2Service } from './activity-summary/activity-summary-v2.service';
 
@@ -415,7 +416,7 @@ class RcaKnowledgeModuleStub {}
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
 async function generate(): Promise<string> {
-  const moduleRef = await withReliabilityStubs(withAdministrationStubs(withMasterDataStubs(Test.createTestingModule({ imports: [V2Module, ClockModuleStub] }))))
+  const moduleRef = await withCloseStubs(withReliabilityStubs(withAdministrationStubs(withMasterDataStubs(Test.createTestingModule({ imports: [V2Module, ClockModuleStub] })))))
     .overrideProvider(getRepositoryToken(ProductionEvent))
     .useValue({})
     .overrideProvider(getRepositoryToken(Unit))

@@ -18716,6 +18716,308 @@
           "v2 · Unit state"
         ]
       }
+    },
+    "/api/v2/month-closes/current": {
+      "get": {
+        "operationId": "MonthCloseV2Controller_current_v2",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The month close of the month containing today (plant time)",
+        "tags": [
+          "v2 · Month close"
+        ]
+      }
+    },
+    "/api/v2/month-closes/{month}": {
+      "get": {
+        "description": "Read-only; a month never acted on is open. 422 INVALID_MONTH for a malformed key.",
+        "operationId": "MonthCloseV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "path",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "schema": {
+              "example": "1405-07",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Month close: state, working-day deadlines and overdue flags, sign-offs, prerequisites (periods not approved, open change proposals), materiality findings and history",
+        "tags": [
+          "v2 · Month close"
+        ]
+      }
+    },
+    "/api/v2/month-closes/{month}/close-quantities": {
+      "post": {
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 422 CLOSE_PREREQUISITES (details list the periods not approved and the open change proposals). Fixes whether the materiality review is required.",
+        "operationId": "MonthCloseV2Controller_closeQuantities_v2",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "path",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "schema": {
+              "example": "1405-07",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonthCloseStepDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Plant management closes the month’s quantities",
+        "tags": [
+          "v2 · Month close"
+        ]
+      }
+    },
+    "/api/v2/month-closes/{month}/materiality-review": {
+      "post": {
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 403 MATERIALITY_REVIEWER without a reviewer role of the policy, SEPARATION_OF_DUTIES for the quantity signer; 409 MATERIALITY_REVIEW_NOT_REQUIRED.",
+        "operationId": "MonthCloseV2Controller_reviewMateriality_v2",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "path",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "schema": {
+              "example": "1405-07",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonthCloseStepDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Extra review of a month above a materiality threshold",
+        "tags": [
+          "v2 · Month close"
+        ]
+      }
+    },
+    "/api/v2/month-closes/{month}/finance-sign-off": {
+      "post": {
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 403 SEPARATION_OF_DUTIES for the quantity signer or the materiality reviewer; 409 MATERIALITY_REVIEW_REQUIRED; 422 CLOSE_PREREQUISITES.",
+        "operationId": "MonthCloseV2Controller_signOffFinance_v2",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "path",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "schema": {
+              "example": "1405-07",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonthCloseStepDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Finance signs the month off",
+        "tags": [
+          "v2 · Month close"
+        ]
+      }
+    },
+    "/api/v2/month-closes/{month}/lock": {
+      "post": {
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 422 CLOSE_PREREQUISITES.",
+        "operationId": "MonthCloseV2Controller_lock_v2",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "path",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "schema": {
+              "example": "1405-07",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonthCloseStepDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lock the signed-off month: its approved periods change only through change proposals (after close)",
+        "tags": [
+          "v2 · Month close"
+        ]
+      }
+    },
+    "/api/v2/month-closes/{month}/reopen": {
+      "post": {
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; a locked month is never reopened.",
+        "operationId": "MonthCloseV2Controller_reopen_v2",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "path",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "schema": {
+              "example": "1405-07",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonthCloseReopenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reopen a month whose quantities are closed or finance signed off (clears every sign-off)",
+        "tags": [
+          "v2 · Month close"
+        ]
+      }
     }
   },
   "info": {
@@ -25429,6 +25731,27 @@
           "signalId",
           "rules",
           "expectedIntervalSeconds"
+        ]
+      },
+      "MonthCloseStepDto": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string",
+            "description": "Sign-off comment, kept on the history"
+          }
+        }
+      },
+      "MonthCloseReopenDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Why the month is reopened (every sign-off is cleared)"
+          }
+        },
+        "required": [
+          "reason"
         ]
       }
     }

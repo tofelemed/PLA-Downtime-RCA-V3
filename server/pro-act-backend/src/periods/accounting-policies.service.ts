@@ -32,8 +32,11 @@ import {
 const SEED_NOTE =
   'Seeded on first use from the D04 / D05 / D06 / D13 default (DECISIONS.md, 2026-10-07); change by a new version.';
 
-/** Kinds seeded approved on first use; `valuation_basis` is seeded unapproved by the valuation module (VAL01). */
-type EngineKind = Exclude<PolicyKind, 'valuation_basis'>;
+/**
+ * Kinds seeded approved on first use; `valuation_basis` is seeded unapproved by the valuation module (VAL01);
+ * the plant-wide workflow kinds by `WorkflowPoliciesService` (their default depends on the plant).
+ */
+type EngineKind = Exclude<PolicyKind, 'valuation_basis' | 'month_close'>;
 
 const DEFAULT_BODIES: Readonly<Record<EngineKind, object>> = {
   coverage_gate: COVERAGE_GATE_DEFAULT,

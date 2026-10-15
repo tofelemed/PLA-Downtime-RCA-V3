@@ -38,6 +38,12 @@ export const INTEGRATION_WRITERS = ['integration_admin', 'manager_approver'] as 
 export const FINANCE_MAINTAINERS = ['finance_maintainer'] as const;
 export const FINANCE_APPROVERS = ['finance_approver'] as const;
 
+/** v2/close/close-roles.ts (SME R1 / R4: month close) */
+export const QUANTITY_CLOSERS = ['manager_approver'] as const;
+export const FINANCE_SIGNERS = ['finance_approver'] as const;
+export const MATERIALITY_REVIEWERS = ['production_accountant', 'manager_approver', 'finance_approver'] as const;
+export const MONTH_REOPENERS = ['manager_approver', 'finance_approver'] as const;
+
 /** v2/rca-policies/rca-policies-v2.controller.ts (`@Roles` on the write) */
 export const RCA_POLICY_WRITERS = ['manager_approver'] as const;
 
