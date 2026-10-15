@@ -53,4 +53,8 @@ export const STALE_TIME: Readonly<Record<V2Resource, number>> = {
   reliability: 5 * MINUTE,
   // month close and reconciliation SLA (EXPERT_REVIEW Area 3): refreshed by their steps and period changes
   close: 30_000,
+  // SME R13 source status mappings: refreshed by their writes
+  'status-mappings': 30_000,
+  // in-app notifications (SLA escalations): refreshed by realtime notices and read marks
+  notifications: 30_000,
 };

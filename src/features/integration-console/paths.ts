@@ -3,6 +3,8 @@ export const CONSOLE_PATH = '/connectivity';
 export const NEW_CONNECTION_PATH = '/connectivity/connections/new';
 export const NEW_MAPPING_PATH = '/connectivity/mappings/new';
 export const HISTORIAN_PATH = '/enhanced-historian';
+/** SME R13: which source statuses are released (versions per source system) */
+export const STATUS_MAPPINGS_PATH = '/connectivity/source-status';
 
 export type ConsoleTab = 'connections' | 'quarantine' | 'mappings';
 

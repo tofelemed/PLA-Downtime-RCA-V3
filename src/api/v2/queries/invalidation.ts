@@ -49,6 +49,8 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   rca_settings: ['rca-settings', 'master-data'],
   reliability: ['reliability'],
   month_close: ['close', 'production-periods', 'period-accounting'],
+  source_status_mapping: ['status-mappings'],
+  user_notification: ['notifications'],
 };
 
 /** Resources to refresh for an entity type; an unknown type refreshes the whole tenant (safe default). */

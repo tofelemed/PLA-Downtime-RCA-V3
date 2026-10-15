@@ -26,6 +26,28 @@ export interface StatusMappingDraft {
   notes: string | null;
 }
 
+export interface StatusMappingList {
+  items: SourceStatusMapping[];
+  /** per source, the approved version whose interval contains now */
+  inForceIds: ReadonlySet<string>;
+  names: ReadonlyMap<string, string>;
+}
+
+/** Per source, the approved version in force at `at` (the highest version when intervals touch). */
+export function inForceIdsOf(
+  mappings: readonly SourceStatusMapping[],
+  at: Date,
+): Set<string> {
+  const best = new Map<string, SourceStatusMapping>();
+  for (const m of mappings) {
+    if (m.state !== 'approved' || m.effectiveFrom > at) continue;
+    if (m.effectiveTo && m.effectiveTo <= at) continue;
+    const current = best.get(m.sourceSystem);
+    if (!current || current.version < m.version) best.set(m.sourceSystem, m);
+  }
+  return new Set([...best.values()].map((m) => m.id));
+}
+
 /** The legacy environment list's statuses, for an `import` source that never had a mapping. */
 const LEGACY_IMPORT_STATUSES: SourceStatusEntry[] = [
   { status: 'COMPLETED', released: true },
@@ -73,16 +95,36 @@ export class SourceStatusMappingsService {
     return this.approvedAt(manager, tenantId, sourceSystem, at);
   }
 
-  list(
+  /**
+   * The versions of the tenant (newest first per source, capped), which one is in force now per source, and
+   * the display names of their authors and approvers.
+   */
+  async list(
     context: RequestContext,
     sourceSystem: string | undefined,
-  ): Promise<SourceStatusMapping[]> {
+  ): Promise<StatusMappingList> {
     const tenantId = requireTenantId(context);
-    return this.dataSource.getRepository(SourceStatusMapping).find({
-      where: { tenantId, ...(sourceSystem ? { sourceSystem } : {}) },
-      order: { sourceSystem: 'ASC', version: 'DESC' },
-      take: 200,
-    });
+    const items = await this.dataSource
+      .getRepository(SourceStatusMapping)
+      .find({
+        where: { tenantId, ...(sourceSystem ? { sourceSystem } : {}) },
+        order: { sourceSystem: 'ASC', version: 'DESC' },
+        take: 200,
+      });
+    const ids = items
+      .flatMap((m) => [m.createdBy, m.approvedBy])
+      .filter((id): id is string => typeof id === 'string');
+    const names: Array<{ id: string; name: string }> = ids.length
+      ? await this.dataSource.query(
+          `SELECT "id"::text AS "id", "name" FROM "users" WHERE "id" = ANY($1::uuid[])`,
+          [[...new Set(ids)]],
+        )
+      : [];
+    return {
+      items,
+      inForceIds: inForceIdsOf(items, new Date()),
+      names: new Map(names.map((n) => [n.id, n.name])),
+    };
   }
 
   create(

@@ -36,7 +36,10 @@ import { Ctx } from '../../common/context/ctx.decorator';
 import { RequestContext } from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { SourceStatusMapping } from '../../periods/entities/source-status-mapping.entity';
-import { SourceStatusMappingsService } from '../../periods/source-status-mappings.service';
+import {
+  inForceIdsOf,
+  SourceStatusMappingsService,
+} from '../../periods/source-status-mappings.service';
 import { INSTANT, INSTANT_MESSAGE } from '../profiles/profile-v2.dto';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import { SOURCE_OWNERS, STATUS_MAPPING_AUTHORS } from './close-roles';
@@ -103,12 +106,26 @@ export interface SourceStatusMappingV2View {
   effectiveFrom: string;
   effectiveTo: string | null;
   createdBy: string | null;
+  createdByName: string | null;
   approvedBy: string | null;
+  approvedByName: string | null;
   approvedAt: string | null;
+  /** the approved version imports of this source use now */
+  inForce: boolean;
   notes: string | null;
 }
 
-function toView(m: SourceStatusMapping): SourceStatusMappingV2View {
+interface ViewExtras {
+  inForceIds?: ReadonlySet<string>;
+  names?: ReadonlyMap<string, string>;
+}
+
+function toView(
+  m: SourceStatusMapping,
+  extras: ViewExtras = {},
+): SourceStatusMappingV2View {
+  const nameOf = (id: string | null) =>
+    id ? (extras.names?.get(id) ?? null) : null;
   return {
     id: m.id,
     sourceSystem: m.sourceSystem,
@@ -118,8 +135,11 @@ function toView(m: SourceStatusMapping): SourceStatusMappingV2View {
     effectiveFrom: m.effectiveFrom.toISOString(),
     effectiveTo: m.effectiveTo ? m.effectiveTo.toISOString() : null,
     createdBy: m.createdBy,
+    createdByName: nameOf(m.createdBy),
     approvedBy: m.approvedBy,
+    approvedByName: nameOf(m.approvedBy),
     approvedAt: m.approvedAt ? m.approvedAt.toISOString() : null,
+    inForce: (extras.inForceIds ?? inForceIdsOf([m], new Date())).has(m.id),
     notes: m.notes,
   };
 }
@@ -134,14 +154,15 @@ export class SourceStatusMappingsV2Controller {
 
   @Get()
   @ApiOperation({
-    summary: 'Status mapping versions per source system, newest first',
+    summary:
+      'Status mapping versions per source system, newest first, with the version in force now',
   })
   async list(
     @Ctx() ctx: RequestContext,
     @Query() query: SourceStatusMappingQueryDto,
   ): Promise<{ items: SourceStatusMappingV2View[] }> {
-    const rows = await this.mappings.list(ctx, query.sourceSystem);
-    return { items: rows.map(toView) };
+    const list = await this.mappings.list(ctx, query.sourceSystem);
+    return { items: list.items.map((m) => toView(m, list)) };
   }
 
   @Post()

@@ -224,6 +224,13 @@ describe('restatement delta, posting date and source status mapping (SME R5 / R1
     const list = (
       await env.get('source-status-mappings?sourceSystem=lims').expect(200)
     ).body as { items: MappingBody[] };
-    expect(list.items[0]).toMatchObject({ version: 1, state: 'approved' });
+    // the screen's "in force" and the author / approver names come from the server
+    expect(list.items[0]).toMatchObject({
+      version: 1,
+      state: 'approved',
+      inForce: true,
+      createdByName: expect.any(String) as string,
+      approvedByName: expect.any(String) as string,
+    });
   });
 });

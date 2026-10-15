@@ -44,7 +44,9 @@ export type V2Resource =
   | 'rca-settings'
   | 'master-data'
   | 'reliability'
-  | 'close';
+  | 'close'
+  | 'status-mappings'
+  | 'notifications';
 
 export interface V2Window {
   from?: string;
