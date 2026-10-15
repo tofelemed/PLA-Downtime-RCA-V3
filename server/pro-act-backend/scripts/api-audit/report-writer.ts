@@ -54,13 +54,22 @@ function summary(r: AuditReport): string {
   );
   const lines = [
     `- Frontend call sites: **${r.calls.length}** (${r.calls.filter((c) => c.client === 'v1').length} v1 \`httpClient\`, ${r.calls.filter((c) => c.client === 'v2').length} v2), reaching **${uniqueRoutes.size}** distinct backend routes.`,
-    `- Backend routes registered: **${r.routes.length}**; never called by the frontend: **${r.uncalled.length}** (informational, listed below).`,
+    `- Backend routes registered: **${r.routes.length}**; no statically resolved frontend call: **${r.uncalled.length}** (approximate; generic dispatch may not resolve, listed below).`,
   ];
   if (r.live)
     lines.push(
       `- Live GETs: **${reads.filter(ok).length} / ${reads.length}** answered 2xx; ${reads.filter((x) => ok(x) && x.ms > SLOW_MS).length} took over ${SLOW_MS} ms.`,
       `- Live mutation probes: **${probes.filter(reachable).length} / ${probes.length}** reachable and validating (400/404/409/412/422 from the handler).`,
-      `- Absent-id GETs: **${absent.filter((x) => x.status === 404).length} / ${absent.length}** answered 404 (the rest answer 2xx with an empty body).`,
+      `- Absent-id GETs: **${absent.filter((x) => x.status === 404).length} / ${absent.length}** answered 404; other responses: ${
+        [
+          ...countBy(
+            absent.filter((x) => x.status !== 404),
+            (x) => String(x.status),
+          ),
+        ]
+          .map(([status, count]) => `${status} ×${count}`)
+          .join(', ') || 'none'
+      } (inspect the detailed contracts below).`,
       `- Not exercised live: **${skipped.length}** (no data to resolve an id, or a probe could change real data — listed below).`,
       `- Create → read-back flows: ${r.creates.filter((x) => x.kind === 'readback' && ok(x) && x.note.includes('matches')).length} / ${r.creates.filter((x) => x.kind === 'create').length} passed.`,
     );
