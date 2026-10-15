@@ -59,14 +59,18 @@ describe('capabilitiesOf', () => {
     expect(caps.canViewAnalysis).toBe(false);
   });
 
-  it('global admins hold everything; OrgAdmin has no admin panel', () => {
+  it('global admins hold everything; OrgAdmin can reach its permitted administration', () => {
     const superAdmin = capabilitiesOf(['SuperAdmin']);
     expect(Object.entries(superAdmin).filter(([key]) => key !== 'roles' && key !== 'isReadOnly').every(([, value]) => value === true)).toBe(true);
     const orgAdmin = capabilitiesOf(['OrgAdmin']);
-    expect(orgAdmin.canUseAdminPanel).toBe(false);
+    expect(orgAdmin.canUseAdminPanel).toBe(true);
     expect(orgAdmin.isSuperAdmin).toBe(false);
     expect(orgAdmin.canViewAuditLogs).toBe(true);
     expect(orgAdmin.canManageMasterData).toBe(true);
+  });
+
+  it.each(['viewer', 'Operator', 'operator', 'Manager', 'master_data_admin', 'integration_admin'])('%s does not gain the admin panel', (role) => {
+    expect(capabilitiesOf([role]).canUseAdminPanel).toBe(false);
   });
 
   it('composes with effectiveRoles: a viewer persona switched to Demo Plant', () => {

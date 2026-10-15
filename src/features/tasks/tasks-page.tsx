@@ -75,7 +75,7 @@ function TasksScreen() {
           )
         }
       />
-      <Section title="Summary">
+      <Section title="Summary" description="Counts use search, priority and My tasks. Status and Overdue only filter the task list.">
         <TaskSummary summary={summary.data} loading={summary.isLoading} />
       </Section>
       <Section title="Tasks">

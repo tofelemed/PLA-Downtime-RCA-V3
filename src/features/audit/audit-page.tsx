@@ -63,7 +63,12 @@ function AuditScreen() {
           <FilterSelect label="Record type filter" value={values.entity} options={entities} onChange={(entity) => setValues({ entity })} />
         </div>
       </Section>
-      <Section title="Activity" description={summary.data ? `${number(summary.data.total)} entries in the period` : undefined} collapsible defaultOpen={false}>
+      <Section
+        title="Activity"
+        description={`Activity uses the selected period. Search, action and record filters apply to the entries list and export.${summary.data ? ` ${number(summary.data.total)} entries in this period.` : ''}`}
+        collapsible
+        defaultOpen={false}
+      >
         <Suspense fallback={<Skeleton className="h-72 w-full" />}>{summary.data && <AuditCharts summary={summary.data} />}</Suspense>
       </Section>
       <Section title="Entries">

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -13,6 +13,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 const { UsersPage } = await import('@/features/users/users-page');
 const { TasksPage } = await import('@/features/tasks/tasks-page');
 const { AdminPage } = await import('./admin-page');
+const { HierarchyFormPage } = await import('./plants/hierarchy-form-page');
 
 interface Call {
   method: string;
@@ -36,10 +37,15 @@ const TASK = {
   createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z',
 };
 const SUMMARY = { total: 1, open: 0, inProgress: 1, completed: 0, cancelled: 0, overdue: 1, asOf: '2026-10-12T00:00:00Z' };
+const ORGANIZATIONS = [
+  { id: 'o1', name: 'Own organization', code: 'OWN', canAddPlants: true, canDelete: false },
+  { id: 'o2', name: 'Read-only organization', code: 'OTHER', canAddPlants: false, canDelete: false },
+];
 
 describe('administration screens on v2', () => {
   let calls: Call[];
   let client: QueryClient;
+  const scrollIntoView = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView');
   const wrap = (node: ReactNode, path = '/') =>
     render(
       <QueryClientProvider client={client}>
@@ -52,6 +58,7 @@ describe('administration screens on v2', () => {
     );
 
   beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() });
     calls = [];
     client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
     vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
@@ -61,12 +68,16 @@ describe('administration screens on v2', () => {
       if (path === '/api/v2/users') return json(200, list([USER, GRANTEE], 'next'));
       if (path === '/api/v2/tasks') return json(200, list([TASK]));
       if (path === '/api/v2/tasks/summary') return json(200, SUMMARY);
+      if (path === '/api/v2/organizations') return json(200, list(ORGANIZATIONS));
+      if (path === '/api/v2/tenants') return json(200, list([{ id: 'tenant-a', name: 'Own plant', code: 'P1', organizationName: 'Own organization', timezone: 'Asia/Tehran', calendarSystem: 'gregorian', weekStart: 'saturday', canDelete: false }]));
       return json(200, list([]));
     }));
     configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
   });
   afterEach(() => {
     vi.unstubAllGlobals();
+    if (scrollIntoView) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', scrollIntoView);
+    else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
     actAs('SuperAdmin');
   });
 
@@ -112,6 +123,45 @@ describe('administration screens on v2', () => {
     actAs('TenantAdmin');
     wrap(<AdminPage />, '/admin?tab=branding');
     await waitFor(() => expect(screen.getAllByRole('tablist').at(-1)?.querySelectorAll('[role="tab"]').length).toBe(3));
+  });
+
+  it('lets OrgAdmin reach plant administration while retaining global and server row guards', async () => {
+    actAs('OrgAdmin');
+    wrap(<AdminPage />, '/admin?tab=branding');
+    expect(await screen.findByText('Own plant')).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'Branding' })).toBeNull();
+    expect(calls.some((call) => call.url.pathname === '/api/v2/branding')).toBe(false);
+    expect(screen.queryByRole('link', { name: 'Add organization' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Delete (organization|plant)/ })).toBeNull();
+    expect(within(screen.getByRole('row', { name: /Own organization OWN/ })).getByRole('link', { name: 'Add plant' })).toHaveAttribute('href', '/admin/plants/new?organizationId=o1');
+    expect(within(screen.getByRole('row', { name: /Read-only organization OTHER/ })).queryByRole('link', { name: 'Add plant' })).toBeNull();
+  });
+
+  it('lets OrgAdmin open the plant form with only writable organizations available', async () => {
+    actAs('OrgAdmin');
+    wrap(<HierarchyFormPage kind="plant" />, '/admin/plants/new');
+    expect(screen.getByRole('button', { name: 'Create plant' })).toBeTruthy();
+    await waitFor(() => expect(calls.some((call) => call.url.pathname === '/api/v2/organizations')).toBe(true));
+    fireEvent.keyDown(screen.getByRole('combobox', { name: /Organization/ }), { key: 'ArrowDown' });
+    expect(await screen.findByRole('option', { name: 'Own organization' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: 'Read-only organization' })).toBeNull();
+    expect(calls.every((call) => call.method === 'GET')).toBe(true);
+  });
+
+  it.each(['OrgAdmin', 'TenantAdmin', 'viewer'])('does not allow %s to open organization creation', (role) => {
+    actAs(role);
+    wrap(<HierarchyFormPage kind="organization" />, '/admin/organizations/new');
+    expect(screen.getByText(/Only a super administrator/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Create organization' })).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
+  it.each(['TenantAdmin', 'viewer'])('does not allow %s to open plant creation', (role) => {
+    actAs(role);
+    wrap(<HierarchyFormPage kind="plant" />, '/admin/plants/new');
+    expect(screen.getByText(/Only a super administrator/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Create plant' })).toBeNull();
+    expect(calls).toHaveLength(0);
   });
 });
 

@@ -186,7 +186,7 @@ export function capabilitiesOf(roles: readonly string[]): Capabilities {
       canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteWorkOrders || writes.canWriteStateMappings || writes.canWriteUnitImpactRules,
     canUseIntegrationConsole: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'integration_admin']),
     canAdministerTenant: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
-    canUseAdminPanel: holdsAny(held, ['SuperAdmin', 'TenantAdmin']),
+    canUseAdminPanel: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
     // the server's GET /audit-logs roles (read in the acting plant only)
     canViewAuditLogs: ServerRoles.satisfiesAnyRole(held, ServerRoles.AUDIT_READERS),
     canApprove: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'Manager', 'manager_approver']),
