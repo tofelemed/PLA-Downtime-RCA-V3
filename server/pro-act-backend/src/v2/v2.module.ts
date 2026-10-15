@@ -110,6 +110,7 @@ import { UncertaintyModule } from '../uncertainty/uncertainty.module';
 import { UncertaintyBudgetsV2Controller } from './uncertainty/uncertainty-budgets-v2.controller';
 import { UncertaintyBudgetsV2Service } from './uncertainty/uncertainty-budgets-v2.service';
 import { SourceAuthorityV2Controller } from './source-authority/source-authority-v2.controller';
+import { SourceAuthorityDecisionsService } from './source-authority/source-authority-decisions.service';
 import { SourceAuthorityV2Service } from './source-authority/source-authority-v2.service';
 import { ActualsJobsV2Controller } from './periods/actuals-jobs-v2.controller';
 import { ExternalReportsV2Controller } from './periods/external-reports-v2.controller';
@@ -302,6 +303,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     LotDispositionsV2Service,
     UncertaintyBudgetsV2Service,
     SourceAuthorityV2Service,
+    SourceAuthorityDecisionsService,
     PeriodAccountingV2Service,
     ReconciliationV2Service,
     KpiReportsV2Service,

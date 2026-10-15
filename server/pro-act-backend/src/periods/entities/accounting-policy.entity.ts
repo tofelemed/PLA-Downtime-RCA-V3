@@ -23,6 +23,8 @@ export type PolicyKind = (typeof POLICY_KINDS)[number];
  * Plan 2.5 adds `oee_policy` (D04) and `reconciliation_tolerance` (D06) for the accounting engine; plan
  * 2.6 adds `valuation_basis` (D08: unapproved versions never value, VAL01).
  * The D04 / D05 / D06 defaults are seeded per tenant (migration, or first use for a new tenant).
+ * `source_authority` versions are drafted and approved by someone else (owner, 15 Oct 2026); only approved
+ * versions resolve.
  */
 @Entity('accounting_policies')
 @Unique('UQ_accounting_policies_kind_scope_version', [
@@ -38,9 +40,18 @@ export type PolicyKind = (typeof POLICY_KINDS)[number];
   'effectiveFrom',
 ])
 @Index('IDX_accounting_policies_unit', ['unitId'])
+@Index(
+  'IDX_accounting_policies_pending',
+  ['tenantId', 'policyKind', 'createdAt'],
+  { where: '"approved_at" IS NULL AND "rejected_at" IS NULL' },
+)
 @Check(
   'CHK_accounting_policies_effective',
   '"effective_to" IS NULL OR "effective_to" > "effective_from"',
+)
+@Check(
+  'CHK_accounting_policies_decision',
+  '"approved_at" IS NULL OR "rejected_at" IS NULL',
 )
 export class AccountingPolicy extends TenantScopedEntity {
   @Column({
@@ -79,4 +90,18 @@ export class AccountingPolicy extends TenantScopedEntity {
 
   @Column({ name: 'notes', type: 'text', nullable: true })
   notes: string | null;
+
+  /** maker-checker kinds (source_authority): a rejected draft never comes into force */
+  @Column({ name: 'rejected_by', type: 'uuid', nullable: true })
+  rejectedBy: string | null;
+
+  @Column({ name: 'rejected_at', type: 'timestamptz', nullable: true })
+  rejectedAt: Date | null;
+
+  @Column({ name: 'rejection_reason', type: 'text', nullable: true })
+  rejectionReason: string | null;
+
+  /** the version in force a draft was prepared from; approval refuses a draft whose base was replaced */
+  @Column({ name: 'based_on_id', type: 'uuid', nullable: true })
+  basedOnId: string | null;
 }

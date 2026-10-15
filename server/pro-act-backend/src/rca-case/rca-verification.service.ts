@@ -110,6 +110,8 @@ export class RcaVerificationService {
       footprint,
       from: start,
       to: end,
+      // the run-time basis frozen with the baseline, so both rates share one exposure (CA3)
+      basis: baseline.window?.exposureBasis ?? 'unit_run_time',
     });
     const observation = {
       windowDays: windowDays(start, end),

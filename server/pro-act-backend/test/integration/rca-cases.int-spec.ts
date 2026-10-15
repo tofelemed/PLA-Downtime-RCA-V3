@@ -245,7 +245,7 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
       expect(body.verificationStatus).toBe('due');
       expect(body.baseline).toMatchObject({
         declared: false,
-        queryVersion: 'rca-exposure-v1',
+        queryVersion: 'rca-exposure-v2',
         criteria: { requiredReduction: 0.5, minExposureHours: 720 },
       });
       actionId = body.id;

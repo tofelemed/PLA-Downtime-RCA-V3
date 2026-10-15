@@ -68,6 +68,10 @@ export interface ResolvedPolicies {
  * instant for the unit, else for the tenant; a tenant without any version of a kind gets the D05 default
  * as version 1 on first use (the migration seeds existing tenants). Results record the versions used.
  */
+/** Maker-checker kinds (source_authority, owner 15 Oct 2026): a draft or rejected version never resolves. */
+const APPROVED_IF_DRAFTED =
+  '(p.policyKind <> :draftedKind OR p.approvedAt IS NOT NULL)';
+
 @Injectable()
 export class AccountingPoliciesService {
   async resolve(
@@ -188,6 +192,7 @@ export class AccountingPoliciesService {
         'p.effectiveFrom <= :at AND (p.effectiveTo IS NULL OR p.effectiveTo > :at)',
         { at },
       )
+      .andWhere(APPROVED_IF_DRAFTED, { draftedKind: 'source_authority' })
       .orderBy('"p"."unit_id" IS NULL', 'ASC')
       .addOrderBy('p.version', 'DESC')
       .getOne();

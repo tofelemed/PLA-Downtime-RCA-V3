@@ -8,6 +8,7 @@ const SignalEditorPage = lazyNamedWithPreload(() => import('@/features/integrati
 const ExceptionPage = lazyNamedWithPreload(() => import('@/features/integration-console/pages/exception-page'), 'ExceptionPage');
 const SourceMappingEditorPage = lazyNamedWithPreload(() => import('@/features/integration-console/pages/source-mapping-editor-page'), 'SourceMappingEditorPage');
 const StatusMappingsPage = lazyNamedWithPreload(() => import('@/features/integration-console/status-mappings/status-mappings-page'), 'StatusMappingsPage');
+const SourceAuthorityPage = lazyNamedWithPreload(() => import('@/features/integration-console/source-authority/source-authority-page'), 'SourceAuthorityPage');
 const HistorianPage = lazyNamedWithPreload(() => import('@/features/integration-console/historian/historian-page'), 'HistorianPage');
 
 /** Integration area: Connectivity (the integration console and its sub-pages) and the historian (track T4). */
@@ -21,5 +22,6 @@ export const INTEGRATION_ROUTES: readonly AppRoute[] = [
   { path: '/connectivity/mappings/new', element: <SourceMappingEditorPage />, preload: SourceMappingEditorPage.preload },
   { path: '/connectivity/mappings/:mappingId', element: <SourceMappingEditorPage />, preload: SourceMappingEditorPage.preload },
   { path: '/connectivity/source-status', element: <StatusMappingsPage />, preload: StatusMappingsPage.preload },
+  { path: '/connectivity/source-authority', element: <SourceAuthorityPage />, preload: SourceAuthorityPage.preload },
   { path: '/enhanced-historian', element: <HistorianPage />, preload: HistorianPage.preload },
 ];

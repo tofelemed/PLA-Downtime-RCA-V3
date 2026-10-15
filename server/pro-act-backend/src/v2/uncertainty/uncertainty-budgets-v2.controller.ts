@@ -51,7 +51,7 @@ import {
 /**
  * Uncertainty budgets per measurement boundary (SME E4): meter, scale, inventory, conversion and timing
  * standard uncertainties with optional correlations, combined (root sum of squares with covariance) and
- * expanded (coverage factor k) by the server; maker-checker, effective-dated, with calibration evidence
+ * expanded (coverage factor k) by the server; maker-checker (approved by the metrology owner), effective-dated, with calibration evidence
  * and a review date. An approved budget can justify an absolute reconciliation tolerance by an explicit
  * adoption — never automatically.
  */
@@ -125,9 +125,9 @@ export class UncertaintyBudgetsV2Controller {
   @Roles(...BUDGET_APPROVERS)
   @ApiOperation({
     summary:
-      'Approve a proposed budget (production accounting, never the author); it is in force from its effective date and ends the previous one of the boundary',
+      'Approve a proposed budget (metrology / instrumentation owner, never the author); it is in force from its effective date and ends the previous one of the boundary',
     description:
-      'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; ' +
+      'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a metrology_approver; 403 SEPARATION_OF_DUTIES for the author; ' +
       '409 INVALID_TRANSITION when not proposed; 422 INVALID_EFFECTIVE_FROM when not after the budget in force.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
@@ -147,7 +147,7 @@ export class UncertaintyBudgetsV2Controller {
   @Roles(...BUDGET_APPROVERS)
   @ApiOperation({
     summary:
-      'Reject a proposed budget with a reason (production accounting, never the author)',
+      'Reject a proposed budget with a reason (metrology / instrumentation owner, never the author)',
     description:
       'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES; 409 INVALID_TRANSITION when not proposed.',
   })

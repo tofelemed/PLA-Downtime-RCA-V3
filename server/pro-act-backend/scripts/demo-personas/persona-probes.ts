@@ -83,6 +83,14 @@ export const approveDisposition = (plant: PlantKey, expect: ProbeExpectation) =>
     plant,
     expect,
   );
+/** Metrology decision on an uncertainty budget no plant has: guards pass → 4xx, never a write. */
+export const approveBudget = (plant: PlantKey, expect: ProbeExpectation) =>
+  create(
+    'POST approve uncertainty budget',
+    '/api/v2/uncertainty-budgets/00000000-0000-4000-8000-000000000000/approve',
+    plant,
+    expect,
+  );
 export const approvePolicy = (plant: PlantKey, expect: ProbeExpectation) =>
   create(
     'POST approve valuation policy',

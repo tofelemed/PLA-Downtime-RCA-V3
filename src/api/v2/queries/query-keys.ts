@@ -47,6 +47,7 @@ export type V2Resource =
   | 'close'
   | 'status-mappings'
   | 'uncertainty-budgets'
+  | 'source-authority'
   | 'notifications';
 
 export interface V2Window {

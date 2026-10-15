@@ -5,6 +5,8 @@ export const NEW_MAPPING_PATH = '/connectivity/mappings/new';
 export const HISTORIAN_PATH = '/enhanced-historian';
 /** SME R13: which source statuses are released (versions per source system) */
 export const STATUS_MAPPINGS_PATH = '/connectivity/source-status';
+/** source authority versions of a unit (measurement hierarchy), maker-checker */
+export const SOURCE_AUTHORITY_PATH = '/connectivity/source-authority';
 
 export type ConsoleTab = 'connections' | 'quarantine' | 'mappings';
 

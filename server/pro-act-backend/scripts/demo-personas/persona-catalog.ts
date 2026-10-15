@@ -5,6 +5,7 @@
  */
 import { LegacyRole, mapLegacyRole } from '../../src/auth/roles/role-model';
 import {
+  approveBudget,
   approveDisposition,
   approvePolicy,
   createConnection,
@@ -391,6 +392,21 @@ export const DEMO_PERSONAS: Persona[] = [
     probes: [
       approveDisposition('demoPlant', 'allowed'),
       setFlag('demoPlant', 'FORBIDDEN_ROLE'),
+    ],
+  },
+  // owner, 15 Oct 2026: the metrology / instrumentation owner approves uncertainty budgets
+  {
+    key: 'metrologyApprover',
+    label: 'metrology_approver',
+    actingPlant: 'demoPlant',
+    users: [
+      user('Kaveh Ahmadi', 'Analyst', 'demoPlant', {
+        extraScopes: inBothDemoPlants('metrology_approver'),
+      }),
+    ],
+    probes: [
+      approveBudget('demoPlant', 'allowed'),
+      approveDisposition('demoPlant', 'FORBIDDEN_ROLE'),
     ],
   },
 ];

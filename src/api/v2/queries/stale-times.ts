@@ -57,6 +57,8 @@ export const STALE_TIME: Readonly<Record<V2Resource, number>> = {
   'status-mappings': 30_000,
   // SME E4 uncertainty budgets: refreshed by their writes
   'uncertainty-budgets': 30_000,
+  // source authority versions (maker-checker): refreshed by their drafts and decisions
+  'source-authority': 30_000,
   // in-app notifications (SLA escalations): refreshed by realtime notices and read marks
   notifications: 30_000,
 };
