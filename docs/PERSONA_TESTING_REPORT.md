@@ -53,7 +53,7 @@ Results after fixes. R1 = round 1 (before fixes), RV = re-verified after fixes, 
 
 Also closed before testing could start: **scope roles not sent to the browser** (viewer / integration admin / master-data admin had no menu or plant switching) — `12cbc0d`; **legacy Manager role had an empty menu** — `d40c538`.
 
-Deliberately not changed: with `AUTH_ALLOW_PUBLIC_REGISTRATION=true` (dev only; off in Compose/production) an *anonymous* registration can still name any role, because the e2e `authenticate()` fallback and `scripts/setup-test-environment.ts` rely on it (recorded in `plans/DECISIONS.md`).
+Deliberately not changed: with `AUTH_ALLOW_PUBLIC_REGISTRATION=true` (dev only; off in Compose/production) an *anonymous* registration can still name any role, because the e2e `authenticate()` fallback relies on it (recorded in `plans/DECISIONS.md`; `scripts/setup-test-environment.ts`, which relied on it too, was removed on 15 Oct 2026).
 
 ## 4. Observations worth the owner's attention (not defects)
 
