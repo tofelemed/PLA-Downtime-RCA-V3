@@ -380,22 +380,19 @@ Don't build these during the e2e pass. Just know they exist:
   - web-vitals
 - **7 orphan `production_plans` rows on the dev DB:** they name deleted tenants. Their foreign key stays NOT VALID until a data owner fixes them.
 
-## 8. Possibly unmerged at handover
+## 8. Merged at the end (15 Oct) — cover these too
 
-A final background task was still running at handover on branch **`worktree-agent-a049d612a9717eb52`** (worktree `.claude/worktrees/agent-a049d612a9717eb52`). It covers:
-- plan 1.10 steps 4–5: equipment-to-unit impact rules, one overlap cause allocator, analog thresholds with reduced-rate segments, the actuals fallback
-- reversal valuation
-- `metrology_approver` added to the delegable roles
-- a 99 % daily coding check at day certification
+The final wave (branch `worktree-agent-a049d612a9717eb52`) is merged. Add e2e coverage, all **NEW**:
+- **Unit impact rules** (Master data → Unit impact rules; `GET|POST /v2/unit-impact-rules`, `/{id}/approve`, `/{id}/retire`): maker-checker per (unit, asset) with full stop / fractional rate / none and an optional standby. A standby run that starts within 60 s and outlasts the stop makes the impact `none`. An impact a person states on the event is `stated` and is never replaced. The Event Hub shows a hint when the impact was derived.
+- **Analog thresholds** on unit-state mappings: stopped / reduced rate / running bands with hysteresis. `reduced_rate` counts as running time; spans at least as long as the debounce become slowdown events (`slowdowns` in `GET /v2/derived-stops/preview`).
+- **Actuals source fallback:** when a run switches to a substitute source, production accounting and integration admins get a `source_fallback` notification (bell); it ends when a rerun uses the primary again.
+- **Reversal valuation:** a reversal line carries the reversed line's approved value with the opposite sign, at the original FX. A reversed line with no stored value shows unvalued `reversed_line_unvalued`.
+- **Daily 99 % coding gate:** day certification shows the coding verdict (`codingGate`). Default mode is warn; with `reconciliation_tolerance.dayGate.mode = block` certifying returns 422 `CODING_INCOMPLETE`.
+- **Delegations:** `metrology_approver` can now be delegated.
 
-Check it with `git log feat/downtime-area2-b..worktree-agent-a049d612a9717eb52`:
-- If it has commits and its tests pass, merge it (`git merge --no-edit`) first.
-- After merging, regenerate the contract files: `npm run openapi:v2:update` in the backend, then `npm run api:types` at the root.
-- Resolve conflicts in `plans/*.md` by keeping both sides.
-- Engine version constants:
-  - `ACCOUNTING_ENGINE_VERSION`, `KPI_ENGINE_VERSION` (`src/domain/kpi/period-kpis.ts`) and `VALUATION_ENGINE_VERSION` each need **one new version** whenever two branches each changed them.
-  - `ACTUALS_ENGINE_VERSION` is in `src/periods/actuals-runner.service.ts`.
-- If it is missing or broken, skip it; it is not needed for the e2e pass.
+Engine versions now: accounting 2.7.0, actuals 2.4.4, KPI 2.7.10, valuation 2.8.1. Seeding gap: the demo seeder has no impact rules or analog thresholds yet — add them (marked "Demo") in an isolated seeder step.
+
+Integration specs from this wave that were never run: `unit-impact-rules`, `analog-state-engine`, plus additions to `day-certification`, `reversal-lines`, `periods-actuals`.
 
 ## 9. Checks before you report
 
@@ -407,7 +404,7 @@ cd server/pro-act-backend && npx tsc --noEmit -p tsconfig.json && npx jest --sel
 # backend integration (one test DB; run in batches of ~8 files; Docker must be up)
 TEST_DB_NAME=proact_e2e_prep npx jest --selectProjects integration --runInBand "<regex of files>"
 ```
-Last verified at `277cb22`: backend unit 2,471/2,471, frontend 795/795, migrations integration 6/6.
+Last verified after merging the final wave: backend unit 2,499/2,499, frontend 805/805, both typechecks clean; migrations integration 6/6 (run by the final-wave agent).
 
 Many new integration specs from 15 Oct are written but **never run**. Run them in batches of about 8 files and fix any failures before or alongside the e2e work:
 `sla-reminders`, `stop-coding-gate`, `reversal-lines`, `bridge-limits`, `role-delegations`, `reliability-recalc`, `measurement-uncertainty`, `source-authority-maker-checker`, `rca-standby-exposure`, `transition-standard-context`, `unit-streams`, `plant-flow`, `stop-events`, `quality-dispositions`, `valuation-economic`, `valuation-rates`, `exports`, `kpi-results`, `rca-workspace`, `restatement-source-status`, `data-retention`.
