@@ -12,6 +12,7 @@ import { labelOf, VALUATION_STATUS_LABELS } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { useCalendarPreference } from '@/lib/dates';
 import { formatMoney, valuationReasonLabel } from '../model/display';
+import { ValuationBreakdown } from './valuation-breakdown';
 
 export interface ValuationTilesProps {
   period: ReconciliationView;
@@ -26,7 +27,8 @@ export interface ValuationTilesProps {
  * with their unit.
  */
 export function ValuationTiles({ period, ledger, approvedOnly }: ValuationTilesProps) {
-  const report = useLossValue({ unitIds: [period.unitId], from: period.utcStart, to: period.utcEnd, ledger, approvedOnly });
+  const query = { unitIds: [period.unitId], from: period.utcStart, to: period.utcEnd, ledger, approvedOnly };
+  const report = useLossValue(query);
   const data = report.data?.data;
   const state = dataStateOf(report);
   const { currency } = useDisplayCurrency();
@@ -69,6 +71,7 @@ export function ValuationTiles({ period, ledger, approvedOnly }: ValuationTilesP
           </Badge>
         )}
         {report.data?.isProvisional && <p className="text-xs text-muted-foreground">Provisional: includes a revision that is not approved.</p>}
+        {data?.view === 'economic_impact' && <ValuationBreakdown query={query} />}
       </DataState>
     </section>
   );

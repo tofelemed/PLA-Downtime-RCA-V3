@@ -4,6 +4,7 @@ import {
   VALUATION_VIEWS,
   ValuationView,
 } from '../../domain/valuation/valuation.types';
+import { StoredComponentAmount } from '../../domain/valuation/component-amounts';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
 import { ApprovedLossLine } from './approved-loss-line.entity';
 
@@ -60,4 +61,8 @@ export class ApprovedLossLineValuation extends TenantScopedEntity {
   /** SME V7: the amount was converted with an authorised provisional FX rate */
   @Column({ name: 'provisional', type: 'boolean', default: false })
   provisional: boolean;
+
+  /** VA-04: economic view only — its components in this currency (null before valuation 2.8.0 / other views) */
+  @Column({ name: 'components', type: 'jsonb', nullable: true })
+  components: StoredComponentAmount[] | null;
 }

@@ -13549,8 +13549,8 @@ export interface operations {
                 /** @description margin = commercial opportunity (contribution margin), standard_cost = standard cost view, operational_cost = cost per hour of downtime, independent_components = margin + time cost of the impact codes the policy marks independent, economic_impact = lost contribution on unrecovered sales + incremental costs (SME V2 / V3). Views are never added to each other. Absent: the default view of the tenant's newest approved valuation policy (SME V8), margin when none is approved. */
                 metric?: "margin" | "standard_cost" | "operational_cost" | "independent_components" | "economic_impact";
                 ledger?: "plan" | "capacity";
-                /** @description kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only */
-                groupBy?: "kind" | "unit" | "day" | "month";
+                /** @description kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only; component (economic_impact only) breaks the economic view down by component in `components` (values stored before valuation 2.8.0 are `not_broken_down`, lines without a value `unvalued`) */
+                groupBy?: "kind" | "unit" | "day" | "month" | "component";
             };
             header?: never;
             path?: never;

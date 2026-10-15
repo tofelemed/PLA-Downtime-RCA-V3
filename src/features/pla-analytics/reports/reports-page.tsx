@@ -10,6 +10,7 @@ import { ScopeExport } from '../components/scope-export';
 import { useAnalyticsScope } from '../hooks/use-analytics-scope';
 import { exportRequestOf, oeeQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { ReconciliationTab } from '../tabs/reconciliation-tab';
+import { EconomicBreakdownCard } from './economic-breakdown-card';
 import { LossValueCard } from './loss-value-card';
 import { DowntimeReasonCard, OeeByDay } from './production-report';
 import { ReportsFilters } from './reports-filters';
@@ -78,8 +79,9 @@ function ReportsScreen() {
           <TabsContent value="reconciliation">
             <ReconciliationTab scope={named} />
           </TabsContent>
-          <TabsContent value="value">
+          <TabsContent value="value" className="space-y-4">
             <LossValueCard scope={named} />
+            <EconomicBreakdownCard scope={named} />
           </TabsContent>
           <TabsContent value="activity">
             <WorkSummary scope={named} />

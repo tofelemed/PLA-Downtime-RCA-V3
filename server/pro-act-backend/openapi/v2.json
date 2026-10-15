@@ -10787,14 +10787,15 @@
             "name": "groupBy",
             "required": false,
             "in": "query",
-            "description": "kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only",
+            "description": "kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only; component (economic_impact only) breaks the economic view down by component in `components` (values stored before valuation 2.8.0 are `not_broken_down`, lines without a value `unvalued`)",
             "schema": {
               "default": "kind",
               "enum": [
                 "kind",
                 "unit",
                 "day",
-                "month"
+                "month",
+                "component"
               ],
               "type": "string"
             }
