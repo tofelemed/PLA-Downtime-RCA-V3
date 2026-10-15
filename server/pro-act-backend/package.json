@@ -72,15 +72,12 @@
     "decimal.js": "^10.4.3",
     "dnp3": "^0.0.1",
     "dotenv": "^17.2.0",
-    "ethernet-ip": "^1.0.0",
     "influx": "^5.8.0",
     "luxon": "^3.7.2",
-    "modbus-serial": "^8.0.16",
     "mongodb": "^6.0.0",
     "mqtt": "^5.3.4",
     "mssql": "^11.0.1",
     "mysql2": "^3.6.0",
-    "node-opcua": "~2.170.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.11.0",
@@ -133,8 +130,5 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
-  },
-  "overrides": {
-    "hexy": "0.3.5"
   }
 }
