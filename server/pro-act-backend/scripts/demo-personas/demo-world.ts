@@ -31,7 +31,7 @@ const PLANTS: Record<
   PlantKey,
   { code: string; name: string; org: 'demoOrg' | 'partnerOrg' }
 > = {
-  demoPlant: { code: 'demo-plant', name: 'Demo Plant', org: 'demoOrg' },
+  demoPlant: { code: 'demo-plant', name: 'HDPE', org: 'demoOrg' },
   demoPlant2: { code: 'demo-plant-2', name: 'Demo Plant 2', org: 'demoOrg' },
   partnerPlant: {
     code: 'partner-plant',
@@ -41,8 +41,8 @@ const PLANTS: Record<
 };
 
 const UNITS: ReadonlyArray<{ plant: PlantKey; code: string; name: string }> = [
-  { plant: 'demoPlant', code: DEMO_PLANT_UNIT_CODES[0], name: 'Demo Line 1' },
-  { plant: 'demoPlant', code: DEMO_PLANT_UNIT_CODES[1], name: 'Demo Line 2' },
+  { plant: 'demoPlant', code: DEMO_PLANT_UNIT_CODES[0], name: 'unit100' },
+  { plant: 'demoPlant', code: DEMO_PLANT_UNIT_CODES[1], name: 'unit200' },
   { plant: 'demoPlant2', code: 'DP2-LINE-1', name: 'Line 1' },
   { plant: 'demoPlant2', code: 'DP2-LINE-2', name: 'Line 2' },
   { plant: 'partnerPlant', code: 'PP-LINE-1', name: 'Partner Line 1' },
@@ -200,6 +200,55 @@ export async function ensureDemoWorld(
   // the showcase history with grade transitions lives in the Demo Plant (LA-08)
   await ensureDemoTransitionPolicy(client, plants.demoPlant, summary);
   return { organizations, plants, units };
+}
+
+/** Owner's final showcase: one organization, one plant and exactly the two requested units. */
+export async function ensureHdpeWorld(
+  client: Client,
+  summary: WorldSummary,
+): Promise<DemoWorld> {
+  const organizationId = await ensureByCode(
+    client,
+    'organizations',
+    'demo-org',
+    { name: 'HDPE' },
+    summary,
+  );
+  await client.query(
+    "UPDATE organizations SET name='HDPE', updated_at=now() WHERE id=$1",
+    [organizationId],
+  );
+  const id = await ensureByCode(
+    client,
+    'tenants',
+    'demo-plant',
+    { name: 'HDPE', organization_id: organizationId },
+    summary,
+  );
+  await client.query(
+    "UPDATE tenants SET name='HDPE', organization_id=$2, updated_at=now() WHERE id=$1",
+    [id, organizationId],
+  );
+  const plant: PlantRow = {
+    id,
+    code: 'demo-plant',
+    name: 'HDPE',
+    organizationId,
+  };
+  const units = new Map<string, string>();
+  for (const unit of UNITS.filter((row) => row.plant === 'demoPlant')) {
+    units.set(
+      unitKey('demoPlant', unit.code),
+      await ensureTenantRow(client, 'units', plant, unit, summary),
+    );
+  }
+  await ensureDemoTransitionPolicy(client, plant, summary);
+  // Compatibility keys identify the same plant; no additional organization or tenant is inserted.
+  return {
+    organizations: { demoOrg: organizationId, partnerOrg: organizationId },
+    plants: { demoPlant: plant, demoPlant2: plant, partnerPlant: plant },
+    units,
+  };
 }
 
 /** Current value of one flag per plant (registry default `false` when unset), for the verify probes. */

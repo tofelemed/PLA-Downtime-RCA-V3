@@ -65,7 +65,16 @@ export function effectiveRoles(
 
 function probeMatches(probe: Probe, response: ProbeResponse): boolean {
   if (probe.expect === 'allowed') {
-    return response.status !== 401 && response.status !== 403;
+    if (probe.body !== 'empty')
+      return response.status >= 200 && response.status < 300;
+    return (
+      (response.status === 428 &&
+        response.code === 'IDEMPOTENCY_KEY_REQUIRED') ||
+      (response.status === 422 && response.code === 'VALIDATION_FAILED') ||
+      (response.status === 404 &&
+        response.code === 'NOT_FOUND' &&
+        probe.path.endsWith('/approve'))
+    );
   }
   return response.status === 403 && response.code === probe.expect;
 }

@@ -3,7 +3,11 @@
  * realistic users each, the scopes they hold (`user_scopes` rows) and the API probes that prove their
  * effective rights in the plant they act on. Every persona shares `DEMO_PERSONA_PASSWORD`.
  */
-import { LegacyRole, mapLegacyRole } from '../../src/auth/roles/role-model';
+import {
+  LegacyRole,
+  RoleName,
+  mapLegacyRole,
+} from '../../src/auth/roles/role-model';
 import {
   approveBudget,
   approveDisposition,
@@ -55,7 +59,7 @@ export interface Probe {
 export interface PersonaUser {
   name: string;
   email: string;
-  legacyRole: LegacyRole;
+  legacyRole: RoleName;
   homePlant: PlantKey;
   scopes: PersonaScope[];
   /** probes specific to this user, run after the persona's */
@@ -71,8 +75,8 @@ export interface Persona {
   probes: Probe[];
 }
 
-/** `DEMO-LINE-1` is the unit the unit-limited operators are restricted to. */
-export const DEMO_PLANT_UNIT_CODES = ['DEMO-LINE-1', 'DEMO-LINE-2'] as const;
+/** unit100 is the HDPE unit the unit-limited operators are restricted to. */
+export const DEMO_PLANT_UNIT_CODES = ['unit100', 'unit200'] as const;
 
 export function personaEmail(name: string): string {
   const local = name
@@ -348,6 +352,21 @@ export const DEMO_PERSONAS: Persona[] = [
       createRule('demoPlant', 'allowed'),
       setFlag('demoPlant', 'FORBIDDEN_ROLE'),
       createPolicy('demoPlant', 'FORBIDDEN_ROLE'),
+    ],
+  },
+  {
+    key: 'productionAccountant',
+    label: 'production_accountant',
+    actingPlant: 'demoPlant',
+    users: ['Sara Nouri', 'David Chen'].map((name) =>
+      user(name, 'Analyst', 'demoPlant', {
+        homeScope: tenantScope('demoPlant', 'production_accountant'),
+        extraScopes: [tenantScope('demoPlant2', 'production_accountant')],
+      }),
+    ),
+    probes: [
+      listFlags('demoPlant', 'allowed'),
+      setFlag('demoPlant', 'FORBIDDEN_ROLE'),
     ],
   },
   // SME V1 (14 Oct 2026): finance maintains and approves valuation inputs, in both demo plants

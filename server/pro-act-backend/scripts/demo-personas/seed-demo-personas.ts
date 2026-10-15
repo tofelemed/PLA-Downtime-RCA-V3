@@ -17,10 +17,12 @@ import { parseCliArgs } from '../../src/migration-cutover/cli/cli-args';
 import {
   DemoWorld,
   ensureDemoWorld,
+  ensureHdpeWorld,
   flagValues,
   WorldSummary,
 } from './demo-world';
-import { DEMO_PERSONAS, FLAG_PROBE_KEY } from './persona-catalog';
+import { DEMO_PERSONAS, FLAG_PROBE_KEY, Persona } from './persona-catalog';
+import { hdpePersonas } from './hdpe-personas';
 import { seedPersonaUsers } from './seed-users';
 import { formatVerifyTable, verifyPersonas } from './verify-personas';
 
@@ -57,11 +59,15 @@ function logWorld(summary: WorldSummary, world: DemoWorld): void {
   }
 }
 
-async function verify(client: Client, world: DemoWorld): Promise<boolean> {
+async function verify(
+  client: Client,
+  world: DemoWorld,
+  personas: readonly Persona[],
+): Promise<boolean> {
   const rows = await verifyPersonas({
     apiUrl: apiUrl(),
     world,
-    personas: DEMO_PERSONAS,
+    personas,
     flagValues: await flagValues(client, world, FLAG_PROBE_KEY),
   });
   process.stdout.write(`${formatVerifyTable(rows)}\n`);
@@ -80,14 +86,22 @@ async function main(): Promise<void> {
   await client.connect();
   try {
     const worldSummary: WorldSummary = { created: [], kept: [] };
-    const world = await ensureDemoWorld(client, worldSummary);
+    const singlePlant = args.flags['hdpe-only'] === true;
+    const personas = singlePlant ? hdpePersonas() : DEMO_PERSONAS;
+    const world = await (singlePlant ? ensureHdpeWorld : ensureDemoWorld)(
+      client,
+      worldSummary,
+    );
     logWorld(worldSummary, world);
-    const users = await seedPersonaUsers(client, world, DEMO_PERSONAS);
+    const users = await seedPersonaUsers(client, world, personas);
     logger.log(
       `users: ${users.usersCreated} created, ${users.usersUpdated} kept (password/role/plant reset); ` +
         `scopes: ${users.scopesCreated} created, ${users.scopesKept} kept, ${users.scopesRemoved} removed`,
     );
-    if (args.flags.verify === true && !(await verify(client, world))) {
+    if (
+      args.flags.verify === true &&
+      !(await verify(client, world, personas))
+    ) {
       process.exitCode = 1;
     }
   } finally {
