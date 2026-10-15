@@ -1,12 +1,7 @@
-import { Type } from '@nestjs/common';
-import { LossCategoryModule } from '../../src/loss-category/loss-category.module';
-import { OEESummaryModule } from '../../src/oee-summary/oee-summary.module';
-import { ReconcileFormModule } from '../../src/reconcile-form/reconcile-form.module';
 import { A, HOUR, NEXT_DAY } from './support/actuals-world';
 import { plus } from './support/accounting-world';
 import { ApiError, DAY1 } from './support/plan-world';
 import { ReconciliationWorld } from './support/reconciliation-world';
-import { bearer } from './support/test-app';
 
 interface SummaryBody {
   periodId: string;
@@ -44,22 +39,15 @@ interface WaterfallBody {
   excluded: Array<{ periodId: string; reason: string }>;
 }
 
-/** The 2.8 world plus the v1 modules whose writes the plan 3.5 flag retires. */
-class DashboardWorld extends ReconciliationWorld {
-  protected extraModules(): Array<Type<unknown>> {
-    return [ReconcileFormModule, OEESummaryModule, LossCategoryModule];
-  }
-}
-
 /**
  * Plan 3.5 backend reads on real Postgres: the period grid (`GET /period-summaries`) shows the shown
  * revision's plan figures after its saved decisions (T15: gap 150, attributed 140, residual 10 →
  * `unaccounted`), workflow state and run, filters by workflow state, is unit-scoped and refuses foreign
- * units; the waterfall (`GET /reports/waterfall`) closes exactly to actual on both ledgers; v1 Plan
- * Dashboard writes answer 410 V1_WRITE_GONE once the tenant's `v2.planDashboard` flag is on.
+ * units; the waterfall (`GET /reports/waterfall`) closes exactly to actual on both ledgers (the v1 Plan
+ * Dashboard routes are retired).
  */
 describe('plan dashboard reads (plan 3.5)', () => {
-  const env = new DashboardWorld();
+  const env = new ReconciliationWorld();
   const window = `from=${encodeURIComponent(DAY1)}&to=${encodeURIComponent(NEXT_DAY)}`;
   let reason = '';
 
@@ -192,33 +180,5 @@ describe('plan dashboard reads (plan 3.5)', () => {
       .get(`reports/waterfall?periodIds=${env.periodA1}`, env.adminB)
       .expect(422);
     expect((response.body as ApiError).code).toBe('INVALID_REFERENCE');
-  });
-
-  it('v1 Plan Dashboard writes answer 410 V1_WRITE_GONE once v2.planDashboard is on; tenant B unaffected', async () => {
-    const v1 = (path: string, token: string) =>
-      env.http().post(`/api/${path}`).set(bearer(token)).send({});
-    const before = await v1('oee-summaries', env.admin);
-    expect(before.status).not.toBe(410);
-    await env
-      .http()
-      .put('/api/v2/feature-flags/v2.planDashboard')
-      .set(bearer(env.admin))
-      .send({ enabled: true })
-      .expect(200);
-    for (const path of [
-      'oee-summaries',
-      'reconcile-forms',
-      'loss-categories',
-    ]) {
-      const gone = await v1(path, env.admin).expect(410);
-      expect((gone.body as ApiError).code).toBe('V1_WRITE_GONE');
-    }
-    const other = await v1('reconcile-forms', env.adminB);
-    expect(other.status).not.toBe(410);
-    await env
-      .http()
-      .get('/api/reconcile-forms')
-      .set(bearer(env.admin))
-      .expect(200);
   });
 });

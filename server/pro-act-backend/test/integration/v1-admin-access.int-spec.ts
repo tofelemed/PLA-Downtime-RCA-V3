@@ -2,7 +2,6 @@ import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import * as request from 'supertest';
 import { OrganizationModule } from '../../src/organization/organization.module';
-import { RolesModule } from '../../src/roles/roles.module';
 import { TenantModule } from '../../src/tenant/tenant.module';
 import { UnitModule } from '../../src/unit/unit.module';
 import { UsersModule } from '../../src/users/users.module';
@@ -15,8 +14,8 @@ interface ErrorBody {
 }
 
 /**
- * v1 administration routes (persona defects ADM-10a, ADM-02b): `/users` and `/roles` are for
- * administrators and approvers, `/tenants` and `/organizations` list only what the caller may see
+ * v1 administration routes (persona defects ADM-10a, ADM-02b): `/users` is for administrators and
+ * approvers (the v1 `/roles` catalogue is retired), `/tenants` and `/organizations` list only what the caller may see
  * and are written by SuperAdmin / the OrgAdmin of the organization, master-data writes need
  * `master_data_admin` or `manager_approver`, and no user response carries `passwordHash`.
  */
@@ -37,13 +36,7 @@ describe('v1 administration access', () => {
       [otherOrganizationId, `OTHER-${otherOrganizationId.slice(0, 8)}`],
     );
     app = await createIntegrationApp(harness, {
-      modules: [
-        UsersModule,
-        TenantModule,
-        OrganizationModule,
-        RolesModule,
-        UnitModule,
-      ],
+      modules: [UsersModule, TenantModule, OrganizationModule, UnitModule],
     });
   });
 
@@ -320,20 +313,7 @@ describe('v1 administration access', () => {
     });
   });
 
-  describe('/roles and master data', () => {
-    it('keeps the role catalogue to administrators and its writes to SuperAdmin', async () => {
-      const operator = await member('Operator', 'operator');
-      await http().get('/api/roles').set(bearer(operator.token)).expect(403);
-      const admin = await member('TenantAdmin', 'manager_approver');
-      await http().get('/api/roles').set(bearer(admin.token)).expect(200);
-      const create = await http()
-        .post('/api/roles')
-        .set(bearer(admin.token))
-        .send({})
-        .expect(403);
-      expect((create.body as ErrorBody).code).toBe('FORBIDDEN_ROLE');
-    });
-
+  describe('master data', () => {
     it('lets master_data_admin and manager_approver write units, not a production engineer', async () => {
       const engineer = await member('Engineer', 'production_engineer');
       await http().get('/api/units').set(bearer(engineer.token)).expect(200);

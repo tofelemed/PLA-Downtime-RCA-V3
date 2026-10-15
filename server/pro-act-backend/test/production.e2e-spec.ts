@@ -77,17 +77,5 @@ describe('Production Endpoints (e2e)', () => {
         });
     });
   });
-
-  describe('/oee-summaries (GET)', () => {
-    it('should get OEE summaries', () => {
-      return request(app.getHttpServer())
-        .get('/oee-summaries')
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200)
-        .expect((res) => {
-          expect(Array.isArray(res.body)).toBe(true);
-        });
-    });
-  });
 });
 

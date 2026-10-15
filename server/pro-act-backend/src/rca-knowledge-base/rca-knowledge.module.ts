@@ -9,8 +9,7 @@ import { RcaKnowledgeVote } from './rca-knowledge-vote.entity';
 
 /**
  * Services of the v2 RCA knowledge base (owner decision 2026-10-12); the routes are
- * `RcaKnowledgeV2Controller` in `V2Module`. No controllers here, so the v1 routes stay in
- * `RCAKnowledgeBaseModule`.
+ * `RcaKnowledgeV2Controller` in `V2Module` (the v1 `/rca-knowledge-base` routes are retired).
  */
 @Module({
   imports: [TypeOrmModule.forFeature([RCAKnowledgeBase, RcaKnowledgeVote])],

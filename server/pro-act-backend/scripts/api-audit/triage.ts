@@ -14,12 +14,6 @@ interface TriageNote {
 
 const NOTES: TriageNote[] = [
   {
-    call: 'GET /api/pi-browser/{tenantId}/eventframes',
-    category: 'live-4xx',
-    severity: 'low',
-    note: 'Data state, not a code defect: Demo Plant has no active PI connection, so 404 is the designed answer; the screen should render it as "no PI connection" rather than an error.',
-  },
-  {
     call: 'GET /api/production-events',
     category: 'large-payload',
     severity: 'high',
@@ -30,18 +24,6 @@ const NOTES: TriageNote[] = [
     category: 'retired-route',
     severity: 'low',
     note: 'By design for plants with v2.planDashboard on (Demo Plant): the legacy PlanDashboard that calls these writes renders only when the flag is off (src/features/plan-dashboard/plan-dashboard-switch.tsx:23). Remove the calls when the v1 dashboard is retired.',
-  },
-  {
-    call: 'POST /api/unmapped-events',
-    category: 'body-mismatch',
-    severity: 'low',
-    note: 'Type-level only: buildPayload (src/services/api/unmappedEventApi.ts:103) folds reason / suggestions / event into eventData before sending.',
-  },
-  {
-    call: 'PUT /api/unmapped-events/{id}',
-    category: 'body-mismatch',
-    severity: 'low',
-    note: 'Type-level only: buildPayload folds reason / suggestions / event into eventData before sending.',
   },
   {
     call: 'PUT /api/app-settings/{key}',

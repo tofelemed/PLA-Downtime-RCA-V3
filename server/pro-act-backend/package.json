@@ -39,7 +39,6 @@
     "test:comprehensive": "ts-node test-all-endpoints-comprehensive.ts",
     "db:ensure-roles-tasks": "ts-node scripts/ensure-roles-tasks.ts",
     "db:delete-all-data": "ts-node scripts/delete-all-data.ts",
-    "setup:test-env": "ts-node scripts/setup-test-environment.ts",
     "db:seed-demo-users": "ts-node scripts/seed-demo-users.ts",
     "db:seed-demo-valuation": "ts-node scripts/demo-valuation/seed-demo-valuation.ts",
     "db:seed-demo-personas": "ts-node scripts/demo-personas/seed-demo-personas.ts",

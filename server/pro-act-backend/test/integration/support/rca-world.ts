@@ -9,7 +9,7 @@ import {
   ReconciliationBody,
   ReconciliationWorld,
 } from './reconciliation-world';
-import { bearer, signToken } from './test-app';
+import { signToken } from './test-app';
 
 export interface CaseBody {
   id: string;
@@ -245,17 +245,6 @@ export class RcaWorld extends ReconciliationWorld {
   ): Promise<string> {
     await this.saveLines(view, lines).expect(200);
     return (await this.view()).slices[0].residual ?? '0';
-  }
-
-  v1(): {
-    post: (path: string, body: object) => request.Test;
-    del: (path: string) => request.Test;
-  } {
-    return {
-      post: (path, body) =>
-        this.http().post(`/api/${path}`).set(bearer(this.admin)).send(body),
-      del: (path) => this.http().delete(`/api/${path}`).set(bearer(this.admin)),
-    };
   }
 }
 
