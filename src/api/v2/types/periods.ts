@@ -11,6 +11,50 @@ export interface SliceActualsView {
   measuredQty: string | null;
   estimatedQty: string | null;
   qualityState: string;
+  /** SME E3 class breakdown; null / absent = no disposition or rework acceptance recorded */
+  qualityClasses?: QualityClassesView | null;
+}
+
+/** SME E3: quantities of a slice by product disposition (backend `quality-classes.ts`), decimal strings. */
+export interface QualityClassesView {
+  firstPassGood: string | null;
+  wideSpec: string;
+  downgrade: string;
+  transitionOffGrade: string;
+  scrap: string;
+  rework: string;
+  unclassified: string | null;
+  recovered: string;
+  reprocessedInput: string;
+  dispositionIds: string[];
+}
+
+/** A lot disposition or recovery movement (`/v2/lot-dispositions`). */
+export interface LotDispositionView {
+  id: string;
+  unitId: string;
+  productId: string;
+  lotCode: string;
+  dispositionClass: string;
+  quantity: string;
+  uom: string;
+  productionStart: string;
+  productionEnd: string;
+  labReleasedAt: string | null;
+  recoveryOfId: string | null;
+  remeasured: boolean;
+  productionEventId: string | null;
+  supersedesId: string | null;
+  reason: string | null;
+  evidenceRef: string | null;
+  state: string;
+  authorId: string;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  decisionReason: string | null;
+  supersededAt: string | null;
+  createdAt: string;
+  rowVersion: number;
 }
 
 export interface PeriodSliceView {

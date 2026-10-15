@@ -7,9 +7,11 @@ import { simFrame } from './sim-fixtures';
 
 /**
  * Runs the PI Web API simulator as its own process for the frontend Playwright e2e (plan 3.7 UX06),
- * whose ESM test runner cannot load this CommonJS package in-process. Test-only: an ephemeral
- * 127.0.0.1 port, the simulator's fake credentials, fixture data from the scenario JSON in the
- * `PI_SIM_SCENARIO` environment variable (an argument would be mangled by Windows shell quoting).
+ * whose ESM test runner cannot load this CommonJS package in-process. Test-only: an ephemeral port
+ * on `PI_SIM_BIND_HOST` (default 127.0.0.1; `0.0.0.0` so a Docker container can reach it), advertised
+ * in `baseUrl` as `PI_SIM_PUBLIC_HOST` (e.g. `host.docker.internal`; default the bind address), the
+ * simulator's fake credentials, fixture data from the scenario JSON in the `PI_SIM_SCENARIO`
+ * environment variable (an argument would be mangled by Windows shell quoting).
  * Prints `READY {baseUrl, username, password}` (the simulator's fake account) once listening and
  * exits when stdin closes or on SIGTERM / SIGINT.
  *
@@ -34,7 +36,10 @@ async function main(): Promise<void> {
   const scenario = JSON.parse(
     process.env.PI_SIM_SCENARIO ?? '{"elements":[],"frames":[]}',
   ) as Scenario;
-  const sim = await new PiWebApiSimulator().start();
+  const sim = await new PiWebApiSimulator().start({
+    bindHost: process.env.PI_SIM_BIND_HOST || undefined,
+    publicHost: process.env.PI_SIM_PUBLIC_HOST || undefined,
+  });
   const paths = new Map<string, string>();
   for (const element of scenario.elements) {
     paths.set(element.webId, element.path);

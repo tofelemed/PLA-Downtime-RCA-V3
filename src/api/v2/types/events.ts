@@ -71,6 +71,8 @@ export interface ProductionEventView {
   /** decimal strings with explicit unit */
   quantity: string | null;
   quantityUom: string | null;
+  /** SME E3: disposition of a quality_loss event's tonnes (downgrade / scrap / rework); absent / null = none */
+  dispositionClass?: string | null;
   cost: string | null;
   value: string | null;
   occurrenceId: string;

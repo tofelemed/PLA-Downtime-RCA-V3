@@ -273,3 +273,30 @@ Stop any local `npm run dev` / `npm run start:dev` first (they hold 8070 / 4004)
 http://localhost:8070 (nginx) with the API at http://localhost:4004/api. MQTT connections stored in
 that database must use `mqtt://host.docker.internal:1884` (reachable from containers and the host),
 not `localhost`.
+
+### Playwright e2e against the containerised API
+
+The integration specs start their test endpoints (the PI Web API simulator, the MQTT simulated
+gateway) on the host, while the API that connects to them runs in a container. Tell the specs which
+address the container should use; nothing needs setting when the API runs on the host
+(`npm run start:dev`).
+
+| Variable | Default | Used by | Meaning |
+|----------|---------|---------|---------|
+| `E2E_PI_SIM_HOST` | `127.0.0.1` | `e2e/integration-console-ux06.spec.ts`, `e2e/personas/integration-02-pi-ux06.spec.ts` (`e2e/test-utils/pi-simulator.ts`) | Host name the API uses for the PI simulator (`http://<host>:<ephemeral port>/piwebapi`). Set `host.docker.internal` for a containerised API |
+| `E2E_PI_SIM_BIND` | `0.0.0.0` if `E2E_PI_SIM_HOST` is not loopback, else `127.0.0.1` | same | Address the simulator listens on |
+| `E2E_MQTT_PASSWORD_URL` / `E2E_MQTT_TLS_URL` | `mqtt://localhost:1885` / `mqtts://localhost:8885` | MQTT persona specs (`e2e/personas/support/integration-world.ts`) | Broker URLs the API connects to; `mqtt://host.docker.internal:1885` / `mqtts://host.docker.internal:8885` for a containerised API |
+| `E2E_MQTT_SIM_URL` | `E2E_MQTT_PASSWORD_URL` | same | Broker URL the spec's own publisher uses from the host (`mqtt://localhost:1885`) |
+| `E2E_MQTT_BROKER_URL` | `mqtt://mqtt:1883` | `e2e/mqtt-console.spec.ts` | Broker URL the API connects to (`mqtt://localhost:1884` for a host-run API) |
+
+`docker-compose.devdb.yml` maps `host.docker.internal` to the host gateway for the backend and the
+worker (Docker Desktop resolves it anyway). `CONNECTOR_EGRESS_ALLOWLIST` is empty in development, which
+allows every host; if you set it on a dev stack, add `host.docker.internal` to it. Never add
+`host.docker.internal` to a production allowlist. With a host-run Playwright and the devdb stack:
+
+```bash
+E2E_PI_SIM_HOST=host.docker.internal npx playwright test e2e/integration-console-ux06.spec.ts e2e/personas/integration-02-pi-ux06.spec.ts
+```
+
+On Windows the first run may show a firewall prompt for Node listening on all interfaces; allow it on
+private networks (the simulator stops when the spec ends).

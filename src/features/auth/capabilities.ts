@@ -16,6 +16,11 @@ export interface Capabilities {
   /** the analysis and planning screens (reports, plans, RCA, codes, finance, historian) */
   canViewAnalysis: boolean;
   canManageMasterData: boolean;
+  /**
+   * the Master data menu entry: master-data administrators, and the roles that write one of its
+   * reliability pages (stop policy, standby, work orders, unit state) — they see only those pages' links
+   */
+  canReachMasterData: boolean;
   canUseIntegrationConsole: boolean;
   /** user management, permissions, settings of the plant */
   canAdministerTenant: boolean;
@@ -36,6 +41,10 @@ export interface Capabilities {
   canApprovePeriods: boolean;
   /** bridge lines (SME R8: production accounting only) */
   canWriteBridges: boolean;
+  /** SME E3: record lot dispositions and recovery movements (operators and production) */
+  canWriteDispositions: boolean;
+  /** SME E3: approve / reject them (manager approvers, never the author) */
+  canApproveDispositions: boolean;
   canWriteCodes: boolean;
   canAuthorRules: boolean;
   canApproveRules: boolean;
@@ -48,6 +57,14 @@ export interface Capabilities {
   canMaintainValuation: boolean;
   /** SME V1: approve / retire them (finance approvers, never the author) */
   canApproveValuation: boolean;
+  /** oee_policy versions over HTTP: micro-stop thresholds and the transition allowance (manager approvers) */
+  canWriteOeePolicy: boolean;
+  /** SME D9: register / retire standby equipment and import its demand / test log */
+  canWriteStandby: boolean;
+  /** SME D10: import CMMS work-order operations */
+  canWriteWorkOrders: boolean;
+  /** SME D1 / D2: unit state mapping versions and staleness settings */
+  canWriteStateMappings: boolean;
   /** v2 production events: any member whose role is not read-only (WriteAccessGuard) */
   canWriteEvents: boolean;
   /**
@@ -66,7 +83,7 @@ const READ_ONLY_ROLES: ReadonlySet<string> = new Set(ServerRoles.READ_ONLY_ROLES
 const holdsAny = (roles: readonly string[], wanted: readonly string[]): boolean =>
   roles.some((role) => wanted.includes(role));
 
-type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
 
 /** The v2 write capabilities; a read-only plant gets none (the server's WriteAccessGuard runs first). */
 function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteCapabilities {
@@ -80,6 +97,8 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canWritePeriods: may(ServerRoles.PERIOD_WRITERS),
     canApprovePeriods: may(ServerRoles.ADJUSTMENT_APPROVERS) && may(ServerRoles.REVISION_APPROVERS),
     canWriteBridges: may(ServerRoles.BRIDGE_WRITERS),
+    canWriteDispositions: may(ServerRoles.DISPOSITION_WRITERS),
+    canApproveDispositions: may(ServerRoles.DISPOSITION_APPROVERS),
     canWriteCodes: may(ServerRoles.CODE_WRITERS),
     canAuthorRules: may(ServerRoles.RULE_AUTHORS),
     canApproveRules: may(ServerRoles.RULE_APPROVERS),
@@ -88,6 +107,10 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canManageRcaPolicies: may(ServerRoles.RCA_POLICY_WRITERS),
     canMaintainValuation: may(ServerRoles.FINANCE_MAINTAINERS),
     canApproveValuation: may(ServerRoles.FINANCE_APPROVERS),
+    canWriteOeePolicy: may(ServerRoles.OEE_POLICY_WRITERS),
+    canWriteStandby: may(ServerRoles.STANDBY_WRITERS),
+    canWriteWorkOrders: may(ServerRoles.WORK_ORDER_WRITERS),
+    canWriteStateMappings: may(ServerRoles.STATE_MAPPING_WRITERS),
     canWriteEvents: !readOnly,
     canManagePlantSettings: may(PLANT_SETTINGS_WRITERS),
   };
@@ -96,14 +119,18 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
 export function capabilitiesOf(roles: readonly string[]): Capabilities {
   const held = [...roles];
   const readOnly = !held.some((role) => !READ_ONLY_ROLES.has(role));
+  const writes = writeCapabilitiesOf(held, readOnly);
+  const canManageMasterData = holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'master_data_admin']);
   return {
-    ...writeCapabilitiesOf(held, readOnly),
+    ...writes,
     roles: held,
     isSuperAdmin: held.includes('SuperAdmin'),
     isReadOnly: readOnly,
     canViewOperations: held.length > 0,
     canViewAnalysis: held.some((role) => !OPERATIONS_ONLY_ROLES.has(role)),
-    canManageMasterData: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'master_data_admin']),
+    canManageMasterData,
+    canReachMasterData:
+      canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteWorkOrders || writes.canWriteStateMappings,
     canUseIntegrationConsole: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'integration_admin']),
     canAdministerTenant: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
     canUseAdminPanel: holdsAny(held, ['SuperAdmin', 'TenantAdmin']),

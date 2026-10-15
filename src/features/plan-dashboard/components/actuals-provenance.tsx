@@ -8,6 +8,7 @@ import { Quantity } from '@/features/ux-kit/quantity';
 import { useCalendarPreference } from '@/lib/dates';
 import { ACTUALS_METHOD_LABELS, ACTUALS_QUALITY_LABELS, ACTUALS_SOURCE_LABELS, findingText, SEGMENT_QUALITY_LABELS } from '../model/actuals-labels';
 import { formatRatioPercent } from '../model/display';
+import { QualityClasses } from './quality-classes';
 
 export interface ActualsProvenanceProps {
   periodId: string;
@@ -28,6 +29,7 @@ function SliceProvenance({ slice, timezone, productName }: { slice: DetailSlice;
             Good <Quantity value={actuals.good} uom={actuals.uom} /> · gross <Quantity value={actuals.gross} uom={actuals.uom} /> · from {labelOf(ACTUALS_METHOD_LABELS, actuals.method, 'unknown source')} · coverage{' '}
             {formatRatioPercent(actuals.coverageRatio, digits)} · {labelOf(ACTUALS_QUALITY_LABELS, actuals.qualityState)}
           </p>
+          {actuals.qualityClasses && <QualityClasses classes={actuals.qualityClasses} uom={actuals.uom} />}
           <ul className="list-disc pl-5 text-xs">
             {actuals.sourceSegments.map((s) => (
               <li key={`${s.source}-${s.from}`}>

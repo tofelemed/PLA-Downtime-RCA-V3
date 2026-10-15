@@ -154,6 +154,8 @@ export interface ValuationLineInput {
   impactCodeId: string | null;
   /** product of the slice (demand status, SME V3); absent outside the economic view */
   productId?: string | null;
+  /** SME E3: disposition class of a quality line (`quality_class:*` flag); absent = unclassified */
+  qualityClass?: string | null;
 }
 
 /** Economic-view parts (SME V2): non-overlapping, so they add up to the line's economic impact. */

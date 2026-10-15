@@ -26,6 +26,11 @@ import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import { toIso } from './reliability-v2-common';
 import { WORK_ORDER_WRITERS } from './reliability-roles';
 import {
+  RepairEvidenceV2Service,
+  RepairEvidenceV2View,
+} from './repair-evidence-v2.service';
+import {
+  RepairEvidenceQueryDto,
   WorkOrderOperationListQueryDto,
   WorkOrderOperationsImportDto,
 } from './work-order-operations-v2.dto';
@@ -72,7 +77,10 @@ const toView = (o: WorkOrderOperation): WorkOrderOperationV2View => ({
 @UseGuards(TenantQueryParamGuard)
 @Controller({ path: 'work-order-operations', version: '2' })
 export class WorkOrderOperationsV2Controller {
-  constructor(private readonly operations: WorkOrderOperationsV2Service) {}
+  constructor(
+    private readonly operations: WorkOrderOperationsV2Service,
+    private readonly evidence: RepairEvidenceV2Service,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -87,6 +95,22 @@ export class WorkOrderOperationsV2Controller {
     return listResponse(page.items.map(toView), page.nextCursor, {
       tenantId: requireTenantId(ctx),
     });
+  }
+
+  @Get('repair-evidence')
+  @ApiOperation({
+    summary:
+      'Active-repair evidence of one stop: active repair vs waiting, as mean active repair time counts it',
+    description:
+      'Diagnosis, repair and test operations linked to the stop (any revision), overlaps once, minus waiting. ' +
+      '`activeRepairSeconds` null with reason `no_operations` (the KPI then names the restore time) or ' +
+      '`operation_open` (an operation still runs). 404 for a stop outside the caller’s units.',
+  })
+  repairEvidence(
+    @Ctx() ctx: RequestContext,
+    @Query() query: RepairEvidenceQueryDto,
+  ): Promise<RepairEvidenceV2View> {
+    return this.evidence.forEvent(ctx, query.eventId);
   }
 
   @Post('import')

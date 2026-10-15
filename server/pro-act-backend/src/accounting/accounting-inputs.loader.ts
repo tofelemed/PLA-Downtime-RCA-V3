@@ -11,6 +11,7 @@ import {
 } from '../domain/accounting/accounting.types';
 import { sliceTarget } from '../domain/accounting/slice-target';
 import { RateTimebase } from '../domain/actuals/actuals.types';
+import { QualityClasses } from '../domain/actuals/period/quality-classes';
 import { PeriodProductSlice } from '../periods/entities/period-product-slice.entity';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { InputFingerprint } from './entities/calculation-run.entity';
@@ -50,6 +51,7 @@ interface EventRow {
   to_product_id: string | null;
   recovery_of_event_id: string | null;
   failure_severity: string | null;
+  disposition_class: string | null;
   asset_type: string | null;
   reason_code: string | null;
   row_version: number;
@@ -79,7 +81,7 @@ export const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", 
        e."oee_component", e."impact_mode", e."impact_fraction"::text AS "impact_fraction", e."quantity"::text AS "quantity",
        e."reason_code_id", e."impact_code_id", e."failure_mode", e."asset_id", e."planned_end_time", e."row_version",
        e."from_product_id", e."to_product_id", e."recovery_of_event_id",
-       e."failure_severity", a."asset_type", rc."code" AS "reason_code",
+       e."failure_severity", e."disposition_class", a."asset_type", rc."code" AS "reason_code",
        r."id" AS "revision_id", r."revision"
   FROM "production_events" e
   LEFT JOIN "assets" a ON a."id" = e."asset_id"
@@ -137,6 +139,7 @@ function toEvent(row: EventRow): LossEvent {
     assetClass: row.asset_type,
     reasonCode: row.reason_code,
     failureSeverity: row.failure_severity,
+    dispositionClass: row.disposition_class,
   };
 }
 
@@ -367,9 +370,10 @@ export class AccountingInputsLoader {
       uom: string | null;
       quality_state: string;
       coverage_ratio: string | null;
+      quality_classes: QualityClasses | null;
     }> = await manager.query(
       `SELECT "slice_id", "gross"::text AS "gross", "good"::text AS "good", "uom", "quality_state",
-              "coverage_ratio"::text AS "coverage_ratio"
+              "coverage_ratio"::text AS "coverage_ratio", "quality_classes"
          FROM "actuals_results" WHERE "actuals_run_id" = $1`,
       [actualsRunId],
     );
@@ -382,6 +386,8 @@ export class AccountingInputsLoader {
           uom: r.uom,
           qualityState: r.quality_state,
           coverageRatio: r.coverage_ratio,
+          // SME E3: absent on results of actuals runs before 2.4.2 (no classes, old behaviour)
+          ...(r.quality_classes ? { classes: r.quality_classes } : {}),
         },
       ]),
     );

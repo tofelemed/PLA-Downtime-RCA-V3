@@ -18,6 +18,7 @@ const NewCalendarVersion = lazyNamedWithPreload(() => import('@/features/plans-p
 const PlanDashboard = lazyNamedWithPreload(() => import('@/features/plan-dashboard/plan-dashboard-page'), 'PlanDashboardPage');
 const PeriodPage = lazyNamedWithPreload(() => import('@/features/plan-dashboard/period-page'), 'PeriodPage');
 const ProposeAdjustment = lazyNamedWithPreload(() => import('@/features/plan-dashboard/adjustments/propose-adjustment-page'), 'ProposeAdjustmentPage');
+const RecordDisposition = lazyNamedWithPreload(() => import('@/features/plan-dashboard/dispositions/record-disposition-page'), 'RecordDispositionPage');
 
 /**
  * Planning routes of the production area (owned by the planning track; spread into `PRODUCTION_ROUTES`).
@@ -39,4 +40,5 @@ export const PLANNING_ROUTES: readonly AppRoute[] = [
   { path: '/plans/:planId', element: <PlanDashboard />, preload: PlanDashboard.preload },
   { path: '/plans/:planId/periods/:periodId', element: <PeriodPage />, preload: PeriodPage.preload },
   { path: '/plans/:planId/periods/:periodId/adjustments/new', element: <ProposeAdjustment />, preload: ProposeAdjustment.preload },
+  { path: '/plans/:planId/periods/:periodId/dispositions/new', element: <RecordDisposition />, preload: RecordDisposition.preload },
 ];

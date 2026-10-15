@@ -9,6 +9,7 @@ import {
   SliceActuals,
   SourceSegment,
 } from '../../domain/actuals/period/period-actuals.types';
+import { QualityClasses } from '../../domain/actuals/period/quality-classes';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
 import { ActualsRun } from './actuals-run.entity';
 import { PeriodProductSlice } from './period-product-slice.entity';
@@ -118,6 +119,10 @@ export class ActualsResult extends TenantOwnedEntity {
 
   @Column({ name: 'adjustment_ids', type: 'jsonb' })
   adjustmentIds: string[];
+
+  /** SME E3: disposition class breakdown (actuals 2.4.2); null = no disposition / rework in the slice */
+  @Column({ name: 'quality_classes', type: 'jsonb', nullable: true })
+  qualityClasses: QualityClasses | null;
 
   @Column({ name: 'computed_at', type: 'timestamptz' })
   computedAt: Date;

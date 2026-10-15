@@ -78,6 +78,9 @@ import { ProductionProfile } from '../profiles/entities/production-profile.entit
 import { UnitProductRate } from '../profiles/entities/unit-product-rate.entity';
 import { ValuationRate } from '../profiles/entities/valuation-rate.entity';
 import { GradeTransitionStandard } from '../profiles/entities/transition-standard.entity';
+import { LotDisposition } from '../quality-dispositions/entities/lot-disposition.entity';
+import { LotDispositionsService } from '../quality-dispositions/lot-dispositions.service';
+import { QualityDispositionsModule } from '../quality-dispositions/quality-dispositions.module';
 import { ProfileResolutionService } from '../profiles/profile-resolution.service';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ProfilesService } from '../profiles/profiles.service';
@@ -306,6 +309,16 @@ class PlansModuleStub {}
 })
 class PeriodsModuleStub {}
 
+/** Stands in for the SME E3 lot dispositions module. */
+@Module({
+  providers: [
+    { provide: LotDispositionsService, useValue: {} },
+    { provide: getRepositoryToken(LotDisposition), useValue: {} },
+  ],
+  exports: [LotDispositionsService, getRepositoryToken(LotDisposition)],
+})
+class QualityDispositionsModuleStub {}
+
 /** Stands in for the plan 2.5 accounting module (calculation runs, recalculation command). */
 @Module({
   providers: [{ provide: AccountingCommandsService, useValue: {} }],
@@ -415,7 +428,13 @@ class RcaKnowledgeModuleStub {}
 const SNAPSHOT = resolve(__dirname, '..', '..', 'openapi', 'v2.json');
 
 async function generate(): Promise<string> {
-  const moduleRef = await withReliabilityStubs(withAdministrationStubs(withMasterDataStubs(Test.createTestingModule({ imports: [V2Module, ClockModuleStub] }))))
+  const moduleRef = await withReliabilityStubs(
+    withAdministrationStubs(
+      withMasterDataStubs(
+        Test.createTestingModule({ imports: [V2Module, ClockModuleStub] }),
+      ),
+    ),
+  )
     .overrideProvider(getRepositoryToken(ProductionEvent))
     .useValue({})
     .overrideProvider(getRepositoryToken(Unit))
@@ -504,6 +523,8 @@ async function generate(): Promise<string> {
     .useModule(PlansModuleStub)
     .overrideModule(PeriodsModule)
     .useModule(PeriodsModuleStub)
+    .overrideModule(QualityDispositionsModule)
+    .useModule(QualityDispositionsModuleStub)
     .overrideModule(AccountingModule)
     .useModule(AccountingModuleStub)
     .overrideModule(ReconciliationModule)

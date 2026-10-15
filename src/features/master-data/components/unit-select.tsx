@@ -13,13 +13,15 @@ export interface UnitSelectProps {
   onChange: (unitId: string) => void;
   /** list filters: an "All units" choice that emits '' */
   allowAll?: boolean;
+  /** text of that choice (default "All units") */
+  allLabel?: string;
   error?: string;
   required?: boolean;
   disabled?: boolean;
 }
 
 /** The plant's active units by code (every page followed, nothing cut off), as a labelled select. */
-export function UnitSelect({ id, label, value, onChange, allowAll, error, required, disabled }: UnitSelectProps) {
+export function UnitSelect({ id, label, value, onChange, allowAll, allLabel = 'All units', error, required, disabled }: UnitSelectProps) {
   const units = useRecordLookup<MasterUnitView>(UNITS, { status: 'active', sort: 'code' });
   const current = value || (allowAll ? ALL : undefined);
   return (
@@ -33,7 +35,7 @@ export function UnitSelect({ id, label, value, onChange, allowAll, error, requir
           <SelectValue placeholder={units.isLoading ? 'Loading units…' : 'Choose a unit'} />
         </SelectTrigger>
         <SelectContent>
-          {allowAll && <SelectItem value={ALL}>All units</SelectItem>}
+          {allowAll && <SelectItem value={ALL}>{allLabel}</SelectItem>}
           {units.items.map((unit) => (
             <SelectItem key={unit.id} value={unit.id}>
               {unit.code} — {unit.name}

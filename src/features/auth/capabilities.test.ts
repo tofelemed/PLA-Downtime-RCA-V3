@@ -85,7 +85,7 @@ describe('capabilitiesOf', () => {
   });
 
   describe('v2 write capabilities mirror the server role sets', () => {
-    type WriteKey = Exclude<CapabilityKey, 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+    type WriteKey = Exclude<CapabilityKey, 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
     const PINS: ReadonlyArray<[WriteKey, readonly string[]]> = [
       ['canWritePlans', Roles.PLAN_WRITERS],
       ['canApprovePlans', Roles.PLAN_APPROVERS],
@@ -103,6 +103,10 @@ describe('capabilitiesOf', () => {
       ['canManageRcaPolicies', Roles.RCA_POLICY_WRITERS],
       ['canMaintainValuation', Roles.FINANCE_MAINTAINERS],
       ['canApproveValuation', Roles.FINANCE_APPROVERS],
+      ['canWriteOeePolicy', Roles.OEE_POLICY_WRITERS],
+      ['canWriteStandby', Roles.STANDBY_WRITERS],
+      ['canWriteWorkOrders', Roles.WORK_ORDER_WRITERS],
+      ['canWriteStateMappings', Roles.STATE_MAPPING_WRITERS],
     ];
     const SCOPE_ROLES = ['manager_approver', 'production_accountant', 'finance_approver', 'finance_maintainer', 'production_engineer', 'reliability_engineer', 'integration_admin', 'master_data_admin', 'operator', 'viewer'];
 

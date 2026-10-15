@@ -1,4 +1,5 @@
 import { Dec } from '../decimal';
+import type { QualityClasses } from './quality-classes';
 
 /**
  * Types of the period actuals engine (plan 2.4, spec ACT01–ACT08, SRC01, D05). Pure data: the service
@@ -143,4 +144,6 @@ export interface SliceActuals {
     substitutedSeconds: number;
   };
   adjustmentIds: string[];
+  /** SME E3 class breakdown; null / absent = no disposition and no rework acceptance (older results) */
+  qualityClasses?: QualityClasses | null;
 }

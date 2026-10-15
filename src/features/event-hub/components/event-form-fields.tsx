@@ -13,6 +13,7 @@ import { useEventHubEnv } from '../use-event-hub-env';
 import { ImpactFields } from './impact-fields';
 import { FailureFields } from './failure-fields';
 import { OriginFields } from './origin-fields';
+import { QualityFields } from './quality-fields';
 import { ReasonCodeSelect } from './reason-code-select';
 
 interface FieldProps {
@@ -112,6 +113,7 @@ export function EventFormFields({ form, mode, assetId }: { form: EventFormState;
       )}
       <OriginFields form={form} />
       <FailureFields form={form} assetId={assetId ?? null} />
+      <QualityFields form={form} />
       <div className="sm:col-span-2">
         <ReasonCodeSelect id="reasonCodeId" value={values.reasonCodeId} onChange={(value) => setField('reasonCodeId', value)} error={errors.reasonCodeId} />
       </div>

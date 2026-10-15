@@ -1,5 +1,6 @@
 import { RateTimebase } from '../actuals/actuals.types';
 import { Dec } from '../actuals/decimal';
+import { QualityClasses } from '../actuals/period/quality-classes';
 import { BoundedInterval } from '../time/interval-algebra';
 
 /** The two loss ledgers of ACC01 (distinct baselines). */
@@ -116,6 +117,8 @@ export interface LossEvent {
   reasonCode?: string | null;
   /** SME D8: failure severity (a functional failure is never a micro-stop) */
   failureSeverity?: string | null;
+  /** SME E3: disposition class of a `quality_loss` event (downgrade / scrap / rework); absent = none */
+  dispositionClass?: string | null;
 }
 
 /** The actuals of a slice (2.4 result of the run's actuals run). */
@@ -126,6 +129,8 @@ export interface SliceActualsInput {
   /** 2.4 quality state and coverage (plan 2.7 data quality); absent in 2.5 fixtures */
   qualityState?: string | null;
   coverageRatio?: string | null;
+  /** SME E3: the slice's disposition class breakdown (actuals 2.4.2); absent / null = none */
+  classes?: QualityClasses | null;
 }
 
 export interface SliceInput {

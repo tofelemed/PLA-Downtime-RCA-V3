@@ -44,6 +44,10 @@ export const FINDING_LABELS: Readonly<Record<string, string>> = {
   spanning_event: 'An output event spans several periods',
   uom_mismatch: 'Unit differs from the profile unit',
   coverage_gap: 'Part of the period has no data',
+  rejects_from_dispositions: 'Rejects taken from the approved lot dispositions',
+  dispositions_exceed_rejects: 'The lot dispositions classify more than the measured rejects',
+  reprocessed_input_excluded: 'Reprocessed material measured again is not counted as new output',
+  disposition_uom_mismatch: 'A lot disposition uses another unit than the profile',
 };
 
 const SPLIT_METHODS: Readonly<Record<string, string>> = {
