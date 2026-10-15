@@ -108,6 +108,64 @@ describe('valuation rates (plan 2.2, v2 API)', () => {
     ).toEqual([]);
   });
 
+  it('SME V2: a rework yield is a currency-free ratio in (0, 1], maker-checker like every valuation rate', async () => {
+    const yieldRate = (body: object = {}) =>
+      env.post(
+        'valuation-rates',
+        {
+          profileId: profileA1.id,
+          basis: 'rework_yield',
+          value: '0.9',
+          effectiveFrom: '2026-10-01T00:00:00Z',
+          ...body,
+        },
+        env.finance,
+      );
+    const created = (await yieldRate().expect(201)).body as {
+      id: string;
+      currency: string | null;
+      perUom: string;
+    };
+    expect(created).toMatchObject({ currency: null, perUom: 't' });
+    for (const value of ['0', '1.01']) {
+      expect(
+        await codeOf(
+          yieldRate({ value, effectiveFrom: '2027-01-01T00:00:00Z' }).expect(
+            422,
+          ),
+        ),
+      ).toBe('INVALID_VALUE');
+    }
+    expect(
+      await codeOf(
+        yieldRate({
+          currency: 'USD',
+          effectiveFrom: '2027-01-01T00:00:00Z',
+        }).expect(422),
+      ),
+    ).toBe('CURRENCY_NOT_ALLOWED');
+    // a money basis still needs its currency
+    const noCurrency = await env
+      .post(
+        'valuation-rates',
+        {
+          profileId: profileA1.id,
+          basis: 'rework_cost',
+          value: '60',
+          effectiveFrom: '2026-10-01T00:00:00Z',
+        },
+        env.finance,
+      )
+      .expect(400);
+    expect(noCurrency.body).toBeDefined();
+    await env
+      .post(`valuation-rates/${created.id}/approve`, {}, env.finance)
+      .expect(403);
+    await env
+      .post(`valuation-rates/${created.id}/approve`, {}, env.financeApprover)
+      .expect(200);
+  });
+
   it('refuses a profile id of another tenant in a valuation rate body (422 INVALID_REFERENCE)', async () => {
     const created = await env
       .post(

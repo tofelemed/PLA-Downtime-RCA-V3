@@ -190,8 +190,17 @@ describe('V2 scrap, downgrade and rework (non-overlapping economic parts)', () =
     ]);
   });
 
-  it('10 t reworked at $60/t with the sale recovered cost $600, not another $3,000 of contribution', () => {
-    expect(usd(economic(quality(REWORK_CODE)))).toBe('600');
+  it('10 t reworked at $60/t with full sales recovered and spare capacity cost $600, not another $3,000 of contribution', () => {
+    const spare = economic(
+      quality(REWORK_CODE),
+      context({ demand: [demand(false)] }),
+    );
+    expect(usd(spare)).toBe('600');
+    expect(spare.notes).toEqual([
+      'disposition_rework',
+      'no_rework_yield_rate',
+      'displaced_not_constrained',
+    ]);
   });
 
   it('a quality line without a disposition, or without a required value, stays unvalued (never zero)', () => {

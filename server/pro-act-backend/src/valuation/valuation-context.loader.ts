@@ -3,12 +3,16 @@ import { ValuationBasis } from '../domain/profiles/profile.types';
 import {
   DemandStatusSnapshot,
   FxRateSnapshot,
+  PlannedRateSnapshot,
+  ReworkLotSnapshot,
+  ReworkYieldSnapshot,
   VALUATION_ENGINE_VERSION,
   ValuationContext,
   ValuationPolicySnapshot,
   ValuationRateSnapshot,
 } from '../domain/valuation/valuation.types';
 import { PolicyVersionRef } from '../periods/entities/actuals-run.entity';
+import { loadReworkInputs } from './rework-inputs.loader';
 import { resolveValuationPolicy, snapshotOf } from './valuation-policy.store';
 
 interface RateRow {
@@ -17,7 +21,8 @@ interface RateRow {
   owner_id: string;
   basis: ValuationBasis;
   value: string;
-  currency: string;
+  /** null only for a ratio basis (`rework_yield`) */
+  currency: string | null;
   per_uom: string;
   effective_from: Date;
   effective_to: Date | null;
@@ -83,6 +88,8 @@ const MONTH_SQL = `SELECT (date_trunc('month', p."local_date"::timestamp) AT TIM
 const iso = (value: Date | null) =>
   value === null ? null : new Date(value).toISOString();
 
+const RATIO_BASIS = 'rework_yield';
+
 function toRate(row: RateRow): ValuationRateSnapshot {
   return {
     id: row.id,
@@ -90,8 +97,20 @@ function toRate(row: RateRow): ValuationRateSnapshot {
     ownerId: row.owner_id,
     basis: row.basis,
     value: row.value,
-    currency: row.currency,
+    currency: row.currency ?? '',
     perUom: row.per_uom,
+    from: new Date(row.effective_from).toISOString(),
+    to: iso(row.effective_to),
+  };
+}
+
+/** SME V2 (2.8.0): a rework yield is a ratio of a profile, kept out of the money rates. */
+function toYield(row: RateRow): ReworkYieldSnapshot {
+  return {
+    id: row.id,
+    version: row.version,
+    profileId: row.owner_id,
+    value: row.value,
     from: new Date(row.effective_from).toISOString(),
     to: iso(row.effective_to),
   };
@@ -147,7 +166,8 @@ export interface ValuationOwners {
  * start, and — only when it is approved — the approved valuation rates of the slices' profiles and the
  * causes' impact codes, the approved FX rates of the policy's rate table overlapping the period (its local
  * month for a month average, SME V6) and, for the economic view (v3), the approved demand statuses of the
- * period's products. The context is stored on the run and hashed, so an approval changes the next run.
+ * period's products, the profiles' rework yields and the unit's approved rework lots with their recovery
+ * movements and planning rates (2.8.0). The context is stored on the run and hashed, so an approval changes the next run.
  */
 export async function loadValuationContext(
   manager: EntityManager,
@@ -173,6 +193,9 @@ interface Inputs {
   fx: FxRateSnapshot[];
   demand?: DemandStatusSnapshot[];
   fxAverage?: { from: string; to: string };
+  reworkLots?: ReworkLotSnapshot[];
+  reworkYields?: ReworkYieldSnapshot[];
+  plannedRates?: PlannedRateSnapshot[];
 }
 
 function contextOf(
@@ -214,10 +237,11 @@ async function approvedInputs(
     : window;
   const rateType = policy.fx?.rateType ?? 'economic';
   const productIds = [...new Set(owners.productIds ?? [])].sort();
-  const [rates, fx, demand] = await Promise.all([
+  const profileIds = [...new Set(owners.profileIds)].sort();
+  const [rates, fx, demand, rework] = await Promise.all([
     manager.query<RateRow[]>(RATES_SQL, [
       period.tenantId,
-      [...new Set(owners.profileIds)].sort(),
+      profileIds,
       [...new Set(owners.impactCodeIds)].sort(),
       ...window,
       policy.economic ? null : CLASSIC_BASES,
@@ -230,11 +254,32 @@ async function approvedInputs(
           ...window,
         ])
       : Promise.resolve([]),
+    policy.economic
+      ? loadReworkInputs(manager, period, profileIds)
+      : Promise.resolve(null),
   ]);
   return {
-    rates: rates.map(toRate),
+    rates: rates.filter((r) => r.basis !== RATIO_BASIS).map(toRate),
     fx: fx.map(toFx),
     ...(policy.economic ? { demand: demand.map(toDemand) } : {}),
     ...(average ? { fxAverage: average } : {}),
+    ...(rework ? economicExtras(rework, rates) : {}),
+  };
+}
+
+/** 2.8.0 economic inputs, each only when present (contexts without rework keep their shape). */
+function economicExtras(
+  rework: Awaited<ReturnType<typeof loadReworkInputs>>,
+  rates: readonly RateRow[],
+): Partial<Inputs> {
+  const yields = rates.filter((r) => r.basis === RATIO_BASIS).map(toYield);
+  // planning rates turn recorded reprocessing time into displaced output: needed only with rework lots
+  const lots = rework.reworkLots.length > 0;
+  return {
+    ...(lots ? { reworkLots: rework.reworkLots } : {}),
+    ...(yields.length ? { reworkYields: yields } : {}),
+    ...(lots && rework.plannedRates.length
+      ? { plannedRates: rework.plannedRates }
+      : {}),
   };
 }

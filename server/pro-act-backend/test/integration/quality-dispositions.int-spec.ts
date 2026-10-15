@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { A, B, C, HOUR } from './support/actuals-world';
 import { AccountingWorld, LineBody, plus } from './support/accounting-world';
 import { ApiError } from './support/plan-world';
+import { loadReworkInputs } from '../../src/valuation/rework-inputs.loader';
 
 type Line = LineBody & { flags: string[] };
 
@@ -274,5 +275,68 @@ describe('lot dispositions and the good-output boundary (SME E3)', () => {
       .set('Idempotency-Key', randomUUID())
       .expect(200);
     expect(rejected.body).toMatchObject({ state: 'rejected' });
+  });
+  it('valuation 2.8.0 reads an approved rework lot with its approved recovery and the profile planning rate', async () => {
+    const rework = await propose({
+      lotCode: 'L-0301-A/RW',
+      dispositionClass: 'rework',
+      quantity: '4',
+    });
+    await approve(rework.id).expect(200);
+    const back = await propose({
+      lotCode: 'L-0301-A/RW/R1',
+      dispositionClass: 'recovered',
+      recoveryOfId: rework.id,
+      quantity: '3.5',
+      productionStart: plus(B, 3 * HOUR),
+      productionEnd: plus(B, 4 * HOUR),
+    });
+    await approve(back.id).expect(200);
+    await env.settle();
+    const [profile] = await env.rows<{ id: string }>(
+      `SELECT "id" FROM "production_profiles" WHERE "unit_id" = $1 AND "product_id" = $2`,
+      [env.world.unitA1, env.products.p1],
+    );
+    const loaded = await loadReworkInputs(
+      env.harness.dataSource.manager,
+      {
+        tenantId: env.world.tenantA,
+        unitId: env.world.unitA1,
+        utcStart: new Date(A),
+        utcEnd: new Date(B),
+      },
+      [profile.id],
+    );
+    const summary = loaded.reworkLots.map((l) => ({
+      id: l.id,
+      quantity: Number(l.quantity),
+      uom: l.uom,
+      recoveries: l.recoveries.map((r) => ({
+        id: r.id,
+        quantity: Number(r.quantity),
+        remeasured: r.remeasured,
+        sameUnit: r.sameUnit,
+        start: r.start,
+      })),
+    }));
+    expect(summary).toEqual([
+      {
+        id: rework.id,
+        quantity: 4,
+        uom: 't',
+        recoveries: [
+          {
+            id: back.id,
+            quantity: 3.5,
+            remeasured: false,
+            sameUnit: true,
+            start: new Date(plus(B, 3 * HOUR)).toISOString(),
+          },
+        ],
+      },
+    ]);
+    expect(
+      loaded.plannedRates.map((r) => [r.profileId, Number(r.rate), r.timebase]),
+    ).toEqual([[profile.id, 90, 'h']]);
   });
 });

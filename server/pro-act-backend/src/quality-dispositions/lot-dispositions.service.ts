@@ -198,14 +198,15 @@ export class LotDispositionsService {
     });
   }
 
-  /** Re-checks the recovery bound, supersedes the corrected row and requests the recalculation. */
+  /** Re-checks the recovery bound, supersedes the corrected row and requests the recalculation (of the recovered lot too). */
   private async applyApproval(
     manager: EntityManager,
     row: LotDisposition,
     context: RequestContext,
   ): Promise<void> {
+    let original: LotDisposition | null = null;
     if (row.recoveryOfId) {
-      const original = await manager.findOneByOrFail(LotDisposition, {
+      original = await manager.findOneByOrFail(LotDisposition, {
         id: row.recoveryOfId,
       });
       checkRecovery(
@@ -222,7 +223,16 @@ export class LotDispositionsService {
     const superseded = row.supersedesId
       ? await this.supersede(manager, row.supersedesId, context)
       : null;
-    await recalculate(manager, superseded ? [row, superseded] : [row], context);
+    // valuation 2.8.0: a recovery changes the yield loss of the original lot, so its periods recalculate too
+    await recalculate(
+      manager,
+      [
+        row,
+        ...(superseded ? [superseded] : []),
+        ...(original ? [original] : []),
+      ],
+      context,
+    );
   }
 
   private async supersede(

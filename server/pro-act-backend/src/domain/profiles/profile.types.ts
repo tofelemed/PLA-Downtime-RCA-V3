@@ -45,6 +45,7 @@ export const VALUATION_BASES = [
   'disposal_cost',
   'downgrade_price_difference',
   'rework_cost',
+  'rework_yield',
 ] as const;
 export type ValuationBasis = (typeof VALUATION_BASES)[number];
 
@@ -59,6 +60,15 @@ export const PRODUCT_VALUE_BASES: ReadonlySet<ValuationBasis> = new Set([
   'disposal_cost',
   'downgrade_price_difference',
   'rework_cost',
+  'rework_yield',
+]);
+
+/**
+ * SME V2 (2.8.0): the share of reworked quantity recovered as saleable output (0 < yield ≤ 1, tonne per
+ * tonne). A ratio, not money: such a rate has no currency. Used only where no recovery is recorded.
+ */
+export const RATIO_BASES: ReadonlySet<ValuationBasis> = new Set([
+  'rework_yield',
 ]);
 
 export const RATE_IMPORT_KINDS = ['budget', 'forecast', 'mpc'] as const;
