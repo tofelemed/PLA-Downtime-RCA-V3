@@ -86,6 +86,26 @@ function applyRule(
     return;
   }
   store(result, field.storedAs, rule.targetField, converted.value);
+  if (rule.targetField === 'quantity') storeQuantityUnit(result, raw);
+}
+
+/** Units belong to the chosen attribute, never another alias or a plant default. */
+function storeQuantityUnit(result: AttributeMappingResult, raw: unknown): void {
+  delete result.columns.quantityUom;
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return;
+  const unit = (raw as Record<string, unknown>).UnitsAbbreviation;
+  if (unit === undefined || unit === null || unit === '') return;
+  if (typeof unit !== 'string' || unit.trim() === '' || unit.length > 32) {
+    result.diagnostics.push(
+      diagnostic(
+        'QUANTITY_UNIT_INVALID',
+        'quantityUom',
+        'The mapped quantity unit must be a nonblank string of at most 32 characters',
+      ),
+    );
+    return;
+  }
+  result.columns.quantityUom = unit.trim();
 }
 
 function store(

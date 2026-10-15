@@ -55,7 +55,9 @@ function attributesOf(
           Value: attribute.digital.value,
           IsSystem: attribute.digital.isSystem ?? false,
         }
-      : (attribute.value ?? null);
+      : attribute.unit
+        ? { Value: attribute.value ?? null, UnitsAbbreviation: attribute.unit }
+        : (attribute.value ?? null);
   }
   return result;
 }

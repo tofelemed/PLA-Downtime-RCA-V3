@@ -141,6 +141,7 @@ const ADDED_AFTER_BACKFILL: ReadonlySet<string> = new Set([
   'streamCode',
   'lotCode',
   'investigationPending',
+  'quantityUom', // source metadata tracking added after the immutable backfill
 ]);
 const atBackfill = (fields: readonly string[]) =>
   fields.filter((field) => !ADDED_AFTER_BACKFILL.has(field));
@@ -280,7 +281,9 @@ describe('EventIntervalModel + EventRevisions backfill', () => {
         actor_kind: 'system',
         tenant_id: world.tenantA,
         effective_facts: factsOf(event, atBackfill(EFFECTIVE_FIELDS)),
-        source_facts: isSource ? factsOf(event, SOURCE_FIELDS) : null,
+        source_facts: isSource
+          ? factsOf(event, atBackfill(SOURCE_FIELDS))
+          : null,
       });
       const [coding] = await rowsOf('event_coding', ids[index]);
       expect(coding).toMatchObject({

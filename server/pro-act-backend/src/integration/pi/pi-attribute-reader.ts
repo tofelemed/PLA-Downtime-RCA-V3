@@ -9,7 +9,7 @@ export interface AttributeRead {
 
 interface StreamValueItem {
   Name?: unknown;
-  Value?: { Value?: unknown } | null;
+  Value?: { Value?: unknown; UnitsAbbreviation?: unknown } | null;
 }
 
 /**
@@ -25,7 +25,7 @@ export async function readAttributes(
 ): Promise<AttributeRead> {
   const paths = webIds.map(
     (webId) =>
-      `streamsets/${encodeURIComponent(webId)}/value?selectedFields=Items.Name;Items.Value.Value`,
+      `streamsets/${encodeURIComponent(webId)}/value?selectedFields=Items.Name;Items.Value.Value;Items.Value.UnitsAbbreviation`,
   );
   const many = await getMany(client, paths, useBatch);
   const values = new Map<string, Record<string, unknown>>();
@@ -42,7 +42,12 @@ function attributeValues(content: unknown): Record<string, unknown> {
   if (!Array.isArray(items)) return attributes;
   for (const item of items as StreamValueItem[]) {
     if (typeof item.Name !== 'string') continue;
-    attributes[item.Name] = item.Value?.Value ?? null;
+    const value = item.Value?.Value ?? null;
+    const unit = item.Value?.UnitsAbbreviation;
+    const digital =
+      typeof value === 'object' && value !== null && 'Name' in value;
+    attributes[item.Name] =
+      unit && !digital ? { Value: value, UnitsAbbreviation: unit } : value;
   }
   return attributes;
 }

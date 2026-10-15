@@ -37,6 +37,7 @@ export const SOURCE_FIELDS = [
   'eventType',
   'description',
   'quantity',
+  'quantityUom',
   'cost',
   'value',
   'severity',

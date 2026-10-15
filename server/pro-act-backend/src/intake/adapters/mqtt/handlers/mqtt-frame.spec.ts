@@ -53,7 +53,7 @@ describe('mqttFrameOf (plan 1.8 step 3: contract event → PI frame path)', () =
     });
     expect(attributes).toEqual({
       ReasonCode: { Name: 'MECH-01', Value: 3, IsSystem: false },
-      Quantity: 12.5,
+      Quantity: { Value: 12.5, UnitsAbbreviation: 't' },
       Description: 'Conveyor belt tripped',
     });
   });
