@@ -56,6 +56,14 @@ describe('notification text (SME R3 / R6)', () => {
     const rejected = notificationText({ ...ESCALATION, detail: { ...ESCALATION.detail, reason: 'rejections', rejections: 3, afterHours: null } }, {});
     expect(rejected.body).toContain('rejected 3 times');
   });
+
+  it('due reminders (SME R3): submission for the preparer, approval for the checker', () => {
+    const detail = { ...ESCALATION.detail, reason: 'due', stage: 'submit', recipient: 'preparer', dueAt: '2026-10-12T18:00:00.000Z', remindedAt: '2026-10-12T18:10:00.000Z' };
+    const submit = notificationText({ ...ESCALATION, kind: 'sla_reminder', detail }, {});
+    expect(submit).toEqual({ title: 'Submission due', body: 'Demo unit 100 · 2026-10-12 · B: the reconciliation is due for submission', href: '/plans/plan-1/periods/per-1' });
+    const approve = notificationText({ ...ESCALATION, kind: 'sla_reminder', detail: { ...detail, stage: 'approve', recipient: 'checker' } }, {});
+    expect(approve.title).toBe('Approval due');
+  });
 });
 
 describe('notification bell', () => {

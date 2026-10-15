@@ -63,7 +63,7 @@ describe('SLA escalation notifications (SME R3 / R6)', () => {
     });
   const countFor = async (userId: string): Promise<number> => {
     const rows = await env.rows<{ n: number }>(
-      `SELECT count(*)::int AS n FROM user_notifications WHERE user_id = $1`,
+      `SELECT count(*)::int AS n FROM user_notifications WHERE user_id = $1 AND kind = 'sla_escalation'`,
       [userId],
     );
     return rows[0].n;
@@ -110,14 +110,24 @@ describe('SLA escalation notifications (SME R3 / R6)', () => {
   });
   afterAll(() => env.stop());
 
-  it('nothing before 48 h after the production day ended', async () => {
-    expect(await notifyAt(47)).toBe(0);
+  // due reminders (12 h / 24 h) are created too; `sla-reminders.int-spec` covers them
+  const hintCount = async () =>
+    (
+      await env.rows<{ n: number }>(
+        `SELECT count(*)::int AS n FROM outbox WHERE type = 'UserNotificationsCreated' AND tenant_id = $1`,
+        [env.world.tenantA],
+      )
+    )[0].n;
+
+  it('no escalation before 48 h after the production day ended', async () => {
+    await notifyAt(47);
     expect(await countFor(ids.accountantPlant)).toBe(0);
   });
 
   it('48 h: production accounting of the plant and of the unit, one per period; idempotent on reruns', async () => {
     const created = await notifyAt(49);
     expect(created).toBeGreaterThanOrEqual(6);
+    const hintsAfterFirst = await hintCount();
     expect(await countFor(ids.accountantPlant)).toBe(3);
     expect(await countFor(ids.accountantUnit)).toBe(3);
     expect(await countFor(ids.accountantOtherUnit)).toBe(0);
@@ -126,11 +136,7 @@ describe('SLA escalation notifications (SME R3 / R6)', () => {
     expect(await notifyAt(49)).toBe(0);
     expect(await notifyAt(60)).toBe(0);
     expect(await countFor(ids.accountantPlant)).toBe(3);
-    const hints = await env.rows<{ n: number }>(
-      `SELECT count(*)::int AS n FROM outbox WHERE type = 'UserNotificationsCreated' AND tenant_id = $1`,
-      [env.world.tenantA],
-    );
-    expect(hints[0].n).toBe(1);
+    expect(await hintCount()).toBe(hintsAfterFirst);
   });
 
   it('72 h: plant management (legacy Manager of the home plant) once per period; production accounting gets nothing new', async () => {
@@ -148,6 +154,10 @@ describe('SLA escalation notifications (SME R3 / R6)', () => {
 
   it('a user lists, counts and marks only their own notifications', async () => {
     const token = tokenOf(ids.accountantUnit);
+    await env.rows(
+      `DELETE FROM user_notifications WHERE kind = 'sla_reminder' AND tenant_id = $1`,
+      [env.world.tenantA],
+    );
     const list = (await env.get('notifications', token).expect(200)).body as {
       items: NotificationBody[];
     };
