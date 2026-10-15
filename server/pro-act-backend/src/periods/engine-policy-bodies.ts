@@ -4,6 +4,7 @@ import {
   ReconciliationOptions,
   reconciliationOptions,
 } from './reconciliation-options';
+import { parseStopEventOptions, StopEventOptions } from './stop-event-options';
 
 /** `oee_policy` body (contracts/policies/oee_policy.schema.json, D04). */
 export interface OeePolicy {
@@ -34,6 +35,8 @@ export interface OeePolicy {
   microStopSecondsByAssetClass?: Record<string, number>;
   /** SME D6: reason codes of process trips — always availability events, never micro-stops. Absent = none. */
   tripReasonCodes?: string[];
+  /** Plan 1.10 / DT-04 / SME D5 stop-event settings; absent fields = the pilot defaults (`stop-event-options.ts`) */
+  stopEvents?: Partial<StopEventOptions>;
 }
 
 /**
@@ -168,7 +171,15 @@ export function parseOeePolicy(body: unknown): OeePolicy {
             'transitionAllowanceInPlan',
           ),
     ...microStopOptions(value),
+    ...stopEventsOf(value),
   };
+}
+
+function stopEventsOf(
+  value: Record<string, unknown>,
+): Pick<OeePolicy, 'stopEvents'> {
+  const stopEvents = parseStopEventOptions(value.stopEvents);
+  return stopEvents ? { stopEvents } : {};
 }
 
 /** SME D6 options of a body; only the fields a version states (older versions have none). */

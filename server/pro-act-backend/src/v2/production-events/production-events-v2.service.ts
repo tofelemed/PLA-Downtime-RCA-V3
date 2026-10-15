@@ -31,6 +31,7 @@ import {
 import { ProductionEventExportQueryDto } from './production-event-export-query.dto';
 import { EventCsv, exportEventsCsv } from './production-events-export';
 import { EventSelectionView, selectEvents } from './production-event-selection';
+import { withIncidentIds } from '../stop-events/event-incidents';
 
 const DEFAULT_SORT: SortSpec<ProductionEventSortField> = {
   field: 'startTime',
@@ -84,12 +85,15 @@ export class ProductionEventsV2Service {
         : null;
 
     const asOf = new Date();
+    const tenantId = requireTenantId(context);
     return listResponse(
-      page.map((event) => toProductionEventV2View(event, asOf)),
+      await withIncidentIds(
+        this.events.manager,
+        tenantId,
+        page.map((event) => toProductionEventV2View(event, asOf)),
+      ),
       nextCursor,
-      {
-        tenantId: requireTenantId(context),
-      },
+      { tenantId },
       asOf,
     );
   }
@@ -134,8 +138,13 @@ export class ProductionEventsV2Service {
       })
       .orderBy('rev.revision', 'DESC')
       .getOne();
+    const [view] = await withIncidentIds(
+      this.events.manager,
+      requireTenantId(context),
+      [toProductionEventV2View(event, new Date())],
+    );
     return {
-      ...toProductionEventV2View(event, new Date()),
+      ...view,
       sourceFacts: source?.sourceFacts ?? null,
       overriddenFields: Object.keys(event.userOverrides ?? {}),
     };

@@ -106,6 +106,8 @@ export interface ProductionEventV2View {
   supersededByEventId: string | null;
   /** optimistic-concurrency revision; also sent as `ETag` on single reads */
   rowVersion: number;
+  /** list and single reads: SME D5 repeat-stop incident of the occurrence (`/v2/stop-incidents`); null = none */
+  incidentId?: string | null;
   /** single reads only: what the source last said (ING06), null for events without a source revision */
   sourceFacts?: EventFacts | null;
   /** single reads only: fields where the user's value overrides the source value */

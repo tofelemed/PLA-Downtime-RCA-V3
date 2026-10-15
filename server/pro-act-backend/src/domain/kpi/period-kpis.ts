@@ -30,8 +30,8 @@ import { StateSegment } from '../reliability/unit-state';
 import { StandbyExposure } from './standby-mtbf';
 
 /** Bumped whenever a KPI rule changes (part of the calculation run's engine version and input hash). */
-// 2.7.8: standby MTBF on own running time and controllable availability (SME D9 / D15) together
-export const KPI_ENGINE_VERSION = '2.7.8';
+// 2.7.9: standby MTBF on own running time, controllable availability and incidents counted once (SME D9 / D15 / D5) together
+export const KPI_ENGINE_VERSION = '2.7.9';
 
 export interface PeriodKpiInput {
   /** the accounting input of the same run (window, schedule, events, slices, policy, asOf) */

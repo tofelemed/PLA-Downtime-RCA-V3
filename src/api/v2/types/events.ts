@@ -88,6 +88,8 @@ export interface ProductionEventView {
   supersededByEventId: string | null;
   rowVersion: number;
   overriddenFields?: string[];
+  /** SME D5: repeat-stop incident of the occurrence (list and single reads); null / absent = none */
+  incidentId?: string | null;
 }
 
 export interface EventRevisionView {

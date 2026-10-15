@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ProductionEventView } from '@/api/v2/types/events';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { DataTableColumn } from '@/features/ux-kit/data-table';
@@ -120,6 +121,20 @@ function durationCell(event: ProductionEventView) {
   );
 }
 
+/** States, plus SME D5 "Repeat incident" when the stop is grouped with repeats (counted once in MTBF). */
+function statesCell(event: ProductionEventView) {
+  return (
+    <span className="inline-flex flex-wrap gap-1">
+      <StateBadges states={event.states} />
+      {event.incidentId && (
+        <Badge variant="outline" className="border-violet-400 text-violet-800 dark:text-violet-200" data-testid="event-incident" title="Repeat stops of one asset and reason, counted once in MTBF">
+          Repeat incident
+        </Badge>
+      )}
+    </span>
+  );
+}
+
 /** Columns of the event list: start (link to the detail page), duration, unit, kind, reason, states. */
 export function eventColumns(context: EventColumnContext): DataTableColumn<ProductionEventView>[] {
   return [
@@ -138,6 +153,6 @@ export function eventColumns(context: EventColumnContext): DataTableColumn<Produ
       ),
     },
     { id: 'reason', header: 'Reason', cell: (event) => reasonCell(event, context) },
-    { id: 'states', header: 'States', cell: (event) => <StateBadges states={event.states} /> },
+    { id: 'states', header: 'States', cell: statesCell },
   ];
 }
