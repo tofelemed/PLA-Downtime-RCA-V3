@@ -6,6 +6,8 @@ import { rlsTenantIds, sessionBindingSql } from './rls-tenant-ids';
 type Release = (error?: unknown) => void;
 interface PgClient {
   query(sql: string): Promise<unknown>;
+  on(event: 'error', listener: (error: Error) => void): this;
+  removeListener(event: 'error', listener: (error: Error) => void): this;
 }
 interface ConnectionSource {
   obtainMasterConnection(): Promise<[PgClient, Release]>;
@@ -29,13 +31,27 @@ export function installTenantSessionBinding(dataSource: DataSource): boolean {
   driver.obtainMasterConnection = async () => {
     const binding = sessionBindingSql(rlsTenantIds(getRequestContext()));
     const [connection, release] = await obtain();
+    // pg-pool has removed its idle listener; TypeORM attaches its listener only after this binding.
+    let connectionError: Error | undefined;
+    const onError = (error: Error) => {
+      connectionError = error;
+    };
+    connection.on('error', onError);
+    const guardedRelease: Release = (error) => {
+      try {
+        release(error ?? connectionError);
+      } finally {
+        connection.removeListener('error', onError);
+      }
+    };
     try {
       await connection.query(binding);
+      if (connectionError) throw connectionError;
     } catch (error) {
-      release(error);
+      guardedRelease(error);
       throw error;
     }
-    return [connection, release];
+    return [connection, guardedRelease];
   };
   driver[INSTALLED] = true;
   return true;
