@@ -29,6 +29,8 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<TransitionStandardView>[
         </span>
       ),
     },
+    { id: 'catalyst', header: 'Catalyst family', nowrap: true, cell: (s) => s.catalystFamily ?? <span className="text-muted-foreground">any</span> },
+    { id: 'mode', header: 'Operating mode', nowrap: true, cell: (s) => s.operatingMode ?? <span className="text-muted-foreground">any</span> },
     { id: 'version', header: 'Version', nowrap: true, cell: (s) => `Version ${s.version}` },
     { id: 'reference', header: 'Reference', align: 'right', nowrap: true, cell: (s) => <LocalizedNumber text={`${hoursOfSeconds(s.referenceSeconds)} h`} /> },
     {
@@ -56,7 +58,7 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<TransitionStandardView>[
 
 /**
  * The grade-transition matrix of a unit (LA-08): approved reference durations per directional product
- * change. Transition loss within the reference is an allowance, the rest an overrun; a change with no
+ * change, catalyst family and operating mode (SME E1; blank = any, the most specific entry applies). Transition loss within the reference is an allowance, the rest an overrun; a change with no
  * approved entry is all loss, flagged — the matrix is never filled with a default.
  */
 export function TransitionStandardsTab() {

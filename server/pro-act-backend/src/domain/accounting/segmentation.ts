@@ -11,6 +11,7 @@ import {
 } from './accounting.types';
 import { occurrenceThresholds } from './micro-stop-threshold';
 import { equalShares } from './shares';
+import { eventsOfStream, slicePieces, StreamPiece } from './streams';
 
 /** Downtime events split by the micro-stop rule (D04 / KPI02) and planned-stop policy. */
 export interface ClassifiedEvents {
@@ -203,14 +204,11 @@ function isExcluded(
     : false;
 }
 
-/**
- * Atomic segments of a slice (ACC02): cut at the slice edges, schedule and exclusion edges, stop,
- * micro-stop, derate and grade-transition edges and rate-version changes; each carries its exclusion,
- * rates and causes.
- */
-export function segmentSlice(
+/** Atomic segments of one window of a slice (no streams: the slice window, share 1). */
+function segmentWindow(
   input: PeriodAccountingInput,
   slice: SliceInput,
+  piece: StreamPiece | null,
 ): Segment[] {
   const classified = classifyEvents(input);
   const cutters = [
@@ -225,6 +223,13 @@ export function segmentSlice(
     const part = { start: new Date(from), end: new Date(points[i + 1]) };
     const exclusion = isExcluded(input, part, classified.excludedStops);
     const running = exclusion === false;
+    const causes = (events: readonly LossEvent[]) =>
+      running
+        ? causesOf(
+            activeIn(events, part, input.asOf),
+            input.policy.overlapAllocation,
+          )
+        : [];
     return {
       ...part,
       seconds: secondsBetween(from, points[i + 1]),
@@ -232,25 +237,43 @@ export function segmentSlice(
       exclusionKind: running ? null : exclusion || null,
       sustained: rateAt(slice.sustainedRates, part.start),
       planning: rateAt(slice.planningRates, part.start),
-      stops: running
-        ? causesOf(
-            activeIn(classified.stops, part, input.asOf),
-            input.policy.overlapAllocation,
-          )
-        : [],
-      microStops: running
-        ? causesOf(
-            activeIn(classified.microStops, part, input.asOf),
-            input.policy.overlapAllocation,
-          )
-        : [],
+      stops: causes(classified.stops),
+      microStops: causes(classified.microStops),
       derates: running ? activeIn(classified.derates, part, input.asOf) : [],
-      transitions: running
-        ? causesOf(
-            activeIn(classified.transitions, part, input.asOf),
-            input.policy.overlapAllocation,
-          )
-        : [],
+      transitions: causes(classified.transitions),
+      ...(piece
+        ? { capacityShare: piece.share, streamId: piece.streamId }
+        : {}),
     };
   });
+}
+
+/**
+ * Atomic segments of a slice (ACC02): cut at the slice edges, schedule and exclusion edges, stop,
+ * micro-stop, derate and grade-transition edges and rate-version changes; each carries its exclusion,
+ * rates and causes. With `streamed` and streams configured (SME E6 / LA-10), the slice is segmented per
+ * stream run of its product instead: each segment carries the stream's capacity share and only the
+ * events of that stream or of the whole unit, so concurrent products never count the unit's capacity
+ * twice. The KPI engine segments without streams (unit time, unchanged).
+ */
+export function segmentSlice(
+  input: PeriodAccountingInput,
+  slice: SliceInput,
+  streamed = false,
+): Segment[] {
+  const pieces = streamed ? slicePieces(input, slice) : null;
+  if (!pieces) return segmentWindow(input, slice, null);
+  return pieces
+    .flatMap((piece) =>
+      segmentWindow(
+        { ...input, events: eventsOfStream(input.events, piece.streamId) },
+        { ...slice, window: piece.window },
+        piece,
+      ),
+    )
+    .sort(
+      (a, b) =>
+        a.start.getTime() - b.start.getTime() ||
+        (a.streamId ?? '').localeCompare(b.streamId ?? ''),
+    );
 }

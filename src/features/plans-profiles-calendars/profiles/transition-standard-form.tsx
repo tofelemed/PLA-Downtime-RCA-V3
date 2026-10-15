@@ -24,7 +24,7 @@ export interface TransitionStandardFormProps {
   onDone: () => void;
 }
 
-/** A draft matrix entry: directional product change, reference hours, optional reference off-grade, evidence. */
+/** A draft matrix entry: directional product change with optional catalyst family / operating mode (SME E1), reference hours, optional reference off-grade, evidence. */
 export function TransitionStandardForm({ unitId, productOptions, timezone, onDone }: TransitionStandardFormProps) {
   const [values, setValues] = useState<TransitionStandardFormValues>(() => emptyTransitionStandardForm(unitId));
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -48,6 +48,14 @@ export function TransitionStandardForm({ unitId, productOptions, timezone, onDon
         </FormField>
         <FormField id="tsTo" label="To product" error={fieldError('toProductId')}>
           <NativeSelect id="tsTo" value={values.toProductId} options={productOptions} placeholder="Choose…" onChange={(v) => set('toProductId', v)} />
+        </FormField>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <FormField id="tsCatalyst" label="Catalyst family (blank = any)" error={fieldError('catalystFamily')}>
+          <Input id="tsCatalyst" value={values.catalystFamily} placeholder="any" onChange={(e) => set('catalystFamily', e.target.value)} />
+        </FormField>
+        <FormField id="tsMode" label="Operating mode (blank = any)" error={fieldError('operatingMode')}>
+          <Input id="tsMode" value={values.operatingMode} placeholder="any" onChange={(e) => set('operatingMode', e.target.value)} />
         </FormField>
       </div>
       <div className="grid gap-2 sm:grid-cols-4">

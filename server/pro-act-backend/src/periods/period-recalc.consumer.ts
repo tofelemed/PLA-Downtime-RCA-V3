@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { InProcessEventBus } from '../common/outbox/in-process-event-bus';
 import { InboxService } from '../common/outbox/inbox.service';
 import { PublishedMessage } from '../common/outbox/outbox-transport';
+import { downstreamUnits } from '../plant-model/flow-inputs.loader';
 import { PLAN_VERSION_APPROVED } from '../plans/plan-events';
 import { ActualsJobsService } from './actuals-jobs.service';
 import { ProductionPeriod } from './entities/production-period.entity';
@@ -93,11 +94,23 @@ export class PeriodRecalcConsumer implements OnModuleInit {
       affectedTo?: string | null;
     };
     if (!payload.affectedFrom) return;
+    const from = new Date(payload.affectedFrom);
+    const to = payload.affectedTo ? new Date(payload.affectedTo) : null;
+    // SME E2: a stop can starve the units downstream of it in the flow map
+    const downstream =
+      event.physical_type === 'downtime'
+        ? await downstreamUnits(manager, {
+            tenantId: message.tenantId,
+            unitId: event.unit_id,
+            from,
+            to,
+          })
+        : [];
     await requestRecalculation(manager, {
       tenantId: message.tenantId,
-      unitIds: [event.unit_id],
-      from: new Date(payload.affectedFrom),
-      to: payload.affectedTo ? new Date(payload.affectedTo) : null,
+      unitIds: [event.unit_id, ...downstream],
+      from,
+      to,
       reason: `${output ? 'output' : 'loss'}_event_${
         message.type === 'EventRetracted' ? 'retracted' : 'changed'
       }`,

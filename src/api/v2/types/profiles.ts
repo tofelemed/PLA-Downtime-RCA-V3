@@ -94,6 +94,9 @@ export interface TransitionStandardView extends VersionFields {
   unitId: string;
   fromProductId: string;
   toProductId: string;
+  /** SME E1: catalyst family / operating mode the entry applies to; null = any */
+  catalystFamily: string | null;
+  operatingMode: string | null;
   /** reference duration, seconds (decimal string) */
   referenceSeconds: string;
   referenceOffgradeQty: string | null;

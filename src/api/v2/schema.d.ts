@@ -2496,6 +2496,238 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/unit-streams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List unit stream versions (keyset on effectiveFrom, id) */
+        get: operations["UnitStreamsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a draft unit stream version
+         * @description Requires `Idempotency-Key`. Unit of the tenant in scope (422 INVALID_REFERENCE); capacityShare in (0, 1] (422 INVALID_CAPACITY_SHARE).
+         */
+        post: operations["UnitStreamsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/unit-streams/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one unit stream version; foreign ids are 404 */
+        get: operations["UnitStreamsV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/unit-streams/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a draft unit stream version
+         * @description Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). 409 STREAM_SHARE_EXCEEDED when the unit's approved streams would provide more than its whole rate.
+         */
+        post: operations["UnitStreamsV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/unit-streams/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retire a unit stream version (draft or approved) */
+        post: operations["UnitStreamsV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/stream-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List stream runs overlapping [from, to) (keyset on startTime, id, newest first) */
+        get: operations["StreamRunsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Record a stream run
+         * @description Requires `Idempotency-Key`. The stream is approved and in force at startTime (422 INVALID_REFERENCE); runs of one stream never overlap (409 STREAM_RUN_OVERLAP); a lot code is made once (409 LOT_CODE_TAKEN).
+         */
+        post: operations["StreamRunsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/stream-runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * End a stream run or correct its lot / notes
+         * @description endTime after startTime (422 INVALID_INTERVAL); the same overlap and lot rules as create.
+         */
+        patch: operations["StreamRunsV2Controller_update_v2"];
+        trace?: never;
+    };
+    "/api/v2/flow-routes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List flow route versions touching a unit (keyset on effectiveFrom, id) */
+        get: operations["FlowRoutesV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Create a draft flow route version
+         * @description Requires `Idempotency-Key`. Both units of the tenant in scope (422 INVALID_REFERENCE), different (422 SAME_UNIT); a buffer needs inventoryUom and drawRatePerHour > 0 (422 BUFFER_INCOMPLETE); max above min level (422 INVALID_LIMITS).
+         */
+        post: operations["FlowRoutesV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/flow-routes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one flow route version; foreign ids are 404 */
+        get: operations["FlowRoutesV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/flow-routes/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a draft flow route version
+         * @description Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). 422 FLOW_CYCLE when an approved path leads back from its to-unit to its from-unit.
+         */
+        post: operations["FlowRoutesV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/flow-routes/{id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retire a flow route version (draft or approved) */
+        post: operations["FlowRoutesV2Controller_retire_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/buffer-levels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List recorded buffer levels (keyset on observedAt, id, newest first) */
+        get: operations["BufferLevelsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Record a buffer level
+         * @description Requires `Idempotency-Key`. An approved route from → to in force at observedAt (422 INVALID_REFERENCE), in the route's inventory unit (422 UOM_MISMATCH); one reading per buffer and instant (409 LEVEL_EXISTS).
+         */
+        post: operations["BufferLevelsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/reports/site-loss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Loss at the site boundary by origin, next to every unit’s own loss (impact), per unit of measure
+         * @description Read-only over the stored runs and approved lines of periods starting in [from, to) (≤ 400 days). Boundary units feed no other unit in the approved flow map at the period start; only they add to the site loss, so an upstream stop counts once — where it starved a boundary unit, attributed to its unit — and one the buffer absorbed costs the site nothing.
+         */
+        get: operations["SiteLossV2Controller_siteLoss_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/source-authority": {
         parameters: {
             query?: never;
@@ -6767,6 +6999,26 @@ export interface components {
              */
             recoveryOfEventId?: Record<string, never> | null;
             /**
+             * @description SME E1: catalyst family of a grade change (transition-standard key); grade_transition only
+             * @example ziegler_natta
+             */
+            catalystFamily?: Record<string, never> | null;
+            /**
+             * @description SME E1: operating mode of a grade change; absent = the profile mode of the production context; grade_transition only
+             * @example normal
+             */
+            operatingMode?: Record<string, never> | null;
+            /**
+             * @description SME E6: the stream (train / line) of the unit the event happened on; absent / null = the whole unit. An approved stream of the unit (422 INVALID_REFERENCE)
+             * @example T1
+             */
+            streamCode?: Record<string, never> | null;
+            /**
+             * @description SME E6: the production lot an output measurement belongs to (silo / packaging output keeps the grade the lot was made as)
+             * @example L-2027-0412
+             */
+            lotCode?: Record<string, never> | null;
+            /**
              * @description SME E3: disposition of the tonnes a quality_loss event explains (downgrade sold at a discount, scrap, rework); quality_loss only
              * @enum {string|null}
              */
@@ -6867,6 +7119,26 @@ export interface components {
              * @description SME Q10: the stop (downtime of the same unit) a ramp-up or startup-quality event recovers from; its loss is charged to that stop
              */
             recoveryOfEventId?: Record<string, never> | null;
+            /**
+             * @description SME E1: catalyst family of a grade change (transition-standard key); grade_transition only
+             * @example ziegler_natta
+             */
+            catalystFamily?: Record<string, never> | null;
+            /**
+             * @description SME E1: operating mode of a grade change; absent = the profile mode of the production context; grade_transition only
+             * @example normal
+             */
+            operatingMode?: Record<string, never> | null;
+            /**
+             * @description SME E6: the stream (train / line) of the unit the event happened on; absent / null = the whole unit. An approved stream of the unit (422 INVALID_REFERENCE)
+             * @example T1
+             */
+            streamCode?: Record<string, never> | null;
+            /**
+             * @description SME E6: the production lot an output measurement belongs to (silo / packaging output keeps the grade the lot was made as)
+             * @example L-2027-0412
+             */
+            lotCode?: Record<string, never> | null;
             /**
              * @description SME E3: disposition of the tonnes a quality_loss event explains (downgrade sold at a discount, scrap, rework); quality_loss only
              * @enum {string|null}
@@ -7592,6 +7864,16 @@ export interface components {
              */
             toProductId: string;
             /**
+             * @description SME E1: catalyst family the entry applies to; absent / null = any (the most specific approved entry wins)
+             * @example ziegler_natta
+             */
+            catalystFamily?: Record<string, never> | null;
+            /**
+             * @description SME E1: operating mode the entry applies to (as on production profiles); absent / null = any
+             * @example normal
+             */
+            operatingMode?: Record<string, never> | null;
+            /**
              * @description Reference duration of the transition in seconds (> 0)
              * @example 7560
              */
@@ -7953,6 +8235,135 @@ export interface components {
         ToleranceAdoptionDto: {
             /** @description Note on the new tolerance version */
             notes?: string;
+        };
+        UnitStreamCreateDto: {
+            /** @example 2026-10-01T02:30:00Z */
+            effectiveFrom: string;
+            /**
+             * @description Exclusive end; absent or null = open-ended
+             * @example 2027-01-01T02:30:00Z
+             */
+            effectiveTo?: Record<string, never> | null;
+            /** Format: uuid */
+            unitId: string;
+            /**
+             * @description Stream code, stable within the unit
+             * @example T1
+             */
+            code: string;
+            /** @example Train 1 */
+            name: string;
+            /**
+             * @description Share of the unit's rate the stream provides, (0, 1]; Σ over the unit's approved streams ≤ 1 (409 STREAM_SHARE_EXCEEDED)
+             * @example 0.6
+             */
+            capacityShare: string;
+            notes?: Record<string, never> | null;
+        };
+        StreamRunCreateDto: {
+            /** Format: uuid */
+            unitId: string;
+            /**
+             * @description An approved stream of the unit in force at startTime
+             * @example T1
+             */
+            streamCode: string;
+            /** Format: uuid */
+            productId: string;
+            /**
+             * @description Production lot made on this run (unique per tenant, 409 LOT_CODE_TAKEN)
+             * @example L-2027-0412
+             */
+            lotCode?: Record<string, never> | null;
+            /** @example 2027-03-01T06:00:00Z */
+            startTime: string;
+            /**
+             * @description Exclusive end; absent or null = still running
+             * @example 2027-03-01T14:00:00Z
+             */
+            endTime?: Record<string, never> | null;
+            notes?: Record<string, never> | null;
+        };
+        StreamRunPatchDto: {
+            endTime?: Record<string, never> | null;
+            lotCode?: Record<string, never> | null;
+            notes?: Record<string, never> | null;
+        };
+        FlowRouteCreateDto: {
+            /** @example 2026-10-01T02:30:00Z */
+            effectiveFrom: string;
+            /**
+             * @description Exclusive end; absent or null = open-ended
+             * @example 2027-01-01T02:30:00Z
+             */
+            effectiveTo?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description Supplying (upstream) unit
+             */
+            fromUnitId: string;
+            /**
+             * Format: uuid
+             * @description Supplied (downstream) unit
+             */
+            toUnitId: string;
+            /**
+             * @description feed = required supply; alternate = can keep the downstream unit fed on its own
+             * @default feed
+             * @enum {string}
+             */
+            routeRole: "feed" | "alternate";
+            /**
+             * @description Downstream output per unit of feed (> 0), default 1
+             * @example 0.98
+             */
+            yieldFactor?: Record<string, never> | null;
+            /** @example Silo S-1 */
+            bufferName?: Record<string, never> | null;
+            /**
+             * @description Usable buffer inventory when no recent level is recorded; absent = max − min operating level, or no buffer
+             * @example 100
+             */
+            usableInventory?: Record<string, never> | null;
+            /**
+             * @description Lowest operating level (a recorded level is usable above it)
+             * @example 20
+             */
+            minOperatingLevel?: Record<string, never> | null;
+            /** @example 140 */
+            maxOperatingLevel?: Record<string, never> | null;
+            /**
+             * @description Inventory unit (required with a buffer)
+             * @example t
+             */
+            inventoryUom?: Record<string, never> | null;
+            /**
+             * @description Downstream draw from the buffer at full rate, inventory unit per hour (required with a buffer, > 0)
+             * @example 20
+             */
+            drawRatePerHour?: Record<string, never> | null;
+            notes?: Record<string, never> | null;
+        };
+        BufferLevelCreateDto: {
+            /** Format: uuid */
+            fromUnitId: string;
+            /** Format: uuid */
+            toUnitId: string;
+            /** @example 2027-05-01T03:30:00Z */
+            observedAt: string;
+            /** @example 60 */
+            level: string;
+            /**
+             * @description The route's inventory unit (422 UOM_MISMATCH)
+             * @example t
+             */
+            uom: string;
+            /**
+             * @default manual
+             * @enum {string}
+             */
+            source: "manual" | "signal" | "import";
+            notes?: Record<string, never> | null;
         };
         BoundaryAdjustmentDto: {
             /** @description The record already includes the stock change between the boundaries (e.g. silo level-to-mass); false = known but never a substitute */
@@ -13399,6 +13810,395 @@ export interface operations {
                 "application/json": components["schemas"]["ToleranceAdoptionDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitStreamsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                unitId?: string;
+                state?: "draft" | "approved" | "retired";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitStreamsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitStreamCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitStreamsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitStreamsV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitStreamsV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StreamRunsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                unitId?: string;
+                streamCode?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StreamRunsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StreamRunCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StreamRunsV2Controller_update_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StreamRunPatchDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FlowRoutesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Routes from or to this unit */
+                unitId?: string;
+                state?: "draft" | "approved" | "retired";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FlowRoutesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlowRouteCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FlowRoutesV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FlowRoutesV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FlowRoutesV2Controller_retire_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BufferLevelsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Levels of buffers feeding this unit */
+                toUnitId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BufferLevelsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BufferLevelCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SiteLossV2Controller_siteLoss_v2: {
+        parameters: {
+            query: {
+                /** @description Periods starting at or after this instant (ISO 8601 with offset) */
+                from: string;
+                /** @description Periods starting before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only). */
+                unitIds?: string[];
+                /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
+                approvedOnly?: boolean;
+                ledger?: "plan" | "capacity";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

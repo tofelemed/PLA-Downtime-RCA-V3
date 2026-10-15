@@ -13,6 +13,14 @@ import {
   LotDispositionInput,
 } from '../domain/actuals/period/quality-classes';
 import { Dec } from '../domain/actuals/decimal';
+import {
+  OutputStreamRun,
+  StreamedOutputEvent,
+} from '../domain/actuals/period/output-attribution';
+import {
+  loadOutputStreamRuns,
+  LOT_OUTPUT_EVENTS_SQL,
+} from '../plant-model/stream-inputs.loader';
 import { Signal } from '../signals/entities/signal.entity';
 import { SampleStore } from '../signals/sample-store';
 import { ActualsAdjustment } from './entities/actuals-adjustment.entity';
@@ -27,7 +35,7 @@ const STOPS_SQL = `SELECT "start_time", "end_time" FROM "production_events"
 
 /** Production output events overlapping the period ($3, $4) of a unit. */
 export const OUTPUT_EVENTS_SQL = `SELECT "id", "canonical_id", "current_source_revision", "row_version", "start_time", "end_time",
-       "quantity"::text AS "quantity", "defective_quantity"::text AS "rejects", "quantity_uom"
+       "quantity"::text AS "quantity", "defective_quantity"::text AS "rejects", "quantity_uom", "stream_code", "lot_code"
   FROM "production_events"
  WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "physical_type" = 'production_output'
    AND "physical_state" IN ('open', 'closed')
@@ -62,7 +70,10 @@ export interface SignalInput {
 }
 
 export interface PeriodInputs {
-  events: PeriodOutputEvent[];
+  /** SME E6: with the stream / lot each output names */
+  events: StreamedOutputEvent[];
+  /** SME E6: stream runs of the unit the outputs are attributed with; absent / empty = none */
+  streamRuns?: OutputStreamRun[];
   /** stops of the unit under output events that cross the period boundary (LA-06: running-time split) */
   stops: StoppedSpan[];
   signals: SignalInput[];
@@ -101,7 +112,52 @@ export class ActualsInputsLoader {
         this.dispositions(manager, period),
       ]);
     const stops = await this.stopsUnder(manager, period, events);
-    return { events, stops, signals, adjustments, reportLines, dispositions };
+    const streamed = await this.streamed(manager, period, events);
+    return {
+      events: streamed.events,
+      streamRuns: streamed.runs,
+      stops,
+      signals,
+      adjustments,
+      reportLines,
+      dispositions,
+    };
+  }
+
+  /**
+   * SME E6: outputs measured after the period whose lot was made in it, and the stream runs that
+   * attribute the outputs to products (none for a unit without streams).
+   */
+  private async streamed(
+    manager: EntityManager,
+    period: ProductionPeriod,
+    inWindow: StreamedOutputEvent[],
+  ): Promise<{ events: StreamedOutputEvent[]; runs: OutputStreamRun[] }> {
+    const params = [
+      period.tenantId,
+      period.unitId,
+      period.utcStart,
+      period.utcEnd,
+    ];
+    const later: Array<Record<string, unknown>> = await manager.query(
+      LOT_OUTPUT_EVENTS_SQL,
+      params,
+    );
+    const events = [...inWindow, ...later.map(toOutputEvent)];
+    const lots = [
+      ...new Set(events.flatMap((e) => (e.lotCode ? [e.lotCode] : []))),
+    ];
+    const runs = await loadOutputStreamRuns(
+      manager,
+      {
+        tenantId: period.tenantId,
+        unitId: period.unitId,
+        from: period.utcStart,
+        to: period.utcEnd,
+      },
+      lots,
+    );
+    return { events, runs };
   }
 
   private async dispositions(
@@ -166,20 +222,12 @@ export class ActualsInputsLoader {
   private async events(
     manager: EntityManager,
     period: ProductionPeriod,
-  ): Promise<PeriodOutputEvent[]> {
+  ): Promise<StreamedOutputEvent[]> {
     const rows: Array<Record<string, unknown>> = await manager.query(
       OUTPUT_EVENTS_SQL,
       [period.tenantId, period.unitId, period.utcStart, period.utcEnd],
     );
-    return rows.map((row) => ({
-      identity: (row.canonical_id as string | null) ?? (row.id as string),
-      revision: row.row_version as number,
-      start: new Date(row.start_time as string),
-      end: row.end_time ? new Date(row.end_time as string) : null,
-      quantity: (row.quantity as string | null) ?? null,
-      rejects: (row.rejects as string | null) ?? null,
-      uom: (row.quantity_uom as string | null) ?? null,
-    }));
+    return rows.map(toOutputEvent);
   }
 
   private async signals(
@@ -311,6 +359,21 @@ export class ActualsInputsLoader {
         })),
     );
   }
+}
+
+/** An output event row (SME E6: with the stream and lot it names). */
+function toOutputEvent(row: Record<string, unknown>): StreamedOutputEvent {
+  return {
+    identity: (row.canonical_id as string | null) ?? (row.id as string),
+    revision: row.row_version as number,
+    start: new Date(row.start_time as string),
+    end: row.end_time ? new Date(row.end_time as string) : null,
+    quantity: (row.quantity as string | null) ?? null,
+    rejects: (row.rejects as string | null) ?? null,
+    uom: (row.quantity_uom as string | null) ?? null,
+    streamId: (row.stream_code as string | null) ?? null,
+    lotCode: (row.lot_code as string | null) ?? null,
+  };
 }
 
 /** Policy source of a signal: PI counters / rates, MQTT and Kafka signals; other connections none. */

@@ -85,6 +85,15 @@ import { UncertaintyBudget } from '../uncertainty/entities/uncertainty-budget.en
 import { ToleranceAdoptionService } from '../uncertainty/tolerance-adoption.service';
 import { UncertaintyBudgetsService } from '../uncertainty/uncertainty-budgets.service';
 import { UncertaintyModule } from '../uncertainty/uncertainty.module';
+import { BufferLevelsService } from '../plant-model/buffer-levels.service';
+import { BufferLevelRecord } from '../plant-model/entities/buffer-level.entity';
+import { PlantFlowRoute } from '../plant-model/entities/plant-flow-route.entity';
+import { PlantFlowRoutesService } from '../plant-model/plant-flow-routes.service';
+import { StreamRunRecord } from '../plant-model/entities/stream-run.entity';
+import { UnitStream } from '../plant-model/entities/unit-stream.entity';
+import { PlantModelModule } from '../plant-model/plant-model.module';
+import { StreamRunsService } from '../plant-model/stream-runs.service';
+import { UnitStreamsService } from '../plant-model/unit-streams.service';
 import { ProfileResolutionService } from '../profiles/profile-resolution.service';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ProfilesService } from '../profiles/profiles.service';
@@ -350,6 +359,26 @@ class QualityDispositionsModuleStub {}
 })
 class UncertaintyModuleStub {}
 
+/** Stands in for the SME E6 / E2 plant-model module (streams, stream runs). */
+const PLANT_MODEL_PROVIDERS = [
+  UnitStreamsService,
+  StreamRunsService,
+  PlantFlowRoutesService,
+  BufferLevelsService,
+  getRepositoryToken(UnitStream),
+  getRepositoryToken(StreamRunRecord),
+  getRepositoryToken(PlantFlowRoute),
+  getRepositoryToken(BufferLevelRecord),
+];
+@Module({
+  providers: PLANT_MODEL_PROVIDERS.map((provide) => ({
+    provide,
+    useValue: {},
+  })),
+  exports: PLANT_MODEL_PROVIDERS,
+})
+class PlantModelModuleStub {}
+
 /** Stands in for the plan 2.5 accounting module (calculation runs, recalculation command). */
 @Module({
   providers: [{ provide: AccountingCommandsService, useValue: {} }],
@@ -590,6 +619,8 @@ async function generate(): Promise<string> {
     .useModule(QualityDispositionsModuleStub)
     .overrideModule(UncertaintyModule)
     .useModule(UncertaintyModuleStub)
+    .overrideModule(PlantModelModule)
+    .useModule(PlantModelModuleStub)
     .overrideModule(AccountingModule)
     .useModule(AccountingModuleStub)
     .overrideModule(ReconciliationModule)

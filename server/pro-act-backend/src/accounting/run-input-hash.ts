@@ -45,6 +45,20 @@ export function hashOf(
       s.from.getTime(),
       s.to?.getTime() ?? null,
     ]),
+    // SME E6: a run's end or a stream's share can change under the same ids
+    ...(inputs.streamRuns.length > 0
+      ? {
+          streams: inputs.streamRuns.map((r) => [
+            r.streamId,
+            r.productId,
+            r.share,
+            r.start.getTime(),
+            r.end?.getTime() ?? null,
+          ]),
+        }
+      : {}),
+    // SME E2: the flow map, buffer levels and upstream stops this unit's starvation is derived from
+    ...(inputs.flowMaterial.length > 0 ? { flow: inputs.flowMaterial } : {}),
     slices: inputs.slices.map((s) => [
       s.sliceId,
       s.window.start.getTime(),

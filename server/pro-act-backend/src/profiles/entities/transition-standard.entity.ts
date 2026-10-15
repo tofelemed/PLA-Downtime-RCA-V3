@@ -6,7 +6,6 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
-  Unique,
 } from 'typeorm';
 import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
 import {
@@ -21,20 +20,22 @@ import { decimalStringTransformer } from '../../v2/common/decimal-string.transfo
  * One entry of a unit's grade-transition matrix (LA-08, SME Q9 / E1): the approved reference duration
  * of a directional product change (from → to; B→A is its own entry) and, optionally, the reference
  * off-grade quantity it makes, with the evidence it was derived from. Effective-dated and versioned like
- * rates (maker-checker approval, supersede); approved versions of one unit and change never overlap.
+ * rates (maker-checker approval, supersede); approved versions of one key never overlap. The key adds
+ * catalyst family and operating mode (SME E1, null = any; the engine takes the most specific match).
  * The accounting engine splits a transition's loss into allowance (within the reference) and overrun.
  */
 @Entity('transition_standards')
-@Unique('UQ_transition_standards_change_version', [
-  'unitId',
-  'fromProductId',
-  'toProductId',
-  'version',
-])
+/** SME E1: one version sequence per full key (unit, from, to, catalyst family, operating mode); migration-owned */
+@Index('UQ_transition_standards_key_version', { synchronize: false })
 @Exclusion(
   'EX_transition_standards_approved_no_overlap',
   `USING gist ("unit_id" WITH =, "from_product_id" WITH =, "to_product_id" WITH =, ` +
+    `(COALESCE("catalyst_family", '')) WITH =, (COALESCE("operating_mode", '')) WITH =, ` +
     `tstzrange("effective_from", "effective_to", '[)') WITH &&) WHERE ("state" = 'approved')`,
+)
+@Check(
+  'CHK_transition_standards_context',
+  `("catalyst_family" IS NULL OR "catalyst_family" <> '') AND ("operating_mode" IS NULL OR "operating_mode" <> '')`,
 )
 @Index('IDX_transition_standards_tenant_unit', ['tenantId', 'unitId'])
 @Index('IDX_transition_standards_from_product', ['fromProductId'])
@@ -90,6 +91,24 @@ export class GradeTransitionStandard extends TenantScopedEntity {
     foreignKeyConstraintName: 'FK_transition_standards_to_product',
   })
   toProduct?: Product;
+
+  /** SME E1: catalyst family the entry applies to; null = any */
+  @Column({
+    name: 'catalyst_family',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  catalystFamily: string | null;
+
+  /** SME E1: operating mode the entry applies to (as on production profiles); null = any */
+  @Column({
+    name: 'operating_mode',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  operatingMode: string | null;
 
   /** reference duration of the transition, seconds (decimal string) */
   @Column({

@@ -75,6 +75,10 @@ export type LossEventType =
 export interface GradeChange {
   fromProductId: string;
   toProductId: string;
+  /** SME E1: catalyst family of the change (event, else unknown); absent / null = not recorded */
+  catalystFamily?: string | null;
+  /** SME E1: operating mode of the change (event, else the production context's profile mode) */
+  operatingMode?: string | null;
 }
 
 /**
@@ -87,8 +91,64 @@ export interface TransitionStandard {
   toProductId: string;
   referenceSeconds: string;
   referenceOffgradeQuantity: string | null;
+  /** SME E1: catalyst family the entry applies to; absent / null = any */
+  catalystFamily?: string | null;
+  /** SME E1: operating mode the entry applies to; absent / null = any */
+  operatingMode?: string | null;
   from: Date;
   to: Date | null;
+}
+
+/**
+ * SME E6 / LA-10: one stream (a parallel train or line of the unit) running one product over
+ * `[start, end)` (end null = still running) with the share of the unit's rate it provides there. The
+ * loader cuts runs at stream-version boundaries, so the share is constant over a run.
+ */
+export interface StreamRun {
+  streamId: string;
+  productId: string;
+  /** share of the unit's rate the stream provides, (0, 1] (decimal string) */
+  share: string;
+  start: Date;
+  end: Date | null;
+}
+
+/**
+ * SME E2: an approved, effective-dated route of the plant's material-flow map: `fromUnitId` feeds
+ * `toUnitId` through an optional buffer (silo) with usable inventory and the downstream draw rate.
+ */
+export interface FlowRoute {
+  fromUnitId: string;
+  toUnitId: string;
+  /** `feed`: required supply; `alternate`: another route that can keep the downstream unit fed */
+  role: 'feed' | 'alternate';
+  /** usable buffer inventory when no level is recorded (decimal string); null = no buffer */
+  usableInventory: string | null;
+  /** lowest operating level: a recorded level is usable only above it; null = 0 */
+  minLevel: string | null;
+  /** downstream draw from the buffer at full rate, inventory unit per hour; null = no buffer */
+  drawRatePerHour: string | null;
+  from: Date;
+  to: Date | null;
+}
+
+/** SME E2: a recorded buffer (silo) level of a route at an instant. */
+export interface BufferLevel {
+  fromUnitId: string;
+  toUnitId: string;
+  at: Date;
+  level: string;
+}
+
+/** SME E2: what upstream propagation reads for the period's unit. */
+export interface FlowInput {
+  unitId: string;
+  routes: readonly FlowRoute[];
+  /** recorded stopping downtime of every unit upstream of `unitId` */
+  upstreamStops: ReadonlyArray<{ unitId: string; event: LossEvent }>;
+  levels: readonly BufferLevel[];
+  /** a recorded level older than this at a stop's start is not used (configured inventory applies) */
+  maxLevelAgeSeconds: number;
 }
 
 /** A loss-explaining event revision effective at run time (evidence of ACC05). */
@@ -128,6 +188,10 @@ export interface LossEvent {
   failureSeverity?: string | null;
   /** SME E3: disposition class of a `quality_loss` event (downgrade / scrap / rework); absent = none */
   dispositionClass?: string | null;
+  /** SME E6: the stream the event happened on; null / absent = the whole unit (every stream) */
+  streamId?: string | null;
+  /** SME E2: set on derived starvation — the upstream unit whose stop it propagates (the cause is that stop) */
+  starvedFrom?: string | null;
 }
 
 /** The actuals of a slice (2.4 result of the run's actuals run). */
@@ -202,6 +266,13 @@ export interface PeriodAccountingInput {
   /** LA-08: the unit's approved transition standards overlapping the period; absent = none */
   transitionStandards?: readonly TransitionStandard[];
   /**
+   * SME E6 / LA-10: the unit's stream runs overlapping the period; absent / empty = no streams configured
+   * (every slice uses its whole window, the 2.5 behaviour)
+   */
+  streamRuns?: readonly StreamRun[];
+  /** SME E2: the material-flow map upstream of the unit; absent = no routes into it (no propagation) */
+  flow?: FlowInput | null;
+  /**
    * full extent of each stop occurrence over all its events, also those outside the window (DT-09):
    * a split child inside the window is a micro-stop only if the whole occurrence is short
    */
@@ -235,6 +306,10 @@ export interface Segment {
   derates: LossEvent[];
   /** grade transitions active in running time (they take the segment's capacity, LA-08) */
   transitions: SegmentCause[];
+  /** SME E6: share of the unit's rate this segment's stream gives the slice; absent = the whole unit (1) */
+  capacityShare?: Dec;
+  /** SME E6: the stream of the segment; absent = no streams configured */
+  streamId?: string;
 }
 
 export interface EvidenceDraft {

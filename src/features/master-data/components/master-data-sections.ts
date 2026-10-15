@@ -29,6 +29,12 @@ export const MASTER_DATA_SECTIONS: readonly MasterDataSection[] = [
   { to: '/master-data/rca/checklists', label: 'Verification checklists', text: 'Checks that confirm a fix worked', visible: managers },
   { to: '/master-data/failure-dictionary', label: 'Failure dictionary', text: 'ISO 14224-aligned failure codes', visible: managers },
   {
+    to: '/master-data/plant-flow',
+    label: 'Plant flow',
+    text: 'Which unit feeds which, the buffers between them and their levels',
+    visible: (c) => c.canManageMasterData || c.canWriteProfiles,
+  },
+  {
     to: '/master-data/stop-policy',
     label: 'Stop and plan policy',
     text: 'Micro-stop thresholds, trip reasons and the grade-change allowance',

@@ -7,6 +7,9 @@ export interface TransitionStandardV2View extends VersionFields {
   unitId: string;
   fromProductId: string;
   toProductId: string;
+  /** SME E1: null = any catalyst family / operating mode */
+  catalystFamily: string | null;
+  operatingMode: string | null;
   referenceSeconds: string;
   referenceOffgradeQty: string | null;
   offgradeUom: string | null;
@@ -23,6 +26,8 @@ export function toTransitionStandardView(
     unitId: row.unitId,
     fromProductId: row.fromProductId,
     toProductId: row.toProductId,
+    catalystFamily: row.catalystFamily,
+    operatingMode: row.operatingMode,
     referenceSeconds: decimalText(row.referenceSeconds),
     referenceOffgradeQty:
       row.referenceOffgradeQty === null

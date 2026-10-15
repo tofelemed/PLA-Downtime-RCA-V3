@@ -23,7 +23,8 @@ import { computePeriodActuals } from './period-actuals.compute';
 /** Bumped when the period engine's rules change (recorded on every run). */
 // 2.4.2: SME E3 — lot dispositions classify rejects; rework acceptance and recovery are not first-pass good
 // 2.4.3: SME E7 — ranked measurement sources per boundary, substitution flag, boundary checks, approved estimate rank
-export const ACTUALS_ENGINE_VERSION = '2.4.3';
+// 2.4.4: SME E6 — outputs attributed to products by stream run and lot (silo / packaging keep the grade made)
+export const ACTUALS_ENGINE_VERSION = '2.4.4';
 
 /** Message type: a period has a new actuals run (2.5 / realtime consumers). */
 export const PERIOD_ACTUALS_COMPUTED = 'PeriodActualsComputed';
@@ -270,6 +271,17 @@ function hashOf(
       e.quantity,
       e.rejects,
       e.uom,
+      e.streamId ?? null,
+      e.lotCode ?? null,
+    ]),
+    // SME E6: runs attribute outputs to products (a run's end or lot can change)
+    streamRuns: (inputs.streamRuns ?? []).map((r) => [
+      r.id,
+      r.streamId,
+      r.productId,
+      r.lotCode,
+      r.start.getTime(),
+      r.end?.getTime() ?? null,
     ]),
     signals: inputs.signals.map((s) => [
       s.signal.id,

@@ -50,10 +50,16 @@ function importScope(
   };
 }
 
-/** Subjects whose message names their unit (a transition standard is per unit, LA-08). */
+/**
+ * Subjects whose message names their unit (a transition standard is per unit, LA-08; streams and stream
+ * runs are per unit, SME E6; a flow route or buffer level names its downstream unit, SME E2).
+ */
 const UNIT_SUBJECTS: ReadonlySet<string> = new Set([
   'profile',
   'transition_standard',
+  'unit_stream',
+  'stream_run',
+  'plant_flow',
 ]);
 /** Subjects of valuation inputs (SME V7): they apply to every unit of the tenant. */
 export const VALUATION_SUBJECTS = [

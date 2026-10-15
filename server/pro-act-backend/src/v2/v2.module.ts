@@ -109,6 +109,15 @@ import { QualityDispositionsModule } from '../quality-dispositions/quality-dispo
 import { LotDispositionsV2Controller } from './quality-dispositions/lot-dispositions-v2.controller';
 import { LotDispositionsV2Service } from './quality-dispositions/lot-dispositions-v2.service';
 import { UncertaintyModule } from '../uncertainty/uncertainty.module';
+import { PlantModelModule } from '../plant-model/plant-model.module';
+import { BufferLevelsV2Controller } from './plant-model/buffer-levels-v2.controller';
+import { FlowRoutesV2Controller } from './plant-model/flow-routes-v2.controller';
+import { PlantFlowV2Service } from './plant-model/plant-flow-v2.service';
+import { SiteLossV2Controller } from './plant-model/site-loss-v2.controller';
+import { SiteLossV2Service } from './plant-model/site-loss-v2.service';
+import { StreamRunsV2Controller } from './plant-model/stream-runs-v2.controller';
+import { UnitStreamsV2Controller } from './plant-model/unit-streams-v2.controller';
+import { UnitStreamsV2Service } from './plant-model/unit-streams-v2.service';
 import { UncertaintyBudgetsV2Controller } from './uncertainty/uncertainty-budgets-v2.controller';
 import { UncertaintyBudgetsV2Service } from './uncertainty/uncertainty-budgets-v2.service';
 import { SourceAuthorityV2Controller } from './source-authority/source-authority-v2.controller';
@@ -210,6 +219,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     PeriodsModule,
     QualityDispositionsModule,
     UncertaintyModule,
+    PlantModelModule,
     AccountingModule,
     ReconciliationModule,
     ExportsModule,
@@ -260,6 +270,11 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     ActualsAdjustmentsV2Controller,
     LotDispositionsV2Controller,
     UncertaintyBudgetsV2Controller,
+    UnitStreamsV2Controller,
+    StreamRunsV2Controller,
+    FlowRoutesV2Controller,
+    BufferLevelsV2Controller,
+    SiteLossV2Controller,
     SourceAuthorityV2Controller,
     ExternalReportsV2Controller,
     ActualsJobsV2Controller,
@@ -308,6 +323,9 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     PeriodsV2Service,
     LotDispositionsV2Service,
     UncertaintyBudgetsV2Service,
+    UnitStreamsV2Service,
+    PlantFlowV2Service,
+    SiteLossV2Service,
     SourceAuthorityV2Service,
     SourceAuthorityDecisionsService,
     PeriodAccountingV2Service,

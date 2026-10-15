@@ -12,6 +12,9 @@ export interface TransitionStandardFormValues {
   unitId: string;
   fromProductId: string;
   toProductId: string;
+  /** SME E1: blank = any catalyst family / operating mode */
+  catalystFamily: string;
+  operatingMode: string;
   referenceHours: string | null;
   referenceOffgradeQty: string | null;
   offgradeUom: string;
@@ -25,6 +28,8 @@ export const emptyTransitionStandardForm = (unitId: string): TransitionStandardF
   unitId,
   fromProductId: '',
   toProductId: '',
+  catalystFamily: '',
+  operatingMode: '',
   referenceHours: null,
   referenceOffgradeQty: null,
   offgradeUom: 't',
@@ -35,6 +40,9 @@ export const emptyTransitionStandardForm = (unitId: string): TransitionStandardF
 });
 
 const SECONDS_PER_HOUR = 3600;
+/** The server's code shape for catalyst family and operating mode. */
+const CONTEXT_CODE = /^[A-Za-z0-9_.-]{1,64}$/;
+const CONTEXT_MESSAGE = 'Use letters, digits, _ . - (up to 64)';
 
 /** Typed hours as the API's seconds (at most 3 decimals). */
 export function secondsOfHours(hours: string): string {
@@ -52,6 +60,8 @@ export function validateTransitionStandardForm(values: TransitionStandardFormVal
   if (!values.fromProductId) errors.fromProductId = 'Choose the product before the change';
   if (!values.toProductId) errors.toProductId = 'Choose the product after the change';
   if (values.fromProductId && values.fromProductId === values.toProductId) errors.toProductId = 'Choose a different product';
+  if (values.catalystFamily.trim() && !CONTEXT_CODE.test(values.catalystFamily.trim())) errors.catalystFamily = CONTEXT_MESSAGE;
+  if (values.operatingMode.trim() && !CONTEXT_CODE.test(values.operatingMode.trim())) errors.operatingMode = CONTEXT_MESSAGE;
   if (!values.referenceHours || Number(values.referenceHours) <= 0) errors.referenceSeconds = 'Enter the reference duration in hours (> 0)';
   if (values.referenceOffgradeQty && !values.offgradeUom.trim()) errors.offgradeUom = 'Enter the off-grade unit';
   if (values.sampleCount && !/^[1-9]\d*$/.test(values.sampleCount)) errors.sampleCount = 'Enter a whole number ≥ 1';
@@ -64,6 +74,8 @@ export function transitionStandardCreateBody(values: TransitionStandardFormValue
     unitId: values.unitId,
     fromProductId: values.fromProductId,
     toProductId: values.toProductId,
+    catalystFamily: values.catalystFamily.trim() || null,
+    operatingMode: values.operatingMode.trim() || null,
     referenceSeconds: secondsOfHours(values.referenceHours as string),
     referenceOffgradeQty: offGrade,
     offgradeUom: offGrade ? values.offgradeUom.trim() : null,

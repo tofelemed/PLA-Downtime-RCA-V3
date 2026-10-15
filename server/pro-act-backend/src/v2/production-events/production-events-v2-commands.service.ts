@@ -48,6 +48,7 @@ import {
   assertGradeChange,
   effectiveLinks,
   gradeLinkColumns,
+  NO_GRADE_LINKS,
 } from './grade-change';
 import {
   CreateProductionEventV2Dto,
@@ -99,7 +100,7 @@ export class ProductionEventsV2CommandService {
     });
     assertImpact(fields, dto.impactFraction);
     assertPlannedEnd(fields.startTime, dto.plannedEndTime);
-    assertGradeChange(fields.physicalType, effectiveLinks(NO_LINKS, dto));
+    assertGradeChange(fields.physicalType, effectiveLinks(NO_GRADE_LINKS, dto));
     assertDispositionClass(fields.physicalType, dto.dispositionClass ?? null);
     assertWrittenNotInFuture(fields, this.clock.now());
     const id = randomUUID();
@@ -336,8 +337,6 @@ function patchColumns(
   return { ...editableColumns(dto), ...fields } as Partial<ProductionEvent>;
 }
 
-const NO_LINKS = { fromProductId: null, toProductId: null };
-
 function notFound(): NotFoundException {
   return new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
 }
@@ -376,6 +375,8 @@ function editableColumns(
     impactFraction: dto.impactFraction,
     investigationPending: dto.investigationPending,
     plannedEndTime: plannedEndColumn(dto.plannedEndTime),
+    streamCode: dto.streamCode,
+    lotCode: dto.lotCode,
     ...failureColumns(dto),
   };
   return {

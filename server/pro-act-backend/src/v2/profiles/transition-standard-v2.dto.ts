@@ -18,6 +18,9 @@ import { ListQueryDto } from '../common/list-query.dto';
 import { DECIMAL, EffectiveDto } from './profile-v2.dto';
 
 const DECIMAL_MESSAGE = 'must be a decimal string ≥ 0 with at most 8 decimals';
+/** Same code shape as a profile's operating mode. */
+const CONTEXT_CODE = /^[A-Za-z0-9_.-]{1,64}$/;
+const CONTEXT_MESSAGE = 'must be 1–64 letters, digits, _ . -';
 
 /** Body of POST /transition-standards: a draft entry of the unit's grade-transition matrix (LA-08). */
 export class TransitionStandardCreateDto extends EffectiveDto {
@@ -38,6 +41,28 @@ export class TransitionStandardCreateDto extends EffectiveDto {
   })
   @IsUUID()
   toProductId: string;
+
+  @ApiPropertyOptional({
+    example: 'ziegler_natta',
+    nullable: true,
+    description:
+      'SME E1: catalyst family the entry applies to; absent / null = any (the most specific approved entry wins)',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(CONTEXT_CODE, { message: `catalystFamily ${CONTEXT_MESSAGE}` })
+  catalystFamily?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'normal',
+    nullable: true,
+    description:
+      'SME E1: operating mode the entry applies to (as on production profiles); absent / null = any',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(CONTEXT_CODE, { message: `operatingMode ${CONTEXT_MESSAGE}` })
+  operatingMode?: string | null;
 
   @ApiProperty({
     example: '7560',
