@@ -70,10 +70,25 @@ const PARTS: Readonly<Record<QualityDisposition | 'unproduced', Part[]>> = {
 
 type Plan = { parts: Part[]; notes: string[] } | { reason: string };
 
+/**
+ * SME E3: a line whose quality class is itself a disposition (an approved lot disposition or a quality
+ * event's class) is valued as recorded — no impact-code mapping needed. Other classes (transition
+ * off-grade) and unclassified lines use the policy's impact-code map, then its default.
+ */
+const CLASS_DISPOSITIONS: Readonly<Record<string, QualityDisposition>> = {
+  scrap: 'scrap',
+  downgrade: 'downgrade',
+  rework: 'rework',
+};
+
 function dispositionOf(
   line: ValuationLineInput,
   rules: EconomicRules,
 ): QualityDisposition | null {
+  const recorded = line.qualityClass
+    ? CLASS_DISPOSITIONS[line.qualityClass]
+    : undefined;
+  if (recorded) return recorded;
   const mapped = line.impactCodeId
     ? rules.qualityDispositions[line.impactCodeId]
     : undefined;

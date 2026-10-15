@@ -26,7 +26,7 @@ const delta = (
 const fmt = (value: Dec | null) => (value === null ? null : formatDec(value));
 
 describe('actuals adjustment projection and check', () => {
-  it('gross basis: good follows gross, reject and rework deltas linearly', () => {
+  it('gross basis: good follows gross and reject deltas linearly; rework acceptance is not good (SME E3)', () => {
     const projected = projectActuals(now('100', '96', '4'), [
       delta('gross', '5'),
       delta('reject', '1'),
@@ -37,7 +37,7 @@ describe('actuals adjustment projection and check', () => {
       fmt(projected.gross),
       fmt(projected.good),
       fmt(projected.reject),
-    ]).toEqual(['105', '98.5', '5']);
+    ]).toEqual(['105', '98', '5']);
     expect(adjustmentViolation(projected)).toBeNull();
   });
 

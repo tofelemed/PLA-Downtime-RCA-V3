@@ -14,7 +14,8 @@ import { segmentSlice } from './segmentation';
 /** Bumped whenever a rule of the accounting engine changes (recorded on every calculation run). */
 // 2.5.5: grade transitions (LA-08) and micro-stops per asset class (SME D6) together
 // 2.5.6: oee_policy transitionAllowanceInPlan — a plan that deducts standard transition time has no allowance line
-export const ACCOUNTING_ENGINE_VERSION = '2.5.6';
+// 2.5.7: SME E3 disposition classes — quality lines name their class (events, lot dispositions)
+export const ACCOUNTING_ENGINE_VERSION = '2.5.7';
 
 function computeSlices(
   input: PeriodAccountingInput,

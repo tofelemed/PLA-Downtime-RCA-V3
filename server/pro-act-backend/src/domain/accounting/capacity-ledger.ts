@@ -27,6 +27,7 @@ import {
   splitDerates,
   totalOf,
 } from './ledger-common';
+import { classifiedQualityLines } from './quality-class-lines';
 import { LineContext, timeLines } from './time-lines';
 
 interface Part {
@@ -93,7 +94,12 @@ function qualityPart(
     remainderRateId: null,
     remainderBasis: 'measured',
   });
-  return { lines: result.lines, issues, overClaim: result.overClaim, total };
+  const lines = classifiedQualityLines(
+    result.lines,
+    ctx.slice.actuals?.classes,
+    ctx.epsilon,
+  );
+  return { lines, issues, overClaim: result.overClaim, total };
 }
 
 /** Running time: performance = max(0, capacity − gross) allocated to micro-stops and derates; above → gain; over-claims kept and flagged. */

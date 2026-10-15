@@ -27,6 +27,7 @@ import {
   transitionScope,
 } from './ledger-common';
 import { PlanTotals, planTotals } from './plan-totals';
+import { classifiedQualityLines } from './quality-class-lines';
 import { LineContext, timeLines } from './time-lines';
 import { standardTransitionCapacity } from './transition-claims';
 import { componentTotal } from './transition-lines';
@@ -105,7 +106,10 @@ function plannedSegments(
   };
 }
 
-/** Quality candidates: declared quantities (quality events) and the measured remainder of gross − good. */
+/**
+ * Quality candidates: declared quantities (quality events) and the measured remainder of gross − good,
+ * split by the slice's disposition classes (SME E3).
+ */
 function qualityCandidates(ctx: SliceContext): Candidates {
   const { gross, good } = productionOf(ctx.slice);
   if (gross === null || good === null || gross.lt(good))
@@ -118,7 +122,11 @@ function qualityCandidates(ctx: SliceContext): Candidates {
     remainderBasis: 'measured',
   });
   return {
-    lines: result.lines,
+    lines: classifiedQualityLines(
+      result.lines,
+      ctx.slice.actuals?.classes,
+      ctx.epsilon,
+    ),
     flags: result.overClaim.gt(ZERO) ? [BRIDGE] : [],
   };
 }
