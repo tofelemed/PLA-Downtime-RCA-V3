@@ -91,6 +91,15 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     capability: 'canViewAnalysis',
     description: 'Close the plant month: approvals, quantity close, finance sign-off and lock',
   },
+  {
+    // SME E4: every analysis role reads; production / integration / accounting record, accounting approves
+    name: 'Measurement Uncertainty',
+    href: '/measurement-uncertainty',
+    icon: EntityIcon.signal,
+    section: 'production',
+    capability: 'canViewAnalysis',
+    description: 'Uncertainty budgets per measurement boundary that justify the reconciliation tolerance',
+  },
   { name: 'RCA Analysis', href: '/rca', icon: EntityIcon.rcaCase, section: 'reliability', capability: 'canViewAnalysis', description: 'Root cause investigations' },
   { name: 'Bad Actors', href: '/reliability/bad-actors', icon: EntityIcon.badActor, section: 'reliability', capability: 'canViewAnalysis', description: 'Monthly top assets and failure modes by approved loss' },
   { name: 'Knowledge Base', href: '/rca-knowledge-base', icon: EntityIcon.knowledge, section: 'reliability', capability: 'canViewAnalysis', description: 'Closed investigations and lessons learned' },

@@ -22,7 +22,8 @@ import { computePeriodActuals } from './period-actuals.compute';
 
 /** Bumped when the period engine's rules change (recorded on every run). */
 // 2.4.2: SME E3 — lot dispositions classify rejects; rework acceptance and recovery are not first-pass good
-export const ACTUALS_ENGINE_VERSION = '2.4.2';
+// 2.4.3: SME E7 — ranked measurement sources per boundary, substitution flag, boundary checks, approved estimate rank
+export const ACTUALS_ENGINE_VERSION = '2.4.3';
 
 /** Message type: a period has a new actuals run (2.5 / realtime consumers). */
 export const PERIOD_ACTUALS_COMPUTED = 'PeriodActualsComputed';
@@ -77,7 +78,11 @@ export class ActualsRunnerService {
       { tenantId: period.tenantId, unitId: period.unitId },
       period.utcStart,
     );
-    const inputs = await this.loader.load(manager, period);
+    const inputs = await this.loader.load(
+      manager,
+      period,
+      maxLagSeconds(policies),
+    );
     const inputHash = hashOf(slices, inputs, policies);
     const current = period.currentActualsRunId
       ? await manager.findOneBy(ActualsRun, { id: period.currentActualsRunId })
@@ -209,8 +214,18 @@ function resultRow(
     coverage: actuals.coverage,
     adjustmentIds: actuals.adjustmentIds,
     qualityClasses: actuals.qualityClasses ?? null,
+    substitution: actuals.substitution ?? null,
     computedAt,
   };
+}
+
+/** The longest boundary lag of the SME E7 hierarchy in force (0 without one). */
+function maxLagSeconds(policies: ResolvedPolicies): number {
+  const entries = policies.sourceAuthority.measurementHierarchy?.entries ?? [];
+  return Math.max(
+    0,
+    ...entries.map((entry) => entry.boundaryAdjustment?.lagSeconds ?? 0),
+  );
 }
 
 /** Display readiness (the workflow itself is 2.8): ended, and every slice complete with enough coverage. */

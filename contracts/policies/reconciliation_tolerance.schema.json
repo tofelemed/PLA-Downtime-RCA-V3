@@ -51,6 +51,11 @@
           "maximum": 1,
           "default": 0.02,
           "description": "SME R7 (14 Oct 2026): improvement target for unexplained loss (positive residual, tolerance adjustments and classified Unaccounted lines) as a share of the shortfall (plan - actual). Reporting only, never the approval tolerance; absent or null = no target."
+        },
+        "uncertaintyBudgetId": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "description": "SME E4 (15 Oct 2026): the approved uncertainty budget (`uncertainty_budgets`) whose expanded uncertainty justifies an `absolute` tolerance; shown as the justification. Written only by an explicit adoption (`POST /v2/uncertainty-budgets/{id}/adopt-as-tolerance`), never automatically; absent = no stated justification."
         }
       },
       "allOf": [

@@ -1,6 +1,7 @@
 import {
   PeriodFinding,
   SourceSegment,
+  SourceSubstitution,
 } from '../../domain/actuals/period/period-actuals.types';
 import { QualityClasses } from '../../domain/actuals/period/quality-classes';
 import { ActualsAdjustment } from '../../periods/entities/actuals-adjustment.entity';
@@ -35,6 +36,11 @@ export interface SliceActualsV2View {
    * recovered quantities of the slice; null = no disposition or rework acceptance recorded
    */
   qualityClasses: QualityClasses | null;
+  /**
+   * SME E7: the lower-ranked source (or approved estimate) that gave the actuals instead of the top-ranked
+   * source, why, and how another boundary was bridged; null = the top rank was used (or an older run)
+   */
+  substitution: SourceSubstitution | null;
 }
 
 export interface SliceActualsDetailV2View extends SliceActualsV2View {
@@ -122,6 +128,7 @@ export function toSummary(result: ActualsResult): SliceActualsV2View {
     estimatedQty: decimalView(result.estimatedQty),
     qualityState: result.qualityState,
     qualityClasses: result.qualityClasses ?? null,
+    substitution: result.substitution ?? null,
   };
 }
 

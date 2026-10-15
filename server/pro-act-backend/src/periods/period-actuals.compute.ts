@@ -9,6 +9,7 @@ import {
   ActualsSource,
   ApprovedAdjustment,
   SliceActuals,
+  SourceAuthorityPolicy,
   SourceCandidate,
   Window,
 } from '../domain/actuals/period/period-actuals.types';
@@ -25,7 +26,8 @@ import { PeriodProductSlice } from './entities/period-product-slice.entity';
  * Actuals of every active slice of a period from loaded inputs (plan 2.4 step 2): candidates per policy
  * source — production output events, PI / MQTT / Kafka counter and rate signals (1.7 engine over the
  * slice window), certified external report lines — then one authority (`selectAuthority`) and the slice
- * result with approved adjustments (`computeSliceActuals`). Unit-level evidence (events, product-less
+ * result with approved adjustments (`computeSliceActuals`); SME E7 ranks naming one signal or a boundary
+ * lag get their own candidate. Unit-level evidence (events, product-less
  * signals) is attributable only when no other slice shares the window (concurrent products, §3.1).
  */
 export function computePeriodActuals(
@@ -93,7 +95,48 @@ function candidatesOf(
   }
   const line = inputs.reportLines.find((l) => l.productId === slice.productId);
   if (line) candidates.external_report = externalLineCandidate(line, window);
-  return { candidates, ambiguous };
+  const byRank = rankedSignalCandidates(
+    context.policies.sourceAuthority,
+    bySource,
+    window,
+  );
+  return { candidates, byRank, ambiguous };
+}
+
+/**
+ * SME E7: candidates of hierarchy ranks that name one signal (a redundant meter of the same type) or read
+ * a signal source over a window shifted by its boundary lag; the observed time is shifted back so
+ * coverage is measured on the slice window.
+ */
+function rankedSignalCandidates(
+  policy: SourceAuthorityPolicy,
+  bySource: ReadonlyMap<ActualsSource, SignalInput[]>,
+  window: Window,
+): Record<number, SourceCandidate> {
+  const byRank: Record<number, SourceCandidate> = {};
+  for (const entry of policy.measurementHierarchy?.entries ?? []) {
+    const lagSeconds = entry.boundaryAdjustment?.lagSeconds ?? 0;
+    if (!entry.signalSourceKey && lagSeconds === 0) continue;
+    const group = bySource.get(entry.source) ?? [];
+    const chosen = entry.signalSourceKey
+      ? group.find((input) => input.signal.sourceKey === entry.signalSourceKey)
+      : authoritative(group);
+    if (!chosen) continue;
+    const lagMs = lagSeconds * 1000;
+    const shifted = {
+      from: new Date(window.from.getTime() + lagMs),
+      to: new Date(window.to.getTime() + lagMs),
+    };
+    const candidate = signalCandidateOf(chosen, shifted);
+    byRank[entry.rank] = {
+      ...candidate,
+      observed: candidate.observed.map((piece) => ({
+        start: new Date(piece.start.getTime() - lagMs),
+        end: new Date(piece.end.getTime() - lagMs),
+      })),
+    };
+  }
+  return byRank;
 }
 
 /** The flagged signal, else the only one; several unflagged → null (ambiguous, never summed). */

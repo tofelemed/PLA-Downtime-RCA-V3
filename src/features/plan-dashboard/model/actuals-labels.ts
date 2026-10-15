@@ -10,7 +10,9 @@ export const ACTUALS_METHOD_LABELS: Readonly<Record<string, string>> = {
 export const ACTUALS_SOURCE_LABELS: Readonly<Record<string, string>> = {
   pi_counter: 'PI counter',
   pi_output_ef: 'PI output events',
+  pi_rate: 'PI rate',
   mqtt: 'MQTT',
+  kafka: 'Kafka',
   external_report: 'Daily production report',
   manual: 'Manual entry',
   counter: 'Counter',
@@ -48,6 +50,27 @@ export const FINDING_LABELS: Readonly<Record<string, string>> = {
   dispositions_exceed_rejects: 'The lot dispositions classify more than the measured rejects',
   reprocessed_input_excluded: 'Reprocessed material measured again is not counted as new output',
   disposition_uom_mismatch: 'A lot disposition uses another unit than the profile',
+  boundary_mismatch: 'A source at another measurement boundary was not used: its stock change and time lag are not accounted for',
+  cross_boundary_substitution: 'A source at another measurement boundary stood in, with its stock change and lag accounted for',
+  estimate_outside_hierarchy: 'An approved estimate stood in, but the source hierarchy does not rank estimates',
+  too_many_samples: 'Too many readings to quantify',
+  signal_version_change: 'The signal configuration changed within the period',
+  product_attribution_unavailable: 'Unit-level data cannot be split between the products sharing the period',
+};
+
+/** SME E7 measurement-source classes, best first. */
+export const SOURCE_CLASS_LABELS: Readonly<Record<string, string>> = {
+  calibrated_primary: 'Calibrated primary totalizer',
+  redundant_measurement: 'Redundant measurement',
+  reconciled_record: 'Reconciled production / inventory record',
+  approved_estimate: 'Approved estimate',
+};
+
+export const SUBSTITUTION_REASON_LABELS: Readonly<Record<string, string>> = {
+  primary_missing: 'The better source had no data',
+  primary_stale: 'The better source stopped reporting',
+  primary_bad_quality: 'The better source was incomplete',
+  no_measured_source: 'No measurement was available',
 };
 
 const SPLIT_METHODS: Readonly<Record<string, string>> = {

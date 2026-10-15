@@ -40,6 +40,72 @@ export interface SourceAuthorityPolicy {
   cadenceSeconds: number;
   conflictTolerance: number;
   overrideRole: string;
+  /** SME E7 ranked sources at one measurement boundary; absent = primary then fallback (older versions) */
+  measurementHierarchy?: MeasurementHierarchy;
+}
+
+/**
+ * SME E7 source classes, best first: a calibrated primary totalizer, a qualified redundant measurement,
+ * a reconciled production / inventory record, an explicitly approved estimate (never a forecast).
+ */
+export const SOURCE_CLASSES = [
+  'calibrated_primary',
+  'redundant_measurement',
+  'reconciled_record',
+  'approved_estimate',
+] as const;
+export type SourceClass = (typeof SOURCE_CLASSES)[number];
+
+/**
+ * How a source at another boundary is brought to the slice's boundary (E7: a packing total stands for
+ * reactor output only after the silo stock change and the time lag are accounted for). `lagSeconds`
+ * shifts the source's window later (signal sources only); `inventoryChangeAccounted` false = the plant
+ * knows the record but it is not a substitute (`boundary_mismatch` whenever it would have been needed).
+ */
+export interface BoundaryAdjustment {
+  inventoryChangeAccounted: boolean;
+  lagSeconds: number;
+  evidenceRef: string;
+}
+
+/** One ranked source of the hierarchy; `signalSourceKey` picks one signal (a redundant meter of the same type). */
+export interface HierarchyEntry {
+  rank: number;
+  sourceClass: SourceClass | null;
+  source: ActualsSource;
+  signalSourceKey: string | null;
+  boundary: string | null;
+  boundaryAdjustment: BoundaryAdjustment | null;
+}
+
+/** SME E7: the slice's measurement boundary, when a lower rank may step in, and the ranked sources. */
+export interface MeasurementHierarchy {
+  boundary: string | null;
+  conditions: FallbackCondition[];
+  entries: HierarchyEntry[];
+}
+
+/** A ranked source as the provenance names it. */
+export interface RankedSourceRef {
+  rank: number;
+  sourceClass: SourceClass | null;
+  source: ActualsSource;
+  boundary: string | null;
+}
+
+/**
+ * SME E7 substitution flag of a slice: a lower-ranked source (or the approved estimate) gave the
+ * actuals instead of the top-ranked source, why, and how another boundary was bridged.
+ */
+export interface SourceSubstitution {
+  used: RankedSourceRef & { label: string };
+  replaced: RankedSourceRef;
+  reason: FallbackCondition | 'no_measured_source';
+  crossBoundary: {
+    fromBoundary: string | null;
+    lagSeconds: number;
+    evidenceRef: string;
+  } | null;
 }
 
 export const ACTUALS_METHODS = [
@@ -146,4 +212,6 @@ export interface SliceActuals {
   adjustmentIds: string[];
   /** SME E3 class breakdown; null / absent = no disposition and no rework acceptance (older results) */
   qualityClasses?: QualityClasses | null;
+  /** SME E7: set when a lower-ranked source or the approved estimate was used (actuals 2.4.3); absent = older */
+  substitution?: SourceSubstitution | null;
 }

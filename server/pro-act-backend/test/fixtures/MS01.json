@@ -1,0 +1,55 @@
+{
+  "id": "MS01",
+  "title": "Measurement-source hierarchy: the day-shift totalizer is unavailable, a redundant meter at the same boundary stands in with a substitution flag; packing records stand in only with the silo stock change and lag accounted for; a 200 t forecast is never actual production",
+  "kind": "numerical",
+  "spec_ref": "SME E7 (calendars and measurement-source hierarchy), SRC01, ACT05, D05",
+  "owner_subphase": "2.4",
+  "tolerance": "0.000001",
+  "inputs": {
+    "slice": "day shift 06:00-14:00 UTC, one HDPE product, unit t, coverage gate 1",
+    "hierarchy": "boundary reactor_outlet; 1 calibrated primary totalizer FT-101 (pi_counter), 2 redundant meter FT-102 (pi_counter, same boundary), 3 reconciled packing record (external_report, boundary packing, silo S-1 stock change accounted, lag 7200 s), 4 approved estimate (manual)",
+    "redundantMeter": "FT-101 has no readings in the shift; FT-102 measures 200 t over the whole shift",
+    "packing": "FT-101 and FT-102 have no readings; packing record 190 t bagged + 10 t silo S-1 stock increase = 200 t at the reactor boundary",
+    "forecast": "plan / forecast 200 t for the shift; no measurement and no approved estimate",
+    "approvedEstimate": "no measurement; an approved estimated gross adjustment of 195 t (shift supervisor log, approved by the production accountant)"
+  },
+  "expected": {
+    "redundantMeter": {
+      "gross": "200",
+      "qualityState": "complete",
+      "usedRank": "2",
+      "usedClass": "redundant_measurement",
+      "replacedRank": "1",
+      "replacedClass": "calibrated_primary",
+      "reason": "primary_missing"
+    },
+    "packingUnaccounted": {
+      "gross": null,
+      "qualityState": "missing",
+      "finding": "boundary_mismatch"
+    },
+    "packingAccounted": {
+      "gross": "200",
+      "usedRank": "3",
+      "usedClass": "reconciled_record",
+      "fromBoundary": "packing",
+      "lagSeconds": "7200",
+      "finding": "cross_boundary_substitution"
+    },
+    "forecastOnly": {
+      "gross": null,
+      "qualityState": "missing"
+    },
+    "approvedEstimate": {
+      "gross": "195",
+      "measuredQty": "0",
+      "estimatedQty": "195",
+      "usedClass": "approved_estimate",
+      "reason": "no_measured_source"
+    },
+    "estimateWithoutRank": {
+      "finding": "estimate_outside_hierarchy",
+      "qualityState": "partial"
+    }
+  }
+}

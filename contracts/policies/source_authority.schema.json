@@ -73,6 +73,54 @@
           "$ref": "policy-envelope.schema.json#/$defs/role",
           "default": "integration_admin",
           "description": "Minimum role allowed to force a different active source for an interval; the override is audited and creates a `source_segments` row with reason."
+        },
+        "measurementHierarchy": { "$ref": "#/$defs/measurementHierarchy" }
+      }
+    },
+    "sourceClass": {
+      "type": "string",
+      "enum": ["calibrated_primary", "redundant_measurement", "reconciled_record", "approved_estimate"],
+      "description": "SME E7 source classes, best first: calibrated primary totalizer, qualified redundant measurement, reconciled production / inventory record, explicitly approved estimate (approved estimated adjustments, never a forecast)."
+    },
+    "measurementHierarchy": {
+      "type": "object",
+      "description": "SME E7 (added in actuals 2.4.3): ranked sources at one measurement boundary. When present it replaces primarySource / fallback for selection (the top rank must be primarySource at `boundary`); a lower rank replaces a better one only under `conditions`; the result carries a substitution flag. Absent = primary then fallback (older versions). Checked by the service: unique ranks, classes in order, the approved estimate is the `manual` source and only it, same-source ranks name different signals, a lag only for counter / rate signals.",
+      "required": ["boundary", "conditions", "entries"],
+      "additionalProperties": false,
+      "properties": {
+        "boundary": { "type": "string", "minLength": 1, "maxLength": 64, "description": "The slice's measurement boundary, e.g. reactor_outlet." },
+        "conditions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["primary_stale", "primary_bad_quality", "primary_missing", "primary_conflict"] },
+          "description": "When a lower rank may replace a better one (same meaning as fallback.conditions)."
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["rank", "sourceClass", "source", "boundary"],
+            "additionalProperties": false,
+            "properties": {
+              "rank": { "type": "integer", "minimum": 1 },
+              "sourceClass": { "$ref": "#/$defs/sourceClass" },
+              "source": { "$ref": "#/$defs/source" },
+              "signalSourceKey": { "type": ["string", "null"], "maxLength": 500, "description": "The signal's source key (tag / topic) when the rank is one signal, e.g. a redundant meter of the same type as the primary." },
+              "boundary": { "type": "string", "minLength": 1, "maxLength": 64 },
+              "boundaryAdjustment": {
+                "type": ["object", "null"],
+                "required": ["inventoryChangeAccounted", "lagSeconds", "evidenceRef"],
+                "additionalProperties": false,
+                "description": "Only for a source at another boundary. inventoryChangeAccounted false = known but not a substitute (boundary_mismatch whenever it would be needed); lagSeconds shifts the source window later (signal sources only).",
+                "properties": {
+                  "inventoryChangeAccounted": { "type": "boolean" },
+                  "lagSeconds": { "type": "integer", "minimum": 0 },
+                  "evidenceRef": { "type": "string", "minLength": 1, "maxLength": 500 }
+                }
+              }
+            }
+          }
         }
       }
     }

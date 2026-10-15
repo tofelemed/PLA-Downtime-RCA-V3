@@ -42,6 +42,11 @@ export interface ReconciliationTolerance {
    * never the approval tolerance; a version written before the option has no field and no target (null).
    */
   unaccountedTargetOfShortfall: number | null;
+  /**
+   * SME E4: the approved uncertainty budget whose expanded uncertainty justifies an `absolute` tolerance
+   * (shown as the justification). Absent = no stated justification (every version before E4).
+   */
+  uncertaintyBudgetId?: string;
 }
 
 /**
@@ -184,12 +189,26 @@ function microStopOptions(
   return options;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function parseReconciliationTolerance(
   body: unknown,
 ): ReconciliationTolerance {
   const value = record(body);
+  const mode = oneOf(value.mode, ['zero', 'percent', 'absolute'], 'mode');
+  const budgetId = value.uncertaintyBudgetId;
+  if (budgetId !== undefined && budgetId !== null) {
+    if (typeof budgetId !== 'string' || !UUID.test(budgetId)) {
+      throw new PolicyBodyError('uncertaintyBudgetId must be a uuid');
+    }
+    if (mode !== 'absolute') {
+      throw new PolicyBodyError(
+        'an uncertainty budget justifies an absolute tolerance only',
+      );
+    }
+  }
   return {
-    mode: oneOf(value.mode, ['zero', 'percent', 'absolute'], 'mode'),
+    mode,
     value: nonNegative(value.value, 'value'),
     epsilon: nonNegative(value.epsilon, 'epsilon'),
     allowUnaccountedClassification: flag(
@@ -200,5 +219,6 @@ export function parseReconciliationTolerance(
       value.unaccountedTargetOfShortfall,
       'unaccountedTargetOfShortfall',
     ),
+    ...(typeof budgetId === 'string' ? { uncertaintyBudgetId: budgetId } : {}),
   };
 }
