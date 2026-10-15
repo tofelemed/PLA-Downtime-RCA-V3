@@ -6,6 +6,8 @@ import { labelOf, READINESS_LABELS } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { type CalendarPreference, type DigitSystem, formatOperationalDate } from '@/lib/dates';
 import { BLOCKING_RESIDUALS, formatRatioPercent, QUALITY_LABELS, RESIDUAL_LABELS, WORKFLOW_LABELS } from '../model/display';
+import { SLA_STAGE_LABELS } from '../model/sla-labels';
+import { SlaBadges } from '../sla/sla-badges';
 
 const num = (value: string | null | undefined, uom: string | null | undefined, digits: DigitSystem) =>
   value === null || value === undefined ? '—' : `${formatDecimal(value, 2, digits)}${uom ? ` ${uom}` : ''}`;
@@ -31,6 +33,19 @@ function ResidualCell({ row, digits }: { row: PeriodSummaryView; digits: DigitSy
     <span data-testid="cell-residual" className={BLOCKING_RESIDUALS.has(state) ? 'font-medium text-destructive' : undefined}>
       {num(row.plan?.residual, row.plan?.uom, digits)}
       <span className="block text-xs">{RESIDUAL_LABELS[state]}</span>
+    </span>
+  );
+}
+
+/** Due time of the current stage with the server's overdue / waiting / escalation verdicts (SME R3 / R6). */
+function DueCell({ row, timezone }: { row: PeriodSummaryView; timezone: string }) {
+  const sla = row.sla;
+  if (!sla) return <span>—</span>;
+  return (
+    <span data-testid="cell-due" data-stage={sla.stage} data-overdue={sla.overdue}>
+      <span className="block text-xs">{SLA_STAGE_LABELS[sla.stage]}</span>
+      {sla.dueAt && sla.stage !== 'waiting_for_data' && <PlantTime iso={sla.dueAt} tz={timezone} withDate />}
+      <SlaBadges sla={sla} />
     </span>
   );
 }
@@ -62,6 +77,7 @@ export function periodGridColumns(timezone: string, pref: CalendarPreference): D
       header: 'Workflow',
       cell: (row) => <Badge variant={row.workflowState === 'approved' ? 'default' : row.workflowState === 'stale' ? 'destructive' : 'secondary'}>{WORKFLOW_LABELS[row.workflowState]}</Badge>,
     },
+    { id: 'due', header: 'Due', nowrap: true, cell: (row) => <DueCell row={row} timezone={timezone} /> },
     {
       id: 'calculated',
       header: 'Calculated',

@@ -21,4 +21,7 @@ export const CLOSE_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
     text: 'Approved periods of a locked month change only through a change proposal; the correction is marked after close.',
   },
   INVALID_MONTH: { title: 'The month is not valid', text: 'Choose the month again.' },
+  HOLD_OPEN: { title: 'The period already waits for data', text: 'Release that wait first, then start a new one.' },
+  NO_OPEN_HOLD: { title: 'The period is not waiting for data', text: 'Reload to see its current state.' },
+  PERIOD_APPROVED: { title: 'The period is already approved', text: 'A late value reaches an approved period through a change proposal.' },
 };

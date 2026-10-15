@@ -75,6 +75,15 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     activeAlso: ['/plans/'],
   },
   {
+    name: 'My Queue',
+    href: '/my-queue',
+    icon: EntityIcon.plan,
+    section: 'production',
+    // a read screen: the server lists only what the caller's roles can act on (empty for read-only roles)
+    capability: 'canViewAnalysis',
+    description: 'Periods to prepare, review or handle as an escalation, earliest due first',
+  },
+  {
     name: 'Month Close',
     href: '/month-close',
     icon: EntityIcon.calendar,

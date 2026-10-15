@@ -72,6 +72,10 @@ export class ApprovalAction extends TenantScopedEntity {
   })
   submittedHash: string | null;
 
+  /** SME R6: what a rejection names — failed lines, the new due time, the rejection count */
+  @Column({ name: 'detail', type: 'jsonb', default: () => "'{}'" })
+  detail: Record<string, unknown>;
+
   @Column({
     name: 'correlation_id',
     type: 'varchar',

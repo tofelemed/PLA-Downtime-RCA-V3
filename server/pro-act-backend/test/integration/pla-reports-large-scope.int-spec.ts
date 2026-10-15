@@ -13,6 +13,7 @@ interface StatusBody {
   residual: Array<{ state: string; periods: number }>;
   ages: Array<{ key: string; periods: number }>;
   overdueCount: number;
+  escalated: Array<{ level: number; role: string; periods: number }>;
   overdue: Array<{ periodId: string; workflowState: string }>;
 }
 
@@ -93,7 +94,7 @@ describe('PLA analytics over more than 1,500 periods (no period cap)', () => {
   it('reconciliation status: 200 with workflow, age and overdue counts of all 1,600 periods', async () => {
     const asOf = encodeURIComponent(plus(START, 1000 * HOUR));
     const status = await read<StatusBody>(
-      `reconciliation-status?${scope}&asOf=${asOf}&overdueAfterHours=48`,
+      `reconciliation-status?${scope}&asOf=${asOf}`,
     );
     expect(status.data.periods).toBe(PERIODS);
     expect(
@@ -120,7 +121,14 @@ describe('PLA analytics over more than 1,500 periods (no period cap)', () => {
     expect(
       status.data.residual.find((r) => r.state === 'not_computable')?.periods,
     ).toBe(PERIODS);
-    expect(status.data.overdueCount).toBe(912);
+    // SME R3 policy: a draft (or never reconciled) period is overdue 12 h after its production day ended, one
+    // in review 24 h after: days 0–40 for the 874 not-approved draft / none periods, days 0–39 for the 70 in review
+    expect(status.data.overdueCount).toBe(944);
+    // 48 h → production accounting (day 38), 72 h → plant management (days 0–37, less the 40 approved)
+    expect(status.data.escalated).toEqual([
+      { level: 1, role: 'production_accountant', periods: 24 },
+      { level: 2, role: 'manager_approver', periods: 872 },
+    ]);
     expect(status.data.overdue).toHaveLength(50);
     expect(status.data.overdue[0]).toMatchObject({
       periodId: firstPeriod,

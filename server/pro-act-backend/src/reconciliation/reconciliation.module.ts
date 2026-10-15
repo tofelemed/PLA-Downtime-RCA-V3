@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CloseModule } from '../close/close.module';
 import { AuditEntry } from '../common/audit/audit-entry.entity';
 import { OutboxModule } from '../common/outbox/outbox.module';
 import { PeriodsModule } from '../periods/periods.module';
@@ -33,6 +34,7 @@ import { SubmissionService } from './submission.service';
     ]),
     OutboxModule,
     PeriodsModule,
+    CloseModule,
   ],
   providers: [
     LineSetWriter,

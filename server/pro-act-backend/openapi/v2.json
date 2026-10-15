@@ -8562,7 +8562,7 @@
     },
     "/api/v2/production-periods/{id}/reject": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter.",
+        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter; 422 INVALID_REFERENCE for a failed line that is not in the reviewed revision. The rejection (history `detail`) carries the new due time from the reconciliation SLA policy and escalates the configured n-th rejection (SME R6: the third) to production accounting.",
         "operationId": "ReconciliationV2Controller_reject_v2",
         "parameters": [
           {
@@ -8587,7 +8587,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReasonedRevisionDto"
+                "$ref": "#/components/schemas/RejectRevisionDto"
               }
             }
           }
@@ -8602,7 +8602,7 @@
             "bearer": []
           }
         ],
-        "summary": "Reject the submitted revision back to draft with a reason",
+        "summary": "Reject the submitted revision back to its preparer with a reason, the failed lines and a new due time",
         "tags": [
           "v2 · Reconciliation and approval"
         ]
@@ -13492,18 +13492,6 @@
             "schema": {
               "default": false,
               "type": "boolean"
-            }
-          },
-          {
-            "name": "overdueAfterHours",
-            "required": false,
-            "in": "query",
-            "description": "A period not approved this many hours after its end is overdue",
-            "schema": {
-              "minimum": 1,
-              "maximum": 2160,
-              "default": 48,
-              "type": "number"
             }
           },
           {
@@ -19018,6 +19006,173 @@
           "v2 · Month close"
         ]
       }
+    },
+    "/api/v2/production-periods/{id}/sla": {
+      "get": {
+        "operationId": "PeriodSlaV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Due times (submit, approve), overdue, age without waits, escalation level and role, rejections, holds and the latest rejection",
+        "tags": [
+          "v2 · Reconciliation SLA"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/data-holds": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 HOLD_OPEN when it already waits, PERIOD_APPROVED for an approved period (a late value goes through a change proposal).",
+        "operationId": "PeriodSlaV2Controller_open_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenDataHoldDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The period waits for data (lab, source, other): the SLA clocks pause",
+        "tags": [
+          "v2 · Reconciliation SLA"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/data-holds/release": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 409 NO_OPEN_HOLD.",
+        "operationId": "PeriodSlaV2Controller_release_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReleaseDataHoldDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The data arrived: the hold ends and the clocks run again",
+        "tags": [
+          "v2 · Reconciliation SLA"
+        ]
+      }
+    },
+    "/api/v2/reconciliation-queue": {
+      "get": {
+        "description": "Ended, not approved periods of the last 62 operational days in the caller's unit scope, earliest due first (keyset on due time). Due, overdue and escalation follow the plant's reconciliation_sla policy; time waiting for data is not counted.",
+        "operationId": "ReconciliationQueueV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "nextCursor of the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Periods the caller should act on: prepare, review (not their own submission) or escalated to one of their roles",
+        "tags": [
+          "v2 · Reconciliation SLA"
+        ]
+      }
     }
   },
   "info": {
@@ -21837,7 +21992,7 @@
           "submittedHash"
         ]
       },
-      "ReasonedRevisionDto": {
+      "RejectRevisionDto": {
         "type": "object",
         "properties": {
           "revision": {
@@ -21846,6 +22001,14 @@
           },
           "reason": {
             "type": "string"
+          },
+          "failedLines": {
+            "maxItems": 50,
+            "description": "Line ids or candidate auto keys of the reviewed revision that failed (422 INVALID_REFERENCE otherwise)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -21867,6 +22030,22 @@
         },
         "required": [
           "approvedRevision",
+          "reason"
+        ]
+      },
+      "ReasonedRevisionDto": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision",
           "reason"
         ]
       },
@@ -25753,6 +25932,37 @@
         "required": [
           "reason"
         ]
+      },
+      "OpenDataHoldDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "lab",
+              "source",
+              "other"
+            ],
+            "description": "lab = waiting for a lab result, source = a failed or late source, other"
+          },
+          "reason": {
+            "type": "string",
+            "description": "What the period waits for (shown to the reviewer)"
+          }
+        },
+        "required": [
+          "kind",
+          "reason"
+        ]
+      },
+      "ReleaseDataHoldDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "What arrived (kept on the hold)"
+          }
+        }
       }
     }
   }

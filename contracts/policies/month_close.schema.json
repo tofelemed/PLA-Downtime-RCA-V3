@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/month_close.schema.json",
+  "title": "Month close policy",
+  "description": "Financial month close of a plant (SME R1 / R4, EXPERT_REVIEW phase R-B): the calendar of the financial month, the weekend days of the close calendar (holidays come from the plant calendar), the working-day deadlines after month end for the quantity close (plant management) and the finance sign-off, whether open change proposals block the close, and the optional materiality routing (an extra reviewer before finance when the month's adjustments reach a threshold per unit of measure). Tenant-wide; seeded per plant on first use (Iranian plants: Solar Hijri months and a Thursday-Friday weekend). Consumed by `src/close/month-close.service.ts`.",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "month_close" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "body": {
+      "type": "object",
+      "required": ["financialCalendar", "weekendDays", "quantitiesCloseWorkingDay", "financeSignOffWorkingDay", "blockOnOpenProposals", "materiality"],
+      "additionalProperties": false,
+      "properties": {
+        "financialCalendar": {
+          "type": "string",
+          "enum": ["gregorian", "persian"],
+          "description": "Calendar of the financial month: Gregorian calendar months, or Solar Hijri (Jalali) months."
+        },
+        "weekendDays": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1, "maximum": 7 },
+          "uniqueItems": true,
+          "maxItems": 6,
+          "description": "ISO weekdays (1 = Monday ... 7 = Sunday) that are not working days of the close calendar."
+        },
+        "quantitiesCloseWorkingDay": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3,
+          "description": "Plant management closes the month's quantities by this working day after month end (SME R4 pilot: 3)."
+        },
+        "financeSignOffWorkingDay": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 5,
+          "description": "Finance signs the month off by this working day after month end (SME R4 pilot: 5); not before the quantity close."
+        },
+        "blockOnOpenProposals": {
+          "type": "boolean",
+          "default": true,
+          "description": "An open change proposal of the month blocks the close until it is accepted or dismissed."
+        },
+        "materiality": {
+          "type": "object",
+          "required": ["enabled", "thresholds", "reviewerRoles"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "thresholds": {
+              "type": "object",
+              "additionalProperties": { "type": "number", "exclusiveMinimum": 0 },
+              "description": "Unit of measure -> quantity of |bridge + classified Unaccounted + tolerance adjustment| at or above which the month needs the extra review."
+            },
+            "reviewerRoles": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Scope roles that may give the extra review (independent of both signers)."
+            }
+          }
+        }
+      }
+    }
+  }
+}

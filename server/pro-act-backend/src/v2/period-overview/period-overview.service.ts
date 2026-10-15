@@ -7,6 +7,7 @@ import {
 } from '../../common/context/request-context';
 import { applyOverlapWindow } from '../../common/query/overlap-window';
 import { scopedQuery } from '../../common/query/scoped-query';
+import { ReconciliationSlaService } from '../../close/reconciliation-sla.service';
 import { AccountingPoliciesService } from '../../periods/accounting-policies.service';
 import { PeriodProductSlice } from '../../periods/entities/period-product-slice.entity';
 import { ProductionPeriod } from '../../periods/entities/production-period.entity';
@@ -27,6 +28,7 @@ import {
   toPeriodSummaryView,
 } from './period-summary.view';
 import { WaterfallV2View, waterfallOf } from './waterfall.view';
+import { toPeriodSlaView } from '../close/period-sla.view';
 
 /** Shown revision's workflow state in SQL (the same rule as `pickRevision` / `workflowOf`). */
 function workflowStateSql(selector: RevisionSelector): string {
@@ -50,6 +52,7 @@ export class PeriodOverviewService {
     @InjectRepository(ProductionPeriod)
     private readonly periods: Repository<ProductionPeriod>,
     private readonly policies: AccountingPoliciesService,
+    private readonly slas: ReconciliationSlaService,
   ) {}
 
   async summaries(
@@ -74,13 +77,19 @@ export class PeriodOverviewService {
       limit: query.limit,
     });
     const manager = this.periods.manager;
-    const [states, slices] = await Promise.all([
+    const [states, slices, slas] = await Promise.all([
       loadPeriodStates(manager, page.items, selector, this.policies),
       this.activeSlices(page.items.map((p) => p.id)),
+      this.slas.statuses(manager, page.items, new Date()),
     ]);
-    const items = states.map((state) =>
-      toPeriodSummaryView(state, slices.get(state.period.id) ?? []),
-    );
+    const items = states.map((state) => {
+      const sla = slas.get(state.period.id);
+      return toPeriodSummaryView(
+        state,
+        slices.get(state.period.id) ?? [],
+        sla ? toPeriodSlaView(sla) : null,
+      );
+    });
     return listResponse(items, page.nextCursor, this.scope(context));
   }
 

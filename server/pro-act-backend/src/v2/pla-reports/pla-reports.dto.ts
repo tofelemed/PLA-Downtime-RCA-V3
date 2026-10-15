@@ -99,22 +99,11 @@ export class ReconciliationTrendQueryDto extends ReportWindowQueryDto {
   groupBy?: TrendGroup;
 }
 
-/** `GET /reports/reconciliation-status`: workflow state, age and overdue periods of a window. */
+/**
+ * `GET /reports/reconciliation-status`: workflow state, age and overdue periods of a window. Overdue follows
+ * the plant's `reconciliation_sla` policy (SME R3), no longer a query parameter.
+ */
 export class ReconciliationStatusQueryDto extends ReportWindowQueryDto {
-  @ApiPropertyOptional({
-    minimum: 1,
-    maximum: 2160,
-    default: 48,
-    description:
-      'A period not approved this many hours after its end is overdue',
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(2160)
-  overdueAfterHours?: number;
-
   @ApiPropertyOptional({
     description:
       'Instant the ages are measured at (ISO 8601 with offset); default: now',

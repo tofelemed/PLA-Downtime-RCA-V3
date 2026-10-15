@@ -10,6 +10,7 @@ import { EditorProblem } from '../editor/editor-problem';
 import { useWorkflowActions } from '../hooks/use-workflow-actions';
 import { approveGate, reviewGate } from '../model/display';
 import { ReasonConfirm } from './reason-confirm';
+import { RejectDialog } from './reject-dialog';
 
 export interface WorkflowBarProps {
   view: ReconciliationView;
@@ -34,18 +35,9 @@ function ReviewButtons({ view, actions, busy }: { view: ReconciliationView; acti
       <ApproveButton access={access} size="sm" data-testid="wf-approve" disabled={busy || !approve.allowed} onClick={() => void actions.approve()} aria-describedby={approve.reason ? 'approve-gate' : undefined}>
         Approve
       </ApproveButton>
-      <ReasonConfirm
-        trigger="Reject…"
-        triggerTestId="wf-reject"
-        disabled={busy || !gate.allowed}
-        title="Return this revision to its author?"
-        description="The revision goes back to draft; the author sees your reason, fixes the lines and submits again."
-        confirmLabel="Return revision"
-        destructive
-        onConfirm={(reason) => orKeepOpen(actions.reject(reason))}
-      >
+      <RejectDialog view={view} disabled={busy || !gate.allowed} onConfirm={(reason, failedLines) => orKeepOpen(actions.reject(reason, failedLines))}>
         {actions.problem && <EditorProblem problem={actions.problem} />}
-      </ReasonConfirm>
+      </RejectDialog>
     </>
   );
 }

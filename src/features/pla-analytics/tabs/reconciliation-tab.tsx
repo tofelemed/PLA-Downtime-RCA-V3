@@ -30,7 +30,11 @@ export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
       response={query.data}
       isEmpty={data?.periods === 0}
       emptyText="No production periods in this scope."
-      note={data ? `${number(data.periods)} periods · overdue = not approved ${number(data.overdueAfterHours)} h after the period ended.` : undefined}
+      note={
+        data
+          ? `${number(data.periods)} periods · overdue = not submitted ${number(data.sla.submitWithinHours)} h or not approved ${number(data.sla.approveWithinHours)} h after the production day ended (time waiting for data not counted) · ${number(data.waitingForData)} waiting for data · ${number(data.rejectionEscalated)} escalated after repeated rejections.`
+          : undefined
+      }
     >
       {data && (
         <div className="space-y-3" data-testid="reconciliation-status" data-overdue={data.overdueCount}>

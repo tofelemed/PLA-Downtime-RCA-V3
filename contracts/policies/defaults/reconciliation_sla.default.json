@@ -1,0 +1,19 @@
+{
+  "policyKind": "reconciliation_sla",
+  "version": 1,
+  "effectiveFrom": "1970-01-01T00:00:00Z",
+  "effectiveTo": null,
+  "scope": { "tenantId": "00000000-0000-0000-0000-000000000000", "siteId": null, "unitId": null },
+  "notes": "Seed default recorded 2026-10-15 from the SME R3 / R6 pilot settings. scope.tenantId is a placeholder that the seeder replaces with the real tenant id; effectiveFrom is the epoch sentinel.",
+  "body": {
+    "submitWithinHours": 12,
+    "approveWithinHours": 24,
+    "resubmitWithinHours": 12,
+    "escalations": [
+      { "afterHours": 48, "role": "production_accountant" },
+      { "afterHours": 72, "role": "manager_approver" }
+    ],
+    "rejectionEscalationCount": 3,
+    "rejectionEscalationRole": "production_accountant"
+  }
+}

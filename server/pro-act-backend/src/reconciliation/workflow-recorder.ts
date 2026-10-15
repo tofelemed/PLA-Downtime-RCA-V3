@@ -1,4 +1,5 @@
 import { EntityManager } from 'typeorm';
+import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { AccountingRevision } from '../accounting/entities/accounting-revision.entity';
 import { appendAudit, AuditDraft } from '../common/audit/audit-trail';
 import { RequestContext } from '../common/context/request-context';
@@ -85,6 +86,10 @@ export async function recordTransition(
     reason: step.reason ?? null,
     submittedHash: step.submittedHash ?? null,
     correlationId: actor.correlationId,
+    // jsonb column: TypeORM's deep-partial type cannot express an open record
+    detail: (step.detail ?? {}) as QueryDeepPartialEntity<
+      Record<string, unknown>
+    >,
     createdBy: actor.userId,
   });
   await appendAudit(manager, [auditOf(step)]);

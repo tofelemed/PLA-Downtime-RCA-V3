@@ -27,7 +27,7 @@ const VIEW: ReconciliationView = {
   revision: {
     id: 'rev-1', revision: 1, lifecycle: 'draft', supersedesId: null, currentRunId: 'run-1', currentLineSetId: null, isStale: false, staleReason: null,
     submittedBy: null, submittedAt: null, submittedHash: null, submittedRunId: null, approvedBy: null, approvedAt: null, approvalSnapshotId: null,
-    rejectedBy: null, rejectedAt: null, rejectReason: null, cancelledBy: null, cancelledAt: null, comment: null,
+    rejectedBy: null, rejectedAt: null, rejectReason: null, cancelledBy: null, cancelledAt: null, afterClose: false, comment: null,
   },
   publishedRevision: null, baseRunId: 'run-1', contentHash: 'a'.repeat(64),
   tolerance: { policyId: null, version: 1, mode: 'zero', value: 0, epsilon: 0.000001, allowUnaccountedClassification: false },

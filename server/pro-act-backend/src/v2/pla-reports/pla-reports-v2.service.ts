@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RequestContext } from '../../common/context/request-context';
+import { ReconciliationSlaService } from '../../close/reconciliation-sla.service';
 import { AccountingPoliciesService } from '../../periods/accounting-policies.service';
 import { ProductionPeriod } from '../../periods/entities/production-period.entity';
 import { AnalyticsResponse } from '../common/response';
@@ -61,6 +62,7 @@ export class PlaReportsV2Service {
     @InjectRepository(ProductionPeriod)
     private readonly periods: Repository<ProductionPeriod>,
     private readonly policies: AccountingPoliciesService,
+    private readonly slas: ReconciliationSlaService,
   ) {}
 
   async scopeWaterfall(
@@ -128,18 +130,22 @@ export class PlaReportsV2Service {
     query: ReconciliationStatusQueryDto,
   ): Promise<AnalyticsResponse<ReconciliationStatusView>> {
     const scope = await this.scope(context, query);
-    const input = {
-      context,
-      scope,
-      asOf: query.asOf ? new Date(query.asOf) : new Date(),
-      overdueAfterHours: query.overdueAfterHours ?? 48,
-    };
+    const asOf = query.asOf ? new Date(query.asOf) : new Date();
+    const sla = await this.slas.policy(
+      this.periods.manager,
+      scope.tenantId,
+      asOf,
+    );
+    const input = { context, scope, asOf, sla };
     const summary = await statusSummary(this.periods.manager, input);
     const [residual, overdue] = await Promise.all([
       summary.some((row) => row.runIds.length > 0)
         ? residualCounts(this.periods, input, this.policies)
         : new Map([['not_computable' as const, total(summary)]]),
-      overduePeriods(this.periods, input, this.policies),
+      overduePeriods(this.periods, input, {
+        policies: this.policies,
+        slas: this.slas,
+      }),
     ]);
     const data = statusView({ ...input, summary, residual, overdue });
     const open = summary.some(

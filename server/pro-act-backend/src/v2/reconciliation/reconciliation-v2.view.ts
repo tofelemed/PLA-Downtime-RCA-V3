@@ -183,6 +183,8 @@ export interface ApprovalActionV2View {
   reason: string | null;
   submittedHash: string | null;
   correlationId: string | null;
+  /** SME R6: a rejection's failed lines, new due time and count; other steps' context */
+  detail: Record<string, unknown>;
   at: string;
 }
 
@@ -198,6 +200,7 @@ export function toApprovalActionView(a: ApprovalAction): ApprovalActionV2View {
     reason: a.reason,
     submittedHash: a.submittedHash,
     correlationId: a.correlationId,
+    detail: a.detail ?? {},
     at: a.createdAt.toISOString(),
   };
 }

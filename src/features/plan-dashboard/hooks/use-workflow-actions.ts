@@ -73,7 +73,7 @@ export function useWorkflowActions(view: ReconciliationView) {
     recomputeError: job.error,
     submit: (comment?: string) => run('submit', () => submit.submit({ period, revision, runId: view.baseRunId ?? '', contentHash: view.contentHash, ...(comment ? { comment } : {}) })),
     approve: (comment?: string) => run('approve', () => approve.submit({ period, revision, submittedHash: view.revision.submittedHash ?? '', ...(comment ? { comment } : {}) })),
-    reject: (reason: string) => run('reject', () => reasoned.submit({ period, action: 'reject', revision, reason })),
+    reject: (reason: string, failedLines: string[] = []) => run('reject', () => reasoned.submit({ period, action: 'reject', revision, reason, failedLines })),
     cancel: (reason: string) => run('cancel', () => reasoned.submit({ period, action: 'cancel', revision, reason })),
     revise: (reason: string) => run('revise', () => revise.submit({ period, approvedRevision: revision, reason })),
     recompute: (reason?: string) =>

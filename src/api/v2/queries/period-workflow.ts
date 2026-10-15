@@ -100,11 +100,13 @@ export interface ReasonedInput {
   action: 'reject' | 'cancel';
   revision: number;
   reason: string;
+  /** reject only (SME R6): line ids or candidate auto keys that failed */
+  failedLines?: string[];
 }
 
 export function useReasonedRevisionCommand() {
-  return usePeriodCommand<ReasonedInput, ReconciliationView>(({ period, action, ...body }, key) =>
-    post(`/production-periods/${period.periodId}/${action}`, body, key),
+  return usePeriodCommand<ReasonedInput, ReconciliationView>(({ period, action, failedLines, ...body }, key) =>
+    post(`/production-periods/${period.periodId}/${action}`, action === 'reject' && failedLines?.length ? { ...body, failedLines } : body, key),
   );
 }
 

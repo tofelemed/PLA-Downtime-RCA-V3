@@ -5,6 +5,11 @@ import {
   MonthClosePolicy,
   parseMonthClosePolicy,
 } from '../domain/close/month-close-policy';
+import {
+  parseReconciliationSla,
+  RECONCILIATION_SLA_DEFAULT,
+  ReconciliationSlaPolicy,
+} from '../domain/close/sla-policy';
 import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
 import { defaultSiteOf } from './close-calendar';
 
@@ -14,13 +19,25 @@ export interface PolicyInForce<T> {
   version: number;
 }
 
+type WorkflowKind = 'month_close' | 'reconciliation_sla';
+
 const SEED_NOTE =
-  'Seeded on first use from the SME R1 / R4 pilot settings (EXPERT_REVIEW §3.1, 2026-10-15); change by a new version.';
+  'Seeded on first use from the SME R1 / R3 / R4 / R6 pilot settings (EXPERT_REVIEW §3.1, 2026-10-15); change by a new version.';
+
+const toPolicy = <T>(
+  row: AccountingPolicy,
+  parse: (body: unknown) => T,
+): PolicyInForce<T> => ({
+  policy: parse(row.body),
+  id: row.id,
+  version: row.version,
+});
 
 /**
- * Plant-wide workflow policies of Area 3 (SME R1 / R4 month close): the tenant-wide version in force at
- * an instant, else version 1 of the pilot default seeded on first use — whose calendar and weekend follow
- * the plant (Asia/Tehran or the Persian display calendar → Solar Hijri months, Thursday–Friday weekend).
+ * Plant-wide workflow policies of Area 3 — `month_close` (SME R1 / R4) and `reconciliation_sla` (R3 / R6):
+ * the approved tenant-wide version in force at an instant, else version 1 of the pilot default seeded on
+ * first use. The month close default follows the plant (Asia/Tehran or the Persian display calendar →
+ * Solar Hijri months, Thursday–Friday weekend).
  */
 @Injectable()
 export class WorkflowPoliciesService {
@@ -29,12 +46,8 @@ export class WorkflowPoliciesService {
     tenantId: string,
     at: Date,
   ): Promise<PolicyInForce<MonthClosePolicy>> {
-    const row = await this.inForce(manager, tenantId, at);
-    return {
-      policy: parseMonthClosePolicy(row.body),
-      id: row.id,
-      version: row.version,
-    };
+    const row = await this.inForce(manager, tenantId, 'month_close', at);
+    return toPolicy(row, parseMonthClosePolicy);
   }
 
   /** The version a month close was first acted on under (its deadlines stay with it). */
@@ -43,30 +56,37 @@ export class WorkflowPoliciesService {
     id: string,
   ): Promise<PolicyInForce<MonthClosePolicy>> {
     const row = await manager.findOneByOrFail(AccountingPolicy, { id });
-    return {
-      policy: parseMonthClosePolicy(row.body),
-      id: row.id,
-      version: row.version,
-    };
+    return toPolicy(row, parseMonthClosePolicy);
+  }
+
+  async sla(
+    manager: EntityManager,
+    tenantId: string,
+    at: Date,
+  ): Promise<PolicyInForce<ReconciliationSlaPolicy>> {
+    const row = await this.inForce(manager, tenantId, 'reconciliation_sla', at);
+    return toPolicy(row, parseReconciliationSla);
   }
 
   private async inForce(
     manager: EntityManager,
     tenantId: string,
+    kind: WorkflowKind,
     at: Date,
   ): Promise<AccountingPolicy> {
-    const found = await this.find(manager, tenantId, at);
+    const found = await this.find(manager, tenantId, kind, at);
     if (found) return found;
-    await this.seed(manager, tenantId);
-    const seeded = await this.find(manager, tenantId, at);
+    await this.seed(manager, tenantId, kind);
+    const seeded = await this.find(manager, tenantId, kind, at);
     if (!seeded)
-      throw new Error(`no month_close policy in force at ${at.toISOString()}`);
+      throw new Error(`no ${kind} policy in force at ${at.toISOString()}`);
     return seeded;
   }
 
   private find(
     manager: EntityManager,
     tenantId: string,
+    kind: WorkflowKind,
     at: Date,
   ): Promise<AccountingPolicy | null> {
     return manager
@@ -74,7 +94,7 @@ export class WorkflowPoliciesService {
       .createQueryBuilder('p')
       .where('p.tenantId = :tenantId AND p.policyKind = :kind', {
         tenantId,
-        kind: 'month_close',
+        kind,
       })
       .andWhere('p.unitId IS NULL AND p.approvedAt IS NOT NULL')
       .andWhere(
@@ -85,25 +105,38 @@ export class WorkflowPoliciesService {
       .getOne();
   }
 
-  private async seed(manager: EntityManager, tenantId: string): Promise<void> {
+  private async defaultBody(
+    manager: EntityManager,
+    tenantId: string,
+    kind: WorkflowKind,
+  ): Promise<object> {
+    if (kind === 'reconciliation_sla') return RECONCILIATION_SLA_DEFAULT;
     const rows: Array<{ timezone: string | null; calendar: string | null }> =
       await manager.query(
         `SELECT t."timezone", t."calendar_system" AS "calendar" FROM "tenants" t WHERE t."id" = $1`,
         [tenantId],
       );
     const site = await defaultSiteOf(manager, tenantId);
-    const body = monthCloseDefault({
+    return monthCloseDefault({
       timezone: site?.timezone ?? rows[0]?.timezone ?? null,
       calendarSystem: rows[0]?.calendar ?? null,
     });
+  }
+
+  private async seed(
+    manager: EntityManager,
+    tenantId: string,
+    kind: WorkflowKind,
+  ): Promise<void> {
+    const body = await this.defaultBody(manager, tenantId, kind);
     await manager.query(
       `INSERT INTO "accounting_policies" ("tenant_id", "row_version", "policy_kind", "unit_id", "scope_key",
               "version", "body", "effective_from", "approved_at", "notes")
-       SELECT $1, 1, 'month_close', NULL, 'tenant', 1, $2::jsonb, '1970-01-01T00:00:00Z', now(), $3
+       SELECT $1, 1, $2::accounting_policy_kind, NULL, 'tenant', 1, $3::jsonb, '1970-01-01T00:00:00Z', now(), $4
         WHERE NOT EXISTS (SELECT 1 FROM "accounting_policies" WHERE "tenant_id" = $1
-                             AND "policy_kind" = 'month_close' AND "unit_id" IS NULL)
+                             AND "policy_kind" = $2::accounting_policy_kind AND "unit_id" IS NULL)
        ON CONFLICT DO NOTHING`,
-      [tenantId, JSON.stringify(body), SEED_NOTE],
+      [tenantId, kind, JSON.stringify(body), SEED_NOTE],
     );
   }
 }

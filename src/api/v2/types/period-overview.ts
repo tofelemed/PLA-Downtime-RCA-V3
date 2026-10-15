@@ -1,3 +1,4 @@
+import type { PeriodSlaView } from './period-sla';
 /**
  * Plan Dashboard read models (plan 3.5): the period grid (`GET /period-summaries`), the ledger waterfall
  * (`GET /reports/waterfall`), the period accounting (`GET /production-periods/{id}/accounting`, plan 2.5/2.6),
@@ -56,6 +57,8 @@ export interface PeriodSummaryView {
   coverageRatio: string | null;
   qualityStates: string[];
   productIds: string[];
+  /** SME R3 / R6: due, overdue and escalation of the current revision (server clock) */
+  sla: PeriodSlaView | null;
 }
 
 export type LedgerKind = 'plan' | 'capacity';

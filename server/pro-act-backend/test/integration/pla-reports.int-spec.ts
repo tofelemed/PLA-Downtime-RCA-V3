@@ -305,7 +305,7 @@ describe('PLA analytics reads (plan 3.6)', () => {
   it('reconciliation status: workflow, residual state, age and overdue periods at a fixed asOf', async () => {
     const later = encodeURIComponent(plus(NEXT_DAY, 72 * HOUR));
     const status = await read<StatusBody>(
-      `reconciliation-status?${scope}&asOf=${later}&overdueAfterHours=48`,
+      `reconciliation-status?${scope}&asOf=${later}`,
     );
     expect(status.data.periods).toBe(3);
     expect(status.data.workflow.find((w) => w.state === 'draft')?.periods).toBe(

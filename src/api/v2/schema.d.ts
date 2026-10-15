@@ -2484,8 +2484,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reject the submitted revision back to draft with a reason
-         * @description Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter.
+         * Reject the submitted revision back to its preparer with a reason, the failed lines and a new due time
+         * @description Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter; 422 INVALID_REFERENCE for a failed line that is not in the reviewed revision. The rejection (history `detail`) carries the new due time from the reconciliation SLA policy and escalates the configured n-th rejection (SME R6: the third) to production accounting.
          */
         post: operations["ReconciliationV2Controller_reject_v2"];
         delete?: never;
@@ -5630,6 +5630,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/production-periods/{id}/sla": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Due times (submit, approve), overdue, age without waits, escalation level and role, rejections, holds and the latest rejection */
+        get: operations["PeriodSlaV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-periods/{id}/data-holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The period waits for data (lab, source, other): the SLA clocks pause
+         * @description Requires `Idempotency-Key`. 409 HOLD_OPEN when it already waits, PERIOD_APPROVED for an approved period (a late value goes through a change proposal).
+         */
+        post: operations["PeriodSlaV2Controller_open_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-periods/{id}/data-holds/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The data arrived: the hold ends and the clocks run again
+         * @description Requires `Idempotency-Key`. 409 NO_OPEN_HOLD.
+         */
+        post: operations["PeriodSlaV2Controller_release_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/reconciliation-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Periods the caller should act on: prepare, review (not their own submission) or escalated to one of their roles
+         * @description Ended, not approved periods of the last 62 operational days in the caller's unit scope, earliest due first (keyset on due time). Due, overdue and escalation follow the plant's reconciliation_sla policy; time waiting for data is not counted.
+         */
+        get: operations["ReconciliationQueueV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6930,13 +7007,19 @@ export interface components {
             submittedHash: string;
             comment?: string;
         };
-        ReasonedRevisionDto: {
+        RejectRevisionDto: {
             revision: number;
             reason: string;
+            /** @description Line ids or candidate auto keys of the reviewed revision that failed (422 INVALID_REFERENCE otherwise) */
+            failedLines?: string[];
         };
         ReviseRevisionDto: {
             /** @description The published approved revision number */
             approvedRevision: number;
+            reason: string;
+        };
+        ReasonedRevisionDto: {
+            revision: number;
             reason: string;
         };
         ProposalDecisionDto: {
@@ -8139,6 +8222,19 @@ export interface components {
         MonthCloseReopenDto: {
             /** @description Why the month is reopened (every sign-off is cleared) */
             reason: string;
+        };
+        OpenDataHoldDto: {
+            /**
+             * @description lab = waiting for a lab result, source = a failed or late source, other
+             * @enum {string}
+             */
+            kind: "lab" | "source" | "other";
+            /** @description What the period waits for (shown to the reviewer) */
+            reason: string;
+        };
+        ReleaseDataHoldDto: {
+            /** @description What arrived (kept on the hold) */
+            note?: string;
         };
     };
     responses: never;
@@ -11983,7 +12079,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReasonedRevisionDto"];
+                "application/json": components["schemas"]["RejectRevisionDto"];
             };
         };
         responses: {
@@ -14226,8 +14322,6 @@ export interface operations {
                 unitIds?: string[];
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
-                /** @description A period not approved this many hours after its end is overdue */
-                overdueAfterHours?: number;
                 /** @description Instant the ages are measured at (ISO 8601 with offset); default: now */
                 asOf?: string;
             };
@@ -16808,6 +16902,96 @@ export interface operations {
                 "application/json": components["schemas"]["MonthCloseReopenDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PeriodSlaV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PeriodSlaV2Controller_open_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenDataHoldDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PeriodSlaV2Controller_release_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseDataHoldDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReconciliationQueueV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description nextCursor of the previous page */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

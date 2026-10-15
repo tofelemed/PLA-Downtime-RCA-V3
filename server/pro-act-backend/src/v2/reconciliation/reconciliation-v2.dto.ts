@@ -265,6 +265,22 @@ export class ReasonedRevisionDto {
   reason: string;
 }
 
+/** Reject: the reason, and optionally the lines or candidates that failed (SME R6). */
+export class RejectRevisionDto extends ReasonedRevisionDto {
+  @ApiPropertyOptional({
+    type: [String],
+    maxItems: 50,
+    description:
+      'Line ids or candidate auto keys of the reviewed revision that failed (422 INVALID_REFERENCE otherwise)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  @MaxLength(128, { each: true })
+  failedLines?: string[];
+}
+
 export class ReviseRevisionDto {
   @ApiProperty({
     minimum: 1,

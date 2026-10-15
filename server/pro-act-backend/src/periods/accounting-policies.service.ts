@@ -36,7 +36,10 @@ const SEED_NOTE =
  * Kinds seeded approved on first use; `valuation_basis` is seeded unapproved by the valuation module (VAL01);
  * the plant-wide workflow kinds by `WorkflowPoliciesService` (their default depends on the plant).
  */
-type EngineKind = Exclude<PolicyKind, 'valuation_basis' | 'month_close'>;
+type EngineKind = Exclude<
+  PolicyKind,
+  'valuation_basis' | 'month_close' | 'reconciliation_sla'
+>;
 
 const DEFAULT_BODIES: Readonly<Record<EngineKind, object>> = {
   coverage_gate: COVERAGE_GATE_DEFAULT,

@@ -19,6 +19,8 @@ const PlanDashboard = lazyNamedWithPreload(() => import('@/features/plan-dashboa
 const PeriodPage = lazyNamedWithPreload(() => import('@/features/plan-dashboard/period-page'), 'PeriodPage');
 /** Month close of the plant (EXPERT_REVIEW Area 3, phase R-B). */
 const MonthClose = lazyNamedWithPreload(() => import('@/features/month-close/month-close-page'), 'MonthClosePage');
+/** "My queue" of the reconciliation workflow (EXPERT_REVIEW Area 3, phase R-C). */
+const MyQueue = lazyNamedWithPreload(() => import('@/features/month-close/my-queue-page'), 'MyQueuePage');
 const ProposeAdjustment = lazyNamedWithPreload(() => import('@/features/plan-dashboard/adjustments/propose-adjustment-page'), 'ProposeAdjustmentPage');
 
 /**
@@ -42,4 +44,5 @@ export const PLANNING_ROUTES: readonly AppRoute[] = [
   { path: '/plans/:planId/periods/:periodId', element: <PeriodPage />, preload: PeriodPage.preload },
   { path: '/plans/:planId/periods/:periodId/adjustments/new', element: <ProposeAdjustment />, preload: ProposeAdjustment.preload },
   { path: '/month-close', element: <MonthClose />, preload: MonthClose.preload },
+  { path: '/my-queue', element: <MyQueue />, preload: MyQueue.preload },
 ];

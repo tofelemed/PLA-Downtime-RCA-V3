@@ -8,6 +8,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { AdjustmentsSection } from '../adjustments/adjustments-section';
 import { LossLineEditor } from '../editor/loss-line-editor';
+import { SlaPanel } from '../sla/sla-panel';
 import { WorkflowBar } from '../workflow/workflow-bar';
 import { ActualsProvenance } from './actuals-provenance';
 import { DetailToolbar } from './detail-toolbar';
@@ -61,6 +62,7 @@ export function PeriodDetail({ planId, periodId, unitName, planLabel, timezone }
       <AdjustmentsSection planId={planId} periodId={periodId} />
       <LossLineEditor key={data.revision.id} view={data} timezone={timezone} readOnly={!editable} />
       <WorkflowBar view={data} shown={view} onShowCurrent={() => setView('current')} />
+      {view === 'current' && <SlaPanel view={data} timezone={timezone} />}
       <Suspense fallback={<Skeleton className="h-48 w-full" />}>
         <WaterfallPanel periodId={periodId} ledger={ledger} view={view} />
       </Suspense>

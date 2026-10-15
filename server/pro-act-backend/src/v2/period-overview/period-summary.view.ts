@@ -1,5 +1,6 @@
 import { Dec, formatDec, ZERO } from '../../domain/actuals/decimal';
 import { SliceReconciliation } from '../../domain/reconciliation/reconciliation.types';
+import { PeriodSlaV2View } from '../close/period-sla.view';
 import { PeriodState } from './period-states';
 
 /** Workflow state of the shown revision (WF01); `stale` = in review with changed inputs. */
@@ -74,6 +75,8 @@ export interface PeriodSummaryV2View {
   /** distinct actuals quality states of the slices (complete, partial, missing, …) */
   qualityStates: string[];
   productIds: string[];
+  /** SME R3 / R6: due, overdue and escalation of the period's current revision (server clock) */
+  sla: PeriodSlaV2View | null;
 }
 
 const text = (value: Dec | null) => (value === null ? null : formatDec(value));
@@ -168,6 +171,7 @@ function coverageOf(state: PeriodState): string | null {
 export function toPeriodSummaryView(
   state: PeriodState,
   productIds: string[],
+  sla: PeriodSlaV2View | null = null,
 ): PeriodSummaryV2View {
   const { period, revision, run } = state;
   return {
@@ -212,5 +216,6 @@ export function toPeriodSummaryView(
       ...new Set(state.actuals.map((a) => a.qualityState)),
     ].sort(),
     productIds,
+    sla,
   };
 }

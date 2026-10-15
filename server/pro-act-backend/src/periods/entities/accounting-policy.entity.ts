@@ -10,6 +10,8 @@ export const POLICY_KINDS = [
   'rca_policy',
   /** SME R1 / R4: month close calendar, deadlines and materiality (plant-wide) */
   'month_close',
+  /** SME R3 / R6: reconciliation deadlines, escalation and rejection escalation (plant-wide) */
+  'reconciliation_sla',
 ] as const;
 export type PolicyKind = (typeof POLICY_KINDS)[number];
 

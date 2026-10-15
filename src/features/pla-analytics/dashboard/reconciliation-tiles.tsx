@@ -36,7 +36,7 @@ export function ReconciliationTiles({ scope }: { scope: AnalyticsScope }) {
             </div>
           ))}
           <div className="rounded-md border p-3" data-testid="dashboard-overdue" data-count={data.overdueCount}>
-            <dt className="text-xs text-muted-foreground">Overdue (&gt; {number(data.overdueAfterHours)} h)</dt>
+            <dt className="text-xs text-muted-foreground">Overdue (past the reconciliation deadline)</dt>
             <dd className="text-xl font-semibold">{number(data.overdueCount)}</dd>
           </div>
         </dl>

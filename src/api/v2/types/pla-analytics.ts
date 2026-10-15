@@ -1,3 +1,4 @@
+import type { PeriodSlaView } from './period-sla';
 /**
  * PLA analytics read models (plan 3.6; backend `src/v2/pla-reports/`). Hand-written: the OpenAPI snapshot
  * describes the queries, not the response bodies. Every number is a decimal string or a server count.
@@ -84,16 +85,30 @@ export interface OverduePeriodView {
   revision: number | null;
   residualState: ResidualState | null;
   ageSeconds: number;
+  /** SME R3: due, escalation and waits of the current revision */
+  sla: PeriodSlaView | null;
+}
+
+/** The reconciliation SLA policy version the overdue verdicts follow (SME R3). */
+export interface StatusSlaPolicyView {
+  version: number;
+  submitWithinHours: number;
+  approveWithinHours: number;
+  escalations: Array<{ level: number; afterHours: number; role: string }>;
+  rejectionEscalationCount: number;
 }
 
 export interface ReconciliationStatusView {
   asOf: string;
-  overdueAfterHours: number;
+  sla: StatusSlaPolicyView;
   periods: number;
   workflow: Array<{ state: GridWorkflowState; periods: number }>;
   residual: Array<{ state: ResidualState; periods: number }>;
   ages: Array<{ key: string; label: string; periods: number }>;
   overdueCount: number;
+  escalated: Array<{ level: number; role: string; periods: number }>;
+  waitingForData: number;
+  rejectionEscalated: number;
   overdue: OverduePeriodView[];
   calculationRunIds: string[];
 }

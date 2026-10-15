@@ -6,7 +6,12 @@ import { RequestContext } from '../common/context/request-context';
 import { approvalConflict } from '../domain/reconciliation/separation-of-duties';
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
-import { invalidTransition } from '../profiles/profile-errors';
+import {
+  invalidReference,
+  invalidTransition,
+} from '../profiles/profile-errors';
+import { ReconciliationSlaService } from '../close/reconciliation-sla.service';
+import { rejectionOutcome } from './rejection-outcome';
 import { writeApprovedValuation } from '../valuation/approved-valuation';
 import { ApprovalSnapshot } from './entities/approval-snapshot.entity';
 import { publishApproval } from './period-approval-event';
@@ -38,6 +43,8 @@ export interface ApproveCommand {
 export interface RejectCommand {
   revision: number;
   reason: string;
+  /** SME R6: the lines or candidates that failed (line ids or candidate auto keys of the reviewed set) */
+  failedLines?: string[];
 }
 
 /**
@@ -54,6 +61,7 @@ export class ApprovalService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly policies: AccountingPoliciesService,
+    private readonly slas: ReconciliationSlaService,
   ) {}
 
   approve(
@@ -95,22 +103,29 @@ export class ApprovalService {
   ): Promise<AccountingRevision> {
     const reviewer = requireUser(context);
     return this.dataSource.transaction(async (manager) => {
-      const { revision } = await this.submitted(
+      const { period, revision } = await this.submitted(
         manager,
         context,
         periodId,
         command.revision,
       );
       if (revision.submittedBy === reviewer) throw separationOfDuties();
+      const failedLines = await this.failedLinesOf(
+        manager,
+        { period, revision },
+        command.failedLines ?? [],
+      );
+      const outcome = await rejectionOutcome(manager, this.slas, period);
       await manager.update(AccountingRevision, revision.id, {
         lifecycle: 'draft',
         rejectedBy: reviewer,
-        rejectedAt: new Date(),
+        rejectedAt: outcome.at,
         rejectReason: command.reason,
         ...SUBMISSION_CLEARED,
         comment: command.reason,
         updatedBy: reviewer,
       });
+      const detail = { failedLines, ...outcome.detail };
       await recordTransition(manager, {
         revision,
         action: 'reject',
@@ -119,13 +134,37 @@ export class ApprovalService {
         actor: actorOf(context),
         reason: command.reason,
         submittedHash: revision.submittedHash,
+        detail,
       });
       await publishWorkflowEvent(manager, revision, WORKFLOW_EVENTS.rejected, {
         reason: command.reason,
         rejectedBy: reviewer,
+        ...detail,
       });
       return manager.findOneByOrFail(AccountingRevision, { id: revision.id });
     });
+  }
+
+  /** Failed-line references must name a line or candidate of the reviewed content (422 otherwise). */
+  private async failedLinesOf(
+    manager: EntityManager,
+    reviewed: { period: ProductionPeriod; revision: AccountingRevision },
+    refs: readonly string[],
+  ): Promise<string[]> {
+    if (refs.length === 0) return [];
+    const state = await loadRevisionState(
+      manager,
+      reviewed.period,
+      reviewed.revision,
+      this.policies,
+    );
+    const known = new Set([
+      ...state.lines.map((line) => line.id),
+      ...state.candidateLines.map((line) => line.autoKey ?? line.id),
+    ]);
+    const unknown = refs.filter((ref) => !known.has(ref));
+    if (unknown.length) throw invalidReference('failedLines', 'reviewed line');
+    return [...new Set(refs)];
   }
 
   /** The numbered revision of a period in scope, locked and in review (409 otherwise). */
@@ -149,7 +188,6 @@ export class ApprovalService {
   }
 }
 
-/** Snapshot, `approved`, reconciled label, history and outbox `PeriodApproved` / `PeriodRestated` — one transaction. */
 /** RC-01: the approver authored none of the reviewed lines and did not reopen the period. */
 function approvalConflictOf(approver: string, state: RevisionState) {
   const { revision } = state;
@@ -160,6 +198,7 @@ function approvalConflictOf(approver: string, state: RevisionState) {
   });
 }
 
+/** Snapshot, `approved`, reconciled label, history and outbox `PeriodApproved` / `PeriodRestated` — one transaction. */
 async function markApproved(
   manager: EntityManager,
   state: RevisionState,

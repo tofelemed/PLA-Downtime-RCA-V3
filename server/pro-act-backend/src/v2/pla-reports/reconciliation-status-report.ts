@@ -1,7 +1,12 @@
 import { EntityManager, In, Repository } from 'typeorm';
+import { ReconciliationSlaService } from '../../close/reconciliation-sla.service';
+import { slaPeriodsCte, SqlParams } from '../../close/sla-sql';
+import { PolicyInForce } from '../../close/workflow-policies.service';
 import { RequestContext } from '../../common/context/request-context';
+import { ReconciliationSlaPolicy } from '../../domain/close/sla-policy';
 import { AccountingPoliciesService } from '../../periods/accounting-policies.service';
 import { ProductionPeriod } from '../../periods/entities/production-period.entity';
+import { toPeriodSlaView } from '../close/period-sla.view';
 import { loadPeriodStates } from '../period-overview/period-states';
 import {
   GridWorkflowState,
@@ -20,91 +25,92 @@ import { foldScopeStates } from './scope-periods';
 
 const HOUR_S = 3600;
 
-/** Age bucket of `age_s` (seconds since the period ended), the same edges as `AGE_BUCKETS`. */
-const AGE_KEY_SQL = `CASE WHEN c."age_s" < 0 THEN 'not_ended'${AGE_BUCKETS.filter(
+/** Age bucket of `period_age_s` (seconds since the period ended), the same edges as `AGE_BUCKETS`. */
+const AGE_KEY_SQL = `CASE WHEN s."period_age_s" < 0 THEN 'not_ended'${AGE_BUCKETS.filter(
   (b) => b.maxHours !== null && Number.isFinite(b.maxHours),
 )
   .map(
-    (b) => ` WHEN c."age_s" < ${Number(b.maxHours) * HOUR_S} THEN '${b.key}'`,
+    (b) =>
+      ` WHEN s."period_age_s" < ${Number(b.maxHours) * HOUR_S} THEN '${b.key}'`,
   )
   .join('')} ELSE '${AGE_BUCKETS[AGE_BUCKETS.length - 1].key}' END`;
-
-/**
- * Each period of the scope (start in [from, to), tenant, units) with its current revision — the latest not
- * cancelled one, like `loadPeriodStates(…, 'current')` — as a grid workflow state, the run it shows and its
- * age at `asOf`. $1 tenant, $2 units, $3 from, $4 to, $5 asOf, $6 overdue after (seconds). Uses
- * UQ_production_periods_unit_start and UQ_accounting_revisions_period_revision.
- */
-const CURRENT = `WITH c AS (
-  SELECT p."id", p."utc_start",
-         CASE WHEN r."lifecycle" IS NULL THEN 'none'
-              WHEN r."lifecycle" = 'in_review' AND r."is_stale" THEN 'stale'
-              ELSE r."lifecycle"::text END AS "workflow",
-         r."current_run_id" AS "run_id",
-         floor(extract(epoch FROM ($5::timestamptz - p."utc_end")))::bigint AS "age_s"
-    FROM "production_periods" p
-    LEFT JOIN LATERAL (SELECT ar."lifecycle", ar."is_stale", ar."current_run_id" FROM "accounting_revisions" ar
-                        WHERE ar."period_id" = p."id" AND ar."tenant_id" = $1 AND ar."lifecycle" <> 'cancelled'
-                        ORDER BY ar."revision" DESC LIMIT 1) r ON true
-   WHERE p."tenant_id" = $1 AND p."unit_id" = ANY($2::uuid[]) AND p."utc_start" >= $3 AND p."utc_start" < $4)`;
-
-const OVERDUE = `c."workflow" <> 'approved' AND c."age_s" >= $6`;
 
 export interface StatusReportInput {
   context: RequestContext;
   scope: ReportScope;
   asOf: Date;
-  overdueAfterHours: number;
+  /** SME R3: overdue, escalation and waits follow the `reconciliation_sla` policy in force at `asOf` */
+  sla: PolicyInForce<ReconciliationSlaPolicy>;
 }
 
-const paramsOf = (input: StatusReportInput) => [
-  input.scope.tenantId,
-  input.scope.unitIds,
-  input.scope.from,
-  input.scope.to,
-  input.asOf,
-  input.overdueAfterHours * HOUR_S,
-];
+/** Periods of the scope (start in [from, to), tenant, units) with their current revision and SLA columns. */
+function scopeCte(input: StatusReportInput, params: SqlParams): string {
+  const tenant = params.add(input.scope.tenantId);
+  const units = params.add(input.scope.unitIds);
+  const from = params.add(input.scope.from);
+  const to = params.add(input.scope.to);
+  return slaPeriodsCte(params, {
+    where: `p."tenant_id" = ${tenant} AND p."unit_id" = ANY(${units}::uuid[]) AND p."utc_start" >= ${from} AND p."utc_start" < ${to}`,
+    asOf: input.asOf,
+    policy: input.sla.policy,
+  });
+}
 
-/** Periods per workflow state, age bucket and overdue flag in one GROUP BY (no period cap). */
+interface SummarySqlRow {
+  workflow: GridWorkflowState;
+  age_key: string;
+  overdue: boolean;
+  escalation_level: number;
+  on_hold: boolean;
+  rejection_escalated: boolean;
+  periods: number;
+  run_ids: string[] | null;
+}
+
+/** Periods per workflow state, age bucket, overdue flag, escalation level and waits in one GROUP BY. */
 export async function statusSummary(
   manager: EntityManager,
   input: StatusReportInput,
 ): Promise<StatusSummaryRow[]> {
   if (input.scope.unitIds.length === 0) return [];
-  const rows: Array<{
-    workflow: GridWorkflowState;
-    age_key: string;
-    overdue: boolean;
-    periods: number;
-    run_ids: string[] | null;
-  }> = await manager.query(
-    `${CURRENT}
-     SELECT c."workflow", ${AGE_KEY_SQL} AS "age_key", (${OVERDUE}) AS "overdue", count(*)::int AS "periods",
-            array_agg(DISTINCT c."run_id") FILTER (WHERE c."run_id" IS NOT NULL) AS "run_ids"
-       FROM c GROUP BY 1, 2, 3`,
-    paramsOf(input),
+  const params = new SqlParams();
+  const cte = scopeCte(input, params);
+  const asOf = params.add(input.asOf);
+  const rows: SummarySqlRow[] = await manager.query(
+    `${cte}
+     SELECT s."workflow", ${AGE_KEY_SQL} AS "age_key", s."overdue", s."escalation_level", s."on_hold",
+            s."rejection_escalated", count(*)::int AS "periods",
+            array_agg(DISTINCT s."run_id") FILTER (WHERE s."run_id" IS NOT NULL) AS "run_ids"
+       FROM (SELECT x.*, floor(extract(epoch FROM (${asOf}::timestamptz - x."utc_end")))::bigint AS "period_age_s"
+               FROM s x) s
+      GROUP BY 1, 2, 3, 4, 5, 6`,
+    params.values,
   );
   return rows.map((r) => ({
     workflow: r.workflow,
     ageKey: r.age_key,
     overdue: r.overdue,
+    escalationLevel: r.escalation_level,
+    onHold: r.on_hold,
+    rejectionEscalated: r.rejection_escalated,
     periods: r.periods,
     runIds: r.run_ids ?? [],
   }));
 }
 
-/** Ids of the oldest overdue periods (oldest end first, then start and id), at most `OVERDUE_LIST_LIMIT`. */
+/** Ids of the most overdue periods (earliest due first, then start and id), at most `OVERDUE_LIST_LIMIT`. */
 async function overdueIds(
   manager: EntityManager,
   input: StatusReportInput,
 ): Promise<string[]> {
   if (input.scope.unitIds.length === 0) return [];
+  const params = new SqlParams();
+  const cte = scopeCte(input, params);
   const rows: Array<{ id: string }> = await manager.query(
-    `${CURRENT}
-     SELECT c."id" FROM c WHERE ${OVERDUE}
-      ORDER BY c."age_s" DESC, c."utc_start" ASC, c."id" ASC LIMIT ${OVERDUE_LIST_LIMIT}`,
-    paramsOf(input),
+    `${cte}
+     SELECT s."id" FROM s WHERE s."overdue"
+      ORDER BY s."due" ASC, s."utc_start" ASC, s."id" ASC LIMIT ${OVERDUE_LIST_LIMIT}`,
+    params.values,
   );
   return rows.map((r) => r.id);
 }
@@ -123,11 +129,11 @@ async function idMap(
   return new Map(rows.map((r) => [r.id, r.value]));
 }
 
-/** The oldest overdue periods with unit name, plan deep link and residual state of their current revision. */
+/** The most overdue periods with unit name, plan deep link, residual state and SLA of their current revision. */
 export async function overduePeriods(
   periods: Repository<ProductionPeriod>,
   input: StatusReportInput,
-  policies: AccountingPoliciesService,
+  deps: { policies: AccountingPoliciesService; slas: ReconciliationSlaService },
 ): Promise<OverduePeriodView[]> {
   const ids = await overdueIds(periods.manager, input);
   if (ids.length === 0) return [];
@@ -137,8 +143,8 @@ export async function overduePeriods(
   const byId = new Map(found.map((p) => [p.id, p]));
   const ordered = ids.flatMap((id) => byId.get(id) ?? []);
   const manager = periods.manager;
-  const [states, unitNames, plans] = await Promise.all([
-    loadPeriodStates(manager, ordered, 'current', policies),
+  const [states, unitNames, plans, slas] = await Promise.all([
+    loadPeriodStates(manager, ordered, 'current', deps.policies),
     idMap(
       manager,
       `SELECT "id"::text AS "id", "name" AS "value" FROM "units" WHERE "tenant_id" = $1 AND "id" = ANY($2::uuid[])`,
@@ -153,10 +159,17 @@ export async function overduePeriods(
         p.selectedPlanVersionId ? [p.selectedPlanVersionId] : [],
       ),
     ),
+    deps.slas.statuses(manager, ordered, input.asOf),
   ]);
-  return states.map((state) =>
-    overdueView(state, { asOf: input.asOf, unitNames, plans }),
-  );
+  return states.map((state) => {
+    const sla = slas.get(state.period.id);
+    return overdueView(state, {
+      asOf: input.asOf,
+      unitNames,
+      plans,
+      sla: sla ? toPeriodSlaView(sla) : null,
+    });
+  });
 }
 
 /**

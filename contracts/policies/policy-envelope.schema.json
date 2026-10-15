@@ -15,7 +15,9 @@
         "source_authority",
         "approval_roles",
         "calendar_defaults",
-        "rca_policy"
+        "rca_policy",
+        "month_close",
+        "reconciliation_sla"
       ],
       "description": "Discriminator; equals `accounting_policies.policy_kind` and the `policyKind` const of the matching kind schema."
     },

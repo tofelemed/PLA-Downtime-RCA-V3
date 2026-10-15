@@ -36,6 +36,7 @@ import {
   DraftLinesDto,
   ReasonedRevisionDto,
   ReconciliationQueryDto,
+  RejectRevisionDto,
   ReviseRevisionDto,
   SubmitRevisionDto,
   WorkflowListQueryDto,
@@ -155,14 +156,19 @@ export class ReconciliationV2Controller {
   @Roles(...REVISION_APPROVERS)
   @UseInterceptors(ETagInterceptor)
   @ApiOperation({
-    summary: 'Reject the submitted revision back to draft with a reason',
-    description: IDEMPOTENT + '403 SEPARATION_OF_DUTIES for the submitter.',
+    summary:
+      'Reject the submitted revision back to its preparer with a reason, the failed lines and a new due time',
+    description:
+      IDEMPOTENT +
+      '403 SEPARATION_OF_DUTIES for the submitter; 422 INVALID_REFERENCE for a failed line that is not in the ' +
+      'reviewed revision. The rejection (history `detail`) carries the new due time from the reconciliation SLA ' +
+      'policy and escalates the configured n-th rejection (SME R6: the third) to production accounting.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async reject(
     @Ctx() ctx: RequestContext,
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() body: ReasonedRevisionDto,
+    @Body() body: RejectRevisionDto,
   ): Promise<ReconciliationV2View> {
     return this.reads.viewOf(ctx, await this.approvals.reject(ctx, id, body));
   }

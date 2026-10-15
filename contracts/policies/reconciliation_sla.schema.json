@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/reconciliation_sla.schema.json",
+  "title": "Reconciliation SLA policy",
+  "description": "Deadlines of the period reconciliation (SME R3 / R6, EXPERT_REVIEW phase R-C): submission and approval due a number of hours after the production day ends, the resubmission time after a rejection, the escalation steps by age (hours since the production day ended, time waiting for data not counted) and the rejection count that escalates. Tenant-wide; seeded per plant on first use. Consumed by `src/domain/close/reconciliation-sla.ts` (and its SQL mirror `src/close/sla-sql.ts`).",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "reconciliation_sla" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "body": {
+      "type": "object",
+      "required": ["submitWithinHours", "approveWithinHours", "resubmitWithinHours", "escalations", "rejectionEscalationCount", "rejectionEscalationRole"],
+      "additionalProperties": false,
+      "properties": {
+        "submitWithinHours": { "type": "number", "exclusiveMinimum": 0, "default": 12, "description": "Submission due this many hours after the production day ends (SME R3 pilot: 12)." },
+        "approveWithinHours": { "type": "number", "exclusiveMinimum": 0, "default": 24, "description": "Approval due this many hours after the production day ends (SME R3 pilot: 24); not before the submission." },
+        "resubmitWithinHours": { "type": "number", "exclusiveMinimum": 0, "default": 12, "description": "After a rejection the corrected submission is due this many hours after it (never before the first due time)." },
+        "escalations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["afterHours", "role"],
+            "additionalProperties": false,
+            "properties": {
+              "afterHours": { "type": "number", "exclusiveMinimum": 0 },
+              "role": { "type": "string", "minLength": 1 }
+            }
+          },
+          "description": "Escalation levels 1, 2, ... in rising afterHours (SME R3 pilot: 48 h production accounting, 72 h plant management)."
+        },
+        "rejectionEscalationCount": { "type": "integer", "minimum": 1, "default": 3, "description": "The n-th rejection of the same revision escalates (SME R6: the third)." },
+        "rejectionEscalationRole": { "type": "string", "minLength": 1, "default": "production_accountant" }
+      }
+    }
+  }
+}

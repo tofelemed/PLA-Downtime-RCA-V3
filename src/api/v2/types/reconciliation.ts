@@ -25,6 +25,8 @@ export interface RevisionWorkflowView {
   rejectReason: string | null;
   cancelledBy: string | null;
   cancelledAt: string | null;
+  /** SME R4: a correction opened through a change proposal of a locked month */
+  afterClose: boolean;
   comment: string | null;
 }
 
