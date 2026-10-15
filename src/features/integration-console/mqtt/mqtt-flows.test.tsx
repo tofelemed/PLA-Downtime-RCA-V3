@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
-import type { ConnectionView } from '@/api/v2/types/integrations';
+import { MQTT_CONNECTION as CONNECTION } from './mqtt-test-fixtures';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
@@ -22,23 +22,7 @@ interface Call {
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const SECRET = 'typed-once-mqtt-secret';
 
-const CONNECTION: ConnectionView = {
-  id: 'c1',
-  sourceType: 'mqtt',
-  displayName: 'Lab',
-  endpointConfig: {
-    mqtt: { brokerUrl: 'mqtt://mqtt:1883', protocolVersion: 5, username: 'lab', qos: 1, cleanStart: false, sessionExpirySeconds: 86400, keepaliveSeconds: 60, connectTimeoutSeconds: 30, reconnect: { minSeconds: 1, maxSeconds: 60 }, tls: { mode: 'system' }, topics: ['proact/v1/+/+/+/+/events'], maxMessageBytes: 65536 },
-    payloadProfile: { kind: 'interval_event_json', schemaVersion: '1.0', topicTemplate: 'proact/v1/{site}/{area}/{line}/{unit}/events', identityStrategy: 'event_id', time: { unit: 'iso', maxFutureSkewSeconds: 300, maxPastSeconds: 604800 }, quality: { protocol: 'PI' } },
-  },
-  hasSecret: true,
-  effectiveClientId: 'proact-c1',
-  capabilities: {},
-  configVersion: 1,
-  isActive: true,
-  rowVersion: 1,
-  createdAt: '2026-10-11T00:00:00Z',
-  updatedAt: null,
-};
+
 
 describe('MQTT console flows (plan 1.8 step 5)', () => {
   let calls: Call[];
@@ -108,6 +92,7 @@ describe('MQTT console flows (plan 1.8 step 5)', () => {
   it('profile editor: live classification, the state map must keep running/stopped, the save is a merge patch under If-Match', async () => {
     reply = () => json(200, { ...CONNECTION, rowVersion: 2, configVersion: 2 });
     wrap(<ProfileEditor connection={CONNECTION} />);
+    fireEvent.click(screen.getByRole('button', { name: /Value maps/ }));
     fireEvent.click(screen.getByTestId('state-map-add'));
     const row = screen.getByTestId('state-map-row');
     fireEvent.change(row.querySelector('input[aria-label="Raw token"]') as HTMLInputElement, { target: { value: 'RUN' } });

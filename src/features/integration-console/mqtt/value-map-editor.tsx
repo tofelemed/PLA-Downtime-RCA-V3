@@ -32,9 +32,9 @@ export function ValueMapEditor({ kind, rows, error, keepUnmapped, onChange }: Va
       </legend>
       <p className="text-xs text-muted-foreground">{text.hint}</p>
       {rows.map((row, index) => (
-        <div key={index} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 text-xs" data-testid={`${kind}-map-row`}>
-          <Input aria-label="Raw token" className="font-mono" value={row.token} onChange={(event) => edit(index, { token: event.target.value })} />
-          <Input aria-label={text.target} list={kind === 'state' ? 'dt01-state-names' : undefined} value={row.value} onChange={(event) => edit(index, { value: event.target.value })} />
+        <div key={index} className="grid min-w-0 gap-2 text-xs sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center" data-testid={`${kind}-map-row`}>
+          <Input aria-label="Raw token" aria-invalid={Boolean(error)} aria-describedby={error ? `${kind}-map-error` : undefined} className="min-w-0 font-mono" value={row.token} onChange={(event) => edit(index, { token: event.target.value })} />
+          <Input aria-label={text.target} aria-invalid={Boolean(error)} aria-describedby={error ? `${kind}-map-error` : undefined} list={kind === 'state' ? 'dt01-state-names' : undefined} value={row.value} onChange={(event) => edit(index, { value: event.target.value })} />
           <Button size="sm" variant="ghost" onClick={() => remove(index)} aria-label={`Remove ${kind} mapping ${row.token || index + 1}`}>
             Remove
           </Button>
@@ -48,7 +48,7 @@ export function ValueMapEditor({ kind, rows, error, keepUnmapped, onChange }: Va
         </datalist>
       )}
       {error && (
-        <p role="alert" className="text-xs text-destructive" data-testid={`${kind}-map-error`}>
+        <p id={`${kind}-map-error`} role="alert" className="text-xs text-destructive" data-testid={`${kind}-map-error`}>
           {error}
         </p>
       )}

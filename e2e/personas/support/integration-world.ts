@@ -258,7 +258,8 @@ export interface IntState {
   lifecycleEventId?: string;
 }
 
-const STATE_FILE = join(tmpdir(), 'proact-personas', 'integration-state.json');
+const stateScope = process.env.HDPE_UI_RUN?.replace(/[^a-z0-9-]/gi, '');
+const STATE_FILE = join(tmpdir(), 'proact-personas', stateScope ? `integration-state-${stateScope}.json` : 'integration-state.json');
 
 export function saveState(state: IntState): void {
   mkdirSync(dirname(STATE_FILE), { recursive: true });

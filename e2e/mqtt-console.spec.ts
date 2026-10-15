@@ -122,6 +122,7 @@ test.describe('Integration console — MQTT panel (plan 1.8 step 5)', () => {
 
     // 3. the worker creates the subscribe job and connects (reconcile every 10 s, heartbeat every 20 s)
     await expect(page.getByTestId('mqtt-status')).toHaveAttribute('data-status', 'connected', { timeout: 90_000 });
+    await page.getByTestId('mqtt-technical-details').locator('summary').click();
     await expect(page.getByTestId('mqtt-client-id')).toHaveText(`proact-${connectionId}`);
     const running = await subscribeJob(connectionId);
     expect(running?.state).toBe('running');
@@ -139,6 +140,7 @@ test.describe('Integration console — MQTT panel (plan 1.8 step 5)', () => {
 
     // 5. payload profile: a state map saved as a merge patch; topics survive; config version bumps
     await page.getByTestId('tab-profile').click();
+    await page.getByRole('button', { name: /Value maps/ }).click();
     await page.getByTestId('state-map-add').click();
     const row = page.getByTestId('state-map-row').first();
     await row.getByLabel('Raw token').fill('RUN');

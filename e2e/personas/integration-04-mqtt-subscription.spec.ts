@@ -92,6 +92,7 @@ test.describe('Integration admin — MQTT subscription and payload profile', () 
     await expect(page.getByTestId('mqtt-status')).toHaveAttribute('data-status', 'connected', { timeout: 90_000 });
     await expect.poll(async () => (await counters(omar.token, state.connectionId)).received, { intervals: [2_000], timeout: 90_000 }).toBeGreaterThanOrEqual(before.received + 7);
     expect((await subscribeJob(omar.token, state.connectionId))?.health.sessionPresent).toBe(true);
+    await page.getByTestId('mqtt-technical-details').locator('summary').click();
     await expect(page.getByText('Session present on last connect').locator('xpath=..')).toContainText('yes');
     for (const id of burstIds) {
       await expect.poll(async () => (await eventsByEventId(omar.token, unit.id, id)).length, { intervals: [2_000], timeout: 60_000 }).toBe(1);
@@ -114,6 +115,7 @@ test.describe('Integration admin — MQTT subscription and payload profile', () 
     const versionBefore = (await findConnection(elena.token, state.connectionName))?.configVersion ?? 0;
     await page.getByTestId('tab-profile').click();
     await expect(page.getByTestId('profile-editor')).toHaveAttribute('data-kind', 'interval_event_json');
+    await page.getByRole('button', { name: /Value maps/ }).click();
     await page.getByTestId('state-map-add').click();
     const row = page.getByTestId('state-map-row').first();
     await row.getByLabel('Raw token').fill('RUN');
@@ -128,6 +130,7 @@ test.describe('Integration admin — MQTT subscription and payload profile', () 
     await expect(page.getByTestId('state-probe-result')).toContainText('"run" → running');
     await page.locator('#state-probe-input').fill('STOP');
     await expect(page.getByTestId('state-probe-result')).toContainText('unmapped_value');
+    await page.getByText('Technical details: pending profile changes', { exact: true }).click();
     await expect(page.getByTestId('profile-patch')).toContainText('"RUN": "running"');
     await page.getByTestId('profile-save').click();
     await expect(page.getByTestId('profile-saved')).toBeVisible({ timeout: 20_000 });
@@ -161,6 +164,7 @@ test.describe('Integration admin — MQTT subscription and payload profile', () 
     await openConsole(page);
     await selectConnection(page, state.connectionName);
     await page.getByTestId('tab-profile').click();
+    await page.getByRole('button', { name: /Value maps/ }).click();
     const row = page.getByTestId('state-map-row').first();
     await expect(row.getByLabel('Raw token')).toHaveValue('RUN');
     await expect(row.getByLabel('DT01 state')).toHaveValue('running');
