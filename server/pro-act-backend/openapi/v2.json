@@ -9392,6 +9392,258 @@
         ]
       }
     },
+    "/api/v2/unit-impact-rules": {
+      "get": {
+        "operationId": "UnitImpactRulesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "draft",
+                "approved",
+                "retired"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List unit impact rule versions of the caller’s units (keyset on effectiveFrom, id)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. The unit in scope and the asset of that unit (422 INVALID_REFERENCE / ASSET_NOT_IN_UNIT); the standby another asset of the tenant (422 SAME_ASSET); `fractional` needs 0 < fraction ≤ 1 and the other modes none (422 INVALID_FRACTION).",
+        "operationId": "UnitImpactRulesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitImpactRuleCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft unit impact rule version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/unit-impact-rules/{id}": {
+      "get": {
+        "operationId": "UnitImpactRulesV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one unit impact rule version; foreign ids are 404",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/unit-impact-rules/{id}/approve": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). The asset's stops starting in its validity are resolved again (worker).",
+        "operationId": "UnitImpactRulesV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft unit impact rule version",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
+    "/api/v2/unit-impact-rules/{id}/retire": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. Stops that took their impact from a retired approved version go back to the default (full stop) unless another version is in force.",
+        "operationId": "UnitImpactRulesV2Controller_retire_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retire a unit impact rule version (draft or approved)",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
     "/api/v2/buffer-levels": {
       "get": {
         "operationId": "BufferLevelsV2Controller_list_v2",
@@ -25701,6 +25953,69 @@
           "effectiveFrom",
           "fromUnitId",
           "toUnitId"
+        ]
+      },
+      "UnitImpactRuleCreateDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "example": "2026-10-01T02:30:00Z"
+          },
+          "effectiveTo": {
+            "type": "object",
+            "example": "2027-01-01T02:30:00Z",
+            "nullable": true,
+            "description": "Exclusive end; absent or null = open-ended"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The equipment whose stops the rule classifies (an asset of the unit)"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "full_stop",
+              "fractional",
+              "none"
+            ],
+            "description": "full_stop = the unit stops; fractional = the unit loses `fraction` of its rate (one of several trains); none = output holds"
+          },
+          "fraction": {
+            "type": "object",
+            "example": "0.5",
+            "nullable": true,
+            "description": "Share of the unit rate lost, 0 < f ≤ 1; only (and required) with fractional"
+          },
+          "standbyAssetId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Installed standby whose successful start holds the output (SME D9 standby log runs)"
+          },
+          "takeoverSeconds": {
+            "type": "number",
+            "default": 60,
+            "minimum": 0,
+            "maximum": 86400,
+            "description": "A standby run starting at most this many seconds after the stop is a takeover"
+          },
+          "reason": {
+            "type": "string",
+            "example": "Two parallel extruder feed trains; one train = 50 % of the rate"
+          }
+        },
+        "required": [
+          "effectiveFrom",
+          "unitId",
+          "assetId",
+          "mode",
+          "reason"
         ]
       },
       "BufferLevelCreateDto": {

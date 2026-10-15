@@ -6,11 +6,13 @@ import { BufferLevelRecord } from './entities/buffer-level.entity';
 import { PlantFlowRoute } from './entities/plant-flow-route.entity';
 import { StreamRunRecord } from './entities/stream-run.entity';
 import { PlantFlowRoutesService } from './plant-flow-routes.service';
+import { UnitImpactRule } from './entities/unit-impact-rule.entity';
 import { UnitStream } from './entities/unit-stream.entity';
 import { StreamRunsService } from './stream-runs.service';
+import { UnitImpactRulesService } from './unit-impact-rules.service';
 import { UnitStreamsService } from './unit-streams.service';
 
-/** SME E6 / E2 plant model: unit streams and the products they run (and, with E2, the material-flow map). */
+/** SME E6 / E2 plant model: unit streams and the products they run (and, with E2, the material-flow map; plan 1.10 unit impact rules). */
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -18,6 +20,7 @@ import { UnitStreamsService } from './unit-streams.service';
       StreamRunRecord,
       PlantFlowRoute,
       BufferLevelRecord,
+      UnitImpactRule,
     ]),
     ProfilesModule,
   ],
@@ -26,12 +29,14 @@ import { UnitStreamsService } from './unit-streams.service';
     StreamRunsService,
     PlantFlowRoutesService,
     BufferLevelsService,
+    UnitImpactRulesService,
   ],
   exports: [
     UnitStreamsService,
     StreamRunsService,
     PlantFlowRoutesService,
     BufferLevelsService,
+    UnitImpactRulesService,
     TypeOrmModule,
   ],
 })

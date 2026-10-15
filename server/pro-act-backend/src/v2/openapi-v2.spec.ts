@@ -88,6 +88,8 @@ import { UncertaintyModule } from '../uncertainty/uncertainty.module';
 import { BufferLevelsService } from '../plant-model/buffer-levels.service';
 import { BufferLevelRecord } from '../plant-model/entities/buffer-level.entity';
 import { PlantFlowRoute } from '../plant-model/entities/plant-flow-route.entity';
+import { UnitImpactRule } from '../plant-model/entities/unit-impact-rule.entity';
+import { UnitImpactRulesService } from '../plant-model/unit-impact-rules.service';
 import { PlantFlowRoutesService } from '../plant-model/plant-flow-routes.service';
 import { StreamRunRecord } from '../plant-model/entities/stream-run.entity';
 import { UnitStream } from '../plant-model/entities/unit-stream.entity';
@@ -365,10 +367,12 @@ const PLANT_MODEL_PROVIDERS = [
   StreamRunsService,
   PlantFlowRoutesService,
   BufferLevelsService,
+  UnitImpactRulesService,
   getRepositoryToken(UnitStream),
   getRepositoryToken(StreamRunRecord),
   getRepositoryToken(PlantFlowRoute),
   getRepositoryToken(BufferLevelRecord),
+  getRepositoryToken(UnitImpactRule),
 ];
 @Module({
   providers: PLANT_MODEL_PROVIDERS.map((provide) => ({
