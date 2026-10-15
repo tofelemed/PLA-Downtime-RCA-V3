@@ -27,6 +27,11 @@ export const CORRECTION_PROPOSERS = ['production_accountant', 'manager_approver'
 export const DISPOSITION_WRITERS = ['operator', 'production_engineer', 'production_accountant', 'manager_approver', 'quality_approver'] as const;
 export const DISPOSITION_APPROVERS = ['quality_approver'] as const;
 
+/** v2/uncertainty/uncertainty-roles.ts (SME E4 uncertainty budgets) */
+export const BUDGET_WRITERS = ['production_engineer', 'integration_admin', 'production_accountant', 'manager_approver'] as const;
+export const BUDGET_APPROVERS = ['production_accountant'] as const;
+export const TOLERANCE_ADOPTERS = ['production_accountant', 'manager_approver'] as const;
+
 /** v2/code-libraries/code-library-v2.controller.ts */
 export const CODE_WRITERS = ['master_data_admin', 'manager_approver'] as const;
 

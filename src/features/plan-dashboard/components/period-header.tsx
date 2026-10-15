@@ -1,10 +1,11 @@
 import { Badge } from '@/components/ui/badge';
 import type { AnalyticsResponse } from '@/api/v2/types/envelopes';
 import type { PeriodAccountingView } from '@/api/v2/types/period-overview';
-import type { ReconciliationView, ToleranceView } from '@/api/v2/types/reconciliation';
+import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { humanize, labelOf, policyRefsLabel, REVISION_LIFECYCLE_LABELS, useUserNames } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ScopeHeader } from '@/features/ux-kit/scope-header';
+import { ToleranceBadge } from './tolerance-badge';
 
 export interface PeriodHeaderProps {
   view: ReconciliationView;
@@ -13,8 +14,6 @@ export interface PeriodHeaderProps {
   planLabel: string;
   timezone: string;
 }
-
-const toleranceText = (t: ToleranceView) => (t.mode === 'zero' ? 'Tolerance: none' : t.mode === 'percent' ? `Tolerance: ${t.value} %` : `Tolerance: ${t.value}`);
 
 function CalculationDetails({ accounting, timezone }: { accounting: PeriodAccountingView['run']; timezone: string }) {
   if (!accounting) return <Badge variant="outline">Not calculated yet</Badge>;
@@ -49,7 +48,7 @@ export function PeriodHeader({ view, accounting, unitName, planLabel, timezone }
           {revision.isStale ? ' · inputs changed' : ''}
         </Badge>
         {view.publishedRevision !== null && <Badge variant="outline">Approved: revision {view.publishedRevision}</Badge>}
-        <Badge variant="outline">{toleranceText(view.tolerance)}</Badge>
+        <ToleranceBadge tolerance={view.tolerance} timezone={timezone} />
         <CalculationDetails accounting={accounting?.data.run ?? null} timezone={timezone} />
       </div>
       {revision.isStale && (

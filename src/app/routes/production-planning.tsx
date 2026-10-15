@@ -23,6 +23,8 @@ const MonthClose = lazyNamedWithPreload(() => import('@/features/month-close/mon
 const MyQueue = lazyNamedWithPreload(() => import('@/features/month-close/my-queue-page'), 'MyQueuePage');
 const ProposeAdjustment = lazyNamedWithPreload(() => import('@/features/plan-dashboard/adjustments/propose-adjustment-page'), 'ProposeAdjustmentPage');
 const RecordDisposition = lazyNamedWithPreload(() => import('@/features/plan-dashboard/dispositions/record-disposition-page'), 'RecordDispositionPage');
+/** SME E4 uncertainty budgets per measurement boundary (justification of the reconciliation tolerance). */
+const MeasurementUncertainty = lazyNamedWithPreload(() => import('@/features/measurement-uncertainty/uncertainty-page'), 'UncertaintyPage');
 
 /**
  * Planning routes of the production area (owned by the planning track; spread into `PRODUCTION_ROUTES`).
@@ -47,4 +49,5 @@ export const PLANNING_ROUTES: readonly AppRoute[] = [
   { path: '/plans/:planId/periods/:periodId/dispositions/new', element: <RecordDisposition />, preload: RecordDisposition.preload },
   { path: '/month-close', element: <MonthClose />, preload: MonthClose.preload },
   { path: '/my-queue', element: <MyQueue />, preload: MyQueue.preload },
+  { path: '/measurement-uncertainty', element: <MeasurementUncertainty />, preload: MeasurementUncertainty.preload },
 ];

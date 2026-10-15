@@ -64,6 +64,11 @@ export interface Capabilities {
   canWriteDispositions: boolean;
   /** SME E3: approve / reject them (manager approvers, never the author) */
   canApproveDispositions: boolean;
+  /** SME E4: record uncertainty budgets / approve them (production accounting, never the author) */
+  canWriteUncertaintyBudgets: boolean;
+  canApproveUncertaintyBudgets: boolean;
+  /** SME E4: adopt an approved budget as the unit's absolute reconciliation tolerance */
+  canAdoptTolerance: boolean;
   canWriteCodes: boolean;
   canAuthorRules: boolean;
   canApproveRules: boolean;
@@ -128,6 +133,9 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canWriteBridges: may(ServerRoles.BRIDGE_WRITERS),
     canWriteDispositions: may(ServerRoles.DISPOSITION_WRITERS),
     canApproveDispositions: may(ServerRoles.DISPOSITION_APPROVERS),
+    canWriteUncertaintyBudgets: may(ServerRoles.BUDGET_WRITERS),
+    canApproveUncertaintyBudgets: may(ServerRoles.BUDGET_APPROVERS),
+    canAdoptTolerance: may(ServerRoles.TOLERANCE_ADOPTERS),
     canWriteCodes: may(ServerRoles.CODE_WRITERS),
     canAuthorRules: may(ServerRoles.RULE_AUTHORS),
     canApproveRules: may(ServerRoles.RULE_APPROVERS),

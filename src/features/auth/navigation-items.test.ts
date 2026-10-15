@@ -24,6 +24,8 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   // EXPERT_REVIEW Area 3: my reconciliation queue (period writers, R-C) and month close (analysis roles, R-B)
   'My Queue': NOT_OPERATOR,
   'Month Close': NOT_OPERATOR,
+  // SME E4 uncertainty budgets: read by every analysis role
+  'Measurement Uncertainty': NOT_OPERATOR,
   // Reliability
   'RCA Analysis': NOT_OPERATOR,
   'Bad Actors': NOT_OPERATOR,

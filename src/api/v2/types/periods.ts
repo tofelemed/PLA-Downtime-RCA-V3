@@ -13,6 +13,26 @@ export interface SliceActualsView {
   qualityState: string;
   /** SME E3 class breakdown; null / absent = no disposition or rework acceptance recorded */
   qualityClasses?: QualityClassesView | null;
+  /** SME E7: a lower-ranked source or the approved estimate gave the actuals; null / absent = the top rank */
+  substitution?: SourceSubstitutionView | null;
+}
+
+/** A ranked measurement source (backend `period-actuals.types.ts` RankedSourceRef). */
+export interface RankedSourceView {
+  rank: number;
+  /** calibrated_primary | redundant_measurement | reconciled_record | approved_estimate; null = older version */
+  sourceClass: string | null;
+  source: string;
+  boundary: string | null;
+}
+
+/** SME E7 substitution flag of a slice (server-decided). */
+export interface SourceSubstitutionView {
+  used: RankedSourceView & { label: string };
+  replaced: RankedSourceView;
+  /** primary_missing | primary_stale | primary_bad_quality | no_measured_source */
+  reason: string;
+  crossBoundary: { fromBoundary: string | null; lagSeconds: number; evidenceRef: string } | null;
 }
 
 /** SME E3: quantities of a slice by product disposition (backend `quality-classes.ts`), decimal strings. */
