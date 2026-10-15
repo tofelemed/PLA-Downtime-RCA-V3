@@ -86,6 +86,13 @@ response to set a specific code (`INVALID_TRANSITION`, `STALE_REVISION`, ...). V
 `/api/v2` are 422 `VALIDATION_FAILED` with `fieldErrors`; semantic validation uses
 `UnprocessableEntityException`. Never put stack traces or SQL in a response.
 
+Invalid or missing credentials return 401. An unexpected failure while resolving
+the authenticated identity (for example, an unavailable database) returns 503
+`SERVICE_UNAVAILABLE`, with `retryable: true` and a generic message. Clients must
+retain the session on 503; refreshing or clearing credentials cannot repair an
+unavailable identity service. Explicit authentication/policy exceptions retain
+their original status.
+
 ## 8. Tests
 
 - Unit: DTO validation through `createValidationPipe()` (same options as production), cursor codec,

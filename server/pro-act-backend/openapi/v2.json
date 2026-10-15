@@ -22910,7 +22910,7 @@
   },
   "info": {
     "title": "Traverse Forge API v2",
-    "description": "Tenant from identity, AND-combined filters, cursor pagination, standard envelopes (src/v2/CONVENTIONS.md)",
+    "description": "Tenant from identity, AND-combined filters, cursor pagination, standard envelopes (src/v2/CONVENTIONS.md). Invalid credentials return 401; unavailable authentication dependencies return retryable 503 SERVICE_UNAVAILABLE without invalidating the session.",
     "version": "2.0",
     "contact": {}
   },

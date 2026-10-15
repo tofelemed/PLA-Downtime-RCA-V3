@@ -12,7 +12,7 @@ export function buildV2Document(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
     .setTitle('Traverse Forge API v2')
     .setDescription(
-      'Tenant from identity, AND-combined filters, cursor pagination, standard envelopes (src/v2/CONVENTIONS.md)',
+      'Tenant from identity, AND-combined filters, cursor pagination, standard envelopes (src/v2/CONVENTIONS.md). Invalid credentials return 401; unavailable authentication dependencies return retryable 503 SERVICE_UNAVAILABLE without invalidating the session.',
     )
     .setVersion('2.0')
     .addBearerAuth()

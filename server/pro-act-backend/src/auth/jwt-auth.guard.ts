@@ -3,6 +3,7 @@ import {
   HttpException,
   Injectable,
   Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -31,7 +32,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  /** Any authentication failure is a 401; a plain Error here would surface as a 500. */
+  /** Invalid credentials are 401; a failed identity lookup must not invalidate a valid session. */
   handleRequest<TUser = AuthenticatedUser>(
     err: unknown,
     user: TUser | false | null | undefined,
@@ -45,7 +46,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       );
       throw err instanceof HttpException
         ? err
-        : new UnauthorizedException('Unauthorized');
+        : new ServiceUnavailableException(
+            'Authentication service temporarily unavailable',
+          );
     }
     if (!user) {
       const reason = describeFailure(info) || 'Unauthorized';

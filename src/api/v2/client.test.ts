@@ -131,4 +131,19 @@ describe('v2 client (plan 3.1)', () => {
     await v2Request({ method: 'PATCH', path: '/production-events/e1', body: {}, ifMatch: 'cached' });
     expect(header(1, 'If-Match')).toBe('"3"');
   });
+
+  it('retains the session when authentication infrastructure returns a retryable 503', async () => {
+    responses.push(json(503, {
+      code: 'SERVICE_UNAVAILABLE', message: 'Authentication service temporarily unavailable',
+      correlationId: 'auth-outage', retryable: true,
+    }));
+    await expect(v2Request({ method: 'GET', path: '/organizations' })).rejects.toMatchObject({
+      status: 503, code: 'SERVICE_UNAVAILABLE', retryable: true,
+    });
+    expect(session.refresh).not.toHaveBeenCalled();
+    expect(session.expired).not.toHaveBeenCalled();
+    responses.push(json(200, { items: [] }));
+    await expect(v2Request({ method: 'GET', path: '/organizations' })).resolves.toMatchObject({ data: { items: [] } });
+    expect(header(1, 'Authorization')).toBe('Bearer header.payload.signature');
+  });
 });

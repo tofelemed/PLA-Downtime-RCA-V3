@@ -2,6 +2,7 @@ import {
   ExecutionContext,
   ForbiddenException,
   Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -10,9 +11,9 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 
 class FixtureController {
   @Public()
-  open(): void {}
+  open(this: void): void {}
 
-  closed(): void {}
+  closed(this: void): void {}
 }
 
 function contextFor(
@@ -31,8 +32,12 @@ describe('JwtAuthGuard', () => {
   const guard = new JwtAuthGuard(new Reflector());
   const context = contextFor(FixtureController.prototype.closed);
 
-  beforeAll(() => Logger.overrideLogger(false));
-  afterAll(() => Logger.overrideLogger(true));
+  beforeAll(() => {
+    Logger.overrideLogger(false);
+  });
+  afterAll(() => {
+    Logger.overrideLogger(true);
+  });
 
   it('turns a missing token into a 401 instead of a plain Error (500)', () => {
     const attempt = () =>
@@ -55,10 +60,30 @@ describe('JwtAuthGuard', () => {
     expect(attempt).toThrow('jwt expired');
   });
 
-  it('wraps unexpected strategy errors as 401 but re-throws HttpExceptions untouched', () => {
+  it('reports an unavailable identity lookup as 503 without exposing internal details', () => {
+    const failure = new Error('connect ECONNREFUSED private-database:5432');
+    const attempt = () => guard.handleRequest(failure, null, null, context);
+    expect(attempt).toThrow(ServiceUnavailableException);
+    expect(attempt).toThrow('Authentication service temporarily unavailable');
+    expect(attempt).not.toThrow('private-database');
+  });
+
+  it('keeps a dropped identity connection distinct from invalid credentials', () => {
     expect(() =>
-      guard.handleRequest(new Error('strategy exploded'), null, null, context),
-    ).toThrow(UnauthorizedException);
+      guard.handleRequest(
+        new Error('Connection terminated unexpectedly'),
+        null,
+        null,
+        context,
+      ),
+    ).toThrow(ServiceUnavailableException);
+  });
+
+  it('re-throws explicit authentication and policy HttpExceptions untouched', () => {
+    const inactive = new UnauthorizedException('Account is inactive');
+    expect(() => guard.handleRequest(inactive, null, null, context)).toThrow(
+      inactive,
+    );
     expect(() =>
       guard.handleRequest(new ForbiddenException('nope'), null, null, context),
     ).toThrow(ForbiddenException);
