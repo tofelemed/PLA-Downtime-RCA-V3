@@ -26,6 +26,7 @@ export interface ShapedLine {
 const EXPLAINING_MANUAL_KINDS: ReadonlySet<LossKind> = new Set([
   'bridge',
   'unaccounted_classified',
+  'reversal',
 ]);
 
 function requireReason(input: DraftLineInput, index: number): void {
@@ -128,6 +129,20 @@ function evidenceShape(input: DraftLineInput, index: number): void {
   }
 }
 
+function reversalShape(input: DraftLineInput, index: number): void {
+  if (
+    (input.eventIds?.length ?? 0) > 0 ||
+    input.adjustmentId ||
+    input.missingEvent
+  ) {
+    throw lineInvalid(
+      'INVALID_LINE',
+      index,
+      'a reversal references the approved line it reverses, not events or adjustments',
+    );
+  }
+}
+
 function manualShape(
   input: DraftLineInput,
   index: number,
@@ -143,7 +158,9 @@ function manualShape(
     throw lineInvalid('SLICE_REQUIRED', index, 'a manual line needs sliceId');
   if (!input.kind)
     throw lineInvalid('KIND_REQUIRED', index, 'a manual line needs a kind');
-  evidenceShape(input, index);
+  // SME R9: a reversal rests on the approved line it reverses and its own record, not on an event
+  if (input.kind === 'reversal') reversalShape(input, index);
+  else evidenceShape(input, index);
   return { sliceId: input.sliceId, kind: input.kind };
 }
 

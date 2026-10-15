@@ -37,6 +37,8 @@ export interface ManualDraft {
   classification?: string;
   evidenceType?: EvidenceType;
   evidenceRef?: string;
+  /** SME R9: the approved line of an earlier period a reversal reverses */
+  reversesLineId?: string;
 }
 
 export interface DraftState {
@@ -80,6 +82,7 @@ function manualOf(line: ReconciliationLineView): ManualDraft {
     classification: line.classification,
     evidenceType: line.evidenceType,
     evidenceRef: line.evidenceRef,
+    reversesLineId: line.reversesLineId,
   };
 }
 
@@ -131,6 +134,7 @@ function manualLine(m: ManualDraft): DraftLineInput {
     classification: m.classification,
     evidenceType: m.evidenceType,
     evidenceRef: m.evidenceRef?.trim(),
+    reversesLineId: m.kind === 'reversal' ? m.reversesLineId : undefined,
   });
 }
 
@@ -159,6 +163,7 @@ export function rebaseDraft(state: DraftState, view: ReconciliationView): { stat
 
 /** Shape problems the form shows before sending (required fields only — never totals or budgets). */
 export function manualProblems(m: ManualDraft): string[] {
+  if (m.kind === 'reversal') return reversalProblems(m);
   const problems: string[] = [];
   if (!m.quantity) problems.push('Enter a quantity.');
   if (!m.eventIds.length && !m.missingEvent) problems.push('Link an event or mark the cause as "no event".');
@@ -167,6 +172,16 @@ export function manualProblems(m: ManualDraft): string[] {
   if (m.kind === 'bridge' && m.quantity?.trim().startsWith('-')) problems.push('A bridge cannot be negative: correct the over-claimed lines.');
   if (categoriesOf(m.kind).length && !m.classification) problems.push('Choose the category.');
   if (needsEvidence(m.kind, m.eventIds.length) && (!m.evidenceType || !m.evidenceRef?.trim())) problems.push('Name the evidence and its reference.');
+  return problems;
+}
+
+/** SME R9: a reversal names the approved line, the record of the error and why; the server checks sign and size. */
+function reversalProblems(m: ManualDraft): string[] {
+  const problems: string[] = [];
+  if (!m.reversesLineId) problems.push('Choose the approved line it reverses.');
+  if (!m.quantity) problems.push('Enter a quantity (opposite sign of the reversed line).');
+  if (!m.reason?.trim()) problems.push('A reversal needs a written reason.');
+  if (!m.evidenceType || !m.evidenceRef?.trim()) problems.push('Name the evidence and its reference.');
   return problems;
 }
 

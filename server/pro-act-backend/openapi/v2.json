@@ -9132,6 +9132,86 @@
         ]
       }
     },
+    "/api/v2/production-periods/{id}/reversible-lines": {
+      "get": {
+        "description": "Lines of the published revision of each earlier period, of the kinds the tolerance policy allows to reverse, with what approved reversals already took back and what is left.",
+        "operationId": "ReconciliationV2Controller_reversible_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "-createdAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "SME R9: approved lines of the unit’s earlier periods (62 days) a reversal of this period may name, newest first (keyset)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
     "/api/v2/production-periods/{id}/change-proposals": {
       "get": {
         "operationId": "ReconciliationV2Controller_proposals_v2",
@@ -23082,7 +23162,8 @@
               "quality",
               "bridge",
               "gain",
-              "unaccounted_classified"
+              "unaccounted_classified",
+              "reversal"
             ],
             "description": "manual and replace lines"
           },
@@ -23166,6 +23247,11 @@
             "type": "string",
             "maxLength": 200,
             "description": "Reference of that record (work order, sample, tag, …)"
+          },
+          "reversesLineId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "SME R9: the approved line (published revision of an earlier period of the unit) a `reversal` line reverses; the reversal has the opposite sign and at most the quantity not yet reversed (422 REVERSAL_*)"
           }
         },
         "required": [

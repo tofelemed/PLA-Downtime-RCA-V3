@@ -47,6 +47,7 @@ import {
   ChangeProposalV2View,
   ReconciliationV2View,
 } from './reconciliation-v2.view';
+import { ReversibleLineV2View } from './reversible-lines';
 
 const IDEMPOTENT = 'Requires `Idempotency-Key`. ';
 
@@ -225,6 +226,22 @@ export class ReconciliationV2Controller {
     @Query() query: WorkflowListQueryDto,
   ): Promise<ListResponse<ApprovalActionV2View>> {
     return this.reads.approvalActions(ctx, id, query);
+  }
+
+  @Get(':id/reversible-lines')
+  @ApiOperation({
+    summary:
+      'SME R9: approved lines of the unit’s earlier periods (62 days) a reversal of this period may name, newest first (keyset)',
+    description:
+      'Lines of the published revision of each earlier period, of the kinds the tolerance policy allows to reverse, ' +
+      'with what approved reversals already took back and what is left.',
+  })
+  reversible(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query() query: WorkflowListQueryDto,
+  ): Promise<ListResponse<ReversibleLineV2View>> {
+    return this.reads.reversible(ctx, id, query);
   }
 
   @Get(':id/change-proposals')

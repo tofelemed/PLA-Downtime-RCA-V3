@@ -85,6 +85,8 @@ export interface ReconciliationLineV2View {
   /** SME R11: the record a manual quantity rests on */
   evidenceType?: string;
   evidenceRef?: string;
+  /** SME R9: the approved line of an earlier period this reversal reverses */
+  reversesLineId?: string;
   reason: string | null;
   comment: string | null;
   authorId: string | null;

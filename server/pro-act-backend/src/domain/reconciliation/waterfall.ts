@@ -30,7 +30,10 @@ export interface Waterfall {
   closes: boolean;
 }
 
-/** Order of the plan-ledger steps; residual categories come last. */
+/**
+ * Order of the plan-ledger steps; residual categories come last. SME R9 reversals are no step: they correct
+ * an earlier period and never move this period's running total.
+ */
 export const PLAN_STEP_KEYS = [
   'availability',
   'performance',

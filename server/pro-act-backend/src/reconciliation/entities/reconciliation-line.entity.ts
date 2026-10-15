@@ -13,6 +13,7 @@ import {
 import { ActualsAdjustment } from '../../periods/entities/actuals-adjustment.entity';
 import { PeriodProductSlice } from '../../periods/entities/period-product-slice.entity';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
+import { ApprovedLossLine } from './approved-loss-line.entity';
 import { ReconciliationLineSet } from './reconciliation-line-set.entity';
 
 /** An evidence event of a manual line, pinned to the revision current when the line was saved. */
@@ -42,6 +43,9 @@ const quantity = (name: string) => ({
 @Index('IDX_reconciliation_lines_slice', ['sliceId'])
 @Index('IDX_reconciliation_lines_adjustment', ['adjustmentId'])
 @Index('IDX_reconciliation_lines_tenant_period', ['tenantId', 'periodId'])
+@Index('IDX_reconciliation_lines_reverses_line', ['reversesLineId'], {
+  where: '"reverses_line_id" IS NOT NULL',
+})
 export class ReconciliationLine extends TenantScopedEntity {
   @Column({ name: 'line_set_id', type: 'uuid' })
   lineSetId: string;
@@ -159,6 +163,17 @@ export class ReconciliationLine extends TenantScopedEntity {
     nullable: true,
   })
   evidenceRef: string | null;
+
+  /** SME R9: the approved line of an earlier period a `reversal` line reverses */
+  @Column({ name: 'reverses_line_id', type: 'uuid', nullable: true })
+  reversesLineId: string | null;
+
+  @ManyToOne(() => ApprovedLossLine, { onDelete: 'RESTRICT', nullable: true })
+  @JoinColumn({
+    name: 'reverses_line_id',
+    foreignKeyConstraintName: 'FK_reconciliation_lines_reverses_line',
+  })
+  reversesLine?: ApprovedLossLine | null;
 
   @Column({ name: 'reason', type: 'text', nullable: true })
   reason: string | null;

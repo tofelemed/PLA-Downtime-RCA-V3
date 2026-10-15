@@ -184,6 +184,16 @@ export class DraftLineDto {
   @IsString()
   @MaxLength(200)
   evidenceRef?: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description:
+      'SME R9: the approved line (published revision of an earlier period of the unit) a `reversal` line reverses; ' +
+      'the reversal has the opposite sign and at most the quantity not yet reversed (422 REVERSAL_*)',
+  })
+  @IsOptional()
+  @IsUUID()
+  reversesLineId?: string;
 }
 
 export class DraftLinesDto {

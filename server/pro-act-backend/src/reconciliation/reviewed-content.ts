@@ -129,6 +129,8 @@ export function linesPart(state: RevisionState) {
     ...(line.classification ? { classification: line.classification } : {}),
     ...(line.evidenceType ? { evidenceType: line.evidenceType } : {}),
     ...(line.evidenceRef ? { evidenceRef: line.evidenceRef } : {}),
+    // SME R9 (15 Oct 2026), same rule
+    ...(line.reversesLineId ? { reversesLineId: line.reversesLineId } : {}),
     reason: line.reason,
     comment: line.comment,
     authorId: line.authorId,

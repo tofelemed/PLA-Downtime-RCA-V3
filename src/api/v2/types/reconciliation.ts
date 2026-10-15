@@ -70,7 +70,8 @@ export interface LineEvidenceRef {
 }
 
 export type DraftAction = 'accept' | 'adjust' | 'replace' | 'reject' | 'manual';
-export type ManualKind = 'availability' | 'performance' | 'quality' | 'bridge' | 'gain' | 'unaccounted_classified';
+/** `reversal` (SME R9): evidence-backed reversal of an approved line of an earlier period of the unit */
+export type ManualKind = 'availability' | 'performance' | 'quality' | 'bridge' | 'gain' | 'unaccounted_classified' | 'reversal';
 /** SME R11: the record a manual quantity rests on when no event or approved adjustment backs it. */
 export type EvidenceType = 'log' | 'work_order' | 'rate_record' | 'totalizer' | 'lot_sample' | 'movement_record' | 'measurement_record' | 'investigation_note';
 
@@ -93,6 +94,8 @@ export interface ReconciliationLineView {
   missingEvent: boolean;
   /** SME R7 / R8: category of an Unaccounted or bridge line */
   classification?: string;
+  /** SME R9: the approved line of an earlier period a reversal reverses */
+  reversesLineId?: string;
   evidenceType?: EvidenceType;
   evidenceRef?: string;
   reason: string | null;
@@ -154,6 +157,8 @@ export interface DraftLineInput {
   classification?: string;
   evidenceType?: EvidenceType;
   evidenceRef?: string;
+  /** SME R9: only on a `reversal` line */
+  reversesLineId?: string;
 }
 
 export interface ApprovalActionView {
@@ -205,4 +210,19 @@ export interface ManualProposalDetail {
   reason: string;
   evidenceType: EvidenceType;
   evidenceRef: string;
+}
+
+/** `GET /production-periods/{id}/reversible-lines` (SME R9): approved lines of earlier periods a reversal may name. */
+export interface ReversibleLineView {
+  id: string;
+  periodId: string;
+  localDate: string;
+  shiftName: string | null;
+  kind: string;
+  quantity: string;
+  uom: string | null;
+  reasonCodeId: string | null;
+  causeEventId: string | null;
+  reversedQuantity: string;
+  remainingQuantity: string;
 }

@@ -22,6 +22,8 @@ const ALLOWED_EVIDENCE: Record<ManualKind, readonly EvidenceType[]> = {
   gain: ['rate_record', 'totalizer', 'measurement_record'],
   bridge: ['movement_record', 'measurement_record'],
   unaccounted_classified: ['investigation_note'],
+  // SME R9: the record showing the earlier entry was wrong (a note alone is not proof)
+  reversal: ['log', 'work_order', 'rate_record', 'totalizer', 'lot_sample', 'movement_record', 'measurement_record'],
 };
 
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -44,6 +46,6 @@ export const evidenceTypesOf = (kind: ManualKind): readonly EvidenceType[] => AL
 /** The categories a kind needs; empty when the kind has none. */
 export const categoriesOf = (kind: ManualKind): readonly string[] => CATEGORIES[kind] ?? [];
 
-/** Bridges and Unaccounted lines always cite their own record; other kinds only without a linked event. */
+/** Bridges, Unaccounted lines and reversals always cite their own record; other kinds only without a linked event. */
 export const needsEvidence = (kind: ManualKind, eventCount: number): boolean =>
-  kind === 'bridge' || kind === 'unaccounted_classified' || eventCount === 0;
+  kind === 'bridge' || kind === 'unaccounted_classified' || kind === 'reversal' || eventCount === 0;

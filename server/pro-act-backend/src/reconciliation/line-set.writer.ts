@@ -96,6 +96,7 @@ export function copyOf(line: ReconciliationLine): LineDraft {
     classification: line.classification,
     evidenceType: line.evidenceType,
     evidenceRef: line.evidenceRef,
+    reversesLineId: line.reversesLineId,
     reason: line.reason,
     comment: line.comment,
     authorId: line.authorId,

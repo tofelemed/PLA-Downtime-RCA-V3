@@ -66,6 +66,7 @@ export const KIND_LABELS: Record<string, string> = {
   tolerance_adjustment: 'Tolerance adjustment',
   transition_allowance: 'Grade transition (within standard)',
   transition_excess: 'Grade transition overrun',
+  reversal: 'Reversal of an earlier entry',
 };
 
 /** Data quality of a period's actuals (server tokens). */

@@ -21,6 +21,11 @@ export const LOSS_KINDS = [
   'transition_allowance',
   /** LA-08: transition loss beyond the standard (`transition_overrun`) or without one (`no_transition_standard`) */
   'transition_excess',
+  /**
+   * SME R9: evidence-backed reversal of an erroneous approved line of an earlier period of the unit. A
+   * correction memo: it never enters this period's balance (never a balancing line), it is shown apart.
+   */
+  'reversal',
 ] as const;
 export type LossKind = (typeof LOSS_KINDS)[number];
 
@@ -29,7 +34,11 @@ export const SIGNED_KINDS: ReadonlySet<LossKind> = new Set([
   'residual',
   'gain',
   'bridge',
+  'reversal',
 ]);
+
+/** SME R9: kinds outside the period's plan identity (target − actual = attributed + residual). */
+export const MEMO_KINDS: ReadonlySet<LossKind> = new Set(['reversal']);
 
 export const LOSS_BASES = [
   'sustained_rate',

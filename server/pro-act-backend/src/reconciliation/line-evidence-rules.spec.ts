@@ -118,4 +118,33 @@ describe('manual line rules (SME R7, R8, R9, R11)', () => {
       ),
     ).toBe('CATEGORY_NOT_ALLOWED');
   });
+
+  it('R9: a reversal names the approved line it reverses and the record of the error; no other line names one', () => {
+    const reversal = manual({
+      kind: 'reversal',
+      quantity: '-10',
+      reversesLineId: 'l1',
+      evidenceType: 'log',
+      evidenceRef: 'duplicate stop on the shift log',
+    });
+    expect(codeOf(reversal)).toBeUndefined();
+    expect(codeOf({ ...reversal, reversesLineId: undefined })).toBe(
+      'REVERSAL_TARGET_REQUIRED',
+    );
+    expect(codeOf({ ...reversal, evidenceType: undefined })).toBe(
+      'EVIDENCE_REQUIRED',
+    );
+    expect(codeOf({ ...reversal, evidenceType: 'investigation_note' })).toBe(
+      'EVIDENCE_TYPE_NOT_ALLOWED',
+    );
+    expect(
+      codeOf(
+        manual({
+          kind: 'availability',
+          eventIds: ['e1'],
+          reversesLineId: 'l1',
+        }),
+      ),
+    ).toBe('INVALID_LINE');
+  });
 });

@@ -18,6 +18,8 @@ export const MATERIAL_KINDS = [
   'bridge',
   'unaccounted_classified',
   'tolerance_adjustment',
+  // SME R9: a reversal changes an approved figure of an earlier period
+  'reversal',
 ] as const;
 
 /**

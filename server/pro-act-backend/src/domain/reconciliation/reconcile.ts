@@ -1,5 +1,6 @@
 import { Dec, ZERO } from '../actuals/decimal';
 import { sumOf } from '../accounting/claims';
+import { MEMO_KINDS } from '../accounting/accounting.types';
 import { planTotals } from '../accounting/plan-totals';
 import {
   Candidate,
@@ -67,11 +68,15 @@ function flagsOf(
   return [];
 }
 
-/** Quantity a line adds itself (manual lines, replacements of a candidate still present). */
+/**
+ * Quantity a line adds itself (manual lines, replacements of a candidate still present). A reversal (SME
+ * R9) corrects an earlier period and adds nothing here, so it can never balance this period.
+ */
 export function ownQuantity(
   line: DecisionLine,
   candidates: ReadonlyMap<string, Candidate>,
 ): Dec {
+  if (line.kind && MEMO_KINDS.has(line.kind)) return ZERO;
   if (line.action === 'manual') return line.quantity ?? ZERO;
   if (line.action === 'replace' && line.autoKey && candidates.has(line.autoKey))
     return line.quantity ?? ZERO;

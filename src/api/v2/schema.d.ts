@@ -2669,6 +2669,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/production-periods/{id}/reversible-lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SME R9: approved lines of the unit’s earlier periods (62 days) a reversal of this period may name, newest first (keyset)
+         * @description Lines of the published revision of each earlier period, of the kinds the tolerance policy allows to reverse, with what approved reversals already took back and what is left.
+         */
+        get: operations["ReconciliationV2Controller_reversible_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/production-periods/{id}/change-proposals": {
         parameters: {
             query?: never;
@@ -7446,7 +7466,7 @@ export interface components {
              * @description manual and replace lines
              * @enum {string}
              */
-            kind?: "availability" | "performance" | "quality" | "bridge" | "gain" | "unaccounted_classified";
+            kind?: "availability" | "performance" | "quality" | "bridge" | "gain" | "unaccounted_classified" | "reversal";
             /** @description Decimal string, ≤ 8 decimals; negative only for bridge / gain */
             quantity?: string;
             /** @enum {string} */
@@ -7481,6 +7501,11 @@ export interface components {
             evidenceType?: "log" | "work_order" | "rate_record" | "totalizer" | "lot_sample" | "movement_record" | "measurement_record" | "investigation_note";
             /** @description Reference of that record (work order, sample, tag, …) */
             evidenceRef?: string;
+            /**
+             * Format: uuid
+             * @description SME R9: the approved line (published revision of an earlier period of the unit) a `reversal` line reverses; the reversal has the opposite sign and at most the quantity not yet reversed (422 REVERSAL_*)
+             */
+            reversesLineId?: string;
         };
         DraftLinesDto: {
             /** @description The draft revision number */
@@ -12874,6 +12899,35 @@ export interface operations {
         };
     };
     ReconciliationV2Controller_approvalActions_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-createdAt";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReconciliationV2Controller_reversible_v2: {
         parameters: {
             query?: {
                 /** @description Opaque cursor returned as nextCursor by the previous page */

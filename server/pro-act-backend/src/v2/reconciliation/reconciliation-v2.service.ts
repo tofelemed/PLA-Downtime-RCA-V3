@@ -19,7 +19,9 @@ import {
 } from '../../reconciliation/revision-access';
 import { loadCodingGate } from '../../reconciliation/coding-gate.loader';
 import { loadRevisionState } from '../../reconciliation/revision-state';
+import { reversibleKindsOf } from '../../periods/reconciliation-options';
 import { keysetPage } from '../common/keyset-page';
+import { ReversibleLineV2View, reversibleLines } from './reversible-lines';
 import { listResponse, ListResponse, ListScope } from '../common/response';
 import {
   ReconciliationQueryDto,
@@ -112,6 +114,32 @@ export class ReconciliationV2Service {
     });
     return listResponse(
       page.items.map(toProposalView),
+      page.nextCursor,
+      this.scope(context, period),
+    );
+  }
+
+  /** SME R9: approved lines of the unit's earlier periods a reversal of this period may name. */
+  async reversible(
+    context: RequestContext,
+    periodId: string,
+    query: WorkflowListQueryDto,
+  ): Promise<ListResponse<ReversibleLineV2View>> {
+    const manager = this.periods.manager;
+    const period = await periodInScope(manager, context, periodId);
+    const engine = await this.policies.resolveEngine(
+      manager,
+      { tenantId: period.tenantId, unitId: period.unitId },
+      period.utcStart,
+    );
+    const page = await reversibleLines(manager, {
+      period,
+      kinds: reversibleKindsOf(engine.tolerance),
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+    return listResponse(
+      page.items,
       page.nextCursor,
       this.scope(context, period),
     );
