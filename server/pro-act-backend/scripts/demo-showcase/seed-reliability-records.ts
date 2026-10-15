@@ -29,13 +29,13 @@ interface EventRow {
 
 const iso = (ms: number) => new Date(ms).toISOString();
 const dayKey = (ms: number) => iso(ms).slice(0, 10).replace(/-/g, '');
-const STANDBY_CODE = 'PEL-PMPB';
+const STANDBY_CODE = 'EXT2-PMPB';
 const DEMO = 'Demo (illustrative)';
 const WORK_ORDERS = 30;
 const MIN_BREAKDOWN_MS = 45 * 60_000;
 
 async function standbyPump(ctx: ShowcaseContext): Promise<string | null> {
-  const unitId = ctx.ids.units.get('PEL');
+  const unitId = ctx.ids.units.get('EXT2');
   if (!unitId) return null;
   const author = ctx.as('authors', 0);
   const assets = await author.listAll<AssetRow>('/v2/assets', {

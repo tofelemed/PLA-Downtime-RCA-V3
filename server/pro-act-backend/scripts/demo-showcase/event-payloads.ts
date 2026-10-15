@@ -28,7 +28,7 @@ export function v2Payload(
     unitId,
     startTime: iso(event.start),
     endTime: iso(event.end),
-    description: coded ? event.description : uncodedText(event),
+    description: `Demo: ${coded ? event.description : uncodedText(event)}`,
   };
   const assetId = event.assetKind
     ? ids.assets.get(`${unitKey}:${event.assetKind}`)
@@ -92,7 +92,7 @@ export function outputPayload(input: OutputInput): PendingEvent {
       eventType: 'ProductionOutput',
       status: 'Closed',
       source: 'Manual',
-      description: `${input.shiftName} shift production report (${input.crew})`,
+      description: `Demo: ${input.shiftName} shift production report (${input.crew})`,
       startTime: iso(input.start),
       endTime: iso(input.end),
       quantity: Number(input.gross.toFixed(2)),

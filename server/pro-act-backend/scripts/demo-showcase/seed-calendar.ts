@@ -15,9 +15,17 @@ export const SHIFTS = [
 ] as const;
 
 /** the public holiday of the showcase calendar (no production that day) */
-export const HOLIDAY = { date: '2026-09-23', name: 'Public holiday' };
+export const HOLIDAY = {
+  date: '2026-09-23',
+  name: 'Demo: planned electrical maintenance shutdown',
+};
 
-export const CREWS = ['Crew A', 'Crew B', 'Crew C', 'Crew D'];
+export const CREWS = [
+  'Demo Crew A',
+  'Demo Crew B',
+  'Demo Crew C',
+  'Demo Crew D',
+];
 export const CYCLE = [
   'Morning',
   'Morning',
@@ -66,7 +74,7 @@ async function seedUnitCalendar(
       '/v2/calendar-versions',
       {
         unitId,
-        timezone: 'UTC',
+        timezone: 'Asia/Tehran',
         operationalDayStart: '06:00',
         shiftTemplates: SHIFTS.map((s) => ({ ...s })),
         holidays: [{ ...HOLIDAY, treatment: 'excluded' }],

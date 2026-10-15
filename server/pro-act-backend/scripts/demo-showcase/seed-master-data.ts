@@ -1,7 +1,6 @@
 /**
- * Units, assets and products of the showcase (v1 routes: v2 has no master-data writes). Existing rows
- * are found by code and kept; the MQTT demo unit `DEMO-EXTRUDER1` is reused for Extruder Line 1 and only
- * renamed. Written by a master-data author.
+ * Units, assets and products of the showcase. Existing demo units are matched by code and their
+ * display name, description and reference capacity aligned with the scenario by a master-data author.
  */
 import { ShowcaseContext } from './showcase-context';
 
@@ -9,17 +8,22 @@ interface UnitRow {
   id: string;
   code: string;
   name: string;
+  description: string | null;
+  capacity: number | null;
+  unitOfMeasure: string | null;
 }
 
 interface AssetRow {
   id: string;
   code: string;
   unitId: string;
+  organizationId: string | null;
 }
 
 interface ProductRow {
   id: string;
   code: string;
+  description: string | null;
 }
 
 export async function seedMasterData(ctx: ShowcaseContext): Promise<void> {
@@ -30,10 +34,18 @@ export async function seedMasterData(ctx: ShowcaseContext): Promise<void> {
     const existing = byCode.get(spec.code);
     if (existing) {
       ctx.ids.units.set(spec.key, existing.id);
-      if (existing.name !== spec.name && !ctx.dryRun) {
+      if (
+        !ctx.dryRun &&
+        (existing.name !== spec.name ||
+          existing.description !== spec.description ||
+          Number(existing.capacity) !== spec.sustainedRate ||
+          existing.unitOfMeasure !== 't/h')
+      ) {
         await author.call('PUT', `/units/${existing.id}`, {
           name: spec.name,
           description: spec.description,
+          capacity: spec.sustainedRate,
+          unitOfMeasure: 't/h',
         });
         ctx.tally.add('units', 0, 1, `${spec.code} renamed to "${spec.name}"`);
       } else ctx.tally.kept('units');
@@ -58,6 +70,19 @@ export async function seedMasterData(ctx: ShowcaseContext): Promise<void> {
   await seedProducts(ctx);
 }
 
+async function alignAssetOrganization(
+  ctx: ShowcaseContext,
+  asset: AssetRow,
+): Promise<void> {
+  if (asset.organizationId === ctx.organizationId) return;
+  if (asset.organizationId)
+    throw new Error(`Demo asset ${asset.code} belongs to another organization`);
+  if (!ctx.dryRun)
+    await ctx.as('authors', 0).call('PUT', `/assets/${asset.id}`, {
+      organizationId: ctx.organizationId,
+    });
+}
+
 async function seedAssets(ctx: ShowcaseContext): Promise<void> {
   const author = ctx.as('authors', 0);
   const all = await author.get<AssetRow[]>('/assets');
@@ -72,6 +97,7 @@ async function seedAssets(ctx: ShowcaseContext): Promise<void> {
       const key = `${unit.key}:${spec.kind}`;
       const found = existing.get(code);
       if (found) {
+        await alignAssetOrganization(ctx, found);
         ctx.ids.assets.set(key, found.id);
         ctx.tally.kept('assets');
         continue;
@@ -83,12 +109,14 @@ async function seedAssets(ctx: ShowcaseContext): Promise<void> {
       const created = await author.call<AssetRow>('POST', '/assets', {
         code,
         name: spec.name,
+        description: `Demo: ${spec.name}; illustrative equipment for the HDPE finishing train, not an installed-equipment claim`,
         unitId,
         assetType: spec.assetType,
         criticality: spec.criticality,
         manufacturer: spec.manufacturer,
         status: 'Operational',
         tenantId: ctx.tenantId,
+        organizationId: ctx.organizationId,
       });
       ctx.ids.assets.set(key, created.body.id);
       ctx.tally.created('assets');
@@ -104,6 +132,11 @@ async function seedProducts(ctx: ShowcaseContext): Promise<void> {
     const found = byCode.get(spec.code);
     if (found) {
       ctx.ids.products.set(spec.code, found.id);
+      if (!ctx.dryRun && found.description !== `Demo: ${spec.description}`) {
+        await author.call('PUT', `/products/${found.id}`, {
+          description: `Demo: ${spec.description}`,
+        });
+      }
       ctx.tally.kept('products');
       continue;
     }
@@ -114,7 +147,7 @@ async function seedProducts(ctx: ShowcaseContext): Promise<void> {
     const created = await author.call<ProductRow>('POST', '/products', {
       code: spec.code,
       name: spec.name,
-      description: spec.description,
+      description: `Demo: ${spec.description}`,
       unitOfMeasure: 't',
       tenantId: ctx.tenantId,
     });

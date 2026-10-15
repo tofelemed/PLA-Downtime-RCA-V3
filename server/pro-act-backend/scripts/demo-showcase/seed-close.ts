@@ -6,9 +6,11 @@
  * prerequisites hold; the current month stays open. One draft shift waits for the lab (a data hold), so the
  * queue shows a paused clock next to the periods the SLA escalated. Every text says "Demo".
  */
-import { ApiError, PersonaSession } from './showcase-client';
+import { PersonaSession } from './showcase-client';
 import { ShowcaseContext } from './showcase-context';
 import { DAY_MS } from './showcase-window';
+import type { OpenProposal } from '../../src/close/month-prerequisites';
+import { dismissUnchangedCloseProposals } from './seed-close-proposals';
 
 interface DayRow {
   unitId: string;
@@ -23,13 +25,35 @@ interface MonthRow {
   firstDate: string;
   endDate: string;
   state: string;
+  signOffs: {
+    materialityRequired: boolean;
+    materialityReviewedAt: string | null;
+  };
   prerequisites: {
     met: boolean;
     pendingCount: number;
     days: number;
     certifiedDays: number;
     openProposalCount: number;
+    openProposals: OpenProposal[];
   };
+}
+
+async function reviewMateriality(
+  ctx: ShowcaseContext,
+  monthKey: string,
+): Promise<void> {
+  const manager = ctx.as('managers', 0);
+  const month = await manager.get<MonthRow>(`/v2/month-closes/${monthKey}`);
+  if (
+    !month.signOffs.materialityRequired ||
+    month.signOffs.materialityReviewedAt
+  )
+    return;
+  await step(manager, monthKey, 'materiality-review', {
+    comment:
+      'Demo: independently reviewed material adjustments and supporting measurement records',
+  });
 }
 
 const STEP = 'month close';
@@ -68,20 +92,12 @@ async function certify(
   manager: PersonaSession,
   day: DayRow,
 ): Promise<void> {
-  try {
-    await manager.post(
-      `/v2/production-days/${day.unitId}/${day.localDate}/certify`,
-      { comment: 'Demo: shifts reconciled, day certified' },
-      'certify production day',
-      { accept: [409] },
-    );
-    ctx.tally.add(STEP, 1, 0, `day ${day.localDate} certified`);
-  } catch (error: unknown) {
-    if (!(error instanceof ApiError)) throw error;
-    ctx.logger.warn(
-      `day ${day.localDate} not certified: ${error.message.slice(0, 200)}`,
-    );
-  }
+  await manager.post(
+    `/v2/production-days/${day.unitId}/${day.localDate}/certify`,
+    { comment: 'Demo: shifts reconciled, day certified' },
+    `certify production day ${day.unitId} ${day.localDate}`,
+  );
+  ctx.tally.add(STEP, 1, 0, `day ${day.localDate} certified`);
 }
 
 /** Certifies the ready days of the previous month and the oldest ready day of the current one. */
@@ -117,7 +133,7 @@ async function step(
   await session.post(
     `/v2/month-closes/${month}/${action}`,
     body,
-    `month close ${action}`,
+    `month close ${month} ${action}`,
   );
 }
 
@@ -132,19 +148,17 @@ async function closeMonth(
   }
   if (month.state === 'open' && !month.prerequisites.met) {
     const p = month.prerequisites;
-    ctx.tally.add(
-      STEP,
-      0,
-      0,
+    throw new Error(
       `${month.monthKey} not closable: ${p.pendingCount} periods open, ${p.days - p.certifiedDays} days uncertified, ${p.openProposalCount} proposals`,
     );
-    return;
   }
   const finance = ctx.as('financeApprovers', 0);
   if (month.state === 'open')
     await step(ctx.as('managers', 1), month.monthKey, 'close-quantities', {
       comment: 'Demo: quantities of the month closed by plant management',
     });
+  if (month.state === 'open' || month.state === 'quantities_closed')
+    await reviewMateriality(ctx, month.monthKey);
   if (month.state === 'open' || month.state === 'quantities_closed')
     await step(finance, month.monthKey, 'finance-sign-off', {
       comment: 'Demo: finance sign-off',
@@ -157,7 +171,7 @@ async function closeMonth(
 
 /** One draft shift of two days ago waits for the lab (its SLA clock pauses). */
 async function holdOneDraft(ctx: ShowcaseContext): Promise<void> {
-  const engineer = ctx.as('engineers', 0);
+  const engineer = ctx.as('accountants', 0);
   const queue = await engineer.get<{
     items: Array<{ periodId: string; workflowState: string; onHold: boolean }>;
   }>('/v2/reconciliation-queue?limit=200');
@@ -185,6 +199,7 @@ export async function seedClose(ctx: ShowcaseContext): Promise<void> {
   const previous = await manager.get<MonthRow>(
     `/v2/month-closes/${current.previousMonthKey}`,
   );
+  await dismissUnchangedCloseProposals(ctx, previous);
   await certifyDays(ctx, previous, current);
   await closeMonth(
     ctx,

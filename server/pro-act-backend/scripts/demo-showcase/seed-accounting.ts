@@ -1,6 +1,6 @@
 /**
  * Period accounting of the showcase: the reviewed history an accountant expects. Shifts older than two
- * days are reconciled by an engineer and approved by a manager; three days ago one Pelletizer night
+ * days are reconciled by an engineer and approved by a manager; three days ago one Extruder2 night
  * shift was rejected with a reason; two days ago the lines are saved but not submitted; yesterday's
  * morning and afternoon shifts of the extruders wait in review; the rest of yesterday and today are
  * untouched (uncoded stops in the operator queue). Before that, one approved and one proposed actuals
@@ -15,7 +15,7 @@ import { inParallel, ShowcaseContext } from './showcase-context';
 import { DAY_MS, iso } from './showcase-window';
 
 const REJECT_REASON =
-  'Die plate stop at 02:10 is booked as availability but the work order says the cutter was changed during the stop – split the line and code the knife change (MECH-KNF).';
+  'Demo: die plate stop at 02:10 is booked as availability but the work order says the cutter was changed during the stop – split the line and code the knife change (MECH-KNF).';
 
 interface Job {
   unitKey: string;
@@ -55,7 +55,7 @@ function outcomeOf(
   if (
     age === 3 &&
     period.shiftName === 'Night' &&
-    (unitKey === 'PEL' || unitKey === 'PKG1')
+    (unitKey === 'EXT2' || unitKey === 'PKG1')
   )
     return 'rejected';
   return 'approved';
@@ -74,14 +74,17 @@ async function waitForRuns(ctx: ShowcaseContext): Promise<void> {
       });
     const pending = rows.filter(
       (r) =>
-        !r.isExcluded && (!r.run || (r.plan !== null && r.plan.gap === null)),
+        !r.isExcluded && r.plan !== null && (!r.run || r.plan.gap === null),
     ).length;
-    if (pending <= Math.ceil(rows.length * 0.02)) return;
+    if (pending === 0) return;
     ctx.logger.log(
       `accounting: waiting for ${pending}/${rows.length} period calculations`,
     );
     await sleep(10_000);
   }
+  throw new Error(
+    'Demo accounting: planned historical periods did not finish calculating',
+  );
 }
 
 async function jobsOf(ctx: ShowcaseContext): Promise<Job[]> {
@@ -153,5 +156,12 @@ export async function seedAccounting(ctx: ShowcaseContext): Promise<void> {
       ctx.tally.add('period accounting', 0, count, `${result} ×${count}`);
     else ctx.tally.add('period accounting', count, 0, `${result} ×${count}`);
   }
+  const failed = [...counts.entries()].filter(
+    ([result]) => result.startsWith('failed') || result === 'not_ready',
+  );
+  if (failed.length)
+    throw new Error(
+      `Demo accounting failures: ${failed.map(([result, count]) => `${result} x${count}`).join(', ')}`,
+    );
   await seedExports(ctx);
 }

@@ -5,9 +5,8 @@
  * when the events connection has no quarantined message yet, publishes one malformed message for the
  * Quarantine tab. Nothing is started or reconfigured here.
  */
-import { spawnSync } from 'child_process';
 import * as mqtt from 'mqtt';
-import * as path from 'path';
+import { setTimeout as sleep } from 'timers/promises';
 import {
   DEFAULT_BROKER_URL,
   EVENTS_CONNECTION_NAME,
@@ -15,6 +14,7 @@ import {
   SIM_TOPICS,
 } from '../demo-mqtt/demo-mqtt-plan';
 import { ShowcaseContext } from './showcase-context';
+import { seedHdpeTelemetry } from './seed-hdpe-telemetry';
 
 interface ConnectionRow {
   id: string;
@@ -24,24 +24,6 @@ interface ConnectionRow {
 interface JobRow {
   id: string;
   state: string;
-}
-
-const BACKEND_DIR = path.resolve(__dirname, '..', '..');
-
-function runSimulator(ctx: ShowcaseContext, args: string[]): void {
-  // fixed arguments only (no user input): the shell resolves npm on Windows
-  const result = spawnSync(`npm run mqtt:sim -- ${args.join(' ')}`, {
-    cwd: BACKEND_DIR,
-    shell: true,
-    encoding: 'utf8',
-    timeout: 180_000,
-  });
-  if (result.status !== 0) {
-    throw new Error(
-      `mqtt:sim ${args.join(' ')} failed (${result.status}): ${(result.stderr || result.stdout).slice(-800)}`,
-    );
-  }
-  ctx.tally.add('mqtt simulator runs', 1, 0, args.join(' '));
 }
 
 async function publishPoison(): Promise<void> {
@@ -66,6 +48,10 @@ export async function seedIntegration(ctx: ShowcaseContext): Promise<void> {
     connections.find((c) => c.displayName === name),
   );
   if (found.some((c) => !c)) {
+    if (!ctx.dryRun)
+      throw new Error(
+        'Demo MQTT connections missing: run db:seed-demo-mqtt -- --demo-plant --unit unit100 before the integration step',
+      );
     ctx.tally.add(
       'mqtt connections',
       0,
@@ -79,6 +65,10 @@ export async function seedIntegration(ctx: ShowcaseContext): Promise<void> {
       connectionId: connection?.id ?? '',
     });
     const running = jobs.some((j) => j.state === 'running');
+    if (!running && !ctx.dryRun)
+      throw new Error(
+        `Demo MQTT subscriber is not running: ${connection?.displayName}`,
+      );
     ctx.tally.add(
       'mqtt connections',
       0,
@@ -87,8 +77,7 @@ export async function seedIntegration(ctx: ShowcaseContext): Promise<void> {
     );
   }
   if (ctx.dryRun) return;
-  runSimulator(ctx, ['burst', '--count', '20', '--rate', '10']);
-  runSimulator(ctx, ['measurements', '--count', '30', '--every', '1']);
+  await seedHdpeTelemetry(ctx);
   const quarantined = await admin.listAll<{ sourceObjectId: string | null }>(
     '/v2/ingestion-exceptions',
     {
@@ -101,5 +90,19 @@ export async function seedIntegration(ctx: ShowcaseContext): Promise<void> {
     return;
   }
   await publishPoison();
-  ctx.tally.created('quarantined messages');
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const rows = await admin.listAll<{ sourceObjectId: string | null }>(
+      '/v2/ingestion-exceptions',
+      {
+        connectionId: found[0]?.id ?? '',
+        errorCode: 'not_json',
+      },
+    );
+    if (rows.some((row) => row.sourceObjectId === SIM_TOPICS.events)) {
+      ctx.tally.created('quarantined messages');
+      return;
+    }
+    await sleep(1000);
+  }
+  throw new Error('Demo malformed MQTT message did not reach quarantine');
 }

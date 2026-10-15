@@ -26,8 +26,8 @@ const ADJUSTMENTS: readonly AdjustmentSpec[] = [
     kind: 'gross',
     quantity: '2.4',
     reason:
-      'Weighbridge reconciliation: silo 3 transfer of the afternoon shift was not booked by the line counter',
-    evidenceRef: 'WB-TICKET-0457',
+      'Demo: weighbridge reconciliation: silo 3 transfer of the afternoon shift was not booked by the line counter',
+    evidenceRef: 'DEMO-WB-TICKET-0457',
     approve: true,
   },
   {
@@ -36,8 +36,8 @@ const ADJUSTMENTS: readonly AdjustmentSpec[] = [
     kind: 'reject',
     quantity: '0.85',
     reason:
-      'Lab retest: lot N3 density below specification, downgraded to off-grade',
-    evidenceRef: 'LIMS-QC-1129',
+      'Demo: lab retest: lot N3 density below specification, downgraded to off-grade',
+    evidenceRef: 'DEMO-LIMS-QC-1129',
     approve: false,
   },
 ];

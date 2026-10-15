@@ -34,8 +34,8 @@ export const MEASUREMENTS_CONNECTION_NAME =
 
 /** The unit the seeder creates when the tenant has none for the simulated equipment. */
 export const DEMO_UNIT = {
-  code: 'DEMO-EXTRUDER1',
-  name: 'Extruder 1 (MQTT demo)',
+  code: 'unit100',
+  name: 'unit100',
   description:
     'Demo unit of the MQTT publisher simulator (scripts/demo-mqtt); safe to delete',
 };
@@ -72,14 +72,14 @@ export interface SignalPlan {
 export const SIM_SIGNALS: readonly SignalPlan[] = [
   {
     sourceKey: 'F1DPwebid-throughput',
-    name: 'Extruder 1 throughput (simulator)',
+    name: 'Demo: Extruder1 pellet totalizer',
     semanticType: 'counter',
     canonicalUom: 't',
     attribute: 'Throughput',
   },
   {
     sourceKey: 'F1DPwebid-runstate',
-    name: 'Extruder 1 run state (simulator)',
+    name: 'Demo: Extruder1 run state',
     semanticType: 'state',
     canonicalUom: null,
     attribute: 'RunState',

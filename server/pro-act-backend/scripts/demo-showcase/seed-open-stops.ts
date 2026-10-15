@@ -179,7 +179,7 @@ export async function seedOpenStops(ctx: ShowcaseContext): Promise<void> {
       startTime: iso(ctx.window.now - spec.minutesAgo * MINUTE_MS),
       physicalType: 'downtime',
       eventType: 'ProductionLoss',
-      description: spec.description,
+      description: `Demo: ${spec.description}`,
     };
     const reasonId = spec.reason ? ctx.ids.reasons.get(spec.reason) : undefined;
     if (reasonId) body.reasonCodeId = reasonId;

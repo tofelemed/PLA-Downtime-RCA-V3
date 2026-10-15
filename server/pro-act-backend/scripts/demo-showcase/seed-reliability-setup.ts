@@ -144,12 +144,12 @@ async function seedStateMapping(ctx: ShowcaseContext): Promise<void> {
         { match: 'IDLE', state: 'standby' },
         { match: 'OFF', state: 'not_scheduled' },
       ],
-      expectedIntervalSeconds: 10,
+      expectedIntervalSeconds: 60,
       jitterSeconds: 2,
       staleAfterIntervals: 3,
       isHeartbeat: true,
       notes:
-        'Demo mapping (SME D1 / D2, illustrative): 10 s heartbeat, stale after 3 intervals + 2 s jitter',
+        'Demo mapping (SME D1 / D2, illustrative): 60 s heartbeat, stale after 3 intervals + 2 s jitter',
     },
     'state mapping EXT1',
   );

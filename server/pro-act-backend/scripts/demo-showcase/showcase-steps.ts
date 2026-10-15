@@ -9,6 +9,11 @@ import { seedClose } from './seed-close';
 import { seedCodeLibraries } from './seed-codes';
 import { seedDispositions } from './seed-dispositions';
 import { seedIntegration } from './seed-integration';
+import { seedHdpeModel } from './seed-hdpe-model';
+import { seedHdpeGovernance } from './seed-hdpe-governance';
+import { seedHdpeVerification } from './seed-hdpe-verification';
+import { seedHdpeCorrections } from './seed-hdpe-corrections';
+import { seedHdpeLockedProposal } from './seed-hdpe-locked-proposal';
 import { recalculate, seedEvents } from './seed-events';
 import { closeStaleStops, seedOpenStops } from './seed-open-stops';
 import { seedMasterData } from './seed-master-data';
@@ -51,6 +56,13 @@ const STEPS: readonly Step[] = [
     run: seedReliabilitySetup,
   },
   { name: 'profiles', always: true, kinds: PLANTS, run: seedProfiles },
+  { name: 'hdpe-model', always: false, kinds: ['full'], run: seedHdpeModel },
+  {
+    name: 'hdpe-governance',
+    always: false,
+    kinds: ['full'],
+    run: seedHdpeGovernance,
+  },
   {
     name: 'valuation-policy',
     always: false,
@@ -83,9 +95,6 @@ const STEPS: readonly Step[] = [
     run: seedDispositions,
   },
   { name: 'recalculate', always: false, kinds: PLANTS, run: recalculate },
-  { name: 'accounting', always: false, kinds: PLANTS, run: seedAccounting },
-  // EXPERT_REVIEW Area 3: certified days, the previous month closed and locked, a lab hold
-  { name: 'close', always: false, kinds: ['full'], run: seedClose },
   {
     name: 'valuation-finance',
     always: false,
@@ -99,6 +108,27 @@ const STEPS: readonly Step[] = [
     run: seedReliabilityRecords,
   },
   { name: 'rca', always: false, kinds: PLANTS, run: seedRcaCases },
+  {
+    name: 'hdpe-verification',
+    always: false,
+    kinds: ['full'],
+    run: seedHdpeVerification,
+  },
+  // Settle event and evidence changes before approval so historical RCA links do not reopen shifts.
+  { name: 'accounting', always: false, kinds: PLANTS, run: seedAccounting },
+  {
+    name: 'hdpe-corrections',
+    always: false,
+    kinds: ['full'],
+    run: seedHdpeCorrections,
+  },
+  { name: 'close', always: false, kinds: ['full'], run: seedClose },
+  {
+    name: 'hdpe-locked-proposal',
+    always: false,
+    kinds: ['full'],
+    run: seedHdpeLockedProposal,
+  },
   { name: 'tasks', always: false, kinds: PLANTS, run: seedTasks },
   { name: 'integration', always: false, kinds: ['full'], run: seedIntegration },
   {

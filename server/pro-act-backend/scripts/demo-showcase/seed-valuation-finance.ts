@@ -2,7 +2,7 @@
  * DEMO DATA ONLY — step `valuation-finance` (SME V1–V8, 14 Oct 2026) of the Demo Plant (HDPE): every row
  * it writes says "Demo:" in its source, evidence or notes (valuation rates have no text field; they are
  * the illustrative HDPE values below). Authored by a finance maintainer, approved by another finance
- * approver (V1). It runs after `accounting`, so its approvals revalue already-calculated periods (V7):
+ * approver (V1). It runs before shift approval and month close, so finance changes settle first:
  *   - USD → IRR rates of the `economic` and `group_reporting` tables, weekly (`seed-valuation-fx.ts`),
  *     the newest past week's economic rate approved last (late-approved);
  *   - per HDPE grade the V2 product values (USD per t): variable cost, salvage, disposal, downgrade price

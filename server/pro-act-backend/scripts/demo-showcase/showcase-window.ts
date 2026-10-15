@@ -1,11 +1,12 @@
 /**
- * The time window of a showcase run, in UTC (the demo site's timezone) with operational days starting at
- * 06:00: `days` complete past days, today (partial, up to now) and the next `futureDays` days for plans.
+ * UTC instants for the Asia/Tehran demo plant's 06:00 operational day: `days` complete past days,
+ * today (partial, up to now) and the next `futureDays` days for plans.
  * A re-run on a later day moves the window forward; rows of earlier days are kept.
  */
 export const HOUR_MS = 3_600_000;
 export const DAY_MS = 24 * HOUR_MS;
-export const DAY_START_HOUR = 6;
+/** 06:00 Asia/Tehran = 02:30 UTC (fixed UTC+03:30 for this 2026 dataset). */
+export const DAY_START_HOUR = 2.5;
 
 export interface ShowcaseWindow {
   now: number;

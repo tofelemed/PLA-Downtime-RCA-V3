@@ -134,7 +134,7 @@ const GEARBOX: CaseSpec = {
 
 const KNIFE: CaseSpec = {
   key: 'knife',
-  unitKey: 'PEL',
+  unitKey: 'EXT2',
   reason: 'MECH-KNF',
   stage: 'closure_review',
   title:

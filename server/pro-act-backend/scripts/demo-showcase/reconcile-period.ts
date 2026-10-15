@@ -56,7 +56,7 @@ const view = (session: PersonaSession, periodId: string) =>
   );
 
 /** Decision lines of one slice: candidates in descending size until the gap is used, then a speed line. */
-function sliceLines(
+export function sliceLines(
   slice: Slice,
   candidates: Candidate[],
   speedReasonId: string,
@@ -80,14 +80,14 @@ function sliceLines(
         autoKey: candidate.autoKey,
         quantity: formatDec(remaining),
         reason:
-          'Capped at the plan gap: the shift plan is set below the planning capacity',
+          'Demo: capped at the plan gap; the shift plan is set below the planning capacity',
       });
       remaining = 0n;
     } else {
       lines.push({
         action: 'reject',
         autoKey: candidate.autoKey,
-        reason: 'Already covered by larger losses of the shift',
+        reason: 'Demo: already covered by larger losses of the shift',
       });
     }
   }
@@ -103,7 +103,7 @@ function sliceLines(
       evidenceRef: 'Demo: shift rate record (planning rate vs. totalizer)',
       reasonCodeId: speedReasonId,
       comment:
-        'Unrecorded speed loss: the line ran below the planning rate between stops',
+        'Demo: unrecorded speed loss; the line ran below the planning rate between stops',
     });
   }
   return lines;
@@ -127,7 +127,7 @@ async function decide(
     );
     return 'rejected';
   }
-  const comment = 'Approved in the daily production meeting';
+  const comment = 'Demo: approved in the daily production meeting';
   await manager.post(
     `/v2/production-periods/${periodId}/approve`,
     { revision, submittedHash, comment },
@@ -177,7 +177,7 @@ export async function reconcilePeriod(input: ReconcileInput): Promise<string> {
       revision: current.revision.revision,
       runId: current.baseRunId,
       contentHash: current.contentHash,
-      comment: 'Shift losses reviewed with the shift supervisor',
+      comment: 'Demo: shift losses reviewed with the shift supervisor',
     },
     `submit ${periodId} ${current.contentHash} ${current.rowVersion}`,
   );

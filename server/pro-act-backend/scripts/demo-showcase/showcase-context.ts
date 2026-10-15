@@ -106,6 +106,8 @@ export class ShowcaseContext {
       ...cast.finance,
       ...cast.financeApprovers,
       ...cast.quality,
+      ...cast.accountants,
+      ...cast.metrology,
     ]);
     for (const persona of personas) {
       const session = new PersonaSession(
