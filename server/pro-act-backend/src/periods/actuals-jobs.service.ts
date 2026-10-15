@@ -1,7 +1,12 @@
 import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
-import { RequestContext } from '../common/context/request-context';
+import { requireTenantRole } from '../auth/roles/require-tenant-role';
+import { requireUnitRole } from '../auth/roles/require-unit-role';
+import {
+  RequestContext,
+  requireTenantId,
+} from '../common/context/request-context';
 import { envInt } from '../common/helpers/time-bounds';
 import { scopedQuery } from '../common/query/scoped-query';
 import { runnerIdentity } from '../common/scheduling/runner-identity';
@@ -13,9 +18,11 @@ import { ExternalReportsService } from './external-reports.service';
 import { PeriodRecomputePort } from './period-recompute.port';
 import {
   assertPeriodUnitInScope,
+  assertTenantWide,
   periodScopeUnits,
   scopeCovers,
 } from './period-scope';
+import { PERIOD_WRITERS, REPORT_IMPORTERS } from '../v2/periods/period-roles';
 
 type Outcome =
   | { state: 'completed'; result: Record<string, unknown> }
@@ -62,13 +69,19 @@ export class ActualsJobsService {
       .andWhere('p.id = :periodId', { periodId })
       .getOne();
     if (!period) throw notFound('Production period');
+    await requireUnitRole(
+      this.jobs.manager,
+      context,
+      period.unitId,
+      PERIOD_WRITERS,
+    );
     await this.enqueue(this.jobs.manager, {
       tenantId: period.tenantId,
       unitIds: [period.unitId],
       from: period.utcStart,
       to: period.utcEnd,
       trigger: 'manual_recompute',
-      scopeUnitIds: periodScopeUnits(context),
+      scopeUnitIds: [period.unitId],
       requestedBy: context.userId,
     });
     return this.jobs.findOneOrFail({
@@ -79,9 +92,11 @@ export class ActualsJobsService {
 
   async requestReportImport(
     context: RequestContext,
-    tenantId: string,
     csv: string,
   ): Promise<ActualsJob> {
+    const tenantId = requireTenantId(context);
+    assertTenantWide(context, 'An external production report');
+    requireTenantRole(context, REPORT_IMPORTERS);
     return this.jobs.save(
       this.jobs.create({
         tenantId,
@@ -259,7 +274,7 @@ export class ActualsJobsService {
       const body = error.getResponse();
       const code =
         typeof body === 'object' && body !== null && 'code' in body
-          ? String((body as { code: unknown }).code)
+          ? String(body.code)
           : `HTTP_${error.getStatus()}`;
       return { state: 'failed', code, message: error.message };
     }

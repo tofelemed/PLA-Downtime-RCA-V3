@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
+import { requireTenantRole } from '../auth/roles/require-tenant-role';
+import { SOURCE_OWNERS, STATUS_MAPPING_AUTHORS } from '../v2/close/close-roles';
 import { appendAudit } from '../common/audit/audit-trail';
 import {
   RequestContext,
@@ -133,6 +135,7 @@ export class SourceStatusMappingsService {
   ): Promise<SourceStatusMapping> {
     const tenantId = requireTenantId(context);
     assertTenantWide(context, 'A source status mapping');
+    requireTenantRole(context, STATUS_MAPPING_AUTHORS);
     return this.dataSource.transaction(async (manager) => {
       await this.lockSource(manager, tenantId, draft.sourceSystem);
       const [{ next }] = await manager.query<Array<{ next: number }>>(
@@ -160,6 +163,7 @@ export class SourceStatusMappingsService {
   approve(context: RequestContext, id: string): Promise<SourceStatusMapping> {
     const tenantId = requireTenantId(context);
     assertTenantWide(context, 'A source status mapping');
+    requireTenantRole(context, SOURCE_OWNERS);
     return this.dataSource.transaction(async (manager) => {
       const mapping = await manager.findOneBy(SourceStatusMapping, {
         id,

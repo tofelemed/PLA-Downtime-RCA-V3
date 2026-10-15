@@ -17,15 +17,11 @@ import {
 } from '@nestjs/swagger';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Ctx } from '../../common/context/ctx.decorator';
-import {
-  RequestContext,
-  requireTenantId,
-} from '../../common/context/request-context';
+import { RequestContext } from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { ExternalReportDraft } from '../../domain/actuals/period/external-report';
 import { ActualsJobsService } from '../../periods/actuals-jobs.service';
 import { ExternalReportsService } from '../../periods/external-reports.service';
-import { assertTenantWide } from '../../periods/period-scope';
 import { JobAccepted } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import { ExternalReportCreateDto, ExternalReportCsvDto } from './period-v2.dto';
@@ -61,9 +57,8 @@ export class ExternalReportsV2Controller {
     @Ctx() ctx: RequestContext,
     @Body() body: ExternalReportCreateDto,
   ): Promise<ExternalReportV2View> {
-    assertTenantWide(ctx, 'An external production report');
-    const { report, outcome } = await this.reports.importOne(
-      { tenantId: requireTenantId(ctx), userId: ctx.userId },
+    const { report, outcome } = await this.reports.importForContext(
+      ctx,
       draftOf(body),
     );
     return toReportView(report, outcome);
@@ -84,12 +79,7 @@ export class ExternalReportsV2Controller {
     @Ctx() ctx: RequestContext,
     @Body() body: ExternalReportCsvDto,
   ): Promise<JobAccepted> {
-    assertTenantWide(ctx, 'An external production report');
-    const job = await this.jobs.requestReportImport(
-      ctx,
-      requireTenantId(ctx),
-      body.csv,
-    );
+    const job = await this.jobs.requestReportImport(ctx, body.csv);
     return { jobId: job.id, statusUrl: `/api/v2/actuals-jobs/${job.id}` };
   }
 

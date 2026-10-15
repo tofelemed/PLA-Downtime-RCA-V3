@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { requireTenantRole } from '../auth/roles/require-tenant-role';
+import { requireUnitsRole } from '../auth/roles/require-unit-role';
 import {
   RequestContext,
   requireTenantId,
@@ -11,6 +13,7 @@ import {
   PeriodMaterializerService,
 } from './period-materializer.service';
 import { assertBodyUnitsInScope, assertTenantWide } from './period-scope';
+import { PERIOD_WRITERS } from '../v2/periods/period-roles';
 
 /** A backfill covers at most this many days (D07 pilot sizing: 5 units × 3 shifts × 92 days). */
 const MATERIALIZE_MAX_DAYS = 92;
@@ -46,8 +49,15 @@ export class PeriodsService {
     if (unitIds) {
       assertBodyUnitsInScope(context, unitIds);
       await this.assertTenantUnits(tenantId, unitIds);
+      await requireUnitsRole(
+        this.dataSource.manager,
+        context,
+        unitIds,
+        PERIOD_WRITERS,
+      );
     } else {
       assertTenantWide(context, 'Materializing every unit');
+      requireTenantRole(context, PERIOD_WRITERS);
     }
     return this.dataSource.transaction((manager) =>
       this.materializer.materialize(manager, { tenantId, unitIds, from, to }),

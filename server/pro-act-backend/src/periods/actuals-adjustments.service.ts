@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { requireUnitRole } from '../auth/roles/require-unit-role';
 import {
   RequestContext,
   requireTenantId,
@@ -19,6 +20,10 @@ import { PeriodProductSlice } from './entities/period-product-slice.entity';
 import { ProductionPeriod } from './entities/production-period.entity';
 import { periodScopeUnits } from './period-scope';
 import { requestRecalculation } from './period-recalc';
+import {
+  ADJUSTMENT_APPROVERS,
+  PERIOD_WRITERS,
+} from '../v2/periods/period-roles';
 
 export interface AdjustmentProposal {
   sliceId: string;
@@ -61,6 +66,12 @@ export class ActualsAdjustmentsService {
     const period = await this.adjustments.manager.findOneByOrFail(
       ProductionPeriod,
       { id: slice.periodId },
+    );
+    await requireUnitRole(
+      this.adjustments.manager,
+      context,
+      period.unitId,
+      PERIOD_WRITERS,
     );
     await assertAdjustmentPossible(
       this.adjustments.manager,
@@ -126,6 +137,12 @@ export class ActualsAdjustmentsService {
   ): Promise<ActualsAdjustment> {
     const decider = requireUser(context);
     const adjustment = await this.get(context, id);
+    await requireUnitRole(
+      this.adjustments.manager,
+      context,
+      adjustment.unitId,
+      ADJUSTMENT_APPROVERS,
+    );
     if (adjustment.authorId === decider) {
       throw new ForbiddenException({
         code: 'SEPARATION_OF_DUTIES',

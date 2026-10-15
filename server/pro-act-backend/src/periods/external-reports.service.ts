@@ -1,6 +1,7 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
+import { requireTenantRole } from '../auth/roles/require-tenant-role';
 import { Site } from '../calendar/entities/site.entity';
 import { SitesService } from '../calendar/sites.service';
 import {
@@ -12,14 +13,18 @@ import {
   isReleasedStatus,
   reportsFromCsv,
 } from '../domain/actuals/period/external-report';
-import { RequestContext } from '../common/context/request-context';
+import {
+  RequestContext,
+  requireTenantId,
+} from '../common/context/request-context';
 import { scopedQuery } from '../common/query/scoped-query';
 import {
   invalid,
   invalidReference,
   notFound,
 } from '../profiles/profile-errors';
-import { periodScopeUnits } from './period-scope';
+import { assertTenantWide, periodScopeUnits } from './period-scope';
+import { REPORT_IMPORTERS } from '../v2/periods/period-roles';
 import { ExternalProductionReport } from './entities/external-production-report.entity';
 import { SourceStatusMapping } from './entities/source-status-mapping.entity';
 import { SourceStatusMappingsService } from './source-status-mappings.service';
@@ -76,7 +81,18 @@ export class ExternalReportsService {
     return report;
   }
 
-  /** JSON import of one record (synchronous); 422 with the problems when it cannot be stored. */
+  /** Interactive imports are plant documents: the importer role itself must cover the plant. */
+  importForContext(
+    context: RequestContext,
+    draft: ExternalReportDraft,
+  ): Promise<{ report: ExternalProductionReport; outcome: StoreOutcome }> {
+    const tenantId = requireTenantId(context);
+    assertTenantWide(context, 'An external production report');
+    requireTenantRole(context, REPORT_IMPORTERS);
+    return this.importOne({ tenantId, userId: context.userId }, draft);
+  }
+
+  /** Trusted ingestion/worker entry; interactive callers use importForContext. */
   async importOne(
     importer: Importer,
     draft: ExternalReportDraft,
