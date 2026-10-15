@@ -178,6 +178,8 @@ Source: [SME_ANSWERS_ALL_PHASES_2026-10-14.md](SME_ANSWERS_ALL_PHASES_2026-10-14
 
 **Built 14 Oct 2026:** S1 `6ef791e` (`oee_policy` v2 first-out) · S2 `2a274ef` · S3 `fcf1bcf` (`possibleRepeat`, 120 s pilot) · S4 `e8f9f45` (`coded_downtime_ratio`) · S5 `604b603` (`origin_unit_id` / `origin_asset_id`) · S6 `1dabe40` (`planned_end_time`, `downtime_maintenance_overrun`) · S7 `19b550a` (failure severity + ISO 14224 fields; `failure_events_v` counts confirmed failures) · S8 `bded959` (`GET /v2/production-events/selection` snapshot). Still waiting for plant data: D1 / D2 state mapping and heartbeat semantics, D6 thresholds per unit, D9 standby demand logs, D10 CMMS timestamps, D11 code dictionary, D17 critical assets and money limit (Area 5).
 
+**Built 15 Oct 2026 (Area 2 leftovers, DECISIONS row "Area 2 leftovers"):** standby asset MTBF on its own running time, failure on demand kept apart (KPI 2.7.7); CMMS operation imports, standby runs / duties and state-mapping versions queue a recalculation of their unit and window (outbox), late state samples through the period sweep; asset type and reason code of each event in the run input hash (re-typing / recoding gives a new run at the next recalculation).
+
 | ID | Sev | Finding | Evidence | Status |
 |---|---|---|---|---|
 | DT-01 | High | **Asset-level / no-impact stops reduce unit Availability and MTBF exposure** (same root as LA-05). | `domain/accounting/segmentation.ts:35-64`; `v2/production-events/production-events-v2-commands.service.ts:327-345` | ✅ 13 Oct (SME Q5: impact `full_stop` / `fractional` / `none`; only stopping downtime is stopped time, `8171b43`) |
@@ -189,7 +191,7 @@ Source: [SME_ANSWERS_ALL_PHASES_2026-10-14.md](SME_ANSWERS_ALL_PHASES_2026-10-14
 | DT-07 | Medium | Pareto/downtime totals use the calendar window while Availability uses scheduled time, so they don't reconcile; no `downtime_external` measure. | `domain/kpi/period-kpis.ts:208-216` | 🔄 13 Oct: `downtime_in_schedule` + `downtime_external` (KPI 2.7.1); Pareto basis waits for D14 |
 | DT-08 | Medium | A stop still open when the period was computed can stay under-measured after the period ends (partly inferred). | `accounting/accounting-inputs.loader.ts:226-229`; `periods/period-sweep.job.ts:84-95` | ✅ 13 Oct |
 | DT-09 | Low | No future-time check on create/patch; merging across a gap turns run time into downtime; micro-stop test uses only the window part of the occurrence. | `v2/.../production-event-v2-write.dto.ts:129,158`; `segmentation.ts:36-47` | ✅ 13 Oct (micro-stop on the full occurrence; 422 `IN_FUTURE` beyond now + 120 s via the injectable `Clock`); merge-gap rule waits for D5 |
-| DT-10 | Low | Multi-period A·P·Q ≠ OEE (A over all periods, P/Q/OEE over complete ones); ISO weeks start Monday (Iranian week starts Saturday); standby asset MTBF uses unit run time. | `domain/kpi/aggregate.ts`; `v2/reports/report-sql.ts:28,117` | 🔄 13 Oct: A·P·Q = OEE ✅, week start per plant ✅; standby MTBF exposure waits for D9 |
+| DT-10 | Low | Multi-period A·P·Q ≠ OEE (A over all periods, P/Q/OEE over complete ones); ISO weeks start Monday (Iranian week starts Saturday); standby asset MTBF uses unit run time. | `domain/kpi/aggregate.ts`; `v2/reports/report-sql.ts:28,117` | ✅ 13 Oct: A·P·Q = OEE, week start per plant; 15 Oct: standby asset MTBF on its own running time (KPI 2.7.7, `domain/kpi/standby-mtbf.ts`) |
 
 ## Area 3 — Reconciliation workflow (~80%)
 
