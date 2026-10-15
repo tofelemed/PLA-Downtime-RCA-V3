@@ -4,7 +4,9 @@
  * `economic` follows an exchange-market-like level drifting from about 1,030,000 IRR/USD,
  * `group_reporting` an official-fixing-like level near 285,000 IRR/USD. The newest past week's economic
  * rate is held back and approved last (`approveLateRate`), so the showcase shows a late-approved rate
- * revaluing periods that were already calculated (change proposals on approved ones).
+ * revaluing periods that were already calculated (change proposals on approved ones). Until then that
+ * week has an authorised provisional rate (SME V7, source "Demo: provisional …", 2 % below the final
+ * level): its figures show as provisional, and the final rate's approval replaces them.
  */
 import { MASTER_DATA_FROM } from './catalog-plants';
 import { PersonaSession } from './showcase-client';
@@ -21,6 +23,7 @@ interface FxRow {
   state: string;
   effectiveFrom: string;
   source: string | null;
+  provisional?: boolean;
 }
 
 interface Week {
@@ -107,6 +110,50 @@ async function createRate(
   );
 }
 
+const PROVISIONAL_SOURCE =
+  'Demo: provisional treasury estimate while the final rate is pending (illustrative, not a quotation)';
+
+/** SME V7: an authorised provisional economic rate for the late week (kept when it already exists). */
+async function seedProvisionalRate(
+  ctx: ShowcaseContext,
+  sessions: { author: PersonaSession; approver: PersonaSession },
+  input: { week: Week; existing: readonly FxRow[] },
+): Promise<void> {
+  const at = Date.parse(new Date(input.week.from).toISOString());
+  const found = input.existing.some(
+    (r) =>
+      r.rateType === 'economic' &&
+      r.provisional === true &&
+      Date.parse(r.effectiveFrom) === at,
+  );
+  if (found) {
+    ctx.tally.kept('demo provisional fx rates');
+    return;
+  }
+  ctx.tally.created('demo provisional fx rates');
+  if (ctx.dryRun) return;
+  const final = Number(rateOf(ctx, 'economic', input.week));
+  const draft = await sessions.author.post<FxRow>(
+    '/v2/fx-rates',
+    {
+      rateType: 'economic',
+      fromCurrency: 'USD',
+      toCurrency: 'IRR',
+      rate: dec(Math.round(final * 0.98), 0),
+      effectiveFrom: new Date(input.week.from).toISOString(),
+      effectiveTo: new Date(input.week.to).toISOString(),
+      source: PROVISIONAL_SOURCE,
+      provisional: true,
+    },
+    `fx provisional week ${input.week.index}`,
+  );
+  await sessions.approver.post(
+    `/v2/fx-rates/${draft.id}/approve`,
+    {},
+    `approve provisional fx ${draft.id}`,
+  );
+}
+
 /** Drafts and approves every week's rate of both tables except the late one; returns the late draft id. */
 export async function seedFxRates(
   ctx: ShowcaseContext,
@@ -139,9 +186,17 @@ export async function seedFxRates(
       const at = new Date(week.from).toISOString();
       const found = existing.find(
         (r) =>
-          r.rateType === type && Date.parse(r.effectiveFrom) === Date.parse(at),
+          r.rateType === type &&
+          r.provisional !== true &&
+          Date.parse(r.effectiveFrom) === Date.parse(at),
       );
       const isLate = type === 'economic' && late?.index === week.index;
+      if (isLate && found?.state !== 'approved')
+        await seedProvisionalRate(
+          ctx,
+          { author, approver },
+          { week, existing },
+        );
       if (found && (found.state !== 'draft' || !isLate)) {
         ctx.tally.kept('demo fx rates');
         continue;

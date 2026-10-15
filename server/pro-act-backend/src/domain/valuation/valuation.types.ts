@@ -30,7 +30,8 @@ export const VIEW_LABELS: Readonly<Record<TotalsView, string>> = {
     'Margin + time cost of independent cost components only',
 };
 
-export const VALUATION_ENGINE_VERSION = '2.6.0';
+/** 2.7.0: SME V7 provisional FX rates (a final rate wins; provisional conversions are marked) and the E3 line quality-class disposition */
+export const VALUATION_ENGINE_VERSION = '2.7.0';
 
 /** SME V5: FX rate tables per purpose (never a market label such as "NIMA"; the source says where from). */
 export const FX_RATE_TYPES = ['economic', 'group_reporting', 'budget'] as const;
