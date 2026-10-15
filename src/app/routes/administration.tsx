@@ -17,6 +17,7 @@ const Checklists = lazyNamedWithPreload(() => import('@/features/master-data/rca
 const ChecklistDetail = lazyNamedWithPreload(() => import('@/features/master-data/rca/checklist-detail-page'), 'ChecklistDetailPage');
 const FailureDictionary = lazyNamedWithPreload(() => import('@/features/master-data/reliability/failure-dictionary-page'), 'FailureDictionaryPage');
 /** Reliability plant data (SME D1 / D2 / D6 / D9 / D10; transition allowance 2.5.6). */
+const PlantFlow = lazyNamedWithPreload(() => import('@/features/master-data/plant-flow/plant-flow-page'), 'PlantFlowPage');
 const StopPolicy = lazyNamedWithPreload(() => import('@/features/master-data/reliability/policy/stop-policy-page'), 'StopPolicyPage');
 const StandbyEquipment = lazyNamedWithPreload(() => import('@/features/master-data/reliability/standby/standby-page'), 'StandbyEquipmentPage');
 const WorkOrders = lazyNamedWithPreload(() => import('@/features/master-data/reliability/work-orders/work-orders-page'), 'WorkOrdersPage');
@@ -67,6 +68,7 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/master-data/rca/checklists/new', element: <ChecklistDetail />, preload: ChecklistDetail.preload },
   { path: '/master-data/rca/checklists/:checklistId', element: <ChecklistDetail />, preload: ChecklistDetail.preload },
   { path: '/master-data/failure-dictionary', element: <FailureDictionary />, preload: FailureDictionary.preload },
+  { path: '/master-data/plant-flow', element: <PlantFlow />, preload: PlantFlow.preload },
   { path: '/master-data/stop-policy', element: <StopPolicy />, preload: StopPolicy.preload },
   { path: '/master-data/standby-equipment', element: <StandbyEquipment />, preload: StandbyEquipment.preload },
   { path: '/master-data/work-orders', element: <WorkOrders />, preload: WorkOrders.preload },

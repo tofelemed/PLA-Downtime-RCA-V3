@@ -71,7 +71,10 @@ describe('unit streams and stream runs (SME E6)', () => {
       .set('Idempotency-Key', 'sr-1')
       .expect(201);
     const overlap = await env
-      .post('stream-runs', runBody({ lotCode: 'L-T1-002', startTime: '2027-03-02T00:00:00Z' }))
+      .post(
+        'stream-runs',
+        runBody({ lotCode: 'L-T1-002', startTime: '2027-03-02T00:00:00Z' }),
+      )
       .set('Idempotency-Key', 'sr-overlap')
       .expect(409);
     expect((overlap.body as ApiError).code).toBe('STREAM_RUN_OVERLAP');

@@ -6,6 +6,7 @@ import {
 
 export interface EventRow {
   id: string;
+  unit_id: string;
   occurrence_id: string;
   physical_type: LossEventType;
   start_time: Date;
@@ -35,7 +36,8 @@ export interface EventRow {
   revision: number | null;
 }
 
-export const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", e."start_time", e."end_time", e."schedule_class",
+/** Columns of a loss event with its asset type, reason code and latest revision. */
+const EVENT_SELECT = `SELECT e."id", e."unit_id", e."occurrence_id", e."physical_type", e."start_time", e."end_time", e."schedule_class",
        e."oee_component", e."impact_mode", e."impact_fraction"::text AS "impact_fraction", e."quantity"::text AS "quantity",
        e."reason_code_id", e."impact_code_id", e."failure_mode", e."asset_id", e."planned_end_time", e."row_version",
        e."from_product_id", e."to_product_id", e."catalyst_family", e."operating_mode", e."stream_code", e."recovery_of_event_id",
@@ -45,9 +47,22 @@ export const EVENTS_SQL = `SELECT e."id", e."occurrence_id", e."physical_type", 
   LEFT JOIN "assets" a ON a."id" = e."asset_id"
   LEFT JOIN "reason_codes" rc ON rc."id" = e."reason_code_id"
   LEFT JOIN LATERAL (SELECT er."id", er."revision" FROM "event_revisions" er WHERE er."event_id" = e."id"
-                      ORDER BY er."revision" DESC LIMIT 1) r ON true
+                      ORDER BY er."revision" DESC LIMIT 1) r ON true`;
+
+export const EVENTS_SQL = `${EVENT_SELECT}
  WHERE e."tenant_id" = $1 AND e."unit_id" = $2
    AND e."physical_type" IN ('downtime', 'slowdown', 'quality_loss', 'grade_transition') AND e."physical_state" IN ('open', 'closed')
+   AND tstzrange(e."start_time", e."end_time", '[)') && tstzrange($3, $4, '[)')
+ ORDER BY e."start_time", e."id"`;
+
+/**
+ * SME E2: stopping downtime of upstream units ($2 unit ids) overlapping ($3, $4) — the supply outages a
+ * buffer may cover (no-impact and partial events never stop supply, SME Q5).
+ */
+export const UPSTREAM_STOPS_SQL = `${EVENT_SELECT}
+ WHERE e."tenant_id" = $1 AND e."unit_id" = ANY($2::uuid[])
+   AND e."physical_type" = 'downtime' AND e."physical_state" IN ('open', 'closed')
+   AND e."impact_mode" NOT IN ('none', 'fractional')
    AND tstzrange(e."start_time", e."end_time", '[)') && tstzrange($3, $4, '[)')
  ORDER BY e."start_time", e."id"`;
 

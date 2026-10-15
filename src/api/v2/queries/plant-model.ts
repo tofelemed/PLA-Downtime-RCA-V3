@@ -1,6 +1,6 @@
 import { v2Request } from '../client';
 import type { BodyOf } from '../schema-types';
-import type { StreamRunView, UnitStreamView } from '../types/plant-model';
+import type { BufferLevelView, FlowRouteView, StreamRunView, UnitStreamView } from '../types/plant-model';
 import { v2 } from '../v2';
 import { useBaselineCommand } from './profile-commands';
 import { useV2InfiniteList } from './use-v2-list';
@@ -49,5 +49,42 @@ export function useCreateStreamRun() {
 export function usePatchStreamRun() {
   return useBaselineCommand<{ id: string; body: StreamRunPatchBody }, StreamRunView>(async (input) =>
     (await v2Request<StreamRunView>({ method: 'PATCH', path: `/stream-runs/${input.id}`, body: input.body })).data,
+  );
+}
+
+export type FlowRouteCreateBody = BodyOf<'/api/v2/flow-routes', 'post'>;
+export type BufferLevelCreateBody = BodyOf<'/api/v2/buffer-levels', 'post'>;
+
+/** Every route version of the plant's material-flow map the caller may read (SME E2). */
+export function useFlowRoutes() {
+  return useV2InfiniteList<FlowRouteView>({
+    resource: 'profiles',
+    path: '/flow-routes',
+    query: { limit: 200 },
+    key: { filters: { kind: 'flow-routes' } },
+  });
+}
+
+/** Recorded buffer levels, newest first (SME E2). */
+export function useBufferLevels() {
+  return useV2InfiniteList<BufferLevelView>({
+    resource: 'profiles',
+    path: '/buffer-levels',
+    query: { limit: 100 },
+    key: { filters: { kind: 'buffer-levels' } },
+  });
+}
+
+/** A draft route; approving it recalculates the downstream unit's periods. */
+export function useCreateFlowRoute() {
+  return useBaselineCommand<FlowRouteCreateBody, FlowRouteView>(async (body, idempotencyKey) =>
+    (await v2.post<FlowRouteView, '/api/v2/flow-routes'>('/api/v2/flow-routes', { body, idempotencyKey })).data,
+  );
+}
+
+/** Records a buffer level; the downstream unit's periods it covers recalculate. */
+export function useRecordBufferLevel() {
+  return useBaselineCommand<BufferLevelCreateBody, BufferLevelView>(async (body, idempotencyKey) =>
+    (await v2.post<BufferLevelView, '/api/v2/buffer-levels'>('/api/v2/buffer-levels', { body, idempotencyKey })).data,
   );
 }

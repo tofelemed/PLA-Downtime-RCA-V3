@@ -5,10 +5,12 @@ import {
   RateVersion,
   ScheduleSpan,
   SliceActualsInput,
+  FlowInput,
   SliceInput,
   StreamRun,
   TransitionStandard,
 } from '../domain/accounting/accounting.types';
+import { loadFlowInputs } from '../plant-model/flow-inputs.loader';
 import { loadStreamRuns } from '../plant-model/stream-inputs.loader';
 import { sliceTarget } from '../domain/accounting/slice-target';
 import { RateTimebase } from '../domain/actuals/actuals.types';
@@ -35,6 +37,10 @@ export interface AccountingInputs {
   transitionStandards: TransitionStandard[];
   /** SME E6: the unit's stream runs over the period (empty = no streams) */
   streamRuns: StreamRun[];
+  /** SME E2: the material-flow map upstream of the unit; null = no route into it */
+  flow: FlowInput | null;
+  /** SME E2: ids and versions of the routes, levels and upstream stops read (run hash) */
+  flowMaterial: string[];
   fingerprint: InputFingerprint;
   /** occurrence extents and failure candidates of the KPI engine (plan 2.7) */
   kpi: KpiInputs;
@@ -232,6 +238,7 @@ export class AccountingInputsLoader {
       from: period.utcStart,
       to: period.utcEnd,
     });
+    const flow = await loadFlowInputs(manager, period);
     return {
       schedule: instances.map(toSpan),
       events: events.map((row) => toEvent(row, modes)),
@@ -239,6 +246,8 @@ export class AccountingInputsLoader {
       asOf,
       transitionStandards: standards,
       streamRuns: streams.runs,
+      flow: flow.flow,
+      flowMaterial: flow.material,
       kpi: await loadKpiInputs(manager, period),
       fingerprint: fingerprintOf({
         period,

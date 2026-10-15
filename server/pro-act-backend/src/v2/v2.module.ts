@@ -108,6 +108,11 @@ import { LotDispositionsV2Controller } from './quality-dispositions/lot-disposit
 import { LotDispositionsV2Service } from './quality-dispositions/lot-dispositions-v2.service';
 import { UncertaintyModule } from '../uncertainty/uncertainty.module';
 import { PlantModelModule } from '../plant-model/plant-model.module';
+import { BufferLevelsV2Controller } from './plant-model/buffer-levels-v2.controller';
+import { FlowRoutesV2Controller } from './plant-model/flow-routes-v2.controller';
+import { PlantFlowV2Service } from './plant-model/plant-flow-v2.service';
+import { SiteLossV2Controller } from './plant-model/site-loss-v2.controller';
+import { SiteLossV2Service } from './plant-model/site-loss-v2.service';
 import { StreamRunsV2Controller } from './plant-model/stream-runs-v2.controller';
 import { UnitStreamsV2Controller } from './plant-model/unit-streams-v2.controller';
 import { UnitStreamsV2Service } from './plant-model/unit-streams-v2.service';
@@ -261,6 +266,9 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     UncertaintyBudgetsV2Controller,
     UnitStreamsV2Controller,
     StreamRunsV2Controller,
+    FlowRoutesV2Controller,
+    BufferLevelsV2Controller,
+    SiteLossV2Controller,
     SourceAuthorityV2Controller,
     ExternalReportsV2Controller,
     ActualsJobsV2Controller,
@@ -309,6 +317,8 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     LotDispositionsV2Service,
     UncertaintyBudgetsV2Service,
     UnitStreamsV2Service,
+    PlantFlowV2Service,
+    SiteLossV2Service,
     SourceAuthorityV2Service,
     PeriodAccountingV2Service,
     ReconciliationV2Service,

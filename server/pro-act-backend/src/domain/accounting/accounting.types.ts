@@ -104,6 +104,44 @@ export interface StreamRun {
   end: Date | null;
 }
 
+/**
+ * SME E2: an approved, effective-dated route of the plant's material-flow map: `fromUnitId` feeds
+ * `toUnitId` through an optional buffer (silo) with usable inventory and the downstream draw rate.
+ */
+export interface FlowRoute {
+  fromUnitId: string;
+  toUnitId: string;
+  /** `feed`: required supply; `alternate`: another route that can keep the downstream unit fed */
+  role: 'feed' | 'alternate';
+  /** usable buffer inventory when no level is recorded (decimal string); null = no buffer */
+  usableInventory: string | null;
+  /** lowest operating level: a recorded level is usable only above it; null = 0 */
+  minLevel: string | null;
+  /** downstream draw from the buffer at full rate, inventory unit per hour; null = no buffer */
+  drawRatePerHour: string | null;
+  from: Date;
+  to: Date | null;
+}
+
+/** SME E2: a recorded buffer (silo) level of a route at an instant. */
+export interface BufferLevel {
+  fromUnitId: string;
+  toUnitId: string;
+  at: Date;
+  level: string;
+}
+
+/** SME E2: what upstream propagation reads for the period's unit. */
+export interface FlowInput {
+  unitId: string;
+  routes: readonly FlowRoute[];
+  /** recorded stopping downtime of every unit upstream of `unitId` */
+  upstreamStops: ReadonlyArray<{ unitId: string; event: LossEvent }>;
+  levels: readonly BufferLevel[];
+  /** a recorded level older than this at a stop's start is not used (configured inventory applies) */
+  maxLevelAgeSeconds: number;
+}
+
 /** A loss-explaining event revision effective at run time (evidence of ACC05). */
 export interface LossEvent {
   eventId: string;
@@ -143,6 +181,8 @@ export interface LossEvent {
   dispositionClass?: string | null;
   /** SME E6: the stream the event happened on; null / absent = the whole unit (every stream) */
   streamId?: string | null;
+  /** SME E2: set on derived starvation — the upstream unit whose stop it propagates (the cause is that stop) */
+  starvedFrom?: string | null;
 }
 
 /** The actuals of a slice (2.4 result of the run's actuals run). */
@@ -221,6 +261,8 @@ export interface PeriodAccountingInput {
    * (every slice uses its whole window, the 2.5 behaviour)
    */
   streamRuns?: readonly StreamRun[];
+  /** SME E2: the material-flow map upstream of the unit; absent = no routes into it (no propagation) */
+  flow?: FlowInput | null;
   /**
    * full extent of each stop occurrence over all its events, also those outside the window (DT-09):
    * a split child inside the window is a micro-stop only if the whole occurrence is short

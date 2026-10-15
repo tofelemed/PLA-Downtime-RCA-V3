@@ -85,6 +85,10 @@ import { UncertaintyBudget } from '../uncertainty/entities/uncertainty-budget.en
 import { ToleranceAdoptionService } from '../uncertainty/tolerance-adoption.service';
 import { UncertaintyBudgetsService } from '../uncertainty/uncertainty-budgets.service';
 import { UncertaintyModule } from '../uncertainty/uncertainty.module';
+import { BufferLevelsService } from '../plant-model/buffer-levels.service';
+import { BufferLevelRecord } from '../plant-model/entities/buffer-level.entity';
+import { PlantFlowRoute } from '../plant-model/entities/plant-flow-route.entity';
+import { PlantFlowRoutesService } from '../plant-model/plant-flow-routes.service';
 import { StreamRunRecord } from '../plant-model/entities/stream-run.entity';
 import { UnitStream } from '../plant-model/entities/unit-stream.entity';
 import { PlantModelModule } from '../plant-model/plant-model.module';
@@ -353,8 +357,12 @@ class UncertaintyModuleStub {}
 const PLANT_MODEL_PROVIDERS = [
   UnitStreamsService,
   StreamRunsService,
+  PlantFlowRoutesService,
+  BufferLevelsService,
   getRepositoryToken(UnitStream),
   getRepositoryToken(StreamRunRecord),
+  getRepositoryToken(PlantFlowRoute),
+  getRepositoryToken(BufferLevelRecord),
 ];
 @Module({
   providers: PLANT_MODEL_PROVIDERS.map((provide) => ({

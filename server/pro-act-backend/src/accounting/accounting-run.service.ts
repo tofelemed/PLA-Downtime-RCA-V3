@@ -354,6 +354,7 @@ function engineInput(
     asOf: inputs.asOf,
     transitionStandards: inputs.transitionStandards,
     streamRuns: inputs.streamRuns,
+    flow: inputs.flow,
     occurrences: inputs.kpi.occurrences,
     policy: {
       microStopSeconds: engine.oee.microStopSeconds,

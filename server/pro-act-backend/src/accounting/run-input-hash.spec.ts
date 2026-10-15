@@ -40,6 +40,8 @@ function inputs(
     asOf: end,
     transitionStandards: [],
     streamRuns: [],
+    flow: null,
+    flowMaterial: [],
     fingerprint: {
       periodId: 'p1',
       window: { start: start.toISOString(), end: end.toISOString() },

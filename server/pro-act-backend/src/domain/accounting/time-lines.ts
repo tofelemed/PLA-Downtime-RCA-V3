@@ -129,7 +129,13 @@ function toLine(entry: RawEntry, context: LineContext): LossLineDraft {
     cause,
     scheduleClass: cause?.scheduleClass ?? null,
     oeeComponent: entry.kind === 'availability' ? 'availability' : null,
-    flags: entry.label ? [`exclusion:${entry.label}`] : [],
+    flags: [
+      ...(entry.label ? [`exclusion:${entry.label}`] : []),
+      // SME E2: starvation propagated from an upstream stop (the cause), named by its unit
+      ...(cause?.starvedFrom
+        ? ['upstream_starvation', `origin_unit:${cause.starvedFrom}`]
+        : []),
+    ],
     evidence: cause
       ? [
           {

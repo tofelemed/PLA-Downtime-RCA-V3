@@ -57,6 +57,8 @@ export function hashOf(
           ]),
         }
       : {}),
+    // SME E2: the flow map, buffer levels and upstream stops this unit's starvation is derived from
+    ...(inputs.flowMaterial.length > 0 ? { flow: inputs.flowMaterial } : {}),
     slices: inputs.slices.map((s) => [
       s.sliceId,
       s.window.start.getTime(),

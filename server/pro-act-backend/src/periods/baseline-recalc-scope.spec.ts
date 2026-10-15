@@ -45,8 +45,8 @@ describe('baselineRecalcScope (LA-03)', () => {
     });
   });
 
-  it.each(['unit_stream', 'stream_run'])(
-    'a %s change (SME E6) recalculates its unit over its interval',
+  it.each(['unit_stream', 'stream_run', 'plant_flow'])(
+    'a %s change (SME E6 / E2) recalculates its unit over its interval',
     (subject) => {
       const scope = baselineRecalcScope(
         'stream-1',

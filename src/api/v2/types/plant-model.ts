@@ -29,3 +29,34 @@ export interface StreamRunView {
   createdAt: string;
   updatedAt: string;
 }
+
+/** A route of the material-flow map (SME E2): `fromUnitId` feeds `toUnitId`, optionally through a buffer. */
+export interface FlowRouteView extends VersionFields {
+  id: string;
+  fromUnitId: string;
+  toUnitId: string;
+  routeRole: 'feed' | 'alternate';
+  yieldFactor: string;
+  bufferName: string | null;
+  usableInventory: string | null;
+  minOperatingLevel: string | null;
+  maxOperatingLevel: string | null;
+  inventoryUom: string | null;
+  /** downstream draw from the buffer, inventory unit per hour */
+  drawRatePerHour: string | null;
+  notes: string | null;
+}
+
+/** A recorded level of a route's buffer (SME E2). */
+export interface BufferLevelView {
+  id: string;
+  fromUnitId: string;
+  toUnitId: string;
+  observedAt: string;
+  level: string;
+  uom: string;
+  source: string;
+  notes: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
