@@ -48,6 +48,14 @@ export interface Capabilities {
   canMaintainValuation: boolean;
   /** SME V1: approve / retire them (finance approvers, never the author) */
   canApproveValuation: boolean;
+  /** oee_policy versions over HTTP: micro-stop thresholds and the transition allowance (manager approvers) */
+  canWriteOeePolicy: boolean;
+  /** SME D9: register / retire standby equipment and import its demand / test log */
+  canWriteStandby: boolean;
+  /** SME D10: import CMMS work-order operations */
+  canWriteWorkOrders: boolean;
+  /** SME D1 / D2: unit state mapping versions and staleness settings */
+  canWriteStateMappings: boolean;
   /** v2 production events: any member whose role is not read-only (WriteAccessGuard) */
   canWriteEvents: boolean;
   /**
@@ -88,6 +96,10 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canManageRcaPolicies: may(ServerRoles.RCA_POLICY_WRITERS),
     canMaintainValuation: may(ServerRoles.FINANCE_MAINTAINERS),
     canApproveValuation: may(ServerRoles.FINANCE_APPROVERS),
+    canWriteOeePolicy: may(ServerRoles.OEE_POLICY_WRITERS),
+    canWriteStandby: may(ServerRoles.STANDBY_WRITERS),
+    canWriteWorkOrders: may(ServerRoles.WORK_ORDER_WRITERS),
+    canWriteStateMappings: may(ServerRoles.STATE_MAPPING_WRITERS),
     canWriteEvents: !readOnly,
     canManagePlantSettings: may(PLANT_SETTINGS_WRITERS),
   };

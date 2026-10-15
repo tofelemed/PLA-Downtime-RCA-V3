@@ -19,6 +19,10 @@ const SECTIONS: readonly SectionLink[] = [
   { to: '/master-data/rca/causes', label: 'Cause library' },
   { to: '/master-data/rca/checklists', label: 'Verification checklists' },
   { to: '/master-data/failure-dictionary', label: 'Failure dictionary' },
+  { to: '/master-data/stop-policy', label: 'Stop and plan policy' },
+  { to: '/master-data/standby-equipment', label: 'Standby equipment' },
+  { to: '/master-data/work-orders', label: 'Work-order operations' },
+  { to: '/master-data/unit-state', label: 'Unit state' },
 ];
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>

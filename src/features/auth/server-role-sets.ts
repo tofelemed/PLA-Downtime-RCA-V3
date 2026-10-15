@@ -44,6 +44,14 @@ export const RCA_POLICY_WRITERS = ['manager_approver'] as const;
 /** v2/feature-flags/feature-flags-v2.controller.ts */
 export const FLAG_WRITERS = ['manager_approver'] as const;
 
+/** v2/reliability/reliability-roles.ts (SME D9 standby log, D10 CMMS operations, D1 / D2 state mappings) */
+export const STANDBY_WRITERS = ['operator', 'reliability_engineer', 'integration_admin', 'manager_approver'] as const;
+export const WORK_ORDER_WRITERS = ['reliability_engineer', 'integration_admin', 'manager_approver'] as const;
+export const STATE_MAPPING_WRITERS = ['integration_admin', 'manager_approver'] as const;
+
+/** micro-stop and transition-allowance policy controllers (`@Roles('manager_approver')` on the write) */
+export const OEE_POLICY_WRITERS = ['manager_approver'] as const;
+
 /** audit-log/audit-roles.ts: who reads the audit trail of the acting plant */
 export const AUDIT_READERS = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'manager_approver'] as const;
 

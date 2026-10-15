@@ -16,6 +16,11 @@ const RcaCauses = lazyNamedWithPreload(() => import('@/features/master-data/rca/
 const Checklists = lazyNamedWithPreload(() => import('@/features/master-data/rca/checklists-page'), 'ChecklistsPage');
 const ChecklistDetail = lazyNamedWithPreload(() => import('@/features/master-data/rca/checklist-detail-page'), 'ChecklistDetailPage');
 const FailureDictionary = lazyNamedWithPreload(() => import('@/features/master-data/reliability/failure-dictionary-page'), 'FailureDictionaryPage');
+/** Reliability plant data (SME D1 / D2 / D6 / D9 / D10; transition allowance 2.5.6). */
+const StopPolicy = lazyNamedWithPreload(() => import('@/features/master-data/reliability/policy/stop-policy-page'), 'StopPolicyPage');
+const StandbyEquipment = lazyNamedWithPreload(() => import('@/features/master-data/reliability/standby/standby-page'), 'StandbyEquipmentPage');
+const WorkOrders = lazyNamedWithPreload(() => import('@/features/master-data/reliability/work-orders/work-orders-page'), 'WorkOrdersPage');
+const UnitState = lazyNamedWithPreload(() => import('@/features/master-data/reliability/unit-state/unit-state-page'), 'UnitStatePage');
 /** Codes and declarative admin rules (plan 3.8): libraries, code pages, rule pages. */
 const CodesAdmin = lazyNamedWithPreload(() => import('@/features/codes-admin/codes-admin-page'), 'CodesAdminPage');
 const CodeDetail = lazyNamedWithPreload(() => import('@/features/codes-admin/codes/code-detail-page'), 'CodeDetailPage');
@@ -62,6 +67,10 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/master-data/rca/checklists/new', element: <ChecklistDetail />, preload: ChecklistDetail.preload },
   { path: '/master-data/rca/checklists/:checklistId', element: <ChecklistDetail />, preload: ChecklistDetail.preload },
   { path: '/master-data/failure-dictionary', element: <FailureDictionary />, preload: FailureDictionary.preload },
+  { path: '/master-data/stop-policy', element: <StopPolicy />, preload: StopPolicy.preload },
+  { path: '/master-data/standby-equipment', element: <StandbyEquipment />, preload: StandbyEquipment.preload },
+  { path: '/master-data/work-orders', element: <WorkOrders />, preload: WorkOrders.preload },
+  { path: '/master-data/unit-state', element: <UnitState />, preload: UnitState.preload },
   { path: '/codes-admin', element: <CodesAdmin />, preload: CodesAdmin.preload },
   { path: '/codes-admin/rules/new', element: <RuleNew />, preload: RuleNew.preload },
   { path: '/codes-admin/rules/:ruleId', element: <RuleDetail />, preload: RuleDetail.preload },
