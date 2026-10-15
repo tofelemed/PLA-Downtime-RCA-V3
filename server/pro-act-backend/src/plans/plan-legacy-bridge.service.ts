@@ -119,7 +119,7 @@ export class PlanLegacyBridge {
         return draft.id;
       });
     } catch (error: unknown) {
-      // a header the version model cannot take (e.g. end before start) keeps the v1 save working
+      // A legacy header the version model cannot take (e.g. equal endpoints) keeps the v1 save working.
       if (!(error instanceof HttpException)) throw error;
       this.logger.warn(`Plan ${after.id}: no draft version (${error.message})`);
       return;
@@ -243,7 +243,7 @@ export class PlanLegacyBridge {
       const body = error.getResponse();
       const code =
         typeof body === 'object' && body !== null && 'code' in body
-          ? String((body as { code: unknown }).code)
+          ? String(body.code)
           : `HTTP_${error.getStatus()}`;
       this.logger.warn(`Draft ${versionId}: generation refused (${code})`);
       await this.dataSource.manager.update(PlanVersion, versionId, {

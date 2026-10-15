@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { RequestContext } from '../common/context/request-context';
 import { findOrThrow } from '../common/helpers/find-or-throw';
 import { PlanLegacyBridge } from '../plans/plan-legacy-bridge.service';
+import { invalid } from '../plans/plan-errors';
 import { ProductionPlan } from './production-plan.entity';
 
 /** Approval columns the client may no longer write (plan 2.3: they come from the identity). */
@@ -48,6 +49,7 @@ export class ProductionPlanService {
       unitId: data.unitId ?? '',
       productId: data.productId ?? null,
     });
+    assertDateRange(data);
     const { approvalStatus, rest } = splitApproval(data);
     const plan = await this.planRepository.save(
       this.planRepository.create({
@@ -69,6 +71,7 @@ export class ProductionPlanService {
   ): Promise<ProductionPlan | null> {
     const before = await findOrThrow(this.findOne(id), 'ProductionPlan', id);
     await this.bridge.assertWritable(context, before);
+    assertDateRange({ ...before, ...data });
     if (data.unitId !== undefined || data.productId !== undefined) {
       await this.bridge.assertCreatable(context, {
         unitId: data.unitId ?? before.unitId,
@@ -125,6 +128,17 @@ export class ProductionPlanService {
     if (stored !== null) {
       await this.planRepository.update(id, { approvalStatus: stored });
     }
+  }
+}
+
+/** Validate the merged header before saving; equal endpoints remain valid in v1. */
+function assertDateRange(data: Partial<ProductionPlan>): void {
+  if (
+    data.startDate &&
+    data.endDate &&
+    new Date(data.endDate).getTime() < new Date(data.startDate).getTime()
+  ) {
+    throw invalid('INVALID_DATE_RANGE', 'endDate must not be before startDate');
   }
 }
 

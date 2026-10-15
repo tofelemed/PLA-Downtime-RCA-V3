@@ -23,7 +23,7 @@ interface PlanDto {
 
 test.describe('Production Plans CRUD Operations', () => {
   let fixture: TestFixture;
-  let createdPlanIds: string[] = [];
+  const createdPlanIds: string[] = [];
 
   test.beforeAll(async () => {
     fixture = await createTestFixture();
@@ -81,8 +81,7 @@ test.describe('Production Plans CRUD Operations', () => {
 
   test('CREATE: should fail with missing required fields', async () => {
     // Missing name
-    try {
-      await apiRequest('/production-plans', {
+    await expect(apiRequest('/production-plans', {
         method: 'POST',
         token: fixture.tokens.accessToken,
         body: JSON.stringify({
@@ -90,15 +89,10 @@ test.describe('Production Plans CRUD Operations', () => {
           startDate: new Date().toISOString(),
           endDate: new Date().toISOString(),
         }),
-      });
-      throw new Error('Should have failed validation for missing name');
-    } catch (error: any) {
-      expect(error).toBeDefined();
-    }
+      })).rejects.toThrow(/^API request failed: (400|422)\b/);
 
     // Missing unitId
-    try {
-      await apiRequest('/production-plans', {
+    await expect(apiRequest('/production-plans', {
         method: 'POST',
         token: fixture.tokens.accessToken,
         body: JSON.stringify({
@@ -106,31 +100,21 @@ test.describe('Production Plans CRUD Operations', () => {
           startDate: new Date().toISOString(),
           endDate: new Date().toISOString(),
         }),
-      });
-      throw new Error('Should have failed validation for missing unitId');
-    } catch (error: any) {
-      expect(error).toBeDefined();
-    }
+      })).rejects.toThrow(/^API request failed: (400|422)\b/);
 
     // Missing dates
-    try {
-      await apiRequest('/production-plans', {
+    await expect(apiRequest('/production-plans', {
         method: 'POST',
         token: fixture.tokens.accessToken,
         body: JSON.stringify({
           name: 'Test Plan',
           unitId: fixture.unit.id,
         }),
-      });
-      throw new Error('Should have failed validation for missing dates');
-    } catch (error: any) {
-      expect(error).toBeDefined();
-    }
+      })).rejects.toThrow(/^API request failed: (400|422)\b/);
   });
 
   test('CREATE: should fail with invalid UUID for unitId', async () => {
-    try {
-      await apiRequest('/production-plans', {
+    await expect(apiRequest('/production-plans', {
         method: 'POST',
         token: fixture.tokens.accessToken,
         body: JSON.stringify({
@@ -139,16 +123,11 @@ test.describe('Production Plans CRUD Operations', () => {
           startDate: new Date().toISOString(),
           endDate: new Date().toISOString(),
         }),
-      });
-      throw new Error('Should have failed validation for invalid UUID');
-    } catch (error: any) {
-      expect(error).toBeDefined();
-    }
+      })).rejects.toThrow(/^API request failed: (400|422)\b/);
   });
 
   test('CREATE: should fail with invalid date format', async () => {
-    try {
-      await apiRequest('/production-plans', {
+    await expect(apiRequest('/production-plans', {
         method: 'POST',
         token: fixture.tokens.accessToken,
         body: JSON.stringify({
@@ -157,11 +136,7 @@ test.describe('Production Plans CRUD Operations', () => {
           startDate: 'invalid-date',
           endDate: 'invalid-date',
         }),
-      });
-      throw new Error('Should have failed validation for invalid date format');
-    } catch (error: any) {
-      expect(error).toBeDefined();
-    }
+      })).rejects.toThrow(/^API request failed: (400|422)\b/);
   });
 
   // ==================== READ OPERATIONS ====================
@@ -305,18 +280,13 @@ test.describe('Production Plans CRUD Operations', () => {
     createdPlanIds.push(createdPlan.id);
 
     // Try to update with invalid unitId
-    try {
-      await apiRequest(`/production-plans/${createdPlan.id}`, {
+    await expect(apiRequest(`/production-plans/${createdPlan.id}`, {
         method: 'PUT',
         token: fixture.tokens.accessToken,
         body: JSON.stringify({
           unitId: 'invalid-uuid',
         }),
-      });
-      throw new Error('Should have failed validation for invalid UUID');
-    } catch (error: any) {
-      expect(error).toBeDefined();
-    }
+      })).rejects.toThrow(/^API request failed: (400|422)\b/);
   });
 
   // ==================== DELETE OPERATIONS ====================
@@ -344,30 +314,18 @@ test.describe('Production Plans CRUD Operations', () => {
     });
 
     // Verify plan is deleted
-    try {
-      await apiRequest(`/production-plans/${createdPlan.id}`, {
+    await expect(apiRequest(`/production-plans/${createdPlan.id}`, {
         method: 'GET',
         token: fixture.tokens.accessToken,
-      });
-      throw new Error('Plan should have been deleted but still exists');
-    } catch (error: any) {
-      // Expected - plan should not exist
-      expect(error).toBeDefined();
-    }
+      })).rejects.toThrow(/^API request failed: 404\b/);
   });
 
   test('DELETE: should fail to delete non-existent plan', async () => {
     const fakeId = '00000000-0000-0000-0000-000000000000';
-    try {
-      await apiRequest(`/production-plans/${fakeId}`, {
+    await expect(apiRequest(`/production-plans/${fakeId}`, {
         method: 'DELETE',
         token: fixture.tokens.accessToken,
-      });
-      throw new Error('Delete should have failed for non-existent plan');
-    } catch (error: any) {
-      // Expected - should fail
-      expect(error).toBeDefined();
-    }
+      })).rejects.toThrow(/^API request failed: 404\b/);
   });
 
   // ==================== INTEGRATION TESTS ====================
@@ -423,16 +381,10 @@ test.describe('Production Plans CRUD Operations', () => {
     });
 
     // Verify deletion
-    try {
-      await apiRequest(`/production-plans/${createdPlan.id}`, {
+    await expect(apiRequest(`/production-plans/${createdPlan.id}`, {
         method: 'GET',
         token: fixture.tokens.accessToken,
-      });
-      throw new Error('Plan should have been deleted but still exists');
-    } catch (error: any) {
-      // Expected - plan should not exist
-      expect(error).toBeDefined();
-    }
+      })).rejects.toThrow(/^API request failed: 404\b/);
   });
 
   test('INTEGRATION: should handle date edge cases', async () => {
@@ -456,8 +408,7 @@ test.describe('Production Plans CRUD Operations', () => {
     expect(plan).toBeDefined();
 
     // Test with end date before start date (should fail validation)
-    try {
-      await apiRequest('/production-plans', {
+    await expect(apiRequest('/production-plans', {
         method: 'POST',
         token: fixture.tokens.accessToken,
         body: JSON.stringify({
@@ -467,12 +418,7 @@ test.describe('Production Plans CRUD Operations', () => {
           startDate: new Date().toISOString(),
           endDate: new Date(Date.now() - 86400000).toISOString(), // Yesterday
         }),
-      });
-      throw new Error('Should have failed validation for invalid date range');
-    } catch (error: any) {
-      // Expected - should fail validation
-      expect(error).toBeDefined();
-    }
+      })).rejects.toThrow(/^API request failed: (400|422)\b/);
   });
 
   // The v1 Production Plans screen was replaced by the v2 plans list (plans are created, edited, approved

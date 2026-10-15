@@ -1,0 +1,11 @@
+# Legacy production-plan date validation — 16 October 2026
+
+The v1 production-plan API accepted an end date before the start date. Create returned HTTP 201 and saved an invalid header; partial updates returned HTTP 200 and changed the header while its version retained the previous valid interval. The bridge validated only after the header write and deliberately swallowed version-content refusals to preserve legacy behavior.
+
+`ProductionPlanService` now checks the effective interval before the create or update write. Updates merge the supplied fields with the stored header first, so changing only `startDate` or only `endDate` cannot bypass the check. A reversed range returns HTTP 422 with `INVALID_DATE_RANGE`. Equal endpoints retain the existing v1 behavior, and generation failures unrelated to this range rule still use the existing bridge fallback. No schema or stored HDPE data was changed.
+
+The isolated `proact_hdpe_test` reproduction in `test/integration/plans-legacy-validation.int-spec.ts` produced **3 failed range cases and 9 passing controls** before the fix. The three responses showed the invalid persisted date values. Controls cover missing required fields, malformed UUID/date/quantity input, equal endpoints, and missing-record GET/PUT/DELETE. The update regressions compare complete header/version rows before and after refusal; the create regression asserts no header or version was written.
+
+Evidence is in `test-results/hdpe-followup/legacy-plans-validation-before.json/.log`. The earlier `legacy-plans-validation-initial.*` attempt expected HTTP 422 for the controller's existing HTTP 400 DTO validation; that fixture expectation was corrected before the clean red reproduction. Those seven initial failures were not product defects.
+
+Post-fix validation passed **2 suites / 18 tests**, including all 12 new checks and the existing 6 bridge compatibility checks. Evidence is retained separately in `legacy-plans-validation-after.json/.log`; backend typecheck and build also passed (`backend-typecheck-final.log`, `backend-build-final.log`). The parent validation campaign owns any application rebuild/deployment and live browser verification; this work did not write to the application database.
