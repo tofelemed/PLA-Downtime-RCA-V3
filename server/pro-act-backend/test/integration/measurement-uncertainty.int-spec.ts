@@ -74,7 +74,7 @@ describe('measurement-source hierarchy and uncertainty budgets (SME E7, E4)', ()
     ],
     coverageFactor: '2',
     calibrationRef: 'CAL-FT101-2027-01; WS-22 certificate',
-    reviewDueAt: '2030-01-01T00:00:00.000Z',
+    reviewDueAt: '2031-01-01T00:00:00.000Z',
     effectiveFrom: '2026-01-01T00:00:00.000Z',
     ...extra,
   });
@@ -298,9 +298,10 @@ describe('measurement-source hierarchy and uncertainty budgets (SME E7, E4)', ()
       checker,
     ).expect(403);
     expect((metrologyAdopts.body as ApiError).code).toBe('FORBIDDEN_ROLE');
-    const adopted = (
-      await decide(proposed.id, 'adopt-as-tolerance', adopter).expect(200)
-    ).body as AdoptedBody;
+    const adoption = await decide(proposed.id, 'adopt-as-tolerance', adopter);
+    if (adoption.status !== 200) throw new Error(JSON.stringify(adoption.body));
+    expect(adoption.status).toBe(200);
+    const adopted = adoption.body as AdoptedBody;
     expect(adopted.tolerance).toMatchObject({
       mode: 'absolute',
       value: 8.48528137,

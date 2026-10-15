@@ -156,8 +156,8 @@ describe('valuation rates (plan 2.2, v2 API)', () => {
         },
         env.finance,
       )
-      .expect(400);
-    expect(noCurrency.body).toBeDefined();
+      .expect(422);
+    expect((noCurrency.body as ApiError).code).toBe('VALIDATION_FAILED');
     await env
       .post(`valuation-rates/${created.id}/approve`, {}, env.finance)
       .expect(403);

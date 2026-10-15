@@ -118,7 +118,7 @@ describe('unit impact rules (plan 1.10 step 4)', () => {
     await env.settle();
     expect((await event(derived)).classification).toMatchObject({
       impactMode: 'fractional',
-      impactFraction: '0.5',
+      impactFraction: '0.50000000',
       impactBasis: 'unit_rule',
     });
     expect((await event(stated)).classification).toMatchObject({

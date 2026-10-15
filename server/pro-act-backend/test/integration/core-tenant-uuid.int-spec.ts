@@ -168,7 +168,9 @@ describe('CoreTenantUuid migration (DB-05)', () => {
   });
 
   it('down restores varchar(36) without FKs and the tenant_uuid shadow kept in sync', async () => {
-    await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    while (await executed()) {
+      await harness.dataSource.undoLastMigration({ transaction: 'all' });
+    }
     expect(await typeOf('production_events')).toBe('character varying');
     expect(await typeOf('rca_knowledge_base')).toBe('character varying');
     expect(await tenantFk('production_events')).toEqual([]);

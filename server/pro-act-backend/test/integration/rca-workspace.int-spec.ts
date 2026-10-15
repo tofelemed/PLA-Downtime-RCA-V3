@@ -305,13 +305,13 @@ describe('RCA workspace (analysis tools, evidence files, case commands)', () => 
         .body as { items: Array<{ id: string }> };
       expect(notOverdue.items.map((item) => item.id)).not.toContain(overdue.id);
       await env.rows(
-        `INSERT INTO rca_actions (tenant_id, rca_id, title, due_date, row_version)
-         VALUES ($1, $2, 'Overdue action', now() - interval '2 days', 1)`,
+        `INSERT INTO rca_actions (tenant_id, rca_id, title, due_date, row_version, status)
+         VALUES ($1, $2, 'Overdue action', now() - interval '2 days', 1, 'open')`,
         [env.world.tenantA, overdue.id],
       );
       await env.rows(
-        `INSERT INTO rca_actions (tenant_id, rca_id, title, baseline, verification_window_start, verification_window_end, row_version)
-         VALUES ($1, $2, 'Awaiting effectiveness', '{"value": 1}', now(), now() + interval '30 days', 1)`,
+        `INSERT INTO rca_actions (tenant_id, rca_id, title, baseline, verification_window_start, verification_window_end, row_version, status)
+         VALUES ($1, $2, 'Awaiting effectiveness', '{"value": 1}', now(), now() + interval '30 days', 1, 'open')`,
         [env.world.tenantA, overdue.id],
       );
       const summary = (await env.get('rcas/summary').expect(200)).body as {

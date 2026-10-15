@@ -118,7 +118,8 @@ describe('source authority maker-checker (owner, 15 Oct 2026)', () => {
   it('a rejection records the reason and keeps the version in force', async () => {
     const before = await inForce();
     const proposed = await draft(integration, 'FT-110.TOT');
-    await decide(proposed.id, 'reject', checker).expect(400);
+    const invalid = await decide(proposed.id, 'reject', checker).expect(422);
+    expect((invalid.body as ApiError).code).toBe('VALIDATION_FAILED');
     const rejected = (
       await decide(proposed.id, 'reject', checker, {
         reason: 'wrong totalizer tag',

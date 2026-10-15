@@ -46,6 +46,7 @@ describe('unit streams and stream runs (SME E6)', () => {
     await env.materialize([env.world.unitA1]);
     periodA1 = await env.periodId(env.world.unitA1, A);
     await env.outputEvent(env.world.unitA1, A, B, '300');
+    await env.settle();
   });
   afterAll(() => env.stop());
 

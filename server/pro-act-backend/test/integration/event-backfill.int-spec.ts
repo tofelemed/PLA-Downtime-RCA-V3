@@ -136,6 +136,11 @@ const ADDED_AFTER_BACKFILL: ReadonlySet<string> = new Set([
   'recoveryOfEventId',
   // SME E3 (15 Oct 2026)
   'dispositionClass',
+  'catalystFamily',
+  'operatingMode',
+  'streamCode',
+  'lotCode',
+  'investigationPending',
 ]);
 const atBackfill = (fields: readonly string[]) =>
   fields.filter((field) => !ADDED_AFTER_BACKFILL.has(field));

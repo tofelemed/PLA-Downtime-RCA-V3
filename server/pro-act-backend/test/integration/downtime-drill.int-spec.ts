@@ -212,6 +212,7 @@ describe('Downtime report drill-down and summary (plan 3.3)', () => {
       'carry_in_count',
       'mean_stop_duration',
       'scheduled_availability',
+      'controllable_availability',
       'onstream_factor',
     ]);
   });
