@@ -63,7 +63,7 @@ export function UserAccessSection({ userId, userName, canWrite }: { userId: stri
         getRowKey={(scope) => scope.id}
         pager={scopes.pager}
         status={scopes.status}
-        empty={{ title: 'No access here', text: 'The user holds no role in this plant yet.' }}
+        empty={{ title: 'No plant roles listed', text: 'No plant or unit roles are listed here. Organization or system roles may still provide access.' }}
       />
     </Section>
   );

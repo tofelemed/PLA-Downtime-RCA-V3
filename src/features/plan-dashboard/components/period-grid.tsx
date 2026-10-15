@@ -15,7 +15,7 @@ export interface PeriodGridProps {
 }
 
 const STATES: GridWorkflowState[] = ['none', 'draft', 'in_review', 'stale', 'approved'];
-const SELECT = 'h-9 rounded-md border border-input bg-background px-2';
+const SELECT = 'h-9 max-w-full rounded-md border border-input bg-background px-2';
 
 /**
  * Period grid: one row per production period of the plan's unit and window with the server's plan-ledger
@@ -30,7 +30,7 @@ export function PeriodGrid({ unitId, from, to, timezone, onOpen }: PeriodGridPro
   return (
     <section className="space-y-3" data-testid="period-grid" aria-label="Production periods">
       <div className="flex flex-wrap items-end gap-3 text-sm">
-        <label className="space-y-1">
+        <label className="min-w-0 max-w-full space-y-1">
           <span className="block text-xs text-muted-foreground">Workflow state</span>
           <select id="gridWorkflow" className={SELECT} value={workflow} onChange={(e) => setWorkflow(e.target.value as GridWorkflowState | '')}>
             <option value="">All</option>
@@ -41,7 +41,7 @@ export function PeriodGrid({ unitId, from, to, timezone, onOpen }: PeriodGridPro
             ))}
           </select>
         </label>
-        <label className="space-y-1">
+        <label className="min-w-0 max-w-full space-y-1">
           <span className="block text-xs text-muted-foreground">Figures of</span>
           <select id="gridView" className={SELECT} value={view} onChange={(e) => setView(e.target.value as RevisionSelector)}>
             <option value="current">Current revision (draft, in review or approved)</option>

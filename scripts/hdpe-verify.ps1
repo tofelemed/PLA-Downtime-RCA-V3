@@ -1,11 +1,15 @@
 param(
     [string]$ApiBase = 'http://127.0.0.1:4004/api',
     [string]$Email = 'sara.nouri@demo.acme.com',
-    [string]$Password = 'Persona-2026!demo'
+    [string]$Password = 'Persona-2026!demo',
+    [string]$EvidenceDirectory = 'test-results/hdpe-audit'
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$evidence = Join-Path $projectRoot 'test-results/hdpe-audit'
+$evidence = [IO.Path]::GetFullPath((Join-Path $projectRoot $EvidenceDirectory))
+if (-not $evidence.StartsWith($projectRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Evidence directory must be inside the project workspace.'
+}
 if (([Uri]$ApiBase).Host -notin @('localhost','127.0.0.1')) { throw 'This acceptance runner is for the local HDPE stack only.' }
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $login = Invoke-RestMethod -Uri "$ApiBase/auth/login" -Method Post -ContentType 'application/json' -NoProxy -TimeoutSec 30 -Body (@{ email=$Email; password=$Password } | ConvertTo-Json)
@@ -21,7 +25,7 @@ function Invoke-Sql([string]$Name, [string[]]$Variables = @()) {
     & docker cp $localFile "proact-postgres:/tmp/$Name.sql"
     if ($LASTEXITCODE -ne 0) { throw "Could not copy $Name.sql to the local database container." }
     & docker exec proact-postgres psql -U postgres -d proact -X @Variables -f "/tmp/$Name.sql" *> (Join-Path $evidence "$Name.txt")
-    if ($LASTEXITCODE -ne 0) { throw "$Name failed; inspect test-results/hdpe-audit/$Name.txt" }
+    if ($LASTEXITCODE -ne 0) { throw "$Name failed; inspect $evidence/$Name.txt" }
     Write-Output "$Name passed"
 }
 $currentMonth = Read-Api '/v2/month-closes/current'

@@ -68,6 +68,7 @@ test.describe('HDPE period workspace navigation and draft safety', () => {
     await page.getByRole('link', { name: /· periods$/ }).click();
     await expect(page).toHaveURL(new RegExp(`/plans/${world.fixture.planId}$`));
     await expect(page.getByTestId('period-grid')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'mobile plan grid overflow').toBeLessThanOrEqual(1);
     await page.goBack();
     await page.getByRole('button', { name: 'Restore loss-line draft', exact: true }).click();
     await expect(page.locator('#manualQuantity')).toHaveValue('12.5');
