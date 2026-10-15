@@ -1,4 +1,5 @@
 import { Dec, formatDec } from '../actuals/decimal';
+import { ExposureBasis } from './exposure-basis';
 import { BaselineMetric } from './rca-verification';
 
 export const EFFECTIVENESS_VERDICTS = [
@@ -15,8 +16,10 @@ export interface ExposureWindow {
   incidents: number;
   /** decimal string, seconds of the incidents clipped to the window */
   downtimeSeconds: string;
-  /** decimal string, run seconds of the unit in the window */
+  /** decimal string, run seconds in the window (of the unit, or of the standby assets: `exposureBasis`) */
   exposureSeconds: string;
+  /** absent on windows computed before rca-exposure-v2 (unit run time) */
+  exposureBasis?: ExposureBasis;
 }
 
 /** Acceptance criteria frozen into the action when its verification is planned (CA2: set before). */

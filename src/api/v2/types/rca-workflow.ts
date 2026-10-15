@@ -40,6 +40,8 @@ export interface RcaExposureWindow {
   incidents: number;
   downtimeSeconds: string;
   exposureSeconds: string;
+  /** unit run time, or the standby assets' own running time (CA4); absent on windows before rca-exposure-v2 */
+  exposureBasis?: 'unit_run_time' | 'standby_running_time';
 }
 
 export interface RcaEffectivenessCriteria {

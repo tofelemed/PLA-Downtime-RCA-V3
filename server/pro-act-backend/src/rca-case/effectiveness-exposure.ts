@@ -1,7 +1,16 @@
 import { EntityManager } from 'typeorm';
 import { ExposureWindow } from '../domain/rca/effectiveness';
+import {
+  ExposureBasis,
+  exposureBasisOf,
+  standbyRunningSeconds,
+} from '../domain/rca/exposure-basis';
 import { failureModeKeySql } from '../domain/rca/failure-mode-key';
 import { RepeatMatch } from '../domain/rca/rca-policy';
+import {
+  standbyAssetsOf,
+  standbyRunsOf,
+} from './standby-effectiveness-exposure';
 
 /** What a case is about for effectiveness: its assets, units and the failure modes of its linked events. */
 export interface ModeFootprint {
@@ -12,8 +21,11 @@ export interface ModeFootprint {
   match: RepeatMatch;
 }
 
-/** Version tag of the query below, frozen into each baseline (CA3: freeze the query with the data). */
-export const EXPOSURE_QUERY_VERSION = 'rca-exposure-v1';
+/**
+ * Version tag of the query below, frozen into each baseline (CA3: freeze the query with the data). v2 adds
+ * the standby running-time basis for cases about standby assets (owner, 15 Oct 2026).
+ */
+export const EXPOSURE_QUERY_VERSION = 'rca-exposure-v2';
 
 export async function caseModeFootprint(
   manager: EntityManager,
@@ -40,15 +52,51 @@ export async function caseModeFootprint(
   };
 }
 
+export interface ExposureRequest {
+  tenantId: string;
+  footprint: ModeFootprint;
+  from: Date;
+  to: Date;
+  /** the basis frozen with the baseline (verification); absent = chosen from the case's assets */
+  basis?: ExposureBasis;
+}
+
 /**
  * CA2 exposure of a window: same-mode unplanned incidents (stops and failure work orders; planned stops
  * never count) on the case's assets — or units without assets — starting in [from, to), their downtime
- * clipped to the window, and the run seconds of the case's units: the window minus the union of every
- * live downtime interval (planned and unplanned) of those units, so overlapping stops are not taken twice.
+ * clipped to the window, and the run seconds. Run seconds of the case's units are the window minus the
+ * union of every live downtime interval (planned and unplanned) of those units, so overlapping stops are
+ * not taken twice; when every case asset is standby equipment, they are the assets' own running time
+ * from the standby log instead (CA4: a spare is exposed only while it runs, mostly while the unit is down).
  */
 export async function exposureWindow(
   manager: EntityManager,
-  input: { tenantId: string; footprint: ModeFootprint; from: Date; to: Date },
+  input: ExposureRequest,
+): Promise<ExposureWindow> {
+  const window = await unitExposureWindow(manager, input);
+  const scope = {
+    tenantId: input.tenantId,
+    assetIds: input.footprint.assetIds,
+    from: input.from,
+    to: input.to,
+  };
+  const standbyIds = await standbyAssetsOf(manager, scope);
+  const basis =
+    input.basis ?? exposureBasisOf(input.footprint.assetIds, standbyIds);
+  if (basis === 'unit_run_time') return { ...window, exposureBasis: basis };
+  const runs = await standbyRunsOf(manager, { ...scope, assetIds: standbyIds });
+  const asOf = new Date(Math.min(Date.now(), input.to.getTime()));
+  const seconds = standbyRunningSeconds(
+    runs,
+    { start: input.from, end: input.to },
+    asOf,
+  );
+  return { ...window, exposureSeconds: String(seconds), exposureBasis: basis };
+}
+
+async function unitExposureWindow(
+  manager: EntityManager,
+  input: ExposureRequest,
 ): Promise<ExposureWindow> {
   const { footprint } = input;
   const base = { from: input.from.toISOString(), to: input.to.toISOString() };

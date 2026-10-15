@@ -1,0 +1,51 @@
+{
+  "id": "RCA04",
+  "title": "Effectiveness of an action on standby equipment: exposure is the spares' own running time",
+  "kind": "scenario",
+  "spec_ref": "CA2 / CA4, SME D9",
+  "owner_subphase": "3.9",
+  "given": "A case about two spare feed pumps (P-101B, P-101C) that only run while the duty pump is down. Baseline window 90 days: the unit is down 300 h, the spares run 300 h and fail twice while running. Verification window 90 days: the unit is down 800 h, P-101B runs 800 h (P-101C runs 100 h at the same time) and fails once. Criteria: 50 % reduction, 720 h minimum exposure.",
+  "inputs": {
+    "criteria": { "requiredReduction": "0.5", "minExposureHours": "720", "zeroRepeat": false },
+    "caseAssets": ["P-101B", "P-101C"],
+    "standbyAssets": ["P-101B", "P-101C"],
+    "baseline": {
+      "from": "2027-01-01T00:00:00.000Z",
+      "to": "2027-04-01T00:00:00.000Z",
+      "incidents": 2,
+      "downtimeSeconds": "14400",
+      "unitRunSeconds": "6696000",
+      "runs": [
+        { "asset": "P-101B", "start": "2027-01-10T00:00:00.000Z", "end": "2027-01-14T04:00:00.000Z" },
+        { "asset": "P-101B", "start": "2027-02-10T00:00:00.000Z", "end": "2027-02-14T04:00:00.000Z" },
+        { "asset": "P-101C", "start": "2027-03-10T00:00:00.000Z", "end": "2027-03-14T04:00:00.000Z" }
+      ]
+    },
+    "post": {
+      "from": "2027-04-01T00:00:00.000Z",
+      "to": "2027-06-30T00:00:00.000Z",
+      "incidents": 1,
+      "downtimeSeconds": "7200",
+      "unitRunSeconds": "4896000",
+      "runs": [
+        { "asset": "P-101B", "start": "2027-04-05T00:00:00.000Z", "end": "2027-04-21T16:00:00.000Z" },
+        { "asset": "P-101C", "start": "2027-04-06T00:00:00.000Z", "end": "2027-04-10T04:00:00.000Z" },
+        { "asset": "P-101B", "start": "2027-05-20T00:00:00.000Z", "end": "2027-06-05T16:00:00.000Z" }
+      ]
+    }
+  },
+  "expected": {
+    "basis": "standby_running_time",
+    "mixedFootprintBasis": "unit_run_time",
+    "standby": {
+      "baselineExposureSeconds": "1080000",
+      "postExposureSeconds": "2880000",
+      "verdict": "effective",
+      "reduction": "0.8125"
+    },
+    "unitRunTime": {
+      "verdict": "not_effective"
+    }
+  },
+  "status": "authored"
+}
