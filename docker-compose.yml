@@ -48,10 +48,13 @@ x-backend-env: &backend-env
   EXPORT_STORAGE_DIR: /app/storage/exports
   EXPORT_TTL_HOURS: ${EXPORT_TTL_HOURS:-168}
   # Daily retention job (DB-07, runs in the worker): audit request log (audit_logs) and audit trail
-  # (audit_log) kept 30 days (owner decision 2026-10-14). Raw retention is not decided: empty = keep forever.
+  # (audit_log) kept 30 days (owner decision 2026-10-14); raw source observations (raw_observations) kept
+  # 1 year and signal samples (measurement_samples) 90 days, both dropped by whole monthly partition
+  # (owner decision 2026-10-15). Empty = keep forever.
   AUDIT_REQUEST_LOG_RETENTION_DAYS: ${AUDIT_REQUEST_LOG_RETENTION_DAYS:-30}
   AUDIT_TRAIL_RETENTION_DAYS: ${AUDIT_TRAIL_RETENTION_DAYS:-30}
-  RAW_RETENTION_DAYS: ${RAW_RETENTION_DAYS:-}
+  RAW_RETENTION_DAYS: ${RAW_RETENTION_DAYS:-365}
+  SAMPLE_RETENTION_DAYS: ${SAMPLE_RETENTION_DAYS:-90}
   RETENTION_BATCH: ${RETENTION_BATCH:-1000}
 
 services:

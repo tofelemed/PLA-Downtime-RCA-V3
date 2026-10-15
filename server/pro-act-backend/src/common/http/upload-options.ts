@@ -58,7 +58,7 @@ function tenantOf(request: unknown): string | null {
 /**
  * Multer options shared by every upload route: size / count limits, type allowlist, random names, and a
  * tenant folder (the acting tenant; 403 `TENANT_REQUIRED` without one). Files are never served
- * statically: `GET /api/uploads/files/:tenantId/:name` streams them to members of that tenant.
+ * statically: the owning v2 route streams them to members of that tenant (`attachment-download.ts`).
  */
 export function attachmentUploadOptions(): MulterOptions {
   return {
@@ -97,17 +97,5 @@ export function attachmentUploadOptions(): MulterOptions {
         false,
       );
     },
-  };
-}
-
-/** What an upload route answers: the authenticated download path, never a public URL. */
-export function uploadedFileView(file: Express.Multer.File, request: unknown) {
-  const tenantId = (tenantOf(request) ?? '').toLowerCase();
-  return {
-    originalName: file.originalname,
-    filename: file.filename,
-    path: `/api/uploads/files/${tenantId}/${file.filename}`,
-    size: file.size,
-    mimetype: file.mimetype,
   };
 }

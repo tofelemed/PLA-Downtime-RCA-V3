@@ -68,7 +68,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs/v2', app, v2Document);
 
   // Uploaded files are no longer served statically: downloads need a token and tenant membership
-  // (GET /api/uploads/files/:tenantId/:name, plan 3.11, owner decision 2026-10-10).
+  // (the owning v2 route streams them, plan 3.11, owner decision 2026-10-10).
 
 
 

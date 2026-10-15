@@ -9,6 +9,7 @@ export interface RetentionResult {
   requestLog: number;
   auditTrail: number;
   rawPartitions: string[];
+  samplePartitions: string[];
 }
 
 /** Served by `IDX_audit_logs_timestamp`; oldest first, one batch per statement (short locks). */
@@ -19,21 +20,41 @@ const REQUEST_LOG_BATCH = `DELETE FROM "audit_logs" WHERE "id" IN (
 const AUDIT_TRAIL_BATCH = `DELETE FROM "audit_log" WHERE "id" IN (
   SELECT "id" FROM "audit_log" WHERE "at" < $1 ORDER BY "at" LIMIT $2)`;
 
-/** Partitions of `raw_observations` whose upper bound (exclusive) is at or before the cutoff. */
-const OLD_RAW_PARTITIONS = `SELECT "name" FROM (
+/**
+ * Range partitions of the parent table `$2` whose upper bound (exclusive) is at or before the cutoff `$1`.
+ * A DEFAULT partition has no `TO (...)` bound, so it never matches; the current month's upper bound lies
+ * after now (and so after every cutoff), so it never matches either.
+ */
+const OLD_PARTITIONS = `SELECT "name" FROM (
   SELECT c."relname" AS "name",
          (regexp_match(pg_get_expr(c."relpartbound", c."oid"), 'TO \\(''([^'']+)''\\)'))[1]::timestamptz AS "upper"
     FROM pg_inherits i JOIN pg_class c ON c."oid" = i."inhrelid"
-   WHERE i."inhparent" = '"raw_observations"'::regclass) p
+   WHERE i."inhparent" = $2::regclass) p
  WHERE p."upper" <= $1 ORDER BY p."upper"`;
 
-const RAW_PARTITION_NAME = /^raw_observations_y\d{4}m\d{2}$/;
+/** A monthly partition family: the parent and the only child names the job may drop. */
+interface PartitionFamily {
+  parent: string;
+  name: RegExp;
+}
+
+const RAW_OBSERVATIONS: PartitionFamily = {
+  parent: '"public"."raw_observations"',
+  name: /^raw_observations_y\d{4}m\d{2}$/,
+};
+
+/** Monthly by `observed_at` (`measurement_samples_ensure_partition`, migration SignalsAndSamples). */
+const MEASUREMENT_SAMPLES: PartitionFamily = {
+  parent: '"public"."measurement_samples"',
+  name: /^measurement_samples_y\d{4}m\d{2}$/,
+};
 
 /**
  * DB-07: deletes what is older than the configured windows (`RetentionPolicy`; null = keep). The request
- * log and the audit trail go in batches; raw observations go by whole monthly partition (DROP TABLE, no
- * row deletes, no bloat), never one holding a row newer than the cutoff. Nothing references raw rows by
- * foreign key; samples and summaries keep their `raw_id` as provenance.
+ * log and the audit trail go in batches; raw observations and signal samples go by whole monthly
+ * partition (DROP TABLE, no row deletes, no bloat, no row trigger), never one holding a row newer than the
+ * cutoff. Nothing references raw rows or samples by foreign key; samples and summaries keep their
+ * `raw_id` as provenance, and summaries outlive the samples they were computed from.
  */
 @Injectable()
 export class DataRetentionService {
@@ -45,6 +66,7 @@ export class DataRetentionService {
     const requestLog = before(policy.requestLogDays);
     const auditTrail = before(policy.auditTrailDays);
     const raw = before(policy.rawDays);
+    const samples = before(policy.sampleDays);
     return {
       requestLog: requestLog
         ? await this.purgeRequestLog(requestLog, policy.batchSize)
@@ -52,7 +74,12 @@ export class DataRetentionService {
       auditTrail: auditTrail
         ? await this.purgeAuditTrail(auditTrail, policy.batchSize)
         : 0,
-      rawPartitions: raw ? await this.dropRawPartitions(raw) : [],
+      rawPartitions: raw
+        ? await this.dropPartitions(RAW_OBSERVATIONS, raw)
+        : [],
+      samplePartitions: samples
+        ? await this.dropPartitions(MEASUREMENT_SAMPLES, samples)
+        : [],
     };
   }
 
@@ -79,14 +106,17 @@ export class DataRetentionService {
     );
   }
 
-  private async dropRawPartitions(before: Date): Promise<string[]> {
+  private async dropPartitions(
+    family: PartitionFamily,
+    before: Date,
+  ): Promise<string[]> {
     const rows: Array<{ name: string }> = await this.dataSource.query(
-      OLD_RAW_PARTITIONS,
-      [before],
+      OLD_PARTITIONS,
+      [before, family.parent],
     );
     const dropped: string[] = [];
     for (const { name } of rows) {
-      if (!RAW_PARTITION_NAME.test(name)) continue;
+      if (!family.name.test(name)) continue;
       await this.dataSource.query(`DROP TABLE "public"."${name}"`);
       dropped.push(name);
     }

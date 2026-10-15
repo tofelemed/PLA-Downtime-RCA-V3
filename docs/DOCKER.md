@@ -96,7 +96,8 @@ All settings are read by `docker compose` from `.env` (or the shell environment)
 | `CORS_ORIGIN` | `http://localhost:8070` | backend | Browser origins allowed to call the backend port directly |
 | `AUDIT_REQUEST_LOG_RETENTION_DAYS` | `30` | worker (passed to backend too) | Days the audit request log (`audit_logs`) is kept by the daily retention job (04:00); empty = keep forever |
 | `AUDIT_TRAIL_RETENTION_DAYS` | `30` | worker (passed to backend too) | Days the append-only audit trail (`audit_log`) is kept; empty = keep forever |
-| `RAW_RETENTION_DAYS` | empty | worker (passed to backend too) | Days of raw observations kept (whole monthly partitions are dropped); not decided yet, so empty = keep forever |
+| `RAW_RETENTION_DAYS` | `365` | worker (passed to backend too) | Days of raw source observations (`raw_observations`) kept: whole monthly partitions older than the window are dropped (owner decision 2026-10-15: 1 year); empty = keep forever |
+| `SAMPLE_RETENTION_DAYS` | `90` | worker (passed to backend too) | Days of signal samples (`measurement_samples`) kept: whole monthly partitions older than the window are dropped (owner decision 2026-10-15: 90 days); signal summaries are kept; empty = keep forever |
 | `RETENTION_BATCH` | `1000` | worker (passed to backend too) | Rows deleted per statement by the retention job |
 | `PI_SERVER` | `https://87.107.103.198:7443` | frontend | Target of the `/piwebapi` proxy |
 | `VITE_API_BASE_URL` | `/api` (build arg) | frontend build | Where the bundle sends API calls; leave relative unless the backend is on another host |
@@ -161,11 +162,17 @@ re-map (`KAFKA_PORT`).
   report export files (plan 2.9, private, never served under `/uploads`) in `proact_exports`,
   Kafka logs in `proact_kafka-data` and MQTT retained messages/sessions in `proact_mqtt-data`.
   `docker compose down` keeps them; `docker compose down -v` deletes them.
-* Retention (owner decision 2026-10-14): the worker's daily job (04:00, `src/common/retention/`) deletes audit
-  request-log and audit-trail rows older than 30 days, oldest first in batches of `RETENTION_BATCH`, and logs
-  how many rows it removed (`docker compose logs worker | grep Retention`). The `audit_log` trigger still refuses
-  every UPDATE and every DELETE that is not below the job's declared cutoff. Without Docker the job reads the
-  same variables from `server/pro-act-backend/.env`; unset there means keep forever.
+* Retention (owner decisions 2026-10-14 and 2026-10-15): the worker's daily job (04:00, `src/common/retention/`)
+  deletes audit request-log and audit-trail rows older than 30 days, oldest first in batches of `RETENTION_BATCH`,
+  and drops whole monthly partitions of raw source observations older than 1 year (`RAW_RETENTION_DAYS`) and of
+  signal samples older than 90 days (`SAMPLE_RETENTION_DAYS`). A partition goes only when its whole month is
+  older than the window, so the current month is never touched; signal summaries and approved ledgers are not
+  affected. The job logs how many rows and which partitions it removed
+  (`docker compose logs worker | grep Retention`). The `audit_log` trigger still refuses every UPDATE and every
+  DELETE that is not below the job's declared cutoff. A value that is not a whole number of days ≥ 1 is logged
+  as an error and nothing is deleted. Without Docker the job reads the same variables from
+  `server/pro-act-backend/.env`; unset there means keep forever, so add
+  `RAW_RETENTION_DAYS=365` and `SAMPLE_RETENTION_DAYS=90` there to apply the owner windows.
 * Backup / restore the bundled database:
   ```bash
   docker compose exec -T postgres pg_dump -U postgres proact > proact.sql

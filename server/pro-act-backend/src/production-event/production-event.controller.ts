@@ -10,31 +10,16 @@ import {
   UseGuards,
   UsePipes,
   ValidationPipe,
-  UploadedFile,
-  UseInterceptors,
-  Req,
 } from '@nestjs/common';
 import { ProductionEventService } from './production-event.service';
 import { ProductionEvent } from './production-event.entity';
-import {
-  ApiTags,
-  ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
-  ApiOperation,
-} from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { CreateProductionEventDto } from './dto/create-production-event.dto';
 import { UpdateProductionEventDto } from './dto/update-production-event.dto';
 import { ProductionEventQueryDto } from './dto/production-event-query.dto';
 import { PagedResult } from '../common/dto/paged-result';
-import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  attachmentUploadOptions,
-  uploadedFileView,
-} from '../common/http/upload-options';
-import type { Request } from 'express';
 
 @ApiTags('Production Events')
 @ApiBearerAuth()
@@ -86,27 +71,5 @@ export class ProductionEventController {
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
     return this.eventService.remove(id);
-  }
-
-  @Post('upload')
-  @ApiOperation({ summary: 'Upload production event attachment' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-        },
-      },
-    },
-  })
-  @UseInterceptors(FileInterceptor('file', attachmentUploadOptions()))
-  uploadEventAttachment(
-    @UploadedFile() file: Express.Multer.File,
-    @Req() request: Request,
-  ) {
-    return uploadedFileView(file, request);
   }
 }
