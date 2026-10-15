@@ -34,11 +34,11 @@ const RATIO_SQL = `SELECT k."value", k."numerator", k."denominator" FROM "kpi_re
    AND k."scope"->>'level' = 'period'
  LIMIT 1`;
 
-async function countsOf(
+/** Stopping downtime of a unit overlapping `[from, to)` by coding (a shift period or a production day). */
+export async function stopCodingCounts(
   manager: EntityManager,
-  state: RevisionState,
+  window: { tenantId: string; unitId: string; from: Date; to: Date },
 ): Promise<StopCodingCounts> {
-  const { period } = state;
   const [row]: Array<{
     stops: number;
     coded: number;
@@ -47,10 +47,10 @@ async function countsOf(
     failure_detailed: number;
     validated: number;
   }> = await manager.query(COUNTS_SQL, [
-    period.tenantId,
-    period.unitId,
-    period.utcStart,
-    period.utcEnd,
+    window.tenantId,
+    window.unitId,
+    window.from,
+    window.to,
   ]);
   return {
     stops: row?.stops ?? 0,
@@ -89,7 +89,13 @@ export async function loadCodingGate(
   manager: EntityManager,
   state: RevisionState,
 ): Promise<CodingGateResult> {
-  const counts = await countsOf(manager, state);
+  const { period } = state;
+  const counts = await stopCodingCounts(manager, {
+    tenantId: period.tenantId,
+    unitId: period.unitId,
+    from: period.utcStart,
+    to: period.utcEnd,
+  });
   const ratio = await ratioOf(manager, state);
   return codingGate(counts, ratio, submitGateOf(state.tolerance.body));
 }

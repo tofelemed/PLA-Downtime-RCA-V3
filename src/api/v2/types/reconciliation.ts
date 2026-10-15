@@ -114,6 +114,8 @@ export interface ToleranceView {
   allowUnaccountedClassification: boolean;
   /** SME D12: shift submission gate (absent in older versions = warn at 95 %) */
   submitGate?: { mode: 'block' | 'warn'; codedRatioTarget: number };
+  /** SME D12: daily-approval gate on day certification (absent = warn at 99 %) */
+  dayGate?: { mode: 'block' | 'warn'; codedRatioTarget: number };
   /** SME R8: per-unit bridge limits (null = no limit) */
   bridgeLimits?: { absolute: number | null; relative: number | null; overLimit: 'second_review' | 'refuse'; uncertaintyBudgetId?: string };
   /** SME R9: kinds a reversal may reverse */

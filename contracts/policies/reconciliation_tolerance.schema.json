@@ -62,6 +62,16 @@
             "codedRatioTarget": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.95 }
           }
         },
+        "dayGate": {
+          "type": "object",
+          "required": ["mode", "codedRatioTarget"],
+          "additionalProperties": false,
+          "description": "SME D12 daily target (15 Oct 2026): before a production day is certified every stop of the day needs a specific reason or 'investigation pending' and the coded share of the day's stopped time (coded_downtime_ratio of the approved shift runs, summed) must reach codedRatioTarget. `warn` shows the result on the production day, `block` refuses the certification (422 CODING_INCOMPLETE). Absent = warn at 0.99.",
+          "properties": {
+            "mode": { "type": "string", "enum": ["block", "warn"], "default": "warn" },
+            "codedRatioTarget": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.99 }
+          }
+        },
         "bridgeLimits": {
           "type": "object",
           "required": ["absolute", "relative", "overLimit"],

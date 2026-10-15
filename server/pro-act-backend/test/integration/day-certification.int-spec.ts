@@ -1,3 +1,6 @@
+import { RECONCILIATION_TOLERANCE_DEFAULT } from '../../src/periods/engine-policy-bodies';
+import { plus } from './support/accounting-world';
+import { A, HOUR } from './support/actuals-world';
 import { ApiError } from './support/plan-world';
 import { ReconciliationWorld } from './support/reconciliation-world';
 
@@ -19,6 +22,13 @@ interface DayBody {
     target: string | null;
     actual: string | null;
   }>;
+  codingGate: {
+    mode: string;
+    target: string;
+    stops: number;
+    uncoded: number;
+    passes: boolean;
+  } | null;
 }
 
 const DAY = '2027-03-01';
@@ -27,7 +37,8 @@ const DAY = '2027-03-01';
  * Owner decision 14 Oct 2026 / SME R2 (phase R-E) on real Postgres: the three 8 h shifts of 1 Mar 2027 on
  * unit A1 are prepared and approved per shift; one approval certifies the day's roll-up (3 × 850 t = 2550
  * t, each quantity stored once on its shift); the certifier is never a submitter of a shift; a revise of a
- * shift reopens the certification (the correction path).
+ * shift reopens the certification (the correction path). SME D12 daily target: an uncoded stop of shift A
+ * fails the day's coding gate; a `block` `dayGate` refuses the certification, `warn` (99 %) only shows it.
  */
 describe('day certification over the shift periods (SME R2)', () => {
   const env = new ReconciliationWorld();
@@ -39,6 +50,8 @@ describe('day certification over the shift periods (SME R2)', () => {
   beforeAll(async () => {
     await env.start();
     reason = await env.reasonCode('FEED');
+    await env.lossEvent(env.world.unitA1, plus(A, HOUR), 0.25);
+    await env.settle();
   });
   afterAll(() => env.stop());
 
@@ -80,6 +93,29 @@ describe('day certification over the shift periods (SME R2)', () => {
         actual: '2550',
       }),
     ]);
+    expect(ready.codingGate).toMatchObject({
+      mode: 'warn',
+      target: '0.99',
+      stops: 1,
+      uncoded: 1,
+      passes: false,
+    });
+  });
+
+  it('D12: a block daily gate refuses the certification while the day is not coded (422 CODING_INCOMPLETE)', async () => {
+    await env.tolerancePolicy(env.world.unitA1, {
+      ...RECONCILIATION_TOLERANCE_DEFAULT,
+      dayGate: { mode: 'block', codedRatioTarget: 0.99 },
+    });
+    expect((await day()).codingGate?.mode).toBe('block');
+    const refused = await env
+      .post(`${path()}/certify`, {}, env.approver)
+      .expect(422);
+    expect((refused.body as ApiError).code).toBe('CODING_INCOMPLETE');
+    await env.tolerancePolicy(env.world.unitA1, {
+      ...RECONCILIATION_TOLERANCE_DEFAULT,
+      dayGate: { mode: 'warn', codedRatioTarget: 0.99 },
+    });
   });
 
   it('the certifier is never a submitter of a shift, and only plant management certifies', async () => {
