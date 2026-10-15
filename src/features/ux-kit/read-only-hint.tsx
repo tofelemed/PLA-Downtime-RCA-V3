@@ -1,4 +1,4 @@
-import { Eye } from 'lucide-react';
+import { ActionIcon } from '@/lib/icons';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 
 /**
@@ -14,7 +14,7 @@ export function ReadOnlyHint({ className = '' }: { className?: string }) {
       data-testid="read-only-hint"
       title="Your role in this plant can view but not change data"
     >
-      <Eye className="h-3 w-3" aria-hidden />
+      <ActionIcon.view className="h-3 w-3" aria-hidden />
       Read-only
     </span>
   );

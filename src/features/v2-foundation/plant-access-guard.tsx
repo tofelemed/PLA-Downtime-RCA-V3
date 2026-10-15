@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Lock } from 'lucide-react';
+import { StatusIcon } from '@/lib/icons';
 import { V2ApiError } from '@/api/v2/errors';
 import { useFeatureFlags } from '@/api/v2/queries/feature-flags';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,7 +28,7 @@ export function PlantAccessGuard({ children }: { children: ReactNode }) {
 
   return (
     <Alert data-state="no-permission" data-testid="plant-access-refused" className="max-w-2xl">
-      <Lock className="h-4 w-4" />
+      <StatusIcon.locked className="h-4 w-4" />
       <AlertTitle>You do not have access to this plant</AlertTitle>
       <AlertDescription>
         <p>

@@ -73,7 +73,7 @@ export async function authenticatedRequest<T>(
   endpoint: string,
   options: {
     method?: string;
-    body?: any;
+    body?: unknown;
     token: string;
   }
 ): Promise<T> {
@@ -81,15 +81,6 @@ export async function authenticatedRequest<T>(
   httpClient.setTokenProvider(() => options.token);
 
   const method = options.method || 'GET';
-  const requestOptions: any = {
-    method,
-    skipAuth: false,
-  };
-
-  if (options.body) {
-    requestOptions.body = options.body;
-  }
-
   if (method === 'GET') {
     return httpClient.get<T>(endpoint).then(r => r.data);
   } else if (method === 'POST') {

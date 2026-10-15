@@ -5,11 +5,14 @@
  * to set up test data, verify state, and clean up after tests.
  */
 
+import type { AuthenticatedUser } from '../../src/services/api/authApi';
+
 const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:4004/api';
 
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  user?: (Partial<AuthenticatedUser> & { userId?: string }) | null;
 }
 
 export interface TestUser {
@@ -24,13 +27,17 @@ export interface EntityRef {
   id: string;
 }
 
+export interface NamedEntityRef extends EntityRef {
+  name: string;
+}
+
 /**
  * Authenticate with the backend and return tokens
  */
 export async function authenticate(
   email: string = 'test@example.com',
   password: string = 'Test123!@#'
-): Promise<AuthTokens & { user?: any }> {
+): Promise<AuthTokens> {
   try {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
@@ -42,7 +49,6 @@ export async function authenticate(
 
     if (!response.ok) {
       // Try to register first if login fails
-      console.log(`Login failed for ${email}, attempting to register...`);
       await registerUser(email, password, 'E2E Test User', 'SuperAdmin');
       // Retry login after registration
       const retryResponse = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -74,7 +80,6 @@ export async function authenticate(
     };
     
     if (!tokens.accessToken) {
-      console.error('No access token in response:', JSON.stringify(data, null, 2));
       throw new Error('No access token received from login');
     }
     
@@ -144,7 +149,7 @@ export async function apiRequest<T>(
           return value;
         });
         fetchOptions.body = processedBody;
-      } catch (e) {
+      } catch {
         // If parsing fails, use body as-is
       }
     }
@@ -175,7 +180,7 @@ export async function apiRequest<T>(
 export async function createTestOrganization(
   token: string,
   name: string = `Test Org ${Date.now()}`
-): Promise<any> {
+): Promise<NamedEntityRef> {
   return apiRequest('/organizations', {
     method: 'POST',
     token,
@@ -190,7 +195,7 @@ export async function createTestTenant(
   token: string,
   organizationId: string,
   name: string = `Test Tenant ${Date.now()}`
-): Promise<any> {
+): Promise<NamedEntityRef> {
   return apiRequest('/tenants', {
     method: 'POST',
     token,
@@ -209,7 +214,7 @@ export async function createTestUnit(
   token: string,
   tenantId: string,
   name: string = `Test Unit ${Date.now()}`
-): Promise<any> {
+): Promise<NamedEntityRef> {
   return apiRequest('/units', {
     method: 'POST',
     token,
@@ -228,7 +233,7 @@ export async function createTestProduct(
   token: string,
   tenantId: string,
   name: string = `Test Product ${Date.now()}`
-): Promise<any> {
+): Promise<NamedEntityRef> {
   return apiRequest('/products', {
     method: 'POST',
     token,
@@ -246,8 +251,8 @@ export async function createTestProduct(
 export async function createTestProductionPlan(
   token: string,
   tenantId: string,
-  data: Partial<any> = {}
-): Promise<any> {
+  data: Record<string, unknown> = {}
+): Promise<EntityRef> {
   return apiRequest('/production-plans', {
     method: 'POST',
     token,
@@ -293,7 +298,7 @@ export async function waitForBackend(maxAttempts: number = 30): Promise<void> {
       if (response.ok) {
         return;
       }
-    } catch (error) {
+    } catch {
       // Backend not ready yet
     }
     await new Promise(resolve => setTimeout(resolve, 1000));

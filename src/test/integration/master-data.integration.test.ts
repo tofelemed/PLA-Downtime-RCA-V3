@@ -7,6 +7,9 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { getTestAuthTokens, authenticatedRequest, waitForBackend } from './api-test-helpers';
 
+interface OrganizationRecord { id: string; name: string; code: string }
+interface TenantRecord { id: string; organizationId: string }
+
 describe('Master Data Integration Tests', () => {
   let tokens: { accessToken: string; refreshToken: string };
   let createdOrgId: string;
@@ -47,7 +50,7 @@ describe('Master Data Integration Tests', () => {
       code: `TEST-ORG-${Date.now()}`,
     };
 
-    const org = await authenticatedRequest<any>('/organizations', {
+    const org = await authenticatedRequest<OrganizationRecord>('/organizations', {
       method: 'POST',
       body: orgData,
       token: tokens.accessToken,
@@ -60,7 +63,7 @@ describe('Master Data Integration Tests', () => {
   });
 
   it('should list organizations', async () => {
-    const orgs = await authenticatedRequest<any[]>('/organizations', {
+    const orgs = await authenticatedRequest<OrganizationRecord[]>('/organizations', {
       method: 'GET',
       token: tokens.accessToken,
     });
@@ -72,7 +75,7 @@ describe('Master Data Integration Tests', () => {
   it('should get organization by ID', async () => {
     if (!createdOrgId) {
       // Create one first
-      const org = await authenticatedRequest<any>('/organizations', {
+      const org = await authenticatedRequest<OrganizationRecord>('/organizations', {
         method: 'POST',
         body: {
           name: `Test Org ${Date.now()}`,
@@ -83,7 +86,7 @@ describe('Master Data Integration Tests', () => {
       createdOrgId = org.id;
     }
 
-    const org = await authenticatedRequest<any>(`/organizations/${createdOrgId}`, {
+    const org = await authenticatedRequest<OrganizationRecord>(`/organizations/${createdOrgId}`, {
       method: 'GET',
       token: tokens.accessToken,
     });
@@ -94,7 +97,7 @@ describe('Master Data Integration Tests', () => {
 
   it('should create tenant for organization', async () => {
     if (!createdOrgId) {
-      const org = await authenticatedRequest<any>('/organizations', {
+      const org = await authenticatedRequest<OrganizationRecord>('/organizations', {
         method: 'POST',
         body: {
           name: `Test Org ${Date.now()}`,
@@ -111,7 +114,7 @@ describe('Master Data Integration Tests', () => {
       organizationId: createdOrgId,
     };
 
-    const tenant = await authenticatedRequest<any>('/tenants', {
+    const tenant = await authenticatedRequest<TenantRecord>('/tenants', {
       method: 'POST',
       body: tenantData,
       token: tokens.accessToken,
@@ -125,7 +128,7 @@ describe('Master Data Integration Tests', () => {
 
   it('should update organization', async () => {
     if (!createdOrgId) {
-      const org = await authenticatedRequest<any>('/organizations', {
+      const org = await authenticatedRequest<OrganizationRecord>('/organizations', {
         method: 'POST',
         body: {
           name: `Test Org ${Date.now()}`,
@@ -137,7 +140,7 @@ describe('Master Data Integration Tests', () => {
     }
 
     const updatedName = `Updated Org ${Date.now()}`;
-    const updated = await authenticatedRequest<any>(`/organizations/${createdOrgId}`, {
+    const updated = await authenticatedRequest<OrganizationRecord>(`/organizations/${createdOrgId}`, {
       method: 'PUT',
       body: { name: updatedName },
       token: tokens.accessToken,

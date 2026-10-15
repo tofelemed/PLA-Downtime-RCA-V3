@@ -5,7 +5,8 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  // Each npm project owns its lint config; worktrees and runtime evidence are not source.
+  { ignores: ["dist", "server/**", ".claude/**", ".codex/**", "test-results/**", ".playwright-mcp/**"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -66,5 +67,11 @@ export default tseslint.config(
     // the registry itself and the generated shadcn primitives may import lucide-react directly
     files: ["src/lib/icons.ts", "src/components/ui/**/*.{ts,tsx}"],
     rules: { "@typescript-eslint/no-restricted-imports": "off" },
+  },
+  {
+    // Generated shadcn prop interfaces intentionally extend one React interface.
+    // Keep generated files untouched and retain the stricter rule for owned code.
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: { "@typescript-eslint/no-empty-object-type": ["error", { allowInterfaces: "with-single-extends" }] },
   }
 );

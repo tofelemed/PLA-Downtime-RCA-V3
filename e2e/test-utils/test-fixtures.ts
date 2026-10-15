@@ -5,14 +5,14 @@
  * All data is created via backend API calls.
  */
 
-import { apiRequest, authenticate, AuthTokens, EntityRef } from './api-helpers';
+import { apiRequest, authenticate, AuthTokens, NamedEntityRef } from './api-helpers';
 
 export interface TestFixture {
   tokens: AuthTokens;
-  organization: any;
-  tenant: any;
-  unit: any;
-  product: any;
+  organization: NamedEntityRef;
+  tenant: NamedEntityRef;
+  unit: NamedEntityRef;
+  product: NamedEntityRef;
   cleanup: () => Promise<void>;
 }
 
@@ -25,7 +25,7 @@ export async function createTestFixture(): Promise<TestFixture> {
   
   // Create organization with unique timestamp and random suffix
   const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  const organization = await apiRequest<EntityRef>('/organizations', {
+  const organization = await apiRequest<NamedEntityRef>('/organizations', {
     method: 'POST',
     token: tokens.accessToken,
     body: JSON.stringify({
@@ -36,7 +36,7 @@ export async function createTestFixture(): Promise<TestFixture> {
 
   // Create tenant with unique timestamp and random suffix
   const tenantUniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  const tenant = await apiRequest<EntityRef>('/tenants', {
+  const tenant = await apiRequest<NamedEntityRef>('/tenants', {
     method: 'POST',
     token: tokens.accessToken,
     body: JSON.stringify({
@@ -47,7 +47,7 @@ export async function createTestFixture(): Promise<TestFixture> {
   });
 
   // Create unit
-  const unit = await apiRequest<EntityRef>('/units', {
+  const unit = await apiRequest<NamedEntityRef>('/units', {
     method: 'POST',
     token: tokens.accessToken,
     body: JSON.stringify({
@@ -58,7 +58,7 @@ export async function createTestFixture(): Promise<TestFixture> {
   });
 
   // Products belong to a tenant (B18); plans refuse products of another or no tenant (plan 2.3)
-  const product = await apiRequest<EntityRef>('/products', {
+  const product = await apiRequest<NamedEntityRef>('/products', {
     method: 'POST',
     token: tokens.accessToken,
     body: JSON.stringify({
@@ -115,12 +115,12 @@ export async function createTestFixture(): Promise<TestFixture> {
  */
 export async function createMinimalFixture(): Promise<{
   tokens: AuthTokens;
-  organization: any;
+  organization: NamedEntityRef;
   cleanup: () => Promise<void>;
 }> {
   const tokens = await authenticate();
   
-  const organization = await apiRequest<EntityRef>('/organizations', {
+  const organization = await apiRequest<NamedEntityRef>('/organizations', {
     method: 'POST',
     token: tokens.accessToken,
     body: JSON.stringify({

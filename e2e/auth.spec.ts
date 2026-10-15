@@ -5,7 +5,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaUI, loginViaAPI, ensureTestUser, logoutViaUI, clearAuth } from './test-utils/auth-helpers';
+import { loginViaUI, loginViaAPI, ensureTestUser, clearAuth } from './test-utils/auth-helpers';
 import { waitForBackend } from './test-utils/api-helpers';
 
 test.describe('Authentication', () => {

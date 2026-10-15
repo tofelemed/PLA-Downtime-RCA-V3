@@ -67,8 +67,8 @@ export async function loginViaAPI(page: Page): Promise<string> {
     };
     
     // Backend login response includes user object with role
-    if ((tokens as any).user) {
-      const user = (tokens as any).user;
+    if (tokens.user) {
+      const user = tokens.user;
       userData = {
         email: user.email || userData.email,
         role: user.role || 'SuperAdmin', // Ensure SuperAdmin role
@@ -165,7 +165,7 @@ export async function ensureTestUser(
 ): Promise<void> {
   try {
     await authenticate(email, password);
-  } catch (error) {
+  } catch {
     // User doesn't exist, register them
     await registerUser(email, password, 'E2E Test User', 'SuperAdmin');
   }
@@ -175,16 +175,6 @@ export async function ensureTestUser(
  * Logout via UI
  */
 export async function logoutViaUI(page: Page): Promise<void> {
-  // The logout button is in the header, next to the user profile
-  // It's a button with LogOut icon (lucide-react icon)
-  // Look for button with svg icon or button near user profile section
-  const logoutButton = page.locator('button:has(svg), button:has([class*="lucide-log-out"])').filter({ 
-    has: page.locator('svg') 
-  }).first();
-  
-  // Alternative: find button in the user profile section
-  const userProfileSection = page.locator('header').locator('div:has-text("' + (await page.textContent('header') || '').substring(0, 20) + '")').first();
-  
   // Try clicking logout button directly (it's visible in header)
   try {
     // Look for button with LogOut icon in header
@@ -216,7 +206,7 @@ export async function clearAuth(page: Page): Promise<void> {
       localStorage.removeItem('proact_auth_state');
       sessionStorage.clear();
     });
-  } catch (error) {
+  } catch {
     // If page isn't ready, just try to clear without navigation
     try {
       await page.evaluate(() => {
@@ -244,4 +234,3 @@ export async function isAuthenticated(page: Page): Promise<boolean> {
     }
   });
 }
-
