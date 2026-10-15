@@ -71,7 +71,11 @@ export class EventChangeNotifier {
    * v1 clients refetch on `productionEventUpdated`; used for changes that bypass ProductionEventService.
    * Sent to the tenant's (and unit's) rooms only (plan 3.11).
    */
-  legacyUpdated(eventId: string, tenantId: string, unitId?: string | null): void {
+  legacyUpdated(
+    eventId: string,
+    tenantId: string,
+    unitId?: string | null,
+  ): void {
     this.gateway.broadcastProductionEventUpdated(
       { id: eventId },
       { tenantId, unitId },
@@ -103,7 +107,7 @@ export function changeMessage(
   kind: RevisionKind,
 ): EventChangeMessage {
   return {
-    tenantId: after.tenantUuid ?? after.tenantId ?? '',
+    tenantId: after.tenantId ?? '',
     eventId: after.id,
     unitId: after.unitId ?? null,
     revision,

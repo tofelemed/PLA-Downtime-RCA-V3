@@ -42,7 +42,7 @@ interface OperationRow {
 /** Operations linked to any revision of the stop (as the KPI loader joins them), the caller's units only. */
 const OPERATIONS_SQL = `SELECT o."operation_kind", o."started_at", o."ended_at", o."waiting_seconds"
   FROM "work_order_operations" o
-  JOIN "production_events" e ON e."id" = o."event_id" AND e."tenant_id" = $1::varchar AND e."unit_id" = o."unit_id"
+  JOIN "production_events" e ON e."id" = o."event_id" AND e."tenant_id" = $1::uuid AND e."unit_id" = o."unit_id"
  WHERE o."tenant_id" = $1::uuid AND e."occurrence_id" = $2::uuid
  ORDER BY o."started_at", o."id"`;
 

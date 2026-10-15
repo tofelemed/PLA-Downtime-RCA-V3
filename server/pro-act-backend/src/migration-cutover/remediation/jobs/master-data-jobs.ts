@@ -79,7 +79,7 @@ export const rateJob: PlanSource = {
       uom: string | null;
     }> = await manager.query(
       `SELECT p."id"::text, t."id"::text AS "tenant", p."standard_rate"::text AS "rate", p."uom"
-           FROM "products" p LEFT JOIN "tenants" t ON t."id"::text = p."tenant_id"
+           FROM "products" p LEFT JOIN "tenants" t ON t."id" = p."tenant_id"
           WHERE p."standard_rate" IS NOT NULL AND ${tenantFilter('t."id"')}`,
       [scope.tenantId],
     );
@@ -98,10 +98,10 @@ export const rateJob: PlanSource = {
 
 /** Per-tenant aggregates for event amounts without unit / currency (one review item per tenant). */
 const EVENT_UNIT_GAPS = `
-  SELECT "tenant_uuid"::text AS "tenant",
+  SELECT "tenant_id"::text AS "tenant",
          count(*) FILTER (WHERE "cost" IS NOT NULL)::int AS "costRows",
          count(*) FILTER (WHERE "quantity" IS NOT NULL AND "quantity_uom" IS NULL)::int AS "quantityRows"
-    FROM "production_events" WHERE "tenant_uuid" IS NOT NULL AND ${tenantFilter('"tenant_uuid"')}
+    FROM "production_events" WHERE "tenant_id" IS NOT NULL AND ${tenantFilter('"tenant_id"')}
    GROUP BY 1`;
 
 async function eventUnitGaps(
@@ -143,7 +143,7 @@ async function productAndLossFlags(
   const products: Array<{ id: string; tenant: string | null }> =
     await manager.query(
       `SELECT p."id"::text, t."id"::text AS "tenant" FROM "products" p
-         LEFT JOIN "tenants" t ON t."id"::text = p."tenant_id"
+         LEFT JOIN "tenants" t ON t."id" = p."tenant_id"
         WHERE coalesce(trim(p."uom"), '') = '' AND ${tenantFilter('t."id"')}`,
       [scope.tenantId],
     );

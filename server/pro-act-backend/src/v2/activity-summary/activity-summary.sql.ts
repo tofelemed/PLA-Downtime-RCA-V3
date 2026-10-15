@@ -18,7 +18,7 @@ export const RCA_CELLS_SQL = `SELECT coalesce(nullif(r."status", ''), 'Unknown')
        count(*) FILTER (WHERE coalesce(r."status", '') NOT IN ('Closed', 'Published')
                           AND r."target_completion_date" < $5)::int AS "overdue"
   FROM "rcas" r
- WHERE r."tenant_id" = $1::text AND r."created_at" >= $2 AND r."created_at" < $3
+ WHERE r."tenant_id" = $1::uuid AND r."created_at" >= $2 AND r."created_at" < $3
    AND ($6::uuid[] IS NULL OR r."unit_id" = ANY($6::uuid[]))
  GROUP BY 1, 2, 3`;
 
@@ -39,7 +39,7 @@ export const AUDIT_CELLS_SQL = `SELECT coalesce(nullif(a."action", ''), 'Unknown
        to_char(a."created_at" AT TIME ZONE $4, 'YYYY-MM-DD') AS "day",
        count(*)::int AS "n"
   FROM "audit_logs" a
- WHERE a."tenant_id" = $1::text AND a."created_at" >= $2 AND a."created_at" < $3
+ WHERE a."tenant_id" = $1::uuid AND a."created_at" >= $2 AND a."created_at" < $3
  GROUP BY 1, 2, 3`;
 
 /** Plant timezone: the default site's, else the plant's, else UTC — only zones Postgres knows. */

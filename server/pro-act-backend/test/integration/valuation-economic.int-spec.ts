@@ -88,7 +88,7 @@ describe('valuation economic view (SME V1–V8)', () => {
       codeOf(await env.post('demand-statuses', draft, env.admin).expect(403)),
     ).toBe('FORBIDDEN_ROLE');
     const [foreign] = await env.rows<{ id: string }>(
-      `SELECT id FROM products WHERE lower(tenant_id) = lower($1) LIMIT 1`,
+      `SELECT id FROM products WHERE tenant_id = $1::uuid LIMIT 1`,
       [env.world.tenantB],
     );
     expect(

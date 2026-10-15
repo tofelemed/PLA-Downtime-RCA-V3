@@ -33,7 +33,7 @@ export class RcaTriggerSweepJob {
     const rows: Array<{ id: string; tenant_id: string }> =
       await this.dataSource.query(
         `SELECT e."id", e."tenant_id" FROM "production_events" e
-         JOIN "feature_flags" f ON f."tenant_id"::text = e."tenant_id" AND f."key" = 'v2.rca' AND f."enabled"
+         JOIN "feature_flags" f ON f."tenant_id" = e."tenant_id" AND f."key" = 'v2.rca' AND f."enabled"
         WHERE e."end_time" IS NULL AND e."physical_state" = 'open' AND e."start_time" < $1
         ORDER BY e."start_time", e."id" LIMIT $2`,
         [now, envInt('RCA_SWEEP_BATCH', 500)],

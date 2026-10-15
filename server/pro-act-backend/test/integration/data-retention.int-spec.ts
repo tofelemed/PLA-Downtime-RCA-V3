@@ -5,6 +5,7 @@ import {
   RetentionPolicy,
 } from '../../src/common/retention/retention-policy';
 import { IntegrationHarness } from './harness';
+import { seedPlant } from './support/seed-plant';
 
 const DAY_MS = 86_400_000;
 
@@ -29,6 +30,7 @@ describe('data retention (DB-07)', () => {
     batchSize: 1,
   };
 
+  const plant = (id: string) => seedPlant(harness.dataSource, id);
   const requestLog = (daysAgo: number, tenant = tenantId) =>
     query<Array<{ id: string }>>(
       `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, tenant_id, timestamp)
@@ -61,6 +63,7 @@ describe('data retention (DB-07)', () => {
 
   beforeAll(async () => {
     await harness.start();
+    await plant(tenantId);
     for (const day of [400, 200, 100, 10, 1]) await requestLog(day);
     for (const day of [400, 100, 10]) await trail(day);
     for (const month of ['2027-01-15', '2027-02-15', '2027-03-15']) {
@@ -140,6 +143,7 @@ describe('data retention (DB-07)', () => {
 
   it('keeps both audit tables for the 30-day owner window: 31-day-old rows go, 29-day-old rows stay', async () => {
     const other = randomUUID();
+    await plant(other);
     const [oldLog] = await requestLog(31, other);
     const [keptLog] = await requestLog(29, other);
     const [oldTrail] = await trail(31, other);

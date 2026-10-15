@@ -69,10 +69,10 @@ export const durationsJob: PlanSource = {
     scope: JobScope,
   ): Promise<RemediationPlan> {
     const rows: DurationRow[] = await manager.query(
-      `SELECT "id", "tenant_uuid" AS "tenant", "source", "legacy_duration"::text AS "legacy",
+      `SELECT "id", "tenant_id" AS "tenant", "source", "legacy_duration"::text AS "legacy",
               "legacy_duration_unit_assumed" AS "unit", "duration_seconds"::text AS "seconds"
          FROM "production_events"
-        WHERE "legacy_duration" IS NOT NULL AND ${tenantFilter('"tenant_uuid"')}`,
+        WHERE "legacy_duration" IS NOT NULL AND ${tenantFilter('"tenant_id"')}`,
       [scope.tenantId],
     );
     const plan = emptyPlan();
@@ -127,15 +127,15 @@ export const sentinelsJob: PlanSource = {
     scope: JobScope,
   ): Promise<RemediationPlan> {
     const all: SentinelRow[] = await manager.query(
-      `SELECT "id", "tenant_uuid" AS "tenant", "end_time"::text AS "endText", "physical_state"::text AS "state",
+      `SELECT "id", "tenant_id" AS "tenant", "end_time"::text AS "endText", "physical_state"::text AS "state",
               "legacy_end_sentinel"::text AS "raw"
-         FROM "production_events" WHERE "end_time" >= $2 AND ${tenantFilter('"tenant_uuid"')}`,
+         FROM "production_events" WHERE "end_time" >= $2 AND ${tenantFilter('"tenant_id"')}`,
       [scope.tenantId, OPEN_FRAME_SENTINEL],
     );
     const rows = all.filter((row) => row.raw === null);
     const converted: Array<{ n: number }> = await manager.query(
       `SELECT count(*)::int AS "n" FROM "production_events"
-        WHERE "legacy_end_sentinel" IS NOT NULL AND ${tenantFilter('"tenant_uuid"')}`,
+        WHERE "legacy_end_sentinel" IS NOT NULL AND ${tenantFilter('"tenant_id"')}`,
       [scope.tenantId],
     );
     const plan = emptyPlan();
@@ -222,14 +222,14 @@ export const duplicatesJob: PlanSource = {
     scope: JobScope,
   ): Promise<RemediationPlan> {
     const groups: DuplicateGroup[] = await manager.query(
-      `SELECT "tenant_uuid" AS "tenant", coalesce("source", '') AS "source", "event_id" AS "eventId",
+      `SELECT "tenant_id" AS "tenant", coalesce("source", '') AS "source", "event_id" AS "eventId",
               array_agg("id"::text ORDER BY ("reason_code_id" IS NULL AND "user_overrides" = '{}'::jsonb), "created_at", "id") AS "ids",
               count(DISTINCT md5(concat_ws('|', "unit_id", "start_time", coalesce("end_time"::text, '-'),
                     coalesce("quantity"::text, '-'), coalesce("event_type", '-'))))::int AS "variants",
               count(*) FILTER (WHERE "reason_code_id" IS NOT NULL OR "user_overrides" <> '{}'::jsonb)::int AS "edited"
          FROM "production_events"
         WHERE "event_id" IS NOT NULL AND "retracted_at" IS NULL AND "superseded_by_event_id" IS NULL
-          AND ${tenantFilter('"tenant_uuid"')}
+          AND ${tenantFilter('"tenant_id"')}
         GROUP BY 1, 2, 3 HAVING count(*) > 1`,
       [scope.tenantId],
     );

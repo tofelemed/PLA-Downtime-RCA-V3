@@ -182,14 +182,14 @@ export class DemandStatusesService {
   }
 }
 
-/** v1 products carry the tenant as text (`products.tenant_id varchar`): 422 INVALID_REFERENCE otherwise. */
+/** The product must be one of the plant's: 422 INVALID_REFERENCE otherwise. */
 async function assertProduct(
   manager: EntityManager,
   tenantId: string,
   productId: string,
 ): Promise<void> {
   const rows = await manager.query<unknown[]>(
-    `SELECT 1 FROM "products" WHERE "id" = $1 AND lower("tenant_id") = $2`,
+    `SELECT 1 FROM "products" WHERE "id" = $1 AND "tenant_id" = $2::uuid`,
     [productId, tenantId.toLowerCase()],
   );
   if (rows.length === 0) throw invalidReference('productId', 'product');

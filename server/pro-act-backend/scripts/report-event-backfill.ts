@@ -4,8 +4,8 @@
  *   npx ts-node scripts/report-event-backfill.ts > ../../plans/evidence/backfill-0002.md
  *
  * Read-only. Prints a Markdown report: rows per classification and state, PI sentinels converted,
- * legacy durations assumed minutes vs. left for review, rows breaking the interval CHECK, tenant ids
- * that are not uuids.
+ * legacy durations assumed minutes vs. left for review, rows breaking the interval CHECK, rows without a
+ * tenant.
  */
 import { AppDataSource } from '../src/database/data-source';
 
@@ -17,7 +17,7 @@ const SECTIONS: ReadonlyArray<[title: string, sql: string]> = [
     `SELECT count(*) AS rows,
             count(*) FILTER (WHERE end_time IS NULL) AS open_rows,
             count(*) FILTER (WHERE legacy_end_sentinel IS NOT NULL) AS pi_sentinels_converted,
-            count(*) FILTER (WHERE tenant_uuid IS NULL) AS tenant_id_not_uuid,
+            count(*) FILTER (WHERE tenant_id IS NULL) AS tenant_id_null,
             count(*) FILTER (WHERE end_time IS NOT NULL AND end_time <= start_time) AS interval_check_violations
        FROM production_events`,
   ],
@@ -74,12 +74,7 @@ async function main(): Promise<void> {
       `Database \`${db}\`, generated ${new Date().toISOString()}.`,
     ];
     for (const [title, sql] of SECTIONS) {
-      out.push(
-        '',
-        `## ${title}`,
-        '',
-        table(await query<Row>(sql)),
-      );
+      out.push('', `## ${title}`, '', table(await query<Row>(sql)));
     }
     process.stdout.write(`${out.join('\n')}\n`);
   } finally {

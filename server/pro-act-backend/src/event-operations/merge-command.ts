@@ -118,7 +118,7 @@ async function recordLineage(
   await relate(
     manager,
     contributors.map((contributor) => ({
-      tenantId: merged.tenantUuid as string,
+      tenantId: merged.tenantId as string,
       fromEventId: merged.id,
       toEventId: contributor.id,
       relationType: 'merged_from' as const,

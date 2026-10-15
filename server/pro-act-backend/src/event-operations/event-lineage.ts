@@ -28,7 +28,6 @@ const NOT_INHERITED = [
   'updatedAt',
   'rowVersion',
   'durationSeconds',
-  'tenantUuid',
   'currentSourceRevision',
   'currentCodingRevision',
   'retractedAt',

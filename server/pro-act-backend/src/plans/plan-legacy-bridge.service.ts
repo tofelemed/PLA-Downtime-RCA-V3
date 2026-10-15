@@ -281,7 +281,7 @@ export class PlanLegacyBridge {
     if (units.length === 0) return null;
     const products = productId
       ? await this.dataSource.query<Array<{ id: string }>>(
-          `SELECT "id" FROM "products" WHERE "id"::text = lower(btrim($1)) AND lower("tenant_id") = $2`,
+          `SELECT "id" FROM "products" WHERE "id"::text = lower(btrim($1)) AND "tenant_id" = $2::uuid`,
           [productId, units[0].tenant_id],
         )
       : [];

@@ -134,6 +134,8 @@ const ADDED_AFTER_BACKFILL: ReadonlySet<string> = new Set([
   'fromProductId',
   'toProductId',
   'recoveryOfEventId',
+  // SME E3 (15 Oct 2026)
+  'dispositionClass',
 ]);
 const atBackfill = (fields: readonly string[]) =>
   fields.filter((field) => !ADDED_AFTER_BACKFILL.has(field));
@@ -299,7 +301,12 @@ describe('EventIntervalModel + EventRevisions backfill', () => {
     expect((await migrated(legacyTenantId)).current_coding_revision).toBe(0);
   });
 
-  it('keeps tenant_uuid in sync on later writes', async () => {
+  it('keeps tenant_id varchar and tenant_uuid in sync while a tenant id is not a uuid (DB-05 guard)', async () => {
+    const [column]: Array<{ data_type: string }> =
+      await harness.dataSource.query(
+        `SELECT data_type FROM information_schema.columns WHERE table_name = 'production_events' AND column_name = 'tenant_id'`,
+      );
+    expect(column).toEqual({ data_type: 'character varying' });
     await harness.dataSource.query(
       `UPDATE production_events SET tenant_id = $1 WHERE id = $2`,
       [world.tenantB, ids[1]],

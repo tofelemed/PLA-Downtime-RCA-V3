@@ -57,7 +57,7 @@ function sameValue(a: number | null, b: number | null): boolean {
 /** v1 rows vs rows visible to v2 for the tenant (an event whose own tenant is not its unit's is lost to v2). */
 const EVENT_COUNTS = `
   SELECT 'event_count' AS "metric", 'unit:' || u."id" AS "scopeKey", 'events of unit ' || u."code" AS "label",
-         count(e."id") AS "legacy", count(e."id") FILTER (WHERE e."tenant_uuid" = $1::uuid) AS "v2"
+         count(e."id") AS "legacy", count(e."id") FILTER (WHERE e."tenant_id" = $1::uuid) AS "v2"
     FROM "units" u LEFT JOIN "production_events" e ON e."unit_id" = u."id"
    WHERE u."tenant_id" = $1::uuid AND ($2::uuid[] IS NULL OR u."id" = ANY($2::uuid[]))
    GROUP BY u."id", u."code" HAVING count(e."id") > 0`;
@@ -67,7 +67,7 @@ const PLAN_PAIRS = `
   WITH plans AS (
     SELECT p."id", p."plan_name", p."target_quantity", p."actual_quantity", p."current_version"
       FROM "production_plans" p
-     WHERE p."tenant_id" = $1::text AND ($2::uuid[] IS NULL OR p."unit_ref_id" = ANY($2::uuid[]))
+     WHERE p."tenant_id" = $1::uuid AND ($2::uuid[] IS NULL OR p."unit_ref_id" = ANY($2::uuid[]))
   ), v2 AS (
     SELECT v."plan_id", sum(v."actual") AS "actual", sum(v."losses") AS "losses"
       FROM "production_losses_v" v WHERE v."plan_id" IN (SELECT "id" FROM plans) GROUP BY v."plan_id"

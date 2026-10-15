@@ -77,7 +77,7 @@ export async function caseFootprint(
               array_agg(DISTINCT e."unit_id") AS "units",
               array_agg(DISTINCT e."reason_code_id") FILTER (WHERE e."reason_code_id" IS NOT NULL) AS "reasons"
          FROM "rca_case_links" k JOIN "production_events" e ON e."id"::text = k."target_id" AND e."tenant_id" = $1
-        WHERE k."tenant_id"::text = $1 AND k."rca_id" = $2 AND k."link_type" = 'event'`,
+        WHERE k."tenant_id" = $1 AND k."rca_id" = $2 AND k."link_type" = 'event'`,
     [tenantId, rcaId],
   );
   const row = rows[0];

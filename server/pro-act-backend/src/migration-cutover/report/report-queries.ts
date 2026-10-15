@@ -74,8 +74,8 @@ export async function tenantOverview(manager: EntityManager): Promise<Row[]> {
   return manager.query(
     `SELECT t."id" AS "tenant", t."name",
             (SELECT count(*)::int FROM "units" u WHERE u."tenant_id" = t."id") AS "units",
-            (SELECT count(*)::int FROM "production_events" e WHERE e."tenant_uuid" = t."id") AS "events",
-            (SELECT count(*)::int FROM "production_plans" p WHERE p."tenant_id" = t."id"::text) AS "plans",
+            (SELECT count(*)::int FROM "production_events" e WHERE e."tenant_id" = t."id") AS "events",
+            (SELECT count(*)::int FROM "production_plans" p WHERE p."tenant_id" = t."id") AS "plans",
             (SELECT string_agg(f."key", ', ' ORDER BY f."key") FROM "feature_flags" f
               WHERE f."tenant_id" = t."id" AND f."enabled") AS "flags on",
             CASE WHEN to_regclass('public.legacy_write_freezes') IS NULL THEN 'n/a' ELSE
@@ -104,7 +104,7 @@ export const CARRIED_CHECKS: ReadonlyArray<[title: string, sql: string]> = [
             count(*) FILTER (WHERE "legacy_end_sentinel" IS NOT NULL)::int AS "sentinels converted",
             count(*) FILTER (WHERE "end_time" >= '9999-01-01')::int AS "sentinels remaining",
             count(*) FILTER (WHERE "legacy_duration" IS NOT NULL AND "legacy_duration_unit_assumed" IS NULL)::int AS "durations unit unknown",
-            count(*) FILTER (WHERE "tenant_uuid" IS NULL)::int AS "tenant not uuid"
+            count(*) FILTER (WHERE "tenant_id" IS NULL)::int AS "without tenant"
        FROM "production_events"`,
   ],
   [
@@ -126,7 +126,7 @@ export const CARRIED_CHECKS: ReadonlyArray<[title: string, sql: string]> = [
     '1.5 v1 PI connections mirrored into integration_connections',
     `SELECT count(*)::int AS "pi_connections",
             count(*) FILTER (WHERE EXISTS (SELECT 1 FROM "integration_connections" ic WHERE ic."id" = pc."id"))::int AS "mirrored",
-            count(*) FILTER (WHERE pc."tenant_id" !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')::int AS "tenant not uuid"
+            count(*) FILTER (WHERE pc."tenant_id" IS NULL)::int AS "without tenant"
        FROM "pi_connections" pc`,
   ],
   [

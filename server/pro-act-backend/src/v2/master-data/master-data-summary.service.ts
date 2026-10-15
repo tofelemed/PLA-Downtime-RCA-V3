@@ -23,10 +23,10 @@ const COUNTS_SQL = `
   SELECT
     (SELECT count(*)::int FROM "units" u WHERE u."tenant_id" = $1::uuid AND u."retired_at" IS NULL
        AND ($3::text[] IS NULL OR u."id"::text = ANY($3::text[]))) AS units,
-    (SELECT count(*)::int FROM "assets" a WHERE a."tenant_id" = $1::text AND a."retired_at" IS NULL
+    (SELECT count(*)::int FROM "assets" a WHERE a."tenant_id" = $1::uuid AND a."retired_at" IS NULL
        AND ($3::text[] IS NULL OR a."unit_id" = ANY($3::text[]))) AS assets,
     (SELECT count(*)::int FROM "products" p WHERE p."is_active"
-       AND (p."tenant_id" = $1::text OR (p."tenant_id" IS NULL AND p."organization_id" = $2::text))) AS products,
+       AND (p."tenant_id" = $1::uuid OR (p."tenant_id" IS NULL AND p."organization_id" = $2::text))) AS products,
     (SELECT count(*)::int FROM "rca_templates" t WHERE t."tenant_id" = $1::uuid AND t."is_active") AS "rcaTemplates",
     (SELECT count(*)::int FROM "rca_cause_codes" c WHERE c."tenant_id" = $1::uuid AND c."is_active") AS "rcaCauses",
     (SELECT count(*)::int FROM "verification_status_codes" v WHERE v."tenant_id" = $1::uuid AND v."is_active")

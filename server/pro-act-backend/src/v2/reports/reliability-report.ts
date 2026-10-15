@@ -92,7 +92,7 @@ async function assetUnits(
   if (ids.length === 0) return [];
   const rows: Array<{ id: string; unit_id: string; name: string }> =
     await manager.query(
-      `SELECT "id"::text AS "id", "unit_id", "name" FROM "assets" WHERE "tenant_id" = $1::text AND "id" = ANY($2::uuid[]) ORDER BY "id"`,
+      `SELECT "id"::text AS "id", "unit_id", "name" FROM "assets" WHERE "tenant_id" = $1::uuid AND "id" = ANY($2::uuid[]) ORDER BY "id"`,
       [scope.tenantId, ids],
     );
   return rows.map((r) => ({ id: r.id, unitId: r.unit_id, label: r.name }));

@@ -79,7 +79,7 @@ export const PLANS: Readonly<Record<DowntimeGroup, GroupPlan>> = {
   asset: {
     dimension: 'asset',
     groupSql: CELL_KEY,
-    labels: `SELECT "id"::text AS "id", "name" AS "label" FROM "assets" WHERE "id"::text = ANY($1) AND "tenant_id" = $2::text`,
+    labels: `SELECT "id"::text AS "id", "name" AS "label" FROM "assets" WHERE "id"::text = ANY($1) AND "tenant_id" = $2::uuid`,
   },
   shift: { dimension: 'none', groupSql: TIME_GROUPS.shift },
   crew: {

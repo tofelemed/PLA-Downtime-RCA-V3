@@ -98,7 +98,7 @@ export async function resolveAssets(
   assetIds: readonly string[],
 ): Promise<Map<string, string>> {
   const rows: Array<{ id: string; unit_id: string }> = await manager.query(
-    `SELECT "id", "unit_id" FROM "assets" WHERE "tenant_id" = $1::text AND "id" = ANY($2::uuid[])`,
+    `SELECT "id", "unit_id" FROM "assets" WHERE "tenant_id" = $1::uuid AND "id" = ANY($2::uuid[])`,
     [scope.tenantId, [...new Set(assetIds)]],
   );
   const units = new Set(scope.unitIds);

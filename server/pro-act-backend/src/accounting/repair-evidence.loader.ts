@@ -8,7 +8,7 @@ import {
 /** CMMS operations linked to the stops of the failures (index tenant + event). */
 const OPERATIONS_SQL = `SELECT e."occurrence_id", o."operation_kind", o."started_at", o."ended_at", o."waiting_seconds"
   FROM "work_order_operations" o
-  JOIN "production_events" e ON e."id" = o."event_id" AND e."tenant_id" = $1::varchar AND e."unit_id" = o."unit_id"
+  JOIN "production_events" e ON e."id" = o."event_id" AND e."tenant_id" = $1::uuid AND e."unit_id" = o."unit_id"
  WHERE o."tenant_id" = $1::uuid AND e."occurrence_id" = ANY($2::uuid[])
  ORDER BY e."occurrence_id", o."started_at", o."id"`;
 

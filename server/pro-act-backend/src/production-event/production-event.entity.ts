@@ -10,6 +10,7 @@ import {
   JoinColumn,
   VersionColumn,
 } from 'typeorm';
+import { Tenant } from '../tenant/tenant.entity';
 import { ClassificationBasis } from '../code-library/classification-basis';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { Unit } from '../unit/unit.entity';
@@ -397,8 +398,12 @@ export class ProductionEvent {
   })
   duration?: number;
 
-  @Column({ name: 'tenant_id', type: 'varchar', length: 36, nullable: true })
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
   tenantId?: string;
+
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant?: Tenant;
 
   @Column({
     name: 'organization_id',
@@ -544,16 +549,6 @@ export class ProductionEvent {
   /** Raw PI open-frame sentinel (9999-12-31) replaced by a null end (B6). */
   @Column({ name: 'legacy_end_sentinel', type: 'timestamptz', nullable: true })
   legacyEndSentinel?: Date | null;
-
-  /** uuid copy of `tenant_id` kept in sync by trigger (expand step of the varchar → uuid change). */
-  @Column({
-    name: 'tenant_uuid',
-    type: 'uuid',
-    nullable: true,
-    insert: false,
-    update: false,
-  })
-  tenantUuid?: string | null;
 
   // --- Revisions and source ownership (plan 1.2, ING01/ING06) ---
 

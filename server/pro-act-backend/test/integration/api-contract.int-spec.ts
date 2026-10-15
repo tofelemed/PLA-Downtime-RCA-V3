@@ -4,6 +4,7 @@ import * as request from 'supertest';
 import { HealthModule } from '../../src/health/health.module';
 import { ProductModule } from '../../src/product/product.module';
 import { IntegrationHarness } from './harness';
+import { seedPlant } from './support/seed-plant';
 import { bearer, createIntegrationApp, signToken } from './support/test-app';
 
 /**
@@ -18,6 +19,7 @@ describe('API contract: error envelope, correlation id, auth, throttling', () =>
 
   beforeAll(async () => {
     await harness.start();
+    await seedPlant(harness.dataSource, tenantId);
     app = await createIntegrationApp(harness, {
       modules: [HealthModule, ProductModule],
     });

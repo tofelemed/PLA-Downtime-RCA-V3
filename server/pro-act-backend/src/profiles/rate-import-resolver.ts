@@ -35,7 +35,7 @@ export async function resolveImportRows(
   );
   const products = await idsByCode(
     manager,
-    `SELECT "id", "code" FROM "products" WHERE lower("tenant_id") = $1 AND "code" = ANY($2)`,
+    `SELECT "id", "code" FROM "products" WHERE "tenant_id" = $1::uuid AND "code" = ANY($2)`,
     [tenantId.toLowerCase(), unique(rows.map((r) => r.productCode))],
   );
   const profiles = await approvedProfiles(manager, tenantId, [
