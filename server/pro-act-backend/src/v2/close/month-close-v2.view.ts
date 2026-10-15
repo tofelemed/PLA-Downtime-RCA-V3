@@ -1,5 +1,10 @@
 import { MonthCloseSnapshot } from '../../close/month-close.service';
-import { OpenProposal, PendingPeriod } from '../../close/month-prerequisites';
+import {
+  OpenProposal,
+  PendingPeriod,
+  UncertifiedDay,
+} from '../../close/month-prerequisites';
+import { addDays } from '../../domain/calendar/wall-clock';
 import { nextMonth, previousMonth } from '../../domain/close/financial-month';
 import {
   AdjustmentTotal,
@@ -30,6 +35,8 @@ export interface MonthCloseV2View {
   firstDate: string;
   /** first date after the month (exclusive) */
   endDate: string;
+  /** the month's last date (display) */
+  lastDate: string;
   previousMonthKey: string;
   nextMonthKey: string;
   state: string;
@@ -42,6 +49,7 @@ export interface MonthCloseV2View {
     financeSignOffWorkingDay: number;
     weekendDays: number[];
     blockOnOpenProposals: boolean;
+    requireCertifiedDays: boolean;
     materialityEnabled: boolean;
     materialityReviewerRoles: string[];
   };
@@ -72,6 +80,10 @@ export interface MonthCloseV2View {
     approved: number;
     pendingCount: number;
     pending: PendingPeriod[];
+    /** production days (unit × date) and the certified ones (owner decision: day certification) */
+    days: number;
+    certifiedDays: number;
+    uncertifiedDays: UncertifiedDay[];
     openProposalCount: number;
     openProposals: OpenProposal[];
   };
@@ -133,12 +145,10 @@ function prerequisitesOf(
   snapshot: MonthCloseSnapshot,
 ): MonthCloseV2View['prerequisites'] {
   const p = snapshot.prerequisites;
-  const blocksOnProposals = snapshot.context.policy.policy.blockOnOpenProposals;
-  return {
-    met:
-      p.pendingCount === 0 && !(blocksOnProposals && p.openProposalCount > 0),
-    ...p,
-  };
+  const policy = snapshot.context.policy.policy;
+  const proposalsBlock = policy.blockOnOpenProposals && p.openProposalCount > 0;
+  const daysBlock = policy.requireCertifiedDays && p.certifiedDays < p.days;
+  return { met: p.pendingCount === 0 && !proposalsBlock && !daysBlock, ...p };
 }
 
 export function toMonthCloseView(
@@ -151,6 +161,7 @@ export function toMonthCloseView(
     calendar: context.month.calendar,
     firstDate: context.month.firstDate,
     endDate: context.month.endDate,
+    lastDate: addDays(context.month.endDate, -1),
     previousMonthKey: previousMonth(context.month).key,
     nextMonthKey: nextMonth(context.month).key,
     state: context.row?.state ?? 'open',
@@ -162,6 +173,7 @@ export function toMonthCloseView(
       financeSignOffWorkingDay: policy.financeSignOffWorkingDay,
       weekendDays: policy.weekendDays,
       blockOnOpenProposals: policy.blockOnOpenProposals,
+      requireCertifiedDays: policy.requireCertifiedDays,
       materialityEnabled: policy.materiality.enabled,
       materialityReviewerRoles: policy.materiality.reviewerRoles,
     },

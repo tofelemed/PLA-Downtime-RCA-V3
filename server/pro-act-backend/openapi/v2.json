@@ -19374,6 +19374,154 @@
           "v2 · Production periods and actuals"
         ]
       }
+    },
+    "/api/v2/production-days": {
+      "get": {
+        "operationId": "ProductionDaysV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2027-03-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Inclusive; at most 62 days after from",
+            "schema": {
+              "example": "2027-03-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Production days of a unit on [from, to] (≤ 62 days): state (open, ready, certified) and shift periods",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-days/{unitId}/{localDate}": {
+      "get": {
+        "operationId": "ProductionDaysV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "localDate",
+            "required": true,
+            "in": "path",
+            "description": "Operational date",
+            "schema": {
+              "example": "2027-03-01",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A production day: shift periods with their workflow, the certification and the roll-up of the approved shifts per unit of measure",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
+    "/api/v2/production-days/{unitId}/{localDate}/certify": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. 422 DAY_NOT_READY (details list the shifts not approved), 409 DAY_CERTIFIED, 403 SEPARATION_OF_DUTIES for a submitter of one of the shifts. A revise of a shift reopens the day.",
+        "operationId": "ProductionDaysV2Controller_certify_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "localDate",
+            "required": true,
+            "in": "path",
+            "description": "Operational date",
+            "schema": {
+              "example": "2027-03-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CertifyDayDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One approval certifies the day: the roll-up of its approved shift revisions (each quantity stays on its shift)",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
     }
   },
   "info": {
@@ -26241,6 +26389,14 @@
           "effectiveFrom",
           "statuses"
         ]
+      },
+      "CertifyDayDto": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string"
+          }
+        }
       }
     }
   }

@@ -45,6 +45,8 @@ export const MATERIALITY_REVIEWERS = ['production_accountant', 'manager_approver
 export const MONTH_REOPENERS = ['manager_approver', 'finance_approver'] as const;
 /** SME R5: finance sets the posting date and treatment of a restatement */
 export const POSTING_DECIDERS = ['finance_approver'] as const;
+/** owner decision 14 Oct 2026 (SME R2): plant management certifies a production day */
+export const DAY_CERTIFIERS = ['manager_approver'] as const;
 
 /** v2/rca-policies/rca-policies-v2.controller.ts (`@Roles` on the write) */
 export const RCA_POLICY_WRITERS = ['manager_approver'] as const;

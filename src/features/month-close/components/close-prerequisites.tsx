@@ -45,6 +45,27 @@ function OpenProposals({ view }: { view: MonthCloseView }) {
   );
 }
 
+function UncertifiedDays({ view }: { view: MonthCloseView }) {
+  const pref = useCalendarPreference();
+  const { days, certifiedDays, uncertifiedDays } = view.prerequisites;
+  if (!view.policy.requireCertifiedDays) return null;
+  if (days === certifiedDays) return <p data-testid="days-certified">Every production day is certified ({certifiedDays}).</p>;
+  return (
+    <div className="space-y-1">
+      <p className="font-medium">
+        {days - certifiedDays} of {days} production days not certified{uncertifiedDays.length < days - certifiedDays ? ` (first ${uncertifiedDays.length} shown)` : ''}
+      </p>
+      <ul className="space-y-0.5 text-sm" data-testid="uncertified-days">
+        {uncertifiedDays.map((d) => (
+          <li key={`${d.unitId}-${d.localDate}`}>
+            {d.unitName ?? 'Unit'} · {formatOperationalDate(d.localDate, pref)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** What has to be true before the month closes (server counts; the lists are capped). */
 export function ClosePrerequisites({ view }: { view: MonthCloseView }) {
   const { prerequisites } = view;
@@ -55,6 +76,7 @@ export function ClosePrerequisites({ view }: { view: MonthCloseView }) {
     >
       <div className="space-y-3" data-testid="close-prerequisites" data-met={prerequisites.met}>
         <PendingPeriods view={view} />
+        <UncertifiedDays view={view} />
         <OpenProposals view={view} />
         {view.materiality.findings.length > 0 && (
           <p className="text-sm" data-testid="materiality-findings">

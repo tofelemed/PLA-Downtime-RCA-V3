@@ -34,3 +34,9 @@ export const STATUS_MAPPING_AUTHORS = [
 ] as const;
 
 export const SOURCE_OWNERS = ['production_accountant'] as const;
+
+/**
+ * Owner decision 14 Oct 2026 (SME R2): plant management certifies a production day — never a submitter of
+ * one of its shifts (checked in the service).
+ */
+export const DAY_CERTIFIERS = ['manager_approver'] as const;

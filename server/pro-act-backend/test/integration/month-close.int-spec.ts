@@ -31,6 +31,8 @@ interface MonthCloseBody {
   };
   prerequisites: {
     met: boolean;
+    days: number;
+    certifiedDays: number;
     periods: number;
     approved: number;
     pendingCount: number;
@@ -158,9 +160,28 @@ describe('month close (SME R1 / R4)', () => {
     await approvePeriod(env.periodA1, '149.5');
     await approvePeriod(env.periodB1);
     await approvePeriod(env.periodC1);
+    // owner decision (SME R2): approved shifts are not enough — the production day must be certified
+    const uncertified = await month();
+    expect(uncertified.prerequisites).toMatchObject({
+      met: false,
+      approved: 3,
+      days: 1,
+      certifiedDays: 0,
+    });
+    await env
+      .post(
+        `production-days/${env.world.unitA1}/2027-03-01/certify`,
+        {},
+        env.approver,
+      )
+      .expect(200);
     const body = await month();
     expect(body.policy.version).toBe(2);
-    expect(body.prerequisites).toMatchObject({ met: true, approved: 3 });
+    expect(body.prerequisites).toMatchObject({
+      met: true,
+      approved: 3,
+      certifiedDays: 1,
+    });
     expect(body.materiality.findings).toEqual([
       { uom: 't', quantity: '0.5', threshold: '0.5' },
     ]);
@@ -271,6 +292,11 @@ describe('month close (SME R1 / R4)', () => {
       lifecycle: 'draft',
       afterClose: true,
     });
+    const reopened = await env.rows<{ state: string }>(
+      `SELECT state FROM production_day_certifications WHERE unit_id = $1`,
+      [env.world.unitA1],
+    );
+    expect(reopened.map((r) => r.state)).toEqual(['reopened']);
     const audit = await env.rows<{ action: string }>(
       `SELECT action FROM audit_log WHERE entity_type = 'month_close' ORDER BY at`,
     );

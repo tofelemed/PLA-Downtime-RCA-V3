@@ -46,6 +46,8 @@ export interface MonthCloseView {
   calendar: 'gregorian' | 'persian';
   firstDate: string;
   endDate: string;
+  /** the month's last date */
+  lastDate: string;
   previousMonthKey: string;
   nextMonthKey: string;
   state: MonthCloseState;
@@ -57,6 +59,7 @@ export interface MonthCloseView {
     financeSignOffWorkingDay: number;
     weekendDays: number[];
     blockOnOpenProposals: boolean;
+    requireCertifiedDays: boolean;
     materialityEnabled: boolean;
     materialityReviewerRoles: string[];
   };
@@ -87,6 +90,10 @@ export interface MonthCloseView {
     approved: number;
     pendingCount: number;
     pending: PendingPeriodView[];
+    /** production days (unit × date) and the certified ones (owner decision: day certification) */
+    days: number;
+    certifiedDays: number;
+    uncertifiedDays: Array<{ unitId: string; unitName: string | null; localDate: string }>;
     openProposalCount: number;
     openProposals: OpenProposalView[];
   };

@@ -50,6 +50,11 @@
           "default": true,
           "description": "An open change proposal of the month blocks the close until it is accepted or dismissed."
         },
+        "requireCertifiedDays": {
+          "type": "boolean",
+          "default": true,
+          "description": "Owner decision 14 Oct 2026 (SME R2): every production day of every unit must be certified before the quantity close. Absent in a version written before the option = false."
+        },
         "materiality": {
           "type": "object",
           "required": ["enabled", "thresholds", "reviewerRoles"],

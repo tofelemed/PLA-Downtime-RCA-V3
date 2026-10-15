@@ -23,12 +23,23 @@ export interface OpenProposal {
   createdAt: string;
 }
 
+/** A production day of a unit that is not certified (owner decision: day certification, SME R2). */
+export interface UncertifiedDay {
+  unitId: string;
+  unitName: string | null;
+  localDate: string;
+}
+
 export interface MonthPrerequisites {
   /** periods of the month that need an approved revision */
   periods: number;
   approved: number;
   pendingCount: number;
   pending: PendingPeriod[];
+  /** production days (unit × date) of the month with a period that needs approval, and the certified ones */
+  days: number;
+  certifiedDays: number;
+  uncertifiedDays: UncertifiedDay[];
   openProposalCount: number;
   openProposals: OpenProposal[];
 }
@@ -131,6 +142,50 @@ async function openProposals(
   };
 }
 
+const DAYS = `, d AS (SELECT DISTINCT m."unit_id", m."local_date" FROM m),
+  dc AS (SELECT d.*, EXISTS (SELECT 1 FROM "production_day_certifications" c
+                              WHERE c."tenant_id" = $1 AND c."unit_id" = d."unit_id"
+                                AND c."local_date" = d."local_date" AND c."state" = 'certified') AS "certified" FROM d)`;
+
+/** Production days of the month and whether each is certified (UQ_production_day_certifications_certified). */
+async function dayCounts(
+  manager: EntityManager,
+  month: MonthDates,
+): Promise<{
+  days: number;
+  certifiedDays: number;
+  uncertifiedDays: UncertifiedDay[];
+}> {
+  const [counts]: Array<{ days: number; certified: number }> =
+    await manager.query(
+      `${MONTH_PERIODS}${DAYS} SELECT count(*)::int AS "days", count(*) FILTER (WHERE "certified")::int AS "certified" FROM dc`,
+      paramsOf(month),
+    );
+  const rows: Array<{
+    unit_id: string;
+    unit_name: string | null;
+    local_date: string;
+  }> =
+    counts.days > counts.certified
+      ? await manager.query(
+          `${MONTH_PERIODS}${DAYS}
+           SELECT dc."unit_id", u."name" AS "unit_name", to_char(dc."local_date", 'YYYY-MM-DD') AS "local_date"
+             FROM dc LEFT JOIN "units" u ON u."id" = dc."unit_id"
+            WHERE NOT dc."certified" ORDER BY dc."local_date", dc."unit_id" LIMIT ${PREREQUISITE_LIST_LIMIT}`,
+          paramsOf(month),
+        )
+      : [];
+  return {
+    days: counts.days,
+    certifiedDays: counts.certified,
+    uncertifiedDays: rows.map((r) => ({
+      unitId: r.unit_id,
+      unitName: r.unit_name,
+      localDate: r.local_date,
+    })),
+  };
+}
+
 /** Every period of the month approved, and the change proposals still open (SME R4 prerequisites). */
 export async function monthPrerequisites(
   manager: EntityManager,
@@ -146,6 +201,7 @@ export async function monthPrerequisites(
     ...counts,
     pendingCount: counts.periods - counts.approved,
     pending,
+    ...(await dayCounts(manager, month)),
     openProposalCount: proposals.count,
     openProposals: proposals.items,
   };

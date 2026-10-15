@@ -267,10 +267,18 @@ async function namesOf(
   return Object.fromEntries(rows.map((r) => [r.id, r.name]));
 }
 
-/** Prerequisites unmet: a period not approved, or an open change proposal when the policy blocks on them. */
+/**
+ * Prerequisites unmet: a period not approved, a production day not certified (when the policy requires day
+ * certification), or an open change proposal when the policy blocks on them.
+ */
 function isBlocked(snapshot: MonthCloseSnapshot): boolean {
   const { prerequisites, context } = snapshot;
   if (prerequisites.pendingCount > 0) return true;
+  if (
+    context.policy.policy.requireCertifiedDays &&
+    prerequisites.certifiedDays < prerequisites.days
+  )
+    return true;
   return (
     context.policy.policy.blockOnOpenProposals &&
     prerequisites.openProposalCount > 0
@@ -282,6 +290,8 @@ function evidenceOf(snapshot: MonthCloseSnapshot): Record<string, unknown> {
   return {
     periods: snapshot.prerequisites.periods,
     approved: snapshot.prerequisites.approved,
+    days: snapshot.prerequisites.days,
+    certifiedDays: snapshot.prerequisites.certifiedDays,
     openProposals: snapshot.prerequisites.openProposalCount,
     materiality: snapshot.findings,
     policyVersion: snapshot.context.policy.version,

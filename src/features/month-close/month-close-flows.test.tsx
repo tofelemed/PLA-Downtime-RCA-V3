@@ -24,11 +24,12 @@ const VIEW: MonthCloseView = {
   calendar: 'persian',
   firstDate: '2026-09-23',
   endDate: '2026-10-23',
+  lastDate: '2026-10-22',
   previousMonthKey: '1405-06',
   nextMonthKey: '1405-08',
   state: 'open',
   rowVersion: null,
-  policy: { id: 'p1', version: 1, quantitiesCloseWorkingDay: 3, financeSignOffWorkingDay: 5, weekendDays: [4, 5], blockOnOpenProposals: true, materialityEnabled: false, materialityReviewerRoles: ['production_accountant'] },
+  policy: { id: 'p1', version: 1, quantitiesCloseWorkingDay: 3, financeSignOffWorkingDay: 5, weekendDays: [4, 5], blockOnOpenProposals: true, requireCertifiedDays: true, materialityEnabled: false, materialityReviewerRoles: ['production_accountant'] },
   deadlines: {
     timezone: 'Asia/Tehran',
     quantitiesDue: '2026-10-26',
@@ -56,6 +57,9 @@ const VIEW: MonthCloseView = {
     approved: 89,
     pendingCount: 1,
     pending: [{ periodId: 'per-1', unitId: 'u1', unitName: 'Demo unit 100', localDate: '2026-10-20', shiftName: 'B', workflow: 'in_review' }],
+    days: 30,
+    certifiedDays: 29,
+    uncertifiedDays: [{ unitId: 'u1', unitName: 'Demo unit 100', localDate: '2026-10-20' }],
     openProposalCount: 0,
     openProposals: [],
   },
@@ -102,6 +106,7 @@ describe('month close screen (SME R1 / R4)', () => {
     expect(screen.getByTestId('deadline-quantities').getAttribute('data-overdue')).toBe('true');
     expect(screen.getByTestId('pending-periods').textContent).toContain('Demo unit 100');
     expect(screen.getByTestId('pending-periods').textContent).toContain('Waiting for approval');
+    expect(screen.getByTestId('uncertified-days').textContent).toContain('Demo unit 100');
     expect((screen.getByTestId('step-close-quantities') as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByTestId('step-finance-sign-off')).toBeNull();
   });

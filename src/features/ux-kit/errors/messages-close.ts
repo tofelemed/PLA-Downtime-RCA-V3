@@ -4,7 +4,7 @@ import type { ErrorMessage } from './error-message';
 export const CLOSE_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   CLOSE_PREREQUISITES: {
     title: 'The month cannot close yet',
-    text: 'Approve every period of the month and accept or dismiss the open change proposals, then try again.',
+    text: 'Approve every period, certify every production day and accept or dismiss the open change proposals, then try again.',
   },
   MATERIALITY_REVIEW_REQUIRED: {
     title: 'An extra review is needed first',
@@ -23,6 +23,9 @@ export const CLOSE_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   INVALID_MONTH: { title: 'The month is not valid', text: 'Choose the month again.' },
   HOLD_OPEN: { title: 'The period already waits for data', text: 'Release that wait first, then start a new one.' },
   NO_OPEN_HOLD: { title: 'The period is not waiting for data', text: 'Reload to see its current state.' },
+  DAY_NOT_READY: { title: 'The day is not ready to certify', text: 'Every shift of the day has to be approved first.' },
+  DAY_CERTIFIED: { title: 'The day is already certified', text: 'A correction of a shift reopens it.' },
+  INVALID_DATE: { title: 'The date is not valid', text: 'Choose the day again.' },
   NOT_A_RESTATEMENT: { title: 'This revision restates nothing', text: 'Only a revision opened over an approved one has a restatement.' },
   PERIOD_APPROVED: { title: 'The period is already approved', text: 'A late value reaches an approved period through a change proposal.' },
 };

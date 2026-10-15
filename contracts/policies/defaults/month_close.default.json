@@ -11,6 +11,7 @@
     "quantitiesCloseWorkingDay": 3,
     "financeSignOffWorkingDay": 5,
     "blockOnOpenProposals": true,
+    "requireCertifiedDays": true,
     "materiality": { "enabled": false, "thresholds": {}, "reviewerRoles": ["production_accountant"] }
   }
 }

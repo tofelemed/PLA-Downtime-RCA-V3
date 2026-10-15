@@ -10,7 +10,7 @@ import { MonthPrerequisites } from './month-prerequisites';
 const MESSAGES: Readonly<Record<MonthCloseRefusal, string>> = {
   INVALID_TRANSITION: 'the month is not in a state that allows this step',
   CLOSE_PREREQUISITES:
-    'every period of the month must be approved and no change proposal may be open',
+    'every period of the month must be approved, every production day certified (when the policy requires it) and no change proposal open',
   SEPARATION_OF_DUTIES:
     'finance signs off independently of the quantity close and of the materiality review',
   MATERIALITY_REVIEW_REQUIRED:
@@ -33,6 +33,7 @@ export function monthCloseRefused(
       details: {
         pendingCount: prerequisites.pendingCount,
         pending: prerequisites.pending,
+        uncertifiedDays: prerequisites.uncertifiedDays,
         openProposalCount: prerequisites.openProposalCount,
         openProposals: prerequisites.openProposals,
       },

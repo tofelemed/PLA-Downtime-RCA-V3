@@ -5,6 +5,7 @@
  */
 import { seedAccounting } from './seed-accounting';
 import { seedCalendars } from './seed-calendar';
+import { seedClose } from './seed-close';
 import { seedCodeLibraries } from './seed-codes';
 import { seedIntegration } from './seed-integration';
 import { recalculate, seedEvents } from './seed-events';
@@ -75,6 +76,8 @@ const STEPS: readonly Step[] = [
   },
   { name: 'recalculate', always: false, kinds: PLANTS, run: recalculate },
   { name: 'accounting', always: false, kinds: PLANTS, run: seedAccounting },
+  // EXPERT_REVIEW Area 3: certified days, the previous month closed and locked, a lab hold
+  { name: 'close', always: false, kinds: ['full'], run: seedClose },
   {
     name: 'valuation-finance',
     always: false,

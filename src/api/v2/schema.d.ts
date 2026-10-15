@@ -5788,6 +5788,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/production-days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Production days of a unit on [from, to] (≤ 62 days): state (open, ready, certified) and shift periods */
+        get: operations["ProductionDaysV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-days/{unitId}/{localDate}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A production day: shift periods with their workflow, the certification and the roll-up of the approved shifts per unit of measure */
+        get: operations["ProductionDaysV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-days/{unitId}/{localDate}/certify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * One approval certifies the day: the roll-up of its approved shift revisions (each quantity stays on its shift)
+         * @description Requires `Idempotency-Key`. 422 DAY_NOT_READY (details list the shifts not approved), 409 DAY_CERTIFIED, 403 SEPARATION_OF_DUTIES for a submitter of one of the shifts. A revise of a shift reopens the day.
+         */
+        post: operations["ProductionDaysV2Controller_certify_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -8349,6 +8403,9 @@ export interface components {
             statuses: components["schemas"]["SourceStatusEntryDto"][];
             /** @description The source workflow documentation it follows */
             notes?: string;
+        };
+        CertifyDayDto: {
+            comment?: string;
         };
     };
     responses: never;
@@ -17217,6 +17274,76 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductionDaysV2Controller_list_v2: {
+        parameters: {
+            query: {
+                unitId: string;
+                from: string;
+                /** @description Inclusive; at most 62 days after from */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductionDaysV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unitId: string;
+                /** @description Operational date */
+                localDate: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductionDaysV2Controller_certify_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                unitId: string;
+                /** @description Operational date */
+                localDate: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CertifyDayDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {

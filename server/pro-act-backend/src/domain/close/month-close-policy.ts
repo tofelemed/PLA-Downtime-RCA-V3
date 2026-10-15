@@ -34,6 +34,11 @@ export interface MonthClosePolicy {
   financeSignOffWorkingDay: number;
   /** an open change proposal of the month blocks the close until it is accepted or dismissed */
   blockOnOpenProposals: boolean;
+  /**
+   * owner decision 14 Oct 2026 (SME R2): every production day of every unit must be certified, not only its
+   * periods approved; a version written before the option has none (false)
+   */
+  requireCertifiedDays: boolean;
   materiality: MaterialityRule;
 }
 
@@ -60,6 +65,7 @@ export function monthCloseDefault(plant: {
     quantitiesCloseWorkingDay: 3,
     financeSignOffWorkingDay: 5,
     blockOnOpenProposals: true,
+    requireCertifiedDays: true,
     materiality: MATERIALITY_OFF,
   };
 }
@@ -101,6 +107,10 @@ export function parseMonthClosePolicy(body: unknown): MonthClosePolicy {
       raw.blockOnOpenProposals,
       'blockOnOpenProposals',
     ),
+    requireCertifiedDays:
+      raw.requireCertifiedDays === undefined
+        ? false
+        : flag(raw.requireCertifiedDays, 'requireCertifiedDays'),
     materiality: materiality(record(raw.materiality, 'materiality')),
   };
   if (policy.weekendDays.length === 7) {

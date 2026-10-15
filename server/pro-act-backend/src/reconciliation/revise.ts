@@ -6,6 +6,7 @@ import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { periodScopeUnits } from '../periods/period-scope';
 import { RequestContext } from '../common/context/request-context';
 import { appendAudit } from '../common/audit/audit-trail';
+import { reopenCertifiedDay } from '../close/day-reopen';
 import { correctionAllowed, CorrectionPath } from '../close/month-lock';
 import { PeriodChangeProposal } from './entities/period-change-proposal.entity';
 import { ReconciliationLine } from './entities/reconciliation-line.entity';
@@ -204,6 +205,12 @@ export async function reviseIn(
     },
   });
   await resolveProposals(manager, approved, draft, context);
+  await reopenCertifiedDay(manager, {
+    period,
+    actorId: context.userId,
+    reason: request.reason,
+    correlationId: context.correlationId || null,
+  });
   await queueRun(manager, context, period, deps.jobs);
   await publishWorkflowEvent(manager, draft, WORKFLOW_EVENTS.revised, {
     supersedesId: approved.id,

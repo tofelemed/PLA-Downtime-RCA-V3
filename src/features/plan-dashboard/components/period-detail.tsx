@@ -8,6 +8,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { AdjustmentsSection } from '../adjustments/adjustments-section';
 import { LossLineEditor } from '../editor/loss-line-editor';
+import { PeriodDayPanel } from '../day/day-certification-panel';
 import { RestatementPanel } from '../restatement/restatement-panel';
 import { SlaPanel } from '../sla/sla-panel';
 import { WorkflowBar } from '../workflow/workflow-bar';
@@ -65,6 +66,7 @@ export function PeriodDetail({ planId, periodId, unitName, planLabel, timezone }
       <WorkflowBar view={data} shown={view} onShowCurrent={() => setView('current')} />
       {view === 'current' && <SlaPanel view={data} timezone={timezone} />}
       {data.revision.supersedesId && <RestatementPanel view={data} />}
+      <PeriodDayPanel periodId={periodId} />
       <Suspense fallback={<Skeleton className="h-48 w-full" />}>
         <WaterfallPanel periodId={periodId} ledger={ledger} view={view} />
       </Suspense>
