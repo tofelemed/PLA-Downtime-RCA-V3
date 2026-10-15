@@ -62,7 +62,8 @@ export interface ValuationRateV2View extends VersionFields {
   impactCodeId: string | null;
   basis: string;
   value: string;
-  currency: string;
+  /** null for a ratio basis (`rework_yield`: recovered per reworked quantity) */
+  currency: string | null;
   perUom: string;
 }
 

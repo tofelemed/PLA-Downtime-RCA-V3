@@ -112,6 +112,9 @@ describe('capabilitiesOf', () => {
       ['canApproveDispositions', Roles.DISPOSITION_APPROVERS],
       ['canVerifyStops', Roles.STOP_VERIFIERS],
       ['canValidateFailures', Roles.FAILURE_VALIDATORS],
+      ['canWriteUncertaintyBudgets', Roles.BUDGET_WRITERS],
+      ['canApproveUncertaintyBudgets', Roles.BUDGET_APPROVERS],
+      ['canAdoptTolerance', Roles.TOLERANCE_ADOPTERS],
     ];
     const SCOPE_ROLES = ['manager_approver', 'production_accountant', 'quality_approver', 'finance_approver', 'finance_maintainer', 'production_engineer', 'reliability_engineer', 'integration_admin', 'master_data_admin', 'operator', 'viewer'];
 

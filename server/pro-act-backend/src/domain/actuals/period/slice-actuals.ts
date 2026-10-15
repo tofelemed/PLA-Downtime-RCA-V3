@@ -1,6 +1,7 @@
 import { clip, union, unionSeconds } from '../../time/interval-algebra';
 import { Dec, formatDec, ZERO } from '../decimal';
 import { AuthoritySelection } from './authority';
+import { refOf } from './measurement-hierarchy';
 import {
   ActualsMethod,
   ApprovedAdjustment,
@@ -10,6 +11,7 @@ import {
   QuantityBasis,
   SliceActuals,
   SourceCandidate,
+  SourceSubstitution,
   Window,
 } from './period-actuals.types';
 import {
@@ -70,6 +72,7 @@ export function computeSliceActuals(input: SliceActualsInput): SliceActuals {
     if (!classified)
       findings.push({ code: 'rejects_not_measured', severity: 'info' });
   }
+  const substitution = substitutionOf(input, source, findings);
   const coverage = coverageOf(input, source);
   const main =
     components.basis === 'gross' ? components.gross : components.good;
@@ -95,7 +98,44 @@ export function computeSliceActuals(input: SliceActualsInput): SliceActuals {
       reject: components.reject,
       reworkAccepted: components.rework,
     }),
+    substitution,
   };
+}
+
+/**
+ * SME E7 substitution flag: the lower rank the authority selected, else — when no source quantified the
+ * slice — the approved estimate rank if approved estimated output adjustments stand in. An estimate the
+ * hierarchy does not rank is a problem (`estimate_outside_hierarchy`); a forecast is never an input.
+ */
+function substitutionOf(
+  input: SliceActualsInput,
+  source: SourceCandidate | null,
+  findings: PeriodFinding[],
+): SourceSubstitution | null {
+  const selection = input.selection;
+  if (selection.substitution) return selection.substitution;
+  if (source && source.quantity !== null) return null;
+  const estimates = input.adjustments.filter(
+    (a) => a.basis === 'estimated' && isSubstitute(a),
+  );
+  if (estimates.length === 0) return null;
+  const entry = selection.estimateEntry ?? null;
+  if (entry && selection.top) {
+    return {
+      used: { ...refOf(entry), label: 'approved_estimate' },
+      replaced: selection.top,
+      reason: 'no_measured_source',
+      crossBoundary: null,
+    };
+  }
+  if (selection.hierarchyConfigured) {
+    findings.push({
+      code: 'estimate_outside_hierarchy',
+      severity: 'problem',
+      detail: { adjustmentIds: estimates.map((a) => a.id) },
+    });
+  }
+  return null;
 }
 
 /** The selected source, or null when its unit differs from the slice unit (never converted). */

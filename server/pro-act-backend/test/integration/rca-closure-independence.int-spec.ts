@@ -165,22 +165,6 @@ describe('RCA closure independence (SME CA1)', () => {
     expect(readiness.approver.canApprove).toBe(false);
   });
 
-  it('RCA-01: the v1 PUT route cannot close the case or change the locked team', async () => {
-    const put = (body: object) =>
-      env
-        .http()
-        .put(`/api/rcas/${caseId}`)
-        .set('Authorization', `Bearer ${env.admin}`)
-        .send(body);
-    expect(codeOf(await put({ status: 'Closed' }).expect(422))).toBe(
-      'STATUS_VIA_TRANSITION',
-    );
-    expect(
-      codeOf(await put({ teamLeadId: people.member.id }).expect(422)),
-    ).toBe('TEAM_LOCKED');
-    expect((await read()).status).toBe('Closure Review');
-  });
-
   it('an independent manager approver closes it', async () => {
     expect((await transition({ to: 'Closed' }, env.approver)).status).toBe(200);
   });

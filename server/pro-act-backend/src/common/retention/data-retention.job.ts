@@ -16,14 +16,16 @@ const window = (days: number | null) => (days === null ? 'keep' : `${days} d`);
 /** One log line per run: the windows applied and what went. */
 const describeRun = (policy: RetentionPolicy, result: RetentionResult) =>
   `Retention (request log ${window(policy.requestLogDays)}, audit trail ${window(policy.auditTrailDays)}, ` +
-  `raw ${window(policy.rawDays)}) deleted ${result.requestLog} request-log and ${result.auditTrail} ` +
-  `audit-trail row(s); dropped raw partitions: ${result.rawPartitions.join(', ') || 'none'}`;
+  `raw ${window(policy.rawDays)}, samples ${window(policy.sampleDays)}) deleted ${result.requestLog} ` +
+  `request-log and ${result.auditTrail} audit-trail row(s); dropped raw partitions: ` +
+  `${result.rawPartitions.join(', ') || 'none'}; dropped sample partitions: ` +
+  `${result.samplePartitions.join(', ') || 'none'}`;
 
 /**
  * Daily data retention (DB-07, worker/all roles): the audit request log, the audit trail and old raw
- * observation partitions, by the windows of `readRetentionPolicy`. Unset = keep forever; the owner set
- * both audit tables to 30 days (2026-10-14, passed by docker-compose), raw retention is not decided. A
- * bad value is logged and nothing is deleted.
+ * observation and signal sample partitions, by the windows of `readRetentionPolicy`. Unset = keep forever;
+ * the owner set both audit tables to 30 days (2026-10-14), raw observations to 1 year and samples to 90
+ * days (2026-10-15), all passed by docker-compose. A bad value is logged and nothing is deleted.
  */
 @Injectable()
 export class DataRetentionJob {

@@ -169,7 +169,27 @@ export interface LossValueReportView {
   basis: string;
   groups: LossValueGroupView[];
   total: LossValueGroupView;
+  /** VA-04, `groupBy=component` only: the economic view by component (else null; `groups` is then empty) */
+  components?: EconomicComponentGroupView[] | null;
   calculationRunIds: string[];
+}
+
+/** One economic component in one reporting currency (server `loss-value-components.ts`). */
+export interface EconomicComponentValueView {
+  currency: string;
+  /** decimal string; null when unvalued or a line lacks an approved FX rate (never estimated) */
+  amount: string | null;
+  status: 'valued' | 'unvalued' | 'mixed';
+  fxProvisional: boolean;
+  reasons: string[];
+  lines: number;
+}
+
+/** A part of the economic view (`lost_contribution`, `rework_cost`, …, `not_broken_down`, `unvalued`). */
+export interface EconomicComponentGroupView {
+  key: string;
+  currencies: EconomicComponentValueView[];
+  quantities: Array<{ uom: string | null; quantity: string }>;
 }
 
 export interface ExportJobDetailView {

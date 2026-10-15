@@ -83,14 +83,16 @@ export interface PeriodInputs {
 export class ActualsInputsLoader {
   constructor(private readonly samples: SampleStore) {}
 
+  /** `lagSeconds`: the longest SME E7 boundary lag of the policy — signal samples are read that much later too */
   async load(
     manager: EntityManager,
     period: ProductionPeriod,
+    lagSeconds = 0,
   ): Promise<PeriodInputs> {
     const [events, signals, adjustments, reportLines, dispositions] =
       await Promise.all([
         this.events(manager, period),
-        this.signals(manager, period),
+        this.signals(manager, period, lagSeconds),
         manager.find(ActualsAdjustment, {
           where: { periodId: period.id, state: 'approved' },
           order: { decidedAt: 'ASC', id: 'ASC' },
@@ -183,6 +185,7 @@ export class ActualsInputsLoader {
   private async signals(
     manager: EntityManager,
     period: ProductionPeriod,
+    lagSeconds: number,
   ): Promise<SignalInput[]> {
     const versions = await manager
       .getRepository(Signal)
@@ -216,7 +219,9 @@ export class ActualsInputsLoader {
         latest.semanticType,
       );
       if (!source) continue;
-      inputs.push(await this.withSamples(manager, period, group, source));
+      inputs.push(
+        await this.withSamples(manager, period, { group, source, lagSeconds }),
+      );
     }
     return inputs;
   }
@@ -224,11 +229,12 @@ export class ActualsInputsLoader {
   private async withSamples(
     manager: EntityManager,
     period: ProductionPeriod,
-    group: Signal[],
-    source: ActualsSource,
+    of: { group: Signal[]; source: ActualsSource; lagSeconds: number },
   ): Promise<SignalInput> {
+    const { group, source } = of;
     const latest = group[group.length - 1];
     const margin = latest.maxGapSeconds * 1000;
+    const lag = of.lagSeconds * 1000;
     const all: EngineSample[] = [];
     let truncated = false;
     for (const version of group) {
@@ -236,7 +242,7 @@ export class ActualsInputsLoader {
         tenantId: period.tenantId,
         signalId: version.id,
         from: new Date(period.utcStart.getTime() - margin),
-        to: new Date(period.utcEnd.getTime() + margin),
+        to: new Date(period.utcEnd.getTime() + margin + lag),
         limit: PERIOD_SAMPLE_CAP + 1,
       });
       truncated ||= rows.length > PERIOD_SAMPLE_CAP;

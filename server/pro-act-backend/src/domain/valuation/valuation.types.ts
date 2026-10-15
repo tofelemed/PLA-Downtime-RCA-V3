@@ -1,4 +1,5 @@
 import { LossKind } from '../accounting/accounting.types';
+import { RateTimebase } from '../actuals/actuals.types';
 import { Dec } from '../actuals/decimal';
 import { ValuationBasis } from '../profiles/profile.types';
 
@@ -30,8 +31,13 @@ export const VIEW_LABELS: Readonly<Record<TotalsView, string>> = {
     'Margin + time cost of independent cost components only',
 };
 
-/** 2.7.0: SME V7 provisional FX rates (a final rate wins; provisional conversions are marked) and the E3 line quality-class disposition */
-export const VALUATION_ENGINE_VERSION = '2.7.0';
+/**
+ * 2.8.0: SME V2 remainder — yield loss on rework (lost share valued like scrap; recorded recovery
+ * movements first, the approved rework yield only where recovery is not recorded) and the contribution
+ * displaced at a demand-constrained unit by rework time. 2.7.0: SME V7 provisional FX rates and the E3
+ * line quality-class disposition.
+ */
+export const VALUATION_ENGINE_VERSION = '2.8.0';
 
 /** SME V5: FX rate tables per purpose (never a market label such as "NIMA"; the source says where from). */
 export const FX_RATE_TYPES = ['economic', 'group_reporting', 'budget'] as const;
@@ -130,6 +136,52 @@ export interface DemandStatusSnapshot {
   to: string | null;
 }
 
+/** SME V2 / E3: an approved recovery movement of a rework lot (the reprocessing interval and its output). */
+export interface ReworkRecoverySnapshot {
+  id: string;
+  start: string;
+  end: string;
+  /** recovered saleable quantity, in the lot's unit */
+  quantity: string;
+  /** reprocessed material passed the recovery unit's production boundary again */
+  remeasured: boolean;
+  /** reprocessed on the rework lot's own unit (only then does it use that unit's capacity) */
+  sameUnit: boolean;
+}
+
+/** SME V2 / E3: an approved rework lot disposition of the period's unit with its approved recoveries. */
+export interface ReworkLotSnapshot {
+  id: string;
+  productId: string;
+  /** production interval of the defective lot, half-open */
+  start: string;
+  end: string;
+  quantity: string;
+  uom: string;
+  recoveries: ReworkRecoverySnapshot[];
+}
+
+/** An approved `rework_yield` valuation rate of a profile: recovered tonnes per reworked tonne (0 < value ≤ 1). */
+export interface ReworkYieldSnapshot {
+  id: string;
+  version: number;
+  profileId: string;
+  value: string;
+  from: string;
+  to: string | null;
+}
+
+/** An approved planning rate version of a profile (displaced output = rework time × this rate). */
+export interface PlannedRateSnapshot {
+  id: string;
+  version: number;
+  profileId: string;
+  rate: string;
+  timebase: RateTimebase;
+  from: string;
+  to: string | null;
+}
+
 /** Everything valuation reads, frozen per calculation run and part of its input hash (FND03, VAL03). */
 export interface ValuationContext {
   engineVersion: string;
@@ -140,6 +192,12 @@ export interface ValuationContext {
   demand?: DemandStatusSnapshot[];
   /** v3 `period_average` only: the local month whose average rate converts every line of the period */
   fxAverage?: { from: string; to: string };
+  /** v3 economic view only (2.8.0): approved rework lots of the unit overlapping the period, with recoveries */
+  reworkLots?: ReworkLotSnapshot[];
+  /** v3 economic view only (2.8.0): approved rework yields of the slices' profiles (never in `rates`: no currency) */
+  reworkYields?: ReworkYieldSnapshot[];
+  /** v3 economic view only (2.8.0): approved planning rates of the slices' profiles */
+  plannedRates?: PlannedRateSnapshot[];
 }
 
 /** What valuation needs to know about one loss line. */
@@ -166,7 +224,14 @@ export type EconomicComponent =
   | 'salvage'
   | 'disposal'
   | 'price_difference'
-  | 'rework_cost';
+  | 'rework_cost'
+  /** SME V2 yield loss on rework: the reworked share not recovered, valued like scrap (2.8.0) */
+  | 'yield_loss_contribution'
+  | 'yield_loss_variable_cost'
+  | 'yield_loss_salvage'
+  | 'yield_loss_disposal'
+  /** SME V2: contribution of prime output displaced by rework time at a demand-constrained unit (2.8.0) */
+  | 'displaced_contribution';
 
 /** One rate version applied to (a time share of) a line. */
 export interface ValuationComponent {

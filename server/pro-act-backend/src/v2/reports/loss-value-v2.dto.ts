@@ -12,7 +12,13 @@ export const LOSS_VALUE_METRICS = {
 } as const;
 export type LossValueMetric = keyof typeof LOSS_VALUE_METRICS;
 
-export const LOSS_VALUE_GROUPS = ['kind', 'unit', 'day', 'month'] as const;
+export const LOSS_VALUE_GROUPS = [
+  'kind',
+  'unit',
+  'day',
+  'month',
+  'component',
+] as const;
 export type LossValueGroup = (typeof LOSS_VALUE_GROUPS)[number];
 
 export class LossValueReportQueryDto extends ReportWindowQueryDto {
@@ -38,7 +44,9 @@ export class LossValueReportQueryDto extends ReportWindowQueryDto {
     enum: LOSS_VALUE_GROUPS,
     default: 'kind',
     description:
-      'kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only',
+      'kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only; ' +
+      'component (economic_impact only) breaks the economic view down by component in `components` ' +
+      '(values stored before valuation 2.8.0 are `not_broken_down`, lines without a value `unvalued`)',
   })
   @IsOptional()
   @IsIn(LOSS_VALUE_GROUPS)

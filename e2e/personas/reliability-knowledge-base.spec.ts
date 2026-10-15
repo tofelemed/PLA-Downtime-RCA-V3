@@ -67,9 +67,10 @@ test.describe('Reliability engineer — RCA knowledge base (journey 5)', () => {
   });
 
   test('J5a (leila): closing a case produced one unpublished knowledge entry carrying the case content', async () => {
-    const entries = await call<KnowledgeEntry[]>(leila.token, 'GET', `/rca-knowledge-base?tenantId=${DEMO_PLANT}`);
+    // v2 list of the acting plant (the v1 `/rca-knowledge-base` route is retired)
+    const entries = await call<{ items: KnowledgeEntry[] }>(leila.token, 'GET', `/v2/rca-knowledge?q=${encodeURIComponent(caseTitle)}`);
     expect(entries.status).toBe(200);
-    const mine = entries.body.filter((entry) => entry.rcaId === caseId);
+    const mine = entries.body.items.filter((entry) => entry.rcaId === caseId);
     expect(mine).toHaveLength(1);
     expect(mine[0]).toMatchObject({ title: caseTitle, rootCause, isPublished: false });
     expect(mine[0].author, 'attributed to the person who closed the case').toBeTruthy();

@@ -12,11 +12,13 @@ import {
   stateCoverage,
 } from '../../domain/reliability/state-coverage';
 import { StateSegment } from '../../domain/reliability/unit-state';
+import { OPEN_ENDED } from '../../periods/period-recalc';
 import { assertBodyUnitsInScope } from '../../periods/period-scope';
 import { UnitStateMapping } from '../../reliability/entities/unit-state-mapping.entity';
 import { loadStateTimeline } from '../../reliability/unit-state/state-timeline.loader';
 import { CursorCodec, invalidCursor } from '../common/cursor-codec';
 import { invalidField } from '../master-data/common/master-data-errors';
+import { requestReliabilityRecalc } from './reliability-recalc';
 import { windowOf } from './reliability-v2-common';
 import {
   UnitStateCoverageQueryDto,
@@ -116,12 +118,20 @@ export class UnitStateV2Service {
         `UPDATE "unit_state_mappings" SET "effective_to" = $3 WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "effective_to" IS NULL`,
         [tenantId, input.unitId, from],
       );
-      return manager.save(
+      const saved = await manager.save(
         manager.create(
           UnitStateMapping,
           rowOf(tenantId, context.userId, input, { from, version: next }),
         ),
       );
+      // the state timeline of the unit changes from the new version on (coverage KPIs, SME D1 / D2)
+      await requestReliabilityRecalc(
+        manager,
+        context,
+        [{ unitId: input.unitId, start: from, end: OPEN_ENDED }],
+        'unit_state_mapping_changed',
+      );
+      return saved;
     });
   }
 

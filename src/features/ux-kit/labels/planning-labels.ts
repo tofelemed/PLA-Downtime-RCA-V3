@@ -84,6 +84,7 @@ export const VALUATION_BASIS_LABELS: Readonly<Record<ValuationBasis, string>> = 
   disposal_cost: 'Disposal / handling cost',
   downgrade_price_difference: 'Downgrade price difference',
   rework_cost: 'Rework cost',
+  rework_yield: 'Rework yield (recovered per reworked)',
 };
 
 export const DEFAULT_BASIS_LABELS: Readonly<Record<DefaultBasis, string>> = {
@@ -147,4 +148,21 @@ export const CALENDAR_WARNING_LABELS: Readonly<Record<CalendarWarningCode, strin
   holiday_reduced: 'Holiday with reduced hours',
   crew_conflict: 'Crew assigned twice',
   timezone_fallback: 'Plant time zone not set (UTC used)',
+};
+
+/** VA-04: parts of the economic view (SME V2), in the order the breakdown lists them. */
+export const ECONOMIC_COMPONENT_LABELS: Readonly<Record<string, string>> = {
+  lost_contribution: 'Lost contribution (sales forgone)',
+  variable_cost: 'Variable cost already spent (scrap)',
+  salvage: 'Salvage recovered (scrap)',
+  disposal: 'Disposal / handling',
+  price_difference: 'Downgrade price difference',
+  rework_cost: 'Rework cost',
+  yield_loss_contribution: 'Yield loss · lost contribution',
+  yield_loss_variable_cost: 'Yield loss · variable cost',
+  yield_loss_salvage: 'Yield loss · salvage',
+  yield_loss_disposal: 'Yield loss · disposal',
+  displaced_contribution: 'Displaced output at a sold-out unit',
+  not_broken_down: 'Not broken down (valued before the breakdown existed)',
+  unvalued: 'Not valued',
 };

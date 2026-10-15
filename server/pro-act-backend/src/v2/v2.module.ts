@@ -97,6 +97,7 @@ import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { PeriodsModule } from '../periods/periods.module';
 import { AccountingModule } from '../accounting/accounting.module';
 import { CalculationRun } from '../accounting/entities/calculation-run.entity';
+import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
 import { PeriodAccountingV2Controller } from './accounting/period-accounting-v2.controller';
 import { PeriodAccountingV2Service } from './accounting/period-accounting-v2.service';
 import { ReconciliationModule } from '../reconciliation/reconciliation.module';
@@ -107,6 +108,11 @@ import { ActualsAdjustmentsV2Controller } from './periods/actuals-adjustments-v2
 import { QualityDispositionsModule } from '../quality-dispositions/quality-dispositions.module';
 import { LotDispositionsV2Controller } from './quality-dispositions/lot-dispositions-v2.controller';
 import { LotDispositionsV2Service } from './quality-dispositions/lot-dispositions-v2.service';
+import { UncertaintyModule } from '../uncertainty/uncertainty.module';
+import { UncertaintyBudgetsV2Controller } from './uncertainty/uncertainty-budgets-v2.controller';
+import { UncertaintyBudgetsV2Service } from './uncertainty/uncertainty-budgets-v2.service';
+import { SourceAuthorityV2Controller } from './source-authority/source-authority-v2.controller';
+import { SourceAuthorityV2Service } from './source-authority/source-authority-v2.service';
 import { ActualsJobsV2Controller } from './periods/actuals-jobs-v2.controller';
 import { ExternalReportsV2Controller } from './periods/external-reports-v2.controller';
 import { PeriodsV2Service } from './periods/periods-v2.service';
@@ -187,6 +193,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
       PlanScenario,
       ProductionPeriod,
       CalculationRun,
+      AccountingPolicy,
     ]),
     ProductionEventModule,
     CodeLibraryModule,
@@ -200,6 +207,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     PlansModule,
     PeriodsModule,
     QualityDispositionsModule,
+    UncertaintyModule,
     AccountingModule,
     ReconciliationModule,
     ExportsModule,
@@ -248,6 +256,8 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     ProductionPeriodsV2Controller,
     ActualsAdjustmentsV2Controller,
     LotDispositionsV2Controller,
+    UncertaintyBudgetsV2Controller,
+    SourceAuthorityV2Controller,
     ExternalReportsV2Controller,
     ActualsJobsV2Controller,
     PeriodAccountingV2Controller,
@@ -294,6 +304,8 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     PlansV2Service,
     PeriodsV2Service,
     LotDispositionsV2Service,
+    UncertaintyBudgetsV2Service,
+    SourceAuthorityV2Service,
     PeriodAccountingV2Service,
     ReconciliationV2Service,
     KpiReportsV2Service,

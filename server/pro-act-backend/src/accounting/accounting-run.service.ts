@@ -281,6 +281,7 @@ function writeKpis(
       occurrences: draft.inputs.kpi.occurrences,
       failures: draft.inputs.kpi.failures,
       stateTimeline: draft.inputs.kpi.stateTimeline,
+      standby: draft.inputs.kpi.standby,
     }),
   );
 }

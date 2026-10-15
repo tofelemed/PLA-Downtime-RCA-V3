@@ -1,9 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { IntegrationController } from './integration.controller';
-import { PIBrowserController } from './pi-browser.controller';
-import { PIEventPullService } from './pi-event-pull.service';
-import { PIWebApiService } from './pi-web-api.service';
 import { MasterDataCodeResolverService } from './master-data-code-resolver.service';
 import { PiFrameIngestService } from './pi-frame-ingest.service';
 import { PiUnmappedRecorder } from './pi-unmapped-recorder';
@@ -67,10 +63,7 @@ import { SignalsModule } from '../signals/signals.module';
     // signals and the measurement normaliser (plan 1.7)
     SignalsModule,
   ],
-  controllers: [IntegrationController, PIBrowserController],
   providers: [
-    PIEventPullService,
-    PIWebApiService,
     MasterDataCodeResolverService,
     PiFrameIngestService,
     PiUnmappedRecorder,
@@ -94,8 +87,6 @@ import { SignalsModule } from '../signals/signals.module';
     PiStreamUpdates,
   ],
   exports: [
-    PIEventPullService,
-    PIWebApiService,
     MasterDataCodeResolverService,
     PiLegacyJobLink,
     // the frame → production event path is shared with the MQTT interval-event handler (plan 1.8)

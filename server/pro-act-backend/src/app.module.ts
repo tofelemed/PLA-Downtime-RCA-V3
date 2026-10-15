@@ -16,64 +16,22 @@ import { TenantModule } from './tenant/tenant.module';
 import { UnitModule } from './unit/unit.module';
 import { AssetModule } from './asset/asset.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
-import { ImpactCodeModule } from './impact-code/impact-code.module';
-import { OEECodeModule } from './oee-code/oee-code.module';
-import { RCACauseCodeModule } from './rca-cause-code/rca-cause-code.module';
-import { VerificationStatusCodeModule } from './verification-status-code/verification-status-code.module';
-import { RolesModule } from './roles/roles.module';
 import { ProductModule } from './product/product.module';
-import { ProductionPlanTemplateModule } from './production-plan-template/production-plan-template.module';
 import { ProductionPlanModule } from './production-plan/production-plan.module';
 import { ProductionEventModule } from './production-event/production-event.module';
 import { RCAModule } from './rca/rca.module';
-import { RCARecommendationModule } from './rca-recommendation/rca-recommendation.module';
-import { RCATemplateModule } from './rca-template/rca-template.module';
-import { ReasonCodeModule } from './reason-code/reason-code.module';
 import { TaskModule } from './task/task.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
-import { LogicTreeNodeModule } from './logic-tree-node/logic-tree-node.module';
-import { EvidenceCategoryModule } from './evidence-category/evidence-category.module';
-import { EvidenceLocationModule } from './evidence-location/evidence-location.module';
-import { ProductionLossModule } from './production-loss/production-loss.module';
-import { OEESummaryModule } from './oee-summary/oee-summary.module';
-import { ReconcileFormModule } from './reconcile-form/reconcile-form.module';
-import { LossCategoryModule } from './loss-category/loss-category.module';
-import { UnmappedEventModule } from './unmapped-event/unmapped-event.module';
-import { RCAEvidenceModule } from './rca-evidence/rca-evidence.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { ScopedRealtimeModule } from './realtime/scoped-realtime.module';
 import { TenantSessionBinding } from './database/rls/tenant-session-binding';
-import { ReportingModule } from './reporting/reporting.module';
 import { IntegrationModule } from './integration/integration.module';
 import { IntakeModule } from './intake/intake.module';
 import { MqttAdapterModule } from './intake/adapters/mqtt/mqtt-adapter.module';
 import { HealthModule } from './health/health.module';
-import { PIProxyModule } from './pi-proxy/pi-proxy.module';
-import { RCATriggerConfigModule } from './rca-trigger-config/rca-trigger-config.module';
-import { RCAKnowledgeBaseModule } from './rca-knowledge-base/rca-knowledge-base.module';
-import { RCAAnalysisConfigModule } from './rca-analysis-config/rca-analysis-config.module';
-import { RCAAnalysisMethodologyModule } from './rca-analysis-methodology/rca-analysis-methodology.module';
-import { FiveWhyAnalysisModule } from './five-why-analysis/five-why-analysis.module';
-import { FishboneDiagramModule } from './fishbone-diagram/fishbone-diagram.module';
-import { FMEAAnalysisModule } from './fmea-analysis/fmea-analysis.module';
-import { FaultTreeAnalysisModule } from './fault-tree-analysis/fault-tree-analysis.module';
-import { BarrierAnalysisModule } from './barrier-analysis/barrier-analysis.module';
-import { ChangeAnalysisModule } from './change-analysis/change-analysis.module';
-import { PIConnectionModule } from './pi-connection/pi-connection.module';
-import { PIAfElementModule } from './pi-af-element/pi-af-element.module';
-import { AfBindingModule } from './af-binding/af-binding.module';
-import { PIEventModule } from './pi-event/pi-event.module';
-import { PIMappingModule } from './pi-mapping/pi-mapping.module';
-import { PISyncWatermarkModule } from './pi-sync-watermark/pi-sync-watermark.module';
 import { PISyncJobModule } from './pi-sync-job/pi-sync-job.module';
-import { HistorianTagModule } from './historian-tag/historian-tag.module';
-import { DataSourceModule } from './data-source/data-source.module';
-import { CustomAttributeDefinitionModule } from './custom-attribute-definition/custom-attribute-definition.module';
-import { CustomAttributeValueModule } from './custom-attribute-value/custom-attribute-value.module';
-import { HistorianHistoryModule } from './historian-history/historian-history.module';
 import { HierarchyMappingModule } from './hierarchy-mapping/hierarchy-mapping.module';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
-import { StreamingModule } from './streaming/streaming.module';
 import { runtimeDataSourceOptions } from './database/data-source';
 import { registerPgTypeParsers } from './database/pg-type-parsers';
 import { AccessModule } from './auth/access/access.module';
@@ -114,68 +72,23 @@ registerPgTypeParsers();
     UnitModule,
     AssetModule,
     AuditLogModule,
-    ImpactCodeModule,
-    OEECodeModule,
-    RCACauseCodeModule,
-    VerificationStatusCodeModule,
-    RolesModule,
     ProductModule,
-    ProductionPlanTemplateModule,
     ProductionPlanModule,
     ProductionEventModule,
     RCAModule,
-    RCARecommendationModule,
-    RCAEvidenceModule,
-    RCATemplateModule,
-    ReasonCodeModule,
     TaskModule,
     AppSettingsModule,
-    LogicTreeNodeModule,
-    EvidenceCategoryModule,
-    EvidenceLocationModule,
-    ProductionLossModule,
-    OEESummaryModule,
-    ReconcileFormModule,
-    LossCategoryModule,
-    UnmappedEventModule,
     RealtimeModule,
     // authenticated, tenant/unit-scoped channel fed from the outbox (plan 3.1)
     ScopedRealtimeModule,
-    ReportingModule,
     IntegrationModule,
     // durable intake core (plan 1.5): raw store, jobs, quarantine, replay, outbox/inbox
     IntakeModule,
     // MQTT source adapter (plan 1.8): config validation, duplicate-feed guard, connection test
     MqttAdapterModule,
     HealthModule,
-    PIProxyModule,
-    // New Modules - Analysis & RCA Tools
-    RCATriggerConfigModule,
-    RCAKnowledgeBaseModule,
-    RCAAnalysisConfigModule,
-    RCAAnalysisMethodologyModule,
-    FiveWhyAnalysisModule,
-    FishboneDiagramModule,
-    FMEAAnalysisModule,
-    FaultTreeAnalysisModule,
-    BarrierAnalysisModule,
-    ChangeAnalysisModule,
-    // PI Integration Modules
-    PIConnectionModule,
-    PIAfElementModule,
-    AfBindingModule,
-    PIEventModule,
-    PIMappingModule,
-    PISyncWatermarkModule,
     PISyncJobModule,
-    HistorianTagModule,
-    // Custom Attributes & Integration
-    DataSourceModule,
-    CustomAttributeDefinitionModule,
-    CustomAttributeValueModule,
-    HistorianHistoryModule,
     HierarchyMappingModule,
-    StreamingModule,
     // /api/v2 resources (src/v2/CONVENTIONS.md)
     V2Module,
     // Plan 3.10: MIG05 v1 write freeze (423) for a tenant being cut over

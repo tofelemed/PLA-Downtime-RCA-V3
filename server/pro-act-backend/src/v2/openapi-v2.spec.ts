@@ -81,6 +81,10 @@ import { GradeTransitionStandard } from '../profiles/entities/transition-standar
 import { LotDisposition } from '../quality-dispositions/entities/lot-disposition.entity';
 import { LotDispositionsService } from '../quality-dispositions/lot-dispositions.service';
 import { QualityDispositionsModule } from '../quality-dispositions/quality-dispositions.module';
+import { UncertaintyBudget } from '../uncertainty/entities/uncertainty-budget.entity';
+import { ToleranceAdoptionService } from '../uncertainty/tolerance-adoption.service';
+import { UncertaintyBudgetsService } from '../uncertainty/uncertainty-budgets.service';
+import { UncertaintyModule } from '../uncertainty/uncertainty.module';
 import { ProfileResolutionService } from '../profiles/profile-resolution.service';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ProfilesService } from '../profiles/profiles.service';
@@ -115,6 +119,7 @@ import { PeriodsService } from '../periods/periods.service';
 import { AccountingCommandsService } from '../accounting/accounting-commands.service';
 import { AccountingModule } from '../accounting/accounting.module';
 import { CalculationRun } from '../accounting/entities/calculation-run.entity';
+import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
 import { DeliveryReconciliationService } from '../exports/delivery-reconciliation.service';
 import { ExportJobsService } from '../exports/export-jobs.service';
 import { ExportReadsService } from '../exports/export-reads.service';
@@ -326,6 +331,21 @@ class PeriodsModuleStub {}
 })
 class QualityDispositionsModuleStub {}
 
+/** Stands in for the SME E4 uncertainty budgets module. */
+@Module({
+  providers: [
+    { provide: UncertaintyBudgetsService, useValue: {} },
+    { provide: ToleranceAdoptionService, useValue: {} },
+    { provide: getRepositoryToken(UncertaintyBudget), useValue: {} },
+  ],
+  exports: [
+    UncertaintyBudgetsService,
+    ToleranceAdoptionService,
+    getRepositoryToken(UncertaintyBudget),
+  ],
+})
+class UncertaintyModuleStub {}
+
 /** Stands in for the plan 2.5 accounting module (calculation runs, recalculation command). */
 @Module({
   providers: [{ provide: AccountingCommandsService, useValue: {} }],
@@ -510,6 +530,8 @@ async function generate(): Promise<string> {
     .useValue({})
     .overrideProvider(getRepositoryToken(ProductionPeriod))
     .useValue({})
+    .overrideProvider(getRepositoryToken(AccountingPolicy))
+    .useValue({})
     .overrideProvider(getRepositoryToken(CalculationRun))
     .useValue({})
     .overrideProvider(ActivitySummaryV2Service)
@@ -540,6 +562,8 @@ async function generate(): Promise<string> {
     .useModule(PeriodsModuleStub)
     .overrideModule(QualityDispositionsModule)
     .useModule(QualityDispositionsModuleStub)
+    .overrideModule(UncertaintyModule)
+    .useModule(UncertaintyModuleStub)
     .overrideModule(AccountingModule)
     .useModule(AccountingModuleStub)
     .overrideModule(ReconciliationModule)

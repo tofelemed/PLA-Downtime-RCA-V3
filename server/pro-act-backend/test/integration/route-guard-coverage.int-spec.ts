@@ -15,10 +15,10 @@ import { PUBLIC_ROUTE_ALLOWLIST } from './support/route-allowlists';
 
 /**
  * Literal routes declared after a parameter route of the same controller that matches them, so Express
- * never reaches them. `forceDatabaseRecreation` (POST /historian/history/recreate) is a dev-only wipe of
- * every tenant's query history; it stays unreachable on purpose until it is removed (API usage audit).
+ * never reaches them. None: the last one (`POST /historian/history/recreate`) left with the retired v1
+ * historian-history routes.
  */
-const KNOWN_SHADOWED = ['HistorianHistoryController.forceDatabaseRecreation'];
+const KNOWN_SHADOWED: string[] = [];
 
 /** `a` (declared earlier) matches every path of `b`: same method, segments equal or `a` has a parameter. */
 function shadows(a: RouteGuardEntry, b: RouteGuardEntry): boolean {
@@ -32,13 +32,6 @@ function shadows(a: RouteGuardEntry, b: RouteGuardEntry): boolean {
     bs.some((seg, i) => as[i].startsWith(':') && !seg.startsWith(':'))
   );
 }
-
-/** Controllers that had no guard at the 0.1 baseline (B14). */
-const FORMERLY_UNGUARDED = [
-  'UnmappedEventController',
-  'RCARecommendationController',
-  'FileUploadController',
-];
 
 describe('route guard coverage (B14, plan 0.4)', () => {
   const harness = new IntegrationHarness();
@@ -84,17 +77,6 @@ describe('route guard coverage (B14, plan 0.4)', () => {
       .filter((entry) => entry.isPublic && !entry.guarded)
       .map(routeKey);
     expect(new Set(publicRoutes)).toEqual(new Set(PUBLIC_ROUTE_ALLOWLIST));
-  });
-
-  it('closes the controllers that were unguarded at the baseline', () => {
-    const entries = inventoryRoutes(registeredControllers(), {
-      globalGuard: true,
-    });
-    for (const controller of FORMERLY_UNGUARDED) {
-      const routes = entries.filter((entry) => entry.controller === controller);
-      expect(routes.length).toBeGreaterThan(0);
-      expect(routes.every((entry) => entry.guarded)).toBe(true);
-    }
   });
 
   it('inventories the routes the v2 code libraries inherit from their base controller', () => {

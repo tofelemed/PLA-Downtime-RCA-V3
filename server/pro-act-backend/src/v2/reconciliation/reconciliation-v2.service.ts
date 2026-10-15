@@ -21,6 +21,7 @@ import { bridgeReviewOf } from '../../reconciliation/bridge-review';
 import { loadCodingGate } from '../../reconciliation/coding-gate.loader';
 import { loadRevisionState } from '../../reconciliation/revision-state';
 import { reversibleKindsOf } from '../../periods/reconciliation-options';
+import { toleranceJustification } from '../../uncertainty/tolerance-justification';
 import { keysetPage } from '../common/keyset-page';
 import { ReversibleLineV2View, reversibleLines } from './reversible-lines';
 import { listResponse, ListResponse, ListScope } from '../common/response';
@@ -184,6 +185,11 @@ export class ReconciliationV2Service {
       openProposalId: open?.id ?? null,
       codingGate: await loadCodingGate(manager, state),
       bridgeReview: await bridgeReviewOf(manager, state),
+      justification: await toleranceJustification(
+        manager,
+        period.tenantId,
+        state.tolerance.body,
+      ),
     });
   }
 

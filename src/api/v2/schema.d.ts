@@ -2378,6 +2378,161 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/uncertainty-budgets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List uncertainty budgets (effective interval overlapping [from, to); keyset on effectiveFrom, id, newest first) */
+        get: operations["UncertaintyBudgetsV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Propose an uncertainty budget for a unit’s measurement boundary
+         * @description Requires `Idempotency-Key`. 422 INVALID_REFERENCE (unit outside the caller’s scope), INVALID_BUDGET, INVALID_RANGE (review not after the effective date).
+         */
+        post: operations["UncertaintyBudgetsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/uncertainty-budgets/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compute a draft budget (combined standard and expanded uncertainty, contributions); nothing is stored
+         * @description 422 INVALID_BUDGET (no component, k ≤ 0, |r| > 1, a pair correlated twice, negative variance).
+         */
+        post: operations["UncertaintyBudgetsV2Controller_preview_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/uncertainty-budgets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One uncertainty budget; foreign or out-of-scope ids are 404 */
+        get: operations["UncertaintyBudgetsV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/uncertainty-budgets/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a proposed budget (production accounting, never the author); it is in force from its effective date and ends the previous one of the boundary
+         * @description Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 INVALID_EFFECTIVE_FROM when not after the budget in force.
+         */
+        post: operations["UncertaintyBudgetsV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/uncertainty-budgets/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a proposed budget with a reason (production accounting, never the author)
+         * @description Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES; 409 INVALID_TRANSITION when not proposed.
+         */
+        post: operations["UncertaintyBudgetsV2Controller_reject_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/uncertainty-budgets/{id}/adopt-as-tolerance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make the budget’s expanded uncertainty the unit’s absolute reconciliation tolerance (new tolerance version, effective now)
+         * @description Requires `Idempotency-Key`. Explicit decision, never automatic. 403 SEPARATION_OF_DUTIES for the budget’s author; 422 BUDGET_NOT_IN_FORCE (not approved or not effective now), BUDGET_REVIEW_OVERDUE, INVALID_POLICY.
+         */
+        post: operations["UncertaintyBudgetsV2Controller_adopt_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/source-authority": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The source authority version in force for a unit (its override, else tenant-wide) */
+        get: operations["SourceAuthorityV2Controller_current_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/source-authority/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * New source authority version with a measurement hierarchy (or none), effective now; the top rank becomes the primary source
+         * @description Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit), INVALID_POLICY (ranks not unique, classes out of order, estimate not manual, same signal twice, lag on a non-signal source, top rank not at the hierarchy boundary).
+         */
+        post: operations["SourceAuthorityV2Controller_write_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/external-production-reports": {
         parameters: {
             query?: never;
@@ -7089,14 +7244,14 @@ export interface components {
              */
             impactCodeId?: string;
             /** @enum {string} */
-            basis: "contribution_margin" | "standard_cost" | "cost_per_hour" | "variable_cost" | "salvage_value" | "disposal_cost" | "downgrade_price_difference" | "rework_cost";
+            basis: "contribution_margin" | "standard_cost" | "cost_per_hour" | "variable_cost" | "salvage_value" | "disposal_cost" | "downgrade_price_difference" | "rework_cost" | "rework_yield";
             /** @example 42.5 */
             value: string;
             /**
-             * @description ISO 4217
+             * @description ISO 4217; required for money bases, omitted for rework_yield (a ratio: recovered per reworked quantity, 0 < value ≤ 1)
              * @example IRR
              */
-            currency: string;
+            currency?: string;
             /** @description Defaults to the profile quantityUom (must match it) or "h" for cost_per_hour */
             perUom?: string;
         };
@@ -7410,6 +7565,118 @@ export interface components {
             reason?: Record<string, never> | null;
             /** @description Lab certificate, sample id or document reference */
             evidenceRef?: Record<string, never> | null;
+        };
+        UncertaintyComponentDto: {
+            /** @enum {string} */
+            kind: "meter" | "scale" | "inventory" | "conversion" | "timing";
+            /** @example FT-101 totalizer (calibration 2027-01) */
+            label: string;
+            /**
+             * @description Standard uncertainty u (one standard deviation) in the budget unit, decimal string ≥ 0
+             * @example 3
+             */
+            standardUncertainty: string;
+            /**
+             * @description Sensitivity coefficient c of the reconciled quantity (1 added, −1 subtracted); default 1
+             * @example -1
+             */
+            sensitivity?: string;
+        };
+        UncertaintyCorrelationDto: {
+            /** @description Index of the first component */
+            a: number;
+            /** @description Index of the second component */
+            b: number;
+            /**
+             * @description Correlation coefficient r in [-1, 1]
+             * @example 0.5
+             */
+            coefficient: string;
+        };
+        UncertaintyBudgetMathsDto: {
+            components: components["schemas"]["UncertaintyComponentDto"][];
+            correlations?: components["schemas"]["UncertaintyCorrelationDto"][];
+            /**
+             * @description Coverage factor k (default 2, about 95 % for a normal distribution), at most 3 decimals
+             * @example 2
+             */
+            coverageFactor?: string;
+        };
+        UncertaintyBudgetCreateDto: {
+            components: components["schemas"]["UncertaintyComponentDto"][];
+            correlations?: components["schemas"]["UncertaintyCorrelationDto"][];
+            /**
+             * @description Coverage factor k (default 2, about 95 % for a normal distribution), at most 3 decimals
+             * @example 2
+             */
+            coverageFactor?: string;
+            /** Format: uuid */
+            unitId: string;
+            /**
+             * @description Measurement boundary the budget covers (same name as the source_authority hierarchy)
+             * @example reactor_outlet
+             */
+            boundary: string;
+            /** @example t */
+            uom: string;
+            /** @example CAL-FT101-2027-01; scale cert WS-22 */
+            calibrationRef: string;
+            /**
+             * Format: date-time
+             * @description Next review of the budget
+             */
+            reviewDueAt: string;
+            /**
+             * Format: date-time
+             * @description When the budget takes effect
+             */
+            effectiveFrom: string;
+            evidenceRef?: Record<string, never> | null;
+            notes?: Record<string, never> | null;
+        };
+        ToleranceAdoptionDto: {
+            /** @description Note on the new tolerance version */
+            notes?: string;
+        };
+        BoundaryAdjustmentDto: {
+            /** @description The record already includes the stock change between the boundaries (e.g. silo level-to-mass); false = known but never a substitute */
+            inventoryChangeAccounted: boolean;
+            /** @description Time lag of this boundary behind the slice boundary, seconds (signal sources only) */
+            lagSeconds: number;
+            /** @example silo S-1 stock reconciliation PA-2027-03 */
+            evidenceRef: string;
+        };
+        HierarchyEntryDto: {
+            rank: number;
+            /** @enum {string} */
+            sourceClass: "calibrated_primary" | "redundant_measurement" | "reconciled_record" | "approved_estimate";
+            /** @enum {string} */
+            source: "pi_output_ef" | "pi_counter" | "pi_rate" | "mqtt" | "kafka" | "manual" | "external_report";
+            /** @description Source key (tag / topic) of the one signal this rank reads, e.g. a redundant meter */
+            signalSourceKey?: Record<string, never> | null;
+            /** @example reactor_outlet */
+            boundary: string;
+            boundaryAdjustment?: components["schemas"]["BoundaryAdjustmentDto"] | null;
+        };
+        MeasurementHierarchyDto: {
+            /**
+             * @description The slice measurement boundary
+             * @example reactor_outlet
+             */
+            boundary: string;
+            /** @description When a lower rank may replace a better one */
+            conditions: ("primary_stale" | "primary_bad_quality" | "primary_missing" | "primary_conflict")[];
+            entries: components["schemas"]["HierarchyEntryDto"][];
+        };
+        SourceAuthorityVersionDto: {
+            /**
+             * Format: uuid
+             * @description Unit override; absent = the tenant-wide version
+             */
+            unitId?: string;
+            /** @description Ranked sources; null = back to primary / fallback. The top rank becomes primarySource. */
+            measurementHierarchy: components["schemas"]["MeasurementHierarchyDto"] | null;
+            notes?: string;
         };
         ExternalReportLineDto: {
             /** Format: uuid */
@@ -11622,7 +11889,7 @@ export interface operations {
                 to?: string;
                 profileId?: string;
                 impactCodeId?: string;
-                basis?: "contribution_margin" | "standard_cost" | "cost_per_hour" | "variable_cost" | "salvage_value" | "disposal_cost" | "downgrade_price_difference" | "rework_cost";
+                basis?: "contribution_margin" | "standard_cost" | "cost_per_hour" | "variable_cost" | "salvage_value" | "disposal_cost" | "downgrade_price_difference" | "rework_cost" | "rework_yield";
                 state?: "draft" | "approved" | "retired";
             };
             header?: never;
@@ -12573,6 +12840,217 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AdjustmentRejectDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UncertaintyBudgetsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                unitId?: string;
+                boundary?: string;
+                state?: "proposed" | "approved" | "rejected";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UncertaintyBudgetsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UncertaintyBudgetCreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UncertaintyBudgetsV2Controller_preview_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UncertaintyBudgetMathsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UncertaintyBudgetsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UncertaintyBudgetsV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustmentApproveDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UncertaintyBudgetsV2Controller_reject_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustmentRejectDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UncertaintyBudgetsV2Controller_adopt_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToleranceAdoptionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SourceAuthorityV2Controller_current_v2: {
+        parameters: {
+            query?: {
+                /** @description Unit whose version in force is read; absent = tenant-wide */
+                unitId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SourceAuthorityV2Controller_write_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceAuthorityVersionDto"];
             };
         };
         responses: {
@@ -13741,8 +14219,8 @@ export interface operations {
                 /** @description margin = commercial opportunity (contribution margin), standard_cost = standard cost view, operational_cost = cost per hour of downtime, independent_components = margin + time cost of the impact codes the policy marks independent, economic_impact = lost contribution on unrecovered sales + incremental costs (SME V2 / V3). Views are never added to each other. Absent: the default view of the tenant's newest approved valuation policy (SME V8), margin when none is approved. */
                 metric?: "margin" | "standard_cost" | "operational_cost" | "independent_components" | "economic_impact";
                 ledger?: "plan" | "capacity";
-                /** @description kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only */
-                groupBy?: "kind" | "unit" | "day" | "month";
+                /** @description kind keeps every loss kind apart (gains and residuals labelled, never netted); other groupings sum the loss kinds only; component (economic_impact only) breaks the economic view down by component in `components` (values stored before valuation 2.8.0 are `not_broken_down`, lines without a value `unvalued`) */
+                groupBy?: "kind" | "unit" | "day" | "month" | "component";
             };
             header?: never;
             path?: never;

@@ -71,23 +71,6 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
         .expect(412);
       expect((stale.body as ApiError).code).toBe('STALE_REVISION');
     });
-
-    it('v1 POST /rcas accepts the array bodies of the v1 screen and the e2e suite', async () => {
-      const response = await env
-        .v1()
-        .post('rcas', {
-          title: 'v1 case',
-          status: 'Draft',
-          priority: 'High',
-          recommendations: [],
-          evidence: [],
-          teamMemberIds: [],
-        })
-        .expect(201);
-      expect(
-        (response.body as { recommendations: string }).recommendations,
-      ).toBe('[]');
-    });
   });
 
   describe('authorization and scope', () => {
@@ -485,7 +468,8 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
     });
     const stopId = await env.stopEvent(env.world.unitA1, 120, 100);
     await env.linkEvent(stopId, { rcaId: extra.id }).expect(201);
-    await env.v1().del(`rcas/${extra.id}`).expect(200);
+    // v2 has no case delete (the v1 route is retired): the FK behaviour is checked on the row itself
+    await env.rows(`DELETE FROM rcas WHERE id = $1`, [extra.id]);
     const [event] = await env.rows<{ rca_id: string | null }>(
       `SELECT rca_id FROM production_events WHERE id = $1`,
       [stopId],

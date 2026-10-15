@@ -78,6 +78,11 @@
           "uniqueItems": true,
           "description": "SME R9 (15 Oct 2026): loss kinds an evidence-backed `reversal` line may reverse (an approved line of an earlier period of the unit). Absent = every kind listed here.",
           "items": { "type": "string", "enum": ["availability", "performance", "quality", "transition_allowance", "transition_excess", "gain", "bridge", "unaccounted_classified"] }
+        },
+        "uncertaintyBudgetId": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "description": "SME E4 (15 Oct 2026): the approved uncertainty budget (`uncertainty_budgets`) whose expanded uncertainty justifies an `absolute` tolerance; shown as the justification. Written only by an explicit adoption (`POST /v2/uncertainty-budgets/{id}/adopt-as-tolerance`), never automatically; absent = no stated justification."
         }
       },
       "allOf": [

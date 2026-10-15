@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import * as request from 'supertest';
 import { CredentialEncryptionService } from '../../src/common/services/credential-encryption.service';
 import { IntegrationConnectionService } from '../../src/intake/connections/integration-connection.service';
 import { IntegrationModule } from '../../src/integration/integration.module';
@@ -12,7 +11,7 @@ import { PISyncWatermark } from '../../src/pi-sync-watermark/pi-sync-watermark.e
 import { ProductionEventModule } from '../../src/production-event/production-event.module';
 import { IntegrationHarness } from './harness';
 import { PiJobDriver, usePiTestTimings } from './support/pi-certification';
-import { bearer, createIntegrationApp, signToken } from './support/test-app';
+import { createIntegrationApp } from './support/test-app';
 import {
   PiWebApiSimulator,
   SIM_PASSWORD,
@@ -22,15 +21,14 @@ import { minutesAgo, simFrame } from '../simulators/pi-web-api/sim-fixtures';
 
 /**
  * Plan 1.6: PI01 connection diagnostics (separate DNS/TLS/auth/version/authz/read checks, batch
- * detection), the hardened v1 browser route (§4.2, I12) and the v1 pull and sync jobs moved onto the
- * certified path (all pages, I8; v1 jobs crosswalked to leased ingestion jobs, step 5).
+ * detection) and the v1 sync jobs moved onto the certified path (v1 jobs crosswalked to leased
+ * ingestion jobs, step 5). The v1 `/pi-browser` routes are retired.
  */
-describe('PI connection diagnostics, browser hardening and the v1 paths (plan 1.6)', () => {
+describe('PI connection diagnostics and the v1 sync jobs (plan 1.6)', () => {
   const harness = new IntegrationHarness();
   const sim = new PiWebApiSimulator();
   let app: INestApplication;
   let pi: PiJobDriver;
-  let token: string;
   const tenantId = randomUUID();
   const v1ConnectionId = randomUUID();
   const rows = <T>(sql: string, params: unknown[] = []): Promise<T[]> =>
@@ -66,11 +64,6 @@ describe('PI connection diagnostics, browser hardening and the v1 paths (plan 1.
       ),
       connectionConfig: JSON.stringify({ databaseWebId: 'DB-HDPE' }),
       isActive: true,
-    });
-    token = signToken(app, {
-      userId: randomUUID(),
-      tenantId,
-      role: 'Engineer',
     });
     sim.addFrames(
       [1, 2, 3, 4, 5].map((index) =>
@@ -161,65 +154,9 @@ describe('PI connection diagnostics, browser hardening and the v1 paths (plan 1.
     });
   });
 
-  describe('pi-browser/:tenantId/request (§4.2, I12)', () => {
-    const browse = (body: Record<string, unknown>, tenant = tenantId) =>
-      request(app.getHttpServer())
-        .post(`/api/pi-browser/${tenant}/request`)
-        .set(bearer(token))
-        .send(body);
-
-    it('forwards allowlisted GETs and POST /batch with the stored credentials', async () => {
-      const servers = await browse({ path: '/assetservers' }).expect(201);
-      const listing = servers.body as { Items: Array<{ WebId: string }> };
-      expect(listing.Items[0].WebId).toBe('AS-SIM');
-      await browse({ path: '/batch', method: 'POST', data: {} }).expect(201);
-    });
-
-    it('rejects paths outside the allowlist, POST elsewhere, other methods, unknown fields and other tenants', async () => {
-      await browse({ path: '/system' }).expect(403);
-      await browse({ path: '/assetservers/../system' }).expect(403);
-      await browse({ path: '/elements', method: 'POST', data: {} }).expect(403);
-      await browse({ path: '/assetservers', method: 'DELETE' }).expect(400);
-      await browse({ path: '/assetservers', target: 'http://evil' }).expect(
-        400,
-      );
-      await browse({ path: '/assetservers' }, randomUUID()).expect(403);
-    });
-  });
-
-  describe('v1 paths on the certified read', () => {
-    it('the on-demand pull reads every page (maxCount is the page size, I8)', async () => {
-      const response = await request(app.getHttpServer())
-        .post(`/api/pi-browser/${tenantId}/sync`)
-        .set(bearer(token))
-        .send({
-          startTimeUtc: minutesAgo(60).toISOString(),
-          endTimeUtc: new Date().toISOString(),
-          scopeType: 'database',
-          scopeId: 'DB-HDPE',
-          templateName: 'V1 Loss',
-          maxCount: 2,
-          autoCreateProductionEvents: false,
-        })
-        .expect(201);
-
-      expect(response.body).toMatchObject({ success: true, eventsFetched: 5 });
-      const indexes = sim.requests
-        .filter(
-          (r) =>
-            r.path.endsWith('/eventframes') &&
-            new URLSearchParams(r.query).get('templateName') === 'V1 Loss',
-        )
-        .map((r) => new URLSearchParams(r.query).get('startIndex'));
-      expect(indexes).toEqual(['0', '2', '4']);
-    });
-
+  describe('v1 sync jobs on the certified read', () => {
     it('a v1 sync job is crosswalked to leased ingestion jobs that start at its watermark', async () => {
       const watermark = minutesAgo(26);
-      // replaces the watermark the on-demand pull above advanced to "now"
-      await harness.dataSource
-        .getRepository(PISyncWatermark)
-        .delete({ tenantId });
       await harness.dataSource.getRepository(PISyncWatermark).insert({
         tenantId,
         syncType: 'database',

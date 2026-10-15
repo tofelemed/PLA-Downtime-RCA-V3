@@ -12,6 +12,7 @@ import {
 import { CodingGateResult } from '../../domain/reconciliation/coding-gate';
 import { BridgeReviewState } from '../../reconciliation/bridge-review';
 import { RevisionState } from '../../reconciliation/revision-state';
+import { ToleranceJustification } from '../../uncertainty/tolerance-justification';
 import {
   candidatesPart,
   contentHashOf,
@@ -116,6 +117,11 @@ export interface ReconciliationV2View {
     value: number;
     epsilon: number;
     allowUnaccountedClassification: boolean;
+    unaccountedTargetOfShortfall: number | null;
+    /** SME E4: the uncertainty budget the absolute tolerance references; absent = none stated */
+    uncertaintyBudgetId?: string;
+    /** SME E4: that budget's expanded uncertainty and evidence; null = no budget referenced */
+    justification: ToleranceJustification | null;
   };
   slices: SliceReconciliationV2View[];
   candidates: CandidateV2View[];
@@ -164,6 +170,7 @@ export function toReconciliationView(
     openProposalId: string | null;
     codingGate: CodingGateResult;
     bridgeReview: BridgeReviewState;
+    justification?: ToleranceJustification | null;
   },
 ): ReconciliationV2View {
   const { period, revision, tolerance } = state;
@@ -181,6 +188,7 @@ export function toReconciliationView(
       policyId: tolerance.policyId,
       version: tolerance.version,
       ...tolerance.body,
+      justification: extra.justification ?? null,
     },
     slices: state.reconciliation.slices.map(sliceView),
     candidates: candidatesPart(state),

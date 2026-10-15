@@ -35,7 +35,8 @@
     },
     "reworkVariant": {
       "qualityClass": "quality_class:rework",
-      "economicUsd": "300"
+      "economicUsd": "300",
+      "economicUsdUnrecorded": "1800"
     }
   }
 }

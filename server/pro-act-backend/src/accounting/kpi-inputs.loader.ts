@@ -4,7 +4,9 @@ import { FailureSource, FailureSpan } from '../domain/kpi/reliability';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { StateSegment } from '../domain/reliability/unit-state';
 import { loadStateTimeline } from '../reliability/unit-state/state-timeline.loader';
+import { StandbyExposure } from '../domain/kpi/standby-mtbf';
 import { withRepairEvidence } from './repair-evidence.loader';
+import { loadStandbyExposure } from './standby-exposure.loader';
 
 /** What the KPI engine reads beyond the accounting inputs: full occurrence extents and failures. */
 export interface KpiInputs {
@@ -12,9 +14,11 @@ export interface KpiInputs {
   failures: FailureSpan[];
   /** SME D1 / D2: the unit's state timeline; null = no state mapping in force (absent in older runs) */
   stateTimeline?: StateSegment[] | null;
+  /** SME D9: standby assets of the unit with their own runs (absent in older runs) */
+  standby?: StandbyExposure[];
 }
 
-/** Stops, failures and the state timeline of a period (plan 2.7, SME D1 / D2). */
+/** Stops, failures, the state timeline and the standby runs of a period (plan 2.7, SME D1 / D2 / D9). */
 export async function loadKpiInputs(
   manager: EntityManager,
   period: ProductionPeriod,
@@ -25,7 +29,8 @@ export async function loadKpiInputs(
     { tenantId: period.tenantId, unitId: period.unitId },
     { start: period.utcStart, end: period.utcEnd },
   );
-  return { ...stops, stateTimeline };
+  const standby = await loadStandbyExposure(manager, period);
+  return { ...stops, stateTimeline, standby };
 }
 
 /** Occurrences with a downtime or FailureWO event touching the window (index tenant + unit + start). */
@@ -138,6 +143,11 @@ export function kpiHashMaterial(inputs: KpiInputs): unknown {
         time(s.end),
         s.state,
         s.unknownReason,
+      ]) ?? null,
+    standby:
+      inputs.standby?.map((s) => [
+        s.assetId,
+        s.runs.map((r) => [time(r.start), time(r.end)]),
       ]) ?? null,
   };
 }

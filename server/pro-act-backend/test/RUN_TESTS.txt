@@ -29,14 +29,8 @@
   # Organizations tests
   npx jest test/organizations.e2e-spec.ts
 
-  # RCA tests
-  npx jest test/rca.e2e-spec.ts
-
   # Production tests
   npx jest test/production.e2e-spec.ts
-
-  # File upload tests
-  npx jest test/file-upload.e2e-spec.ts
 
 ================================================================================
 
@@ -87,9 +81,7 @@
     ├── test-helpers.ts          (Utilities)
     ├── auth.e2e-spec.ts         (Auth tests)
     ├── organizations.e2e-spec.ts (Org tests)
-    ├── rca.e2e-spec.ts          (RCA tests)
     ├── production.e2e-spec.ts   (Production tests)
-    ├── file-upload.e2e-spec.ts  (Upload tests)
     └── run-all-tests.ts         (Test runner)
 
   test-all-endpoints.ps1         (PowerShell runner)

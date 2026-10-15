@@ -2,7 +2,9 @@ import { randomUUID } from 'crypto';
 import { EntityManager } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { formatDec } from '../domain/actuals/decimal';
+import { componentAmounts } from '../domain/valuation/component-amounts';
 import { ReconciledLine } from '../domain/valuation/reconciled-valuation';
+import { ValuationContext } from '../domain/valuation/valuation.types';
 import { ApprovedLossLine } from './entities/approved-loss-line.entity';
 import { ApprovedLossLineValuation } from './entities/approved-loss-line-valuation.entity';
 import { approvedLedgerLines } from './reviewed-valuation';
@@ -47,9 +49,10 @@ function metaOf(line: ReconciledLine, state: RevisionState): LineMeta {
 
 function valuationRows(
   scope: ApprovedLedgerScope,
-  approvedLineId: string,
-  line: ReconciledLine,
+  approved: { id: string; line: ReconciledLine },
+  context: ValuationContext | null,
 ): Array<QueryDeepPartialEntity<ApprovedLossLineValuation>> {
+  const { id: approvedLineId, line } = approved;
   return line.valuation.views.flatMap((view) =>
     view.amounts.map((amount) => ({
       tenantId: scope.tenantId,
@@ -60,6 +63,10 @@ function valuationRows(
       status: view.status,
       reason: amount.reason ?? view.reason,
       provisional: amount.provisional === true,
+      // VA-04: the economic parts in this currency, from the run's frozen context
+      components: context
+        ? componentAmounts(view, amount.currency, context)
+        : null,
       createdBy: scope.approver,
     })),
   );
@@ -112,6 +119,8 @@ export async function writeApprovedLedger(
   await insertChunks(
     manager,
     ApprovedLossLineValuation,
-    withIds.flatMap(({ line, id }) => valuationRows(scope, id, line)),
+    withIds.flatMap((approved) =>
+      valuationRows(scope, approved, state.run?.valuationContext ?? null),
+    ),
   );
 }

@@ -118,6 +118,26 @@ export interface ToleranceView {
   bridgeLimits?: { absolute: number | null; relative: number | null; overLimit: 'second_review' | 'refuse' };
   /** SME R9: kinds a reversal may reverse */
   reversibleKinds?: string[];
+  /** SME E4: the uncertainty budget that justifies an absolute tolerance; absent = none stated */
+  uncertaintyBudgetId?: string;
+  /** SME E4: that budget's numbers and evidence; null / absent = no budget referenced */
+  justification?: ToleranceJustificationView | null;
+}
+
+/** SME E4: why the absolute tolerance has its size (backend `uncertainty/tolerance-justification.ts`). */
+export interface ToleranceJustificationView {
+  budgetId: string;
+  found: boolean;
+  unitId: string | null;
+  boundary: string | null;
+  uom: string | null;
+  combinedStandardUncertainty: string | null;
+  coverageFactor: string | null;
+  expandedUncertainty: string | null;
+  calibrationRef: string | null;
+  reviewDueAt: string | null;
+  reviewOverdue: boolean;
+  valueMatchesExpandedUncertainty: boolean;
 }
 
 export interface ReconciliationView {

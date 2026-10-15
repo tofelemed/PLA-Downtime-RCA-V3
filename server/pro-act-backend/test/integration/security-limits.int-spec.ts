@@ -1,9 +1,6 @@
 import { INestApplication, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { rmSync } from 'fs';
-import { join } from 'path';
 import * as request from 'supertest';
-import { RCAEvidenceModule } from '../../src/rca-evidence/rca-evidence.module';
 import { V2Module } from '../../src/v2/v2.module';
 import { IntegrationHarness } from './harness';
 import { EventWorld, seedEventWorld } from './support/seed-event-world';
@@ -19,13 +16,12 @@ describe('request limits and secret hygiene (plan 3.11)', () => {
   let world: EventWorld;
   let token = '';
   const logged: string[] = [];
-  const uploaded: string[] = [];
 
   beforeAll(async () => {
     await harness.start();
     world = await seedEventWorld(harness.dataSource);
     app = await createIntegrationApp(harness, {
-      modules: [V2Module, RCAEvidenceModule],
+      modules: [V2Module],
     });
     token = signToken(app, {
       userId: randomUUID(),
@@ -43,14 +39,6 @@ describe('request limits and secret hygiene (plan 3.11)', () => {
 
   afterAll(async () => {
     jest.restoreAllMocks();
-    for (const name of uploaded)
-      rmSync(join(process.cwd(), 'uploads', world.tenantA, name), {
-        force: true,
-      });
-    rmSync(join(process.cwd(), 'uploads', world.tenantA), {
-      recursive: true,
-      force: true,
-    });
     await app?.close();
     await harness.stop();
   });
@@ -64,45 +52,12 @@ describe('request limits and secret hygiene (plan 3.11)', () => {
     expect(response.status).toBe(413);
   });
 
-  it('accepts listed attachment types under random names and refuses pages and scripts', async () => {
-    const ok = await request(app.getHttpServer())
-      .post('/api/uploads/evidence')
-      .set(bearer(token))
-      .attach('file', Buffer.from('a,b\n1,2\n'), 'readings.csv')
-      .expect(201);
-    const { filename: name, path } = ok.body as {
-      filename: string;
-      path: string;
-    };
-    uploaded.push(name);
-    expect(name).toMatch(/^[0-9a-f-]{36}\.csv$/);
-    expect(path).toBe(`/api/uploads/files/${world.tenantA}/${name}`);
-
-    // downloads need a token and membership of the file's tenant (owner decision 2026-10-10)
-    const downloaded = await request(app.getHttpServer())
-      .get(path)
-      .set(bearer(token))
-      .expect(200);
-    expect(downloaded.headers['x-content-type-options']).toBe('nosniff');
-    expect(downloaded.headers['content-disposition']).toContain('attachment');
-    await request(app.getHttpServer()).get(path).expect(401);
-    const outsider = signToken(app, {
-      userId: randomUUID(),
-      tenantId: world.tenantB,
-      role: 'TenantAdmin',
-    });
-    await request(app.getHttpServer())
-      .get(path)
-      .set(bearer(outsider))
-      .expect(404);
-    await request(app.getHttpServer())
-      .get(`/api/uploads/files/${world.tenantA}/..%2F..%2F.env`)
-      .set(bearer(token))
-      .expect(404);
-    await request(app.getHttpServer()).get(`/uploads/${name}`).expect(404);
+  // the stored-file path (random names, tenant-only download) is covered by rca-workspace.int-spec.ts
+  it('refuses pages and scripts on the attachment upload route (415) before the handler runs', async () => {
+    await request(app.getHttpServer()).get('/uploads/x.csv').expect(404);
     for (const file of ['page.html', 'logo.svg', 'run.js', 'noextension']) {
       const refused = await request(app.getHttpServer())
-        .post('/api/uploads/evidence')
+        .post(`/api/v2/rcas/${randomUUID()}/attachments`)
         .set(bearer(token))
         .attach('file', Buffer.from('<script>alert(1)</script>'), file);
       expect(refused.status).toBe(415);
