@@ -22,6 +22,10 @@ import {
   WorkOrderOperationRowDto,
   WorkOrderOperationsImportDto,
 } from './work-order-operations-v2.dto';
+import {
+  occurrenceSpans,
+  requestReliabilityRecalc,
+} from './reliability-recalc';
 
 export interface WorkOrderImportV2View {
   total: number;
@@ -131,8 +135,8 @@ export class WorkOrderOperationsV2Service {
         return unit ? [unit] : [];
       }),
     ]);
-    return this.manager.transaction((manager) =>
-      upsert(
+    return this.manager.transaction(async (manager) => {
+      const { view, linkedBefore } = await upsert(
         manager,
         {
           tenantId,
@@ -140,8 +144,20 @@ export class WorkOrderOperationsV2Service {
           allowedUnits: periodScopeUnits(context),
         },
         resolved,
-      ),
-    );
+      );
+      // mean active repair time of the stops linked now or before (their periods, SME D10)
+      const stops = [
+        ...linkedBefore,
+        ...resolved.flatMap((r) => (r.eventId ? [r.eventId] : [])),
+      ];
+      await requestReliabilityRecalc(
+        manager,
+        context,
+        await occurrenceSpans(manager, tenantId, stops),
+        'work_order_operations_imported',
+      );
+      return view;
+    });
   }
 
   /**
@@ -229,7 +245,7 @@ async function upsert(
     allowedUnits: readonly string[] | null;
   },
   rows: readonly Resolved[],
-): Promise<WorkOrderImportV2View> {
+): Promise<{ view: WorkOrderImportV2View; linkedBefore: string[] }> {
   const repository = manager.getRepository(WorkOrderOperation);
   const existing = await repository
     .createQueryBuilder('o')
@@ -256,13 +272,13 @@ async function upsert(
   });
   if (foreign.length > 0) throw rowsInvalid(CODE, foreign);
   const inserts: Array<Partial<WorkOrderOperation>> = [];
-  let updated = 0;
+  const linkedBefore: string[] = [];
   for (const r of rows) {
     const columns = columnsOf(r, stamp.actorId);
     const found = byKey.get(keyOf(r.row.workOrderId, r.row.operationId));
     if (found) {
       await repository.update(found.id, columns);
-      updated++;
+      if (found.eventId) linkedBefore.push(found.eventId);
     } else
       inserts.push({
         ...columns,
@@ -274,12 +290,13 @@ async function upsert(
   }
   for (let i = 0; i < inserts.length; i += 500)
     await repository.insert(inserts.slice(i, i + 500));
-  return {
+  const view = {
     total: rows.length,
     created: inserts.length,
-    updated,
+    updated: rows.length - inserts.length,
     linked: rows.filter((r) => r.eventId).length,
   };
+  return { view, linkedBefore };
 }
 
 function columnsOf(
