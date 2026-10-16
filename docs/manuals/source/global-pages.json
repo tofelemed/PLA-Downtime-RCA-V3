@@ -1,0 +1,381 @@
+{
+  "pages": [
+    {
+      "key": "sign-in",
+      "title": "Sign in and session recovery",
+      "routes": [
+        "Any protected route when signed out"
+      ],
+      "sources": [
+        "src/components/LoginForm.tsx",
+        "src/features/login/login-copy.ts",
+        "src/features/auth/session-recovery.tsx",
+        "src/features/auth/session-controller.ts"
+      ],
+      "purpose": "Authenticate an assigned user and restore their authorized plant session.",
+      "access": [
+        "Available before authentication."
+      ],
+      "workflow": [
+        "Open the application address. Enter the assigned email in USER ID and the account password. Select Secure sign in.",
+        "On a temporary session loading failure, use Retry session. Sign out clears the local session. A rejected credential returns a generic failure message."
+      ],
+      "sections": [
+        "Sign in",
+        "Session recovery"
+      ],
+      "fields": [
+        {
+          "label": "USER ID",
+          "section": "Sign in",
+          "control": "Email input",
+          "requirement": "Required",
+          "default": "Empty",
+          "options": [],
+          "validation": "Browser email format; account must exist and be active.",
+          "behavior": "Submitted as email to the authentication service.",
+          "example": "operator@example.com",
+          "source": "src/components/LoginForm.tsx"
+        },
+        {
+          "label": "PASSWORD",
+          "section": "Sign in",
+          "control": "Password input",
+          "requirement": "Required",
+          "default": "Empty",
+          "options": [],
+          "validation": "Required; the server checks the password hash.",
+          "behavior": "Masked entry. Do not use the demonstration credentials for a real site.",
+          "example": "Assigned individual password",
+          "source": "src/components/LoginForm.tsx"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Secure sign in",
+          "preconditions": "Email and password entered; no request pending.",
+          "result": "Loads the authenticated session or displays an error.",
+          "request": "POST /api/auth/login"
+        },
+        {
+          "label": "Retry session",
+          "preconditions": "Session startup error.",
+          "result": "Attempts session restoration again.",
+          "request": "Session validation or refresh as required."
+        },
+        {
+          "label": "Sign out",
+          "preconditions": "Session recovery or signed-in header.",
+          "result": "Clears authentication and protected draft ownership.",
+          "request": "POST /api/auth/logout"
+        }
+      ],
+      "filters": [],
+      "logic": [
+        "The initial page is not a separate registration page. New accounts are provisioned by administrators.",
+        "Session startup requests have a bounded deadline. An unavailable service is distinguished from invalid credentials."
+      ],
+      "states": [
+        "Signing in",
+        "Authentication failure",
+        "Session service unavailable",
+        "Authenticated"
+      ],
+      "setup": [
+        "Create the first administrator with the bootstrap command before attempting the first sign in."
+      ]
+    },
+    {
+      "key": "global-shell",
+      "title": "Application header and navigation",
+      "routes": [
+        "All protected pages"
+      ],
+      "sources": [
+        "src/features/shell/app-header.tsx",
+        "src/features/shell/app-sidebar.tsx",
+        "src/features/plant-selector/plant-tree.tsx",
+        "src/features/plant-selector/use-plant-directory.ts",
+        "src/features/display-currency/display-currency-provider.tsx",
+        "src/features/notifications/notification-bell.tsx"
+      ],
+      "purpose": "Select operating scope, navigate authorized modules, change display currency and read notifications.",
+      "access": [
+        "Signed-in users; the server limits the available organization, plant, unit and asset records."
+      ],
+      "workflow": [
+        "Open the plant selector and expand Organization, Plant, Unit and Asset as needed.",
+        "Choose the intended plant before changing any records. Expand a sidebar group and open the relevant module.",
+        "Use the currency toggle to choose the server-supplied USD or IRR values. Open notifications to follow due work."
+      ],
+      "sections": [
+        "Scope selector",
+        "Header",
+        "Sidebar"
+      ],
+      "fields": [
+        {
+          "label": "Organization",
+          "section": "Scope selector",
+          "control": "Hierarchy selection",
+          "requirement": "Select the company containing the plant",
+          "default": "Saved selection or available session scope",
+          "options": [
+            "Authorized organizations"
+          ],
+          "validation": "Only organizations containing a selectable plant are listed.",
+          "behavior": "Expands to plants; selecting the organization alone does not select a specific plant.",
+          "example": "HDPE",
+          "source": "src/features/plant-selector/plant-tree.tsx"
+        },
+        {
+          "label": "Plant",
+          "section": "Scope selector",
+          "control": "Hierarchy selection",
+          "requirement": "Required for plant-scoped workflows",
+          "default": "Saved authorized plant or default authorized plant",
+          "options": [
+            "Authorized plants"
+          ],
+          "validation": "Authorization is checked on the server.",
+          "behavior": "Sets the acting tenant and clears stale scoped data when authority changes.",
+          "example": "HDPE",
+          "source": "src/contexts/PlantSelectionContext.tsx"
+        },
+        {
+          "label": "Unit",
+          "section": "Scope selector",
+          "control": "Hierarchy selection",
+          "requirement": "Optional global selection; required by unit-specific forms",
+          "default": "No unit at plant scope",
+          "options": [
+            "Units in the expanded plant"
+          ],
+          "validation": "The directory is read in that plant.",
+          "behavior": "Loaded when the plant node is expanded; selecting a unit includes its parent plant.",
+          "example": "unit100",
+          "source": "src/features/plant-selector/plant-tree.tsx"
+        },
+        {
+          "label": "Asset",
+          "section": "Scope selector",
+          "control": "Hierarchy selection",
+          "requirement": "Optional",
+          "default": "No asset",
+          "options": [
+            "Active assets in the selected unit"
+          ],
+          "validation": "Only active assets are requested by the header directory.",
+          "behavior": "Loaded when the unit is expanded; header breadcrumb displays the unit path.",
+          "example": "Extruder1",
+          "source": "src/features/plant-selector/use-plant-directory.ts"
+        },
+        {
+          "label": "Display currency",
+          "section": "Header",
+          "control": "Single selection toggle",
+          "requirement": "One selected currency",
+          "default": "USD unless this user previously selected IRR in this browser",
+          "options": [
+            "USD",
+            "IRR"
+          ],
+          "validation": "Only USD and IRR are accepted.",
+          "behavior": "Chooses already calculated server values; does not convert money or change rates.",
+          "example": "USD",
+          "source": "src/features/display-currency/display-currency-toggle.tsx"
+        },
+        {
+          "label": "Live update status",
+          "section": "Header",
+          "control": "Read only",
+          "requirement": "System supplied",
+          "default": "Connection-dependent",
+          "options": [],
+          "validation": "Not editable.",
+          "behavior": "Indicates real-time connection state; hidden at narrow widths.",
+          "example": "Connected or reconnecting",
+          "source": "src/features/shell/live-indicator.tsx"
+        },
+        {
+          "label": "User and role",
+          "section": "Header",
+          "control": "Read only",
+          "requirement": "Session supplied",
+          "default": "Current user",
+          "options": [],
+          "validation": "Effective capabilities also include scoped roles.",
+          "behavior": "Read-only badge appears when every effective role in the selected plant is read only.",
+          "example": "Assigned user name",
+          "source": "src/features/shell/user-badge.tsx"
+        },
+        {
+          "label": "Notification title body and created time",
+          "section": "Header",
+          "control": "Read only",
+          "requirement": "System supplied",
+          "default": "Newest 20 notifications on opening",
+          "options": [],
+          "validation": "Current user and acting plant only.",
+          "behavior": "Unread count is refreshed by real-time hints; opening an unread entry marks it read and follows its link.",
+          "example": "Period approval escalation",
+          "source": "src/api/v2/queries/notifications.ts"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Expand or Collapse sidebar",
+          "preconditions": "Authenticated layout.",
+          "result": "Switches between full menu and icon rail.",
+          "request": "Local UI state."
+        },
+        {
+          "label": "Expand section",
+          "preconditions": "Visible sidebar group.",
+          "result": "Shows its authorized navigation links.",
+          "request": "Local UI state."
+        },
+        {
+          "label": "Mark all read",
+          "preconditions": "Unread notifications exist.",
+          "result": "Marks the current user's notifications read.",
+          "request": "POST /api/v2/notifications/read-all"
+        },
+        {
+          "label": "Open notification",
+          "preconditions": "Notification available.",
+          "result": "Marks unread notification read, closes panel and opens its destination when provided.",
+          "request": "POST /api/v2/notifications/{id}/read"
+        },
+        {
+          "label": "Sign out",
+          "preconditions": "Signed in.",
+          "result": "Ends the session and clears owned protected drafts.",
+          "request": "POST /api/auth/logout"
+        }
+      ],
+      "filters": [],
+      "logic": [
+        "Navigation visibility follows effective capabilities and feature flags. Hidden navigation is not the authorization boundary; the server checks each request.",
+        "Directory lists use pages of 500 and continue through every cursor. Units and assets load on expansion. Directory cache freshness is ten minutes.",
+        "Notifications are in-app; this interface does not send email or SMS."
+      ],
+      "states": [
+        "Loading plants",
+        "No units",
+        "No assets",
+        "Read only",
+        "No notifications",
+        "Loading notifications"
+      ],
+      "setup": [
+        "Provision roles and scopes before expecting a user to see a plant or menu item."
+      ]
+    },
+    {
+      "key": "not-found",
+      "title": "Unknown address",
+      "routes": [
+        "*"
+      ],
+      "sources": [
+        "src/pages/NotFound.tsx"
+      ],
+      "purpose": "Explain that an address is not a registered page and provide a route back.",
+      "access": [
+        "Any user"
+      ],
+      "workflow": [
+        "Check the displayed path. Select Go to the dashboard to return."
+      ],
+      "sections": [],
+      "fields": [
+        {
+          "label": "Requested path",
+          "section": "Page",
+          "control": "Read only",
+          "requirement": "System supplied",
+          "default": "Current browser path",
+          "options": [],
+          "validation": "No editing on this page.",
+          "behavior": "Shows the path that was not matched.",
+          "example": "/unknown-page",
+          "source": "src/pages/NotFound.tsx"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Go to the dashboard",
+          "preconditions": "None.",
+          "result": "Navigates to /dashboard; authentication is required there.",
+          "request": "Client navigation."
+        }
+      ],
+      "filters": [],
+      "logic": [
+        "The root address / redirects to /dashboard."
+      ],
+      "states": [
+        "404"
+      ],
+      "setup": []
+    },
+    {
+      "key": "dev-ux-kit",
+      "title": "Development UI kit playground",
+      "routes": [
+        "/dev/ux-kit"
+      ],
+      "sources": [
+        "src/app/routes/dev.tsx",
+        "src/features/ux-kit/ux-kit-playground.tsx"
+      ],
+      "purpose": "Preview shared formatting and data states during development. This route is omitted from production builds.",
+      "access": [
+        "Development build and authenticated route only."
+      ],
+      "workflow": [
+        "Open the development route. Compare duration, plant time, quantity and data-state examples. Enter a decimal to inspect its formatting."
+      ],
+      "sections": [
+        "Formatting",
+        "Data states"
+      ],
+      "fields": [
+        {
+          "label": "Decimal",
+          "section": "Formatting",
+          "control": "Decimal input",
+          "requirement": "Optional demonstration value",
+          "default": "1234.5",
+          "options": [],
+          "validation": "Uses the shared DecimalInput parser.",
+          "behavior": "Changes local sample state only; no business record is saved.",
+          "example": "1234.5",
+          "source": "src/features/ux-kit/ux-kit-playground.tsx"
+        },
+        {
+          "label": "Scope duration plant time quantity and state examples",
+          "section": "Data states",
+          "control": "Read only",
+          "requirement": "Fixed demonstration inputs",
+          "default": "Sample instant 2026-10-09T02:30:00Z; duration 5400 seconds; loading, empty, no-permission, source-offline, incomplete, calculation-pending and error states.",
+          "options": [],
+          "validation": "No business validation or persistence.",
+          "behavior": "Shows shared component rendering; retry is a no-op sample.",
+          "example": "Quantity 12345.678 t",
+          "source": "src/features/ux-kit/ux-kit-playground.tsx"
+        }
+      ],
+      "actions": [],
+      "filters": [],
+      "logic": [
+        "Production bundles do not register or import this developer playground."
+      ],
+      "states": [
+        "Demonstration states only"
+      ],
+      "setup": []
+    }
+  ]
+}

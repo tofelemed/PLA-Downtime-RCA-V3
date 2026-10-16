@@ -1,0 +1,131 @@
+{
+  "edition": "2026-10-16",
+  "productRevision": "2f385d2",
+  "documents": [
+    {
+      "document": "01_Page_and_Field_Manual.docx",
+      "sha256": "ed5b5aa298f4cfa97c28587f44c2679a62ac4cccaa9634387de14f99cbb8c503",
+      "pages": 292,
+      "wordsApproximate": 71246,
+      "tables": 462,
+      "sparsePagesForVisualReview": [],
+      "errors": []
+    },
+    {
+      "document": "02_Application_Logic_and_Data_Flows.docx",
+      "sha256": "0de4db97014386b8b5b9282e697b3f9e60e09de315ae20214d0064b7db9dc556",
+      "pages": 17,
+      "wordsApproximate": 5304,
+      "tables": 2,
+      "sparsePagesForVisualReview": [
+        17
+      ],
+      "errors": []
+    },
+    {
+      "document": "03_New_Plant_Setup_Guide.docx",
+      "sha256": "f6a480ad4bba61dd05b78f634044e6fb1ebc270e24313b189b81366b2ebb0e16",
+      "pages": 257,
+      "wordsApproximate": 66015,
+      "tables": 417,
+      "sparsePagesForVisualReview": [],
+      "errors": []
+    },
+    {
+      "document": "04_Operations_and_Verification_Guide.docx",
+      "sha256": "da4dd28882b7360d3b5c2555bafa63f5ece2b3ef3c9d3d1bd1c820a99476022a",
+      "pages": 9,
+      "wordsApproximate": 3536,
+      "tables": 0,
+      "sparsePagesForVisualReview": [],
+      "errors": []
+    },
+    {
+      "document": "05_Persona_Responsibilities_and_Approvals.docx",
+      "sha256": "1af9c4c36df96cd82ba405ae0af4b3bc2dbb1b255cd28ad69e547386c76de34d",
+      "pages": 17,
+      "wordsApproximate": 4852,
+      "tables": 4,
+      "sparsePagesForVisualReview": [],
+      "errors": []
+    }
+  ],
+  "totalPages": 592,
+  "inventory": {
+    "inventories": [
+      {
+        "file": "administration-pages.json",
+        "pages": 25,
+        "fields": 607
+      },
+      {
+        "file": "global-pages.json",
+        "pages": 4,
+        "fields": 13
+      },
+      {
+        "file": "integration-pages.json",
+        "pages": 14,
+        "fields": 317
+      },
+      {
+        "file": "operations-pages.json",
+        "pages": 52,
+        "fields": 1143
+      }
+    ],
+    "pageGroups": 95,
+    "fieldEntries": 2080,
+    "routeDeclarations": 95,
+    "coveredDeclarations": 95,
+    "missingRoutes": [],
+    "missingProperties": [],
+    "missingSources": [],
+    "scope": "Static route and schema/source-path reconciliation. Control-level coverage is separately reconciled by each inventory owner; this check is not a claim of exhaustive runtime-state testing."
+  },
+  "personaCoverage": {
+    "namedPeople": 52,
+    "canonicalRoles": 12,
+    "legacyAndGlobalMappings": 7,
+    "workflowFamilies": 35,
+    "workedHandoffs": 9,
+    "explicitGrants": 70
+  },
+  "rendering": {
+    "method": "Hidden task-owned Word COM field/TOC refresh and PDF export; bundled Poppler PNGs at 108 dpi",
+    "packagedRendererFallback": "The packaged render_docx.py was attempted; LibreOffice was unavailable. Diagnostic: test-results/hdpe-followup/docx-renderer-first.log",
+    "finalImages": "test-results/manual-qa/accepted"
+  },
+  "visualReview": {
+    "allFinalPageBodiesCovered": true,
+    "finalPageCount": 592,
+    "directlyOpenedInFinalRender": 43,
+    "identicalPreviouslyReviewedBodies": 549,
+    "method": "Each original page was individually viewed at original resolution. Every changed body was re-inspected after corrections. Exact RGB body hashes above y=1130 in 918x1188 PNGs carry review across unchanged or moved pages; the remaining footer contains date and page fields, verified on every final PDF page. Full PNG hashes bind receipts to inspected images. This is not a claim that every unchanged final PNG was reopened.",
+    "pageMap": "verification-pages.json"
+  },
+  "sourceHashes": {
+    "docs/manuals/source/administration-pages.json": "21c56819ca4af9f6271952512e2cbc13fdcf8a243256810205c3b7c5624cbb48",
+    "docs/manuals/source/application-logic.md": "7f9a83e40bd84594f407242a6ce88eae0b5d10802516e3ecacf2d60076990527",
+    "docs/manuals/source/environment-fields.json": "f9a62721d6101ff6acfab56c6799ad272baf157ad7731334bf3ffd699c2a5be4",
+    "docs/manuals/source/global-pages.json": "5be96c68c7b14f9f68a9461c60e78af113a2a9c57016b5f1605b1aa51145ef8e",
+    "docs/manuals/source/integration-pages.json": "939b9a5182e23a7bef0301a2f9dc01a3db33f769aeb41c1a1b0dbda6a55a0f6a",
+    "docs/manuals/source/new-plant-setup.md": "67c33341dddcfab8105dd15b6cb8f1fc778c08f7f54f593e54e5d73863e80c5e",
+    "docs/manuals/source/operations-control-reconciliation.json": "e71e6425340d905489f47b671605ef6ffd9cfa26573508e2f876dd22f6e270a6",
+    "docs/manuals/source/operations-pages.json": "6bc831546d1c1f909e5c4a3d709e645fcd827b8aea9de26cf1d45cb731e14cf7",
+    "docs/manuals/source/operations-verification.md": "54630791bf81599193dc27ee77f9bf2c21a7d01d25146899941bd35b954ad9f1",
+    "docs/manuals/source/persona-responsibilities.json": "94925a6cdea268d08ad8602952ac5bd919d5b86eeb169545e60e6ca562c94fa8"
+  },
+  "scriptHashes": {
+    "scripts/build-application-manuals.py": "f2eceffc5f7d75facd4d8103cd9b8e5be308fc334898d9b0817b744724f3698f",
+    "scripts/audit-manual-coverage.py": "3bc4d985602ef1b27a981b77ff67eeda2043d0778c6a84e7982a796691240884",
+    "scripts/validate-application-manuals.py": "605654e7e976627b96b38174af43134b98b24ae871475de8b3f90ddc92154d73",
+    "scripts/render-manuals-word.ps1": "3898a560526f5ec310e91047f731b239574295698bcf670e3667e3f72f61640b",
+    "scripts/rasterize-manuals.py": "384abba231dbf1c3df03895692a4ab06772e8e0b3566936b91a9bbf6c9491ac0"
+  },
+  "limits": [
+    "Source/route inventory coverage is separate from runtime-state test coverage.",
+    "HDPE values are realistic synthetic test data, not measured plant data or approved settings for another facility.",
+    "The operations guide preserves test provenance, existing warnings, external integration and accessibility limits."
+  ]
+}

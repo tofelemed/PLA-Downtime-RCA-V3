@@ -29,6 +29,7 @@ The dependency versions require a modern Node runtime. The tested host and both 
 ## Validation
 
 - Backend unit and math fixtures: **220 suites, 2,540 tests passed**, including authentication, scope, and OpenAPI checks (`backend-unit-fixtures-after.json/.log`).
+- Full backend integration campaign under Jest 30: **173 suites / 990 tests**, with 166 suites and 962 tests passing initially; 7 suites and 28 tests failed (`backend-integration-full-final.json/.log`). The exact seven failed suites then passed **35/35 tests, zero skips**, in a quiet, isolated diagnostic rerun lasting 116.478 seconds (`backend-integration-failed-retest.json/.log`). The latest result per suite is therefore **173/173 suites and 990/990 tests passed**, with provenance in `backend-integration-effective-summary.json`. This combines the full campaign and one exact failed-suite rerun; it is not a fresh full green run.
 - Frontend navigation / role selection: **154 tests passed** (`frontend-navigation-final.json/.log`).
 - Backend typecheck and production build passed (`backend-typecheck-after.log`, `backend-build-after.log`).
 - A clean backend `npm ci --legacy-peer-deps --no-audit --no-fund` passed from the final lockfile (`backend-clean-install.log`). `npm ls` validates the selected dependency tree without invalid-package errors.
@@ -40,6 +41,8 @@ The dependency versions require a modern Node runtime. The tested host and both 
 - Final production audits and backend all-dependency audit report zero vulnerabilities. Frontend residual evidence is `frontend-all-final.json` and `frontend-chains-final.json`.
 
 The first SWC-based frontend attempts failed before tests/build execution; their logs are retained as `frontend-navigation-after.log` and `frontend-build-after.log`. They are superseded by the successful final plugin checks. `frontend-typecheck-dependencies.log` retains an earlier failure while shared authentication source edits were underway; the final shared typecheck above supersedes it.
+
+The initial integration failures included two explicit connection resets, setup HTTP 500/503 responses, and missing downstream calculations. None reproduced in the exact diagnostic rerun, which captured no HTTP 5xx or server error-level entries. A failed migration left one blocking idle transaction; the narrowly guarded, parent-authorized termination targeted only that recorded session in `proact_hdpe_test`. The original transport failure's cause remains unproven; a passing rerun does not establish a network or resource root cause. All original results, diagnostics and the cleanup receipt remain in `test-results/hdpe-followup/integration-diagnostics.md` and its linked artifacts. No application or UI-clone data was reset or cleaned by these tests.
 
 ## Remaining development-only issue
 

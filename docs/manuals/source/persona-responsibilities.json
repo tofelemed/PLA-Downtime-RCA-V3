@@ -1,0 +1,1959 @@
+{
+  "documentKey": "05_Persona_Responsibilities_and_Approvals",
+  "title": "Persona Responsibilities and Approval Handoffs",
+  "subtitle": "HDPE · unit100 / Extruder1 · unit200 / Extruder2",
+  "asOf": "2026-10-16",
+  "purpose": "Identify who prepares, submits, reviews, approves and closes work, with exact application role gates and named HDPE examples.",
+  "renderingGuidance": {
+    "targetPages": "8–15",
+    "compactTables": true,
+    "roleCodes": "Use the code legend for compact matrix and roster tables. Preserve the full role names in the legend.",
+    "layout": "Intro and authority rules; role/mapping tables; grouped responsibility matrix; worked handoffs; compact 52-person roster; source notes. Long source lists can be small reference text."
+  },
+  "overview": [
+    "Plans are prepared by production_engineer or manager_approver. Recommended handoff: a production engineer creates/submits, then an independent manager_approver reviews and approves or returns the version. The version creator cannot approve it.",
+    "Technical permission describes what this code allows. Recommended accountability describes how plant teams should divide work; it does not add a new permission or approval stage.",
+    "A role name is not a universal seniority ladder: manager_approver does not automatically include finance, quality, metrology or accountant-only powers. Multiple grants and legacy mappings can produce legitimate overlaps.",
+    "SuperAdmin/OrgAdmin satisfy broad route role gates, but service-level scope, lifecycle and independence checks remain authoritative. An administrator cannot override a self-approval refusal by changing screens or selecting another role."
+  ],
+  "roleLegend": [
+    {
+      "code": "M",
+      "role": "manager_approver",
+      "recommendedAccountability": "Plant production manager / independent checker",
+      "technicalWork": "Plans and engineering approvals; accounting decisions; day/quantity close; operational policies.",
+      "limits": "Does not inherently hold finance, quality, metrology or production-accountant-only authority.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    },
+    {
+      "code": "A",
+      "role": "production_accountant",
+      "recommendedAccountability": "Production accounting owner",
+      "technicalWork": "Prepare/review period accounts; manual bridges; source governance; tolerance adoption; after-close proposals.",
+      "limits": "Cannot approve own submitted content; cannot replace quality/metrology/finance signers.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    },
+    {
+      "code": "Q",
+      "role": "quality_approver",
+      "recommendedAccountability": "Quality / laboratory disposition owner",
+      "technicalWork": "Propose and independently approve or reject lot dispositions.",
+      "limits": "A proposer must use another authorized quality approver for the decision.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    },
+    {
+      "code": "T",
+      "role": "metrology_approver",
+      "recommendedAccountability": "Instrumentation / metrology owner",
+      "technicalWork": "Propose and independently decide uncertainty budgets.",
+      "limits": "Budget approval does not adopt the accounting tolerance; adoption belongs to A or M.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    },
+    {
+      "code": "F",
+      "role": "finance_approver",
+      "recommendedAccountability": "Finance reviewer and financial signatory",
+      "technicalWork": "Approve valuation inputs; retire supported versions; month finance sign-off/lock; posting decisions.",
+      "limits": "Does not inherently create finance drafts; finance sign-off must be independent of quantity/materiality signers.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    },
+    {
+      "code": "FM",
+      "role": "finance_maintainer",
+      "recommendedAccountability": "Finance master-data preparer",
+      "technicalWork": "Draft valuation policies, valuation rates, FX and demand statuses.",
+      "limits": "No finance approval right unless a separate eligible role is held.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    },
+    {
+      "code": "P",
+      "role": "production_engineer",
+      "recommendedAccountability": "Planning / production engineer",
+      "technicalWork": "Prepare plans, periods, reconciliation and adjustments; verify stops; propose quality/metrology items.",
+      "limits": "No plan approval or final accounting approval from P alone.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    },
+    {
+      "code": "R",
+      "role": "reliability_engineer",
+      "recommendedAccountability": "Maintenance / reliability investigator",
+      "technicalWork": "RCA investigation/actions, failure validation, standby/CMMS records and failure dictionary.",
+      "limits": "Closure needs an independent manager; investigating the case disqualifies that person from closure approval.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    },
+    {
+      "code": "I",
+      "role": "integration_admin",
+      "recommendedAccountability": "Automation / integration owner",
+      "technicalWork": "Connections, PI/MQTT mapping, jobs/replay/quarantine; source-governance drafts; external reports.",
+      "limits": "Configuring a source does not authorize its governance approval or accounting sign-off.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    },
+    {
+      "code": "D",
+      "role": "master_data_admin",
+      "recommendedAccountability": "Plant model / engineering master-data custodian",
+      "technicalWork": "Hierarchy children, code libraries, profile/calendar drafts, rules and RCA settings.",
+      "limits": "Profile/rule approval is a distinct M decision; does not grant user-administration or finance approval.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    },
+    {
+      "code": "O",
+      "role": "operator",
+      "recommendedAccountability": "Shift operator / recorder",
+      "technicalWork": "Record events and coding; propose lot dispositions; record standby demand/test observations.",
+      "limits": "No plan/accounting approval; pure O UI is operations-only. Unit grants restrict visible/writable records.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    },
+    {
+      "code": "V",
+      "role": "viewer",
+      "recommendedAccountability": "Read-only stakeholder",
+      "technicalWork": "Read admitted operations/analysis within scope.",
+      "limits": "Business writes refused when viewer is the only effective role; role-restricted reads such as audit remain restricted.",
+      "sourceRefs": [
+        "auth",
+        "ui"
+      ]
+    }
+  ],
+  "legacyAndGlobalMappings": [
+    {
+      "storedRole": "SuperAdmin",
+      "effective": "Global role; satisfies every route role. May select any existing plant.",
+      "boundary": "Scope/readability and workflow state still apply; no author/submitter independence bypass.",
+      "code": "SA"
+    },
+    {
+      "storedRole": "OrgAdmin",
+      "effective": "Global scope-role admission within its organization; satisfies route roles except SuperAdmin.",
+      "boundary": "Another selected plant still needs membership; outside its own organization the legacy role does not carry. RCA closure has a stricter explicit M-or-SuperAdmin service gate.",
+      "code": "OA"
+    },
+    {
+      "storedRole": "TenantAdmin",
+      "effective": "TenantAdmin + manager_approver (M).",
+      "boundary": "Home-plant legacy mapping plus explicit grants; retains named administrator endpoints. It is not a global all-role identity.",
+      "code": "TA"
+    },
+    {
+      "storedRole": "Manager",
+      "effective": "Manager + manager_approver (M).",
+      "boundary": "Home-plant mapping; not a user administrator or specialist approver by title alone.",
+      "code": "LM"
+    },
+    {
+      "storedRole": "Engineer",
+      "effective": "Engineer + production_engineer (P).",
+      "boundary": "Home-plant mapping; reliability/integration/other specialist work needs an additional role.",
+      "code": "LE"
+    },
+    {
+      "storedRole": "Analyst",
+      "effective": "Analyst + production_engineer (P).",
+      "boundary": "This is a write-capable legacy mapping, not the viewer role.",
+      "code": "LA"
+    },
+    {
+      "storedRole": "Operator",
+      "effective": "Operator + operator (O).",
+      "boundary": "Home-plant mapping; explicit grants still determine record scope.",
+      "code": "LO"
+    }
+  ],
+  "authorityRules": [
+    {
+      "title": "Acting plant",
+      "text": "Requests use the selected acting plant. Legacy role plus D06 mapping normally applies only in the home plant; explicit role grants are evaluated in the acting plant. SuperAdmin may select any existing plant; other identities require membership for another selected plant. OrgAdmin legacy authority follows its organization.",
+      "sourceRefs": [
+        "auth"
+      ]
+    },
+    {
+      "title": "Role and scope must both qualify",
+      "text": "A tenant grant covers the plant; a site grant covers that site's units; a unit grant covers only that unit. Reading a plant does not enlarge a specialist delegated role. A broad A/viewer read grant plus unit200 T does not permit a unit100 metrology decision.",
+      "sourceRefs": [
+        "auth"
+      ]
+    },
+    {
+      "title": "Legacy mapping versus record visibility",
+      "text": "Legacy mappings participate in effective roles but do not erase record-scope restrictions. The two unit100-only operators cannot use that mapping to access unit200. Role-specific service checks supplement general scope filtering on the governed write paths.",
+      "sourceRefs": [
+        "auth",
+        "roster"
+      ]
+    },
+    {
+      "title": "Independence uses identity",
+      "text": "The actual user ID is compared with author, submitter, line authors, reopening actor or historical investigators as that workflow specifies. Holding two roles, using delegation, or being an administrator does not make one person independent of their own work.",
+      "sourceRefs": [
+        "accounting",
+        "plans",
+        "rca",
+        "close"
+      ]
+    },
+    {
+      "title": "Delegation",
+      "text": "Only M/A/F/Q/T can be delegated. The delegator must truly hold the role for the target scope; delegated grants cannot be delegated onward. Maximum 90 days, no self-delegation, active recipient, effective interval and revocation apply. Delegation transfers allowed role actions, including writes where that role permits them, rather than only an approval button.",
+      "sourceRefs": [
+        "delegation",
+        "auth"
+      ]
+    },
+    {
+      "title": "UI versus API",
+      "text": "Navigation can be narrower than API eligibility. For example, I/M can satisfy integration write routes, while console entry requires I, TenantAdmin or global administration; a Manager-only identity may not see it. Use the visible supported workflow and treat server refusal as authoritative, not a hidden-button workaround.",
+      "sourceRefs": [
+        "ui",
+        "integration"
+      ]
+    },
+    {
+      "title": "State and evidence",
+      "text": "An eligible role is necessary but not sufficient: current version, valid references, evidence, freshness, quantity checks, dates and close prerequisites remain enforced. This guide lists business responsibility families; it does not claim every route/role combination was independently exercised.",
+      "sourceRefs": [
+        "plans",
+        "accounting",
+        "close"
+      ]
+    }
+  ],
+  "responsibilityMatrix": {
+    "legend": "P production engineer; M manager approver; A production accountant; D master-data admin; I integration admin; R reliability engineer; Q quality approver; T metrology approver; FM finance maintainer; F finance approver; O operator; V viewer. SA/OA/TA are legacy/global administrative identities. Global admission is subject to the stated service exceptions and every independence rule.",
+    "rows": [
+      {
+        "id": "plan",
+        "workflow": "Versioned production plans",
+        "prepare": "P or M: create, copy, edit draft, new version.",
+        "submitOrExecute": "P or M: preview/generate and submit draft.",
+        "reviewApproveRejectClose": "M: approve open version or return submitted version to draft with reason.",
+        "restrictions": "Decision maker must differ from version creator. API allows any plan writer to submit and can approve draft or submitted; recommended flow submits first. Approved versions remain history.",
+        "recommendedOwner": "Planning engineer → independent plant manager.",
+        "sourceRefs": [
+          "plans"
+        ]
+      },
+      {
+        "id": "profiles",
+        "workflow": "Profiles and production-rate versions",
+        "prepare": "D or M: profile draft/update and rate-import drafting.",
+        "submitOrExecute": "Draft/import workflow; no separate submit command.",
+        "reviewApproveRejectClose": "M: approve/retire profile and production-rate versions.",
+        "restrictions": "Author cannot approve their version, including administrators; effective-date overlap/supersession rules apply.",
+        "recommendedOwner": "Engineering master data → independent manager.",
+        "sourceRefs": [
+          "profiles"
+        ]
+      },
+      {
+        "id": "topology",
+        "workflow": "Unit streams, flow routes, grade-transition standards",
+        "prepare": "D or M: propose versioned configuration.",
+        "submitOrExecute": "Create draft; no separate submit stage.",
+        "reviewApproveRejectClose": "M: approve or retire supported versions.",
+        "restrictions": "Independent version approval; related plant/unit references must be accessible.",
+        "recommendedOwner": "Engineering custodian → independent manager.",
+        "sourceRefs": [
+          "profiles",
+          "masterData"
+        ]
+      },
+      {
+        "id": "calendar",
+        "workflow": "Calendar versions and crews",
+        "prepare": "D or M: draft/edit calendar and crew data.",
+        "submitOrExecute": "D or M: preview and publish calendar.",
+        "reviewApproveRejectClose": "Publish is the supported release command; there is no separate checker approval stage.",
+        "restrictions": "Published versions are immutable; republish/regeneration needs the specified reason. Do not invent mandatory two-person approval here.",
+        "recommendedOwner": "Calendar custodian; management reviews schedule operationally.",
+        "sourceRefs": [
+          "calendar"
+        ]
+      },
+      {
+        "id": "periods",
+        "workflow": "Periods, actuals and recalculation",
+        "prepare": "P, A or M: period materialization, accounting drafts and stream-run/buffer records.",
+        "submitOrExecute": "P, A or M: queue applicable actuals/reconciliation jobs.",
+        "reviewApproveRejectClose": "Read job outcomes and resolve refusals; job success is not accounting approval.",
+        "restrictions": "Required writer role must cover affected units; broad jobs need appropriate plant scope.",
+        "recommendedOwner": "Production engineer with production accounting.",
+        "sourceRefs": [
+          "actuals",
+          "accounting"
+        ]
+      },
+      {
+        "id": "adjustments",
+        "workflow": "Manual actuals adjustment",
+        "prepare": "P, A or M: propose correction with evidence.",
+        "submitOrExecute": "Proposal becomes available for decision.",
+        "reviewApproveRejectClose": "M: approve or reject.",
+        "restrictions": "Author cannot decide their proposal; correct unit role required.",
+        "recommendedOwner": "Preparer → independent plant manager.",
+        "sourceRefs": [
+          "actuals"
+        ]
+      },
+      {
+        "id": "reports",
+        "workflow": "External daily production reports",
+        "prepare": "I or M: import report/revision.",
+        "submitOrExecute": "Import through supported API/ingestion command.",
+        "reviewApproveRejectClose": "Source-status rule determines released status; report import is not final period approval.",
+        "restrictions": "Requires authorized report scope and mapped site/unit references.",
+        "recommendedOwner": "Integration owner imports; production accounting owns release semantics.",
+        "sourceRefs": [
+          "actuals",
+          "sourceGovernance"
+        ]
+      },
+      {
+        "id": "accounting",
+        "workflow": "Period reconciliation",
+        "prepare": "P, A or M: draft/save lines.",
+        "submitOrExecute": "P, A or M: submit or cancel a draft.",
+        "reviewApproveRejectClose": "A or M: approve/reject; open a revision of approved accounting.",
+        "restrictions": "Approval excludes submitter, any reviewed-line author and the opener of a replacement revision. Reject excludes submitter. Stale submissions must be refreshed.",
+        "recommendedOwner": "Production accounting prepares; independent A or M decides.",
+        "sourceRefs": [
+          "accounting"
+        ]
+      },
+      {
+        "id": "bridge",
+        "workflow": "Manual reconciliation bridges",
+        "prepare": "A only: create bridge lines with required reason/evidence.",
+        "submitOrExecute": "P/A/M may submit the containing draft within normal rules.",
+        "reviewApproveRejectClose": "A or M: independent bridge review when policy requires it; another independent A/M gives final approval.",
+        "restrictions": "An over-limit bridge can be refused or require second review. Bridge reviewer cannot be final approver; author/submitter separation remains.",
+        "recommendedOwner": "Accountant → second reviewer → separate final approver.",
+        "sourceRefs": [
+          "accounting"
+        ]
+      },
+      {
+        "id": "correction",
+        "workflow": "Closing/locked-month change proposals",
+        "prepare": "A or M: propose reasoned correction with evidence.",
+        "submitOrExecute": "Explicit change-proposal workflow.",
+        "reviewApproveRejectClose": "A or M other than proposer: reject or accept at permitted timing; F later decides posting.",
+        "restrictions": "Locked history is retained. Accepted after-close change becomes a new revision/restatement, not silent overwrite.",
+        "recommendedOwner": "Production accounting prepares; independent accounting/management decides.",
+        "sourceRefs": [
+          "accounting",
+          "close"
+        ]
+      },
+      {
+        "id": "day",
+        "workflow": "Production-day certification",
+        "prepare": "Resolve and approve applicable shift accounting first.",
+        "submitOrExecute": "M: certify day.",
+        "reviewApproveRejectClose": "Certification is the manager decision.",
+        "restrictions": "Certifier cannot be submitter of any included shift; prerequisites apply. A revised shift reopens certification.",
+        "recommendedOwner": "Plant manager independent of shift submission.",
+        "sourceRefs": [
+          "close"
+        ]
+      },
+      {
+        "id": "month-quantity",
+        "workflow": "Month quantity close",
+        "prepare": "Accounting team resolves periods, days and open proposals.",
+        "submitOrExecute": "Plant-wide M: close quantities.",
+        "reviewApproveRejectClose": "Quantity-close sign-off.",
+        "restrictions": "Needs close prerequisites. Unit-only authority cannot sign for the plant.",
+        "recommendedOwner": "Plant production manager.",
+        "sourceRefs": [
+          "close"
+        ]
+      },
+      {
+        "id": "month-materiality",
+        "workflow": "Month materiality review",
+        "prepare": "Required only when policy/materiality triggers it.",
+        "submitOrExecute": "A/M/F route eligibility, plus one of the configured policy reviewer roles at plant scope.",
+        "reviewApproveRejectClose": "Record materiality review.",
+        "restrictions": "Reviewer must differ from quantity closer. Default reviewer responsibility is production accounting; current policy is authoritative.",
+        "recommendedOwner": "Policy-designated independent accountant/reviewer.",
+        "sourceRefs": [
+          "close"
+        ]
+      },
+      {
+        "id": "month-finance",
+        "workflow": "Month finance sign-off and lock",
+        "prepare": "Complete quantity close and any materiality review.",
+        "submitOrExecute": "Plant-wide F: sign off finance; then lock.",
+        "reviewApproveRejectClose": "F financial sign-off and lock.",
+        "restrictions": "Finance signer must differ from both quantity closer and materiality reviewer. Prerequisites are rechecked. Lock has no additional different-person rule.",
+        "recommendedOwner": "Finance approver.",
+        "sourceRefs": [
+          "close"
+        ]
+      },
+      {
+        "id": "month-reopen",
+        "workflow": "Reopen a closing month",
+        "prepare": "M or F with plant-wide authority.",
+        "submitOrExecute": "Reopen quantities_closed or finance_signed_off month.",
+        "reviewApproveRejectClose": "Locked month has no ordinary reopen action.",
+        "restrictions": "Locked corrections use after-close proposals/restatements. Preserve prior action history.",
+        "recommendedOwner": "Management/finance under close policy.",
+        "sourceRefs": [
+          "close"
+        ]
+      },
+      {
+        "id": "posting",
+        "workflow": "Restatement posting",
+        "prepare": "Accepted after-close correction and approved replacement accounting.",
+        "submitOrExecute": "F: set posting date and treatment.",
+        "reviewApproveRejectClose": "Finance posting decision.",
+        "restrictions": "Posting policy, chronology and locked-month rules remain enforced.",
+        "recommendedOwner": "Finance approver.",
+        "sourceRefs": [
+          "close"
+        ]
+      },
+      {
+        "id": "finance",
+        "workflow": "Valuation policy, valuation rate, FX, demand status",
+        "prepare": "FM: draft version.",
+        "submitOrExecute": "No general submit step; draft goes to independent approval.",
+        "reviewApproveRejectClose": "F: approve; retire supported FX/demand/rate versions.",
+        "restrictions": "Draft author cannot approve. Validity, currency, unit and overlap rules apply. M is not F/FM by itself.",
+        "recommendedOwner": "Finance maintainer → finance approver.",
+        "sourceRefs": [
+          "finance",
+          "profiles"
+        ]
+      },
+      {
+        "id": "quality",
+        "workflow": "Lot dispositions",
+        "prepare": "O/P/A/M/Q: propose disposition.",
+        "submitOrExecute": "Create proposal; no separate submit step.",
+        "reviewApproveRejectClose": "Q: approve or reject.",
+        "restrictions": "Decision maker cannot be proposer; Q authority must cover the lot's unit. Accounting uses only approved disposition evidence.",
+        "recommendedOwner": "Production/quality preparer → independent quality owner.",
+        "sourceRefs": [
+          "quality"
+        ]
+      },
+      {
+        "id": "uncertainty",
+        "workflow": "Uncertainty budgets",
+        "prepare": "P/I/A/M/T: propose budget.",
+        "submitOrExecute": "Create proposed budget and review calculation/evidence.",
+        "reviewApproveRejectClose": "T: approve or reject.",
+        "restrictions": "Decision maker cannot be author; required role must cover the budget unit.",
+        "recommendedOwner": "Instrumentation engineer → independent metrology owner.",
+        "sourceRefs": [
+          "metrology"
+        ]
+      },
+      {
+        "id": "tolerance",
+        "workflow": "Adopt uncertainty as accounting tolerance",
+        "prepare": "Use an approved eligible budget.",
+        "submitOrExecute": "A or M: explicit adoption.",
+        "reviewApproveRejectClose": "Adoption is separate from metrology approval.",
+        "restrictions": "Adopter cannot be the budget author; adoption is never automatic and must cover the budget unit.",
+        "recommendedOwner": "Production accounting/management.",
+        "sourceRefs": [
+          "metrology"
+        ]
+      },
+      {
+        "id": "authority",
+        "workflow": "Source priority / measurement hierarchy",
+        "prepare": "I or A: draft unit or plant hierarchy.",
+        "submitOrExecute": "Create version with ranks, boundaries and fallback evidence.",
+        "reviewApproveRejectClose": "A: approve or reject.",
+        "restrictions": "Author cannot decide. Plant-wide hierarchy needs A at plant scope; unit hierarchy needs role on that unit.",
+        "recommendedOwner": "Integration prepares → independent production accountant.",
+        "sourceRefs": [
+          "sourceGovernance"
+        ]
+      },
+      {
+        "id": "status",
+        "workflow": "Source release-status mappings",
+        "prepare": "I or A: draft source/status version.",
+        "submitOrExecute": "Create draft; active behavior unchanged until approval.",
+        "reviewApproveRejectClose": "A: approve effective version.",
+        "restrictions": "Author cannot approve; required plant-wide role and nonoverlapping validity. No separate reject command documented.",
+        "recommendedOwner": "Source maintainer → independent production accountant.",
+        "sourceRefs": [
+          "sourceGovernance"
+        ]
+      },
+      {
+        "id": "intake",
+        "workflow": "PI/MQTT connections, jobs, mapping, replay and quarantine",
+        "prepare": "I or M at API: configure and map.",
+        "submitOrExecute": "I or M: test, activate, run/replay and resolve applicable exceptions.",
+        "reviewApproveRejectClose": "No independent approval step for connection/profile saves.",
+        "restrictions": "Technical ingestion rights do not approve source governance or accounting. UI console entry has a narrower gate; see navigation note.",
+        "recommendedOwner": "Integration owner; source publisher stays external.",
+        "sourceRefs": [
+          "integration",
+          "ui"
+        ]
+      },
+      {
+        "id": "events",
+        "workflow": "Events, coding and operational tasks",
+        "prepare": "Any admitted non-viewer writer in scope: supported recording/editing; O is usual recorder.",
+        "submitOrExecute": "Save event/coding or create/update/complete task.",
+        "reviewApproveRejectClose": "These saves do not constitute accounting or failure approval.",
+        "restrictions": "Read-only viewer is blocked from ordinary mutating requests. Record state, ownership/references and scope still govern edits.",
+        "recommendedOwner": "Shift operator records; relevant supervisor reviews.",
+        "sourceRefs": [
+          "events",
+          "administration",
+          "auth"
+        ]
+      },
+      {
+        "id": "verification",
+        "workflow": "Stop verification and failure validation",
+        "prepare": "O or other writer records coding/failure evidence.",
+        "submitOrExecute": "P or M: verify stop; R: validate failure detail.",
+        "reviewApproveRejectClose": "Both stages are explicit specialist decisions.",
+        "restrictions": "Neither stage may be performed by current coding author. Validation requires a verified qualifying stop; recoding can reset labels.",
+        "recommendedOwner": "Supervisor verifies; maintenance validates.",
+        "sourceRefs": [
+          "reliability"
+        ]
+      },
+      {
+        "id": "rca",
+        "workflow": "RCA case, investigation and actions",
+        "prepare": "R or M: open/edit case, evidence, methods and actions.",
+        "submitOrExecute": "R/M progress through investigation and monitoring; request closure after gates pass.",
+        "reviewApproveRejectClose": "Independent M, or eligible SuperAdmin: close/reject closure/reopen.",
+        "restrictions": "Reviewer must not be creator, lead, member, closure requester or any past investigator. OrgAdmin alone fails the explicit closure service gate.",
+        "recommendedOwner": "Reliability investigator → independent plant manager.",
+        "sourceRefs": [
+          "rca"
+        ]
+      },
+      {
+        "id": "rca-baseline",
+        "workflow": "RCA action baseline/effectiveness",
+        "prepare": "R or M: plan action, implementation evidence and baseline correction.",
+        "submitOrExecute": "R/M may request verification; worker evaluates due verification windows.",
+        "reviewApproveRejectClose": "M other than proposer: approve/reject baseline correction.",
+        "restrictions": "Effectiveness is calculated from observations, not a discretionary approval. Closure still needs evidence, verdict and risk gates.",
+        "recommendedOwner": "Reliability owner; independent correction checker.",
+        "sourceRefs": [
+          "rca"
+        ]
+      },
+      {
+        "id": "knowledge",
+        "workflow": "RCA knowledge and reusable settings",
+        "prepare": "R/M: supported knowledge draft/case publication work; D/M: RCA templates/checklists/cause settings.",
+        "submitOrExecute": "R/M maintain eligible knowledge items.",
+        "reviewApproveRejectClose": "M: knowledge approval/retirement commands where exposed.",
+        "restrictions": "Do not treat creating an RCA template as approving a case closure.",
+        "recommendedOwner": "Reliability knowledge owner with master-data custodian.",
+        "sourceRefs": [
+          "rca",
+          "masterData"
+        ]
+      },
+      {
+        "id": "reliability",
+        "workflow": "Reliability operations and policies",
+        "prepare": "Standby: O/R/I/M; CMMS operations: R/I/M; failure dictionary: D/R/M.",
+        "submitOrExecute": "State mappings: I/M; micro-stop/transition/RCA trigger policies: M.",
+        "reviewApproveRejectClose": "Policy update is the supported command; no blanket separate approval stage.",
+        "restrictions": "Source facts and approved accounting remain governed by their own workflows.",
+        "recommendedOwner": "Maintenance, automation and plant management.",
+        "sourceRefs": [
+          "reliability",
+          "ui"
+        ]
+      },
+      {
+        "id": "master-data",
+        "workflow": "Units/assets/products, codes and rules",
+        "prepare": "D or M: plant master-data/code changes; D/M: rule drafts.",
+        "submitOrExecute": "Apply permitted master-data changes; save/test rule draft and publish through its version workflow.",
+        "reviewApproveRejectClose": "M: publish rule; M approves unit-impact rules drafted by D/M/R.",
+        "restrictions": "Rule publication and unit-impact approval forbid author self-approval. Core master-data saves do not have that same review stage.",
+        "recommendedOwner": "Engineering custodian → independent manager for governed rules.",
+        "sourceRefs": [
+          "masterData"
+        ]
+      },
+      {
+        "id": "users",
+        "workflow": "Users, membership and grants",
+        "prepare": "SA/OA/TA: user management and scope grants.",
+        "submitOrExecute": "Create/update/deactivate eligible users and change grants.",
+        "reviewApproveRejectClose": "User/audit reads additionally admit M; M is not a general user-scope administrator.",
+        "restrictions": "Grant rank, organization/plant ownership and self-deactivation restrictions apply. Global-role assignments are specially restricted.",
+        "recommendedOwner": "Authorized administrator.",
+        "sourceRefs": [
+          "administration",
+          "auth"
+        ]
+      },
+      {
+        "id": "hierarchy",
+        "workflow": "Organizations, plants and application branding",
+        "prepare": "SA: organization creation/deletion and plant deletion. SA/OA: plant creation within allowed organization.",
+        "submitOrExecute": "SA: application-wide branding; authorized admins manage their hierarchy.",
+        "reviewApproveRejectClose": "No business approval replacement follows from hierarchy administration.",
+        "restrictions": "Delete only eligible empty hierarchy nodes. Shared definitions/application branding have SuperAdmin-specific constraints.",
+        "recommendedOwner": "Platform administrator / organization administrator.",
+        "sourceRefs": [
+          "administration"
+        ]
+      },
+      {
+        "id": "delegation",
+        "workflow": "Temporary delegation",
+        "prepare": "SA/OA/TA may record eligible holder's delegation; M/A/F/Q/T holders delegate their own eligible role.",
+        "submitOrExecute": "Create bounded delegation; delegator, delegate or administrator can revoke under policy.",
+        "reviewApproveRejectClose": "Only M, A, F, Q and T are delegatable.",
+        "restrictions": "At most 90 days; no self/onward delegation, no scope expansion, active recipient required. Independence remains based on actual acting user.",
+        "recommendedOwner": "Role holder and authorized administrator.",
+        "sourceRefs": [
+          "delegation",
+          "administration"
+        ]
+      },
+      {
+        "id": "settings",
+        "workflow": "Plant settings, flags and audit",
+        "prepare": "TA/M plus global route admission: display settings; M: feature flags/operational policy writes.",
+        "submitOrExecute": "Save applicable settings; changes affect acting plant.",
+        "reviewApproveRejectClose": "Audit read: SA/OA/TA/M. Audit entries are read-only.",
+        "restrictions": "Menu visibility is not authorization. Viewers may read admitted settings but cannot save them.",
+        "recommendedOwner": "Plant management; administrators for infrastructure.",
+        "sourceRefs": [
+          "ui",
+          "administration"
+        ]
+      },
+      {
+        "id": "read",
+        "workflow": "Dashboards, analytics, exports and notifications",
+        "prepare": "Admitted readers within plant/unit scope; role-specific read endpoints retain extra gates.",
+        "submitOrExecute": "Export/read records as permitted; non-viewers mark their own notifications read.",
+        "reviewApproveRejectClose": "Reading/exporting does not approve business content.",
+        "restrictions": "Only own notifications are returned. Current read-mark commands are ordinary POSTs and viewer-only identities remain subject to WriteAccessGuard.",
+        "recommendedOwner": "Each role monitors its assigned work; V observes.",
+        "sourceRefs": [
+          "events",
+          "auth",
+          "ui"
+        ]
+      }
+    ]
+  },
+  "workedHandoffs": [
+    {
+      "title": "Who makes and approves a production plan?",
+      "example": "Noah Schmidt (P) prepares an HDPE unit100 plan; Jonas Weber (M) reviews it.",
+      "steps": [
+        "Noah creates the draft, selects unit/product/window/basis, enters targets, previews capacity and generates periods using published calendars and approved profiles.",
+        "Noah submits for review. Jonas checks the plan and independently approves, or returns the submitted version with a reason. Noah corrects and resubmits when returned.",
+        "Approval is refused if Jonas created that version, even if he is also a writer or administrator. An independent manager can approve an open draft through the API; submission remains the recommended accountable handoff."
+      ],
+      "sourceRefs": [
+        "plans"
+      ]
+    },
+    {
+      "title": "Profiles and rates before planning",
+      "example": "Charlotte Evans (D, also P) prepares; Jonas Weber (M) approves.",
+      "steps": [
+        "Charlotte drafts the profile, effective dates and supported rates, or imports rate drafts.",
+        "Jonas checks units, time validity and overlaps, then approves versions he did not create. For drafts created by Jonas, use Fatima Haddad or another independent M.",
+        "Engineering rate approval does not approve valuation rates: Mina Sadeghi (FM) prepares those and Reza Karimi (F) decides."
+      ],
+      "sourceRefs": [
+        "profiles",
+        "finance"
+      ]
+    },
+    {
+      "title": "Reconciliation and exceptional bridges",
+      "example": "Sara Nouri (A, also P) prepares; David Chen (A) reviews; Fatima Haddad (M) gives the final decision when a second bridge review is required.",
+      "steps": [
+        "Sara reviews source actuals and generated loss candidates, records justified lines and any accountant-only bridge, then submits the current revision.",
+        "For ordinary approval David may decide if he is not submitter, line author or revision opener. If an over-limit bridge requires second review, David records that review and Fatima gives final approval independently.",
+        "A returned revision is corrected and resubmitted. Later changes use revise or an after-close proposal; they do not overwrite approved evidence."
+      ],
+      "sourceRefs": [
+        "accounting"
+      ]
+    },
+    {
+      "title": "Finance input and month close",
+      "example": "Mina Sadeghi (FM) → Reza Karimi (F); month signers Jonas Weber → Sara Nouri → Reza Karimi.",
+      "steps": [
+        "Mina drafts valuation policy/rates/FX/demand status; Reza independently approves the eligible version.",
+        "After approved shifts and day certification, Jonas closes month quantities. If materiality review is required and the policy admits A, Sara performs it.",
+        "Reza signs finance and locks. Reza must not be either the quantity closer or materiality reviewer. A locked month uses the after-close correction/posting process."
+      ],
+      "sourceRefs": [
+        "finance",
+        "close"
+      ]
+    },
+    {
+      "title": "Source configuration and source authority",
+      "example": "Elena Marchetti (I, also P) configures; Sara Nouri (A) approves source governance.",
+      "steps": [
+        "Elena configures the connection, mapping and limited ingestion, and resolves quarantine; technical connectivity alone is not an accounting release approval.",
+        "Elena drafts source-status or measurement-priority rules with evidence. Sara independently approves the eligible version; source authority also supports rejection.",
+        "If Sara drafted the rule, David Chen is an available independent A. The selected unit/plant scope must match the role grant."
+      ],
+      "sourceRefs": [
+        "integration",
+        "sourceGovernance"
+      ]
+    },
+    {
+      "title": "Quality / laboratory decision",
+      "example": "Liam Murphy (O) proposes a lot disposition; Parisa Rahimi (Q, also P) decides.",
+      "steps": [
+        "Liam records the proposed lot class, quantity and supporting evidence in the correct unit.",
+        "Parisa approves or rejects independently. If Parisa authored it, another authorized Q is required: ordinary management is not a substitute for Q.",
+        "The named seed has one Q persona. Provide an eligible second Q holder or properly authorized bounded delegation for that conflict; do not self-approve."
+      ],
+      "sourceRefs": [
+        "quality",
+        "delegation"
+      ]
+    },
+    {
+      "title": "Metrology approval and accounting adoption",
+      "example": "Elena Marchetti prepares → Kaveh Ahmadi (T, also P) approves → Sara Nouri adopts.",
+      "steps": [
+        "Elena proposes a unit uncertainty budget with component evidence. Kaveh independently approves or rejects.",
+        "Sara explicitly adopts an approved budget as tolerance if eligible; she must not be its author. Approval alone does not change accounting tolerance.",
+        "The named seed has one T persona. Kaveh's own proposal requires another authorized T decision maker, not a self-approval."
+      ],
+      "sourceRefs": [
+        "metrology",
+        "delegation"
+      ]
+    },
+    {
+      "title": "Event verification, RCA and closure",
+      "example": "Liam records; Noah verifies; Viktor Petrov (R, also P) validates/investigates; Fatima closes independently.",
+      "steps": [
+        "Liam records stop coding. Noah verifies it; Viktor validates qualifying failure details. Neither verifier may be the current coding author.",
+        "Viktor leads RCA, records evidence/methods/actions and monitors effectiveness. Closure review is requested only after gates pass.",
+        "Fatima may close, reject closure or reopen only if she never created, led, joined or requested that case. Removing a person from the current team does not erase historical participation."
+      ],
+      "sourceRefs": [
+        "reliability",
+        "rca"
+      ]
+    },
+    {
+      "title": "Scope and temporary cover",
+      "example": "Kaveh delegates metrology approval on unit200 to Sara for a bounded absence.",
+      "steps": [
+        "An eligible delegation adds T only on unit200 during its effective interval. Sara's broad HDPE accounting access does not extend T to unit100.",
+        "Sara still cannot approve a budget she authored. Revoke or expiry ends the delegated authority while recorded decisions remain.",
+        "Ingrid Hansen and Amir Rahimi remain unit100 operators; use an appropriate permanent grant or valid delegation when a different responsibility is intended."
+      ],
+      "sourceRefs": [
+        "auth",
+        "delegation",
+        "roster"
+      ]
+    }
+  ],
+  "rosterSummary": {
+    "namedUsers": 52,
+    "distinctExplicitGrants": 70,
+    "homePlant": "HDPE",
+    "wholePlantUsers": 50,
+    "unit100OnlyUsers": 2,
+    "unit200OnlyUsers": 0,
+    "scopeDataSource": "Computed by invoking the current hdpePersonas() catalogue transformation and deduplicating grants exactly as seed-users.ts does. This documentation pass did not query or modify the live database.",
+    "notes": [
+      "All catalogue plant aliases are consolidated to HDPE; old demoPlant2/partner labels do not represent extra seeded plants.",
+      "The existing @demo.acme.com login addresses are retained identities, not extra demo organizations.",
+      "The roster excludes the four bootstrap/service identities and removed browser fixture users. It lists the requested 52 named personas only.",
+      "All 52 identities have source-defined roles and scopes; there are no missing scope fields. Runtime membership edits or temporary delegations may later differ from this seeded baseline.",
+      "A and F/Q/T/FM specialists with stored Analyst retain P in their home plant. R/I users with Engineer or Analyst likewise retain P. TA maps to M; SA/OA represent global admission rather than enumerated specialist grants."
+    ]
+  },
+  "personaRoster": [
+    {
+      "name": "Helena Fischer",
+      "login": "helena.fischer@demo.acme.com",
+      "personaGroup": "Platform administrators",
+      "storedRole": "SuperAdmin",
+      "effectiveRoleCodes": [
+        "SA"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "SuperAdmin"
+        }
+      ],
+      "note": "Global all-scope-role admission; independence restrictions remain."
+    },
+    {
+      "name": "Marcus Lindqvist",
+      "login": "marcus.lindqvist@demo.acme.com",
+      "personaGroup": "Platform administrators",
+      "storedRole": "SuperAdmin",
+      "effectiveRoleCodes": [
+        "SA"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "SuperAdmin"
+        }
+      ],
+      "note": "Global all-scope-role admission; independence restrictions remain."
+    },
+    {
+      "name": "Priya Raman",
+      "login": "priya.raman@demo.acme.com",
+      "personaGroup": "Platform administrators",
+      "storedRole": "SuperAdmin",
+      "effectiveRoleCodes": [
+        "SA"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "SuperAdmin"
+        }
+      ],
+      "note": "Global all-scope-role admission; independence restrictions remain."
+    },
+    {
+      "name": "Tomasz Nowak",
+      "login": "tomasz.nowak@demo.acme.com",
+      "personaGroup": "Platform administrators",
+      "storedRole": "SuperAdmin",
+      "effectiveRoleCodes": [
+        "SA"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "SuperAdmin"
+        }
+      ],
+      "note": "Global all-scope-role admission; independence restrictions remain."
+    },
+    {
+      "name": "Isabel Moreno",
+      "login": "isabel.moreno@demo.acme.com",
+      "personaGroup": "Organization administrators",
+      "storedRole": "OrgAdmin",
+      "effectiveRoleCodes": [
+        "OA"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "OrgAdmin"
+        }
+      ],
+      "note": "Organization administrator in the consolidated HDPE organization; RCA closure requires explicit M or SuperAdmin."
+    },
+    {
+      "name": "Daniel Okafor",
+      "login": "daniel.okafor@demo.acme.com",
+      "personaGroup": "Organization administrators",
+      "storedRole": "OrgAdmin",
+      "effectiveRoleCodes": [
+        "OA"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "OrgAdmin"
+        }
+      ],
+      "note": "Organization administrator in the consolidated HDPE organization; RCA closure requires explicit M or SuperAdmin."
+    },
+    {
+      "name": "Sofia Bergstrom",
+      "login": "sofia.bergstrom@demo.acme.com",
+      "personaGroup": "Organization administrators",
+      "storedRole": "OrgAdmin",
+      "effectiveRoleCodes": [
+        "OA"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "OrgAdmin"
+        }
+      ],
+      "note": "Organization administrator in the consolidated HDPE organization; RCA closure requires explicit M or SuperAdmin."
+    },
+    {
+      "name": "Ravi Krishnan",
+      "login": "ravi.krishnan@demo.acme.com",
+      "personaGroup": "Organization administrators",
+      "storedRole": "OrgAdmin",
+      "effectiveRoleCodes": [
+        "OA"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "OrgAdmin"
+        }
+      ],
+      "note": "Organization administrator in the consolidated HDPE organization; RCA closure requires explicit M or SuperAdmin."
+    },
+    {
+      "name": "Lucas Ferreira",
+      "login": "lucas.ferreira@demo.acme.com",
+      "personaGroup": "Organization administrators",
+      "storedRole": "OrgAdmin",
+      "effectiveRoleCodes": [
+        "OA"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "OrgAdmin"
+        }
+      ],
+      "note": "Organization administrator in the consolidated HDPE organization; RCA closure requires explicit M or SuperAdmin."
+    },
+    {
+      "name": "Anna Keller",
+      "login": "anna.keller@demo.acme.com",
+      "personaGroup": "Plant administrators",
+      "storedRole": "TenantAdmin",
+      "effectiveRoleCodes": [
+        "M"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "manager_approver"
+        }
+      ],
+      "note": "Also retains TenantAdmin-only administration commands."
+    },
+    {
+      "name": "Benjamin Carter",
+      "login": "benjamin.carter@demo.acme.com",
+      "personaGroup": "Plant administrators",
+      "storedRole": "TenantAdmin",
+      "effectiveRoleCodes": [
+        "M"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "manager_approver"
+        }
+      ],
+      "note": "Also retains TenantAdmin-only administration commands."
+    },
+    {
+      "name": "Mei Tanaka",
+      "login": "mei.tanaka@demo.acme.com",
+      "personaGroup": "Plant administrators",
+      "storedRole": "TenantAdmin",
+      "effectiveRoleCodes": [
+        "M"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "manager_approver"
+        }
+      ],
+      "note": "Also retains TenantAdmin-only administration commands."
+    },
+    {
+      "name": "Oliver Hughes",
+      "login": "oliver.hughes@demo.acme.com",
+      "personaGroup": "Plant administrators",
+      "storedRole": "TenantAdmin",
+      "effectiveRoleCodes": [
+        "M"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "manager_approver"
+        }
+      ],
+      "note": "Also retains TenantAdmin-only administration commands."
+    },
+    {
+      "name": "Chloe Dubois",
+      "login": "chloe.dubois@demo.acme.com",
+      "personaGroup": "Plant administrators",
+      "storedRole": "TenantAdmin",
+      "effectiveRoleCodes": [
+        "M"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "manager_approver"
+        }
+      ],
+      "note": "Also retains TenantAdmin-only administration commands."
+    },
+    {
+      "name": "Jonas Weber",
+      "login": "jonas.weber@demo.acme.com",
+      "personaGroup": "Plant management",
+      "storedRole": "Manager",
+      "effectiveRoleCodes": [
+        "M"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "manager_approver"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Fatima Haddad",
+      "login": "fatima.haddad@demo.acme.com",
+      "personaGroup": "Plant management",
+      "storedRole": "Manager",
+      "effectiveRoleCodes": [
+        "M"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "manager_approver"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Erik Johansson",
+      "login": "erik.johansson@demo.acme.com",
+      "personaGroup": "Plant management",
+      "storedRole": "Manager",
+      "effectiveRoleCodes": [
+        "M"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "manager_approver"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Laura Rossi",
+      "login": "laura.rossi@demo.acme.com",
+      "personaGroup": "Plant management",
+      "storedRole": "Manager",
+      "effectiveRoleCodes": [
+        "M"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "manager_approver"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Noah Schmidt",
+      "login": "noah.schmidt@demo.acme.com",
+      "personaGroup": "Production engineering",
+      "storedRole": "Engineer",
+      "effectiveRoleCodes": [
+        "P"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Aisha Bello",
+      "login": "aisha.bello@demo.acme.com",
+      "personaGroup": "Production engineering",
+      "storedRole": "Engineer",
+      "effectiveRoleCodes": [
+        "P"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Mateo Alvarez",
+      "login": "mateo.alvarez@demo.acme.com",
+      "personaGroup": "Production engineering",
+      "storedRole": "Engineer",
+      "effectiveRoleCodes": [
+        "P"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Hannah Novak",
+      "login": "hannah.novak@demo.acme.com",
+      "personaGroup": "Production engineering",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Samuel Osei",
+      "login": "samuel.osei@demo.acme.com",
+      "personaGroup": "Production engineering",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Liam Murphy",
+      "login": "liam.murphy@demo.acme.com",
+      "personaGroup": "Shift operations",
+      "storedRole": "Operator",
+      "effectiveRoleCodes": [
+        "O"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "operator"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Yuki Sato",
+      "login": "yuki.sato@demo.acme.com",
+      "personaGroup": "Shift operations",
+      "storedRole": "Operator",
+      "effectiveRoleCodes": [
+        "O"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "operator"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Carlos Mendes",
+      "login": "carlos.mendes@demo.acme.com",
+      "personaGroup": "Shift operations",
+      "storedRole": "Operator",
+      "effectiveRoleCodes": [
+        "O"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "operator"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Ingrid Hansen",
+      "login": "ingrid.hansen@demo.acme.com",
+      "personaGroup": "Shift operations",
+      "storedRole": "Operator",
+      "effectiveRoleCodes": [
+        "O"
+      ],
+      "scope": "HDPE / unit100 only",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / unit100",
+          "role": "operator"
+        }
+      ],
+      "note": "Scope does not include unit200 / Extruder2."
+    },
+    {
+      "name": "Amir Rahimi",
+      "login": "amir.rahimi@demo.acme.com",
+      "personaGroup": "Shift operations",
+      "storedRole": "Operator",
+      "effectiveRoleCodes": [
+        "O"
+      ],
+      "scope": "HDPE / unit100 only",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / unit100",
+          "role": "operator"
+        }
+      ],
+      "note": "Scope does not include unit200 / Extruder2."
+    },
+    {
+      "name": "Grace Whitfield",
+      "login": "grace.whitfield@demo.acme.com",
+      "personaGroup": "Read-only stakeholders",
+      "storedRole": "viewer",
+      "effectiveRoleCodes": [
+        "V"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "viewer"
+        }
+      ],
+      "note": "Stored role is viewer, avoiding inherited Operator write rights."
+    },
+    {
+      "name": "Pedro Santos",
+      "login": "pedro.santos@demo.acme.com",
+      "personaGroup": "Read-only stakeholders",
+      "storedRole": "viewer",
+      "effectiveRoleCodes": [
+        "V"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "viewer"
+        }
+      ],
+      "note": "Stored role is viewer, avoiding inherited Operator write rights."
+    },
+    {
+      "name": "Nadia Petrova",
+      "login": "nadia.petrova@demo.acme.com",
+      "personaGroup": "Read-only stakeholders",
+      "storedRole": "viewer",
+      "effectiveRoleCodes": [
+        "V"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "viewer"
+        }
+      ],
+      "note": "Stored role is viewer, avoiding inherited Operator write rights."
+    },
+    {
+      "name": "Kenji Nakamura",
+      "login": "kenji.nakamura@demo.acme.com",
+      "personaGroup": "Read-only stakeholders",
+      "storedRole": "viewer",
+      "effectiveRoleCodes": [
+        "V"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "viewer"
+        }
+      ],
+      "note": "Stored role is viewer, avoiding inherited Operator write rights."
+    },
+    {
+      "name": "Viktor Petrov",
+      "login": "viktor.petrov@demo.acme.com",
+      "personaGroup": "Reliability engineering",
+      "storedRole": "Engineer",
+      "effectiveRoleCodes": [
+        "P",
+        "R"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "reliability_engineer"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Amara Diallo",
+      "login": "amara.diallo@demo.acme.com",
+      "personaGroup": "Reliability engineering",
+      "storedRole": "Engineer",
+      "effectiveRoleCodes": [
+        "P",
+        "R"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "reliability_engineer"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Sebastian Vogel",
+      "login": "sebastian.vogel@demo.acme.com",
+      "personaGroup": "Reliability engineering",
+      "storedRole": "Engineer",
+      "effectiveRoleCodes": [
+        "P",
+        "R"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "reliability_engineer"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Leila Farouk",
+      "login": "leila.farouk@demo.acme.com",
+      "personaGroup": "Reliability engineering",
+      "storedRole": "Engineer",
+      "effectiveRoleCodes": [
+        "P",
+        "R"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "reliability_engineer"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Elena Marchetti",
+      "login": "elena.marchetti@demo.acme.com",
+      "personaGroup": "Integration",
+      "storedRole": "Engineer",
+      "effectiveRoleCodes": [
+        "P",
+        "I"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "integration_admin"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Omar Siddiqui",
+      "login": "omar.siddiqui@demo.acme.com",
+      "personaGroup": "Integration",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "I"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "integration_admin"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Freya Nilsson",
+      "login": "freya.nilsson@demo.acme.com",
+      "personaGroup": "Integration",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "I"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "integration_admin"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Diego Herrera",
+      "login": "diego.herrera@demo.acme.com",
+      "personaGroup": "Integration",
+      "storedRole": "Engineer",
+      "effectiveRoleCodes": [
+        "P",
+        "I"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "integration_admin"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Charlotte Evans",
+      "login": "charlotte.evans@demo.acme.com",
+      "personaGroup": "Master data",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "D"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "master_data_admin"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Hiro Yamamoto",
+      "login": "hiro.yamamoto@demo.acme.com",
+      "personaGroup": "Master data",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "D"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "master_data_admin"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Zara Qureshi",
+      "login": "zara.qureshi@demo.acme.com",
+      "personaGroup": "Master data",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "D"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "master_data_admin"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Felix Brandt",
+      "login": "felix.brandt@demo.acme.com",
+      "personaGroup": "Master data",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "D"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "master_data_admin"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Sara Nouri",
+      "login": "sara.nouri@demo.acme.com",
+      "personaGroup": "Production accounting",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "A"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_accountant"
+        }
+      ],
+      "note": "P is inherited from stored Analyst even though the explicit grant is A."
+    },
+    {
+      "name": "David Chen",
+      "login": "david.chen@demo.acme.com",
+      "personaGroup": "Production accounting",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "A"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_accountant"
+        }
+      ],
+      "note": "P is inherited from stored Analyst even though the explicit grant is A."
+    },
+    {
+      "name": "Mina Sadeghi",
+      "login": "mina.sadeghi@demo.acme.com",
+      "personaGroup": "Finance preparation",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "FM"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "finance_maintainer"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Thomas Keller",
+      "login": "thomas.keller@demo.acme.com",
+      "personaGroup": "Finance preparation",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "FM"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "finance_maintainer"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Reza Karimi",
+      "login": "reza.karimi@demo.acme.com",
+      "personaGroup": "Finance approval",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "F"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "finance_approver"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Sofia Lindqvist",
+      "login": "sofia.lindqvist@demo.acme.com",
+      "personaGroup": "Finance approval",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "F"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "finance_approver"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Parisa Rahimi",
+      "login": "parisa.rahimi@demo.acme.com",
+      "personaGroup": "Quality approval",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "Q"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "quality_approver"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    },
+    {
+      "name": "Kaveh Ahmadi",
+      "login": "kaveh.ahmadi@demo.acme.com",
+      "personaGroup": "Metrology approval",
+      "storedRole": "Analyst",
+      "effectiveRoleCodes": [
+        "P",
+        "T"
+      ],
+      "scope": "HDPE / whole plant",
+      "explicitGrants": [
+        {
+          "scope": "HDPE / whole plant",
+          "role": "production_engineer"
+        },
+        {
+          "scope": "HDPE / whole plant",
+          "role": "metrology_approver"
+        }
+      ],
+      "note": "Effective codes include any Engineer/Analyst legacy P mapping."
+    }
+  ],
+  "staffingNotes": [
+    "Only Parisa is seeded as Q and only Kaveh as T. Their own quality/metrology proposals need another eligible independent person; the seed does not invent a second specialist approval role.",
+    "Two production accountants (Sara/David) and two finance approvers (Reza/Sofia Lindqvist) support independent handoffs. Over-limit bridges or materiality close can require a third separate person.",
+    "Do not confuse Sofia Bergstrom (OrgAdmin) with Sofia Lindqvist (finance approver), or Thomas Keller (finance maintainer) with Anna Keller (TenantAdmin).",
+    "Before assigning a task, verify acting plant, unit, current effective roles, author/submitter identity and any active delegation. This is an operational assignment check, not a request to bypass role controls."
+  ],
+  "knownPermissionNuances": [
+    "Plan submit checks writer eligibility and version state, not creator ownership; the plan author's recommended accountability is stronger than that API restriction.",
+    "Plan approval excludes the version creator; reconciliation approval additionally excludes line authors and replacement-revision opener. Do not describe the two rules as identical.",
+    "Calendar publish, source connection/profile save, master-data save and ordinary event/task save are direct commands, not universal two-person approval workflows.",
+    "OrgAdmin satisfies generic role gates but the RCA independent-closure service explicitly requires manager_approver in effective roles or SuperAdmin. The seeded OA-only personas are not represented as RCA closure approvers.",
+    "Read-only viewer remains subject to WriteAccessGuard for notification read-mark POSTs as well as business mutations unless a route explicitly allows read-only calls."
+  ],
+  "sourceReferences": {
+    "auth": [
+      "server/pro-act-backend/src/auth/roles/role-model.ts",
+      "server/pro-act-backend/src/auth/context/request-context.factory.ts",
+      "server/pro-act-backend/src/auth/roles/unit-roles.ts",
+      "server/pro-act-backend/src/auth/roles/require-unit-role.ts",
+      "server/pro-act-backend/src/auth/roles/require-tenant-role.ts",
+      "server/pro-act-backend/src/auth/guards/write-access.guard.ts",
+      "server/pro-act-backend/src/common/query/scoped-query.ts"
+    ],
+    "ui": [
+      "src/features/auth/server-role-sets.ts",
+      "src/features/auth/capabilities.ts"
+    ],
+    "roster": [
+      "server/pro-act-backend/scripts/demo-personas/persona-catalog.ts",
+      "server/pro-act-backend/scripts/demo-personas/hdpe-personas.ts",
+      "server/pro-act-backend/scripts/demo-personas/seed-users.ts"
+    ],
+    "plans": [
+      "server/pro-act-backend/src/v2/plans/plan-roles.ts",
+      "server/pro-act-backend/src/v2/plans/production-plans-v2.controller.ts",
+      "server/pro-act-backend/src/v2/plans/production-plan-review-v2.controller.ts",
+      "server/pro-act-backend/src/plans/plan-review.service.ts",
+      "server/pro-act-backend/src/plans/plan-approval.service.ts"
+    ],
+    "profiles": [
+      "server/pro-act-backend/src/v2/profiles/profile-roles.ts",
+      "server/pro-act-backend/src/v2/profiles/profiles-v2.controller.ts",
+      "server/pro-act-backend/src/v2/profiles/rates-v2.controller.ts",
+      "server/pro-act-backend/src/profiles/versioning.ts",
+      "server/pro-act-backend/src/v2/plant-model/unit-streams-v2.controller.ts",
+      "server/pro-act-backend/src/v2/plant-model/flow-routes-v2.controller.ts",
+      "server/pro-act-backend/src/v2/profiles/transition-standards-v2.controller.ts"
+    ],
+    "calendar": [
+      "server/pro-act-backend/src/v2/calendars/calendar-roles.ts",
+      "server/pro-act-backend/src/v2/calendars/calendar-versions-v2.controller.ts"
+    ],
+    "accounting": [
+      "server/pro-act-backend/src/v2/periods/period-roles.ts",
+      "server/pro-act-backend/src/v2/reconciliation/reconciliation-v2.controller.ts",
+      "server/pro-act-backend/src/reconciliation/approval.service.ts",
+      "server/pro-act-backend/src/domain/reconciliation/separation-of-duties.ts",
+      "server/pro-act-backend/src/reconciliation/bridge-review.ts",
+      "server/pro-act-backend/src/v2/reconciliation/change-proposals-v2.controller.ts"
+    ],
+    "actuals": [
+      "server/pro-act-backend/src/v2/periods/actuals-adjustments-v2.controller.ts",
+      "server/pro-act-backend/src/v2/periods/external-reports-v2.controller.ts",
+      "server/pro-act-backend/src/v2/periods/production-periods-v2.controller.ts"
+    ],
+    "quality": [
+      "server/pro-act-backend/src/v2/quality-dispositions/disposition-roles.ts",
+      "server/pro-act-backend/src/v2/quality-dispositions/lot-dispositions-v2.controller.ts"
+    ],
+    "metrology": [
+      "server/pro-act-backend/src/v2/uncertainty/uncertainty-roles.ts",
+      "server/pro-act-backend/src/v2/uncertainty/uncertainty-budgets-v2.controller.ts"
+    ],
+    "sourceGovernance": [
+      "server/pro-act-backend/src/v2/source-authority/source-authority-roles.ts",
+      "server/pro-act-backend/src/v2/source-authority/source-authority-decisions.service.ts",
+      "server/pro-act-backend/src/v2/source-authority/source-authority-v2.service.ts",
+      "server/pro-act-backend/src/v2/close/source-status-mappings-v2.controller.ts",
+      "server/pro-act-backend/src/periods/source-status-mappings.service.ts"
+    ],
+    "integration": [
+      "server/pro-act-backend/src/v2/intake/intake-roles.ts",
+      "server/pro-act-backend/src/v2/intake/connections-v2.controller.ts",
+      "server/pro-act-backend/src/v2/intake/ingestion-exceptions-v2.controller.ts",
+      "server/pro-act-backend/src/v2/source-mappings/source-mappings-v2.controller.ts",
+      "server/pro-act-backend/src/v2/attribute-mappings/attribute-mappings-v2.controller.ts"
+    ],
+    "finance": [
+      "server/pro-act-backend/src/v2/valuation/valuation-roles.ts",
+      "server/pro-act-backend/src/v2/valuation/valuation-policies-v2.controller.ts",
+      "server/pro-act-backend/src/v2/profiles/valuation-rates-v2.controller.ts",
+      "server/pro-act-backend/src/v2/valuation/fx-rates-v2.controller.ts",
+      "server/pro-act-backend/src/v2/valuation/demand-statuses-v2.controller.ts"
+    ],
+    "close": [
+      "server/pro-act-backend/src/v2/close/close-roles.ts",
+      "server/pro-act-backend/src/close/month-close.service.ts",
+      "server/pro-act-backend/src/domain/close/month-close-machine.ts",
+      "server/pro-act-backend/src/v2/close/production-days-v2.controller.ts",
+      "server/pro-act-backend/src/v2/close/restatement-v2.controller.ts"
+    ],
+    "rca": [
+      "server/pro-act-backend/src/rca-case/rca-scope.ts",
+      "server/pro-act-backend/src/domain/rca/case-workflow.ts",
+      "server/pro-act-backend/src/rca-case/case-transition-rules.ts",
+      "server/pro-act-backend/src/v2/rca/rca-actions-v2.controller.ts",
+      "server/pro-act-backend/src/rca-case/rca-verification.service.ts",
+      "server/pro-act-backend/src/v2/rca-knowledge/rca-knowledge-v2.controller.ts"
+    ],
+    "reliability": [
+      "server/pro-act-backend/src/v2/reliability/reliability-roles.ts",
+      "server/pro-act-backend/src/v2/production-events/verification-roles.ts",
+      "server/pro-act-backend/src/v2/production-events/stop-verification.service.ts"
+    ],
+    "masterData": [
+      "server/pro-act-backend/src/v2/master-data/common/master-data-writer.ts",
+      "server/pro-act-backend/src/v2/rules/rules-v2.controller.ts",
+      "server/pro-act-backend/src/v2/plant-model/unit-impact-roles.ts",
+      "server/pro-act-backend/src/v2/plant-model/unit-impact-rules-v2.controller.ts",
+      "server/pro-act-backend/src/v2/rca-settings/rca-templates-v2.controller.ts"
+    ],
+    "administration": [
+      "server/pro-act-backend/src/v2/administration/administration-roles.ts",
+      "server/pro-act-backend/src/v2/administration/hierarchy/organizations-v2.controller.ts",
+      "server/pro-act-backend/src/v2/administration/hierarchy/plants-v2.controller.ts",
+      "server/pro-act-backend/src/v2/administration/tasks/tasks-v2.controller.ts",
+      "server/pro-act-backend/src/v2/administration/users/users-v2-commands.service.ts",
+      "server/pro-act-backend/src/v2/administration/branding/branding-v2.controller.ts"
+    ],
+    "events": [
+      "server/pro-act-backend/src/v2/production-events/production-events-v2.controller.ts",
+      "server/pro-act-backend/src/v2/production-events/production-events-v2-commands.service.ts",
+      "server/pro-act-backend/src/v2/notifications/notifications-v2.controller.ts"
+    ],
+    "delegation": [
+      "server/pro-act-backend/src/auth/delegations/role-delegation.entity.ts",
+      "server/pro-act-backend/src/auth/delegations/delegation-rules.ts",
+      "server/pro-act-backend/src/v2/administration/role-delegations/role-delegations-v2.controller.ts"
+    ]
+  },
+  "verification": {
+    "canonicalScopeRoles": 12,
+    "legacyGlobalRoles": 7,
+    "namedPersonas": 52,
+    "deduplicatedGrants": 70,
+    "responsibilityFamilies": 35,
+    "workedHandoffs": 9,
+    "credentialsIncluded": false,
+    "missingScopeData": [],
+    "basis": "Current repository sources, role constants, controllers, service/domain checks and deterministic seed-catalogue projection. No database mutations or new live permission claims."
+  }
+}

@@ -1,0 +1,206 @@
+[
+  {
+    "name": "FRONTEND_PORT",
+    "detail": "8070. Host HTTP port for the nginx frontend."
+  },
+  {
+    "name": "BACKEND_PORT",
+    "detail": "4004. Host port mapped to the API container port 4004."
+  },
+  {
+    "name": "POSTGRES_PORT",
+    "detail": "5433. Host port for the bundled database; backend containers use DB_PORT 5432."
+  },
+  {
+    "name": "KAFKA_PORT",
+    "detail": "9092. Host Kafka listener; internal clients normally use kafka:29092."
+  },
+  {
+    "name": "KAFKA_UI_PORT",
+    "detail": "8085. Optional Kafka UI host port, enabled by the tools profile."
+  },
+  {
+    "name": "MQTT_PORT",
+    "detail": "1884. Development anonymous MQTT host listener, mapped to broker port 1883."
+  },
+  {
+    "name": "MQTT_WS_PORT",
+    "detail": "8884. Development MQTT over WebSockets host listener, mapped to 9001."
+  },
+  {
+    "name": "MQTT_AUTH_PORT",
+    "detail": "1885. Authenticated plain MQTT host listener."
+  },
+  {
+    "name": "MQTT_TLS_PORT",
+    "detail": "8885. Authenticated TLS MQTT host listener, mapped to broker port 8883."
+  },
+  {
+    "name": "POSTGRES_USER",
+    "detail": "postgres. Database account passed as DB_USERNAME to the backend and worker."
+  },
+  {
+    "name": "POSTGRES_PASSWORD",
+    "detail": "Required site secret. Replace the example placeholder; never use change-me in a real installation."
+  },
+  {
+    "name": "POSTGRES_DB",
+    "detail": "proact. Database name passed as DB_NAME."
+  },
+  {
+    "name": "DB_MIGRATIONS_RUN",
+    "detail": "true for the API by default; worker is fixed false. Use a single migration owner."
+  },
+  {
+    "name": "DB_RLS_TENANT_BINDING",
+    "detail": "true. Bind authenticated requests to their permitted tenant context. Keep enabled."
+  },
+  {
+    "name": "DB_HOST",
+    "detail": "postgres in the standard Compose stack. External database overrides change this. Use the hostname resolvable from inside the API and worker containers."
+  },
+  {
+    "name": "DB_PORT",
+    "detail": "5432. Database service port inside the container network."
+  },
+  {
+    "name": "KAFKA_BROKERS",
+    "detail": "kafka:29092 in the standard stack. Comma-separated broker endpoints where applicable."
+  },
+  {
+    "name": "MQTT_URL",
+    "detail": "mqtt://mqtt:1883 in the development stack. This is the shared runtime broker setting; individual intake connections have their own broker configuration."
+  },
+  {
+    "name": "JWT_SECRET",
+    "detail": "Required unique long random access-token signing secret. Example guidance recommends at least 32 random characters."
+  },
+  {
+    "name": "JWT_REFRESH_SECRET",
+    "detail": "Required separate long random refresh-token signing secret. Must differ from JWT_SECRET."
+  },
+  {
+    "name": "AUTH_ALLOW_PUBLIC_REGISTRATION",
+    "detail": "false. Keep false; use bootstrap for the first administrator and authorized user administration thereafter."
+  },
+  {
+    "name": "CREDENTIAL_ENCRYPTION_KEY",
+    "detail": "Empty falls back to JWT_SECRET. Configure and protect a stable secret for encrypted connector credentials."
+  },
+  {
+    "name": "CREDENTIAL_ENCRYPTION_KEYS",
+    "detail": "Optional named key ring in id:secret,id2:secret2 form; secrets at least 16 characters according to the configuration example. Use the supported rotation procedure."
+  },
+  {
+    "name": "CREDENTIAL_ENCRYPTION_KEY_ID",
+    "detail": "Identifier of the named key used for new encrypted values. Leave empty with the key ring when using the single-key configuration."
+  },
+  {
+    "name": "EXPORT_TTL_HOURS",
+    "detail": "168. Hours a completed export remains downloadable."
+  },
+  {
+    "name": "CORS_ORIGIN",
+    "detail": "http://localhost:8070 by default. Comma-separated permitted browser origins for direct backend calls; normal frontend traffic uses the same-origin proxy."
+  },
+  {
+    "name": "PI_SERVER",
+    "detail": "Runtime nginx /piwebapi proxy target, passed to the frontend service by Compose. Set to the site's actual PI Web API endpoint; it does not configure each backend PI connection. The repository contains a development endpoint, not a new-plant default to reuse."
+  },
+  {
+    "name": "CONNECTOR_EGRESS_ALLOWLIST",
+    "detail": "Empty means unrestricted development egress. Set permitted source hosts and optional ports for a site; wildcard subdomain syntax is documented in .env.example."
+  },
+  {
+    "name": "VITE_API_BASE_URL",
+    "detail": "/api for a same-origin container build. Build-time setting; do not put a relative /api override into the root development .env unless the development proxy is configured accordingly."
+  },
+  {
+    "name": "PROCESS_ROLE",
+    "detail": "api for the API service, worker for the worker service; all is supported outside the split Compose deployment. Fixed per service, not selected by the root .env."
+  },
+  {
+    "name": "PORT",
+    "detail": "4004 inside the API container."
+  },
+  {
+    "name": "WORKER_PORT",
+    "detail": "4005 inside the worker container for health probes; not exposed as the business API."
+  },
+  {
+    "name": "BACKEND_URL",
+    "detail": "http://backend:4004 in the standard frontend container. Runtime nginx proxy target."
+  },
+  {
+    "name": "CLIENT_MAX_BODY_SIZE",
+    "detail": "25m in the frontend image. nginx upload request limit; backend validation also applies. A different value requires a frontend service environment override; the standard Compose file does not read this key from root .env."
+  },
+  {
+    "name": "EXPORT_STORAGE_DIR",
+    "detail": "/app/storage/exports. Private storage mounted into both API and worker. Keep separate from public assets."
+  },
+  {
+    "name": "AUDIT_REQUEST_LOG_RETENTION_DAYS",
+    "detail": "30 in Compose. Retention for request audit logs. Runtime unset/empty means keep forever, but Compose's :-30 interpolation substitutes 30 for an empty root .env value; disabling it requires an explicit service environment override. A configured value must be a whole number of days >=1."
+  },
+  {
+    "name": "AUDIT_TRAIL_RETENTION_DAYS",
+    "detail": "30 in Compose. Retention for the append-only audit trail. Runtime unset/empty means keep forever; an empty root .env value still selects Compose's 30-day default. Use an explicit service environment override to disable."
+  },
+  {
+    "name": "RAW_RETENTION_DAYS",
+    "detail": "365 in Compose. Raw observations are removed by eligible whole monthly partitions. Runtime unset/empty means keep forever; an empty root .env value still selects Compose's 365-day default. Use an explicit service environment override to disable."
+  },
+  {
+    "name": "SAMPLE_RETENTION_DAYS",
+    "detail": "90 in Compose. Measurement samples are removed by eligible whole monthly partitions; signal summaries remain. Runtime unset/empty means keep forever; an empty root .env value still selects Compose's 90-day default. Use an explicit service environment override to disable."
+  },
+  {
+    "name": "RETENTION_BATCH",
+    "detail": "1000 in Compose. Row deletion batch size for retention work."
+  },
+  {
+    "name": "DB_USERNAME",
+    "detail": "Mapped from POSTGRES_USER in Compose. For a direct Node deployment, set the backend database account explicitly."
+  },
+  {
+    "name": "DB_PASSWORD",
+    "detail": "Mapped from POSTGRES_PASSWORD in Compose. For a direct Node deployment, provide the database secret securely."
+  },
+  {
+    "name": "DB_NAME",
+    "detail": "Mapped from POSTGRES_DB in Compose; proact is the data-source fallback."
+  },
+  {
+    "name": "DB_LOGGING",
+    "detail": "Enabled only when exactly true. Diagnostic SQL logging setting; do not enable casually on a sensitive or busy site. Optional runtime key: set in the API/worker service environment or direct Node process; standard Compose does not forward it from root .env."
+  },
+  {
+    "name": "DB_POOL_MAX",
+    "detail": "10 runtime connections by default per process; non-positive or non-integer input falls back to 10. Optional runtime key: configure the API/worker service environment explicitly; standard Compose does not forward it from root .env."
+  },
+  {
+    "name": "DB_STATEMENT_TIMEOUT_MS",
+    "detail": "30000 milliseconds in long-running API/worker connections by default; non-positive or non-integer input falls back to 30000, so 0 does not disable it. Migration CLI connections do not inherit this statement timeout. Configure the service environment explicitly; standard Compose does not forward this key from root .env."
+  },
+  {
+    "name": "DB_CONNECT_TIMEOUT_MS",
+    "detail": "10000 milliseconds by default; non-positive or non-integer input falls back to 10000. Configure the API/worker service environment explicitly; standard Compose does not forward this optional runtime key from root .env."
+  },
+  {
+    "name": "DB_SLOW_QUERY_MS",
+    "detail": "500 milliseconds by default; threshold for slow-query warnings. Non-positive or non-integer input falls back to 500. Configure the API/worker service environment explicitly; standard Compose does not forward this optional runtime key from root .env."
+  },
+  {
+    "name": "EXPORT_PDF_FONT",
+    "detail": "Optional path to a TrueType font available inside the process for PDF glyph coverage, including Persian text. Mount the font and configure the relevant API/worker environment explicitly; standard Compose does not forward this key from root .env."
+  },
+  {
+    "name": "EXPORT_PDF_FONT_BOLD",
+    "detail": "Optional corresponding bold font path; falls back to EXPORT_PDF_FONT when not supplied. Mount the font and configure the service environment explicitly. Verify generated PDFs with the actual configured fonts."
+  },
+  {
+    "name": "BCRYPT_ROUNDS",
+    "detail": "Bootstrap and seed-script hashing default to 10 when absent. This is not a global override of every authentication/user service. For container bootstrap, pass it explicitly to that process; standard Compose does not forward it from root .env."
+  }
+]
