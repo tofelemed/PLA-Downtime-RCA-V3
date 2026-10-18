@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { API, signIn } from './support/admin-helpers';
-import { INT_USERS } from './support/integration-world';
+import { CONSOLE_ADMIN } from './support/integration-world';
 
 const connectionPath = '/connectivity/connections/cb40dc90-2fc9-4dd1-83a6-169380242689';
 
@@ -9,7 +9,8 @@ test.describe('HDPE MQTT grouped profile and responsive state', () => {
   for (const width of [1280, 390]) {
     test(`profile groups retain local fields and fit at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      await signIn(page, INT_USERS.elena);
+      // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+      await signIn(page, CONSOLE_ADMIN);
       await page.goto(`${connectionPath}?tab=profile`);
       await expect(page.getByTestId('profile-editor')).toBeVisible();
       const errors: string[] = []; const writes: string[] = [];

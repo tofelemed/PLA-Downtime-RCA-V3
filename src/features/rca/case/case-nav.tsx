@@ -8,9 +8,10 @@ const SECTIONS = [
   { path: '/analysis', label: 'Analysis', testId: 'tab-analysis', end: false },
   { path: '/actions', label: 'Recommendations & actions', testId: 'tab-actions', end: false },
   { path: '/links', label: 'Links & outcome', testId: 'tab-links', end: false },
+  { path: '/history', label: 'History', testId: 'tab-history', end: false },
 ] as const;
 
-/** The five sub-pages of a case as links (each is its own route, so Back and bookmarks work). */
+/** The six sub-pages of a case as links (each is its own route, so Back and bookmarks work). */
 export function CaseNav() {
   const { basePath } = useCaseWorkspace();
   const { pathname, search } = useLocation();
@@ -19,7 +20,7 @@ export function CaseNav() {
     ? currentPath === basePath || currentPath === `${basePath}/definition`
     : currentPath === `${basePath}${path}` || currentPath.startsWith(`${basePath}${path}/`);
   return (
-    <nav aria-label="Case sections" className="border-b">
+    <nav aria-label="Investigation sections" className="border-b">
       <ul className="-mb-px flex flex-wrap gap-x-1">
         {SECTIONS.map((section) => (
           <li key={section.testId}>

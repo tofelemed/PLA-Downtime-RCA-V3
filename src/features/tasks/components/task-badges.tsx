@@ -1,27 +1,17 @@
 import type { TaskView } from '@/api/v2/types/administration';
-import { Badge } from '@/components/ui/badge';
-import { labelOf, TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from '@/features/ux-kit/labels';
+import { labelOf, PRIORITY_TONES, TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TASK_STATUS_TONES } from '@/features/ux-kit/labels';
+import { StatusBadge } from '@/features/ux-kit/status-badge';
+import { toneOf } from '@/features/ux-kit/status-tone';
 import { StatusIcon } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-const PRIORITY_CLASS: Readonly<Record<string, string>> = {
-  Low: 'border-muted-foreground/30 text-muted-foreground',
-  Medium: 'border-blue-300 text-blue-800 dark:text-blue-200',
-  High: 'border-amber-400 text-amber-900 dark:text-amber-200',
-  Critical: 'border-red-400 text-red-800 dark:text-red-200',
-};
-
-/** Priority as a word on a tinted badge (never colour alone). */
+/** Priority as a word on a tinted badge (never colour alone): Critical red, High amber, others neutral. */
 export function PriorityBadge({ priority }: { priority: string }) {
-  return (
-    <Badge variant="outline" className={cn(PRIORITY_CLASS[priority])}>
-      {labelOf(TASK_PRIORITY_LABELS, priority)}
-    </Badge>
-  );
+  return <StatusBadge tone={toneOf(PRIORITY_TONES, priority)}>{labelOf(TASK_PRIORITY_LABELS, priority)}</StatusBadge>;
 }
 
 export function TaskStatusBadge({ status }: { status: string }) {
-  return <Badge variant={status === 'Completed' ? 'secondary' : 'outline'}>{labelOf(TASK_STATUS_LABELS, status)}</Badge>;
+  return <StatusBadge tone={toneOf(TASK_STATUS_TONES, status)}>{labelOf(TASK_STATUS_LABELS, status)}</StatusBadge>;
 }
 
 /** The due day in the plant calendar, with "Overdue" in words when the server says so. */

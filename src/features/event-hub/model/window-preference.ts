@@ -1,6 +1,7 @@
 import { WINDOW_PRESETS } from './event-filters';
+import type { RelativeWindow } from './relative-window';
 
-export type WindowPreset = (typeof WINDOW_PRESETS)[number];
+export type WindowPreset = RelativeWindow;
 
 /** The Event Hub list opens on the last 7 days unless the user picked another preset before. */
 export const DEFAULT_WINDOW_PRESET: WindowPreset = WINDOW_PRESETS.find((preset) => preset.hours === 24 * 7) ?? WINDOW_PRESETS[0];

@@ -6,7 +6,7 @@ import { DateInput } from '@/features/ux-kit/date-inputs';
 import { Section } from '@/features/ux-kit/page-layout';
 import { FormField } from '../components/form-field';
 import { RefusalNotice } from '../components/refusal-notice';
-import { VersionStateBadge } from '../components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { useCalendarEditor, type CalendarScope, type PreviewCandidate } from '../hooks/use-calendar-editor';
 import type { CalendarDraft } from '../model/calendar-draft';
 import { ExclusionsEditor } from './exclusions-editor';

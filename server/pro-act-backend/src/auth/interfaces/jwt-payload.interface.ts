@@ -1,5 +1,5 @@
 export interface JwtPayload {
-  sub: string;  // user ID
+  sub: string; // user ID
   email: string;
   role: string;
   tenantId?: string;
@@ -17,4 +17,3 @@ export interface AuthenticatedUser {
   tenantId?: string;
   organizationId?: string;
 }
-

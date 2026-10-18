@@ -5,7 +5,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { BASIS_SHORT_LABELS, DISTRIBUTION_LABELS, labelOf, useUserNames } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { VersionStateBadge } from '../components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 
 /** Versions newest first with approval, supersession and change reasons (plan history), 20 per page. */
 export function VersionHistory({ planId, timezone }: { planId: string; timezone: string }) {

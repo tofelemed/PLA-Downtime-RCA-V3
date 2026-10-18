@@ -69,7 +69,7 @@ describe('Work summary under Audit Logs', () => {
     expect(calls.some((url) => url.pathname.endsWith('/activity-summary'))).toBe(false);
     expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument();
     fireEvent.mouseDown(screen.getByRole('tab', { name: 'Work summary' }), { button: 0, ctrlKey: false });
-    expect(await screen.findByText('RCA cases')).toBeInTheDocument();
+    expect(await screen.findByText('Investigations')).toBeInTheDocument();
     expect(screen.getByText('Tasks')).toBeInTheDocument();
     expect(screen.getByText('Audit activity (3 entries)')).toBeInTheDocument();
     expect(screen.queryByLabelText('Action filter')).not.toBeInTheDocument();
@@ -87,14 +87,14 @@ describe('Work summary under Audit Logs', () => {
 
   it('opens the summary directly without requesting audit entries', async () => {
     open(`/audit?view=work-summary&${WINDOW}`);
-    expect(await screen.findByText('RCA cases')).toBeInTheDocument();
+    expect(await screen.findByText('Investigations')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Work summary' })).toHaveAttribute('aria-selected', 'true');
     expect(calls.some((url) => url.pathname.includes('/audit-logs'))).toBe(false);
   });
 
   it('redirects old report activity links, preserving dates and dropping report-only filters', async () => {
     open(`/reports?view=activity&${WINDOW}&units=u1&approved=1`);
-    expect(await screen.findByText('RCA cases')).toBeInTheDocument();
+    expect(await screen.findByText('Investigations')).toBeInTheDocument();
     const location = screen.getByTestId('location').textContent ?? '';
     expect(location).toMatch(/^\/audit\?view=work-summary/);
     expect(location).toContain(`from=${encodeURIComponent(FROM)}`);
@@ -120,6 +120,6 @@ describe('Work summary under Audit Logs', () => {
   it.each(['TenantAdmin', 'Manager'])('allows existing audit readers (%s) to open the summary', async (role) => {
     actAs(role);
     open(`/audit?view=work-summary&${WINDOW}`);
-    expect(await screen.findByText('RCA cases')).toBeInTheDocument();
+    expect(await screen.findByText('Investigations')).toBeInTheDocument();
   });
 });

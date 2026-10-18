@@ -2,6 +2,7 @@ import { v2Request } from '../client';
 import { ifMatchOf } from '../etag-cache';
 import type { RcaAnalysesView, RcaAnalysisBodies, RcaRecordTool } from '../types/rca-analyses';
 import type { BodyOf } from '../schema-types';
+import type { RcaCaseCauseBody, RcaCaseCausePatch, RcaCaseCauseView } from '../types/rca-causes';
 import type { RcaActionView, RcaCaseView, RcaLinkResultView, RcaRecommendationView } from '../types/rca';
 import { v2 } from '../v2';
 import type { ChangeNotice } from './invalidation';
@@ -165,6 +166,37 @@ export function useResetRcaLogicTree() {
       ifMatch: ifMatchOf(rca.rowVersion),
     })).data,
   );
+}
+
+/** Item 7: adds a typed cause to a case (Idempotency-Key; 422 CAUSES_LOCKED once closure is requested). */
+export function useCreateRcaCause() {
+  return useRcaCommand<{ rcaId: string; body: RcaCaseCauseBody }, RcaCaseCauseView>(async (input, idempotencyKey) =>
+    (await v2.post<RcaCaseCauseView, '/api/v2/rcas/{id}/causes'>('/api/v2/rcas/{id}/causes', {
+      path: { id: input.rcaId },
+      body: input.body,
+      idempotencyKey,
+    })).data,
+  );
+}
+
+type CauseRef = Pick<RcaCaseCauseView, 'id' | 'rowVersion'>;
+
+/** Item 7: changes a cause with `If-Match` = the version on screen (412 when someone saved in between). */
+export function useUpdateRcaCause() {
+  return useRcaCommand<{ cause: CauseRef; body: RcaCaseCausePatch }, RcaCaseCauseView>(async (input) =>
+    (await v2.patch<RcaCaseCauseView, '/api/v2/rca-case-causes/{id}'>('/api/v2/rca-case-causes/{id}', {
+      path: { id: input.cause.id },
+      body: input.body,
+      ifMatch: ifMatchOf(input.cause.rowVersion),
+    })).data,
+  );
+}
+
+/** Item 7: removes a cause (If-Match). */
+export function useDeleteRcaCause() {
+  return useRcaCommand<CauseRef, void>(async (cause) => {
+    await v2Request<void>({ method: 'DELETE', path: `/rca-case-causes/${encodeURIComponent(cause.id)}`, ifMatch: ifMatchOf(cause.rowVersion) });
+  });
 }
 
 const TOOL_PATHS: Readonly<Record<RcaRecordTool, string>> = {

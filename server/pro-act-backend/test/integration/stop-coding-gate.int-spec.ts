@@ -71,6 +71,26 @@ describe('stop coding gate and verification (SME D12 / D13)', () => {
     (await env.view(env.periodA1)).codingGate as GateBody;
   const event = async (id: string) =>
     (await env.get(`production-events/${id}`).expect(200)).body as EventBody;
+  const labelRevisions = (eventId: string, reason: string) =>
+    env.rows<{ actorId: string; kind: string }>(
+      `SELECT "actor_id"::text AS "actorId", "kind"::text AS "kind" FROM "event_revisions"
+        WHERE "event_id" = $1 AND "change_reason" = $2`,
+      [eventId, reason],
+    );
+  const labelMessages = async (eventId: string) =>
+    (
+      await env.rows<{ n: number }>(
+        `SELECT count(*)::int AS "n" FROM "outbox" WHERE "aggregate_id" = $1
+            AND "type" = 'EventChanged' AND "payload"->>'workflowOnly' = 'true'`,
+        [eventId],
+      )
+    )[0].n;
+  const recalcRequests = async () =>
+    (
+      await env.rows<{ n: number }>(
+        `SELECT count(*)::int AS "n" FROM "outbox" WHERE "type" = 'PeriodRecalculateRequested'`,
+      )
+    )[0].n;
 
   beforeAll(async () => {
     await env.start();
@@ -130,6 +150,8 @@ describe('stop coding gate and verification (SME D12 / D13)', () => {
 
   it('D13: a supervisor of the unit verifies the shift — the uncoded stop is skipped', async () => {
     const supervisor = await person('production_engineer', env.world.unitA1);
+    const versionBefore = (await event(ids.coded)).rowVersion;
+    const recalcBefore = await recalcRequests();
     const outcome = (
       await env
         .post(
@@ -143,9 +165,20 @@ describe('stop coding gate and verification (SME D12 / D13)', () => {
     expect(outcome.skipped).toEqual([
       { eventId: ids.uncoded, reason: 'NOT_CODED' },
     ]);
-    expect((await event(ids.coded)).verification.verifiedBy).toBe(
-      supervisor.id,
-    );
+    const verified = await event(ids.coded);
+    expect(verified.verification.verifiedBy).toBe(supervisor.id);
+    expect(verified.rowVersion).toBe(versionBefore + 1);
+    // each label is one event revision by the verifier with its EventChanged in the outbox
+    for (const id of [ids.coded, ids.pending]) {
+      expect(await labelRevisions(id, 'verification')).toEqual([
+        { actorId: supervisor.id, kind: 'user' },
+      ]);
+      expect(await labelMessages(id)).toBe(1);
+    }
+    expect(await labelRevisions(ids.uncoded, 'verification')).toEqual([]);
+    // a label changes no quantity: its messages request no period recalculation
+    await env.settle();
+    expect(await recalcRequests()).toBe(recalcBefore);
     expect((await gate()).verification).toMatchObject({
       verified: 2,
       unverified: 1,
@@ -198,6 +231,7 @@ describe('stop coding gate and verification (SME D12 / D13)', () => {
 
   it('D13: maintenance validates the failure detail of a verified stop only', async () => {
     const maintenance = await person('reliability_engineer', env.world.unitA1);
+    const versionBefore = (await event(ids.coded)).rowVersion;
     const pending = (
       await env
         .post(
@@ -220,7 +254,14 @@ describe('stop coding gate and verification (SME D12 / D13)', () => {
         .expect(200)
     ).body as OutcomeBody;
     expect(coded.done).toEqual([ids.coded]);
-    expect((await event(ids.coded)).verification.validatedAt).not.toBeNull();
+    const validated = await event(ids.coded);
+    expect(validated.verification.validatedAt).not.toBeNull();
+    expect(validated.rowVersion).toBe(versionBefore + 1);
+    expect(await labelRevisions(ids.coded, 'failure_validation')).toEqual([
+      { actorId: maintenance.id, kind: 'user' },
+    ]);
+    expect(await labelRevisions(ids.pending, 'failure_validation')).toEqual([]);
+    expect(await labelMessages(ids.coded)).toBe(2);
   });
 
   it('D13: changing the coding clears the verification (recording is never blocked)', async () => {

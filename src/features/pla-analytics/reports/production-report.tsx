@@ -4,6 +4,7 @@ import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { LocalizedNumber } from '@/features/ux-kit/localized-number';
+import { NumberText } from '@/features/ux-kit/number-text';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '../components/analytics-card';
 import { OeeGroupTable } from '../components/oee-group-table';
@@ -35,9 +36,9 @@ const DOWNTIME_COLUMNS: Array<DataTableColumn<Group>> = [
       </span>
     ),
   },
-  { id: 'downtime', header: 'Downtime', align: 'right', nowrap: true, cell: (group) => <DurationText seconds={group.value} variant="clock" /> },
+  { id: 'downtime', header: 'Downtime', align: 'right', nowrap: true, cell: (group) => <DurationText seconds={group.value} /> },
   { id: 'share', header: 'Share', align: 'right', nowrap: true, cell: (group) => <LocalizedNumber text={shareText(group.share)} /> },
-  { id: 'periods', header: 'Periods', align: 'right', cell: (group) => group.periods },
+  { id: 'periods', header: 'Periods', align: 'right', cell: (group) => <NumberText value={group.periods} /> },
 ];
 
 /** Downtime by reason: the 2.7 report's allocated seconds per reason in server order (Pareto), 20 per page. */

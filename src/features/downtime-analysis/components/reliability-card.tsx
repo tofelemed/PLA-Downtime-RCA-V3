@@ -5,19 +5,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { reportBase, type DowntimeFilters } from '../model/downtime-filters';
-import { formatCount, reasonText, restoreColumn, restoreTitle } from '../model/kpi-display';
+import { formatCount, reasonText, REPAIR_COLUMNS } from '../model/kpi-display';
 import { ReportCard } from './report-card';
 
 /**
  * Reliability per unit (KPI07 / KPI08, D13): MTBF = exposure ÷ failures from the server, null with the
- * exposure when there were no failures; mean active repair time only with repair evidence, otherwise the
- * column is the mean time to restore production (SME D10).
+ * exposure when there were no failures; mean active repair time (from work-order evidence) and mean time
+ * to restore production (the full outage) side by side (SME D10).
  */
 export function ReliabilityCard({ filters }: { filters: DowntimeFilters }) {
   const env = useEventHubEnv();
   const query = useReliabilityReport(reportBase(filters), env.timezone);
   const rows = query.data?.data.units ?? [];
-  const restore = restoreTitle(rows);
   return (
     <ReportCard
       title="Reliability"
@@ -33,7 +32,12 @@ export function ReliabilityCard({ filters }: { filters: DowntimeFilters }) {
             <TableHead>Unit</TableHead>
             <TableHead>MTBF</TableHead>
             <TableHead>Failures</TableHead>
-            <TableHead data-testid="restore-title">{restore}</TableHead>
+            {REPAIR_COLUMNS.map((column) => (
+              <TableHead key={column.testId}>
+                <span data-testid={column.testId}>{column.title}</span>
+                <span className="block text-xs font-normal text-muted-foreground">{column.note}</span>
+              </TableHead>
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -48,7 +52,6 @@ export function ReliabilityCard({ filters }: { filters: DowntimeFilters }) {
 
 function ReliabilityRow({ row, unitName }: { row: ReliabilityRowView; unitName: string }) {
   const { digits } = useCalendarPreference();
-  const restore = restoreColumn(row);
   return (
     <TableRow data-testid="reliability-row" data-unit-id={row.unitId}>
       <TableCell>{unitName}</TableCell>
@@ -62,7 +65,10 @@ function ReliabilityRow({ row, unitName }: { row: ReliabilityRowView; unitName: 
         )}
       </TableCell>
       <TableCell>{formatCount(row.failures, digits)}</TableCell>
-      <TableCell>{restore.view.value !== null ? <DurationText seconds={restore.view.value} /> : reasonText(restore.view.reason)}</TableCell>
+      {REPAIR_COLUMNS.map((column) => {
+        const view = column.view(row);
+        return <TableCell key={column.testId}>{view.value !== null ? <DurationText seconds={view.value} /> : reasonText(view.reason)}</TableCell>;
+      })}
     </TableRow>
   );
 }

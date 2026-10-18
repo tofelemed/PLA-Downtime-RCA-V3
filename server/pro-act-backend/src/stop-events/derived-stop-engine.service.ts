@@ -4,11 +4,14 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { envInt } from '../common/helpers/time-bounds';
 import {
+  DerivedSlowdown,
   deriveSlowdowns,
   describeSlowdown,
 } from '../domain/reliability/derived-slowdowns';
 import { deriveStops } from '../domain/reliability/derived-stops';
 import {
+  DerivedWritePlan,
+  EngineOwnedEvent,
   planDerivedWrites,
   planEngineWrites,
 } from '../domain/reliability/derived-stop-writes';
@@ -22,6 +25,8 @@ import {
   loadStateInputs,
   mappingInForce,
 } from '../reliability/unit-state/state-timeline.loader';
+import { RuleClassificationService } from '../rules/rule-classification.service';
+import { ActiveCodingRule } from '../rules/rule-defaults';
 import { applySlowdownWrites, isSlowdownKey } from './derived-slowdown-writer';
 import {
   applyDerivedWrites,
@@ -74,6 +79,7 @@ export class DerivedStopEngineService {
     private readonly notifier: EventChangeNotifier,
     private readonly reconciliation: StopReconciliationService,
     private readonly incidents: IncidentGroupingService,
+    private readonly ruleDefaults: RuleClassificationService,
   ) {}
 
   processUnit(
@@ -109,6 +115,7 @@ export class DerivedStopEngineService {
       settings,
       now,
       lookbackMs: envInt('STATE_ENGINE_LOOKBACK_HOURS', 24) * HOUR_MS,
+      lateHorizonMs: envInt('STATE_ENGINE_LATE_SAMPLE_HOURS', 168) * HOUR_MS,
     });
     const span = { start: window.start, end: now };
     const { messages, outcome } = await this.writeDerived(manager, {
@@ -163,14 +170,12 @@ export class DerivedStopEngineService {
       }),
       { newId: randomUUID, describe: describeSlowdown },
     );
-    const messages = [
-      ...(await applyDerivedWrites(manager, this.revisions, scope, plan)),
-      ...(await applySlowdownWrites(manager, this.revisions, {
-        scope,
-        plan: slowPlan,
-        owned: ownedSlowdowns,
-      })),
-    ];
+    const messages = await this.applyPlans(manager, {
+      scope,
+      plan,
+      slowPlan,
+      ownedSlowdowns,
+    });
     return {
       messages,
       outcome: {
@@ -184,5 +189,38 @@ export class DerivedStopEngineService {
           : {}),
       },
     };
+  }
+
+  /**
+   * Writes both plans. New events get the tenant's active `coding_default` rules (plan 3.8), loaded once
+   * per run and only when the run creates events.
+   */
+  private async applyPlans(
+    manager: EntityManager,
+    input: {
+      scope: UnitScope;
+      plan: DerivedWritePlan;
+      slowPlan: DerivedWritePlan<DerivedSlowdown>;
+      ownedSlowdowns: readonly EngineOwnedEvent[];
+    },
+  ): Promise<EventChangeMessage[]> {
+    const { scope, plan, slowPlan } = input;
+    const rules: ActiveCodingRule[] =
+      plan.create.length + slowPlan.create.length > 0
+        ? await this.ruleDefaults.activeRules(scope.tenantId)
+        : [];
+    return [
+      ...(await applyDerivedWrites(manager, this.revisions, {
+        scope,
+        rules,
+        plan,
+      })),
+      ...(await applySlowdownWrites(manager, this.revisions, {
+        scope,
+        rules,
+        plan: slowPlan,
+        owned: input.ownedSlowdowns,
+      })),
+    ];
   }
 }

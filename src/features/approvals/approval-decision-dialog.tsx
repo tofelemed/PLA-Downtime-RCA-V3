@@ -10,7 +10,14 @@ import { approvalRecordChanged, useApprovalRecord } from './use-approval-record'
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { ACTION_LABELS, needsReason } from './approval-command';
 
-export function ApprovalDecisionDialog({ item, action }: { item: ApprovalItem; action: ApprovalAction }) {
+interface Props {
+  item: ApprovalItem;
+  action: ApprovalAction;
+  /** after the server confirmed the decision (the approval page returns to the inbox) */
+  onDecided?: (action: ApprovalAction) => void;
+}
+
+export function ApprovalDecisionDialog({ item, action, onDecided }: Props) {
   const [open, setOpen] = useState(false);
   const record = useApprovalRecord(item, open);
   const [reason, setReason] = useState('');
@@ -26,13 +33,13 @@ export function ApprovalDecisionDialog({ item, action }: { item: ApprovalItem; a
       description={action === 'retire' ? 'Retiring removes this draft from future use and keeps its history. It cannot be undone.' : 'Review the record and its effective dates before deciding. Existing approval and data checks still apply.'}
       busy={command.isPending} confirmDisabled={!canConfirm}
       onOpenChange={(next) => { setOpen(next); if (next) { command.reset(); setReason(''); setSupersede(false); } }}
-      onConfirm={() => command.submit({ item, action, reason, supersede })}>
+      onConfirm={() => command.submit({ item, action, reason, supersede }).then(() => onDecided?.(action))}>
       <div className="max-h-[55vh] space-y-3 overflow-y-auto px-1">
       <p className="break-words text-sm">{item.kindLabel} · {item.unitName ?? 'Plant-wide'} · {item.state}{item.version != null ? ` · version ${item.version}` : ''}</p>
       <p className="max-h-40 overflow-auto whitespace-pre-wrap break-words text-sm text-muted-foreground">{item.summary}</p>
       <ApprovalRecordDetails record={record} />
       {changed && <p role="alert" className="text-sm text-destructive">This record changed. Close this dialog and refresh the inbox before deciding.</p>}
-      <Link className="text-sm underline" to={item.reviewHref}>Open workspace</Link>
+      <Link className="text-sm underline" to={item.reviewHref}>Open full workspace</Link>
       <ApprovalDecisionFields item={item} action={action} reason={reason} supersede={supersede} setReason={setReason} setSupersede={setSupersede} />
       {command.isError && <FriendlyErrorAlert error={command.error} title="Decision could not be saved" />}
       </div>

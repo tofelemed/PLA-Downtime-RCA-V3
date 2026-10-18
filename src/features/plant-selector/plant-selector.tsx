@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlantSelection, type PlantSelection } from '@/contexts/PlantSelectionContext';
 import { defaultTenantFor } from '@/contexts/plant-selection-store';
+import { InlineError } from '@/features/ux-kit/errors/inline-error';
 import { EntityIcon, UiIcon, type AppIcon } from '@/lib/icons';
 import type { DirectoryOrganization as Organization } from '@/api/v2/types/plant-directory';
 import { PlantTree } from './plant-tree';
@@ -75,7 +76,11 @@ export function PlantSelector() {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="max-h-[400px] min-w-[340px] overflow-y-auto p-2">
-        <PlantTree organizations={directory.organizations} tenants={directory.tenants} selection={selection} onSelect={choose} />
+        {directory.error ? (
+          <InlineError className="p-1" title="Could not load plants." error={directory.error} onRetry={directory.retry} />
+        ) : (
+          <PlantTree organizations={directory.organizations} tenants={directory.tenants} selection={selection} onSelect={choose} />
+        )}
       </PopoverContent>
     </Popover>
   );

@@ -14,7 +14,7 @@ export interface MqttTestPanelProps {
   onTested: (result: SessionTest['result']) => void;
 }
 
-const TONE_CLASS = { ok: 'text-green-700 dark:text-green-400', error: 'text-destructive', neutral: '' } as const;
+const TONE_CLASS = { ok: 'text-success', error: 'text-destructive', neutral: '' } as const;
 
 /**
  * CONNACK-only test with a throwaway client id (nothing subscribed or stored; the running subscriber

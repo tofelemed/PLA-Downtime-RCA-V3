@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { RCA } from '../rca/rca.entity';
 import { User } from '../users/user.entity';
 
@@ -48,4 +56,4 @@ export class RCARecommendation {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}

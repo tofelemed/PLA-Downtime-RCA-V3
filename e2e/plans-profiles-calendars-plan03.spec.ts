@@ -217,6 +217,7 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     const approver = await secondApproverPage(browser);
     await openPlan(approver);
     await approver.getByTestId('approve-plan-submit').click();
+    await approver.getByRole('alertdialog').getByRole('button', { name: 'Approve version' }).click();
     await expect(approver.getByTestId('frozen-version')).toBeVisible({ timeout: 15_000 });
     await approver.context().close();
     // the plan has its own URL: a reload shows the approved version

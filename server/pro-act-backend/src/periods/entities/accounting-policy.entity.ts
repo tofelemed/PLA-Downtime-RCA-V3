@@ -54,6 +54,14 @@ export type PolicyKind = (typeof POLICY_KINDS)[number];
   'CHK_accounting_policies_decision',
   '"approved_at" IS NULL OR "rejected_at" IS NULL',
 )
+@Check(
+  'CHK_accounting_policies_backdate',
+  '("requested_effective_from" IS NULL) = ("backdate_reason" IS NULL)',
+)
+@Check(
+  'CHK_accounting_policies_restate_approved',
+  'NOT "restate_approved" OR "backdate_reason" IS NOT NULL',
+)
 export class AccountingPolicy extends TenantScopedEntity {
   @Column({
     name: 'policy_kind',
@@ -105,4 +113,25 @@ export class AccountingPolicy extends TenantScopedEntity {
   /** the version in force a draft was prepared from; approval refuses a draft whose base was replaced */
   @Column({ name: 'based_on_id', type: 'uuid', nullable: true })
   basedOnId: string | null;
+
+  /**
+   * Commissioning backdate (owner, 18 Oct 2026): the past effective-from requested for this version and
+   * why; a source authority draft takes effect at it on approval. Both null = effective at approval.
+   */
+  @Column({
+    name: 'requested_effective_from',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  requestedEffectiveFrom: Date | null;
+
+  @Column({ name: 'backdate_reason', type: 'text', nullable: true })
+  backdateReason: string | null;
+
+  /**
+   * Valuation policy backdate over approved figures (owner, 18 Oct 2026): approval opens a change proposal
+   * for each approved period in range (normal revaluation path) instead of refusing the version.
+   */
+  @Column({ name: 'restate_approved', type: 'boolean', default: false })
+  restateApproved: boolean;
 }

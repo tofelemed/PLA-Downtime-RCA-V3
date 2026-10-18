@@ -8,7 +8,7 @@ import { QualityBadge } from './components/quality-score';
 
 /**
  * "Similar past RCAs" of an event (owner decision 2026-10-12): knowledge entries the server ranks by the
- * event's asset, reason code and unit. Shown in the v2 event detail while `v2.rca` is on.
+ * event's asset, reason code and unit. Shown in the event detail (RCA is v2 for every plant).
  */
 export function SimilarKnowledgePanel({ eventId }: { eventId: string }) {
   const similar = useSimilarKnowledge(eventId);

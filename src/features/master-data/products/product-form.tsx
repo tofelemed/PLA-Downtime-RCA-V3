@@ -20,7 +20,7 @@ export interface ProductFormProps {
 }
 
 const AVAILABILITY_HINT: Record<ProductAvailability, string> = {
-  organization: 'Every plant of the organisation sees this product. Production profiles and plans need a product of their own plant.',
+  organization: 'Every plant of the organization sees this product. Production profiles and plans need a product of their own plant.',
   plant: 'Only this plant sees the product; it can be used in production profiles and plans.',
 };
 
@@ -62,7 +62,7 @@ export function ProductForm({ draft, errors, onChange, onSave, saving, isNew, re
     <form onSubmit={submit} className="max-w-2xl space-y-4" noValidate aria-label={isNew ? 'Create product' : 'Edit product'}>
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField id="name" label="Name" value={draft.name} onChange={(name) => onChange({ name })} error={errors.name} required disabled={readOnly} />
-        <TextField id="code" label="Code" value={draft.code} onChange={(code) => onChange({ code })} error={errors.code} hint="Unique across the organisation's products." required disabled={readOnly} />
+        <TextField id="code" label="Code" value={draft.code} onChange={(code) => onChange({ code })} error={errors.code} hint="Unique across the organization's products." required disabled={readOnly} />
       </div>
       <TextField id="uom" label="Unit of measure" value={draft.uom} onChange={(uom) => onChange({ uom })} placeholder="e.g. t" disabled={readOnly} />
       <TextField id="description" label="Description" value={draft.description} onChange={(description) => onChange({ description })} multiline disabled={readOnly} />

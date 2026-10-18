@@ -5,10 +5,11 @@ import type { QueryParams } from '@/api/v2/request-url';
 import { usePagedQuery } from '@/api/v2/queries/use-paged-query';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { DataTable, type DataTableEmpty } from '@/features/ux-kit/data-table';
+import { useAssetNames } from '@/features/ux-kit/labels';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { usePrefetchEvent } from '../hooks/use-prefetch-event';
 import { useEventHubEnv } from '../use-event-hub-env';
-import { eventColumns, eventRowLabel, type EventColumnContext } from './event-columns';
+import { eventColumns, type EventColumnContext } from './event-columns';
 
 export interface EventTableProps {
   caption: string;
@@ -16,13 +17,16 @@ export interface EventTableProps {
   query: ProductionEventFilters;
   selection?: EventColumnContext['selection'];
   onCode?: EventColumnContext['onCode'];
+  /** E-1: start-time order toggle (absent: no toggle) */
+  sort?: EventColumnContext['sort'];
   empty?: DataTableEmpty;
   testId?: string;
 }
 
 /** Production events as a server-paged table: 20 per page, keyset pages, rows open `/events/:id`. */
-export function EventTable({ caption, query, selection, onCode, empty, testId = 'event-list' }: EventTableProps) {
+export function EventTable({ caption, query, selection, onCode, sort, empty, testId = 'event-list' }: EventTableProps) {
   const env = useEventHubEnv();
+  const assets = useAssetNames();
   const navigate = useNavigate();
   const location = useLocation();
   const { dateTime } = usePlantFormat();
@@ -36,8 +40,8 @@ export function EventTable({ caption, query, selection, onCode, empty, testId = 
   });
   const listSearch = `${location.pathname}${location.search}`;
   const context = useMemo<EventColumnContext>(
-    () => ({ unitName: env.unitName, reasonName: env.reasonName, dateTime, listSearch, prefetch, selection, rows: paged.rows, onCode }),
-    [env.unitName, env.reasonName, dateTime, listSearch, prefetch, selection, paged.rows, onCode],
+    () => ({ unitName: env.unitName, reasonName: env.reasonName, assetName: assets.nameOf, dateTime, listSearch, prefetch, selection, rows: paged.rows, onCode, sort }),
+    [env.unitName, env.reasonName, assets.nameOf, dateTime, listSearch, prefetch, selection, paged.rows, onCode, sort],
   );
   const columns = useMemo(() => eventColumns(context), [context]);
   const open = (event: ProductionEventView) => {
@@ -55,7 +59,7 @@ export function EventTable({ caption, query, selection, onCode, empty, testId = 
         status={paged.status}
         empty={empty ?? { title: 'No events', text: 'No event matches the filters in this window.' }}
         onRowClick={open}
-        rowLabel={(event) => eventRowLabel(event, context)}
+        rowsHaveLink
       />
     </div>
   );

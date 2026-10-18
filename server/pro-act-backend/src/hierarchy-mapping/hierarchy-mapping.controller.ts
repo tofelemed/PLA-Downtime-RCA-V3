@@ -11,7 +11,13 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { HierarchyMappingService } from './hierarchy-mapping.service';
 import { SourceHierarchyMapping } from './entities/source-hierarchy-mapping.entity';
@@ -28,18 +34,37 @@ export class HierarchyMappingController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new hierarchy mapping' })
-  @ApiResponse({ status: 201, description: 'Mapping created successfully', type: SourceHierarchyMapping })
+  @ApiResponse({
+    status: 201,
+    description: 'Mapping created successfully',
+    type: SourceHierarchyMapping,
+  })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  create(@Body() createDto: CreateSourceHierarchyMappingDto): Promise<SourceHierarchyMapping> {
+  create(
+    @Body() createDto: CreateSourceHierarchyMappingDto,
+  ): Promise<SourceHierarchyMapping> {
     return this.mappingService.create(createDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all hierarchy mappings' })
   @ApiQuery({ name: 'tenantId', required: true, description: 'Tenant ID' })
-  @ApiQuery({ name: 'sourceType', required: false, description: 'Filter by source type' })
-  @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter by active status' })
-  @ApiResponse({ status: 200, description: 'Return all mappings', type: [SourceHierarchyMapping] })
+  @ApiQuery({
+    name: 'sourceType',
+    required: false,
+    description: 'Filter by source type',
+  })
+  @ApiQuery({
+    name: 'isActive',
+    required: false,
+    type: Boolean,
+    description: 'Filter by active status',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Return all mappings',
+    type: [SourceHierarchyMapping],
+  })
   findAll(
     @Query('tenantId') tenantId: string,
     @Query('sourceType') sourceType?: string,
@@ -57,7 +82,11 @@ export class HierarchyMappingController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get hierarchy mapping by ID' })
-  @ApiResponse({ status: 200, description: 'Return mapping', type: SourceHierarchyMapping })
+  @ApiResponse({
+    status: 200,
+    description: 'Return mapping',
+    type: SourceHierarchyMapping,
+  })
   @ApiResponse({ status: 404, description: 'Mapping not found' })
   findOne(@Param('id') id: string): Promise<SourceHierarchyMapping> {
     return this.mappingService.findOne(id);
@@ -65,7 +94,11 @@ export class HierarchyMappingController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Update hierarchy mapping' })
-  @ApiResponse({ status: 200, description: 'Mapping updated successfully', type: SourceHierarchyMapping })
+  @ApiResponse({
+    status: 200,
+    description: 'Mapping updated successfully',
+    type: SourceHierarchyMapping,
+  })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   update(
     @Param('id') id: string,
@@ -83,10 +116,15 @@ export class HierarchyMappingController {
 
   @Post('find-mapping')
   @ApiOperation({ summary: 'Find hierarchy mapping for an event' })
-  @ApiResponse({ status: 200, description: 'Return hierarchy IDs if mapping found', type: HierarchyIds })
+  @ApiResponse({
+    status: 200,
+    description: 'Return hierarchy IDs if mapping found',
+    type: HierarchyIds,
+  })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async findMapping(@Body() request: MappingRequest): Promise<HierarchyIds | null> {
+  async findMapping(
+    @Body() request: MappingRequest,
+  ): Promise<HierarchyIds | null> {
     return this.mappingService.findHierarchyMapping(request);
   }
 }
-

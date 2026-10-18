@@ -7,8 +7,10 @@ import {
 import { ProductionEvent } from '../production-event/production-event.entity';
 import {
   affectedWindows,
+  assertAssetUnit,
   classifyItems,
   codingPatch,
+  codingSnapshot,
   rejectExclusions,
 } from './bulk-code-plan';
 
@@ -156,5 +158,62 @@ describe('affectedWindows', () => {
         to: at('11:00').toISOString(),
       },
     ]);
+  });
+});
+
+describe('bulk asset and investigation flag (UX A-1 / E-3)', () => {
+  it('writes the asset and the investigation flag when given, and leaves them otherwise', () => {
+    const patch = codingPatch(
+      event('a'),
+      { assetId: 'asset-1', investigationPending: true },
+      {},
+    );
+    expect(patch).toMatchObject({
+      assetId: 'asset-1',
+      investigationPending: true,
+    });
+    const untouched = codingPatch(event('a'), { scheduleClass: 'planned' }, {});
+    expect(untouched).not.toHaveProperty('assetId');
+    expect(untouched).not.toHaveProperty('investigationPending');
+  });
+
+  it('clears the investigation flag with false', () => {
+    const patch = codingPatch(
+      event('a', { investigationPending: true }),
+      { investigationPending: false },
+      {},
+    );
+    expect(patch.investigationPending).toBe(false);
+  });
+
+  it('shows asset and flag in the preview snapshot', () => {
+    expect(
+      codingSnapshot(event('a', { assetId: 'x', investigationPending: true })),
+    ).toMatchObject({ assetId: 'x', investigationPending: true });
+    expect(codingSnapshot(event('b'))).toMatchObject({
+      assetId: null,
+      investigationPending: false,
+    });
+  });
+
+  it('accepts an asset of every event unit and refuses another unit or an unknown asset (422)', () => {
+    const events = [event('a'), event('b', { unitId: 'u2' })];
+    expect(() => assertAssetUnit([events[0]], { unitId: 'u1' })).not.toThrow();
+    for (const asset of [{ unitId: 'u1' }, null]) {
+      try {
+        assertAssetUnit(events, asset);
+        throw new Error('expected a refusal');
+      } catch (error) {
+        expect(error).toBeInstanceOf(UnprocessableEntityException);
+        const body = (error as UnprocessableEntityException).getResponse();
+        expect(body).toMatchObject({ code: 'INVALID_REFERENCE' });
+      }
+    }
+    try {
+      assertAssetUnit(events, { unitId: 'u1' });
+    } catch (error) {
+      const body = (error as UnprocessableEntityException).getResponse();
+      expect(body).toMatchObject({ details: { eventIds: ['b'] } });
+    }
   });
 });

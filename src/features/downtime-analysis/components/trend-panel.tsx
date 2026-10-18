@@ -65,7 +65,7 @@ function TrendTable({ rows, classes, unit }: { rows: TrendRow[]; classes: readon
       align: 'right' as const,
       nowrap: true,
       cell: (row: TrendRow) =>
-        unit === 's' ? <DurationText seconds={row.values[scheduleClass] ?? null} variant="compact" /> : formatCount(row.values[scheduleClass], digits),
+        unit === 's' ? <DurationText seconds={row.values[scheduleClass] ?? null} /> : formatCount(row.values[scheduleClass], digits),
     })),
   ];
   return <DataTable caption="Trend buckets" columns={columns} rows={rows} getRowKey={(row) => row.key} density="compact" />;

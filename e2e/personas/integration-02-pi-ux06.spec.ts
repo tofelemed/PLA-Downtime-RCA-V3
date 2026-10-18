@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { seedPiWorld, stopSimulator, type PiWorld } from './support/integration-pi-world';
-import { apiLogin, eventsByEventId, findConnection, INT_USERS, findOnPages, jobsOf, newSuffix, openConsole, selectConnection, uiLogin, type IntSession } from './support/integration-world';
+import { CONSOLE_ADMIN, apiLogin, eventsByEventId, findConnection, INT_USERS, findOnPages, jobsOf, newSuffix, openConsole, selectConnection, uiLogin, type IntSession } from './support/integration-world';
 
 /**
  * INTEGRATION ADMIN persona — journey 2, the UX06 PI journey (plan 3.7) as Elena: configure a PI
@@ -45,7 +45,8 @@ test.describe('Integration admin — UX06 PI journey', () => {
       if (!response.url().includes('/api/')) return;
       bodies.push(await response.text().catch(() => ''));
     });
-    await uiLogin(page, INT_USERS.elena);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
 
     // 1. configure: Kafka is not available (D10), MQTT is selectable; PI with a write-only password
@@ -178,7 +179,8 @@ test.describe('Integration admin — UX06 PI journey', () => {
     expect(connection?.hasSecret).toBe(true);
     expect(await eventsByEventId(fresh.token, world.unitId, world.recentFrame)).toHaveLength(1);
     expect(await eventsByEventId(fresh.token, world.unitId, world.oldFrame)).toHaveLength(1);
-    await uiLogin(page, INT_USERS.elena);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
     await selectConnection(page, world.connectionName);
     await page.getByTestId('tab-jobs').click();

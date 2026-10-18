@@ -49,11 +49,12 @@ export class StopEventPolicyV2Controller {
   @Roles('manager_approver')
   @ApiOperation({
     summary:
-      'Record new stop-event settings as an approved oee_policy version, effective now',
+      'Record new stop-event settings as an approved oee_policy version, effective now (or from a past effectiveFrom while commissioning)',
     description:
       'Requires `Idempotency-Key`. Stated fields replace those in force; other oee_policy fields are kept. ' +
       'Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). Already derived / merged / grouped ' +
-      'stops keep their state; the new values apply from now on.',
+      'stops keep their state; the new values apply from now on (a commissioning backdate makes the version the one in ' +
+      'force from effectiveFrom for later resolution and recalculation; it does not re-derive stops by itself).',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   create(

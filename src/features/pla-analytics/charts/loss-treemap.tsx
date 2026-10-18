@@ -2,6 +2,7 @@ import { ResponsiveContainer, Tooltip, Treemap } from 'recharts';
 import type { LossTreeGroupView } from '@/api/v2/types/pla-analytics';
 import { currencyDigits } from '@/features/display-currency/money-format';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { ChartFigure } from '@/features/ux-kit/chart-figure';
 
 interface Leaf {
   name: string;
@@ -21,13 +22,14 @@ export function LossTreemap({ groups, unit }: { groups: readonly LossTreeGroupVi
   );
   const { decimal } = useNumberFormat();
   if (leaves.length === 0) return null;
+  const caption = `Treemap of ${leaves.length} loss groups sized by amount${unit ? ` (${unit})` : ''}; the table lists every group with its figure.`;
   return (
-    <div className="h-64 w-full" aria-hidden>
+    <ChartFigure caption={caption} chartClassName="h-64 w-full" testId="loss-treemap">
       <ResponsiveContainer>
         <Treemap data={leaves} dataKey="size" nameKey="name" stroke="hsl(var(--background))" fill="hsl(var(--primary))" isAnimationActive={false}>
           <Tooltip formatter={(_value: unknown, _name: string, item: { payload?: Leaf }) => `${decimal(item.payload?.amount, currencyDigits(unit))} ${unit ?? ''}`} />
         </Treemap>
       </ResponsiveContainer>
-    </div>
+    </ChartFigure>
   );
 }

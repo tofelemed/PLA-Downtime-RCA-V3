@@ -28,14 +28,17 @@ export class RCATriggerConfigService {
   ): RCATriggerGlobalSettings {
     return {
       alwaysAllowManualCreation:
-        settings?.alwaysAllowManualCreation ?? DEFAULT_GLOBAL_SETTINGS.alwaysAllowManualCreation,
+        settings?.alwaysAllowManualCreation ??
+        DEFAULT_GLOBAL_SETTINGS.alwaysAllowManualCreation,
       showWarningForLowImpact:
-        settings?.showWarningForLowImpact ?? DEFAULT_GLOBAL_SETTINGS.showWarningForLowImpact,
+        settings?.showWarningForLowImpact ??
+        DEFAULT_GLOBAL_SETTINGS.showWarningForLowImpact,
       requireApprovalForLowImpact:
         settings?.requireApprovalForLowImpact ??
         DEFAULT_GLOBAL_SETTINGS.requireApprovalForLowImpact,
       minCostThresholdGlobal: settings?.minCostThresholdGlobal ?? undefined,
-      minDurationThresholdGlobal: settings?.minDurationThresholdGlobal ?? undefined,
+      minDurationThresholdGlobal:
+        settings?.minDurationThresholdGlobal ?? undefined,
     };
   }
 
@@ -65,7 +68,8 @@ export class RCATriggerConfigService {
         ...rule,
         id,
         tenantId: rule.tenantId ?? existing?.tenantId ?? tenantId,
-        organizationId: rule.organizationId ?? existing?.organizationId ?? organizationId,
+        organizationId:
+          rule.organizationId ?? existing?.organizationId ?? organizationId,
         createdAt,
         updatedAt: now,
         enabled: rule.enabled ?? existing?.enabled ?? true,
@@ -84,7 +88,9 @@ export class RCATriggerConfigService {
     return config;
   }
 
-  async create(createDto: CreateRCATriggerConfigDto): Promise<RCATriggerConfig> {
+  async create(
+    createDto: CreateRCATriggerConfigDto,
+  ): Promise<RCATriggerConfig> {
     const rules = this.normaliseRulesForPersist(
       createDto.rules as unknown as RCATriggerRuleModel[] | undefined,
       createDto.tenantId,
@@ -128,14 +134,21 @@ export class RCATriggerConfigService {
   }
 
   async findOne(id: string): Promise<RCATriggerConfig> {
-    const config = await this.rcaTriggerConfigRepository.findOne({ where: { id } });
+    const config = await this.rcaTriggerConfigRepository.findOne({
+      where: { id },
+    });
     if (!config) {
-      throw new NotFoundException(`RCA trigger configuration with ID ${id} not found`);
+      throw new NotFoundException(
+        `RCA trigger configuration with ID ${id} not found`,
+      );
     }
     return this.hydrateConfig(config);
   }
 
-  async update(id: string, updateDto: UpdateRCATriggerConfigDto): Promise<RCATriggerConfig> {
+  async update(
+    id: string,
+    updateDto: UpdateRCATriggerConfigDto,
+  ): Promise<RCATriggerConfig> {
     const config = await this.findOne(id);
 
     if (updateDto.rules) {
@@ -192,7 +205,9 @@ export class RCATriggerConfigService {
   async remove(id: string): Promise<void> {
     const result = await this.rcaTriggerConfigRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`RCA trigger configuration with ID ${id} not found`);
+      throw new NotFoundException(
+        `RCA trigger configuration with ID ${id} not found`,
+      );
     }
   }
 
@@ -201,4 +216,3 @@ export class RCATriggerConfigService {
     return configs[0] ?? null;
   }
 }
-

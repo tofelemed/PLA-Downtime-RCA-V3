@@ -3,7 +3,7 @@ import { authenticate } from './test-utils/api-helpers';
 import { loginViaUI } from './test-utils/auth-helpers';
 import { call, command } from './test-utils/downtime-world';
 import { seedRcaWorld, waitForRecommendation, type RcaWorld } from './test-utils/rca-world';
-import { acceptInvestigation, finishActions, moveCase, prepareInvestigation } from './personas/support/rca-workflow';
+import { acceptInvestigation, addCodedRootCause, finishActions, moveCase, prepareInvestigation } from './personas/support/rca-workflow';
 
 /**
  * Plan 3.9 journey on `/events` and `/rca` (flag `v2.rca`, switched on for the demo tenant by the manager
@@ -162,6 +162,7 @@ test.describe('RCA integration — RCA01–03 (plan 3.9)', () => {
     // approved by the independent approver
     const approver = (await authenticate(APPROVER.email, APPROVER.password)).accessToken;
     await prepareInvestigation(manager, caseId, 'Coupling misalignment');
+    await addCodedRootCause(manager, manager, caseId, 'Coupling misalignment'); // item 7: coded root cause
     await finishActions(manager, approver, caseId);
     await acceptInvestigation(manager, caseId);
     await page.reload();

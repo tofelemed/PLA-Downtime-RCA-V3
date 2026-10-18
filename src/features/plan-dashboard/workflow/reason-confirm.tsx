@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
+import { RequiredMarker } from '@/features/ux-kit/form-field';
 
 export interface ReasonConfirmProps {
   /** label of the button that opens the dialog */
@@ -39,7 +40,7 @@ export function ReasonConfirm({ trigger, triggerTestId, triggerVariant = 'outlin
       onConfirm={() => onConfirm(reason.trim()).then(() => setReason(''))}
     >
       <div className="space-y-1">
-        <Label htmlFor={id}>Reason (required)</Label>
+        <Label htmlFor={id}>Reason<RequiredMarker /></Label>
         <Textarea id={id} rows={3} data-testid="wf-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
       </div>
       {children}

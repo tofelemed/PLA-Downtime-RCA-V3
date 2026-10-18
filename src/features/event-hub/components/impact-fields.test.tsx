@@ -21,9 +21,9 @@ describe('ImpactFields (SME Q5)', () => {
     expect(screen.getByLabelText('Output lost (%)')).toBeInTheDocument();
   });
 
-  it('plan 1.10: says when the impact came from a unit impact rule or a standby takeover', () => {
-    render(<ImpactFields form={formOf({ physicalType: 'downtime', impactMode: 'none', impactBasis: 'standby_takeover' })} />);
-    expect(screen.getByTestId('impact-basis').textContent).toContain('standby took over');
+  it('plan 1.10: states the basis of the stored impact', () => {
+    render(<ImpactFields form={formOf({ physicalType: 'downtime', impactMode: 'full_stop' })} basisText="From the approved impact rule for EXT1-Main" />);
+    expect(screen.getByTestId('impact-basis').textContent).toBe('From the approved impact rule for EXT1-Main');
   });
 
   it('is not shown for events other than downtime', () => {

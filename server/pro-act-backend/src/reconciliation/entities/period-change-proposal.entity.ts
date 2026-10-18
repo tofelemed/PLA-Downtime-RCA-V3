@@ -13,6 +13,8 @@ export const CHANGE_TRIGGERS = [
   'recalculation',
   // a correction a user proposes for a period of a closing or locked month (SME R4)
   'manual_correction',
+  // SME V7: an approved FX rate, valuation policy or demand status revalues the period (quantities unchanged)
+  'valuation_change',
 ] as const;
 export type ChangeTrigger = (typeof CHANGE_TRIGGERS)[number];
 

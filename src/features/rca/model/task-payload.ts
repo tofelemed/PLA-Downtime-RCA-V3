@@ -1,4 +1,4 @@
-import type { RcaCaseView, RcaRecommendationItem } from '@/api/v2/types/rca';
+import type { RcaActionView, RcaCaseView, RcaRecommendationItem } from '@/api/v2/types/rca';
 import type { CreateTaskInput, TaskPriority, TaskStatus } from '@/api/v2/types/administration';
 
 const STATUSES: readonly TaskStatus[] = ['Open', 'In Progress', 'Completed', 'Cancelled'];
@@ -11,7 +11,7 @@ const priority = (value: string | null): TaskPriority => PRIORITIES.find((p) => 
 export function recommendationTask(rca: Pick<RcaCaseView, 'id' | 'title'>, rec: RcaRecommendationItem, userId: string): CreateTaskInput {
   return {
     title: rec.title,
-    description: [rec.description, `Recommendation of RCA case "${rca.title}"`, rec.estimatedCost ? `Estimated cost: ${rec.estimatedCost}` : ''].filter(Boolean).join('\n'),
+    description: [rec.description, `Recommendation of investigation "${rca.title}"`, rec.estimatedCost ? `Estimated cost: ${rec.estimatedCost}` : ''].filter(Boolean).join('\n'),
     assigneeId: rec.ownerId ?? userId,
     priority: priority(rec.priority),
     status: status(rec.status),
@@ -31,5 +31,23 @@ export function caseTask(rca: Pick<RcaCaseView, 'id' | 'title' | 'description'>,
     status: 'Open',
     linkType: 'RCA',
     linkId: rca.id,
+  };
+}
+
+/**
+ * Item 5: a task carrying out one action, linked to its case and to the action (`rcaActionId`); the
+ * server keeps one open task per action (409 ACTION_TASK_EXISTS). Owner = the action's owner, else you.
+ */
+export function actionTask(rca: Pick<RcaCaseView, 'id' | 'title'>, action: Pick<RcaActionView, 'id' | 'title' | 'ownerId' | 'dueDate'>, userId: string): CreateTaskInput {
+  return {
+    title: action.title,
+    description: `Action of investigation "${rca.title}"`,
+    assigneeId: action.ownerId ?? userId,
+    priority: 'Medium',
+    status: 'Open',
+    dueDate: action.dueDate ?? undefined,
+    linkType: 'RCA',
+    linkId: rca.id,
+    rcaActionId: action.id,
   };
 }

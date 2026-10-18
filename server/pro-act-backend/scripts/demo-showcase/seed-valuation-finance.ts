@@ -21,6 +21,12 @@ import { approveLateRate, seedFxRates } from './seed-valuation-fx';
 import { dec } from './showcase-random';
 
 const FROM = `${MASTER_DATA_FROM}T00:00:00.000Z`;
+/**
+ * The economic policy supersedes the master-data policy (`seed-policy.ts`, effective at FROM): a backdated
+ * version must start after the latest approved one (409 BACKDATE_REWRITES_HISTORY), so it starts a second
+ * later — before any showcase period.
+ */
+const POLICY_FROM = `${MASTER_DATA_FROM}T00:00:01.000Z`;
 const DEMO_POLICY_NOTE =
   'Demo: showcase policy (SME V1-V8 pilot settings) — economic view by default, lost sales only where a demand status says sold out, IC004 downgraded, IC008 scrapped';
 
@@ -198,7 +204,10 @@ async function seedDemoPolicy(
         qualityDispositions: dispositions,
         defaultQualityDisposition: 'downgrade',
         manualLineHours: true,
-        effectiveFrom: FROM,
+        effectiveFrom: POLICY_FROM,
+        backdateReason:
+          'Showcase setup: the economic view applies from the showcase start',
+        restateApproved: true,
         notes: DEMO_POLICY_NOTE,
       },
       'demo valuation policy',

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { ChangeContent, ChangeRecord } from '@/api/v2/types/rca-analyses';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -12,6 +11,7 @@ import { ActionIcon } from '@/lib/icons';
 import { CHANGE_CATEGORIES, LIKELIHOODS, rowId } from '../../../../model/analysis-settings';
 import { useCaseWorkspace } from '../../../case-context';
 import { ChoiceField, optionsOf } from '../../../evidence/form-controls';
+import { useToolDraft } from '../tool-draft';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
@@ -41,7 +41,7 @@ function Editor({ record, save }: { record: ToolRecord<'change'>; save: (body: C
   const { number } = useNumberFormat();
   const { readOnly } = useCaseWorkspace();
   const zone = usePlantTimezone();
-  const [content, setContent] = useState<ChangeContent>(() => ({ question: record?.question ?? 'What changed before the incident?', changes: record?.changes ?? [] }));
+  const [content, setContent] = useToolDraft<ChangeContent>(() => ({ question: record?.question ?? 'What changed before the incident?', changes: record?.changes ?? [] }));
   const setChanges = (changes: ChangeRecord[]) => setContent({ ...content, changes });
   const related = content.changes.filter((c) => c.relatedToIncident).length;
   const add = () => setChanges([...content.changes, { id: rowId('change', content.changes), category: 'Process', description: '', changeDate: plantToday(zone.timezone), relatedToIncident: false, impactLevel: 'Medium' }]);

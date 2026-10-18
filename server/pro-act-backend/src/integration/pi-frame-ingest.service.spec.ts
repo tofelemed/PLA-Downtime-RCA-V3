@@ -25,6 +25,7 @@ describe('PiFrameIngestService', () => {
   let create: jest.Mock;
   let applySourceRevision: jest.Mock;
   let record: jest.Mock;
+  let activeRules: jest.Mock;
   let placement: ResolvedMapping;
   let service: PiFrameIngestService;
 
@@ -33,6 +34,7 @@ describe('PiFrameIngestService', () => {
     create = jest.fn().mockResolvedValue({});
     applySourceRevision = jest.fn();
     record = jest.fn();
+    activeRules = jest.fn().mockResolvedValue([]);
     placement = {
       status: 'mapped',
       tier: 'af_binding',
@@ -58,6 +60,7 @@ describe('PiFrameIngestService', () => {
       }),
       stub({ defaultsFor: jest.fn().mockResolvedValue({}) }),
       stub({ record }),
+      stub({ activeRules }),
     );
   });
 
@@ -134,6 +137,47 @@ describe('PiFrameIngestService', () => {
       expect.objectContaining({ code: 'TYPE_MISMATCH', field: 'quantity' }),
     ]);
     expect(applySourceRevision).not.toHaveBeenCalled();
+  });
+
+  it('fills open axes from the active coding_default rules, loading them once per frame context', async () => {
+    findOne.mockResolvedValue(null);
+    activeRules.mockResolvedValue([
+      {
+        id: 'rule-1',
+        version: 3,
+        definition: {
+          when: { all: [{ field: 'source', op: 'eq', value: 'MQTT' }] },
+          then: [{ set: 'oeeComponent', value: 'quality' }],
+        },
+      },
+    ]);
+    const mqtt = { ...context(), sourceSystem: 'MQTT' as const };
+
+    await service.ingest(mqtt, FRAME, {});
+    await service.ingest(mqtt, { ...FRAME, WebId: 'EF-2' }, {});
+
+    expect(activeRules).toHaveBeenCalledTimes(1);
+    const [dto] = create.mock.calls[0] as [Record<string, unknown>];
+    expect(dto).toMatchObject({
+      source: 'MQTT',
+      classification: { oeeComponent: 'quality' },
+      classificationBasis: {
+        oeeComponent: {
+          source: 'declarative_rule',
+          ruleId: 'rule-1',
+          ruleVersion: 3,
+        },
+      },
+    });
+  });
+
+  it('never runs the rules on a source revision of a known event', async () => {
+    findOne.mockResolvedValue(existing);
+    applySourceRevision.mockResolvedValue('revised');
+
+    await ingest();
+
+    expect(activeRules).not.toHaveBeenCalled();
   });
 
   it('quarantines an ambiguous frame instead of picking a mapping', async () => {

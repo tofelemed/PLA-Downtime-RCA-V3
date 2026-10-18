@@ -3,10 +3,10 @@ import type { ErrorMessage } from './error-message';
 /** RCA case refusals (v2 `/rcas`, the case workspace). */
 export const RCA_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   RCA_CASE_IN_USE: {
-    title: 'This case cannot be deleted',
+    title: 'This investigation cannot be deleted',
     text: 'It is closed, linked to records, has actions or came from a recommendation. Move it through the workflow instead.',
   },
-  NO_TEMPLATE: { title: 'This case has no template', text: 'Only a case opened from a template can be reset to it.' },
+  NO_TEMPLATE: { title: 'This investigation has no template', text: 'Only an investigation opened from a template can be reset to it.' },
   // Workflow and action refusals carry their reasons in the server's words (fieldErrors / message): titles only.
   CLOSE_BLOCKED: { title: 'Closure cannot be requested yet' },
   INVESTIGATION_BLOCKED: { title: 'The investigation cannot be accepted yet' },

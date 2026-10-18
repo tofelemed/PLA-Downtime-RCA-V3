@@ -10,4 +10,4 @@ export class CreateAppSettingsDto {
   @ApiProperty()
   @IsNotEmpty()
   value: any;
-} 
+}

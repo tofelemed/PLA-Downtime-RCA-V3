@@ -58,6 +58,50 @@
         ]
       }
     },
+    "/api/v2/approval-inbox/{kind}/{id}": {
+      "get": {
+        "operationId": "ApprovalInboxV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalItemView"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One pending record of the inbox (approval detail): same role, scope and separation-of-duties actions as the list; 404 once decided or outside the caller’s approval scope.",
+        "tags": [
+          "v2 · Approvals"
+        ]
+      }
+    },
     "/api/v2/equipment-setup/readiness": {
       "get": {
         "operationId": "EquipmentReadinessV2Controller_read_v2",
@@ -476,7 +520,7 @@
     },
     "/api/v2/production-events": {
       "get": {
-        "description": "Filters AND across parameters and OR within a repeated parameter; from/to is a half-open window with overlap semantics; pages are keyset-based on (startTime, id). The tenant comes from the identity.",
+        "description": "Filters AND across parameters and OR within a repeated parameter; from/to is a half-open window with overlap semantics; pages are keyset-based on (sort key, id) — sort startTime or durationSeconds, where an event without an end sorts as the longest. The tenant comes from the identity.",
         "operationId": "ProductionEventsV2Controller_list_v2",
         "parameters": [
           {
@@ -503,12 +547,14 @@
             "name": "sort",
             "required": false,
             "in": "query",
-            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "description": "durationSeconds: closed events by end − start; events without an end (still running) sort as the longest (first with -durationSeconds, last with durationSeconds)",
             "schema": {
               "default": "-startTime",
               "enum": [
                 "startTime",
-                "-startTime"
+                "-startTime",
+                "durationSeconds",
+                "-durationSeconds"
               ],
               "type": "string"
             }
@@ -772,6 +818,32 @@
               "maximum": 3600,
               "default": 120,
               "type": "number"
+            }
+          },
+          {
+            "name": "minDurationSeconds",
+            "required": false,
+            "in": "query",
+            "description": "Only events lasting at least this many seconds: closed events by end − start, running events by the time elapsed until the request (the elapsedSeconds of the response)",
+            "schema": {
+              "minimum": 0,
+              "maximum": 31536000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "verificationStates",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "verified",
+                  "not_verified"
+                ]
+              }
             }
           },
           {
@@ -1087,6 +1159,32 @@
             }
           },
           {
+            "name": "minDurationSeconds",
+            "required": false,
+            "in": "query",
+            "description": "Only events lasting at least this many seconds: closed events by end − start, running events by the time elapsed until the request (the elapsedSeconds of the response)",
+            "schema": {
+              "minimum": 0,
+              "maximum": 31536000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "verificationStates",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "verified",
+                  "not_verified"
+                ]
+              }
+            }
+          },
+          {
             "name": "from",
             "required": true,
             "in": "query",
@@ -1370,6 +1468,32 @@
             }
           },
           {
+            "name": "minDurationSeconds",
+            "required": false,
+            "in": "query",
+            "description": "Only events lasting at least this many seconds: closed events by end − start, running events by the time elapsed until the request (the elapsedSeconds of the response)",
+            "schema": {
+              "minimum": 0,
+              "maximum": 31536000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "verificationStates",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "verified",
+                  "not_verified"
+                ]
+              }
+            }
+          },
+          {
             "name": "from",
             "required": true,
             "in": "query",
@@ -1406,7 +1530,7 @@
     },
     "/api/v2/production-events/{id}": {
       "get": {
-        "description": "Returns `ETag: \"<rowVersion>\"`; a foreign or unknown id is 404. The body is the effective event plus `sourceFacts` (what the source last delivered) and `overriddenFields` (user overrides of source values).",
+        "description": "Returns `ETag: \"<rowVersion>\"`; a foreign or unknown id is 404. The body is the effective event plus `sourceFacts` (what the source last delivered), `overriddenFields` (user overrides of source values) and `sourceOwnedFields` (fields the source system owns: the interval of a non-manual event and the fields whose edit is recorded as a source override).",
         "operationId": "ProductionEventsV2Controller_get_v2",
         "parameters": [
           {
@@ -10164,7 +10288,7 @@
         ]
       },
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit), INVALID_POLICY (ranks not unique, classes out of order, estimate not manual, same signal twice, lag on a non-signal source, top rank not at the hierarchy boundary).",
+        "description": "Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit), INVALID_POLICY (ranks not unique, classes out of order, estimate not manual, same signal twice, lag on a non-signal source, top rank not at the hierarchy boundary); 422 INVALID_EFFECTIVE_FROM / BACKDATE_REASON_REQUIRED, 409 BACKDATE_REWRITES_HISTORY / BACKDATE_OVERLAPS_CALCULATION (commissioning backdate).",
         "operationId": "SourceAuthorityV2Controller_write_v2",
         "parameters": [
           {
@@ -10196,7 +10320,7 @@
             "bearer": []
           }
         ],
-        "summary": "Draft a source authority version with a measurement hierarchy (or none) from the version in force; the top rank becomes the primary source. It applies only once approved.",
+        "summary": "Draft a source authority version with a measurement hierarchy (or none) from the version in force; the top rank becomes the primary source. It applies only once approved (from approval time, or from a past effectiveFrom while commissioning).",
         "tags": [
           "v2 · Production periods"
         ]
@@ -10233,7 +10357,7 @@
     },
     "/api/v2/source-authority/versions/{id}/approve": {
       "post": {
-        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; 409 STALE_DRAFT when the version it was prepared from is no longer in force.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; 409 STALE_DRAFT when the version it was prepared from is no longer in force. A draft with a commissioning backdate takes effect at its requestedEffectiveFrom; the checks are repeated now: 409 BACKDATE_REWRITES_HISTORY, 409 BACKDATE_OVERLAPS_CALCULATION (details.periods).",
         "operationId": "SourceAuthorityV2Controller_approve_v2",
         "parameters": [
           {
@@ -10633,6 +10757,163 @@
           }
         ],
         "summary": "Calculation runs of a period, newest first (keyset on createdAt, id)",
+        "tags": [
+          "v2 · Loss accounting"
+        ]
+      }
+    },
+    "/api/v2/production-events/{id}/attributed-losses": {
+      "get": {
+        "description": "Quantities per kind and unit of measure and the value of the tenant default valuation view per currency (amount null when any line is unvalued). Loss kinds only; periods of units outside the caller scope are left out. At most 200 periods, earliest first (`truncated` when cut). 404 for an event outside the tenant or the caller scope.",
+        "operationId": "EventAttributedLossesV2Controller_attributedLosses_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Plan-ledger loss lines whose cause is the event, per period revision: approved (published revision) and provisional (open revision run)",
+        "tags": [
+          "v2 · Loss accounting"
+        ]
+      }
+    },
+    "/api/v2/loss-lines": {
+      "get": {
+        "description": "Plan ledger, active lines, loss kinds (filter `kinds`). Filters: unitIds, reasonCodeIds, kinds, q (reason code, reason name, cause event description), from/to (period and line segment overlap, half-open; from ≥ to is 422 INVALID_RANGE). The `id` is the `targetId` of an RCA `loss_line` link.",
+        "operationId": "LossLinesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "default": "-periodStart",
+              "enum": [
+                "-periodStart"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat the parameter for several units",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "reasonCodeIds",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "kinds",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "availability",
+                  "performance",
+                  "quality",
+                  "transition_allowance",
+                  "transition_excess",
+                  "unaccounted_classified",
+                  "bridge"
+                ]
+              }
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Text search (case-insensitive, literal) on the reason code, its name and the cause event description",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Loss lines of the current run of each period’s latest revision across the caller’s units, newest period first (keyset)",
         "tags": [
           "v2 · Loss accounting"
         ]
@@ -13657,7 +13938,7 @@
     },
     "/api/v2/rcas": {
       "get": {
-        "description": "Filters: status, unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), title (q).",
+        "description": "Filters: status, open (not Closed), unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), title (q). Each row carries its first linked event (trigger, null without one) and its action counts (total without cancelled, done, overdue).",
         "operationId": "RcaCasesV2Controller_list_v2",
         "parameters": [
           {
@@ -13783,6 +14064,15 @@
             "required": false,
             "in": "query",
             "description": "true = target close date passed and not Closed; false = the others",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "open",
+            "required": false,
+            "in": "query",
+            "description": "true = not Closed (with priority=Critical: the \"open critical\" count of the summary); false = Closed",
             "schema": {
               "type": "boolean"
             }
@@ -14138,6 +14428,295 @@
         ]
       }
     },
+    "/api/v2/rcas/{id}/history": {
+      "get": {
+        "description": "Every command on the case, its actions, links, analysis tools and causes: who, when, the action, the changed top-level fields, small before / after values (status, owner, due date, root-cause length), the reason, and hashes of the row before and after. Keyset pages (cursor, limit); 404 outside your tenant and units.",
+        "operationId": "RcaHistoryV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Field history of a case, newest first (append-only audit)",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rcas/{id}/causes": {
+      "get": {
+        "operationId": "RcaCaseCausesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Direct, contributing and root causes of a case",
+        "tags": [
+          "v2 · RCA"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE).",
+        "operationId": "RcaCaseCausesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaCaseCauseV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a cause",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rca-case-causes/{id}": {
+      "patch": {
+        "description": "Requires `If-Match` (428/412). Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE).",
+        "operationId": "RcaCaseCausesV2Controller_update_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RcaCaseCauseV2UpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change a cause",
+        "tags": [
+          "v2 · RCA"
+        ]
+      },
+      "delete": {
+        "description": "Requires `If-Match` (428/412). Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE).",
+        "operationId": "RcaCaseCausesV2Controller_remove_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a cause",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/reports/rca-causes": {
+      "get": {
+        "description": "Cases of your tenant and units (unitId narrows it; kind filters the cause kind). Top `limit` (max 50) by cases; approved loss = events and loss lines linked to those cases, approved revisions only, in the policy default valuation view (null amount when not valued, never estimated). sort=approvedLoss orders that top set by the amount in `currency` (default USD).",
+        "operationId": "RcaCauseReportV2Controller_report_v2",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "description": "Only causes of this kind (all kinds when omitted)",
+            "schema": {
+              "enum": [
+                "direct",
+                "contributing",
+                "root"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "description": "Cases of this unit only",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "cases: by number of cases (server ranking); approvedLoss: the top `limit` codes by cases, ordered by their approved loss in `currency` (unvalued last)",
+            "schema": {
+              "default": "cases",
+              "enum": [
+                "cases",
+                "approvedLoss"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 3,
+              "default": "USD",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Catalogue causes ranked by the number of cases naming them, with the approved loss of those cases",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
     "/api/v2/rcas/{id}/links": {
       "get": {
         "operationId": "RcaLinksV2Controller_list_v2",
@@ -14167,7 +14746,7 @@
         ]
       },
       "post": {
-        "description": "Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). 422 INVALID_REFERENCE for a target outside your scope.",
+        "description": "Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). 409 CASE_CLOSED for a new link to a closed investigation (reopen it first). 422 INVALID_REFERENCE for a target outside your scope.",
         "operationId": "RcaLinksV2Controller_link_v2",
         "parameters": [
           {
@@ -14211,6 +14790,123 @@
           }
         ],
         "summary": "Link an event, loss line, work order or occurrence to the case",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/occurrences": {
+      "get": {
+        "description": "Needs a window (from/to, overlap, at most 366 days) or an eventId (422 WINDOW_REQUIRED / WINDOW_TOO_LONG / INVALID_RANGE). Filters: unit, asset, reason, description text (q). Each row: first and last time, event count, the first event (description, asset, reason) and the cases of your scope it is already linked to.",
+        "operationId": "RcaOccurrencesV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "-startTime"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetId",
+            "required": false,
+            "in": "query",
+            "description": "Occurrences with an event of this asset",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reasonCodeId",
+            "required": false,
+            "in": "query",
+            "description": "Occurrences with an event coded with this reason",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": false,
+            "in": "query",
+            "description": "The occurrence of this event",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive search in event descriptions",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stop occurrences of your scope to link to an RCA case, newest first",
         "tags": [
           "v2 · RCA"
         ]
@@ -14535,7 +15231,7 @@
     },
     "/api/v2/rcas/{id}/attachments": {
       "post": {
-        "description": "Answers the stored file name; reference it from an evidence item (`attachments`) and save the case. Not idempotent: a repeated upload stores another file, an unreferenced file is never served.",
+        "description": "RCA writers, or the owner of an open action of the case (completion evidence; 403 FORBIDDEN_ROLE otherwise). Answers the stored file name; reference it from an evidence item (`attachments`) and save the case. Not idempotent: a repeated upload stores another file, an unreferenced file is never served.",
         "operationId": "RcaCaseWorkspaceV2Controller_upload_v2",
         "parameters": [
           {
@@ -14618,7 +15314,7 @@
     },
     "/api/v2/production-events/{id}/rca-link": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). Body: exactly one of `rcaId` / `create`. The event's RCA state becomes linked and its open recommendations accepted; no coding or loss changes.",
+        "description": "Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). 409 CASE_CLOSED for a new link to a closed investigation (reopen it first). Body: exactly one of `rcaId` / `create`. The event's RCA state becomes linked and its open recommendations accepted; no coding or loss changes.",
         "operationId": "EventRcaLinkV2Controller_link_v2",
         "parameters": [
           {
@@ -14691,6 +15387,141 @@
           }
         ],
         "summary": "Evidence package the event would be linked with now (nothing stored)",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/rca-actions": {
+      "get": {
+        "description": "Each row carries its case (id, title, status, unit). Filters: mine=true (you own them), ownerId, status (repeat), overdue (open or in progress past the due date, as in GET /v2/rcas/summary), rcaId, unitId, from/to on the due date. Keyset pages; actions without a due date come last.",
+        "operationId": "RcaActionsV2Controller_listAll_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "enum": [
+                "dueDate"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mine",
+            "required": false,
+            "in": "query",
+            "description": "true = only actions you own (the signed-in user)",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "ownerId",
+            "required": false,
+            "in": "query",
+            "description": "Actions of this owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Statuses (repeat the parameter)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "in_progress",
+                  "done",
+                  "cancelled"
+                ]
+              }
+            }
+          },
+          {
+            "name": "overdue",
+            "required": false,
+            "in": "query",
+            "description": "true = open or in progress with the due date passed (the overdue count of GET /v2/rcas/summary); false = the others",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "rcaId",
+            "required": false,
+            "in": "query",
+            "description": "Actions of this case",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "description": "Actions of cases of this unit",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actions across the cases of your scope, due date first (F-7 \"My actions\")",
         "tags": [
           "v2 · RCA"
         ]
@@ -14773,7 +15604,7 @@
     },
     "/api/v2/rca-actions/{id}": {
       "patch": {
-        "description": "Requires `If-Match` (428/412).",
+        "description": "Requires `If-Match` (428/412). RCA writers change any field. The owner of the action who is not an RCA writer may only set the status to open / in progress and record the completion evidence (403 FORBIDDEN_ROLE for other fields or other actions, 403 SEPARATION_OF_DUTIES for done, 409 ACTION_FINISHED on a done or cancelled action). The verification window is fixed once the action is done (409 VERIFICATION_WINDOW_LOCKED).",
         "operationId": "RcaActionsV2Controller_update_v2",
         "parameters": [
           {
@@ -15602,7 +16433,7 @@
     },
     "/api/v2/period-summaries": {
       "get": {
-        "description": "Keyset on utcStart (ascending). Periods overlapping [from, to); unitIds must be units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Figures are the shown revision’s plan ledger after its saved decisions (the same arithmetic as GET …/reconciliation), slices summed per period only when they share one unit (else null with flag uom_mixed). Read-only.",
+        "description": "Keyset on utcStart (sort utcStart ascending, -utcStart descending). Rows of every plan of the scope, each with its planId; residualStates filters by the plan-ledger residual state (a filtered page may be short while nextCursor is set). Periods overlapping [from, to); unitIds must be units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Figures are the shown revision’s plan ledger after its saved decisions (the same arithmetic as GET …/reconciliation), slices summed per period only when they share one unit (else null with flag uom_mixed). Read-only.",
         "operationId": "PeriodSummariesV2Controller_list_v2",
         "parameters": [
           {
@@ -15629,10 +16460,12 @@
             "name": "sort",
             "required": false,
             "in": "query",
-            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "description": "utcStart: oldest first; -utcStart: newest first (e.g. the period just before a date with to=<its start>&limit=1)",
             "schema": {
+              "default": "utcStart",
               "enum": [
-                "utcStart"
+                "utcStart",
+                "-utcStart"
               ],
               "type": "string"
             }
@@ -15699,6 +16532,27 @@
                 "approved"
               ],
               "type": "string"
+            }
+          },
+          {
+            "name": "residualStates",
+            "required": false,
+            "in": "query",
+            "description": "Plan-ledger residual state of the shown revision (repeat for several). The state is computed per period, so a filtered page examines at most 2,000 periods: it may hold fewer than `limit` rows while `nextCursor` is set — keep paging until `nextCursor` is null.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "not_computable",
+                  "balanced",
+                  "within_tolerance",
+                  "unaccounted",
+                  "over_accounted",
+                  "overproduction",
+                  "conflict"
+                ]
+              }
             }
           }
         ],
@@ -20839,7 +21693,7 @@
             "bearer": []
           }
         ],
-        "summary": "Record new micro-stop settings as an approved oee_policy version, effective now",
+        "summary": "Record new micro-stop settings as an approved oee_policy version, effective now (or from a past effectiveFrom while commissioning)",
         "tags": [
           "v2 · Micro-stop policy"
         ]
@@ -22047,7 +22901,7 @@
     },
     "/api/v2/stop-event-policies": {
       "post": {
-        "description": "Requires `Idempotency-Key`. Stated fields replace those in force; other oee_policy fields are kept. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). Already derived / merged / grouped stops keep their state; the new values apply from now on.",
+        "description": "Requires `Idempotency-Key`. Stated fields replace those in force; other oee_policy fields are kept. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). Already derived / merged / grouped stops keep their state; the new values apply from now on (a commissioning backdate makes the version the one in force from effectiveFrom for later resolution and recalculation; it does not re-derive stops by itself).",
         "operationId": "StopEventPolicyV2Controller_create_v2",
         "parameters": [
           {
@@ -22079,7 +22933,7 @@
             "bearer": []
           }
         ],
-        "summary": "Record new stop-event settings as an approved oee_policy version, effective now",
+        "summary": "Record new stop-event settings as an approved oee_policy version, effective now (or from a past effectiveFrom while commissioning)",
         "tags": [
           "v2 · Stop events"
         ]
@@ -22156,14 +23010,14 @@
     },
     "/api/v2/month-closes/{month}": {
       "get": {
-        "description": "Read-only; a month never acted on is open. 422 INVALID_MONTH for a malformed key.",
+        "description": "Read-only; a month never acted on is open. 422 INVALID_MONTH for a malformed key, MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS for a month of the other calendar. `prerequisites` include the scheduled shifts without a period and whether the month has ended.",
         "operationId": "MonthCloseV2Controller_get_v2",
         "parameters": [
           {
             "name": "month",
             "required": true,
             "in": "path",
-            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps.",
             "schema": {
               "example": "1405-07",
               "type": "string"
@@ -22188,14 +23042,14 @@
     },
     "/api/v2/month-closes/{month}/close-quantities": {
       "post": {
-        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 422 CLOSE_PREREQUISITES (details list the periods not approved and the open change proposals). Fixes whether the materiality review is required.",
+        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 422 MONTH_NOT_ENDED before the month is over in the plant time zone (its last shift ended; `details.monthEndsAt`); 422 CLOSE_PREREQUISITES (details list the periods not approved, the scheduled shifts without a period and the open change proposals). Fixes whether the materiality review is required.",
         "operationId": "MonthCloseV2Controller_closeQuantities_v2",
         "parameters": [
           {
             "name": "month",
             "required": true,
             "in": "path",
-            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps.",
             "schema": {
               "example": "1405-07",
               "type": "string"
@@ -22245,7 +23099,7 @@
             "name": "month",
             "required": true,
             "in": "path",
-            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps.",
             "schema": {
               "example": "1405-07",
               "type": "string"
@@ -22295,7 +23149,7 @@
             "name": "month",
             "required": true,
             "in": "path",
-            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps.",
             "schema": {
               "example": "1405-07",
               "type": "string"
@@ -22345,7 +23199,7 @@
             "name": "month",
             "required": true,
             "in": "path",
-            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps.",
             "schema": {
               "example": "1405-07",
               "type": "string"
@@ -22395,7 +23249,7 @@
             "name": "month",
             "required": true,
             "in": "path",
-            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07)",
+            "description": "Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps.",
             "schema": {
               "example": "1405-07",
               "type": "string"
@@ -23018,6 +23872,21 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "active (default): open work and information; resolved: shared work someone already did (history); all",
+            "schema": {
+              "default": "active",
+              "enum": [
+                "active",
+                "resolved",
+                "all"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -23050,7 +23919,7 @@
             "bearer": []
           }
         ],
-        "summary": "How many of my notifications are unread",
+        "summary": "How many of my active (not resolved) notifications are unread",
         "tags": [
           "v2 · Notifications"
         ]
@@ -23100,6 +23969,35 @@
           }
         ],
         "summary": "Mark one of my notifications read (404 for anyone else’s)",
+        "tags": [
+          "v2 · Notifications"
+        ]
+      }
+    },
+    "/api/v2/notifications/{id}/unread": {
+      "post": {
+        "operationId": "NotificationsV2Controller_unread_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark one of my notifications unread again (404 for anyone else’s)",
         "tags": [
           "v2 · Notifications"
         ]
@@ -23432,6 +24330,15 @@
               "idle",
               "none"
             ]
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Equipment (asset) of every event’s unit (422 INVALID_REFERENCE otherwise); on source events the value is recorded as a source override, as with a single PATCH"
+          },
+          "investigationPending": {
+            "type": "boolean",
+            "description": "SME D12: no specific reason yet — the stops are explicitly under investigation (false clears the flag)"
           }
         }
       },
@@ -23972,6 +24879,11 @@
           "startTime": {
             "type": "string",
             "format": "date-time"
+          },
+          "changeReason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Why the event is changed; stored on the user revision (`change_reason`) and its coding revision"
           }
         }
       },
@@ -26646,6 +27558,16 @@
       "SourceAuthorityVersionDto": {
         "type": "object",
         "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Commissioning only: a past instant the version takes effect from instead of approval / record time. Requires backdateReason; 422 INVALID_EFFECTIVE_FROM (not past), 409 BACKDATE_REWRITES_HISTORY (not after the latest approved version of the scope), 409 BACKDATE_OVERLAPS_CALCULATION (a calculated period of the unit, or of any unit for a plant-wide version, overlaps [effectiveFrom, now); details.periods lists them)."
+          },
+          "backdateReason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Why the version is backdated; required with effectiveFrom (422 BACKDATE_REASON_REQUIRED), refused without it"
+          },
           "unitId": {
             "type": "string",
             "format": "uuid",
@@ -27382,7 +28304,17 @@
           },
           "effectiveFrom": {
             "type": "string",
-            "example": "2027-01-01T00:00:00Z"
+            "example": "2027-01-01T00:00:00Z",
+            "description": "A past instant is a commissioning backdate (owner, 18 Oct 2026): it needs backdateReason (422 BACKDATE_REASON_REQUIRED), must follow the latest approved version (409 BACKDATE_REWRITES_HISTORY) and no period of the plant with an approved revision may overlap [effectiveFrom, now) (409 BACKDATE_OVERLAPS_APPROVED_VALUE, details.periods) unless restateApproved. Checked again at approval."
+          },
+          "backdateReason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Why the version is backdated; required with a past effectiveFrom, refused otherwise (422 BACKDATE_REASON_WITHOUT_EFFECTIVE_FROM). Kept on the version."
+          },
+          "restateApproved": {
+            "type": "boolean",
+            "description": "Backdate over approved figures: approval queues the revaluation and every approved period in range gets a change proposal (approved snapshots are never rewritten). Only with a backdate (422 RESTATE_WITHOUT_BACKDATE)."
           },
           "notes": {
             "type": "object",
@@ -27593,6 +28525,13 @@
             "type": "object",
             "nullable": true,
             "description": "Estimated cost as a decimal string (no currency)"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Read-only (item 5): the actions implementing this recommendation, as the case view returns them. Accepted so a read item can be sent back; never stored (link an action with its recommendationId)."
           }
         },
         "required": [
@@ -27777,6 +28716,18 @@
               "pending",
               "completed"
             ]
+          },
+          "taskAssigneeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "verifiedBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "verifiedAt": {
+            "type": "string",
+            "nullable": true
           },
           "nodeIds": {
             "maxItems": 100,
@@ -28232,6 +29183,80 @@
         "required": [
           "to"
         ]
+      },
+      "RcaCaseCauseV2CreateDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "contributing",
+              "root"
+            ]
+          },
+          "causeCodeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "statement": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "evidenceIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "nodeIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "statement"
+        ]
+      },
+      "RcaCaseCauseV2UpdateDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "contributing",
+              "root"
+            ]
+          },
+          "causeCodeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "statement": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "evidenceIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "nodeIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
       },
       "RcaLinkV2CreateDto": {
         "type": "object",
@@ -28811,6 +29836,17 @@
             "type": "object",
             "nullable": true
           },
+          "verificationMethod": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "CA4: how the completion will be verified (inspection, test, record review)"
+          },
+          "verifierId": {
+            "type": "object",
+            "nullable": true,
+            "description": "CA4: the plant member named to check the completion evidence and mark the action done; never the owner (422 VERIFIER_IS_OWNER). When named, only this person marks the action done (403 NOT_THE_VERIFIER)."
+          },
           "baseline": {
             "nullable": true,
             "allOf": [
@@ -28831,6 +29867,18 @@
               "USD"
             ],
             "nullable": true
+          },
+          "recommendationId": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 64,
+            "description": "Item 5: id of the case recommendation this action implements (422 INVALID_REFERENCE when the case has no such recommendation); null unlinks"
+          },
+          "cancelReason": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "F-9: why the action is cancelled; accepted only with status cancelled (or on a cancelled action, 422 CANCEL_REASON_WITHOUT_CANCEL otherwise). Optional; who and when are recorded by the server."
           }
         },
         "required": [
@@ -28905,6 +29953,17 @@
             "type": "object",
             "nullable": true
           },
+          "verificationMethod": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "CA4: how the completion will be verified (inspection, test, record review)"
+          },
+          "verifierId": {
+            "type": "object",
+            "nullable": true,
+            "description": "CA4: the plant member named to check the completion evidence and mark the action done; never the owner (422 VERIFIER_IS_OWNER). When named, only this person marks the action done (403 NOT_THE_VERIFIER)."
+          },
           "baseline": {
             "nullable": true,
             "allOf": [
@@ -28925,6 +29984,18 @@
               "USD"
             ],
             "nullable": true
+          },
+          "recommendationId": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 64,
+            "description": "Item 5: id of the case recommendation this action implements (422 INVALID_REFERENCE when the case has no such recommendation); null unlinks"
+          },
+          "cancelReason": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "F-9: why the action is cancelled; accepted only with status cancelled (or on a cancelled action, 422 CANCEL_REASON_WITHOUT_CANCEL otherwise). Optional; who and when are recorded by the server."
           }
         }
       },
@@ -29292,6 +30363,10 @@
           "linkId": {
             "type": "string",
             "description": "Required with linkType"
+          },
+          "rcaActionId": {
+            "type": "string",
+            "description": "Item 5: the RCA action this task carries out; needs linkType RCA with the case of the action as linkId (422 INVALID_REFERENCE). One open task per action (409 ACTION_TASK_EXISTS)."
           }
         },
         "required": [
@@ -29352,6 +30427,11 @@
           "linkId": {
             "type": "object",
             "nullable": true
+          },
+          "rcaActionId": {
+            "type": "object",
+            "nullable": true,
+            "description": "Item 5: the RCA action this task carries out (linkType RCA of the case of the action); null unlinks. Changing the link away from RCA clears it."
           }
         }
       },
@@ -30006,7 +31086,7 @@
           "effectiveness": {
             "type": "object",
             "additionalProperties": true,
-            "description": "CA2/CA3 effectiveness rules (contracts/policies/rca_policy.schema.json; checked by the server parser, 422 INVALID_POLICY)"
+            "description": "CA2/CA3 effectiveness rules: baselineLookbackDays, minExposureHours, requiredReduction, reviewDays, zeroRepeatClasses and minimumCoverage (0–1, default 0.95: state-data coverage of the window after an action needed for a verdict; a version without it behaves as 0.95) (contracts/policies/rca_policy.schema.json; checked by the server parser, 422 INVALID_POLICY)"
           },
           "fmea": {
             "type": "object",
@@ -30751,6 +31831,16 @@
       "MicroStopPolicyCreateDto": {
         "type": "object",
         "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Commissioning only: a past instant the version takes effect from instead of approval / record time. Requires backdateReason; 422 INVALID_EFFECTIVE_FROM (not past), 409 BACKDATE_REWRITES_HISTORY (not after the latest approved version of the scope), 409 BACKDATE_OVERLAPS_CALCULATION (a calculated period of the unit, or of any unit for a plant-wide version, overlaps [effectiveFrom, now); details.periods lists them)."
+          },
+          "backdateReason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Why the version is backdated; required with effectiveFrom (422 BACKDATE_REASON_REQUIRED), refused without it"
+          },
           "unitId": {
             "type": "string",
             "format": "uuid",
@@ -31185,6 +32275,16 @@
       "StopEventPolicyCreateDto": {
         "type": "object",
         "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Commissioning only: a past instant the version takes effect from instead of approval / record time. Requires backdateReason; 422 INVALID_EFFECTIVE_FROM (not past), 409 BACKDATE_REWRITES_HISTORY (not after the latest approved version of the scope), 409 BACKDATE_OVERLAPS_CALCULATION (a calculated period of the unit, or of any unit for a plant-wide version, overlaps [effectiveFrom, now); details.periods lists them)."
+          },
+          "backdateReason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Why the version is backdated; required with effectiveFrom (422 BACKDATE_REASON_REQUIRED), refused without it"
+          },
           "unitId": {
             "type": "string",
             "format": "uuid",

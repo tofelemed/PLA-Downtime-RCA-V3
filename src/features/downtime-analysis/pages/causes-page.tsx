@@ -21,7 +21,7 @@ export function DowntimeCausesPage({ filters, bundle, onChange }: DowntimePagePr
     <div className="space-y-4" data-testid="downtime-view-causes">
       <AnalysisModeSelect param="analysis" label="Rank by" options={MODES} />
       {mode === 'reasons' ? <ReasonPareto filters={filters} onChange={onChange} onEvents={(selection) => setDrill({ key, selection })} />
-        : mode === 'assets' ? <BadActors bundle={bundle} views={pageViews(filters)} /> : <LostProductionPareto filters={filters} />}
+        : mode === 'assets' ? <BadActors bundle={bundle} views={pageViews(filters)} filters={filters} /> : <LostProductionPareto filters={filters} />}
       {mode === 'reasons' && drill?.key === key && <DrillEvents filters={filters} selection={drill.selection} onDismiss={() => setDrill(null)} />}
     </div>
   );

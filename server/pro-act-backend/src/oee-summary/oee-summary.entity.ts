@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { Tenant } from '../tenant/tenant.entity';
 
@@ -13,28 +21,70 @@ export class OEESummary {
   @JoinColumn({ name: 'plan_id' })
   plan: ProductionPlan;
 
-  @Column({ name: 'availability', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'availability',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   availability: number;
 
-  @Column({ name: 'performance', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'performance',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   performance: number;
 
-  @Column({ name: 'quality', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'quality',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   quality: number;
 
-  @Column({ name: 'oee', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'oee',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   overallOEE: number;
 
   @Column({ name: 'period', type: 'varchar', length: 50, nullable: true })
   period: string;
 
-  @Column({ name: 'planned_production_time', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'planned_production_time',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   plannedProductionTime?: number;
 
-  @Column({ name: 'actual_production_time', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'actual_production_time',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   actualProductionTime?: number;
 
-  @Column({ name: 'downtime', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'downtime',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   downtime?: number;
 
   @Column({ name: 'tenant_id', type: 'uuid', nullable: true })

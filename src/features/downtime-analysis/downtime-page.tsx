@@ -7,6 +7,7 @@ import { DOWNTIME_PAGES, type DowntimeView } from '@/features/analysis-navigatio
 import { CloseStopDialog } from '@/features/event-hub/components/close-stop-dialog';
 import { CodeEventDialog } from '@/features/event-hub/components/code-event-dialog';
 import { EventHubFrame } from '@/features/event-hub/event-hub-frame';
+import { useWindowRangeText } from '@/features/event-hub/hooks/use-window-range-text';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { unitsLabel } from '@/features/pla-analytics/model/links';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
@@ -40,11 +41,12 @@ function DowntimeScreen({ view }: { view: DowntimeView }) {
   const { mode, bundled, scope, page, showTrend } = downtimePageSettings(view, params);
   const bundle = useDowntimeBundle(pageBundleQuery(filters, view, mode), env.timezone, bundled);
   const Content = PAGES[view];
+  const windowText = useWindowRangeText()({ label: filters.windowLabel, from: filters.from, to: filters.to });
   return (
     <Page width="wide">
       <div className="space-y-5" data-testid="downtime-analysis">
         {bundled ? <DowntimeHeader filters={filters} bundle={bundle} title={`Downtime Analysis · ${page.label}`} />
-          : <PageHeader title={`Downtime Analysis · ${page.label}`} description={page.description} meta={<p className="text-xs text-muted-foreground">{unitsLabel(filters.unitIds, env.unitName)} · {filters.windowLabel} · {env.timezone}</p>} />}
+          : <PageHeader title={`Downtime Analysis · ${page.label}`} description={page.description} meta={<p className="text-xs text-muted-foreground">{unitsLabel(filters.unitIds, env.unitName)} · {windowText} · {env.timezone}</p>} />}
         <AnalysisPageNav label="Downtime analysis pages" pages={DOWNTIME_PAGES} />
         <DowntimeFiltersBar filters={filters} onChange={change} scope={scope} showTrend={showTrend} showSchedule={params.get('presentation') !== 'timeline' || view !== 'stops'} />
         <p className="text-xs text-muted-foreground" data-testid="period-selection-note">{DOWNTIME_SCOPE_NOTES[scope]}</p>

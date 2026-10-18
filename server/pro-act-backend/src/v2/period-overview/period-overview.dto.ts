@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { toArrayParam } from '../../common/dto/query-param.transformers';
 import { ListQueryDto } from '../common/list-query.dto';
+import type { ResidualState } from './period-summary.view';
 
 export const GRID_WORKFLOW_STATES = [
   'none',
@@ -19,12 +20,28 @@ export const GRID_WORKFLOW_STATES = [
   'approved',
 ] as const;
 export const REVISION_SELECTORS = ['current', 'approved'] as const;
+/** Plan-ledger residual states of a grid row (`PeriodPlanFiguresV2View.residualState`, ACC09/ACC10). */
+export const RESIDUAL_STATES = [
+  'not_computable',
+  'balanced',
+  'within_tolerance',
+  'unaccounted',
+  'over_accounted',
+  'overproduction',
+  'conflict',
+] as const satisfies readonly ResidualState[];
+const SUMMARY_SORTS = ['utcStart', '-utcStart'] as const;
 
 /** `GET /period-summaries`: the Plan Dashboard period grid (plan 3.5). */
 export class PeriodSummaryQueryDto extends ListQueryDto {
-  @ApiPropertyOptional({ enum: ['utcStart'] })
+  @ApiPropertyOptional({
+    enum: SUMMARY_SORTS,
+    default: 'utcStart',
+    description:
+      'utcStart: oldest first; -utcStart: newest first (e.g. the period just before a date with to=<its start>&limit=1)',
+  })
   @IsOptional()
-  @IsIn(['utcStart'])
+  @IsIn(SUMMARY_SORTS)
   sort?: string = undefined;
 
   @ApiPropertyOptional({
@@ -62,6 +79,21 @@ export class PeriodSummaryQueryDto extends ListQueryDto {
   @IsOptional()
   @IsIn(REVISION_SELECTORS)
   view?: (typeof REVISION_SELECTORS)[number];
+
+  @ApiPropertyOptional({
+    type: [String],
+    enum: RESIDUAL_STATES,
+    description:
+      'Plan-ledger residual state of the shown revision (repeat for several). The state is computed per period, ' +
+      'so a filtered page examines at most 2,000 periods: it may hold fewer than `limit` rows while `nextCursor` ' +
+      'is set — keep paging until `nextCursor` is null.',
+  })
+  @IsOptional()
+  @Transform(toArrayParam)
+  @IsArray()
+  @ArrayMaxSize(RESIDUAL_STATES.length)
+  @IsIn(RESIDUAL_STATES, { each: true })
+  residualStates?: ResidualState[];
 }
 
 /** `GET /reports/waterfall`: one ledger of 1–31 periods that close to actual (plan 3.5). */

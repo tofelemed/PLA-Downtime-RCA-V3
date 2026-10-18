@@ -1,11 +1,18 @@
 import { V2ApiError } from '@/api/v2/errors';
+import { fieldReason, type FieldVocabulary } from '@/features/ux-kit/errors';
 
 /** Field name (as the API names it) → message shown under that input. */
 export type FieldErrors = Record<string, string>;
 
-/** The 422 field errors of a refused command keyed by field, so they land on the same inputs. */
-export function serverFieldErrors(error: unknown): FieldErrors {
-  return error instanceof V2ApiError ? error.fieldErrorMap() : {};
+/**
+ * The 422 field errors of a refused command keyed by field, so they land on the same inputs — as a sentence
+ * without the field name, enum choices with the form's labels (`fields`), else humanized.
+ */
+export function serverFieldErrors(error: unknown, fields?: FieldVocabulary): FieldErrors {
+  if (!(error instanceof V2ApiError)) return {};
+  return Object.fromEntries(
+    Object.entries(error.fieldErrorMap()).map(([field, message]) => [field, fieldReason(field, message, fields)]),
+  );
 }
 
 /** A half-open validity: a start is required and an end, when given, must follow it (ISO UTC instants). */

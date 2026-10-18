@@ -156,6 +156,34 @@ describe('pending approvals inbox (isolated proact_test)', () => {
       false,
     );
   });
+  it('reads one pending record for its approval page with the list’s scope and separation of duties', async () => {
+    const manager = await env.unitUser(env.world.unitA1, 'manager_approver');
+    const outsider = await env.unitUser(env.world.unitA2, 'manager_approver');
+    const id = await profile(env.world.unitA1, 'detail-own', manager);
+    const own = (
+      await env.get(`approval-inbox/profile/${id}`, manager).expect(200)
+    ).body as ApprovalInboxView['items'][number];
+    expect(own).toMatchObject({
+      id,
+      kind: 'profile',
+      resource: 'profiles',
+      commandId: id,
+    });
+    expect(
+      own.actions.find((a) => a.action === 'approve')?.disabledReason,
+    ).toBeTruthy();
+    await env.get(`approval-inbox/profile/${id}`, outsider).expect(404);
+    const admin = (
+      await env.get(`approval-inbox/profile/${id}`, superAdmin).expect(200)
+    ).body as ApprovalInboxView['items'][number];
+    expect(
+      admin.actions.find((a) => a.action === 'approve')?.disabledReason,
+    ).toBeNull();
+    await env.post(`profiles/${id}/approve`, {}, superAdmin).expect(200);
+    await env.get(`approval-inbox/profile/${id}`, superAdmin).expect(404);
+    await env.get(`approval-inbox/unknown/${id}`, superAdmin).expect(400);
+    await env.get('approval-inbox/profile/not-a-uuid', superAdmin).expect(400);
+  });
   it('routes quality, metrology and source ownership independently of management', async () => {
     const disposition = await env
       .post(

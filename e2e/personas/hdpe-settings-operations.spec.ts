@@ -3,6 +3,8 @@ import type { NotificationView } from '../../src/api/v2/types/notifications';
 import { apiLogin, call, PLANTS, signIn } from './support/admin-helpers';
 
 const MANAGER = 'jonas.weber@demo.acme.com';
+/** owner 18 Oct 2026: Integration is SuperAdmin-only; Source Status Rules stays open to its source owner (production_accountant) */
+const SOURCE_OWNER = 'sara.nouri@demo.acme.com';
 const PLANT_PATH = `/v2/tenants/${PLANTS.demo.id}`;
 const WINDOW = { from: '2026-10-01T00:00:00.000Z', to: '2026-10-16T00:00:00.000Z' };
 interface DisplaySettings {
@@ -54,7 +56,7 @@ async function assertPlantDate(page: Page, settings: DisplaySettings): Promise<v
   else await expect(time).not.toContainText(/[۰-۹]/);
 }
 
-test('plant calendar, digits and reporting week propagate to dates and server weekly buckets', async ({ page }) => {
+test('plant calendar, digits and reporting week propagate to dates and server weekly buckets', async ({ page, browser }) => {
   const manager = await apiLogin(MANAGER);
   const original = await call<DisplaySettings>(manager.token, 'GET', PLANT_PATH);
   expect(original.status).toBe(200);
@@ -63,6 +65,8 @@ test('plant calendar, digits and reporting week propagate to dates and server we
   const unit = units.body.items.find((row) => row.code === 'unit100');
   expect(unit).toBeDefined();
   await signIn(page, MANAGER);
+  const owner = await (await browser.newContext({ baseURL: test.info().project.use.baseURL })).newPage();
+  await signIn(owner, SOURCE_OWNER);
   try {
     for (const preference of [
       { calendarSystem: 'persian', digits: 'persian', weekStart: 'monday', weekday: 1 },
@@ -77,7 +81,7 @@ test('plant calendar, digits and reporting week propagate to dates and server we
       const saved = await call<DisplaySettings>(manager.token, 'GET', PLANT_PATH);
       expect(saved.status).toBe(200);
       expect(saved.body).toMatchObject({ calendarSystem: preference.calendarSystem, digits: preference.digits, weekStart: preference.weekStart });
-      await assertPlantDate(page, saved.body);
+      await assertPlantDate(owner, saved.body);
       await assertWeeklyBuckets(manager.token, unit!.id, preference.weekday);
       await page.goto('/admin?tab=settings');
       for (const id of [`calendar-${preference.calendarSystem}`, `digits-${preference.digits}`, `week-${preference.weekStart}`]) {
@@ -85,6 +89,7 @@ test('plant calendar, digits and reporting week propagate to dates and server we
       }
     }
   } finally {
+    await owner.context().close();
     const { calendarSystem, digits, weekStart } = original.body;
     const restored = await call<DisplaySettings>(manager.token, 'PATCH', `${PLANT_PATH}/display-settings`, { calendarSystem, digits, weekStart });
     expect(restored.status, 'restore original HDPE display settings').toBe(200);
@@ -137,7 +142,7 @@ test('in-app notifications support opening one unread item and marking all read'
   const first = page.locator('[data-testid="notification"][data-read="false"]').first();
   await expect(first).toBeVisible();
   const one = page.waitForResponse((r) => /\/notifications\/[^/]+\/read$/.test(r.url()) && r.request().method() === 'POST');
-  await first.locator('a, button').click();
+  await first.locator('a, button').first().click();
   const marked = await one;
   expect(marked.ok()).toBe(true);
   const id = new URL(marked.url()).pathname.split('/').at(-2);

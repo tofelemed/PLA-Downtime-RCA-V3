@@ -23,7 +23,9 @@ const files = fs
   .sort();
 
 function readJson(file: string): Json {
-  return JSON.parse(fs.readFileSync(path.join(FIXTURE_DIR, file), 'utf8')) as Json;
+  return JSON.parse(
+    fs.readFileSync(path.join(FIXTURE_DIR, file), 'utf8'),
+  ) as Json;
 }
 
 function isObject(value: Json | undefined): value is JsonObject {
@@ -37,12 +39,20 @@ function loadFixture(file: string): JsonObject {
 }
 
 /** Paths of JS numbers that should have been decimal strings. */
-function nonStringQuantities(value: Json, keyPath: string, key: string): string[] {
+function nonStringQuantities(
+  value: Json,
+  keyPath: string,
+  key: string,
+): string[] {
   if (typeof value === 'number') {
-    return Number.isInteger(value) && COUNT_KEY.test(key) ? [] : [`${keyPath}=${value}`];
+    return Number.isInteger(value) && COUNT_KEY.test(key)
+      ? []
+      : [`${keyPath}=${value}`];
   }
   if (Array.isArray(value)) {
-    return value.flatMap((item, i) => nonStringQuantities(item, `${keyPath}[${i}]`, ''));
+    return value.flatMap((item, i) =>
+      nonStringQuantities(item, `${keyPath}[${i}]`, ''),
+    );
   }
   if (isObject(value)) {
     return Object.entries(value).flatMap(([k, v]) =>
@@ -94,7 +104,9 @@ describe('acceptance fixtures', () => {
         expect(isObject(fixture.expected)).toBe(true);
         expect(typeof fixture.tolerance).toBe('string');
         expect(nonStringQuantities(fixture.inputs, 'inputs', '')).toEqual([]);
-        expect(nonStringQuantities(fixture.expected, 'expected', '')).toEqual([]);
+        expect(nonStringQuantities(fixture.expected, 'expected', '')).toEqual(
+          [],
+        );
         return;
       }
       for (const key of ['given', 'action', 'assertion']) {

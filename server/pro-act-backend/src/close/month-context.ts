@@ -1,8 +1,8 @@
+import { UnprocessableEntityException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import {
   financialMonth,
   FinancialMonth,
-  isMonthKey,
   monthOfDate,
 } from '../domain/close/financial-month';
 import {
@@ -10,7 +10,7 @@ import {
   CloseDeadlines,
 } from '../domain/close/month-close-machine';
 import { MonthClosePolicy } from '../domain/close/month-close-policy';
-import { invalid } from '../profiles/profile-errors';
+import { resolveMonthKey } from '../domain/close/month-key';
 import {
   defaultSiteOf,
   endOfLocalDay,
@@ -47,9 +47,15 @@ async function monthFor(
 ): Promise<FinancialMonth> {
   const calendar = policy.financialCalendar;
   if (selector !== 'current') {
-    if (!isMonthKey(selector.key))
-      throw invalid('INVALID_MONTH', 'month must be YYYY-MM');
-    return financialMonth(selector.key, calendar);
+    const resolved = resolveMonthKey(selector.key, calendar);
+    if (!resolved.ok) {
+      throw new UnprocessableEntityException({
+        code: resolved.code,
+        message: resolved.message,
+        details: { calendar, overlaps: resolved.overlaps },
+      });
+    }
+    return financialMonth(resolved.key, calendar);
   }
   const site = await defaultSiteOf(manager, tenantId);
   return monthOfDate(localDateOf(now, site?.timezone ?? 'UTC'), calendar);

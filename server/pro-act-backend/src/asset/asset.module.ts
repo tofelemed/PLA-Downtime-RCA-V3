@@ -10,4 +10,4 @@ import { AssetController } from './asset.controller';
   controllers: [AssetController],
   exports: [AssetService],
 })
-export class AssetModule {} 
+export class AssetModule {}

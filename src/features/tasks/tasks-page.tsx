@@ -63,7 +63,7 @@ function TasksScreen() {
     <Page width="wide">
       <PageHeader
         title="Tasks"
-        description="Assign, track and complete action items linked to RCA cases, events and plans."
+        description="Assign, track and complete tasks linked to investigations, events and plans."
         actions={
           canWriteEvents && (
             <Button asChild>
@@ -76,7 +76,7 @@ function TasksScreen() {
         }
       />
       <Section title="Summary" description="Counts use search, priority and My tasks. Status and Overdue only filter the task list.">
-        <TaskSummary summary={summary.data} loading={summary.isLoading} />
+        <TaskSummary summary={summary.data} loading={summary.isLoading} isError={summary.isError} error={summary.error} onRetry={() => void summary.refetch()} />
       </Section>
       <Section title="Tasks">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">

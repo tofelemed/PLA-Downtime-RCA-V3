@@ -47,7 +47,7 @@ export function BudgetActions({ budget }: { budget: UncertaintyBudgetView }) {
           <ConfirmDialog
             trigger={<Button size="sm" variant="outline" data-testid="budget-adopt">Use as tolerance…</Button>}
             title="Make the expanded uncertainty the unit's tolerance?"
-            description={`A new reconciliation tolerance version for this unit takes effect now: absolute, ${format.decimal(budget.expandedUncertainty, 3)} ${budget.uom}. Residuals are still published; periods already calculated keep their version.`}
+            description={`A new reconciliation tolerance version for this unit takes effect now: absolute, ${format.decimal(budget.expandedUncertainty, 3)} ${budget.uom}. Unaccounted figures are still published; periods already calculated keep their version.`}
             confirmLabel="Use as tolerance"
             onConfirm={() => adopt.submit({ id: budget.id }).then(() => undefined)}
           />

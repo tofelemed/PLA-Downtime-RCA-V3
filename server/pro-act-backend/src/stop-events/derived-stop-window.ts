@@ -31,7 +31,9 @@ const minDate = (...dates: Array<Date | null>) =>
 
 /**
  * Window a run re-derives (plan 1.10 idempotent reprocessing): from the cursor (or, on a first run / a new
- * mapping version, from the mapping start within the lookback), moved back to the earliest late sample and
+ * mapping version, from the mapping start within the lookback), moved back to the earliest late sample
+ * (observed after the mapping start and within the late-sample horizon, which may reach further back than
+ * the lookback: intake accepts store-and-forward data up to its own past limit, 7 days by default) and
  * by a margin (staleness + debounce + restart confirmation, so an unconfirmed stop or a short restart at
  * the edge is seen whole), and back to the start of a derived stop crossing that instant (its event is
  * re-derived as one piece, never cut).
@@ -45,20 +47,23 @@ export async function processingWindow(
     settings: StopEventOptions;
     now: Date;
     lookbackMs: number;
+    /** how far back a late sample may reopen the window (never shorter than the lookback) */
+    lateHorizonMs: number;
   },
 ): Promise<ProcessingWindow> {
   const { scope, mapping, cursor, settings, now } = input;
-  const floor = new Date(
-    Math.max(mapping.effectiveFrom.getTime(), now.getTime() - input.lookbackMs),
-  );
+  const floorOf = (ms: number) =>
+    new Date(Math.max(mapping.effectiveFrom.getTime(), now.getTime() - ms));
+  const floor = floorOf(input.lookbackMs);
   const fresh = !cursor || cursor.mappingId !== mapping.id;
+  const lateFloor = floorOf(Math.max(input.lookbackMs, input.lateHorizonMs));
   const [news] = await manager.query<
     Array<{ observed_from: Date | null; seen_through: Date | null }>
   >(NEW_SAMPLES_SQL, [
     scope.tenantId,
     mapping.signalId,
     fresh ? EPOCH : cursor.samplesSeenThrough,
-    floor,
+    fresh ? floor : lateFloor,
   ]);
   const late = news?.observed_from ? new Date(news.observed_from) : null;
   const base = fresh ? floor : minDate(cursor.processedThrough, late);

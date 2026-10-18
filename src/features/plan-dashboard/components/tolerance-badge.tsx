@@ -1,8 +1,13 @@
-import { Badge } from '@/components/ui/badge';
 import type { ToleranceView } from '@/api/v2/types/reconciliation';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { StatusBadge } from '@/features/ux-kit/status-badge';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+
+type Justification = NonNullable<ToleranceView['justification']>;
+
+/** A missing budget, a budget past its review or a value no longer equal to U is a failed check (red, §5.8). */
+const budgetFailed = (j: Justification) => !j.found || j.reviewOverdue || !j.valueMatchesExpandedUncertainty;
 
 /**
  * The tolerance of the revision and, for an absolute tolerance adopted from an SME E4 uncertainty budget,
@@ -14,11 +19,11 @@ export function ToleranceBadge({ tolerance, timezone }: { tolerance: ToleranceVi
   const { text } = useNumberFormat();
   const value = tolerance.mode === 'zero' ? 'none' : tolerance.mode === 'percent' ? text(`${tolerance.value} %`) : text(String(tolerance.value));
   const justification = tolerance.justification;
-  if (!justification) return <Badge variant="outline">Tolerance: {value}</Badge>;
+  if (!justification) return <StatusBadge tone="neutral">Tolerance: {value}</StatusBadge>;
   return (
     <details className="text-xs" data-testid="tolerance-justification">
       <summary className="cursor-pointer">
-        <Badge variant="outline">Tolerance: {value} · expanded measurement uncertainty</Badge>
+        <StatusBadge tone={budgetFailed(justification) ? 'danger' : 'neutral'}>Tolerance: {value} · expanded measurement uncertainty</StatusBadge>
       </summary>
       {justification.found ? (
         <div className="mt-1 space-y-0.5 text-muted-foreground">

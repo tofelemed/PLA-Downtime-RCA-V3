@@ -1,4 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique, Index, VersionColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Unique,
+  Index,
+  VersionColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 
 @Entity('products')
@@ -20,7 +31,13 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @Column({ name: 'standard_rate', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'standard_rate',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   standardCost?: number;
 
   @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
@@ -30,7 +47,12 @@ export class Product {
   @JoinColumn({ name: 'tenant_id' })
   tenant?: Tenant;
 
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @Column({ name: 'unit_id', type: 'varchar', length: 36, nullable: true })
@@ -48,4 +70,4 @@ export class Product {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

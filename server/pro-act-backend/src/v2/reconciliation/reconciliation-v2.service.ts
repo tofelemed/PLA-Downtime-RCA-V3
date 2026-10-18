@@ -24,6 +24,13 @@ import { reversibleKindsOf } from '../../periods/reconciliation-options';
 import { toleranceJustification } from '../../uncertainty/tolerance-justification';
 import { keysetPage } from '../common/keyset-page';
 import { ReversibleLineV2View, reversibleLines } from './reversible-lines';
+import { loadApprovedValuation } from './approved-valuation-view';
+import {
+  loadCandidateDerivations,
+  scaledSliceIds,
+} from './candidate-derivation';
+import { loadEventRca, rcaEventIdsOf } from './event-rca';
+import { monthCloseStateOf } from './month-close-state';
 import { listResponse, ListResponse, ListScope } from '../common/response';
 import {
   ReconciliationQueryDto,
@@ -189,6 +196,24 @@ export class ReconciliationV2Service {
         manager,
         period.tenantId,
         state.tolerance.body,
+      ),
+      monthClose: await monthCloseStateOf(manager, period),
+      // the open proposal restates the published revision only
+      approvedValuation: await loadApprovedValuation(
+        manager,
+        revision,
+        published?.id === revision.id ? (open?.id ?? null) : null,
+      ),
+      derivations: await loadCandidateDerivations(
+        manager,
+        period.tenantId,
+        state.candidateLines,
+        scaledSliceIds(state.totals),
+      ),
+      eventRca: await loadEventRca(
+        manager,
+        period.tenantId,
+        rcaEventIdsOf(state),
       ),
     });
   }

@@ -193,8 +193,8 @@ export async function downloadExportText(exportId: string): Promise<string> {
   return (await v2Request<string>({ method: 'GET', path: `/exports/${exportId}/download` })).data;
 }
 
-/** Fetches an export file as a Blob of its own type (CSV text or PDF bytes) for saving. */
+/** Fetches an export file byte for byte (CSV with its BOM, PDF) for saving: the file matches its published sha256. */
 export async function downloadExportFile(exportId: string): Promise<Blob> {
-  const data = (await v2Request<Blob | string>({ method: 'GET', path: `/exports/${exportId}/download` })).data;
+  const data = (await v2Request<Blob | string>({ method: 'GET', path: `/exports/${exportId}/download`, asFile: true })).data;
   return typeof data === 'string' ? new Blob([data], { type: 'text/csv;charset=utf-8' }) : data;
 }

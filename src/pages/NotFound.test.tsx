@@ -13,5 +13,16 @@ describe('NotFound', () => {
     expect(screen.getByText('/downtime-analysis')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Go to the dashboard' })).toHaveAttribute('href', '/dashboard');
     expect(document.title).toBe('Page not found · Traverse Forge');
+    expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+
+  it('inside the app shell it renders no second main landmark', () => {
+    render(
+      <MemoryRouter initialEntries={['/nowhere']}>
+        <NotFound embedded />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('heading', { name: '404' })).toBeInTheDocument();
+    expect(screen.queryByRole('main')).toBeNull();
   });
 });

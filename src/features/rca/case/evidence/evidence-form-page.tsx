@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { Section } from '@/features/ux-kit/page-layout';
+import { useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { useRcaFormat } from '../../use-rca-format';
 import { EMPTY_EVIDENCE_FORM, evidenceFormOf, evidenceItemOf, type EvidenceForm } from '../../model/evidence-form';
 import { newItemId } from '../../model/rca-form';
@@ -25,6 +26,8 @@ function useEvidenceSave(existing: RcaEvidenceItem | undefined) {
       collectedAt: new Date().toISOString(),
       collectedBy: session?.user.id ?? null,
       nodeIds: [],
+      verifiedBy: null,
+      verifiedAt: null,
     };
     const item = evidenceItemOf(form, base);
     const evidence = existing ? rca.evidence.map((entry) => (entry.id === existing.id ? item : entry)) : [...rca.evidence, item];
@@ -41,9 +44,11 @@ export function EvidenceFormPage() {
   const { evidenceId } = useParams();
   const navigate = useNavigate();
   const existing = evidenceId ? rca.evidence.find((entry) => entry.id === evidenceId) : undefined;
-  const [form, setForm] = useState<EvidenceForm>(() => (existing ? evidenceFormOf(existing, timezone) : EMPTY_EVIDENCE_FORM));
+  const [initial] = useState<EvidenceForm>(() => (existing ? evidenceFormOf(existing, timezone) : EMPTY_EVIDENCE_FORM));
+  const [form, setForm] = useState<EvidenceForm>(initial);
   const [busy, setBusy] = useState(false);
   const saving = useEvidenceSave(existing);
+  useUnsavedChangesGuard(JSON.stringify(form) !== JSON.stringify(initial));
   if (readOnly || (evidenceId && !existing)) return <Navigate to={`${basePath}/evidence`} replace />;
   const change = (patch: Partial<EvidenceForm>) => setForm((current) => ({ ...current, ...patch }));
   return (

@@ -11,7 +11,8 @@ import { useCalendarPreference } from '@/lib/dates';
 import { CONTROLLABLE_TILE, findMetric, formatCount, formatRatio, reasonText, SUMMARY_TILES, type TileSpec } from '@/features/downtime-analysis/model/kpi-display';
 import { ControllableSwitch } from '@/features/downtime-analysis/components/controllable-switch';
 import { AnalyticsCard } from '../components/analytics-card';
-import { repeatQuery, scopeToParams, type AnalyticsScope } from '../model/analytics-scope';
+import { repeatQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { assetStopsHref, downtimeHref, plaHref } from './dashboard-links';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 const DASHBOARD_TILES = SUMMARY_TILES.filter((tile) => ['downtime_total', 'downtime_unplanned', 'stop_count', 'scheduled_availability'].includes(tile.metric));
@@ -19,7 +20,7 @@ const TOP = 5;
 
 function TileValue({ spec, view }: { spec: TileSpec; view: KpiAggregateView }) {
   const { digits } = useCalendarPreference();
-  if (spec.kind === 'duration') return <DurationText seconds={view.value} variant="clock" />;
+  if (spec.kind === 'duration') return <DurationText seconds={view.value} />;
   return <>{spec.kind === 'ratio' ? formatRatio(view.value, 1, digits) : formatCount(view.value, digits)}</>;
 }
 
@@ -31,7 +32,7 @@ function DowntimeTile({ spec, view }: { spec: TileSpec; view: KpiAggregateView |
       <dd className="text-xl font-semibold" data-testid="kpi-value">
         {view && view.value !== null ? <TileValue spec={spec} view={view} /> : '—'}
       </dd>
-      <dd className="text-[11px] text-muted-foreground">{view && view.value === null ? reasonText(view.reason) ?? 'Not available' : spec.note}</dd>
+      <dd className="text-xs text-muted-foreground">{view && view.value === null ? reasonText(view.reason) ?? 'Not available' : spec.note}</dd>
     </div>
   );
 }
@@ -46,7 +47,7 @@ export function DashboardDowntime({ scope }: { scope: AnalyticsScope }) {
   const actions = (
     <div className="flex flex-wrap items-center gap-3">
       <ControllableSwitch checked={controllable} onChange={setControllable} testId="dashboard-controllable-switch" />
-      <Link className="text-sm underline" to="/downtime">
+      <Link className="text-sm underline" to={downtimeHref(scope)}>
         Downtime analysis
       </Link>
     </div>
@@ -64,11 +65,20 @@ export function DashboardDowntime({ scope }: { scope: AnalyticsScope }) {
 
 type Group = DowntimeReportView['groups'][number];
 
-const ASSET_COLUMNS: Array<DataTableColumn<Group>> = [
-  { id: 'asset', header: 'Asset', cell: (group) => group.label ?? (group.key ? 'Unknown asset' : 'No asset recorded') },
-  { id: 'stops', header: 'Stops', align: 'right', cell: (group) => <NumberText value={group.value} /> },
-  { id: 'periods', header: 'Shifts', align: 'right', cell: (group) => <NumberText value={group.periods} /> },
-];
+const assetName = (group: Group) => group.label ?? (group.key ? 'Unknown asset' : 'No asset recorded');
+
+/** An asset row opens its stops in the Event Hub over the same window. */
+function assetColumns(scope: AnalyticsScope): Array<DataTableColumn<Group>> {
+  return [
+    {
+      id: 'asset',
+      header: 'Asset',
+      cell: (group) => (group.key ? <Link className="underline" to={assetStopsHref(scope, group.key)}>{assetName(group)}</Link> : assetName(group)),
+    },
+    { id: 'stops', header: 'Stops', align: 'right', cell: (group) => <NumberText value={group.value} /> },
+    { id: 'periods', header: 'Shifts', align: 'right', cell: (group) => <NumberText value={group.periods} /> },
+  ];
+}
 
 /** The assets with the most stops in the window (the top 5; the full list is under Losses → Repeat causes). */
 export function DashboardTopAssets({ scope }: { scope: AnalyticsScope }) {
@@ -76,7 +86,7 @@ export function DashboardTopAssets({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useDowntimeReport(repeatQuery(scope, 'asset'), env.timezone);
   const groups = query.data?.data.groups ?? [];
-  const link = `/pla-analytics?${scopeToParams({ ...scope, tab: 'losses' }).toString()}#repeat-causes`;
+  const link = plaHref(scope, '/pla-analytics/losses', '#repeat-causes');
   return (
     <AnalyticsCard
       title={`Most stopped assets (top ${TOP})`}
@@ -87,7 +97,7 @@ export function DashboardTopAssets({ scope }: { scope: AnalyticsScope }) {
       emptyText="No stops on assets in this window."
       actions={<Link className="text-sm underline" to={link}>All repeat causes</Link>}
     >
-      <DataTable caption="Most stopped assets" columns={ASSET_COLUMNS} rows={groups.slice(0, TOP)} getRowKey={(group) => group.key ?? '-'} pager="none" density="compact" />
+      <DataTable caption="Most stopped assets" columns={assetColumns(scope)} rows={groups.slice(0, TOP)} getRowKey={(group) => group.key ?? '-'} pager="none" density="compact" />
       {groups.length > TOP && <p className="text-xs text-muted-foreground">{number(groups.length - TOP)} more assets with stops: see all repeat causes.</p>}
     </AnalyticsCard>
   );

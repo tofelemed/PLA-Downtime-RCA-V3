@@ -4,19 +4,23 @@ import { INTEGRATION_ROUTES } from './integration';
 import { OVERVIEW_ROUTES } from './overview';
 import { PRODUCTION_ROUTES } from './production';
 import { RELIABILITY_ROUTES } from './reliability';
+import { withMenuGates } from './route-gates';
 import type { AppRoute } from './route-types';
 
 export type { AppRoute } from './route-types';
 
-/** Every protected route, area by area (each area file is owned by one feature track). */
-export const PROTECTED_ROUTES: readonly AppRoute[] = [
+/**
+ * Every protected route, area by area (each area file is owned by one feature track), each with the
+ * capability its menu item needs (`requires`, UX audit B-7).
+ */
+export const PROTECTED_ROUTES: readonly AppRoute[] = withMenuGates([
   ...OVERVIEW_ROUTES,
   ...PRODUCTION_ROUTES,
   ...RELIABILITY_ROUTES,
   ...INTEGRATION_ROUTES,
   ...ADMINISTRATION_ROUTES,
   ...DEV_ROUTES,
-];
+]);
 
 const preloadByPath = new Map<string, () => Promise<unknown>>();
 for (const route of PROTECTED_ROUTES) if (route.preload) preloadByPath.set(route.path, route.preload);

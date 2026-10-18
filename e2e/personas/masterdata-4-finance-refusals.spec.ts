@@ -126,13 +126,12 @@ test.describe('Master data admin — finance drafts, refusals and persistence', 
     expect(cases.status).toBe(200);
     expect(itemsOf(cases.body).filter((item) => item.title === title)).toEqual([]);
 
-    // not in the menu, but the v2 integration console (flag on) opens read-only by URL; no write is offered
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; not in the menu and a direct visit shows no console
     const name = `${PREFIX}refused connection ${suffix}`;
     await page.goto('/connectivity');
-    await expect(page.getByTestId('integration-console')).toBeVisible({ timeout: 60_000 });
-    test.info().annotations.push({ type: 'observation', description: 'Connectivity is hidden from the master_data_admin menu, yet /connectivity renders the v2 integration console read-only (UX06 non-writer pattern).' });
-    await expectHidden(page.getByTestId('new-connection'));
-    await page.screenshot({ path: test.info().outputPath('mda-05b-connection-hidden.png') });
+    await expect(page.getByRole('heading', { name: 'Connectivity', level: 1 })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('integration-console')).toHaveCount(0);
+    await page.screenshot({ path: test.info().outputPath('mda-05b-connectivity-closed.png') });
     const connections = await api<{ items: Array<{ displayName: string }> }>(hiro.token, 'GET', '/v2/connections?limit=200');
     expect(itemsOf(connections.body).map((item) => item.displayName)).not.toContain(name);
     const connection = await post<{ code: string }>(hiro.token, '/v2/connections', { sourceType: 'mqtt', displayName: name });

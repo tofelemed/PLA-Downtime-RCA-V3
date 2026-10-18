@@ -111,13 +111,16 @@ describe('Event Hub v2 flows (plan 3.2)', () => {
     act(() => {
       result.current.form.setField('startLocal', '2026-10-09T06:00');
       result.current.form.setField('endLocal', '2026-10-09T07:00');
+      result.current.form.setField('intervalMode', 'duration');
       result.current.form.setField('durationMinutes', '30');
     });
     responses.push(json(422, { code: 'DURATION_CONFLICT', message: 'mismatch', fieldErrors: [{ field: 'durationSeconds', message: 'Does not match the end' }], correlationId: 'c', retryable: false }));
     await act(async () => expect(await result.current.save.submit()).toBe('failed'));
     expect(result.current.form.errors.durationMinutes).toBe('Does not match the end');
     expect(header(0, 'Idempotency-Key')).toBeTruthy();
-    expect(body(0)).toMatchObject({ unitId: 'u1', startTime: '2026-10-09T06:00:00.000Z', endTime: '2026-10-09T07:00:00.000Z', durationSeconds: 1800 });
+    // E-4: the duration is the chosen alternative; the typed end is kept in the form but not sent
+    expect(body(0)).toMatchObject({ unitId: 'u1', startTime: '2026-10-09T06:00:00.000Z', durationSeconds: 1800 });
+    expect(body(0)).not.toHaveProperty('endTime');
   });
 
   it('restores an unsaved draft after a reload and flags a server revision change', () => {
@@ -199,7 +202,7 @@ describe('Event Hub v2 flows (plan 3.2)', () => {
 
   it('state badges carry text labels for every dimension', () => {
     render(<StateBadges states={{ physical: 'open', coding: 'coded', rca: 'required' }} />, { wrapper });
-    expect(screen.getByLabelText('Physical state: Running')).toBeTruthy();
+    expect(screen.getByLabelText('Physical state: Ongoing')).toBeTruthy();
     expect(screen.getByLabelText('Coding state: Coded')).toBeTruthy();
     expect(screen.getByLabelText('RCA state: RCA required')).toBeTruthy();
   });

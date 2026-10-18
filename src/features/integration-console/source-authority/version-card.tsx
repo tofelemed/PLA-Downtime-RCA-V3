@@ -1,6 +1,6 @@
 import type { SourceAuthorityPolicyView, SourceAuthorityVersionView } from '@/api/v2/types/source-authority';
 import { Badge } from '@/components/ui/badge';
-import { useUserNames } from '@/features/ux-kit/labels';
+import { actorText, useUserNames } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { VersionActions } from './version-actions';
 
@@ -46,7 +46,7 @@ function Decision({ version, timezone }: { version: SourceAuthorityVersionView; 
   const decidedBy = version.approvedBy ?? version.rejectedBy;
   return (
     <p className="text-xs text-muted-foreground">
-      Drafted by {users.nameOf(version.createdBy)} on <PlantTime iso={version.createdAt} tz={timezone} withDate />
+      Drafted by {actorText({ id: version.createdBy }, users.nameOf)} on <PlantTime iso={version.createdAt} tz={timezone} withDate />
       {decidedBy && ` · ${version.state === 'rejected' ? 'rejected' : 'approved'} by ${users.nameOf(decidedBy)}`}
       {version.rejectionReason && `: ${version.rejectionReason}`}
     </p>
@@ -77,6 +77,12 @@ export function VersionCard({ version, timezone }: { version: SourceAuthorityVer
       </header>
       <PolicySources policy={version.policy} />
       <Decision version={version} timezone={timezone} />
+      {version.requestedEffectiveFrom && (
+        <p className="text-xs" data-testid="authority-backdate">
+          Commissioning backdate to <PlantTime iso={version.requestedEffectiveFrom} tz={timezone} withDate />
+          {version.backdateReason && `: ${version.backdateReason}`}
+        </p>
+      )}
       {version.notes && <p className="text-xs">{version.notes}</p>}
       <VersionActions version={version} />
     </article>

@@ -49,7 +49,7 @@ function KnowledgeScreen() {
     <Page width="wide">
       <PageHeader
         title="RCA knowledge base"
-        description="Learning from closed RCA cases of this plant. Entries are written when a case closes; a reliability engineer or manager publishes them."
+        description="Learning from closed investigations of this plant. Entries are written when an investigation closes; a reliability engineer or manager publishes them."
         actions={<ExportButton filters={filters} />}
       />
       <Section title="Entries">
@@ -59,7 +59,7 @@ function KnowledgeScreen() {
             filters={toKnowledgeQuery(filters, filters.text)}
             empty={{
               title: 'No entries',
-              text: 'No entry matches these filters. Entries appear when RCA cases close.',
+              text: 'No entry matches these filters. Entries appear when investigations close.',
               action: (
                 <Button variant="outline" size="sm" onClick={() => setParams({}, { replace: true })}>
                   Clear filters

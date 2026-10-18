@@ -11,7 +11,7 @@ import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { ActionIcon } from '@/lib/icons';
-import { VersionStateBadge } from '../components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { ValuationRateForm } from './valuation-rate-form';
 import { VersionActions } from './version-actions';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
@@ -28,7 +28,7 @@ function LegacyCost({ profile }: { profile: ProfileView }) {
   if (legacy === undefined || legacy === null) return null;
   return (
     <p className="text-sm" data-testid="legacy-cost">
-      <Badge variant="outline" className="mr-2 border-amber-500 text-amber-700">
+      <Badge variant="outline" className="mr-2 border-warning/40 bg-warning/10 text-warning">
         Unconfirmed earlier cost
       </Badge>
       Standard rate {text(legacy)} (no currency) from the old master data — not used for valuation until finance confirms it.

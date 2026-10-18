@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { parseFilters, toSearchParams, type DowntimeFilters } from '../model/downtime-filters';
+import { useWindowClock } from '@/features/event-hub/hooks/use-window-clock';
+import { hasAbsoluteWindow, hasWindowParams, parseFilters, toSearchParams, type DowntimeFilters } from '../model/downtime-filters';
 
 export interface DowntimeFiltersState {
   filters: DowntimeFilters;
@@ -18,26 +19,27 @@ const withOthers = (filters: DowntimeFilters, current: URLSearchParams) => {
 const DRILL_KEEPING: ReadonlyArray<keyof DowntimeFilters> = ['metric', 'trendBy', 'reasonPath'];
 
 /**
- * Filters of the Downtime Analysis page in the URL search params (plan 3.3 step 1). The default window
- * is anchored to the instant the page was opened (not re-taken on every render) and written to the URL
- * once, so a reload or a shared link shows the same window.
+ * Filters of the Downtime Analysis page in the URL search params (plan 3.3 step 1). A rolling window is
+ * kept as its key (`window=7d`) and resolved from a clock that moves on while the page is open (A-5);
+ * chosen dates stay explicit bounds. A missing window is written once as the default key.
  */
 export function useDowntimeFilters(): DowntimeFiltersState {
   const [params, setParams] = useSearchParams();
-  const [openedAt] = useState(() => Date.now());
-  const filters = useMemo(() => parseFilters(params, openedAt), [params, openedAt]);
+  const [now, refreshWindow] = useWindowClock(!hasAbsoluteWindow(params));
+  const filters = useMemo(() => parseFilters(params, now), [params, now]);
 
   useEffect(() => {
-    if (!params.get('from') || !params.get('to')) setParams((current) => withOthers(filters, current), { replace: true });
+    if (!hasWindowParams(params)) setParams((current) => withOthers(filters, current), { replace: true });
   }, [params, filters, setParams]);
 
   const change = useCallback(
     (patch: Partial<DowntimeFilters>) => {
       const keepsDrill = Object.keys(patch).every((key) => DRILL_KEEPING.includes(key as keyof DowntimeFilters));
       const next = { ...filters, ...(keepsDrill ? {} : { reasonPath: [] }), ...patch };
+      if (next.relativeWindow && next.relativeWindow !== filters.relativeWindow) refreshWindow();
       setParams((current) => withOthers(next, current));
     },
-    [filters, setParams],
+    [filters, setParams, refreshWindow],
   );
 
   return { filters, change };

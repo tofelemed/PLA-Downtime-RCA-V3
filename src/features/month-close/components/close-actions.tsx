@@ -3,6 +3,9 @@ import type { MonthCloseStep, MonthCloseView } from '@/api/v2/types/month-close'
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { useCalendarPreference } from '@/lib/dates';
+import { monthLabelOf } from '../model/month-label';
+import { CloseMonthEnd } from './close-month-end';
 import { StepConfirm } from './step-confirm';
 
 /** Which steps the user may try in this state (display only — the server decides and refuses). */
@@ -28,12 +31,13 @@ export function CloseActions({ view }: { view: MonthCloseView }) {
   const run = (step: MonthCloseStep) => (text: string) => command.submit({ month: view.monthKey, step, text });
   const signedQuantities = !caps.isSuperAdmin && userId !== null && view.signOffs.quantitiesClosedBy?.id === userId;
   const busy = command.isPending;
+  const month = monthLabelOf(view.monthKey, view.calendar, useCalendarPreference().digits);
   const problem = command.error ? <FriendlyErrorAlert error={command.error} /> : null;
   return (
     <div className="space-y-2" data-testid="close-actions">
       <div className="flex flex-wrap gap-2">
         {steps.close && (
-          <StepConfirm trigger="Close quantities…" testId="step-close-quantities" disabled={busy || !view.prerequisites.met} title={`Close the quantities of ${view.monthKey}?`} description="You confirm every period of the month is approved. Finance signs off next; nobody can revise the month's periods until it is reopened." confirmLabel="Close quantities" onConfirm={run('close-quantities')}>
+          <StepConfirm trigger="Close quantities…" testId="step-close-quantities" disabled={busy || !view.prerequisites.met} title={`Close the quantities of ${month}?`} description="You confirm every period of the month is approved. Finance signs off next; nobody can revise the month's periods until it is reopened." confirmLabel="Close quantities" onConfirm={run('close-quantities')}>
             {problem}
           </StepConfirm>
         )}
@@ -43,21 +47,22 @@ export function CloseActions({ view }: { view: MonthCloseView }) {
           </StepConfirm>
         )}
         {steps.signOff && (
-          <StepConfirm trigger="Finance sign-off…" testId="step-finance-sign-off" disabled={busy || steps.needsReview || signedQuantities} title={`Sign off ${view.monthKey} for finance?`} description="Record the finance sign-off. SuperAdmin may also have closed the quantities; other signers must be independent." confirmLabel="Sign off" onConfirm={run('finance-sign-off')}>
+          <StepConfirm trigger="Finance sign-off…" testId="step-finance-sign-off" disabled={busy || steps.needsReview || signedQuantities} title={`Sign off ${month} for finance?`} description="Record the finance sign-off. SuperAdmin may also have closed the quantities; other signers must be independent." confirmLabel="Sign off" onConfirm={run('finance-sign-off')}>
             {problem}
           </StepConfirm>
         )}
         {steps.lock && (
-          <StepConfirm trigger="Lock month…" testId="step-lock" disabled={busy} title={`Lock ${view.monthKey}?`} description="After the lock, approved periods change only through change proposals, marked after close. A locked month is never reopened." confirmLabel="Lock month" onConfirm={run('lock')}>
+          <StepConfirm trigger="Lock month…" testId="step-lock" destructive typedConfirmation={month} disabled={busy} title={`Lock ${month}?`} description="This cannot be undone: a locked month is never reopened. After the lock, approved periods change only through change proposals, marked after close." confirmLabel="Lock month" onConfirm={run('lock')}>
             {problem}
           </StepConfirm>
         )}
         {steps.reopen && (
-          <StepConfirm trigger="Reopen…" testId="step-reopen" destructive textRequired disabled={busy} title={`Reopen ${view.monthKey}?`} description="Every sign-off is cleared; the month is closed again from the start." confirmLabel="Reopen month" onConfirm={run('reopen')}>
+          <StepConfirm trigger="Reopen…" testId="step-reopen" destructive textRequired disabled={busy} title={`Reopen ${month}?`} description="Every sign-off is cleared; the month is closed again from the start." confirmLabel="Reopen month" onConfirm={run('reopen')}>
             {problem}
           </StepConfirm>
         )}
       </div>
+      {steps.close && <CloseMonthEnd view={view} />}
       {steps.close && !view.prerequisites.met && <p className="text-sm text-muted-foreground" data-testid="close-blocked">Resolve the blocking prerequisites shown above before closing the quantities.</p>}
       {steps.signOff && signedQuantities && <p className="text-sm text-muted-foreground" data-testid="close-sod">You closed the quantities; finance sign-off needs someone else.</p>}
       {problem}

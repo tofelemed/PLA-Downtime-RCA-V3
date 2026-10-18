@@ -10,12 +10,6 @@ const IMPACTS: ReadonlyArray<[string, string]> = [
   ['none', 'No production impact (e.g. standby took over)'],
 ];
 
-/** Plan 1.10: an impact the server derived; choosing a value here makes it the person's (the override). */
-const DERIVED: Readonly<Record<string, string>> = {
-  unit_rule: 'Set by the unit impact rule of the asset. Choosing a value here overrides it.',
-  standby_takeover: 'Set because the standby took over in time. Choosing a value here overrides it.',
-};
-
 interface ImpactForm {
   values: EventFormValues;
   errors: FieldErrors;
@@ -24,9 +18,10 @@ interface ImpactForm {
 
 /**
  * SME Q5: what a stop did to production — stopped the unit, reduced output by a share (a rate loss, not
- * stopped time) or nothing (an equipment event without production loss). Downtime only.
+ * stopped time) or nothing (an equipment event without production loss). Downtime only. `basisText`: what
+ * decided the stored impact (`impactBasis` in words); a source-owned impact states it in its hint instead.
  */
-export function ImpactFields({ form }: { form: ImpactForm }) {
+export function ImpactFields({ form, basisText = null }: { form: ImpactForm; basisText?: string | null }) {
   const { values, errors, setField } = form;
   if (!['downtime', 'slowdown'].includes(values.physicalType)) return null;
   return (
@@ -36,7 +31,7 @@ export function ImpactFields({ form }: { form: ImpactForm }) {
         <select id="impactMode" className={SELECT_CLASS} value={values.impactMode || 'full_stop'} onChange={(e) => setField('impactMode', e.target.value)}>
           {IMPACTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
-        {DERIVED[values.impactBasis] && <p className="text-xs text-muted-foreground" data-testid="impact-basis">{DERIVED[values.impactBasis]}</p>}
+        {basisText && <p className="text-xs text-muted-foreground" data-testid="impact-basis">{basisText}</p>}
       </div>}
       {(values.impactMode === 'fractional' || values.physicalType === 'slowdown') && (
         <div className="space-y-1">

@@ -6,7 +6,7 @@ export const RECORD_STATUS_FILTER_LABELS: Readonly<Record<'active' | 'retired' |
 };
 
 export const PRODUCT_AVAILABILITY_LABELS: Readonly<Record<'organization' | 'plant', string>> = {
-  organization: 'All plants of the organisation',
+  organization: 'All plants of the organization',
   plant: 'This plant only',
 };
 

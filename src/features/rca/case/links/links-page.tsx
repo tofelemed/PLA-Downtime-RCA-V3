@@ -10,8 +10,8 @@ export function LinksPage() {
   const { timezone } = useRcaFormat();
   return (
     <>
-      <Section title="Links" description="Events, approved loss lines, work orders and occurrences this case investigates.">
-        <LinksTab rcaId={rca.id} timezone={timezone} />
+      <Section title="Links" description="Events, approved loss lines, work orders and occurrences this investigation covers.">
+        <LinksTab rcaId={rca.id} timezone={timezone} closed={rca.status === 'Closed'} />
       </Section>
       <Section title="Outcome" description="Approved historical loss, claimed avoided loss and realized difference — three separate figures, never added up.">
         <OutcomePanel rcaId={rca.id} />

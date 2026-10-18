@@ -126,10 +126,20 @@ describe('formatDuration', () => {
   it('matches the ux-kit duration formatter for Latin digits', () => {
     const values = [0, 0.4, 45, 59.6, 60, 89, 90, 3599, 3600, 5400, 7200, 86_399, 360_000, '5400.000', null, -1, 'x', ''];
     for (const value of values) {
-      for (const style of ['long', 'compact', 'clock'] as const) {
-        expect(formatDuration(value, { style })).toBe(uxFormatDuration(value, style));
-      }
+      expect(formatDuration(value)).toBe(uxFormatDuration(value));
     }
-    expect(formatDuration(5400, { style: 'clock', digits: 'persian' })).toBe('۱:۳۰');
+  });
+
+  it('uses one rule: minutes under 1 h, hours and minutes up to 48 h, days and hours above (C-3)', () => {
+    expect(formatDuration(45)).toBe('45 s');
+    expect(formatDuration(2520)).toBe('42 min');
+    expect(formatDuration(3599)).toBe('1 h');
+    expect(formatDuration(3900)).toBe('1 h 05 min');
+    expect(formatDuration(12_300)).toBe('3 h 25 min');
+    expect(formatDuration(172_800)).toBe('48 h');
+    expect(formatDuration(213_000)).toBe('2 d 11 h');
+    expect(formatDuration(259_200)).toBe('3 d');
+    expect(formatDuration(5400, { style: 'clock' })).toBe('1 h 30 min');
+    expect(formatDuration(5400, { digits: 'persian' })).toBe('۱ h ۳۰ min');
   });
 });

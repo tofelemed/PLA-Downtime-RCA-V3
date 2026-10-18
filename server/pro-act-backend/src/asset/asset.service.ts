@@ -45,4 +45,4 @@ export class AssetService {
     await this.assetRepository.delete(id);
     this.realtimeGateway.broadcastEntityEvent('Deleted', 'asset', { id });
   }
-} 
+}

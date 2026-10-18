@@ -15,8 +15,10 @@ import {
 } from '../production-event/revisions/event-change.notifier';
 import { actorFromContext } from '../production-event/revisions/revision-actor';
 import { applyUserChangeIn } from '../production-event/revisions/user-change';
+import { Asset } from '../asset/asset.entity';
 import {
   affectedWindows,
+  assertAssetUnit,
   classifyItems,
   codingPatch,
   codingSnapshot,
@@ -60,6 +62,12 @@ export class BulkCodeService {
       .getMany();
     const { eligible, exclusions } = classifyItems(command.items, events);
     const targets = eligible.map(({ event }) => event);
+    await assertBulkAsset(
+      this.events.manager,
+      tenantId,
+      command.codes,
+      targets,
+    );
     const defaults = await this.defaultsFor(tenantId, command.codes, targets);
     const items = targets.map((event) => ({
       eventId: event.id,
@@ -115,7 +123,12 @@ export class BulkCodeService {
       context,
       unitProperty: 'unitId',
     })
-      .select(['event.id', 'event.rowVersion', 'event.physicalState'])
+      .select([
+        'event.id',
+        'event.rowVersion',
+        'event.physicalState',
+        'event.unitId',
+      ])
       .andWhere('event.id IN (:...ids)', { ids: idsOf(command) })
       .getMany();
     const { exclusions } = classifyItems(command.items, visible);
@@ -123,6 +136,12 @@ export class BulkCodeService {
       exclusions.filter(({ reason }) =>
         ['not_found', 'duplicate'].includes(reason),
       ),
+    );
+    await assertBulkAsset(
+      this.events.manager,
+      tenantId,
+      command.codes,
+      visible,
     );
     const actorId = actorFromContext(context).id;
     return this.jobs.save(
@@ -152,6 +171,12 @@ export class BulkCodeService {
     const locked = await lockScopedEvents(manager, context, idsOf(command));
     const { eligible, exclusions } = classifyItems(command.items, locked);
     rejectExclusions(exclusions);
+    await assertBulkAsset(
+      manager,
+      tenantId,
+      command.codes,
+      eligible.map(({ event }) => event),
+    );
     const defaults = await this.defaultsFor(
       tenantId,
       command.codes,
@@ -201,6 +226,21 @@ export class BulkCodeService {
     }
     return defaults;
   }
+}
+
+/** UX A-1: the bulk asset is the tenant's and of every event's unit (422 INVALID_REFERENCE). */
+async function assertBulkAsset(
+  manager: EntityManager,
+  tenantId: string,
+  codes: BulkCodes,
+  events: readonly ProductionEvent[],
+): Promise<void> {
+  if (!codes.assetId) return;
+  const asset = await manager.findOne(Asset, {
+    where: { id: codes.assetId, tenantId },
+    select: { id: true, unitId: true },
+  });
+  assertAssetUnit(events, asset);
 }
 
 function idsOf(command: BulkCodeCommand): string[] {

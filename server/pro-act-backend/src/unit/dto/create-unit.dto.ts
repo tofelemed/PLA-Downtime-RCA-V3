@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsNumber,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateUnitDto {
   @ApiProperty()
@@ -40,4 +46,4 @@ export class CreateUnitDto {
   @IsUUID()
   @IsOptional()
   organizationId?: string;
-} 
+}

@@ -12,7 +12,6 @@ import {
   requireTenantId,
 } from '../../common/context/request-context';
 import { scopedQuery } from '../../common/query/scoped-query';
-import { CursorCodec } from '../common/cursor-codec';
 import { listResponse, ListResponse } from '../common/response';
 import { parseSort, SortSpec } from '../common/sort-spec';
 import {
@@ -31,6 +30,9 @@ import {
 import { ProductionEventExportQueryDto } from './production-event-export-query.dto';
 import { EventCsv, exportEventsCsv } from './production-events-export';
 import { EventSelectionView, selectEvents } from './production-event-selection';
+import { applyEventOrder, cursorOf } from './production-event-sort';
+import { sourceOwnedFields } from './source-owned-fields';
+import { withAccountingStates } from './event-accounting-states';
 import { withIncidentIds } from '../stop-events/event-incidents';
 
 const DEFAULT_SORT: SortSpec<ProductionEventSortField> = {
@@ -62,36 +64,29 @@ export class ProductionEventsV2Service {
       DEFAULT_SORT,
     );
 
+    const asOf = new Date();
     const qb = scopedQuery(this.events, 'event', {
       unitProperty: 'unitId',
       context,
     });
-    applyProductionEventV2Filters(qb, query);
+    applyProductionEventV2Filters(qb, query, 'event', asOf);
     applyKeysetCursor(qb, query.cursor, sort);
-    qb.orderBy(`event.${sort.field}`, sort.direction)
-      .addOrderBy('event.id', sort.direction)
-      .take(query.limit + 1);
+    applyEventOrder(qb, sort).take(query.limit + 1);
 
     const rows = await qb.getMany();
     const hasMore = rows.length > query.limit;
     const page = hasMore ? rows.slice(0, query.limit) : rows;
     const last = page[page.length - 1];
-    const nextCursor =
-      hasMore && last
-        ? CursorCodec.encode({
-            sortValue: last.startTime.toISOString(),
-            id: last.id,
-          })
-        : null;
+    const nextCursor = hasMore && last ? cursorOf(last, sort.field) : null;
 
-    const asOf = new Date();
     const tenantId = requireTenantId(context);
+    const views = await withIncidentIds(
+      this.events.manager,
+      tenantId,
+      page.map((event) => toProductionEventV2View(event, asOf)),
+    );
     return listResponse(
-      await withIncidentIds(
-        this.events.manager,
-        tenantId,
-        page.map((event) => toProductionEventV2View(event, asOf)),
-      ),
+      await withAccountingStates(this.events.manager, tenantId, views),
       nextCursor,
       { tenantId },
       asOf,
@@ -138,15 +133,19 @@ export class ProductionEventsV2Service {
       })
       .orderBy('rev.revision', 'DESC')
       .getOne();
-    const [view] = await withIncidentIds(
+    const tenantId = requireTenantId(context);
+    const [view] = await withAccountingStates(
       this.events.manager,
-      requireTenantId(context),
-      [toProductionEventV2View(event, new Date())],
+      tenantId,
+      await withIncidentIds(this.events.manager, tenantId, [
+        toProductionEventV2View(event, new Date()),
+      ]),
     );
     return {
       ...view,
       sourceFacts: source?.sourceFacts ?? null,
       overriddenFields: Object.keys(event.userOverrides ?? {}),
+      sourceOwnedFields: sourceOwnedFields(event),
     };
   }
 }

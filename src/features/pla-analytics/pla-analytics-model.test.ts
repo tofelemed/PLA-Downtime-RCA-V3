@@ -49,6 +49,16 @@ describe('PLA analytics scope (plan 3.6, T24)', () => {
     expect(fallback).toMatchObject({ from: '2026-10-03T00:00:00.000Z', to: '2026-10-10T00:00:00.000Z', windowLabel: 'Last 7 days' });
   });
 
+  it('U2c: a rolling window key of a Downtime / Event Hub link (window=24h) keeps its length instead of the 7-day default', () => {
+    const now = Date.parse('2026-10-10T00:00:00Z');
+    expect(parseScope(new URLSearchParams('window=24h&units=u1'), now)).toMatchObject({ from: '2026-10-09T00:00:00.000Z', to: '2026-10-10T00:00:00.000Z', windowLabel: 'Last 24 h', unitIds: ['u1'] });
+    expect(parseScope(new URLSearchParams('window=30d'), now)).toMatchObject({ from: '2026-09-10T00:00:00.000Z', windowLabel: 'Last 30 days' });
+    expect(parseScope(new URLSearchParams('window=Last 8 h'), now)).toMatchObject({ from: '2026-10-09T16:00:00.000Z', windowLabel: 'Last 8 h' });
+    expect(parseScope(new URLSearchParams('window=nonsense'), now).windowLabel).toBe('Last 7 days');
+    const bounded = parseScope(new URLSearchParams('from=2026-10-01T00:00:00Z&to=2026-10-02T00:00:00Z&window=24h'), now);
+    expect(bounded).toMatchObject({ from: '2026-10-01T00:00:00Z', to: '2026-10-02T00:00:00Z', windowLabel: 'Last 24 h' });
+  });
+
   it('T24: every widget sends the same window, units and run selection; the same scope gives the same report key', () => {
     const base = scopeBase(scope());
     const queries = [waterfallQuery(scope()), lossTreeQuery(scope()), trendQuery(scope()), statusQuery(scope()), qualityQuery(scope()), oeeQuery(scope(), 'unit'), repeatQuery(scope(), 'reason')];

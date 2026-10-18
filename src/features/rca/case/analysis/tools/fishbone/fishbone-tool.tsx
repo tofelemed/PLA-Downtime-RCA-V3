@@ -9,6 +9,7 @@ import { ActionIcon } from '@/lib/icons';
 import { ANALYSIS_SETTINGS, rowId } from '../../../../model/analysis-settings';
 import { useCaseWorkspace } from '../../../case-context';
 import { CopyReportButton } from '../copy-report-button';
+import { useToolDraft } from '../tool-draft';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { AddCauseDialog, type NewCause } from './add-cause-dialog';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
@@ -72,7 +73,7 @@ function CategoryCard(props: { category: FishboneCategory; readOnly: boolean; on
 function Editor({ record, save }: { record: ToolRecord<'fishbone'>; save: (body: FishboneContent) => Promise<unknown> }) {
   const { number } = useNumberFormat();
   const { rca, readOnly } = useCaseWorkspace();
-  const [content, setContent] = useState<FishboneContent>(() => ({ effect: record?.effect ?? rca.title, categories: record?.categories ?? defaultCategories() }));
+  const [content, setContent] = useToolDraft<FishboneContent>(() => ({ effect: record?.effect ?? rca.title, categories: record?.categories ?? defaultCategories() }));
   const [adding, setAdding] = useState<FishboneCategory | null>(null);
   const causes = content.categories.flatMap((category) => category.causes);
   const replace = (next: FishboneCategory) => setContent({ ...content, categories: content.categories.map((c) => (c.id === next.id ? next : c)) });

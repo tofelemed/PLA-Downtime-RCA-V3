@@ -32,7 +32,7 @@ const LABELS: Readonly<Record<string, string>> = {
   'Monitoring>Closure Review': 'Request closure',
   'Closure Review>Monitoring': 'Reject the closure',
   'Closure Review>Closed': 'Approve the closure',
-  'Closed>Analysis': 'Reopen the case',
+  'Closed>Analysis': 'Reopen the investigation',
 };
 
 function gateOf(to: RcaStatus, gates: readonly string[]): WorkflowMove['gate'] {
@@ -83,3 +83,36 @@ export function moveReady(move: WorkflowMove, blockers: readonly RcaGateIssue[],
 
 /** A test-id safe slug of a status (`Closure Review` → `closure-review`). */
 export const statusSlug = (status: string) => status.toLowerCase().replace(/\s+/g, '-');
+
+/** What a move commits the case to, said before it runs (irreversible without a manager approver). */
+export interface MoveConfirmation {
+  title: string;
+  description: string;
+  confirmLabel: string;
+}
+
+/** The confirmation of an accept, closure request or closure approval; null for other moves. */
+export function moveConfirmation(move: Pick<WorkflowMove, 'to' | 'needsResidualRisk'>, from: string): MoveConfirmation | null {
+  if (move.to === 'Monitoring' && from !== 'Closure Review') {
+    return {
+      title: 'Accept the investigation?',
+      description: 'The investigation team is locked from now on, so the closure approver can be judged independent of it. It moves to monitoring while the actions are verified; changing the team needs the investigation reopened.',
+      confirmLabel: 'Accept the investigation',
+    };
+  }
+  if (move.to === 'Closure Review' && move.needsResidualRisk) {
+    return {
+      title: 'Request closure?',
+      description: 'The effectiveness verdict is frozen as it stands and sent with the residual risk to an independent manager approver. Edits to the actions no longer change the verdict under review.',
+      confirmLabel: 'Request closure',
+    };
+  }
+  if (move.to === 'Closed') {
+    return {
+      title: 'Approve the closure?',
+      description: 'The investigation is closed and the RCA state of its linked events becomes completed. Reopening it later needs a manager approver and a reason.',
+      confirmLabel: 'Approve the closure',
+    };
+  }
+  return null;
+}

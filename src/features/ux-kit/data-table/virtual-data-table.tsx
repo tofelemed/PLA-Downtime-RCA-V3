@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { cn } from '@/lib/utils';
-import { cellClass, headClass, renderCellValue, rowActivationProps } from './data-table-cells';
+import { cellClass, headClass, renderCellValue, rowActivationProps, rowHintOf, rowLabelHint } from './data-table-cells';
 import { EmptyMessage } from './data-table-states';
 import type { DataTableColumn, DataTableDensity, DataTableEmpty } from './data-table-types';
 
@@ -16,6 +16,7 @@ export interface VirtualDataTableProps<T> {
   empty?: DataTableEmpty;
   onRowClick?: (row: T) => void;
   rowLabel?: (row: T) => string;
+  rowsHaveLink?: boolean;
 }
 
 const gridTemplate = <T,>(columns: ReadonlyArray<DataTableColumn<T>>) =>
@@ -35,15 +36,17 @@ function VirtualHeader<T>({ columns, density, template }: { columns: ReadonlyArr
   );
 }
 
-interface VirtualRowProps<T> extends Pick<VirtualDataTableProps<T>, 'caption' | 'columns' | 'density' | 'rowHeight' | 'onRowClick' | 'rowLabel'> {
+interface VirtualRowProps<T> extends Pick<VirtualDataTableProps<T>, 'caption' | 'columns' | 'density' | 'rowHeight' | 'onRowClick' | 'rowLabel' | 'rowsHaveLink'> {
   row: T;
   index: number;
   start: number;
   template: string;
 }
 
-function VirtualRow<T>({ row, index, start, template, columns, density, rowHeight, caption, onRowClick, rowLabel }: VirtualRowProps<T>) {
-  const activation = rowActivationProps(onRowClick && (() => onRowClick(row)), rowLabel?.(row));
+function VirtualRow<T>(props: VirtualRowProps<T>) {
+  const { row, index, start, template, columns, density, rowHeight, caption, onRowClick, rowsHaveLink } = props;
+  const activation = rowActivationProps(onRowClick && (() => onRowClick(row)), rowsHaveLink);
+  const hint = rowHintOf(row, props);
   return (
     <div
       role="row"
@@ -52,8 +55,9 @@ function VirtualRow<T>({ row, index, start, template, columns, density, rowHeigh
       className={cn('absolute left-0 top-0 grid w-full items-center border-b hover:bg-muted/50', activation.className)}
       style={{ gridTemplateColumns: template, height: rowHeight, transform: `translateY(${start}px)` }}
     >
-      {columns.map((column) => (
+      {columns.map((column, columnIndex) => (
         <div key={column.id} role="cell" className={cn('truncate', cellClass(column, density))}>
+          {columnIndex === 0 && rowLabelHint(hint)}
           {renderCellValue(column, row, index, caption)}
         </div>
       ))}
@@ -81,21 +85,23 @@ export function VirtualDataTable<T>(props: VirtualDataTableProps<T>) {
   });
   const template = gridTemplate(columns);
   return (
-    <div role="table" aria-label={caption} aria-rowcount={rows.length + 1} className="w-full text-sm">
-      <VirtualHeader columns={columns} density={density} template={template} />
-      {rows.length === 0 ? (
-        <div className="px-4 py-10">
-          <EmptyMessage empty={props.empty} />
-        </div>
-      ) : (
-        <div ref={scrollRef} role="rowgroup" style={{ height, overflowY: 'auto' }}>
-          <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
-            {virtualizer.getVirtualItems().map((item) => (
-              <VirtualRow key={item.key} {...props} row={rows[item.index]} index={item.index} start={item.start} template={template} />
-            ))}
+    <div className="w-full overflow-x-auto">
+      <div role="table" aria-label={caption} aria-rowcount={rows.length + 1} className="w-full min-w-max text-sm">
+        <VirtualHeader columns={columns} density={density} template={template} />
+        {rows.length === 0 ? (
+          <div className="px-4 py-10">
+            <EmptyMessage empty={props.empty} />
           </div>
-        </div>
-      )}
+        ) : (
+          <div ref={scrollRef} role="rowgroup" style={{ height, overflowY: 'auto' }}>
+            <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+              {virtualizer.getVirtualItems().map((item) => (
+                <VirtualRow key={item.key} {...props} row={rows[item.index]} index={item.index} start={item.start} template={template} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

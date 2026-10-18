@@ -188,7 +188,9 @@ export class ProductionEventV2EditableDto {
   })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @Matches(CONTEXT_CODE, { message: 'streamCode must be 1–64 letters, digits, _ . -' })
+  @Matches(CONTEXT_CODE, {
+    message: 'streamCode must be 1–64 letters, digits, _ . -',
+  })
   streamCode?: string | null;
 
   @ApiPropertyOptional({
@@ -365,4 +367,14 @@ export class PatchProductionEventV2Dto extends ProductionEventV2EditableDto {
   @IsOptional()
   @IsISO8601({ strict: true })
   startTime?: string;
+
+  @ApiPropertyOptional({
+    maxLength: 1000,
+    description:
+      'Why the event is changed; stored on the user revision (`change_reason`) and its coding revision',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  changeReason?: string;
 }

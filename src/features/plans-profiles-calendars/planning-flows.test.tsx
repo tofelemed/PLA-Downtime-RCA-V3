@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -111,6 +111,7 @@ describe('plans, profiles, calendars — forms and commands (plan 3.4)', () => {
     expect(calls[0].body).toEqual({ version: 1, preview: true });
     expect(calls[0].url.pathname).toMatch(/\/v2\/production-plans\/plan-1\/generate-periods$/);
     fireEvent.click(screen.getByTestId('approve-plan-submit'));
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Approve version' }));
     await waitFor(() => expect(screen.getAllByTestId('refusal').some((node) => node.getAttribute('data-kind') === 'role')).toBe(true));
     expect(calls[1].body).toEqual({ expectedVersion: 1 });
   });

@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Entity('organizations')
 export class Organization {
@@ -14,16 +20,31 @@ export class Organization {
   @Column({ name: 'description', type: 'text', nullable: true })
   description?: string;
 
-  @Column({ name: 'is_active', type: 'boolean', default: true, nullable: false })
+  @Column({
+    name: 'is_active',
+    type: 'boolean',
+    default: true,
+    nullable: false,
+  })
   isActive: boolean;
 
   @Column({ name: 'address', type: 'varchar', length: 500, nullable: true })
   address?: string;
 
-  @Column({ name: 'contact_email', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'contact_email',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   contactEmail?: string;
 
-  @Column({ name: 'contact_phone', type: 'varchar', length: 50, nullable: true })
+  @Column({
+    name: 'contact_phone',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
   contactPhone?: string;
 
   @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
@@ -34,4 +55,4 @@ export class Organization {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

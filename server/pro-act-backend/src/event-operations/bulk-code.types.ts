@@ -19,6 +19,10 @@ export interface BulkCodes {
   reasonCodeId?: string;
   scheduleClass?: ScheduleClass;
   oeeComponent?: OeeComponent;
+  /** UX A-1: equipment of the events' unit (a source override on source events, like a single PATCH) */
+  assetId?: string;
+  /** UX E-3 / SME D12: explicitly under investigation (no specific reason yet) */
+  investigationPending?: boolean;
 }
 
 export interface BulkCodeCommand {
@@ -30,6 +34,8 @@ export interface BulkCodeCommand {
 /** Coding of one event before or after the bulk command. */
 export interface CodingSnapshot {
   reasonCodeId: string | null;
+  assetId: string | null;
+  investigationPending: boolean;
   impactCodeId: string | null;
   scheduleClass: ScheduleClass;
   oeeComponent: OeeComponent;

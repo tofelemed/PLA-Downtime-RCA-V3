@@ -5,6 +5,7 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { labelOf } from '@/features/ux-kit/labels';
 import { RCA_BASELINE_METRIC_LABELS, RCA_VERDICT_LABELS } from '@/features/ux-kit/labels/rca-labels';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ApprovedImpact } from './components/approved-impact';
 
 /**
@@ -13,6 +14,7 @@ import { ApprovedImpact } from './components/approved-impact';
  */
 export function OutcomePanel({ rcaId }: { rcaId: string }) {
   const outcome = useRcaOutcome(rcaId);
+  const { decimal } = useNumberFormat();
   const data = outcome.data;
   return (
     <DataState state={dataStateOf(outcome)} error={outcome.error}>
@@ -44,7 +46,7 @@ export function OutcomePanel({ rcaId }: { rcaId: string }) {
               <ul className="text-sm">
                 {data.realized.map((row) => (
                   <li key={row.actionId}>
-                    {row.title}: {row.difference} {labelOf(RCA_BASELINE_METRIC_LABELS, row.metric).toLowerCase()} (expected {row.expected}, observed {row.observed})
+                    {row.title}: {decimal(row.difference, 2)} {labelOf(RCA_BASELINE_METRIC_LABELS, row.metric).toLowerCase()} (expected {decimal(row.expected, 2)}, observed {decimal(row.observed, 2)})
                     {row.verdict ? ` · ${labelOf(RCA_VERDICT_LABELS, row.verdict)}` : ''}
                   </li>
                 ))}

@@ -42,6 +42,33 @@ export async function prepareInvestigation(token: string, caseId: string, rootCa
   expect(patched.status, JSON.stringify(patched.body)).toBe(200);
 }
 
+interface CauseCodeRow {
+  id: string;
+  isActive: boolean;
+}
+
+/** An active RCA cause code of the plant; created by `codeAdmin` (a master-data writer) when there is none. */
+export async function ensureCauseCode(token: string, codeAdmin: string): Promise<string> {
+  const listed = await call<{ items: CauseCodeRow[] }>(token, 'GET', '/v2/rca-causes?status=active&limit=1');
+  const found = listed.body.items?.find((code) => code.isActive);
+  if (found) return found.id;
+  const created = await command<CauseCodeRow>(codeAdmin, '/v2/rca-causes', { code: 'E2E-ROOT', name: 'E2E root cause', category: 'Equipment' });
+  expect(created.status, JSON.stringify(created.body)).toBe(201);
+  return created.body.id;
+}
+
+/**
+ * Item 7: a case opened since typed causes exist needs a `root` cause with a cause code before closure is
+ * requested. Adds one (idempotent: a coded root cause already on the case is kept).
+ */
+export async function addCodedRootCause(writer: string, codeAdmin: string, caseId: string, statement: string): Promise<void> {
+  const causes = await call<Array<{ kind: string; causeCodeId: string | null }>>(writer, 'GET', `/v2/rcas/${caseId}/causes`);
+  if (causes.body.some((cause) => cause.kind === 'root' && cause.causeCodeId)) return;
+  const causeCodeId = await ensureCauseCode(writer, codeAdmin);
+  const added = await command(writer, `/v2/rcas/${caseId}/causes`, { kind: 'root', causeCodeId, statement });
+  expect(added.status, JSON.stringify(added.body)).toBe(201);
+}
+
 /** From Draft / In Progress / Analysis to Monitoring (investigation accepted). */
 export async function acceptInvestigation(token: string, caseId: string): Promise<void> {
   const path: Record<string, string> = { Draft: 'In Progress', 'In Progress': 'Analysis', Analysis: 'Monitoring', Published: 'Monitoring' };

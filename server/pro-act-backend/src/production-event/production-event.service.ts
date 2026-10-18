@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -7,7 +7,6 @@ import { RealtimeGateway } from '../realtime.gateway';
 import { CreateProductionEventDto } from './dto/create-production-event.dto';
 import { UpdateProductionEventDto } from './dto/update-production-event.dto';
 import { ProductionEventQueryDto } from './dto/production-event-query.dto';
-import { RcaAutoCreateService } from '../rca/rca-auto-create.service';
 import { PagedResult } from '../common/dto/paged-result';
 import { applyProductionEventFilters } from './production-event-query.builder';
 import { prepareCreate, prepareUpdate } from './event-write-model';
@@ -32,13 +31,10 @@ const DEFAULT_PAGE_SIZE = 50;
 
 @Injectable()
 export class ProductionEventService {
-  private readonly logger = new Logger(ProductionEventService.name);
-
   constructor(
     @InjectRepository(ProductionEvent)
     private readonly eventRepository: Repository<ProductionEvent>,
     private readonly realtimeGateway: RealtimeGateway,
-    private readonly rcaAutoCreateService: RcaAutoCreateService,
     private readonly revisions: EventRevisionService,
     private readonly shiftLabels: ShiftLabelsService,
   ) {}
@@ -109,27 +105,18 @@ export class ProductionEventService {
     return result;
   }
 
-  /** Side effects of every new event, v1 or v2: realtime push and the RCA trigger rules. */
-  async publishCreated(event: ProductionEvent): Promise<void> {
+  /**
+   * Side effect of every new event, v1 or v2: realtime push. RCA triggers follow the `rca_policy` through
+   * the outbox `EventChanged` consumer (RCA is v2 for every plant; the v1 trigger configs are retired).
+   */
+  publishCreated(event: ProductionEvent): Promise<void> {
     this.realtimeGateway.broadcastEntityEvent(
       'Created',
       'productionEvent',
       event,
     );
     this.realtimeGateway.broadcastProductionEventCreated(event);
-    try {
-      const autoRca = await this.rcaAutoCreateService.tryCreateForEvent(event);
-      if (autoRca.created) {
-        this.logger.log(
-          `RCA auto-created for event ${event.id}: ${autoRca.rcaId}`,
-        );
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.warn(
-        `RCA auto-create skipped for event ${event.id}: ${message}`,
-      );
-    }
+    return Promise.resolve();
   }
 
   /** Realtime push after an update from any API version. */

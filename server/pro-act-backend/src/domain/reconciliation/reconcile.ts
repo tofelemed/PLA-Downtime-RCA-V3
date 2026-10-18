@@ -101,7 +101,7 @@ function withPlan(
 ): SliceReconciliation {
   const plan = planTotals({
     target: base.target as Dec,
-    actual: base.actual as Dec,
+    actual: base.actual,
     attributed: base.attributed.plus(base.toleranceAdjustment),
     epsilon,
   });

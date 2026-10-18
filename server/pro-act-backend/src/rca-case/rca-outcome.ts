@@ -30,7 +30,7 @@ const OUTCOME_NOTE =
   'vs baseline) are separate figures with different bases; they are never added together.';
 
 /** Approved loss of the linked events plus linked loss lines that are not caused by a linked event. */
-async function approvedOf(
+export async function approvedOf(
   manager: EntityManager,
   tenantId: string,
   links: { eventIds: string[]; lineIds: string[] },

@@ -7,7 +7,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { ActionIcon } from '@/lib/icons';
-import { VersionStateBadge } from '@/features/plans-profiles-calendars/components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import type { PlanningRefs } from '@/features/plans-profiles-calendars/hooks/use-planning-refs';
 import { VersionActions } from '@/features/plans-profiles-calendars/profiles/version-actions';
 import { FlowRouteForm } from './flow-route-form';

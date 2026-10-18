@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FeatureFlagKey } from '@/api/v2/types/flags';
 import { capabilitiesOf } from './capabilities';
 import { effectiveRoles, type RoleSubject } from './effective-roles';
-import { groupNavigationItems, isNavItemActive, NAV_SECTIONS, NAVIGATION_ITEMS, visibleNavigationItems } from './navigation-items';
+import { activeNavItem, groupNavigationItems, isNavItemActive, NAV_SECTIONS, NAVIGATION_ITEMS, visibleNavigationItems } from './navigation-items';
 
 /**
  * The menu of each legacy demo user in its home plant (one legacy-role list per item): the menu
@@ -21,7 +21,8 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   'Event Hub': ALL,
   'Plans, Profiles & Calendars': NOT_OPERATOR,
   // EXPERT_REVIEW Area 3: my reconciliation queue (period writers, R-C) and month close (analysis roles, R-B)
-  'My Queue': NOT_OPERATOR,
+  // Marun E2E: operators own RCA actions and tasks, so they reach My work and RCA Analysis
+  'My work': ALL,
   'Month Close': NOT_OPERATOR,
   // SME E4 uncertainty budgets: read by every analysis role
   'Measurement Uncertainty': NOT_OPERATOR,
@@ -37,17 +38,18 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   OEE: ALL,
   'Reconciliation & Data Quality': ALL,
   'Loss Valuation': ALL,
+  // UX audit B-5: the period grid, gated like Plans, Profiles & Calendars
+  'Period accounting': NOT_OPERATOR,
   // Reliability
-  'RCA Analysis': NOT_OPERATOR,
+  'RCA Analysis': ALL,
   'Bad Actors': NOT_OPERATOR,
   'Knowledge Base': NOT_OPERATOR,
   Tasks: ALL,
-  // Integration
-  Connectivity: ADMINS,
-  // SME R13 source status rules: read by every analysis role, written by integration admins / production accounting
-  'Source Status Rules': NOT_OPERATOR,
-  'Source Priority': NOT_OPERATOR,
-  'Enhanced Historian': NOT_OPERATOR,
+  // Integration: owner 18 Oct 2026, SuperAdmin only (approvers reach their two review pages from the inbox)
+  Connectivity: ['SuperAdmin'],
+  'Source Status Rules': ['SuperAdmin'],
+  'Source Priority': ['SuperAdmin'],
+  'Enhanced Historian': ['SuperAdmin'],
   // Administration: Master Data also for the writers of its reliability pages (Manager = manager_approver:
   // stop and plan policy; Operator = operator: standby log); they see only those pages' links
   'Equipment Setup Guide': ALL,
@@ -57,8 +59,6 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   // SME R1 / R6: administrators for anyone, approval-role holders (Manager = manager_approver) for themselves
   'Admin Panel': [...ADMINS, 'Manager'],
   'Audit Logs': ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager'],
-  // plant settings follow the server's tenant-setting write rule (TenantAdmin / manager_approver)
-  'Data Seeding': ADMINS,
 };
 
 const FLAGS_ON: Partial<Record<FeatureFlagKey, boolean>> = {
@@ -102,9 +102,22 @@ describe('navigation items by capability', () => {
     expect(menuFor(charlotte)).toEqual(menuFor(legacyUser('Analyst')));
   });
 
-  it('an integration_admin (legacy Engineer) gains Connectivity, and Master Data for the unit state page', () => {
+  it('an integration_admin (legacy Engineer) gains no Integration item: the section is SuperAdmin-only (owner 18 Oct 2026)', () => {
     const elena: RoleSubject = { ...legacyUser('Engineer'), scopes: [{ tenantId: HOME, role: 'production_engineer' }, { tenantId: HOME, role: 'integration_admin' }] };
-    expect(menuFor(elena)).toEqual([...menuFor(legacyUser('Engineer')), 'Connectivity'].sort(byMenuOrder));
+    expect(menuFor(elena)).toEqual(menuFor(legacyUser('Engineer')));
+  });
+
+  it('only SuperAdmin sees the Integration section; production accounting reaches Source Priority / Status Rules by route only', () => {
+    const integration = (roles: string[]) =>
+      groupNavigationItems(visibleNavigationItems(capabilitiesOf(roles), FLAGS_ON)).some((group) => group.section.key === 'integration');
+    expect(integration(['SuperAdmin'])).toBe(true);
+    for (const roles of [['OrgAdmin'], ['TenantAdmin'], ['integration_admin'], ['production_accountant'], ['manager_approver'], ['viewer']]) {
+      expect([roles.join(), integration(roles)]).toEqual([roles.join(), false]);
+    }
+    const accountant = capabilitiesOf(['production_accountant']);
+    expect([accountant.canReachIntegration, accountant.canReviewSourcePriority, accountant.canReviewSourceStatusRules]).toEqual([false, true, true]);
+    const admin = capabilitiesOf(['integration_admin']);
+    expect([admin.canReachIntegration, admin.canReviewSourcePriority, admin.canReviewSourceStatusRules]).toEqual([false, false, false]);
   });
 
   it('Master Data is listed for master-data admins and for every writer of one of its reliability pages', () => {
@@ -119,7 +132,7 @@ describe('navigation items by capability', () => {
 
   it.each([
     ['Equipment Setup Guide', 'canReachMasterData'],
-    ['Enhanced Historian', 'canViewAnalysis'],
+    ['Enhanced Historian', 'canReachIntegration'],
     ['Admin Panel', 'canUseAdminPanel'],
     ['Audit Logs', 'canViewAuditLogs'],
   ] as const)('%s is listed exactly when its page gate (%s) admits the user', (name, gate) => {
@@ -137,10 +150,10 @@ describe('navigation items by capability', () => {
     }
   });
 
-  it('a reliability engineer sees the historian (a read screen) but not the audit trail (server: FORBIDDEN_ROLE)', () => {
+  it('a reliability engineer sees neither the historian (Integration is SuperAdmin-only) nor the audit trail (server: FORBIDDEN_ROLE)', () => {
     const amara: RoleSubject = { ...legacyUser('Engineer'), scopes: [{ tenantId: HOME, role: 'reliability_engineer' }] };
     expect(menuFor(amara)).not.toContain('Audit Logs');
-    expect(menuFor(amara)).toContain('Enhanced Historian');
+    expect(menuFor(amara)).not.toContain('Enhanced Historian');
     // standby log and CMMS work orders
     expect(menuFor(amara)).toContain('Master Data');
   });
@@ -178,9 +191,10 @@ describe('navigation sections', () => {
 
   it.each([
     ['SuperAdmin', ['overview', 'production', 'downtime', 'pla', 'reliability', 'integration', 'administration']],
-    ['TenantAdmin', ['overview', 'production', 'downtime', 'pla', 'reliability', 'integration', 'administration']],
-    ['Manager', ['overview', 'production', 'downtime', 'pla', 'reliability', 'integration', 'administration']],
-    ['Engineer', ['overview', 'production', 'downtime', 'pla', 'reliability', 'integration', 'administration']],
+    // owner 18 Oct 2026: the Integration section is SuperAdmin-only
+    ['TenantAdmin', ['overview', 'production', 'downtime', 'pla', 'reliability', 'administration']],
+    ['Manager', ['overview', 'production', 'downtime', 'pla', 'reliability', 'administration']],
+    ['Engineer', ['overview', 'production', 'downtime', 'pla', 'reliability', 'administration']],
     // operators keep the standby log: Master Data (its standby page) brings the administration section
     ['Operator', ['overview', 'production', 'downtime', 'pla', 'reliability', 'administration']],
   ])('a %s sees only the sections that hold one of its items', (role, sections) => {
@@ -204,9 +218,23 @@ describe('navigation sections', () => {
     expect(isNavItemActive(byHref('/planning'), '/plans/p1/periods/x')).toBe(true);
     expect(isNavItemActive(byHref('/planning'), '/planning/plans/p1')).toBe(true);
   });
-});
 
-const order = new Map(NAVIGATION_ITEMS.map((item, index) => [item.name, index]));
-function byMenuOrder(a: string, b: string): number {
-  return (order.get(a) ?? 0) - (order.get(b) ?? 0);
-}
+  it.each([
+    ['/connectivity/source-status', '/connectivity/source-status'],
+    ['/connectivity/source-authority', '/connectivity/source-authority'],
+    ['/connectivity/source-authority/v2', '/connectivity/source-authority'],
+    ['/connectivity', '/connectivity'],
+    ['/connectivity/jobs', '/connectivity'],
+    ['/plans/p1/periods/x', '/planning'],
+  ])('one highlighted item for %s: the longest match (%s)', (pathname, href) => {
+    expect(activeNavItem(NAVIGATION_ITEMS, pathname)?.href).toBe(href);
+  });
+
+  it('no highlighted item for a path outside the menu', () => {
+    expect(activeNavItem(NAVIGATION_ITEMS, '/nowhere')).toBeUndefined();
+  });
+
+  it('lists no development-only item without a route', () => {
+    expect(NAVIGATION_ITEMS.some((item) => item.href === '/data-seeding')).toBe(false);
+  });
+});

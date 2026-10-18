@@ -16,14 +16,10 @@ function CauseMoveDialog({ cause, onClose }: { cause: RcaCauseView; onClose: () 
   const { toast } = useToast();
   const all = useRecordLookup<RcaCauseView>(RCA_CAUSES, { status: 'active', sort: 'code' });
   const change = useChangeRecord<{ parentId: string | null }, RcaCauseView>(RCA_CAUSES);
+  // a refusal is shown inside the dialog (MoveNodeDialog), which stays open
   const move = async (parentId: string | null) => {
-    try {
-      await change.submit({ record: cause, body: { parentId } });
-      toast({ title: 'Cause moved' });
-    } catch (error) {
-      toast({ ...friendlyToastContent(error), variant: 'destructive' });
-      throw error;
-    }
+    await change.submit({ record: cause, body: { parentId } });
+    toast({ title: 'Cause moved' });
   };
   return (
     <MoveNodeDialog

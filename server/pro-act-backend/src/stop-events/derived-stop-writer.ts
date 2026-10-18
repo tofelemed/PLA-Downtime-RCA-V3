@@ -5,7 +5,6 @@ import {
   DerivedWritePlan,
   EngineOwnedEvent,
 } from '../domain/reliability/derived-stop-writes';
-import { prepareCreate } from '../production-event/event-write-model';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { EventChangeMessage } from '../production-event/revisions/event-change.notifier';
 import { EventRevisionService } from '../production-event/revisions/event-revision.service';
@@ -14,6 +13,8 @@ import {
   applySourceIn,
   retractIn,
 } from '../production-event/revisions/source-revision';
+import { ActiveCodingRule } from '../rules/rule-defaults';
+import { engineCreateFields } from './derived-rule-defaults';
 
 /** `production_events.source` of state-derived stops. */
 export const STATE_ENGINE_SOURCE = 'State engine';
@@ -24,6 +25,12 @@ export const derivedEventIdPrefix = (unitId: string) => `state:${unitId}:`;
 export interface UnitScope {
   tenantId: string;
   unitId: string;
+}
+
+/** Where new engine events go: the unit, and the tenant's active `coding_default` rules (plan 3.8). */
+export interface EngineTarget {
+  scope: UnitScope;
+  rules: readonly ActiveCodingRule[];
 }
 
 const ENGINE_OWNED_SQL = `SELECT e."id", e."event_id", e."physical_state", e."end_time", e."occurrence_id", e."description",
@@ -85,19 +92,19 @@ export const sourceFacts = (write: DerivedWrite<DerivedItem>) => ({
 
 /**
  * Applies a derived-write plan in the caller's transaction: new events with revision 1 (`source`, system
- * actor) and the baseline coding, changed ends / bounds as source revisions (a user override of the end
+ * actor), the baseline coding and the rule-filled open axes, changed ends / bounds as source revisions (a user override of the end
  * keeps the user's value and opens a review item), occurrence moves as system writes, and gone keys
  * retracted (tombstones). Returns the change messages for the outbox.
  */
 export async function applyDerivedWrites(
   manager: EntityManager,
   revisions: EventRevisionService,
-  scope: UnitScope,
-  plan: DerivedWritePlan,
+  input: EngineTarget & { plan: DerivedWritePlan },
 ): Promise<EventChangeMessage[]> {
+  const { plan } = input;
   const messages: Array<EventChangeMessage | null> = [];
   for (const write of plan.create) {
-    messages.push(await createDerived(manager, revisions, scope, write));
+    messages.push(await createDerived(manager, revisions, input, write));
   }
   for (const write of plan.update) {
     const outcome = await applySourceIn(manager, write.id, sourceFacts(write), {
@@ -136,23 +143,30 @@ export async function moveOccurrence(
 async function createDerived(
   manager: EntityManager,
   revisions: EventRevisionService,
-  scope: UnitScope,
+  target: EngineTarget,
   write: DerivedWrite & { id: string },
 ): Promise<EventChangeMessage | null> {
-  const fields = prepareCreate({
-    ...sourceFacts(write),
-    source: STATE_ENGINE_SOURCE,
-    classification: {
-      physicalType: 'downtime',
-      scheduleClass: write.stop.scheduleClass,
-      oeeComponent: 'availability',
-      impactMode: 'full_stop',
+  const { scope } = target;
+  // the schedule class comes from the state mapping (an engine fact); the rest is open to the rules
+  const { fields, columns } = engineCreateFields(target.rules, {
+    unitId: scope.unitId,
+    stated: ['scheduleClass'],
+    input: {
+      ...sourceFacts(write),
+      source: STATE_ENGINE_SOURCE,
+      classification: {
+        physicalType: 'downtime',
+        scheduleClass: write.stop.scheduleClass,
+        oeeComponent: 'availability',
+        impactMode: 'full_stop',
+      },
     },
   });
   const repository = manager.getRepository(ProductionEvent);
   const saved = await repository.save(
     repository.create({
       ...fields,
+      ...columns,
       id: write.id,
       canonicalId: write.id,
       occurrenceId: write.occurrenceId,

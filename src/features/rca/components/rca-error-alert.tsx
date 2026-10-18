@@ -14,10 +14,13 @@ const RCA_TITLES: Readonly<Record<string, string>> = {
   FORBIDDEN_ROLE: 'Only a manager approver can decide this',
   EVIDENCE_REQUIRED: 'Add the evidence that the action was done',
   INVALID_TRANSITION: 'This move is not possible from the current status',
-  INVALID_STATUS: 'A case opens as Draft or In Progress',
+  INVALID_STATUS: 'An investigation opens as Draft or In Progress',
   BASELINE_NOT_COMPUTED: 'Plan the verification first',
   NO_PENDING_CORRECTION: 'No correction is waiting for a decision',
   INVALID_POLICY: 'These settings do not fit together',
+  ACTION_TASK_EXISTS: 'This action already has an open task',
+  CAUSES_LOCKED: 'Causes are locked once closure is requested',
+  CAUSE_CODE_RETIRED: 'This cause code is retired',
 };
 
 const titleOf = (error: V2ApiError) => RCA_TITLES[error.code] ?? refusalTitle(error.code, error.status);
@@ -28,7 +31,11 @@ const titleOf = (error: V2ApiError) => RCA_TITLES[error.code] ?? refusalTitle(er
  */
 function serverReasons(error: unknown): string[] | null {
   if (!(error instanceof V2ApiError) || error.status >= 500 || [401, 412, 429].includes(error.status)) return null;
-  const fieldTexts = error.fieldErrors.map((entry) => entry.message).filter((text) => isHumanMessage(text, error.code));
+  const fields = describeError(error).fieldMessages;
+  const fieldTexts = error.fieldErrors.flatMap((entry, index) => {
+    if (fields[index]?.unexpected) return [`${fields[index].label}: ${fields[index].message}`];
+    return isHumanMessage(entry.message, error.code) ? [entry.message] : [];
+  });
   if (fieldTexts.length > 0) return fieldTexts.map(sentence);
   return isHumanMessage(error.message, error.code) ? [sentence(error.message)] : null;
 }

@@ -85,6 +85,8 @@ export interface LossValueQuery {
   to: string;
   ledger: LedgerKind;
   approvedOnly: boolean;
+  /** a named value view (`margin`, `economic_impact` …); absent = the current policy default view */
+  metric?: string;
 }
 
 /**
@@ -120,7 +122,7 @@ export function useLossValue(query: LossValueQuery | null) {
     queryKey: v2Keys.list(tenantId ?? '-', 'reports', {
       scope: { unitIds: query?.unitIds },
       window: { from: query?.from, to: query?.to },
-      filters: { kind: 'loss-value', groupBy: 'kind', ledger: query?.ledger },
+      filters: { kind: 'loss-value', groupBy: 'kind', ledger: query?.ledger, metric: query?.metric },
       revisionSelector: query?.approvedOnly ? 'approved' : 'shown',
     }),
     enabled: Boolean(tenantId && query),

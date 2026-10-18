@@ -1,5 +1,9 @@
 import { queryInboxRows, toApprovalItem } from './approval-inbox-query';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import {
@@ -56,6 +60,30 @@ export class ApprovalInboxService {
       binding,
       tenantId,
     });
+  }
+
+  /**
+   * One pending record of the inbox (the approval detail page): the same row, role / scope filter and
+   * separation-of-duties actions as the list. 404 when it is not pending, not in the caller's approval scope
+   * or not in the plant — a decided record is gone, as in the list.
+   */
+  async get(
+    context: RequestContext,
+    kind: string,
+    id: string,
+  ): Promise<ApprovalItemView> {
+    requireTenantId(context);
+    const definition = APPROVAL_DEFINITIONS.find((item) => item.kind === kind);
+    if (!definition) throw new BadRequestException('Unknown approval kind');
+    const [row] = await queryInboxRows(this.manager, context, definition, {
+      query: { limit: 1 },
+      cursor: null,
+      recordId: id,
+    });
+    if (!row) {
+      throw new NotFoundException('This record is not pending your approval');
+    }
+    return toApprovalItem(context, definition, row);
   }
 }
 function approvalPage(

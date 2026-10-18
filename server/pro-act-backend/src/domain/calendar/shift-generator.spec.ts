@@ -334,20 +334,18 @@ describe('explicit reduced-hours holidays', () => {
   ])(
     '%s %s keeps only explicit %s–%s working time (%s h)',
     (zone, date, startLocal, endLocal, hours) => {
-      const definition = threeShifts(zone as string);
+      const definition = threeShifts(zone);
       definition.holidays = [
         {
-          date: date as string,
+          date: date,
           name: 'Reduced production',
           treatment: 'reduced',
-          workingIntervals: [
-            { startLocal: startLocal as string, endLocal: endLocal as string },
-          ],
+          workingIntervals: [{ startLocal: startLocal, endLocal: endLocal }],
         },
       ];
       const { instances, warnings } = generateShifts(definition, {
-        from: date as string,
-        to: date as string,
+        from: date,
+        to: date,
       });
       expect(
         instances

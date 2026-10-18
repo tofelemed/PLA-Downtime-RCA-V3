@@ -37,31 +37,62 @@ export async function findEvent(
   return event;
 }
 
+interface LossLineRow {
+  unit_id: string;
+  period_id: string;
+  run_id: string | null;
+  kind: string;
+  quantity: string;
+  uom: string | null;
+  cause_event_id: string | null;
+  segment_start: Date;
+  segment_end: Date;
+  source: 'run' | 'manual';
+}
+
+/** A run line (`loss_lines.id`). */
+const RUN_LINE_SQL = `SELECT p."unit_id", l."period_id", l."run_id", l."kind"::text AS "kind", l."quantity"::text AS "quantity", l."uom",
+        l."cause_event_id", l."segment_start", l."segment_end", 'run' AS "source"
+   FROM "loss_lines" l JOIN "production_periods" p ON p."id" = l."period_id" AND p."tenant_id" = l."tenant_id"
+  WHERE l."id" = $1 AND l."tenant_id" = $2`;
+
+/**
+ * A manual line of an approved revision (Marun E2E): the id is the manual line's (`approved_loss_lines.source_id`
+ * with source `line`), its latest approval; it has no run segment, so the period bounds stand in.
+ */
+const MANUAL_LINE_SQL = `SELECT p."unit_id", a."period_id", ar."current_run_id" AS "run_id", a."kind"::text AS "kind",
+        a."quantity"::text AS "quantity", a."uom", a."cause_event_id", p."utc_start" AS "segment_start",
+        p."utc_end" AS "segment_end", 'manual' AS "source"
+   FROM "approved_loss_lines" a
+   JOIN "accounting_revisions" ar ON ar."id" = a."revision_id" AND ar."tenant_id" = a."tenant_id"
+   JOIN "production_periods" p ON p."id" = a."period_id" AND p."tenant_id" = a."tenant_id"
+  WHERE a."source_id" = $1 AND a."tenant_id" = $2 AND a."source" = 'line' AND ar."lifecycle" = 'approved'
+  ORDER BY ar."revision" DESC LIMIT 1`;
+
+async function findLossLine(
+  manager: EntityManager,
+  scope: RcaScope,
+  id: string,
+): Promise<LossLineRow | null> {
+  if (!isUuid(id)) return null;
+  const run: LossLineRow[] = await manager.query(RUN_LINE_SQL, [
+    id,
+    scope.tenantId,
+  ]);
+  if (run[0]) return run[0];
+  const manual: LossLineRow[] = await manager.query(MANUAL_LINE_SQL, [
+    id,
+    scope.tenantId,
+  ]);
+  return manual[0] ?? null;
+}
+
 async function lossLineTarget(
   manager: EntityManager,
   scope: RcaScope,
   id: string,
 ): Promise<ResolvedTarget> {
-  const rows: Array<{
-    unit_id: string;
-    period_id: string;
-    run_id: string;
-    kind: string;
-    quantity: string;
-    uom: string | null;
-    cause_event_id: string | null;
-    segment_start: Date;
-    segment_end: Date;
-  }> = isUuid(id)
-    ? await manager.query(
-        `SELECT p."unit_id", l."period_id", l."run_id", l."kind"::text AS "kind", l."quantity"::text AS "quantity", l."uom",
-                l."cause_event_id", l."segment_start", l."segment_end"
-           FROM "loss_lines" l JOIN "production_periods" p ON p."id" = l."period_id" AND p."tenant_id" = l."tenant_id"
-          WHERE l."id" = $1 AND l."tenant_id" = $2`,
-        [id, scope.tenantId],
-      )
-    : [];
-  const line = rows[0];
+  const line = await findLossLine(manager, scope, id);
   if (!line || !inScope(scope, line.unit_id))
     throw invalidReference('targetId');
   return {
@@ -72,6 +103,7 @@ async function lossLineTarget(
       builtAt: new Date().toISOString(),
       line: {
         id,
+        source: line.source,
         periodId: line.period_id,
         runId: line.run_id,
         kind: line.kind,

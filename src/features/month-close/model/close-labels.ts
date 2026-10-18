@@ -1,4 +1,5 @@
 import type { MonthCloseState } from '@/api/v2/types/month-close';
+import { GRID_WORKFLOW_LABELS } from '@/features/ux-kit/labels/workflow-labels';
 
 /** Plain-language names of the month close states (SME R4). */
 export const CLOSE_STATE_LABELS: Record<MonthCloseState, string> = {
@@ -18,13 +19,8 @@ export const CLOSE_ACTION_LABELS: Record<string, string> = {
 };
 
 /** Workflow of a period that keeps the month from closing. */
-export const PENDING_WORKFLOW_LABELS: Record<string, string> = {
-  none: 'Not reconciled',
-  draft: 'Draft',
-  in_review: 'Waiting for approval',
-  stale: 'Inputs changed after submission',
-  approved: 'Approved',
-};
+/** The shared period workflow wording (owner finding 2): a period in review reads "In review" here too. */
+export const PENDING_WORKFLOW_LABELS: Readonly<Record<string, string>> = GRID_WORKFLOW_LABELS;
 
 /** Why a change proposal opened. */
 export const PROPOSAL_TRIGGER_LABELS: Record<string, string> = {
@@ -36,6 +32,7 @@ export const PROPOSAL_TRIGGER_LABELS: Record<string, string> = {
   source_retraction: 'Source record withdrawn',
   recalculation: 'Recalculated',
   manual_correction: 'Correction proposed',
+  valuation_change: 'Valuation input changed',
 };
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];

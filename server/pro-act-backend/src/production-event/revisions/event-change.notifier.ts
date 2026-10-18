@@ -21,6 +21,11 @@ export interface EventChangeMessage {
   affectedFrom: string;
   affectedTo: string | null;
   kind: RevisionKind;
+  /**
+   * The revision changed a workflow label only (SME D13 verification / failure validation): no timing,
+   * quantity or coding moved, so period recalculation and stop reconciliation skip it; browsers still refresh.
+   */
+  workflowOnly?: boolean;
 }
 
 export type EventChangeType = 'EventChanged' | 'EventRetracted';
@@ -97,6 +102,13 @@ export class EventChangeNotifier {
 /** A retraction revision is `EventRetracted`; every other revision is `EventChanged`. */
 export function changeTypeOf(message: EventChangeMessage): EventChangeType {
   return message.kind === 'retraction' ? 'EventRetracted' : 'EventChanged';
+}
+
+/** True for the outbox payload of a workflow-label-only revision (see `EventChangeMessage.workflowOnly`). */
+export function isWorkflowOnly(
+  payload: Readonly<Record<string, unknown>>,
+): boolean {
+  return payload.workflowOnly === true;
 }
 
 /** Message for a revision that moved an event from `before` to `after`. */

@@ -43,4 +43,4 @@ export class ProductService {
     await this.productRepository.delete(id);
     this.realtimeGateway.broadcastEntityEvent('Deleted', 'product', { id });
   }
-} 
+}

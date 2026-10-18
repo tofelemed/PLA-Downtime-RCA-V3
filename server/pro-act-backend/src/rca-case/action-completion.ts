@@ -32,7 +32,7 @@ export function hasCompletionEvidence(action: {
 
 /**
  * CA4 completion of an action (status becoming `done`): its type, objective evidence and a verifier who
- * is not its owner; the completion date is the one given (never in the future) or now. Leaving `done`
+ * is not its owner (the named verifier when the action names one); the completion date is the one given (never in the future) or now. Leaving `done`
  * clears the completion. Other edits leave the completion as it is.
  */
 export function applyCompletion(
@@ -69,6 +69,17 @@ export function applyCompletion(
       code: 'SEPARATION_OF_DUTIES',
       message:
         'an action is marked done by someone who checks its evidence, not by its owner',
+    });
+  }
+  if (
+    !input.isSuperAdmin &&
+    next.verifierId &&
+    input.actorId !== next.verifierId
+  ) {
+    throw new ForbiddenException({
+      code: 'NOT_THE_VERIFIER',
+      message:
+        'this action names its verifier; only that person checks the evidence and marks it done',
     });
   }
   if (input.completedAt && input.completedAt.getTime() > input.now.getTime()) {

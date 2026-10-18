@@ -32,8 +32,13 @@ export function WorkflowFacts({ rca, readiness }: { rca: RcaCaseView; readiness:
       <Fact label="Effectiveness" testId="workflow-verdict">
         {verdictText(rca, readiness)}
       </Fact>
+      {readiness.closure.rootCauseRule?.coded && (
+        <Fact label="Root cause rule" testId="workflow-coded-root-causes">
+          {`Coded root causes: ${readiness.closure.rootCauseRule.codedRootCauses}`}
+        </Fact>
+      )}
       <Fact label="Same-problem events" testId="workflow-recurrences">
-        {readiness.linkedRecurrences === 0 ? 'None linked by the triggers' : `${readiness.linkedRecurrences} linked to this case by the triggers since it opened`}
+        {readiness.linkedRecurrences === 0 ? 'None linked by the triggers' : `${readiness.linkedRecurrences} linked to this investigation by the triggers since it opened`}
       </Fact>
       {requested && <Fact label="Closure requested by">{requested}</Fact>}
       {approved && <Fact label="Closure approved by">{approved}</Fact>}

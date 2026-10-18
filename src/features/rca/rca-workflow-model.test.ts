@@ -23,7 +23,7 @@ const READINESS: RcaCaseReadinessView = {
   },
   approver: { canApprove: false, reason: 'closure is approved by a manager approver' },
   linkedRecurrences: 2,
-  rules: { fiveWhyGuidelineLevels: 5, consequenceClass: 'minor' },
+  rules: { fiveWhyGuidelineLevels: 5, fiveWhyUnsupportedRootCauses: ['operator error'], consequenceClass: 'minor' },
 };
 
 describe('case workflow model (RCA-01 / SME CA1)', () => {
@@ -61,7 +61,7 @@ describe('trigger reasons (SME D17 / CA8)', () => {
       '4,201 USD (limit 3,000 USD)',
     ]);
     const linked = { outcome: 'linked_to_case', trigger: 'repeat', detail: {}, source: { kind: 'policy', id: 'p', version: 2 }, provisional: false };
-    expect(recommendationDetail(linked as never)).toContain('open case');
+    expect(recommendationDetail(linked as never)).toContain('open investigation');
   });
 });
 

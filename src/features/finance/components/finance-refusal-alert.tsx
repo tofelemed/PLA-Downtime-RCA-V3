@@ -1,17 +1,19 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
-import { describeError, SupportReference } from '@/features/ux-kit/errors';
+import { describeError, FieldMessageList, SupportReference, type FieldVocabulary } from '@/features/ux-kit/errors';
 import { StatusIcon } from '@/lib/icons';
 import { financeRefusalKind, overlapConflicts } from '../model/finance-refusal';
 
 /**
  * A refused finance command in plain language: what happened and what to do, the approved versions an
- * approval overlaps, and "Copy support reference". Field errors are shown on their inputs by the forms.
+ * approval overlaps, the refused fields by name (also shown on their inputs by the forms; a field the form
+ * does not render, such as an unexpected property, is only here) and "Copy support reference". `fields` is
+ * the form's vocabulary, so a refused field reads with the form's own label and choice names.
  */
-export function FinanceRefusalAlert({ error }: { error: unknown }) {
+export function FinanceRefusalAlert({ error, fields }: { error: unknown; fields?: FieldVocabulary }) {
   const dates = usePlantDates();
   if (!error) return null;
-  const friendly = describeError(error);
+  const friendly = describeError(error, undefined, fields);
   const kind = financeRefusalKind(error);
   const conflicts = overlapConflicts(error);
   const Icon = kind === 'role' || kind === 'scope' || kind === 'duties' ? StatusIcon.locked : StatusIcon.warning;
@@ -30,6 +32,7 @@ export function FinanceRefusalAlert({ error }: { error: unknown }) {
             ))}
           </ul>
         )}
+        <FieldMessageList fieldMessages={friendly.fieldMessages} />
         <SupportReference reference={friendly.reference} />
       </AlertDescription>
     </Alert>

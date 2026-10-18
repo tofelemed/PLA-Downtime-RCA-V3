@@ -113,7 +113,7 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     expect(listCalls.every((url) => !new URL(url).searchParams.has('tenantId'))).toBe(true);
 
     await expect(stop(page, stopId)).toBeVisible();
-    await expect(stop(page, stopId).getByTestId('current-stop-elapsed')).toHaveText(/\d+:\d{2}/);
+    await expect(stop(page, stopId).getByTestId('current-stop-elapsed')).toHaveText(/^Ongoing \d+ (s|min|h|d)/);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath('event-hub-v2.png'), fullPage: true });
     await stop(page, stopId).getByRole('link', { name: 'Open' }).click();
@@ -148,7 +148,7 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     await close.locator('#close-reason').fill('motor reset');
     await close.getByRole('button', { name: 'Close stop' }).click();
     await expect(stop(page, running!.id)).toHaveCount(0);
-    await expect(row(page, running!.id).getByTestId('event-duration')).not.toContainText('Running');
+    await expect(row(page, running!.id).getByTestId('event-duration')).not.toContainText('Ongoing');
 
     // realtime: an event written elsewhere appears without a manual refresh
     const other = await command<EventBody>(world.operator, '/v2/production-events', {
@@ -199,8 +199,10 @@ test.describe('Event Hub v2 — UX04 operator journey (plan 3.2)', () => {
     const form = page.getByTestId('event-form');
     await expect(form.locator('#unitId')).toHaveValue(world.unitId);
     await fillPlantTime(form, 'Start', '2026-10-01T08:00');
-    await fillPlantTime(form, 'End (empty = still running)', '2026-10-01T09:00');
-    await form.locator('#durationMinutes').fill('30');
+    await fillPlantTime(form, 'End (empty = still ongoing)', '2026-10-01T09:00');
+    // E-4: the duration is an explicit alternative to the end; an unreadable duration is flagged
+    await form.getByTestId('interval-mode-duration').click();
+    await form.locator('#durationMinutes').fill('soon');
     await form.getByRole('button', { name: 'Save' }).click();
     await expect(form.getByTestId('error-durationMinutes')).toBeVisible();
     // the form is a page: "Keep draft and close" returns to the list

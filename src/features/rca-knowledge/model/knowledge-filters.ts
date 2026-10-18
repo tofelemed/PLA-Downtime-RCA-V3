@@ -56,7 +56,7 @@ export const QUALITY_FACTOR_LABELS: Readonly<Record<string, string>> = {
   actions: 'Actions tracked',
   effective: 'Verified effective',
   scope: 'Unit or asset named',
-  sourceCase: 'Linked case',
+  sourceCase: 'Linked investigation',
   feedback: 'Helpful votes',
 };
 

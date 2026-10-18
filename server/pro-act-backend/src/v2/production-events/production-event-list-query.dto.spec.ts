@@ -116,3 +116,45 @@ describe('ProductionEventListQueryDto (v2 list query)', () => {
     expect(await rejectedFields({ page: '2' })).toContain('page');
   });
 });
+
+describe('ProductionEventListQueryDto (UX E-1 / E-7 options)', () => {
+  it('accepts the duration sorts next to the start-time sorts', async () => {
+    for (const sort of [
+      'startTime',
+      '-startTime',
+      'durationSeconds',
+      '-durationSeconds',
+    ]) {
+      expect((await parse({ sort })).sort).toBe(sort);
+    }
+    expect(await rejectedFields({ sort: 'elapsedSeconds' })).toContain('sort');
+  });
+
+  it('coerces minDurationSeconds and bounds it to 0..1 year', async () => {
+    expect(
+      (await parse({ minDurationSeconds: '600' })).minDurationSeconds,
+    ).toBe(600);
+    expect(await rejectedFields({ minDurationSeconds: '-1' })).toContain(
+      'minDurationSeconds',
+    );
+    expect(await rejectedFields({ minDurationSeconds: '1.5' })).toContain(
+      'minDurationSeconds',
+    );
+    expect(await rejectedFields({ minDurationSeconds: '31536001' })).toContain(
+      'minDurationSeconds',
+    );
+  });
+
+  it('accepts verified / not_verified as a repeated parameter', async () => {
+    expect(
+      (await parse({ verificationStates: 'verified' })).verificationStates,
+    ).toEqual(['verified']);
+    expect(
+      (await parse({ verificationStates: ['verified', 'not_verified'] }))
+        .verificationStates,
+    ).toEqual(['verified', 'not_verified']);
+    expect(await rejectedFields({ verificationStates: 'validated' })).toContain(
+      'verificationStates',
+    );
+  });
+});

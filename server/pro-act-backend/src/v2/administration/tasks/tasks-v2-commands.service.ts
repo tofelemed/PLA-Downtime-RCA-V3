@@ -1,13 +1,18 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { Repository } from 'typeorm';
+import { EntityManager, QueryFailedError, Repository } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import {
   RequestContext,
   requireTenantId,
 } from '../../../common/context/request-context';
 import { RealtimeGateway } from '../../../realtime.gateway';
+import {
+  actionTaskExists,
+  assertActionTask,
+  recordTaskOutcome,
+} from '../../../rca-case/action-tasks';
 import { Task } from '../../../task/task.entity';
 import { PlaceNamesService } from '../common/place-names.service';
 import { UserDirectoryService } from '../users/user-directory.service';
@@ -31,11 +36,24 @@ function completionPatch(current: Task, status: string | undefined): TaskPatch {
 
 function linkPatch(body: UpdateTaskV2Dto): TaskPatch {
   if (body.linkType === null)
-    return { entityType: SQL_NULL, entityId: SQL_NULL };
+    return { entityType: SQL_NULL, entityId: SQL_NULL, rcaActionId: SQL_NULL };
   const patch: TaskPatch = {};
   if (body.linkType !== undefined) patch.entityType = body.linkType;
   if (body.linkId !== undefined) patch.entityId = body.linkId ?? SQL_NULL;
+  if (body.rcaActionId !== undefined)
+    patch.rcaActionId = body.rcaActionId ?? SQL_NULL;
+  else if (body.linkType !== undefined && body.linkType !== 'RCA')
+    patch.rcaActionId = SQL_NULL;
   return patch;
+}
+
+/** The unique index of one open task per action refused the write (a concurrent duplicate). */
+function isOpenTaskDuplicate(error: unknown): boolean {
+  return (
+    error instanceof QueryFailedError &&
+    (error.driverError as { constraint?: string } | undefined)?.constraint ===
+      'UQ_tasks_open_rca_action'
+  );
 }
 
 function fieldPatch(body: UpdateTaskV2Dto): TaskPatch {
@@ -72,9 +90,16 @@ export class TasksV2CommandsService {
   ): Promise<TaskV2View> {
     const tenantId = requireTenantId(context);
     await this.assertAssignee(tenantId, body.assigneeId);
+    if (body.rcaActionId) {
+      await assertActionTask(this.tasks.manager, {
+        tenantId,
+        rcaId: body.linkType === 'RCA' ? (body.linkId ?? null) : null,
+        actionId: body.rcaActionId,
+      });
+    }
     const status = body.status ?? 'Open';
     const organizationId = await this.places.organizationOf(tenantId);
-    const saved = await this.tasks.save(
+    const saved = await this.insert(
       this.tasks.create({
         id: randomUUID(),
         title: body.title.trim(),
@@ -87,10 +112,19 @@ export class TasksV2CommandsService {
         completedDate: status === 'Completed' ? new Date() : undefined,
         entityType: body.linkType,
         entityId: body.linkType ? body.linkId : undefined,
+        rcaActionId: body.rcaActionId ?? null,
         organizationId: organizationId ?? context.organizationId ?? '',
         tenantId,
       }),
     );
+    if (saved.rcaActionId && status === 'Completed') {
+      await recordTaskOutcome(this.tasks.manager, {
+        tenantId,
+        actorId: context.userId ?? null,
+        actionId: saved.rcaActionId,
+        completedAt: saved.completedDate ?? new Date(),
+      });
+    }
     this.realtime.broadcastEntityEvent('Created', 'task', saved);
     return this.reads.get(context, saved.id);
   }
@@ -109,6 +143,17 @@ export class TasksV2CommandsService {
       ...linkPatch(body),
       ...completionPatch(current, body.status),
     };
+    if (body.rcaActionId) {
+      const linkType =
+        body.linkType === undefined ? current.entityType : body.linkType;
+      const linkId = body.linkId === undefined ? current.entityId : body.linkId;
+      await assertActionTask(this.tasks.manager, {
+        tenantId: current.tenantId,
+        rcaId: linkType === 'RCA' ? (linkId ?? null) : null,
+        actionId: body.rcaActionId,
+        taskId: current.id,
+      });
+    }
     return this.apply(context, current, patch);
   }
 
@@ -130,14 +175,57 @@ export class TasksV2CommandsService {
     patch: TaskPatch,
   ): Promise<TaskV2View> {
     if (Object.keys(patch).length > 0) {
-      await this.tasks.update(
-        { id: current.id, tenantId: current.tenantId },
-        patch,
+      await this.write(() =>
+        this.tasks.manager.transaction(async (manager) => {
+          await manager
+            .getRepository(Task)
+            .update({ id: current.id, tenantId: current.tenantId }, patch);
+          await this.flowBack(manager, context, current);
+        }),
       );
       const updated = await this.reads.find(context, current.id);
       this.realtime.broadcastEntityEvent('Updated', 'task', updated);
     }
     return this.reads.get(context, current.id);
+  }
+
+  private insert(task: Task): Promise<Task> {
+    return this.write(() => this.tasks.save(task));
+  }
+
+  /** 409 ACTION_TASK_EXISTS when the one-open-task-per-action index refuses a concurrent write. */
+  private async write<T>(run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (error) {
+      if (isOpenTaskDuplicate(error)) throw actionTaskExists();
+      throw error;
+    }
+  }
+
+  /**
+   * Item 5 flow-back: when the task of an RCA action becomes Completed (or leaves Completed) the action
+   * records it (`taskCompletedAt`); the action's own status never moves (CA4 evidence still decides).
+   */
+  private async flowBack(
+    manager: EntityManager,
+    context: RequestContext,
+    before: Task,
+  ): Promise<void> {
+    const after = await manager
+      .getRepository(Task)
+      .findOneBy({ id: before.id, tenantId: before.tenantId });
+    const actionId = after?.rcaActionId ?? before.rcaActionId;
+    if (!after || !actionId) return;
+    const wasDone = before.status === 'Completed';
+    const isDone = after.status === 'Completed' && Boolean(after.rcaActionId);
+    if (wasDone === isDone && before.rcaActionId === after.rcaActionId) return;
+    await recordTaskOutcome(manager, {
+      tenantId: after.tenantId,
+      actorId: context.userId ?? null,
+      actionId,
+      completedAt: isDone ? (after.completedDate ?? new Date()) : null,
+    });
   }
 
   private async assertAssignee(

@@ -259,4 +259,45 @@ describe('late corrections and change proposals (plan 2.8)', () => {
       'period_change_proposal.dismissed',
     ]);
   });
+
+  it('R3: a proposal caused by an OEE-component change names it on the loss line', async () => {
+    const approvedRevision = await submitBalanced(env.periodA1);
+    // the approver reopened revision 2 (accepted the proposal): another manager approves it
+    const independent = await env.unitUser(env.world.unitA1);
+    await env.approve(approvedRevision, independent, env.periodA1).expect(200);
+    const [stop] = await env.rows<{ id: string }>(
+      `SELECT "id" FROM "production_events" WHERE "unit_id" = $1 AND "start_time" = $2`,
+      [env.world.unitA1, plus(A, 5 * HOUR)],
+    );
+    const current = await env.get(`production-events/${stop.id}`).expect(200);
+    const { rowVersion } = current.body as { rowVersion: number };
+    await env
+      .patch(
+        `production-events/${stop.id}`,
+        { oeeComponent: 'performance' },
+        `"${rowVersion}"`,
+      )
+      .expect(200);
+    await env.settle();
+    const open = (await proposals(env.periodA1)).find(
+      (p) => p.state === 'open',
+    );
+    const changes = (open?.after as { codingChanges?: unknown[] } | null)
+      ?.codingChanges;
+    expect(changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'availability',
+          fields: [
+            {
+              field: 'oeeComponent',
+              // a stop entered without an OEE component (the type default)
+              before: 'none',
+              after: 'performance',
+            },
+          ],
+        }),
+      ]),
+    );
+  });
 });

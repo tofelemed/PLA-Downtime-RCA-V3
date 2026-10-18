@@ -44,6 +44,8 @@ export interface PeriodPlanFiguresV2View {
 export interface PeriodSummaryV2View {
   periodId: string;
   unitId: string;
+  /** UX D-6: plan of the period's selected plan version (rows of several plans in one list), null without one */
+  planId: string | null;
   utcStart: string;
   utcEnd: string;
   localDate: string;
@@ -172,11 +174,13 @@ export function toPeriodSummaryView(
   state: PeriodState,
   productIds: string[],
   sla: PeriodSlaV2View | null = null,
+  planId: string | null = null,
 ): PeriodSummaryV2View {
   const { period, revision, run } = state;
   return {
     periodId: period.id,
     unitId: period.unitId,
+    planId,
     utcStart: period.utcStart.toISOString(),
     utcEnd: period.utcEnd.toISOString(),
     localDate: period.localDate,

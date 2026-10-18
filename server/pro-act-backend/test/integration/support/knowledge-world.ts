@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { addCodedRootCause } from './rca-causes';
 import * as request from 'supertest';
 import { ProductionEventModule } from '../../../src/production-event/production-event.module';
 import { V2Module } from '../../../src/v2/v2.module';
@@ -212,6 +213,7 @@ export class KnowledgeWorld {
       rcaId: caseId,
     }).expect(201);
     await this.verifiedAction(caseId);
+    await addCodedRootCause(this, this.world.tenantA, caseId);
     for (const step of [
       { to: 'Analysis' },
       { to: 'Monitoring' },

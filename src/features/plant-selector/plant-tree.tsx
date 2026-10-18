@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { PlantSelection } from '@/contexts/PlantSelectionContext';
+import { InlineError } from '@/features/ux-kit/errors/inline-error';
 import { EntityIcon } from '@/lib/icons';
 import type { DirectoryOrganization as Organization, DirectoryPlant as Tenant, DirectoryUnit as Unit } from '@/api/v2/types/plant-directory';
 import { TreeRow } from './tree-row';
@@ -34,6 +35,14 @@ function Notice({ level, text }: { level: number; text: string }) {
   );
 }
 
+function LoadFailed({ level, title, error, onRetry }: { level: number; title: string; error: unknown; onRetry: () => void }) {
+  return (
+    <li className="py-1" style={{ paddingLeft: level * 16 + 32 }}>
+      <InlineError title={title} error={error} onRetry={onRetry} />
+    </li>
+  );
+}
+
 interface NodeProps {
   selection: PlantSelection | null;
   onSelect: (selection: PlantSelection) => void;
@@ -50,6 +59,7 @@ function UnitNode({ org, tenant, unit, ...tree }: NodeProps & { org: Organizatio
     <TreeRow level={2} icon={EntityIcon.unit} label={unit.name} selected={selected} expandable expanded={open}
       onToggle={() => tree.toggle(key)} onSelect={() => tree.onSelect({ organization: org, tenant, unit })}>
       {assets.isLoading && <Notice level={3} text="Loading assets…" />}
+      {assets.isError && <LoadFailed level={3} title="Could not load assets." error={assets.error} onRetry={() => void assets.refetch()} />}
       {assets.data?.length === 0 && <Notice level={3} text="No assets" />}
       {assets.data?.map((asset) => (
         <TreeRow key={asset.id} level={3} icon={EntityIcon.asset} label={asset.name} selected={tree.selection?.asset?.id === asset.id}
@@ -60,6 +70,15 @@ function UnitNode({ org, tenant, unit, ...tree }: NodeProps & { org: Organizatio
   );
 }
 
+type UnitsQuery = ReturnType<typeof usePlantUnits>;
+
+function UnitList({ units, org, tenant, ...tree }: NodeProps & { units: UnitsQuery; org: Organization; tenant: Tenant }) {
+  if (units.isLoading) return <Notice level={2} text="Loading units…" />;
+  if (units.isError) return <LoadFailed level={2} title="Could not load units." error={units.error} onRetry={() => void units.refetch()} />;
+  if (units.data?.length === 0) return <Notice level={2} text="No units" />;
+  return <>{units.data?.map((unit) => <UnitNode key={unit.id} org={org} tenant={tenant} unit={unit} {...tree} />)}</>;
+}
+
 function TenantNode({ org, tenant, ...tree }: NodeProps & { org: Organization; tenant: Tenant }) {
   const key = `tenant:${tenant.id}`;
   const open = tree.isOpen(key);
@@ -68,9 +87,7 @@ function TenantNode({ org, tenant, ...tree }: NodeProps & { org: Organization; t
   return (
     <TreeRow level={1} icon={EntityIcon.plant} label={tenant.name} selected={selected} expandable expanded={open}
       onToggle={() => tree.toggle(key)} onSelect={() => tree.onSelect({ organization: org, tenant })}>
-      {units.isLoading && <Notice level={2} text="Loading units…" />}
-      {units.data?.length === 0 && <Notice level={2} text="No units" />}
-      {units.data?.map((unit) => <UnitNode key={unit.id} org={org} tenant={tenant} unit={unit} {...tree} />)}
+      <UnitList units={units} org={org} tenant={tenant} {...tree} />
     </TreeRow>
   );
 }

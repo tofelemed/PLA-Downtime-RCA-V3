@@ -31,8 +31,10 @@ describe('toLatinNumber', () => {
 });
 
 describe('durations in Persian digits', () => {
-  it('group compact minutes with the Persian group separator', () => {
-    expect(formatDuration(90_000, { style: 'compact' })).toBe('1,500 min');
-    expect(formatDuration(90_000, { style: 'compact', digits: 'persian' })).toBe('۱٬۵۰۰ min');
+  it('writes every unit of the one duration format in Persian digits', () => {
+    expect(formatDuration(216_000)).toBe('2 d 12 h');
+    expect(formatDuration(216_000, { digits: 'persian' })).toBe('۲ d ۱۲ h');
+    expect(formatDuration(12_300, { digits: 'persian' })).toBe('۳ h ۲۵ min');
+    expect(formatDuration(2520, { digits: 'persian' })).toBe('۴۲ min');
   });
 });

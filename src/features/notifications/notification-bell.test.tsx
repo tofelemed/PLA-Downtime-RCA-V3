@@ -115,4 +115,67 @@ describe('notification bell', () => {
     await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
     expect(calls.find((c) => c.method === 'POST')?.url.pathname).toMatch(/\/v2\/notifications\/n1\/read$/);
   });
+
+  it('a failed list says so with Retry instead of "No notifications."', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (new URL(url).pathname.endsWith('/unread-count')) return json({ unread: 1 });
+        return new Response(JSON.stringify({ code: 'INTERNAL', message: 'x' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
+        <MemoryRouter>
+          <NotificationBell />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByTestId('notification-bell'));
+    expect(await screen.findByText('Could not load notifications.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.queryByText('No notifications.')).toBeNull();
+  });
+  it('shows an Unread label in text, filters Unread / All on the server and toggles read and unread per item', async () => {
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
+        <MemoryRouter>
+          <NotificationBell />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByTestId('notification-bell'));
+    expect(await screen.findByTestId('notification-unread-label')).toHaveTextContent('Unread');
+    const lists = () => calls.filter((c) => c.method === 'GET' && c.url.pathname.endsWith('/v2/notifications'));
+    expect(lists()[0].url.searchParams.get('unread')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Unread/ }));
+    await waitFor(() => expect(lists().some((c) => c.url.searchParams.get('unread') === 'true')).toBe(true));
+    expect(screen.getByRole('button', { name: /^Unread/ })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark as read: Escalated to Production accountant' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.pathname.endsWith('/n1/read'))).toBe(true));
+  });
+
+  it('a read notification offers Mark as unread', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        const call = { method: init.method ?? 'GET', url: new URL(url) };
+        calls.push(call);
+        if (call.url.pathname.endsWith('/unread-count')) return json({ unread: 0 });
+        if (call.method === 'POST') return json({ ...ESCALATION, read: false });
+        return json({ items: [{ ...ESCALATION, read: true, readAt: '2026-10-15T07:00:00.000Z' }], nextCursor: null, asOf: 'now', scope: { tenantId: 'tenant-a' } });
+      }),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
+        <MemoryRouter>
+          <NotificationBell />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByTestId('notification-bell'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark as unread: Escalated to Production accountant' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.pathname.endsWith('/n1/unread'))).toBe(true));
+    expect(screen.queryByTestId('notification-unread-label')).toBeNull();
+  });
 });

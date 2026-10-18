@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
@@ -53,6 +53,8 @@ const DRAFT: SourceAuthorityVersionView = {
   rejectedAt: null,
   rejectionReason: null,
   notes: null,
+  requestedEffectiveFrom: null,
+  backdateReason: null,
   policy: POLICY,
 };
 
@@ -153,6 +155,19 @@ describe('source priority screen (maker-checker source authority)', () => {
       measurementHierarchy: { boundary: 'reactor_outlet', conditions: ['primary_missing'], entries: [{ rank: 1, source: 'pi_counter', boundary: 'reactor_outlet' }] },
     });
     expect(post?.body && 'unitId' in post.body).toBe(false);
+  });
+
+  it('a draft can carry a commissioning backdate with its reason, effective from it once approved', async () => {
+    await draftFromScreen();
+    const commissioning = screen.getByTestId('authority-commissioning');
+    expect(commissioning).toHaveTextContent('The check is repeated when it is approved');
+    fireEvent.change(within(commissioning).getByLabelText('Effective from (commissioning only) date'), { target: { value: '2026-10-01' } });
+    fireEvent.change(within(commissioning).getByLabelText(/Reason for backdating/), { target: { value: 'meter in service since start-up' } });
+    fireEvent.click(screen.getByTestId('authority-save'));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
+    const body = calls.find((c) => c.method === 'POST')?.body;
+    expect(body).toMatchObject({ unitId: 'unit-1', backdateReason: 'meter in service since start-up' });
+    expect(new Date(String(body?.effectiveFrom)).getTime()).toBeLessThan(Date.now());
   });
 
   it("shows the server's refusal of a draft", async () => {

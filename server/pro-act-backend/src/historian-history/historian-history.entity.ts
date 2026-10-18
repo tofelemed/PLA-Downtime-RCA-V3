@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -34,4 +41,3 @@ export class QueryHistory {
   @JoinColumn({ name: 'tenant_id' })
   tenant?: Tenant;
 }
-

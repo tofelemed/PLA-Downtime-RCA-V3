@@ -17,6 +17,7 @@ import { SourceMappingModule } from '../source-mapping/source-mapping.module';
 import { AttributeMappingModule } from '../attribute-mapping/attribute-mapping.module';
 import { CodeLibraryModule } from '../code-library/code-library.module';
 import { IntakeModule } from '../intake/intake.module';
+import { RulesModule } from '../rules/rules.module';
 import { PiIntakeBridge } from './pi-intake-bridge';
 import { PiIntervalHandler } from './pi-interval.handler';
 import { PiWebApiAdapter } from './pi-web-api.adapter';
@@ -58,6 +59,8 @@ import { SignalsModule } from '../signals/signals.module';
     SourceMappingModule,
     AttributeMappingModule,
     CodeLibraryModule,
+    // active `coding_default` rules applied to created source events (plan 3.8)
+    RulesModule,
     // durable intake (plan 1.5): the PI adapter and normaliser register themselves on init
     IntakeModule,
     // signals and the measurement normaliser (plan 1.7)

@@ -90,13 +90,11 @@ describe('MqttStateHandler (plan 1.8 step 3, design §4.5)', () => {
   });
 
   it('delegates machine state to effective-dated signal measurement storage, preserving time, quality and retained controls', async () => {
-    const measure = jest
-      .fn()
-      .mockResolvedValue({
-        status: 'applied',
-        outcome: 'sample_stored',
-        canonicalEventId: null,
-      });
+    const measure = jest.fn().mockResolvedValue({
+      status: 'applied',
+      outcome: 'sample_stored',
+      canonicalEventId: null,
+    });
     registry.register({
       name: 'measurement',
       supports: (e) => e.kind === 'measurement',

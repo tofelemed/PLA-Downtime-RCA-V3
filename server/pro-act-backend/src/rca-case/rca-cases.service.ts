@@ -16,14 +16,18 @@ import {
   TEAM_LOCKED_STATUSES,
   withInvestigators,
 } from '../domain/rca/case-workflow';
-import { readIds } from './rca-case-json';
+import { attributeEvidence } from './evidence-attribution';
+import { caseAudit, recordRcaAudit } from './rca-audit';
+import { recommendationActions } from './recommendation-actions';
+import { readEvidence, readIds } from './rca-case-json';
 import {
   assertCaseReferences,
   caseColumns,
   insertCase,
 } from './rca-case-writer';
+import { caseListFacts, toListFacts } from './rca-case-list-facts';
 import {
-  RcaCaseSummaryV2View,
+  RcaCaseListItemV2View,
   RcaCaseV2View,
   toRcaCaseSummary,
   toRcaCaseView,
@@ -50,7 +54,7 @@ export class RcaCasesService {
   async list(
     context: RequestContext,
     query: RcaCaseV2ListQueryDto,
-  ): Promise<ListResponse<RcaCaseSummaryV2View>> {
+  ): Promise<ListResponse<RcaCaseListItemV2View>> {
     const scope = scopeOf(context);
     const qb = this.dataSource
       .getRepository(RCA)
@@ -66,6 +70,12 @@ export class RcaCasesService {
       qb.andWhere('rca.priority = :priority', { priority: query.priority });
     if (query.overdue !== undefined)
       qb.andWhere(query.overdue ? OVERDUE : `NOT (${OVERDUE})`);
+    if (query.open !== undefined)
+      qb.andWhere(
+        query.open
+          ? `rca.status IS DISTINCT FROM 'Closed'`
+          : `rca.status = 'Closed'`,
+      );
     if (query.q)
       qb.andWhere('rca.title ILIKE :q', { q: `%${escapeLike(query.q)}%` });
     if (query.assetId)
@@ -93,15 +103,27 @@ export class RcaCasesService {
       cursor: query.cursor,
       limit: query.limit,
     });
-    return listResponse(page.items.map(toRcaCaseSummary), page.nextCursor, {
+    const facts = await caseListFacts(
+      this.dataSource.manager,
+      scope,
+      page.items.map((rca) => rca.id),
+    );
+    const items = page.items.map((rca) => ({
+      ...toRcaCaseSummary(rca),
+      ...(facts.get(rca.id) ?? toListFacts(undefined)),
+    }));
+    return listResponse(items, page.nextCursor, {
       tenantId: scope.tenantId,
       ...(scope.units ? { unitIds: scope.units } : {}),
     });
   }
 
   async get(context: RequestContext, id: string): Promise<RcaCaseV2View> {
+    const scope = scopeOf(context);
+    const rca = await findCase(this.dataSource.manager, scope, id);
     return toRcaCaseView(
-      await findCase(this.dataSource.manager, scopeOf(context), id),
+      rca,
+      await recommendationActions(this.dataSource.manager, scope.tenantId, id),
     );
   }
 
@@ -136,9 +158,16 @@ export class RcaCasesService {
       }
       assertTeamOpen(rca, body);
       await assertCaseReferences(manager, scope, body, unitId);
-      await manager.getRepository(RCA).save({
+      const evidence = body.evidence
+        ? attributeEvidence(readEvidence(rca.evidence), body.evidence, {
+            userId: scope.userId,
+            now: new Date(),
+          })
+        : undefined;
+      const before = { ...rca };
+      const saved = await manager.getRepository(RCA).save({
         ...rca,
-        ...caseColumns(body),
+        ...caseColumns({ ...body, evidence }),
         investigatorIds: withInvestigators(rca.investigatorIds, [
           rca.teamLeadId,
           ...readIds(rca.teamMemberIds),
@@ -146,6 +175,9 @@ export class RcaCasesService {
           ...(body.teamMemberIds ?? []),
         ]),
       });
+      await recordRcaAudit(manager, scope, [
+        caseAudit('updated', { before, after: saved }),
+      ]);
     });
     return this.get(context, target.id);
   }

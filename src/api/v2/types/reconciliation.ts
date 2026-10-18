@@ -1,3 +1,4 @@
+import type { MonthCloseState } from './month-close';
 import type { CodingGateView } from './stop-coding';
 /**
  * Reconciliation and approval views (backend `src/v2/reconciliation/reconciliation-v2.view.ts`, plan 2.8);
@@ -28,6 +29,8 @@ export interface RevisionWorkflowView {
   cancelledAt: string | null;
   /** SME R4: a correction opened through a change proposal of a locked month */
   afterClose: boolean;
+  /** who opened this revision of an approved period (revise / accepted proposal); null for a first revision (absent from older servers) */
+  openedBy?: string | null;
   comment: string | null;
 }
 
@@ -62,6 +65,79 @@ export interface CandidateView {
   causeEventId: string | null;
   state: CandidateState;
   effectiveQuantity: string | null;
+  /** UX D-2: the stored inputs the engine used (absent from older servers) */
+  derivation?: CandidateDerivationView;
+  /** UX G-4: RCA state of the cause event (null = event not found; absent = no cause event) */
+  causeEventRca?: EventRcaView | null;
+}
+
+/** UX G-4: an event's RCA state and investigation, as the event list exposes them. */
+export interface EventRcaView {
+  /** none | required | linked | completed */
+  state: string;
+  caseId: string | null;
+}
+
+/** RCA of an event a saved line cites (`evidence[].eventId`). */
+export interface LinkedEventRcaView extends EventRcaView {
+  eventId: string;
+}
+
+/** UX D-2: the rate the engine computed the line with (stored since 2026-10-18; null on older runs). */
+export interface AppliedRateView {
+  /** quantity per timebase, decimal string — the planning rate scaled to target on scaled plan slices */
+  value: string;
+  timebase: string | null;
+}
+
+/** The approved rate version a time-based candidate was based on (backend `candidate-derivation.ts`). */
+export interface DerivationRateView {
+  versionId: string;
+  kind: string | null;
+  /** quantity per timebase, decimal string — the approved value, not the applied one when scaled */
+  value: string | null;
+  /** s | min | h | d */
+  timebase: string | null;
+}
+
+/** One cause allocation behind a candidate (`loss_line_evidence`). */
+export interface DerivationEvidenceView {
+  eventId: string | null;
+  eventRevisionId: string | null;
+  occurrenceId: string | null;
+  /** share of the segment allocated to this cause, decimal string 0..1 */
+  share: string;
+  clippedStart: string;
+  clippedEnd: string;
+}
+
+/** UX D-2: how the engine derived a candidate, as stored (no recomputation). */
+export interface CandidateDerivationView {
+  basis: string;
+  ledger: string;
+  segmentStart: string;
+  segmentEnd: string;
+  durationSeconds: number;
+  rate: DerivationRateView | null;
+  /** SME Q1: the planning rate was scaled to the target (`appliedRate` holds the scaled rate when stored) */
+  rateScaledToTarget: boolean;
+  /** the rate the quantity was computed with; null/absent on non-rate lines and runs before it was stored */
+  appliedRate?: AppliedRateView | null;
+  sourceEventId: string | null;
+  occurrenceId: string | null;
+  evidence: DerivationEvidenceView[];
+  flags: string[];
+}
+
+/** SME R4: how an approved period of the month may be corrected. */
+export type CorrectionPath = 'direct' | 'proposal' | 'none';
+
+/** UX D-7: close state of the financial month containing the period. */
+export interface MonthCloseStateView {
+  state: MonthCloseState;
+  /** plant month key `YYYY-MM`; null while the month was never acted on */
+  monthKey: string | null;
+  correctionPath: CorrectionPath;
 }
 
 export interface LineEvidenceRef {
@@ -103,6 +179,8 @@ export interface ReconciliationLineView {
   authorId: string | null;
   /** baseline_changed | candidate_missing */
   flags: string[];
+  /** UX G-4: RCA state of the cited events that were found (absent from older servers) */
+  linkedEventRca?: LinkedEventRcaView[];
 }
 
 export interface ToleranceView {
@@ -161,6 +239,24 @@ export interface ReconciliationView {
   codingGate?: CodingGateView;
   /** SME R8: bridges above the unit limit and their second review of the current submission */
   bridgeReview?: BridgeReviewView;
+  /** UX D-7: the month close state of the period (absent from older servers) */
+  monthClose?: MonthCloseStateView;
+  /** owner, 18 Oct 2026: an approved revision's frozen valuation view vs the current policy (null otherwise) */
+  approvedValuation?: ApprovedValuationView | null;
+}
+
+/** A valuation policy version and the default view it opens on (backend `approved-valuation-view.ts`). */
+export interface ValuationBasisRef {
+  view: string;
+  policyId: string | null;
+  policyVersion: number | null;
+}
+
+/** The view frozen in the approval snapshot, the current approved policy's view, and the restatement. */
+export interface ApprovedValuationView extends ValuationBasisRef {
+  current: ValuationBasisRef;
+  differs: boolean;
+  restatementProposalId: string | null;
 }
 
 /** SME R8 (backend `reconciliation/bridge-review.ts`). */

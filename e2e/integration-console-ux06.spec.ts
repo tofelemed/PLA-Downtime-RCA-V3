@@ -12,14 +12,16 @@ import { cleanupIntegrationWorld, eventsOf, findConnection, jobsOf, seedIntegrat
  * run → replay → the event exists once → 7-day backfill (drained) → production job healthy; every stage
  * recorded. The PI endpoint is the backend's test simulator on an ephemeral port (loopback by default) started by
  * this spec (never a real PI server). Also: job stop really stops (cursor unchanged, audit row), the
- * password never appears in an API response or browser storage, a non-writer has no diagnostics controls and gets API 403
- * and does not see raw payloads. Data: new "E2E INT …" unit / connection; nothing existing changes.
+ * password never appears in an API response or browser storage, a non-SuperAdmin has no console (owner 18 Oct 2026:
+ * Integration is SuperAdmin-only) and gets API 403. The UI steps run as the SuperAdmin; API checks keep the manager. Data: new "E2E INT …" unit / connection; nothing existing changes.
  *
  * API in Docker (`docker-compose.devdb.yml`): run with `E2E_PI_SIM_HOST=host.docker.internal` so the
  * simulator listens on all interfaces and the connection URL names the host (`test-utils/pi-simulator.ts`).
  */
 const MANAGER = { email: 'manager@acme.com', password: 'demo123' };
 const ENGINEER = { email: 'engineer@acme.com', password: 'demo123' };
+/** owner 18 Oct 2026: Integration is SuperAdmin-only, so the console UI steps run as the SuperAdmin */
+const SUPER_ADMIN = { email: 'test@example.com', password: 'Test123!@#' };
 const FLAG = 'v2.integrationConsole';
 
 let manager = '';
@@ -58,14 +60,14 @@ test.describe('Integration console — UX06 journey (plan 3.7)', () => {
     await call(manager, 'PUT', `/v2/feature-flags/${FLAG}`, { enabled: true });
   });
 
-  test('UX06 manager: configure → diagnose → discover → map → limited job → quarantine → bind → replay → backfill → production', async ({ page }) => {
+  test('UX06 SuperAdmin: configure → diagnose → discover → map → limited job → quarantine → bind → replay → backfill → production', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 }); // tablet (UX07)
     const bodies: string[] = [];
     page.on('response', async (response) => {
       if (!response.url().includes('/api/')) return;
       bodies.push(await response.text().catch(() => ''));
     });
-    await loginViaUI(page, MANAGER.email, MANAGER.password);
+    await loginViaUI(page, SUPER_ADMIN.email, SUPER_ADMIN.password);
     await openConsole(page);
     await expect(page.getByRole('tab', { name: 'Quarantine' })).toBeVisible();
 
@@ -191,25 +193,21 @@ test.describe('Integration console — UX06 journey (plan 3.7)', () => {
     expect(storage).not.toContain(world.password);
   });
 
-  test('a non-writer cannot run diagnostics (hidden, API 403) and sees no raw payload', async ({ page }) => {
+  test('a non-SuperAdmin has no console (no menu, page closed) and the server refuses diagnostics (API 403)', async ({ page }) => {
     test.setTimeout(60_000);
     await loginViaUI(page, ENGINEER.email, ENGINEER.password);
-    await openConsole(page);
-    // the connection has its own page (the list is paged)
+    await expect(page.locator('nav a[href="/connectivity"]')).toHaveCount(0);
     const connection = await findConnection(manager, world.connectionName);
     expect(connection).toBeTruthy();
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; a direct visit renders no console content
     await page.goto(`/connectivity/connections/${connection!.id}`);
-    await expect(page.getByRole('heading', { name: world.connectionName, exact: true })).toBeVisible();
-    await expect(page.getByTestId('tab-diagnostics')).toHaveCount(0);
-    await expect(page.getByTestId('run-diagnostics')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Connectivity', level: 1 })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('connection-detail')).toHaveCount(0);
+    await page.goto('/connectivity?tab=quarantine');
+    await expect(page.getByRole('heading', { name: 'Connectivity', level: 1 })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('integration-console')).toHaveCount(0);
     const engineer = await authenticate(ENGINEER.email, ENGINEER.password);
     const refused = await command<{ code: string }>(engineer.accessToken, `/v2/connections/${connection!.id}/test`, {});
     expect([refused.status, refused.body.code]).toEqual([403, 'FORBIDDEN_ROLE']);
-    await page.goto('/connectivity?tab=quarantine'); // the quarantine is a tab of the console, the connection has its own page
-    await page.locator('#q-state').selectOption('resolved');
-    await page.getByTestId('q-connection').selectOption({ label: world.connectionName });
-    await page.locator(`[data-testid="exception-row"][data-source-id="${world.recentFrame}"]`).click();
-    await expect(page.getByTestId('raw-payload-hidden')).toBeVisible();
-    await expect(page.getByTestId('raw-payload')).toHaveCount(0);
   });
 });

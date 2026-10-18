@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { OutboxModule } from '../common/outbox/outbox.module';
 import { PeriodsModule } from '../periods/periods.module';
 import { ProductionEventModule } from '../production-event/production-event.module';
+import { RulesModule } from '../rules/rules.module';
 import { DerivedStopEngineService } from './derived-stop-engine.service';
 import { EventImpact } from './entities/event-impact.entity';
 import { StateEngineCursor } from './entities/state-engine-cursor.entity';
@@ -39,6 +40,7 @@ export const STOP_EVENT_ENTITIES = [
     OutboxModule,
     PeriodsModule,
     ProductionEventModule,
+    RulesModule,
   ],
   providers: [
     StopEventSettingsService,

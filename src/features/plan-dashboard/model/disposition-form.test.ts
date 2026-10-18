@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { dispositionBody, emptyDisposition, validateDisposition } from './disposition-form';
+import type { LotDispositionView } from '@/api/v2/types/periods';
+import { canCorrect, correctionOf, dispositionBody, emptyDisposition, validateDisposition } from './disposition-form';
 
 const period = { unitId: 'unit-1', utcStart: '2027-03-01T02:30:00.000Z', utcEnd: '2027-03-01T10:30:00.000Z' };
 
@@ -51,5 +52,29 @@ describe('lot disposition form (SME E3)', () => {
     expect(body).toMatchObject({ dispositionClass: 'scrap', labReleasedAt: '2027-03-01T12:00:00.000Z', evidenceRef: 'LIMS-7' });
     expect(body).not.toHaveProperty('recoveryOfId');
     expect(body).not.toHaveProperty('remeasured');
+  });
+
+  describe('correcting an approved disposition (Marun E2E)', () => {
+    const approved: LotDispositionView = {
+      id: 'd-a', unitId: 'unit-1', productId: 'p1', lotCode: 'HD5502-A01', dispositionClass: 'downgrade', quantity: '2', uom: 't',
+      productionStart: period.utcStart, productionEnd: period.utcEnd, labReleasedAt: null, recoveryOfId: null, remeasured: true,
+      productionEventId: null, supersedesId: null, reason: null, evidenceRef: 'LAB-1', state: 'approved', authorId: 'leila',
+      decidedBy: 'neda', decidedAt: period.utcEnd, decisionReason: null, supersededAt: null, createdAt: period.utcEnd, rowVersion: 1,
+    };
+
+    it('starts from the approved lot and sends supersedesId with the new figures', () => {
+      const values = { ...correctionOf(approved), quantity: '3', evidenceRef: 'LAB-2' };
+      expect(values).toMatchObject({ lotCode: 'HD5502-A01', productId: 'p1', supersedesId: 'd-a', evidenceRef: 'LAB-2' });
+      expect(dispositionBody(values, { unitId: 'unit-1', uom: 't' })).toMatchObject({ supersedesId: 'd-a', quantity: '3', dispositionClass: 'downgrade' });
+      expect(dispositionBody(emptyDisposition(period, 'p1'), { unitId: 'unit-1', uom: 't' })).not.toHaveProperty('supersedesId');
+    });
+
+    it('only an approved, not yet corrected row without a pending correction can be corrected', () => {
+      expect(canCorrect(approved, [approved])).toBe(true);
+      expect(canCorrect({ ...approved, state: 'proposed' }, [])).toBe(false);
+      expect(canCorrect({ ...approved, supersededAt: period.utcEnd }, [])).toBe(false);
+      const pending = { ...approved, id: 'd-b', state: 'proposed', supersedesId: 'd-a' };
+      expect(canCorrect(approved, [approved, pending])).toBe(false);
+    });
   });
 });

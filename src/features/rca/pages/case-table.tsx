@@ -1,53 +1,82 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { usePrefetchRcaCase, useRcaCasePage } from '@/api/v2/queries/rca-cases';
-import type { RcaCaseSummaryView } from '@/api/v2/types/rca';
-import { Badge } from '@/components/ui/badge';
+import type { RcaCaseListItemView } from '@/api/v2/types/rca';
 import { DataTable, type DataTableColumn, type DataTableEmpty } from '@/features/ux-kit/data-table';
+import { PRIORITY_TONES, RCA_CASE_STATUS_TONES, useUserNames } from '@/features/ux-kit/labels';
+import { StatusBadge } from '@/features/ux-kit/status-badge';
+import { toneOf } from '@/features/ux-kit/status-tone';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import type { CaseListFilters } from '../model/case-filters';
 import { toCaseQuery } from '../model/case-filters';
 import { useRcaFormat } from '../use-rca-format';
 import { useUnitNames } from '../use-unit-names';
-import { statusLabel } from '../model/rca-labels';
+import { actionProgressText, statusLabel } from '../model/rca-labels';
 
 interface ColumnContext {
   unitName: (id: string | null) => string;
+  userName: (id: string | null) => string;
   day: (value: string | null) => string;
   date: (value: string | null) => string;
+  dateTime: (value: string | null) => string;
   prefetch: (id: string) => void;
 }
 
-function caseColumns(context: ColumnContext): DataTableColumn<RcaCaseSummaryView>[] {
+function TriggerCell({ row, dateTime }: { row: RcaCaseListItemView; dateTime: ColumnContext['dateTime'] }) {
+  if (!row.trigger) return <span className="text-muted-foreground">No event</span>;
+  return (
+    <Link className="underline" to={`/events/${encodeURIComponent(row.trigger.eventId)}`} data-testid="case-trigger">
+      Event {dateTime(row.trigger.startTime)}
+    </Link>
+  );
+}
+
+function ActionsCell({ row }: { row: RcaCaseListItemView }) {
+  const { number } = useNumberFormat();
+  if (row.actions.total === 0) return <span className="text-muted-foreground">No actions</span>;
+  return (
+    <span className={row.actions.overdue > 0 ? 'font-medium text-destructive' : undefined} data-testid="case-actions">
+      {actionProgressText(row.actions, number)}
+    </span>
+  );
+}
+
+function caseColumns(context: ColumnContext): DataTableColumn<RcaCaseListItemView>[] {
   return [
     {
       id: 'title',
-      header: 'Case',
+      header: 'Investigation',
       cell: (row) => (
         <span className="font-medium" onMouseEnter={() => context.prefetch(row.id)}>
           {row.title}
         </span>
       ),
     },
-    { id: 'status', header: 'Status', cell: (row) => <Badge variant="secondary">{statusLabel(row.status)}</Badge>, nowrap: true },
-    { id: 'priority', header: 'Priority', cell: (row) => <Badge variant="outline">{row.priority ?? 'Medium'}</Badge>, nowrap: true },
+    { id: 'status', header: 'Status', cell: (row) => <StatusBadge tone={toneOf(RCA_CASE_STATUS_TONES, row.status ?? 'Draft')}>{statusLabel(row.status)}</StatusBadge>, nowrap: true },
+    { id: 'priority', header: 'Priority', cell: (row) => <StatusBadge tone={toneOf(PRIORITY_TONES, row.priority ?? 'Medium')}>{row.priority ?? 'Medium'}</StatusBadge>, nowrap: true },
+    { id: 'lead', header: 'Lead', cell: (row) => (row.teamLeadId ? context.userName(row.teamLeadId) : <span className="text-muted-foreground">No lead</span>) },
     { id: 'unit', header: 'Unit', cell: (row) => context.unitName(row.unitId) },
+    { id: 'trigger', header: 'Trigger', cell: (row) => <TriggerCell row={row} dateTime={context.dateTime} />, nowrap: true },
+    { id: 'actions', header: 'Actions', cell: (row) => <ActionsCell row={row} />, nowrap: true },
     { id: 'target', header: 'Target close', cell: (row) => context.day(row.targetCloseDate), nowrap: true },
     { id: 'opened', header: 'Opened', cell: (row) => context.date(row.createdAt), nowrap: true },
   ];
 }
 
-/** The cases of the scope, 20 per server page, newest first; a row opens the case. */
+/** The cases of the scope, 20 per server page, newest first, with trigger event and action progress; a row opens the case. */
 export function CaseTable({ filters, empty }: { filters: CaseListFilters; empty: DataTableEmpty }) {
   const navigate = useNavigate();
   const { unitName } = useUnitNames();
-  const { day, date } = useRcaFormat();
+  const { day, date, dateTime } = useRcaFormat();
   const prefetch = usePrefetchRcaCase();
   const paged = useRcaCasePage(toCaseQuery(filters));
-  const columns = useMemo(() => caseColumns({ unitName, day, date, prefetch }), [unitName, day, date, prefetch]);
+  const leadIds = useMemo(() => paged.rows.map((row) => row.teamLeadId), [paged.rows]);
+  const users = useUserNames(leadIds);
+  const columns = useMemo(() => caseColumns({ unitName, userName: users.nameOf, day, date, dateTime, prefetch }), [unitName, users.nameOf, day, date, dateTime, prefetch]);
   return (
     <div data-testid="case-list">
       <DataTable
-        caption="RCA cases"
+        caption="Investigations"
         columns={columns}
         rows={paged.rows}
         getRowKey={(row) => row.id}
@@ -55,7 +84,7 @@ export function CaseTable({ filters, empty }: { filters: CaseListFilters; empty:
         status={paged.status}
         empty={empty}
         onRowClick={(row) => navigate(`/rca/${row.id}`)}
-        rowLabel={(row) => `Open case ${row.title}`}
+        rowLabel={(row) => `Open investigation ${row.title}`}
       />
     </div>
   );

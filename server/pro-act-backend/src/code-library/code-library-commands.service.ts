@@ -348,7 +348,7 @@ function extrasOf(
     Object.entries(input).filter(
       ([key, value]) => allowed.includes(key) && value !== undefined,
     ),
-  ) as Partial<CodeRow>;
+  );
 }
 
 function definedOnly<T extends object>(value: T): Partial<T> {

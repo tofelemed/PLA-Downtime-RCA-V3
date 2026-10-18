@@ -1,4 +1,5 @@
 import type { MonthCloseView, PersonRef } from '@/api/v2/types/month-close';
+import { resolvedActorText } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Section } from '@/features/ux-kit/page-layout';
 import { CloseActions } from './close-actions';
@@ -9,7 +10,7 @@ function SignOff({ label, who, at, timezone, testId }: { label: string; who: Per
       <span className="font-medium">{label}:</span>{' '}
       {who ? (
         <>
-          {who.name ?? 'a user'} · <PlantTime iso={at} tz={timezone} withDate />
+          {resolvedActorText(who.id, who.name)} · <PlantTime iso={at} tz={timezone} withDate />
         </>
       ) : (
         <span className="text-muted-foreground">not yet</span>

@@ -1,5 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { ChartFigure } from '@/features/ux-kit/chart-figure';
 
 export interface SeriesRow {
   label: string;
@@ -15,7 +16,7 @@ export interface SeriesChartProps {
   ratio?: boolean;
 }
 
-const COLOURS = ['hsl(var(--primary))', 'hsl(var(--destructive))', 'hsl(142 70% 40%)', 'hsl(38 92% 50%)'];
+const COLOURS = ['hsl(var(--chart-1))', 'hsl(var(--chart-5))', 'hsl(var(--chart-3))', 'hsl(var(--chart-2))'];
 
 /**
  * Time series of server values (lazy chunk, plan 3.6): each point is a server figure converted to a number
@@ -30,12 +31,13 @@ export function SeriesChart({ rows, series, kind, ratio }: SeriesChartProps) {
   // ticks and tooltips in the plant's digits; ratios as percentages (drawing only, nothing derived)
   const axis = (value: number) => (ratio ? percent(value * 100) : tick(value));
   const Chart = kind === 'line' ? LineChart : BarChart;
+  const caption = `${kind === 'line' ? 'Line' : 'Bar'} chart of ${series.map((s) => s.label).join(', ')} over ${rows.length} periods.`;
   return (
-    <div className="h-64 w-full" aria-hidden>
+    <ChartFigure caption={caption} chartClassName="h-64 w-full" testId="series-chart">
       <ResponsiveContainer>
         <Chart data={points} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+          <XAxis dataKey="label" tick={{ fontSize: 11 }} />
           <YAxis tick={{ fontSize: 11 }} tickFormatter={axis} />
           <Tooltip formatter={(value: unknown) => (typeof value === 'number' ? (ratio ? percent(value * 100, 1) : number(value, 2)) : String(value))} />
           <Legend />
@@ -48,6 +50,6 @@ export function SeriesChart({ rows, series, kind, ratio }: SeriesChartProps) {
           )}
         </Chart>
       </ResponsiveContainer>
-    </div>
+    </ChartFigure>
   );
 }

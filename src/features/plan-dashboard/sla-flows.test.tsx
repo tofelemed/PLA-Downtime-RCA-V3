@@ -47,6 +47,10 @@ const DETAIL: PeriodSlaDetailView = {
   lastRejection: { at: '2026-10-09T06:00:00.000Z', by: 'reviewer-1', reason: 'the event supports only 15 t', failedLines: ['k1'], resubmitDueAt: '2026-10-09T18:00:00.000Z', rejection: 3, escalated: true, escalatedTo: 'production_accountant' },
 };
 
+/** GET /production-periods/p1: the period whose actuals quality the SLA line shows */
+const periodOf = (qualityState: string) => json(200, { data: { id: 'p1', slices: [{ id: 's1', actuals: { qualityState } }] } });
+const isPeriodRead = (call: Call) => call.method === 'GET' && /\/production-periods\/p1$/.test(call.url.pathname);
+
 describe('reconciliation SLA in the period workspace (SME R3 / R6)', () => {
   let calls: Call[];
   let reply: (call: Call) => Response;
@@ -83,18 +87,25 @@ describe('reconciliation SLA in the period workspace (SME R3 / R6)', () => {
 
   it('the preparer sees the reason, the failed line, the new due time and the escalation', async () => {
     actAs('production_engineer', 'preparer-1');
-    reply = () => json(200, DETAIL);
+    reply = (call) => (isPeriodRead(call) ? periodOf('partial') : json(200, DETAIL));
     wrap(<SlaPanel view={{ ...VIEW, revision: { ...VIEW.revision, lifecycle: 'draft' } }} timezone="Asia/Tehran" />);
     expect(await screen.findByTestId('sla-overdue')).toBeTruthy();
     expect(screen.getByTestId('sla-escalated').textContent).toMatch(/production accountant/i);
     expect(screen.getByTestId('sla-failed-lines').textContent).toContain('Proposed loss 1 · availability · 25 t');
     expect(screen.getByTestId('sla-rejection').textContent).toMatch(/corrected submission due/);
+    expect((await screen.findByTestId('sla-data-state')).textContent).toBe('Data: partly covered');
   });
 
   it('waiting for the lab sends the kind and the reason', async () => {
     actAs('production_engineer', 'preparer-1');
-    reply = (call) => (call.method === 'POST' ? json(200, { ...DETAIL, sla: { ...DETAIL.sla, onHold: true, stage: 'waiting_for_data' } }) : json(200, { ...DETAIL, lastRejection: null }));
+    reply = (call) => {
+      if (isPeriodRead(call)) return periodOf('complete');
+      return call.method === 'POST' ? json(200, { ...DETAIL, sla: { ...DETAIL.sla, onHold: true, stage: 'waiting_for_data' } }) : json(200, { ...DETAIL, lastRejection: null });
+    };
     wrap(<SlaPanel view={VIEW} timezone="Asia/Tehran" />);
+    // Marun E2E: complete data reads as complete; the hold is an action, not a state
+    expect((await screen.findByTestId('sla-data-state')).textContent).toBe('Data complete');
+    expect(screen.getByTestId('hold-open').textContent).toBe('Pause for late data…');
     fireEvent.click(await screen.findByTestId('hold-open'));
     fireEvent.change(await screen.findByTestId('hold-text'), { target: { value: 'Demo: waiting for the MFI lab result' } });
     fireEvent.click(screen.getByRole('button', { name: 'Start waiting' }));

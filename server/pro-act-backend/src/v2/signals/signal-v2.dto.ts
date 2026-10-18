@@ -53,7 +53,8 @@ export class SignalV2WriteDto {
   name: string;
 
   @ApiProperty({
-    description: 'Source stream id: PI WebId, MQTT measurement payload signal field, or full MQTT state_json topic',
+    description:
+      'Source stream id: PI WebId, MQTT measurement payload signal field, or full MQTT state_json topic',
   })
   @IsString()
   @IsNotEmpty()

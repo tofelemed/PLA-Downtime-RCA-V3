@@ -9,6 +9,8 @@ import { plantDayOf, plantDayStart } from './plant-day';
  */
 export interface ActionForm {
   title: string;
+  /** a member of the plant ('' = no owner); the server checks it (422 INVALID_REFERENCE) */
+  ownerId: string;
   actionType: '' | RcaActionType;
   dueDate: string;
   windowStart: string;
@@ -18,10 +20,17 @@ export interface ActionForm {
   baselineDays: string;
   claimed: string;
   claimedCurrency: '' | 'IRR' | 'USD';
+  /** item 5: the case recommendation the action implements ('' = none) */
+  recommendationId: string;
+  /** CA4: how the completion is verified ('' = not stated) */
+  verificationMethod: string;
+  /** CA4: the named verifier ('' = any RCA writer other than the owner); never the owner (server 422) */
+  verifierId: string;
 }
 
 export const EMPTY_ACTION_FORM: ActionForm = {
   title: '',
+  ownerId: '',
   actionType: '',
   dueDate: '',
   windowStart: '',
@@ -30,8 +39,10 @@ export const EMPTY_ACTION_FORM: ActionForm = {
   baselineDays: '',
   claimed: '',
   claimedCurrency: '',
+  recommendationId: '',
+  verificationMethod: '',
+  verifierId: '',
 };
-
 
 export const asActionType = (value: string): '' | RcaActionType => RCA_ACTION_TYPES.find((type) => type === value) ?? '';
 
@@ -41,12 +52,17 @@ function baselineOf(form: ActionForm): RcaActionBody['baseline'] {
   return { metric: form.baselineMetric, ...(days ? { windowDays: Number(days) } : {}) };
 }
 
-/** The v2 action body; the server checks window order, claim currency and baseline (422 otherwise). */
-export function buildActionBody(form: ActionForm, ownerId: string | null, timeZone: string): RcaActionBody {
+export const VERIFIER_IS_OWNER = "The verifier checks the owner's evidence, so choose someone other than the owner.";
+
+/** A verifier who is also the owner (the server refuses it with 422 VERIFIER_IS_OWNER). */
+export const verifierIsOwner = (form: Pick<ActionForm, 'ownerId' | 'verifierId'>) => Boolean(form.verifierId) && form.verifierId === form.ownerId;
+
+/** The v2 action body; the server checks window order, claim currency, baseline and verifier (422 otherwise). */
+export function buildActionBody(form: ActionForm, timeZone: string): RcaActionBody {
   const day = (value: string) => plantDayStart(value, timeZone);
   return {
     title: form.title.trim(),
-    ownerId,
+    ownerId: form.ownerId || null,
     actionType: form.actionType || null,
     dueDate: day(form.dueDate),
     verificationWindowStart: day(form.windowStart),
@@ -54,6 +70,9 @@ export function buildActionBody(form: ActionForm, ownerId: string | null, timeZo
     baseline: baselineOf(form),
     claimedAvoidedLoss: form.claimed.trim() || null,
     claimedCurrency: form.claimedCurrency || null,
+    ...(form.recommendationId ? { recommendationId: form.recommendationId } : {}),
+    ...(form.verificationMethod.trim() ? { verificationMethod: form.verificationMethod.trim() } : {}),
+    ...(form.verifierId ? { verifierId: form.verifierId } : {}),
   };
 }
 
@@ -95,5 +114,13 @@ export function buildCompletionPatch(form: CompletionForm, markDone: boolean, ti
     completionAttachments: form.attachments.map(({ fileName, name }) => ({ fileName, name })),
     ...(completedAt ? { completedAt } : {}),
     ...(markDone ? { status: 'done' as const } : {}),
+  };
+}
+
+/** The owner's PATCH (not an RCA writer): the evidence reference and files only (the server refuses more). */
+export function buildOwnerEvidencePatch(form: CompletionForm): RcaActionPatch {
+  return {
+    completionEvidenceRef: form.evidenceRef.trim() || null,
+    completionAttachments: form.attachments.map(({ fileName, name }) => ({ fileName, name })),
   };
 }

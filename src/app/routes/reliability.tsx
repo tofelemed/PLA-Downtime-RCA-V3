@@ -10,7 +10,7 @@ const BadActors = lazyNamedWithPreload(() => import('@/features/rca/bad-actors/b
 
 /**
  * Reliability area: RCA cases (list, new case — also `?eventId=` from the Event Hub — and the case with
- * its sub-pages `/rca/:caseId/{evidence,analysis,actions,links}/…`), the knowledge base and the CA8
+ * its sub-pages `/rca/:caseId/{evidence,analysis,actions,links,history}/…`), the knowledge base and the CA8
  * bad-actor review (`/tasks` lives in the administration routes).
  */
 export const RELIABILITY_ROUTES: readonly AppRoute[] = [

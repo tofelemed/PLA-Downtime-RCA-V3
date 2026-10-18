@@ -23,6 +23,12 @@ export const CLOSE_MESSAGES: Readonly<Record<CloseBlocker, GateIssue>> = {
     field: 'rootCause',
     message: 'write down the root cause before requesting closure',
   },
+  CODED_ROOT_CAUSE_MISSING: {
+    code: 'CODED_ROOT_CAUSE_MISSING',
+    field: 'causes',
+    message:
+      'record at least one root cause linked to the cause catalogue before requesting closure',
+  },
   ACTIONS_NOT_DONE: {
     code: 'ACTIONS_NOT_DONE',
     field: 'actions',

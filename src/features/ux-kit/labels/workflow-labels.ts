@@ -10,12 +10,29 @@ export type ReadinessState = NonNullable<QueryOf<'/api/v2/production-periods', '
 export type ValuationStatus = 'valued' | 'unvalued' | 'mixed';
 export type LossLineKind = ManualKind | 'tolerance_adjustment';
 
+/**
+ * The one wording of a period's accounting workflow (owner finding 2, 18 Oct 2026): every screen and role
+ * shows these words for the server's `workflowState`. A submitted revision whose inputs changed is still
+ * "In review" (with the reason), never a different stage.
+ */
 export const GRID_WORKFLOW_LABELS: Readonly<Record<GridWorkflowState, string>> = {
   none: 'Not calculated',
   draft: 'Draft',
   in_review: 'In review',
-  stale: 'Stale (inputs changed)',
+  stale: 'In review (inputs changed)',
   approved: 'Approved',
+};
+
+/**
+ * Accounting workflow of the periods an event overlaps (`accountingState` on event reads), shown next to
+ * the event's coding state so the two are never confused ("Coded" + "Accounting: in review").
+ */
+export const EVENT_ACCOUNTING_LABELS: Readonly<Record<GridWorkflowState, string>> = {
+  none: 'Accounting: not calculated',
+  draft: 'Accounting: draft',
+  in_review: 'Accounting: in review',
+  stale: 'Accounting: in review (inputs changed)',
+  approved: 'Accounting: approved',
 };
 
 export const REVISION_LIFECYCLE_LABELS: Readonly<Record<RevisionLifecycle, string>> = {
@@ -65,7 +82,7 @@ export const LOSS_KIND_LABELS: Readonly<Record<LossLineKind, string>> = {
   quality: 'Quality',
   bridge: 'Bridge',
   gain: 'Gain',
-  unaccounted_classified: 'Unaccounted (classified)',
+  unaccounted_classified: 'Unaccounted',
   tolerance_adjustment: 'Tolerance adjustment',
   reversal: 'Reversal of an earlier entry',
 };

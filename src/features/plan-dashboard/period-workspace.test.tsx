@@ -95,6 +95,21 @@ describe('period workspace navigation and retained editing', () => {
     expect(screen.queryByTestId('save-lines')).not.toBeInTheDocument();
   });
 
+  it('Marun E2E: an operator is sent to Actuals & quality, the only section they reach', async () => {
+    actAs('operator', 'omid');
+    open(`${BASE}/value?keep=scope`);
+    expect(await screen.findByText('Product dispositions')).toBeVisible();
+    expect(screen.getByTestId('location')).toHaveTextContent(`${BASE}/actuals?keep=scope`);
+    const links = within(screen.getByRole('navigation', { name: 'Period sections' })).getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual(['Actuals & quality']);
+    expect(screen.queryByText('Valuation figures')).not.toBeInTheDocument();
+  });
+
+  it('returns to the event the period was opened from', async () => {
+    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[{ pathname: BASE, state: { listSearch: '/events/e1' } }]}><Harness /></MemoryRouter></QueryClientProvider>);
+    expect(await screen.findByRole('link', { name: /Back to the event/ })).toHaveAttribute('href', '/events/e1');
+  });
+
   it('retains all groups in their task sections while hiding secondary reads from reconciliation', async () => {
     open();
     expect(screen.getByTestId('reconciliation-summary')).toBeVisible();
@@ -143,6 +158,10 @@ describe('period workspace navigation and retained editing', () => {
     fireEvent.click(screen.getByText('Restore loss-line draft'));
     expect(screen.getByTestId('candidate-decision')).toHaveValue('accept');
     fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+    expect(unload()).toBe(true);
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toHaveTextContent('1 unsaved change will be lost');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Discard changes' }));
     expect(unload()).toBe(false);
   });
 

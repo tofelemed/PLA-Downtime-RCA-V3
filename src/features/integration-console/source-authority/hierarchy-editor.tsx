@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { BackdateOverlapList } from '@/features/policy-backdate/backdate-overlap-list';
+import { backdateBodyOf, backdateErrors, EMPTY_BACKDATE, type BackdateErrors } from '@/features/policy-backdate/backdate-model';
+import { CommissioningBackdateFields } from '@/features/policy-backdate/commissioning-backdate-fields';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { ConsoleRefusal } from '../components/console-refusal';
@@ -35,6 +38,8 @@ function EditorForm({ initial, unitId, onDone }: { initial: HierarchyFormValues;
   const draft = useDraftSourceAuthorityVersion();
   const [values, setValues] = useState(initial);
   const [errors, setErrors] = useState<HierarchyFieldErrors>({});
+  const [backdate, setBackdate] = useState(EMPTY_BACKDATE);
+  const [backdateProblems, setBackdateProblems] = useState<BackdateErrors>({});
   const set = <K extends keyof HierarchyFormValues>(key: K, value: HierarchyFormValues[K]) => setValues((v) => ({ ...v, [key]: value }));
   const entries = values.entries;
   const move = (from: number, to: number) => {
@@ -45,9 +50,11 @@ function EditorForm({ initial, unitId, onDone }: { initial: HierarchyFormValues;
   };
   const save = () => {
     const found = validateHierarchyForm(values);
+    const backdateFound = backdateErrors(backdate);
     setErrors(found);
-    if (Object.keys(found).length > 0) return;
-    draft.submit(hierarchyDraftBody(values, unitId)).then(onDone, () => undefined);
+    setBackdateProblems(backdateFound);
+    if (Object.keys(found).length > 0 || Object.keys(backdateFound).length > 0) return;
+    draft.submit({ ...hierarchyDraftBody(values, unitId), ...backdateBodyOf(backdate) }).then(onDone, () => undefined);
   };
   return (
     <div className="space-y-3" data-testid="authority-editor">
@@ -79,7 +86,9 @@ function EditorForm({ initial, unitId, onDone }: { initial: HierarchyFormValues;
       <Field id="authority-notes" label="Notes (optional)">
         <Textarea id="authority-notes" rows={2} maxLength={2000} value={values.notes} onChange={(e) => set('notes', e.target.value)} />
       </Field>
+      <CommissioningBackdateFields idPrefix="authority" value={backdate} onChange={setBackdate} errors={backdateProblems} takesEffect="approval" />
       <ConsoleRefusal error={draft.error} />
+      <BackdateOverlapList error={draft.error} />
       <div className="flex gap-2">
         <Button size="sm" onClick={save} disabled={draft.isPending} data-testid="authority-save">
           Save draft

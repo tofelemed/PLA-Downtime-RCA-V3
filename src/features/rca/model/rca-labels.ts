@@ -11,7 +11,7 @@ export const LINK_TYPE_LABELS: Readonly<Record<RcaLinkType, string>> = {
 
 /** Case statuses are words already; `Published` is a v1 status read as an analysis-stage case. */
 const STATUS_LABELS: Readonly<Record<string, string>> = {
-  Published: 'Published (older case)',
+  Published: 'Published (older investigation)',
 };
 
 export const statusLabel = (status: string | null): string => (status ? STATUS_LABELS[status] ?? status : 'Draft');
@@ -38,7 +38,7 @@ export function recommendationText(rec: RcaRecommendationView): string {
 /** What fired in numbers, and whether it was added to an open case about the same problem (CA8). */
 export function recommendationDetail(rec: RcaRecommendationView, digits?: DigitSystem): string {
   const parts = triggerDetailText(rec, digits);
-  if (rec.outcome === 'linked_to_case') parts.push('added to the open case about the same problem');
+  if (rec.outcome === 'linked_to_case') parts.push('added to the open investigation about the same problem');
   return parts.join(' · ');
 }
 
@@ -46,4 +46,13 @@ export function recommendationDetail(rec: RcaRecommendationView, digits?: DigitS
 export function ruleNameOf(rec: RcaRecommendationView): string | null {
   const name = rec.detail.ruleName;
   return typeof name === 'string' ? name : null;
+}
+
+/** "3/5 done · 1 overdue" of a case's actions (cancelled ones are not counted by the server). */
+export function actionProgressText(
+  counts: { total: number; done: number; overdue: number },
+  number: (value: number) => string = String,
+): string {
+  const done = `${number(counts.done)}/${number(counts.total)} done`;
+  return counts.overdue > 0 ? `${done} · ${number(counts.overdue)} overdue` : done;
 }

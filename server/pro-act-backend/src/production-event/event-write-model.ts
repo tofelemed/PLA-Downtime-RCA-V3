@@ -43,6 +43,8 @@ export interface EventWriteInput {
   source?: string | null;
   reasonCodeId?: string | null;
   rcaId?: string | null;
+  /** SME D12: an uncoded stop under investigation; absent = the stored flag */
+  investigationPending?: boolean;
   classification?: Partial<EventClassification>;
 }
 
@@ -80,13 +82,14 @@ export function prepareCreate(input: EventWriteInput): IntervalModelFields {
     hasReasonCode: Boolean(input.reasonCodeId),
     hasRca: Boolean(input.rcaId),
   });
-  return assemble(interval, classification, states, input.source);
+  return assemble(interval, classification, states, sourceKindOf(input.source));
 }
 
 /**
  * Interval-model fields after applying `input` to `existing`. A new legacy `status` is translated;
- * otherwise the stored states move forward with the row (an end closes it, a reason codes it, an RCA
- * links it) and are never reset.
+ * otherwise the stored states move forward with the row (an end closes it, an RCA links it) and the coding
+ * state is recomputed from the merged data (`codingStateOf`): a stop without a reason is uncoded again,
+ * unless its investigation is pending (Marun E2E, regression R1).
  */
 export function prepareUpdate(
   existing: ProductionEvent,
@@ -122,8 +125,16 @@ export function prepareUpdate(
   );
   const context = {
     hasEnd: interval.end !== null,
-    hasReasonCode: Boolean(input.reasonCodeId ?? existing.reasonCodeId),
+    hasReasonCode:
+      input.reasonCodeId === undefined
+        ? Boolean(existing.reasonCodeId)
+        : Boolean(input.reasonCodeId),
     hasRca: Boolean(input.rcaId ?? existing.rcaId),
+    reasonCleared:
+      input.reasonCodeId === null && Boolean(existing.reasonCodeId),
+    investigationPending:
+      input.investigationPending ?? existing.investigationPending,
+    isStop: classification.physicalType === 'downtime',
   };
   const states = input.status
     ? fromLegacyStatus(input.status, context)
@@ -132,8 +143,22 @@ export function prepareUpdate(
     interval,
     classification,
     states,
-    input.source ?? existing.source,
+    keptSourceKind(existing, input),
   );
+}
+
+/**
+ * The stored kind survives an update (a coded state-engine stop stays `derived`, an import stays
+ * `imported`): the `source` label alone cannot tell them from a connected source. Only a changed `source`
+ * re-derives it.
+ */
+function keptSourceKind(
+  existing: ProductionEvent,
+  input: EventWriteInput,
+): ProductionEvent['sourceKind'] {
+  const changed =
+    input.source !== undefined && input.source !== existing.source;
+  return changed ? sourceKindOf(input.source) : existing.sourceKind;
 }
 
 /** An RCA was opened for the event (auto-create): RCA required unless the event was already reviewed. */
@@ -193,9 +218,38 @@ function resolve(
   }
 }
 
+interface StateContext {
+  hasEnd: boolean;
+  hasReasonCode: boolean;
+  hasRca: boolean;
+  /** the update clears the reason the event had */
+  reasonCleared: boolean;
+  investigationPending: boolean;
+  /** the event is a stop after the update */
+  isStop: boolean;
+}
+
+/**
+ * The coding state follows the event's data on every write (Marun regression R1): a reason codes it (a
+ * reviewed coding stays reviewed); a stop without a reason is uncoded unless its investigation is pending
+ * (then the stored state stands). A non-stop event keeps its stored state unless its reason is cleared.
+ */
+function codingStateOf(
+  existing: ProductionEvent,
+  context: StateContext,
+): EventStates['codingState'] {
+  if (context.hasReasonCode) {
+    return existing.codingState === 'reviewed' ? 'reviewed' : 'coded';
+  }
+  if (context.investigationPending) return existing.codingState;
+  return context.reasonCleared || context.isStop
+    ? 'uncoded'
+    : existing.codingState;
+}
+
 function advanceStates(
   existing: ProductionEvent,
-  context: { hasEnd: boolean; hasReasonCode: boolean; hasRca: boolean },
+  context: StateContext,
 ): EventStates {
   const physicalState =
     existing.physicalState === 'retracted' ||
@@ -204,10 +258,7 @@ function advanceStates(
       : context.hasEnd
         ? 'closed'
         : 'open';
-  const codingState =
-    existing.codingState === 'uncoded' && context.hasReasonCode
-      ? 'coded'
-      : existing.codingState;
+  const codingState = codingStateOf(existing, context);
   const rcaState =
     existing.rcaState === 'none' && context.hasRca
       ? 'linked'
@@ -219,14 +270,14 @@ function assemble(
   interval: { start: Date; end: Date | null },
   classification: EventClassification,
   states: EventStates,
-  source: string | null | undefined,
+  sourceKind: ProductionEvent['sourceKind'],
 ): IntervalModelFields {
   return {
     startTime: interval.start,
     endTime: interval.end,
     ...classification,
     ...states,
-    sourceKind: sourceKindOf(source),
+    sourceKind,
     status: toLegacyStatus(states),
     duration: legacyMinutes(interval),
   };

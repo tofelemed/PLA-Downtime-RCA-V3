@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 
 @Entity('unmapped_events')
@@ -13,7 +21,12 @@ export class UnmappedEvent {
   @JoinColumn({ name: 'tenant_id' })
   tenant?: Tenant;
 
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @Column({ name: 'unit_id', type: 'varchar', length: 36, nullable: true })
@@ -31,7 +44,12 @@ export class UnmappedEvent {
   @Column({ name: 'end_time', type: 'timestamptz', nullable: true })
   endTime?: Date;
 
-  @Column({ name: 'source_system', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'source_system',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   sourceSystem?: string;
 
   @Column({ name: 'source_id', type: 'varchar', length: 255, nullable: true })

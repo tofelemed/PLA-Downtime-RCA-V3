@@ -6,6 +6,7 @@ import { labelOf } from '@/features/ux-kit/labels';
 import { RCA_BASELINE_METRIC_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { useRcaFormat } from '../use-rca-format';
 import { BaselineCorrection } from './baseline-correction';
+import { ExposureCoverage } from './exposure-coverage';
 
 function Criteria({ baseline }: { baseline: RcaActionBaseline }) {
   const { number, percent } = useNumberFormat();
@@ -35,7 +36,8 @@ function Counted({ baseline }: { baseline: RcaActionBaseline }) {
     <>
       baseline counted from history ({date(span.from)} – {date(span.to)}): {number(span.incidents)} same-mode incident(s), {formatDuration(span.downtimeSeconds, 'long', digits)} downtime,{' '}
       {/* run seconds of the server's exposure window shown in hours (a unit change, no business figure) */}
-      {number(Number(span.exposureSeconds) / 3600)} {span.exposureBasis === 'standby_running_time' ? 'running hours of the standby equipment' : 'run hours'}
+      {number(Number(span.exposureSeconds) / 3600)} {span.exposureBasis === 'standby_running_time' ? 'running hours of the standby equipment' : 'known run hours'}
+      <ExposureCoverage window={span} />
     </>
   );
 }

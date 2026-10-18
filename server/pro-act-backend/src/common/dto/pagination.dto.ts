@@ -48,4 +48,4 @@ export class PaginatedResponseDto<T> {
 
   @ApiProperty()
   hasPrev: boolean;
-} 
+}

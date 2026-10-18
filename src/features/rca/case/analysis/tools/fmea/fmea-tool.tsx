@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import type { FmeaCause, FmeaContent, FmeaEffect } from '@/api/v2/types/rca-analyses';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { rowId } from '../../../../model/analysis-settings';
 import { useCaseWorkspace } from '../../../case-context';
+import { useToolDraft } from '../tool-draft';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { causeScore, contentOf, rulesText } from './fmea-model';
 import { CauseRow, EffectRow } from './fmea-rows';
@@ -14,7 +14,7 @@ const without = <T extends { id: string }>(items: readonly T[], id: string) => i
 
 function Editor({ record, save }: { record: ToolRecord<'fmea'>; save: (body: FmeaContent) => Promise<unknown> }) {
   const { rca, readOnly } = useCaseWorkspace();
-  const [content, setContent] = useState<FmeaContent>(() => contentOf(record, rca.title.slice(0, 255)));
+  const [content, setContent] = useToolDraft<FmeaContent>(() => contentOf(record, rca.title.slice(0, 255)));
   const scored = (id: string) => causeScore(record?.causes.find((cause) => cause.id === id), record?.method);
   const setEffects = (effects: FmeaEffect[]) => setContent({ ...content, effects });
   const setCauses = (causes: FmeaCause[]) => setContent({ ...content, causes });

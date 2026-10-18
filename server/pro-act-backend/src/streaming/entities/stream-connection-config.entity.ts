@@ -1,4 +1,11 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 
 @Entity('stream_connection_configs')
 @Index(['tenantId'])
@@ -46,5 +53,3 @@ export class StreamConnectionConfigEntity {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 }
-
-

@@ -82,4 +82,4 @@ export class UpdateAssetDto {
   @IsOptional()
   @Type(() => Date)
   nextMaintenanceDate?: Date;
-} 
+}

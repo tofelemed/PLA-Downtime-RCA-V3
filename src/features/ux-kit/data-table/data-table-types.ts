@@ -49,8 +49,13 @@ export interface DataTableProps<T> {
   empty?: DataTableEmpty;
   /** makes rows keyboard-activatable (Enter / Space) and clickable */
   onRowClick?: (row: T) => void;
-  /** accessible name of an activatable row, e.g. the event's reason and start */
+  /** action text of an activatable row, e.g. "Open case …", read before the cell text (never replaces it) */
   rowLabel?: (row: T) => string;
+  /**
+   * rows have a link cell to the same target as `onRowClick`: the link is the keyboard path, so rows stay
+   * clickable with the mouse but are not an extra tab stop (H-10)
+   */
+  rowsHaveLink?: boolean;
   /** default true: the header stays visible while the body scrolls inside `maxHeight` */
   stickyHeader?: boolean;
   maxHeight?: number | string;

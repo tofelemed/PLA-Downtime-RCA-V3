@@ -15,6 +15,8 @@ import { call, command } from './test-utils/downtime-world';
  * the job and deactivates the connection. The password never appears in an API response.
  */
 const MANAGER = { email: 'manager@acme.com', password: 'demo123' };
+/** owner 18 Oct 2026: Integration is SuperAdmin-only, so the console UI steps run as the SuperAdmin */
+const SUPER_ADMIN = { email: 'test@example.com', password: 'Test123!@#' };
 const FLAG = 'v2.integrationConsole';
 const BROKER_URL = process.env.E2E_MQTT_BROKER_URL ?? 'mqtt://mqtt:1883';
 const BASE_URL = process.env.E2E_BASE_URL;
@@ -82,7 +84,7 @@ test.describe('Integration console — MQTT panel (plan 1.8 step 5)', () => {
       if (!response.url().includes('/api/')) return;
       bodies.push(await response.text().catch(() => ''));
     });
-    await loginViaUI(page, MANAGER.email, MANAGER.password);
+    await loginViaUI(page, SUPER_ADMIN.email, SUPER_ADMIN.password);
     await openConsole(page);
 
     // 1. wizard: profile preset → basics (unique topic family) → connection (write-only password) → advanced

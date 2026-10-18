@@ -84,6 +84,30 @@ describe('parseRcaPolicy (D13 + SME D17 / CA2–CA8)', () => {
     ).toThrow(RcaPolicyError);
   });
 
+  it('effectiveness.minimumCoverage: 0–1, a version without it behaves as 0.95 (owner, 18 Oct 2026)', () => {
+    const { minimumCoverage, ...withoutField } =
+      RCA_RULES_DEFAULT.effectiveness;
+    expect(minimumCoverage).toBe(0.95);
+    expect(
+      parseRcaPolicy({ ...LEGACY, effectiveness: withoutField }).effectiveness
+        .minimumCoverage,
+    ).toBe(0.95);
+    expect(
+      parseRcaPolicy({
+        ...LEGACY,
+        effectiveness: { ...withoutField, minimumCoverage: 0.9 },
+      }).effectiveness.minimumCoverage,
+    ).toBe(0.9);
+    for (const bad of [1.2, -0.1, '0.9', null]) {
+      expect(() =>
+        parseRcaPolicy({
+          ...LEGACY,
+          effectiveness: { ...withoutField, minimumCoverage: bad },
+        }),
+      ).toThrow('minimumCoverage must be a number in [0, 1]');
+    }
+  });
+
   it('criticalities compare case-insensitively', () => {
     const policy = parseRcaPolicy({
       ...LEGACY,

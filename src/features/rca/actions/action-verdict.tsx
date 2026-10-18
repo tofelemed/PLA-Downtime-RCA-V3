@@ -3,6 +3,8 @@ import { Badge } from '@/components/ui/badge';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { labelOf } from '@/features/ux-kit/labels';
 import { RCA_VERDICT_LABELS } from '@/features/ux-kit/labels/rca-labels';
+import { ExposureCoverage } from './exposure-coverage';
+import { VerdictCoverage } from './verdict-coverage';
 
 const VARIANTS: Readonly<Record<string, 'default' | 'destructive' | 'secondary'>> = {
   effective: 'default',
@@ -28,9 +30,11 @@ export function ActionVerdict({ action }: { action: RcaActionView }) {
             same-mode rate {decimal(result.baselineRate, 2)} → {decimal(result.postRate, 2)} per {text('1,000')} run hours
             {reduction ? ` (reduction ${reduction})` : ''}
             {result.mtbfLowerBound95Hours ? ` · MTBF at least ${decimal(result.mtbfLowerBound95Hours, 0)} h (${percent(95)})` : ''}
+            {action.postAction?.exposure && <ExposureCoverage window={action.postAction.exposure} />}
           </span>
         )}
       </p>
+      <VerdictCoverage coverage={result?.coverage} />
       {result && result.reasons.length > 0 && (
         <ul className="list-disc pl-5 text-muted-foreground">
           {result.reasons.map((reason) => (

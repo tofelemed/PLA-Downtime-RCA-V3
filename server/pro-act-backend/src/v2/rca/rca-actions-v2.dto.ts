@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -20,6 +20,10 @@ import {
   ValidateNested,
 } from 'class-validator';
 import {
+  toArrayParam,
+  toBooleanParam,
+} from '../../common/dto/query-param.transformers';
+import {
   BASELINE_METRICS,
   BaselineMetric,
 } from '../../domain/rca/rca-verification';
@@ -29,6 +33,7 @@ import {
   RcaActionStatus,
   RcaActionType,
 } from '../../rca/entities/rca-action.entity';
+import { ListQueryDto } from '../common/list-query.dto';
 
 const DECIMAL = /^\d{1,16}(\.\d{1,8})?$/;
 export const CLAIM_CURRENCIES = ['IRR', 'USD'] as const;
@@ -200,6 +205,29 @@ export class RcaActionV2CreateDto {
   @IsISO8601()
   verificationWindowEnd?: string | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    maxLength: 2000,
+    description:
+      'CA4: how the completion will be verified (inspection, test, record review)',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(2000)
+  verificationMethod?: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'CA4: the plant member named to check the completion evidence and mark the action done; never the owner ' +
+      '(422 VERIFIER_IS_OWNER). When named, only this person marks the action done (403 NOT_THE_VERIFIER).',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  verifierId?: string | null;
+
   @ApiPropertyOptional({ type: RcaActionBaselineDto, nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
@@ -223,6 +251,90 @@ export class RcaActionV2CreateDto {
   @ValidateIf((_, value) => value !== null)
   @IsIn(CLAIM_CURRENCIES)
   claimedCurrency?: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    maxLength: 64,
+    description:
+      'Item 5: id of the case recommendation this action implements (422 INVALID_REFERENCE when the case has no such recommendation); null unlinks',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
+  recommendationId?: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    maxLength: 2000,
+    description:
+      'F-9: why the action is cancelled; accepted only with status cancelled (or on a cancelled action, 422 ' +
+      'CANCEL_REASON_WITHOUT_CANCEL otherwise). Optional; who and when are recorded by the server.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2000)
+  cancelReason?: string | null;
 }
 
 export class RcaActionV2UpdateDto extends PartialType(RcaActionV2CreateDto) {}
+
+export const RCA_ACTION_LIST_SORTS = ['dueDate'] as const;
+
+/**
+ * `GET /v2/rca-actions` (F-7): actions across the cases of your scope, due date first (no due date
+ * last). Repeat `status` for several statuses.
+ */
+export class RcaActionV2ListQueryDto extends ListQueryDto {
+  @ApiPropertyOptional({
+    description: 'true = only actions you own (the signed-in user)',
+  })
+  @IsOptional()
+  @Transform(toBooleanParam)
+  @IsBoolean()
+  mine?: boolean;
+
+  @ApiPropertyOptional({ description: 'Actions of this owner' })
+  @IsOptional()
+  @IsUUID()
+  ownerId?: string;
+
+  @ApiPropertyOptional({
+    enum: RCA_ACTION_STATUSES,
+    isArray: true,
+    description: 'Statuses (repeat the parameter)',
+  })
+  @IsOptional()
+  @Transform(toArrayParam)
+  @IsArray()
+  @ArrayMaxSize(RCA_ACTION_STATUSES.length)
+  @IsIn(RCA_ACTION_STATUSES, { each: true })
+  status?: RcaActionStatus[];
+
+  @ApiPropertyOptional({
+    description:
+      'true = open or in progress with the due date passed (the overdue count of GET /v2/rcas/summary); false = the others',
+  })
+  @IsOptional()
+  @Transform(toBooleanParam)
+  @IsBoolean()
+  overdue?: boolean;
+
+  @ApiPropertyOptional({ description: 'Actions of this case' })
+  @IsOptional()
+  @IsUUID()
+  rcaId?: string;
+
+  @ApiPropertyOptional({ description: 'Actions of cases of this unit' })
+  @IsOptional()
+  @IsUUID()
+  unitId?: string;
+
+  @ApiPropertyOptional({ enum: RCA_ACTION_LIST_SORTS })
+  @IsOptional()
+  @IsIn(RCA_ACTION_LIST_SORTS)
+  sort?: string = undefined;
+}

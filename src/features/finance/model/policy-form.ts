@@ -8,6 +8,7 @@ import {
   type TimeBasisRule,
   type ValuationPolicyView,
 } from '@/api/v2/types/valuation';
+import { backdateErrors, EMPTY_BACKDATE, type BackdateDraft } from '@/features/policy-backdate/backdate-model';
 import type { FieldErrors } from './field-errors';
 import { economicBody, economicErrors, economicFormOf, type EconomicFormValues } from './policy-economic';
 
@@ -25,8 +26,12 @@ export interface PolicyFormValues {
   independentImpactCodeIds: string[];
   /** version-3 fields (SME V2–V6) */
   economic: EconomicFormValues;
-  /** ISO UTC instant (DateTimeInput) */
+  /** ISO UTC instant (DateTimeInput); now or later — a past start is the commissioning backdate below */
   effectiveFrom: string | null;
+  /** commissioning backdate (owner, 18 Oct 2026): a past start with its reason, replacing `effectiveFrom` */
+  backdate: BackdateDraft;
+  /** with a backdate over approved figures: approval opens a change proposal for each of them */
+  restateApproved: boolean;
   notes: string;
 }
 
@@ -51,13 +56,29 @@ export function policyFormOf(source: ValuationPolicyView | null): PolicyFormValu
     independentImpactCodeIds: stringList(body.independentImpactCodeIds),
     economic: economicFormOf(source ? body : null),
     effectiveFrom: null,
+    backdate: { ...EMPTY_BACKDATE },
+    restateApproved: false,
     notes: '',
   };
 }
 
-export function validatePolicyForm(values: PolicyFormValues): FieldErrors {
-  const errors: FieldErrors = economicErrors(values.economic, values.defaultBasis);
-  if (!values.effectiveFrom) errors.effectiveFrom = 'Enter the date and time it starts.';
+/** The start: a commissioning backdate (past instant and reason) or a start from now on. */
+function startErrors(values: PolicyFormValues, now: Date): FieldErrors {
+  if (values.backdate.effectiveFrom) {
+    const found = backdateErrors(values.backdate, now);
+    const errors: FieldErrors = {};
+    if (found.effectiveFrom) errors.backdateEffectiveFrom = found.effectiveFrom;
+    if (found.reason) errors.backdateReason = found.reason;
+    return errors;
+  }
+  if (values.backdate.reason.trim()) return { backdateEffectiveFrom: 'Choose the effective-from, or clear the reason' };
+  if (!values.effectiveFrom) return { effectiveFrom: 'Enter the date and time it starts.' };
+  if (Date.parse(values.effectiveFrom) < now.getTime()) return { effectiveFrom: 'A past start is a commissioning backdate: set it under Commissioning with a reason.' };
+  return {};
+}
+
+export function validatePolicyForm(values: PolicyFormValues, now: Date = new Date()): FieldErrors {
+  const errors: FieldErrors = { ...economicErrors(values.economic, values.defaultBasis), ...startErrors(values, now) };
   const currencies = values.reportingCurrencies;
   if (currencies.length < 1) errors.reportingCurrencies = 'Choose at least one reporting currency.';
   else if (currencies.length > 2) errors.reportingCurrencies = 'Choose at most two reporting currencies.';
@@ -75,7 +96,13 @@ export function policyCreateBody(values: PolicyFormValues): ValuationPolicyCreat
     fxPolicy: values.fxPolicy,
     independentImpactCodeIds: independent ? [...values.independentImpactCodeIds] : [],
     ...economicBody(values.economic),
-    effectiveFrom: values.effectiveFrom as string,
+    ...startBody(values),
     notes: values.notes.trim() || null,
   };
+}
+
+function startBody(values: PolicyFormValues): Pick<ValuationPolicyCreateBody, 'effectiveFrom' | 'backdateReason' | 'restateApproved'> {
+  const { effectiveFrom, reason } = values.backdate;
+  if (!effectiveFrom) return { effectiveFrom: values.effectiveFrom as string };
+  return { effectiveFrom, backdateReason: reason.trim(), ...(values.restateApproved ? { restateApproved: true } : {}) };
 }

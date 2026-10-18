@@ -71,8 +71,8 @@ test.describe('Manager persona — Downtime Analysis and PLA analytics', () => {
     await openDowntime(page, []);
     await expect(page.locator('nav a[href="/downtime"]')).toBeVisible();
     await expect(tile(page, 'downtime_total')).toHaveAttribute('data-value', '8100');
-    await expect(tile(page, 'downtime_total').getByTestId('kpi-value')).toHaveText('2:15');
-    await expect(tile(page, 'unknown_time').getByTestId('kpi-value')).toHaveText('0:15');
+    await expect(tile(page, 'downtime_total').getByTestId('kpi-value')).toHaveText('2 h 15 min');
+    await expect(tile(page, 'unknown_time').getByTestId('kpi-value')).toHaveText('15 min');
     await expect(tile(page, 'stop_count').getByTestId('kpi-value')).toHaveText('4');
     await expect(page.getByTestId('unknown-lower-bound')).toBeVisible();
     await expect(bars(page)).toHaveCount(3);
@@ -124,7 +124,7 @@ test.describe('Manager persona — Downtime Analysis and PLA analytics', () => {
     await expect(waterfall).toHaveAttribute('data-opening', '2160');
     await expect(page.getByTestId('snapshot-runs')).toHaveAttribute('data-run-ids', /^[0-9a-f-]{36}(,[0-9a-f-]{36}){2}$/);
     const capacityRequest = reportRequest(page, 'scope-waterfall', (url) => url.searchParams.get('ledger') === 'capacity' && url.searchParams.getAll('unitIds').includes(unit));
-    await page.getByTestId('ledger-capacity').check();
+    await page.getByTestId('ledger-capacity').click();
     await capacityRequest;
     await expect(waterfall).toHaveAttribute('data-ledger', 'capacity');
     await expect(waterfall).toHaveAttribute('data-closes', 'true');

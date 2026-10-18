@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import { IntegrationPageGate } from '@/features/integration-console/integration-page-gate';
 import { lazyNamedWithPreload } from '@/lib/lazy-with-preload';
 import type { AppRoute } from './route-types';
 
@@ -11,17 +13,42 @@ const StatusMappingsPage = lazyNamedWithPreload(() => import('@/features/integra
 const SourceAuthorityPage = lazyNamedWithPreload(() => import('@/features/integration-console/source-authority/source-authority-page'), 'SourceAuthorityPage');
 const HistorianPage = lazyNamedWithPreload(() => import('@/features/integration-console/historian/historian-page'), 'HistorianPage');
 
-/** Integration area: Connectivity (the integration console and its sub-pages) and the historian (track T4). */
+interface Gate {
+  title: string;
+  requires: 'canReachIntegration' | 'canReviewSourcePriority' | 'canReviewSourceStatusRules';
+}
+
+const CONSOLE: Gate = { title: 'Connectivity', requires: 'canReachIntegration' };
+const STATUS_RULES: Gate = { title: 'Source Status Rules', requires: 'canReviewSourceStatusRules' };
+const SOURCE_PRIORITY: Gate = { title: 'Source Priority', requires: 'canReviewSourcePriority' };
+const HISTORIAN: Gate = { title: 'Enhanced Historian', requires: 'canReachIntegration' };
+
+/** A route of the section with its page gate; `requires` is also the route gate. */
+function gated(path: string, page: ReactNode, preload: () => Promise<unknown>, gate: Gate = CONSOLE): AppRoute {
+  return {
+    path,
+    element: <IntegrationPageGate title={gate.title} requires={gate.requires}>{page}</IntegrationPageGate>,
+    preload,
+    requires: gate.requires,
+    gateTitle: gate.title,
+  };
+}
+
+/**
+ * Integration area: Connectivity (the integration console and its sub-pages) and the historian (track T4).
+ * Owner 18 Oct 2026: SuperAdmin only. The Source Priority and Source Status Rules pages also open for
+ * their maker-checker approvers, who reach them from the approvals inbox (the menu stays hidden).
+ */
 export const INTEGRATION_ROUTES: readonly AppRoute[] = [
-  { path: '/connectivity', element: <ConsolePage />, preload: ConsolePage.preload },
-  { path: '/connectivity/connections/new', element: <ConnectionEditorPage />, preload: ConnectionEditorPage.preload },
-  { path: '/connectivity/connections/:connectionId', element: <ConnectionPage />, preload: ConnectionPage.preload },
-  { path: '/connectivity/connections/:connectionId/edit', element: <ConnectionEditorPage />, preload: ConnectionEditorPage.preload },
-  { path: '/connectivity/connections/:connectionId/signals/new', element: <SignalEditorPage />, preload: SignalEditorPage.preload },
-  { path: '/connectivity/quarantine/:exceptionId', element: <ExceptionPage />, preload: ExceptionPage.preload },
-  { path: '/connectivity/mappings/new', element: <SourceMappingEditorPage />, preload: SourceMappingEditorPage.preload },
-  { path: '/connectivity/mappings/:mappingId', element: <SourceMappingEditorPage />, preload: SourceMappingEditorPage.preload },
-  { path: '/connectivity/source-status', element: <StatusMappingsPage />, preload: StatusMappingsPage.preload },
-  { path: '/connectivity/source-authority', element: <SourceAuthorityPage />, preload: SourceAuthorityPage.preload },
-  { path: '/enhanced-historian', element: <HistorianPage />, preload: HistorianPage.preload },
+  gated('/connectivity', <ConsolePage />, ConsolePage.preload),
+  gated('/connectivity/connections/new', <ConnectionEditorPage />, ConnectionEditorPage.preload),
+  gated('/connectivity/connections/:connectionId', <ConnectionPage />, ConnectionPage.preload),
+  gated('/connectivity/connections/:connectionId/edit', <ConnectionEditorPage />, ConnectionEditorPage.preload),
+  gated('/connectivity/connections/:connectionId/signals/new', <SignalEditorPage />, SignalEditorPage.preload),
+  gated('/connectivity/quarantine/:exceptionId', <ExceptionPage />, ExceptionPage.preload),
+  gated('/connectivity/mappings/new', <SourceMappingEditorPage />, SourceMappingEditorPage.preload),
+  gated('/connectivity/mappings/:mappingId', <SourceMappingEditorPage />, SourceMappingEditorPage.preload),
+  gated('/connectivity/source-status', <StatusMappingsPage />, StatusMappingsPage.preload, STATUS_RULES),
+  gated('/connectivity/source-authority', <SourceAuthorityPage />, SourceAuthorityPage.preload, SOURCE_PRIORITY),
+  gated('/enhanced-historian', <HistorianPage />, HistorianPage.preload, HISTORIAN),
 ];

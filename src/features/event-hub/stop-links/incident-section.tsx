@@ -55,7 +55,7 @@ export function IncidentSection({ incident, eventId, occurrenceId, canDecide }: 
   return (
     <div className="space-y-2" data-testid="stop-incident">
       <p className="text-sm">
-        {format.number(incident.stopCount)} stops of one unresolved incident (restarts within {format.duration(incident.windowSeconds, 'compact')}): stopped{' '}
+        {format.number(incident.stopCount)} stops of one unresolved incident (restarts within {format.duration(incident.windowSeconds)}): stopped{' '}
         {format.duration(incident.stoppedSeconds)}
         {incident.envelopeSeconds !== null && ` within ${format.duration(incident.envelopeSeconds)}`}. Counted once in MTBF; each stop keeps its own duration.
       </p>
@@ -64,7 +64,7 @@ export function IncidentSection({ incident, eventId, occurrenceId, canDecide }: 
           <li key={stop.id} data-testid="incident-stop">
             {stop.id === eventId ? <strong>{format.dateTime(stop.startTime)}</strong> : <Link className="underline" to={`/events/${stop.id}`}>{format.dateTime(stop.startTime)}</Link>}
             {' · '}
-            {stop.durationSeconds === null ? 'still open' : format.duration(stop.durationSeconds, 'compact')} · {SOURCE_KIND_LABELS[stop.sourceKind] ?? stop.sourceKind}
+            {stop.durationSeconds === null ? 'still open' : format.duration(stop.durationSeconds)} · {SOURCE_KIND_LABELS[stop.sourceKind] ?? stop.sourceKind}
           </li>
         ))}
       </ol>

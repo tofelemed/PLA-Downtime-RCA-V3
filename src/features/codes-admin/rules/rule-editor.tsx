@@ -8,6 +8,7 @@ import { Field } from '@/features/integration-console/components/field';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useDebouncedValue } from '@/features/ux-kit/use-debounced-value';
+import { hasUnsavedChanges, useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { AdminRefusalAlert } from '../components/admin-refusal-alert';
 import { useReferenceOptions } from '../hooks/use-reference-options';
 import { useRuleDraft } from '../hooks/use-rule-draft';
@@ -35,7 +36,8 @@ function initialDraft(rule: RuleView | null): RuleDraft {
  */
 export function RuleEditor({ schema, rule, onSaved }: RuleEditorProps) {
   const { canAuthorRules } = useCapabilities();
-  const state = useRuleDraft(() => initialDraft(rule));
+  const initial = useMemo(() => initialDraft(rule), [rule]);
+  const state = useRuleDraft(() => initial);
   const { draft } = state;
   const references = useReferenceOptions();
   const definition = useMemo(() => definitionOf(draft, schema), [draft, schema]);
@@ -49,6 +51,7 @@ export function RuleEditor({ schema, rule, onSaved }: RuleEditorProps) {
     [draft, checked.data, saveError],
   );
   const readOnly = draft.nested || rule?.state === 'retired' || !canAuthorRules;
+  useUnsavedChangesGuard(hasUnsavedChanges(draft, initial, [readOnly, create.isPending, change.isPending]));
   const save = async () => {
     const common = { name: draft.name.trim(), description: draft.description.trim() || null, priority: Number(draft.priority) || 0, definition };
     const saved = rule
@@ -72,7 +75,7 @@ export function RuleEditor({ schema, rule, onSaved }: RuleEditorProps) {
       <Field id="rule-description" label="Description">
         <Input id="rule-description" value={draft.description} onChange={(event) => state.patch({ description: event.target.value })} disabled={readOnly} />
       </Field>
-      {draft.nested && <p className="text-sm text-amber-700">This definition has nested groups; view it in the version history (the builder edits one level).</p>}
+      {draft.nested && <p className="text-sm text-warning">This definition has nested groups; view it in the version history (the builder edits one level).</p>}
       <ConditionsSection list="all" state={state} schema={schema} references={references} errors={errors} disabled={readOnly} />
       <ConditionsSection list="any" state={state} schema={schema} references={references} errors={errors} disabled={readOnly} />
       <ActionsSection state={state} schema={schema} references={references} errors={errors} disabled={readOnly} />

@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OutboxModule } from '../common/outbox/outbox.module';
-import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
 import { PeriodsModule } from '../periods/periods.module';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { RcaAction } from '../rca/entities/rca-action.entity';
 import { RcaCaseLink } from '../rca/entities/rca-case-link.entity';
 import { RcaTriggerEvaluation } from '../rca/entities/rca-trigger-evaluation.entity';
 import { RCA } from '../rca/rca.entity';
+import { RcaActionQueueService } from './rca-action-queue.service';
 import { RcaActionsService } from './rca-actions.service';
 import { RcaBaselineCorrectionsService } from './rca-baseline-corrections.service';
 import { RcaAnalysesService } from './rca-analyses.service';
@@ -15,7 +15,11 @@ import { RcaAttachmentsService } from './rca-attachments.service';
 import { RcaCaseCommandsService } from './rca-case-commands.service';
 import { RcaCasesService } from './rca-cases.service';
 import { RcaCaseWorkflowService } from './rca-case-workflow.service';
+import { RcaCauseReportService } from './rca-cause-report.service';
+import { RcaCausesService } from './rca-causes.service';
+import { RcaHistoryService } from './rca-history.service';
 import { RcaLinksService } from './rca-links.service';
+import { RcaOccurrencesService } from './rca-occurrences.service';
 import { RcaRecommendationsService } from './rca-recommendations.service';
 import { RcaVerificationService } from './rca-verification.service';
 import { RcaTriggerSweepJob } from './triggers/rca-trigger-sweep.job';
@@ -39,7 +43,6 @@ import { RcaApprovedTriggerService } from './triggers/rca-approved-trigger.servi
     ]),
     OutboxModule,
     PeriodsModule,
-    FeatureFlagsModule,
   ],
   providers: [
     RcaCasesService,
@@ -48,8 +51,13 @@ import { RcaApprovedTriggerService } from './triggers/rca-approved-trigger.servi
     RcaAnalysesService,
     RcaAttachmentsService,
     RcaLinksService,
+    RcaHistoryService,
+    RcaCausesService,
+    RcaCauseReportService,
+    RcaOccurrencesService,
     RcaRecommendationsService,
     RcaActionsService,
+    RcaActionQueueService,
     RcaBaselineCorrectionsService,
     RcaVerificationService,
     RcaTriggerService,
@@ -64,8 +72,13 @@ import { RcaApprovedTriggerService } from './triggers/rca-approved-trigger.servi
     RcaAnalysesService,
     RcaAttachmentsService,
     RcaLinksService,
+    RcaHistoryService,
+    RcaCausesService,
+    RcaCauseReportService,
+    RcaOccurrencesService,
     RcaRecommendationsService,
     RcaActionsService,
+    RcaActionQueueService,
     RcaBaselineCorrectionsService,
     RcaVerificationService,
     RcaTriggerService,

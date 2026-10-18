@@ -20,6 +20,8 @@ import {
   'at',
 ])
 @Index('IDX_audit_log_at', ['at'])
+/** RCA field history by case (partial expression index, migration RcaFieldHistory) */
+@Index('IDX_audit_log_rca_case', { synchronize: false })
 export class AuditEntry {
   @PrimaryGeneratedColumn('uuid')
   id: string;

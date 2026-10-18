@@ -87,7 +87,10 @@ test.describe('HDPE period workspace navigation and draft safety', () => {
     await reload;
     await page.getByTestId('manual-line-form').getByRole('button', { name: 'Cancel', exact: true }).click();
     const discard = page.getByTestId('loss-line-editor').getByRole('button', { name: 'Discard changes', exact: true });
-    if (await discard.isVisible()) await discard.click();
+    if ((await discard.isVisible()) && (await discard.isEnabled())) {
+      await discard.click();
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Discard changes' }).click();
+    }
   });
 
   test('viewer can read all five sections without accounting command controls', async ({ page }) => {
@@ -95,7 +98,7 @@ test.describe('HDPE period workspace navigation and draft safety', () => {
     await page.goto(seedPath);
     for (const name of sections) {
       await section(page, name);
-      for (const id of ['save-lines', 'add-manual-line', 'wf-submit', 'wf-approve', 'wf-revise', 'hold-open', 'day-certify', 'adjustment-propose', 'disposition-record', 'propose-correction']) {
+      for (const id of ['save-lines', 'add-manual-line', 'wf-submit', 'sticky-submit', 'wf-approve', 'wf-revise', 'hold-open', 'day-certify', 'adjustment-propose', 'disposition-record', 'propose-correction']) {
         await expect(page.getByTestId(id)).toHaveCount(0);
       }
     }

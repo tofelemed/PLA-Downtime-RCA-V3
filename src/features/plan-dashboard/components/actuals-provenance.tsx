@@ -3,13 +3,14 @@ import type { PeriodDetailView } from '@/api/v2/types/periods';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { labelOf, useProductNames } from '@/features/ux-kit/labels';
-import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { useCalendarPreference } from '@/lib/dates';
-import { ACTUALS_METHOD_LABELS, ACTUALS_QUALITY_LABELS, ACTUALS_SOURCE_LABELS, findingText, SEGMENT_QUALITY_LABELS } from '../model/actuals-labels';
+import { useUnitSignalNames } from '@/api/v2/queries/signals';
+import { ACTUALS_METHOD_LABELS, ACTUALS_QUALITY_LABELS, findingText } from '../model/actuals-labels';
 import { formatRatioPercent } from '../model/display';
 import { QualityClasses } from './quality-classes';
 import { SourceSubstitution } from './source-substitution';
+import { SourceSegmentGroups } from './source-segment-groups';
 
 export interface ActualsProvenanceProps {
   periodId: string;
@@ -18,7 +19,14 @@ export interface ActualsProvenanceProps {
 
 type DetailSlice = PeriodDetailView['slices'][number];
 
-function SliceProvenance({ slice, timezone, productName }: { slice: DetailSlice; timezone: string; productName: string }) {
+interface SliceProvenanceProps {
+  slice: DetailSlice;
+  timezone: string;
+  productName: string;
+  signalName: (signalId: string) => string | null;
+}
+
+function SliceProvenance({ slice, timezone, productName, signalName }: SliceProvenanceProps) {
   const actuals = slice.actuals;
   const { digits } = useCalendarPreference();
   return (
@@ -32,13 +40,8 @@ function SliceProvenance({ slice, timezone, productName }: { slice: DetailSlice;
           </p>
           {actuals.substitution && <SourceSubstitution substitution={actuals.substitution} />}
           {actuals.qualityClasses && <QualityClasses classes={actuals.qualityClasses} uom={actuals.uom} />}
+          <SourceSegmentGroups segments={actuals.sourceSegments} uom={actuals.uom} timezone={timezone} coverageText={formatRatioPercent(actuals.coverageRatio, digits)} signalName={signalName} />
           <ul className="list-disc pl-5 text-xs">
-            {actuals.sourceSegments.map((s) => (
-              <li key={`${s.source}-${s.from}`}>
-                {labelOf(ACTUALS_SOURCE_LABELS, s.source)} ({labelOf(ACTUALS_METHOD_LABELS, s.method).toLowerCase()}, {labelOf(SEGMENT_QUALITY_LABELS, s.quality)}): <PlantTime iso={s.from} tz={timezone} /> → <PlantTime iso={s.to} tz={timezone} /> ·{' '}
-                <Quantity value={s.quantity} uom={actuals.uom} />
-              </li>
-            ))}
             {actuals.exceptions.map((e) => (
               <li key={`${e.code}-${e.from ?? ''}`} className={e.severity === 'problem' ? 'text-destructive' : undefined} data-code={e.code}>
                 {e.severity === 'problem' ? 'Problem: ' : 'Note: '}
@@ -58,13 +61,14 @@ function SliceProvenance({ slice, timezone, productName }: { slice: DetailSlice;
 export function ActualsProvenance({ periodId, timezone }: ActualsProvenanceProps) {
   const period = useProductionPeriod(periodId);
   const products = useProductNames();
+  const signalName = useUnitSignalNames(period.data?.data.unitId ?? null);
   const state = dataStateOf(period);
   if (state !== 'ready' || !period.data) return <DataState state={state} error={period.error} />;
   return (
     <details className="rounded-md border p-2 text-sm" data-testid="actuals-provenance">
       <summary className="cursor-pointer font-medium">Actuals provenance</summary>
       {period.data.data.slices.map((slice) => (
-        <SliceProvenance key={slice.id} slice={slice} timezone={timezone} productName={products.nameOf(slice.productId)} />
+        <SliceProvenance key={slice.id} slice={slice} timezone={timezone} productName={products.nameOf(slice.productId)} signalName={signalName} />
       ))}
     </details>
   );

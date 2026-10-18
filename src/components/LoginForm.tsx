@@ -8,10 +8,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { StatusIcon } from '@/lib/icons';
 import { LOGIN_COPY } from '@/features/login/login-copy';
 import { LoginHeroPanel } from '@/features/login/login-hero-panel';
-import { DemoAccountsHint } from '@/features/login/demo-accounts-hint';
 import { useLoginDocumentTitle } from '@/features/login/use-login-document-title';
 
-const FIELD_LABEL = 'text-xs font-semibold tracking-[0.15em] text-slate-700';
+const FIELD_LABEL = 'text-xs font-semibold tracking-[0.15em] text-foreground';
 
 export const LoginForm: React.FC = () => {
   const { login, loginError } = useAuth();
@@ -38,14 +37,14 @@ export const LoginForm: React.FC = () => {
       <main className="flex flex-1 items-center justify-center px-4 py-8 sm:px-8 md:px-10 md:py-12">
         <div className="w-full max-w-md">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold tracking-[0.2em] text-slate-900">{LOGIN_COPY.appName}</h1>
-            <p className="mt-2 font-mono text-[10px] tracking-[0.1em] text-slate-600 lg:text-xs lg:tracking-[0.2em]">
+            <h1 className="text-2xl font-bold tracking-[0.2em] text-foreground">{LOGIN_COPY.appName}</h1>
+            <p className="mt-2 font-mono text-xs tracking-[0.1em] text-muted-foreground lg:tracking-[0.2em]">
               {LOGIN_COPY.appSubtitle}
             </p>
           </div>
 
-          <div className="mb-6 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-700">
-            <strong className="font-semibold text-slate-900">{LOGIN_COPY.noticeLead}</strong> {LOGIN_COPY.noticeBody}
+          <div className="mb-6 rounded-md border border-border bg-muted p-3 text-xs leading-relaxed text-foreground">
+            <strong className="font-semibold text-foreground">{LOGIN_COPY.noticeLead}</strong> {LOGIN_COPY.noticeBody}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -84,10 +83,8 @@ export const LoginForm: React.FC = () => {
               {LOGIN_COPY.submit}
             </Button>
 
-            <p className="text-center text-xs text-slate-600">{LOGIN_COPY.help}</p>
+            <p className="text-center text-xs text-muted-foreground">{LOGIN_COPY.help}</p>
           </form>
-
-          <DemoAccountsHint />
         </div>
       </main>
     </div>

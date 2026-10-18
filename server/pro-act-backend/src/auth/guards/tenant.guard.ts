@@ -1,11 +1,19 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 
 @Injectable()
 export class TenantGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    const tenantId = request.params.tenantId || request.query.tenantId || request.body.tenantId;
+    const tenantId =
+      request.params.tenantId ||
+      request.query.tenantId ||
+      request.body.tenantId;
 
     // SuperAdmin can access all tenants
     if (user.role === 'SuperAdmin') {
@@ -20,4 +28,3 @@ export class TenantGuard implements CanActivate {
     return true;
   }
 }
-

@@ -138,8 +138,15 @@ export async function reliabilityReport(
     stats,
     policyVersions: await policyVersions(manager, stats.runIds),
     provisionalData: data.units.some((u) => u.mtbf.quality === 'provisional'),
-    notes: [
-      'MTTR needs active-repair evidence; until then see meanDowntimeToRestore (D13)',
-    ],
+    notes: reliabilityNotes(data),
   });
+}
+
+const MTTR_NOTE =
+  'MTTR needs active-repair evidence; until then see meanDowntimeToRestore (D13)';
+
+/** The MTTR note only while some unit or asset has no active-repair evidence (Marun E2E 1.5). */
+export function reliabilityNotes(data: ReliabilityReportView): string[] {
+  const rows = [...data.units, ...data.assets];
+  return rows.some((r) => r.mttr.value === null) ? [MTTR_NOTE] : [];
 }

@@ -1,6 +1,6 @@
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { cellClass, headClass, renderCellValue, rowActivationProps } from './data-table-cells';
+import { cellClass, headClass, renderCellValue, rowActivationProps, rowHintOf, rowLabelHint } from './data-table-cells';
 import { EmptyRow, SkeletonRows } from './data-table-states';
 import type { DataTableColumn, DataTableDensity, DataTableEmpty } from './data-table-types';
 
@@ -16,6 +16,7 @@ export interface DataTableGridProps<T> {
   empty?: DataTableEmpty;
   onRowClick?: (row: T) => void;
   rowLabel?: (row: T) => string;
+  rowsHaveLink?: boolean;
 }
 
 function GridHeader<T>({ columns, density, sticky }: { columns: ReadonlyArray<DataTableColumn<T>>; density: DataTableDensity; sticky: boolean }) {
@@ -33,15 +34,17 @@ function GridHeader<T>({ columns, density, sticky }: { columns: ReadonlyArray<Da
 }
 
 function GridRows<T>(props: DataTableGridProps<T>) {
-  const { columns, rows, getRowKey, density, onRowClick, rowLabel, caption } = props;
+  const { columns, rows, getRowKey, density, onRowClick, rowsHaveLink, caption } = props;
   return (
     <>
       {rows.map((row, index) => {
-        const activation = rowActivationProps(onRowClick && (() => onRowClick(row)), rowLabel?.(row));
+        const activation = rowActivationProps(onRowClick && (() => onRowClick(row)), rowsHaveLink);
+        const hint = rowHintOf(row, props);
         return (
           <TableRow key={getRowKey(row)} {...activation}>
-            {columns.map((column) => (
+            {columns.map((column, columnIndex) => (
               <TableCell key={column.id} className={cellClass(column, density)}>
+                {columnIndex === 0 && rowLabelHint(hint)}
                 {renderCellValue(column, row, index, caption)}
               </TableCell>
             ))}

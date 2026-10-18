@@ -11,16 +11,19 @@ import { SnapshotStatus } from '../components/snapshot-status';
 import { oeeQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { DASHBOARD_PRESETS, dashboardScope, presetKeyOf } from '../model/dashboard-scope';
 import { DashboardDowntime, DashboardTopAssets } from './dashboard-downtime';
+import { eventsHref, reportsHref } from './dashboard-links';
 import { DashboardOee } from './dashboard-oee';
+import { ForYouRow } from './for-you-row';
 import { LatestEvents } from './latest-events';
 import { RcaTiles } from './rca-tiles';
 import { ReconciliationTiles } from './reconciliation-tiles';
 
 /**
- * Dashboard (plan 3.6 step 3): every unit in the caller's scope over a rolling window — OEE with its policy
+ * Dashboard (plan 3.6 step 3): a role-aware "For you" row first (UX audit §5.6), then every unit in the caller's scope over a rolling window — OEE with its policy
  * label (operational with its components, and the labelled reconciled tile, D04), downtime, the most
  * stopped assets, open and overdue reconciliations, RCA cases and actions, and the latest loss events. Every tile is a server
- * snapshot of the same scope and appears as soon as its own figures arrive.
+ * snapshot of the same scope and appears as soon as its own figures arrive. Every link carries the dashboard's
+ * analysis context (B-8, `dashboard-links.ts`).
  */
 export function AnalyticsDashboard() {
   const tenantId = useV2TenantId();
@@ -71,7 +74,8 @@ function DashboardScreen() {
     <Page width="wide">
       <div className="space-y-6" data-testid="analytics-dashboard">
         <PageHeader title="Dashboard" description="Key figures of the selected plant." actions={<WindowSelect value={key} onChange={choose} />} meta={<DashboardStatus scope={scope} />} />
-        <Section title="OEE">
+        <ForYouRow scope={scope} />
+        <Section title="OEE" actions={<Link className="text-sm underline" to={reportsHref(scope, 'production')}>OEE and downtime report</Link>}>
           <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
             <DashboardOee scope={scope} policy="operational" />
             <DashboardOee scope={scope} policy="reconciled" />
@@ -89,7 +93,7 @@ function DashboardScreen() {
         <Section title="Root cause analysis">
           <RcaTiles />
         </Section>
-        <Section title="Latest loss events" actions={<Link className="text-sm underline" to="/events">All events</Link>}>
+        <Section title="Latest loss events" actions={<Link className="text-sm underline" to={eventsHref(scope)}>All events</Link>}>
           <LatestEvents scope={scope} />
         </Section>
       </div>

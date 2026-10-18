@@ -1,5 +1,5 @@
 import type { RcaRecommendationView } from '@/api/v2/types/rca';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/features/ux-kit/status-badge';
 import { useCalendarPreference } from '@/lib/dates';
 import { StatusIcon } from '@/lib/icons';
 import { recommendationDetail, recommendationText, ruleNameOf } from '../model/rca-labels';
@@ -21,10 +21,9 @@ export function RecommendationBadges({ items, canDismiss = false }: Recommendati
         const detail = recommendationDetail(rec, digits);
         return (
           <li key={rec.id} className="flex flex-wrap items-center gap-1">
-            <Badge variant="outline" className="gap-1 border-amber-500 text-amber-700" title={ruleNameOf(rec) ?? undefined}>
-              <StatusIcon.info className="h-3 w-3" aria-hidden />
+            <StatusBadge tone="info" icon={StatusIcon.info} title={ruleNameOf(rec) ?? undefined}>
               RCA recommended: {recommendationText(rec)}
-            </Badge>
+            </StatusBadge>
             {detail && (
               <span className="text-xs text-muted-foreground" data-testid="recommendation-detail">
                 {detail}

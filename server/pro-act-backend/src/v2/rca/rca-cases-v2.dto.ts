@@ -245,6 +245,15 @@ export class RcaCaseV2ListQueryDto extends ListQueryDto {
   @IsBoolean()
   overdue?: boolean;
 
+  @ApiPropertyOptional({
+    description:
+      'true = not Closed (with priority=Critical: the "open critical" count of the summary); false = Closed',
+  })
+  @IsOptional()
+  @Transform(toBooleanParam)
+  @IsBoolean()
+  open?: boolean;
+
   @ApiPropertyOptional({ enum: ['-createdAt', 'createdAt'] })
   @IsOptional()
   @IsIn(['-createdAt', 'createdAt'])

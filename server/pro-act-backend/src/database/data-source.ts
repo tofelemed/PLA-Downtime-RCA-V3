@@ -56,5 +56,5 @@ export function runtimeDataSourceOptions(
       statement_timeout: positiveInt(env.DB_STATEMENT_TIMEOUT_MS, 30_000),
       connectionTimeoutMillis: positiveInt(env.DB_CONNECT_TIMEOUT_MS, 10_000),
     },
-  } as DataSourceOptions;
+  };
 }

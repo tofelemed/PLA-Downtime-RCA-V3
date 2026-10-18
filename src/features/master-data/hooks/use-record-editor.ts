@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { V2ApiError } from '@/api/v2/errors';
 import { friendlyToastContent } from '@/features/ux-kit/errors';
+import { hasUnsavedChanges, useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { useToast } from '@/hooks/use-toast';
 import type { RecordResource } from '../api/record-resource';
 import { useChangeRecord, useCreateRecord } from '../api/use-record-commands';
@@ -22,7 +22,7 @@ export interface RecordEditorOptions<TDraft, TRecord extends Revisioned, TCreate
   toChange: (draft: TDraft, record: TRecord) => TChange;
   /** "Unit", "Asset", … (toasts) */
   kind: string;
-  /** page to open after a create; omitted (dialogs) = stay */
+  /** page to open after a create; omitted (dialogs) = stay. Pages with it also ask before leaving unsaved edits. */
   detailPath?: (id: string) => string;
   /** server field → form field */
   fieldMap?: Readonly<Record<string, string>>;
@@ -30,8 +30,9 @@ export interface RecordEditorOptions<TDraft, TRecord extends Revisioned, TCreate
 
 /**
  * Draft, validation and save of a master-data form: create (then open the new record's page) or change
- * under If-Match. Field refusals (a duplicate code, an inactive unit) land next to their field; anything
- * else is a friendly toast. The draft resets when the stored record changes revision.
+ * under If-Match. Field refusals (a duplicate code, an inactive unit) land next to their field, and every
+ * refusal is also a friendly toast naming the refused fields ("Unexpected field: xyz" for a property the
+ * server does not accept). The draft resets when the stored record changes revision.
  */
 export function useRecordEditor<TDraft, TRecord extends Revisioned, TCreate, TChange>(
   options: RecordEditorOptions<TDraft, TRecord, TCreate, TChange>,
@@ -50,6 +51,7 @@ export function useRecordEditor<TDraft, TRecord extends Revisioned, TCreate, TCh
     setErrors({});
   }
 
+  useUnsavedChangesGuard(hasUnsavedChanges(draft, options.initial, [!options.detailPath]));
   const patch = (next: Partial<TDraft>) => setDraft((current) => ({ ...current, ...next }));
 
   /** true when saved; false when the draft is invalid or the server refused it (messages shown) */
@@ -68,11 +70,8 @@ export function useRecordEditor<TDraft, TRecord extends Revisioned, TCreate, TCh
       if (options.detailPath) navigate(options.detailPath(created.id), { replace: true });
       return true;
     } catch (error) {
-      const fields = fieldErrorsOf(error, options.fieldMap);
-      setErrors(fields);
-      if (Object.keys(fields).length === 0 || !(error instanceof V2ApiError)) {
-        toast({ ...friendlyToastContent(error), variant: 'destructive' });
-      }
+      setErrors(fieldErrorsOf(error, options.fieldMap));
+      toast({ ...friendlyToastContent(error), variant: 'destructive' });
       return false;
     }
   };

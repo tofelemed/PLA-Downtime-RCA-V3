@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -28,7 +37,12 @@ export class PISyncWatermark {
   tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @ApiProperty({ description: 'Sync type', required: false })
@@ -40,11 +54,15 @@ export class PISyncWatermark {
   lastSyncTimestamp?: Date;
 
   @ApiProperty({ description: 'Last sync marker', required: false })
-  @Column({ name: 'last_sync_marker', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'last_sync_marker',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   lastSyncMarker?: string;
 
   @ApiProperty({ description: 'Sync status', required: false })
   @Column({ name: 'sync_status', type: 'varchar', length: 50, nullable: true })
   syncStatus?: string;
 }
-

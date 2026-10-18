@@ -93,6 +93,7 @@ test('workflow and revision filters query the server; a different manager approv
   await openPeriodSection(page, 'Review & close');
   await expect(page.getByTestId('wf-approve')).toBeEnabled();
   await page.getByTestId('wf-approve').click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Approve revision' }).click();
   await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'approved');
   const saved = await readReconciliation(world.checker.token, world.fixture.periods.a);
   expect(saved.revision).toMatchObject({ lifecycle: 'approved', submittedBy: world.author.user.id, approvedBy: world.checker.user.id });
@@ -114,6 +115,8 @@ test('day certification enforces independence, and a UI revision reopens the cer
   await signIn(page, ACCOUNTING_USERS.checker);
   await openAccountingPeriod(page, world);
   await page.getByTestId('day-certify').click();
+  await expect(page.getByTestId('day-certify-summary')).toBeVisible();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Certify the day', exact: true }).click();
   await expect(page.getByTestId('day-certification')).toHaveAttribute('data-state', 'certified');
   const certified = await readDay(world);
   expect(certified.certification?.certifiedBy).toBe(world.checker.user.id);

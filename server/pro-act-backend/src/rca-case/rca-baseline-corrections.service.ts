@@ -12,7 +12,8 @@ import {
   RcaBaselineCorrectionDto,
   RcaBaselineDecisionDto,
 } from '../v2/rca/rca-actions-v2.dto';
-import { RcaActionV2View, toActionView } from './rca-action.view';
+import { RcaActionV2View } from './rca-action.view';
+import { childAudit, recordRcaAudit } from './rca-audit';
 import { RcaActionsService } from './rca-actions.service';
 import { scopeOf } from './rca-scope';
 
@@ -45,6 +46,7 @@ export class RcaBaselineCorrectionsService {
         target.id,
       );
       assertRevision(action.rowVersion, target.expectedRowVersion);
+      const before = { ...action };
       if (
         !action.baseline ||
         action.baseline.declared ||
@@ -69,10 +71,16 @@ export class RcaBaselineCorrectionsService {
           note: null,
         },
       };
-      return toActionView(
-        await manager.getRepository(RcaAction).save(action),
-        now,
-      );
+      const saved = await manager.getRepository(RcaAction).save(action);
+      await recordRcaAudit(manager, scope, [
+        childAudit(
+          'rca_action',
+          'baseline_correction_proposed',
+          { before, after: saved },
+          body.reason,
+        ),
+      ]);
+      return this.actions.view(manager, saved, now);
     });
   }
 
@@ -90,6 +98,7 @@ export class RcaBaselineCorrectionsService {
         target.id,
       );
       assertRevision(action.rowVersion, target.expectedRowVersion);
+      const before = { ...action };
       const correction = action.baseline?.correction;
       if (!action.baseline || correction?.status !== 'pending') {
         throw new ConflictException({
@@ -119,10 +128,18 @@ export class RcaBaselineCorrectionsService {
         },
       };
       if (body.approve) action.postAction = null;
-      return toActionView(
-        await manager.getRepository(RcaAction).save(action),
-        now,
-      );
+      const saved = await manager.getRepository(RcaAction).save(action);
+      await recordRcaAudit(manager, scope, [
+        childAudit(
+          'rca_action',
+          body.approve
+            ? 'baseline_correction_approved'
+            : 'baseline_correction_rejected',
+          { before, after: saved },
+          body.note,
+        ),
+      ]);
+      return this.actions.view(manager, saved, now);
     });
   }
 }

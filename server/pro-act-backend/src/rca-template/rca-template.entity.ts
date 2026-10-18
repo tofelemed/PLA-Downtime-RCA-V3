@@ -1,4 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, VersionColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+  VersionColumn,
+} from 'typeorm';
 import { Organization } from '../organization/organization.entity';
 import { Tenant } from '../tenant/tenant.entity';
 
@@ -16,7 +26,12 @@ export class RCATemplate {
   description?: string;
 
   // Map category to template_type for database
-  @Column({ name: 'template_type', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'template_type',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   category?: string;
 
   // Map logicTreeStructure to template_data JSON for database
@@ -72,4 +87,4 @@ export class RCATemplate {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

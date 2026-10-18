@@ -14,15 +14,17 @@ export class RequestLoggerMiddleware implements NestMiddleware {
     const startTime = Date.now();
 
     // Log request
-    this.logger.log(
-      `${method} ${originalUrl} - ${ip} - ${userAgent}`,
-    );
+    this.logger.log(`${method} ${originalUrl} - ${ip} - ${userAgent}`);
 
     // Override res.end to log response
     const originalEnd = res.end.bind(res);
     const logger = this.logger;
-    
-    res.end = function(chunk?: any, encoding?: any, cb?: () => void): Response {
+
+    res.end = function (
+      chunk?: any,
+      encoding?: any,
+      cb?: () => void,
+    ): Response {
       const endTime = Date.now();
       const duration = endTime - startTime;
       const { statusCode } = res;
@@ -50,4 +52,4 @@ export class RequestLoggerMiddleware implements NestMiddleware {
 
     next();
   }
-} 
+}

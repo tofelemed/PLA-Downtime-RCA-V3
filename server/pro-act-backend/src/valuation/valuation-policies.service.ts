@@ -24,6 +24,12 @@ import {
   recordValuationChanges,
   RevaluationRequested,
 } from './valuation-events';
+import {
+  parseValuationBackdate,
+  ValuationBackdate,
+  ValuationBackdateRequest,
+} from './valuation-backdate';
+import { assertValuationBackdateAllowed } from './valuation-backdate.guard';
 import { ensureValuationPolicy, snapshotOf } from './valuation-policy.store';
 
 type V3Fields = Pick<
@@ -37,7 +43,9 @@ type V3Fields = Pick<
   | 'manualLineHours'
 >;
 
-export interface NewValuationPolicy extends V3Fields {
+export interface NewValuationPolicy
+  extends V3Fields,
+    Omit<ValuationBackdateRequest, 'effectiveFrom'> {
   defaultBasis: ValuationPolicyBody['defaultBasis'];
   timeBasisRule: 'exclusive' | 'independent_components';
   reportingCurrencies: string[];
@@ -115,9 +123,14 @@ export class ValuationPoliciesService {
     ]);
     const body = bodyOf(input);
     const effectiveFrom = new Date(input.effectiveFrom);
+    const now = new Date();
+    const backdate = parseValuationBackdate(input, now);
     return this.policies.manager.transaction(async (manager) => {
       await ensureValuationPolicy(manager, tenantId);
       const next = await nextPolicyVersion(manager, tenantId);
+      if (backdate) {
+        await assertValuationBackdateAllowed(manager, tenantId, backdate, now);
+      }
       return manager.save(
         manager.create(AccountingPolicy, {
           tenantId,
@@ -131,6 +144,9 @@ export class ValuationPoliciesService {
           approvedBy: null,
           approvedAt: null,
           notes: input.notes?.trim() || null,
+          requestedEffectiveFrom: backdate?.effectiveFrom ?? null,
+          backdateReason: backdate?.reason ?? null,
+          restateApproved: backdate?.restateApproved ?? false,
           createdBy: context.userId,
           updatedBy: context.userId,
         }),
@@ -138,7 +154,10 @@ export class ValuationPoliciesService {
     });
   }
 
-  /** Records the finance sign-off; SME V7: the periods it values are queued for revaluation with it. */
+  /**
+   * Records the finance sign-off; SME V7: the periods it values are queued for revaluation with it. A
+   * backdated version is checked again first (owner, 18 Oct 2026: figures approved since it was drafted).
+   */
   async approve(
     context: RequestContext,
     id: string,
@@ -150,6 +169,16 @@ export class ValuationPoliciesService {
     assertApprovable(context, policy);
     const revaluation = await this.policies.manager.transaction(
       async (manager) => {
+        const backdate = storedBackdateOf(policy);
+        if (backdate) {
+          await lockValuationPolicies(manager, policy.tenantId);
+          await assertValuationBackdateAllowed(
+            manager,
+            policy.tenantId,
+            backdate,
+            new Date(),
+          );
+        }
         const updated = await manager
           .createQueryBuilder()
           .update(AccountingPolicy)
@@ -252,14 +281,32 @@ function v3FieldsOf(input: NewValuationPolicy): V3Fields {
   return fields;
 }
 
-/** Next tenant-wide version number of the kind, under a per-tenant advisory lock. */
+/** The commissioning backdate a version was drafted with, or null. */
+function storedBackdateOf(policy: AccountingPolicy): ValuationBackdate | null {
+  if (!policy.backdateReason) return null;
+  return {
+    effectiveFrom: policy.effectiveFrom,
+    reason: policy.backdateReason,
+    restateApproved: policy.restateApproved,
+  };
+}
+
+/** The per-tenant advisory lock of the valuation policy sequence. */
+async function lockValuationPolicies(
+  manager: EntityManager,
+  tenantId: string,
+): Promise<void> {
+  await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [
+    `accounting_policies:${tenantId}:${KIND}`,
+  ]);
+}
+
+/** Next tenant-wide version number of the kind, under the per-tenant advisory lock. */
 async function nextPolicyVersion(
   manager: EntityManager,
   tenantId: string,
 ): Promise<number> {
-  await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [
-    `accounting_policies:${tenantId}:${KIND}`,
-  ]);
+  await lockValuationPolicies(manager, tenantId);
   const [{ next }] = await manager.query<Array<{ next: number }>>(
     `SELECT coalesce(max("version"), 0) + 1 AS "next" FROM "accounting_policies"
       WHERE "tenant_id" = $1 AND "policy_kind" = $2 AND "scope_key" = 'tenant'`,

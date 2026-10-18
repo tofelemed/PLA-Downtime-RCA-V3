@@ -41,6 +41,9 @@ export interface StopEventPolicyV2View extends StopEventOptions {
   version: number;
   effectiveFrom: string;
   notes: string | null;
+  /** commissioning backdate: the past instant requested and why (null = effective when recorded) */
+  requestedEffectiveFrom: string | null;
+  backdateReason: string | null;
 }
 
 export interface DerivedStopPreviewV2View {
@@ -96,6 +99,8 @@ const toView = ({ row, body }: PolicyInForce): StopEventPolicyV2View => ({
   version: row.version,
   effectiveFrom: row.effectiveFrom.toISOString(),
   notes: row.notes,
+  requestedEffectiveFrom: row.requestedEffectiveFrom?.toISOString() ?? null,
+  backdateReason: row.backdateReason,
 });
 
 const SETTING_KEYS = [

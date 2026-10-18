@@ -1,7 +1,7 @@
 import type { CalendarVersionView } from '@/api/v2/types/calendars';
 import { DataTable, type DataTableColumn, type DataTableStatus } from '@/features/ux-kit/data-table';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
-import { VersionStateBadge } from '../components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 
 export interface CalendarVersionListProps {
   versions: readonly CalendarVersionView[];

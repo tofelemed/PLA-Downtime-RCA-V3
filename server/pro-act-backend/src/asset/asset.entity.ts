@@ -1,4 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, VersionColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  VersionColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 
 @Entity('assets')
@@ -23,13 +33,23 @@ export class Asset {
   @Column({ name: 'asset_type', type: 'varchar', length: 50, nullable: true })
   assetType?: string;
 
-  @Column({ name: 'manufacturer', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'manufacturer',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   manufacturer?: string;
 
   @Column({ name: 'model', type: 'varchar', length: 255, nullable: true })
   model?: string;
 
-  @Column({ name: 'serial_number', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'serial_number',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   serialNumber?: string;
 
   @Column({ name: 'criticality', type: 'varchar', length: 50, nullable: true })
@@ -44,10 +64,18 @@ export class Asset {
   @Column({ name: 'installation_date', type: 'timestamptz', nullable: true })
   installationDate?: Date;
 
-  @Column({ name: 'last_maintenance_date', type: 'timestamptz', nullable: true })
+  @Column({
+    name: 'last_maintenance_date',
+    type: 'timestamptz',
+    nullable: true,
+  })
   lastMaintenanceDate?: Date;
 
-  @Column({ name: 'next_maintenance_date', type: 'timestamptz', nullable: true })
+  @Column({
+    name: 'next_maintenance_date',
+    type: 'timestamptz',
+    nullable: true,
+  })
   nextMaintenanceDate?: Date;
 
   @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
@@ -57,7 +85,12 @@ export class Asset {
   @JoinColumn({ name: 'tenant_id' })
   tenant?: Tenant;
 
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   /** When the asset was retired (v2 master data); null = active. Retired assets keep their history. */

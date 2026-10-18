@@ -317,7 +317,9 @@ describe('v2 administration: attributes, hierarchy, branding', () => {
       .set(bearer(adminA.token))
       .send({ ...value, value: 'South hall' })
       .expect(200);
-    const read = bodyOf<Array<{ attributeDefinitionId: string; value: string }>>(
+    const read = bodyOf<
+      Array<{ attributeDefinitionId: string; value: string }>
+    >(
       await http()
         .get(
           `/api/v2/custom-attribute-values?entityType=Unit&entityId=${world.unitA}`,
@@ -391,7 +393,10 @@ describe('v2 administration: attributes, hierarchy, branding', () => {
         .set(bearer(operatorA.token))
         .expect(200),
     );
-    expect(before).toMatchObject({ isStored: false, appName: 'Traverse Forge' });
+    expect(before).toMatchObject({
+      isStored: false,
+      appName: 'Traverse Forge',
+    });
     await http()
       .put('/api/v2/branding')
       .set(bearer(adminA.token))

@@ -32,7 +32,7 @@ export function PlantAccessGuard({ children }: { children: ReactNode }) {
       <AlertTitle>You do not have access to this plant</AlertTitle>
       <AlertDescription>
         <p>
-          The server refused {refused.name}: it is outside your organisation or your scope grants. Switch
+          The server refused {refused.name}: it is outside your organization or your scope grants. Switch
           back to a plant you are a member of to continue.
         </p>
         {correlationId && <p className="mt-1 text-xs">Reference: {correlationId}</p>}

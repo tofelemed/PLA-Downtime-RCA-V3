@@ -7,6 +7,7 @@ import {
   StoredPostAction,
 } from '../rca/entities/rca-action.entity';
 import { ACTION_EVIDENCE, hasCompletionEvidence } from './action-completion';
+import { RcaActionTaskV2View } from './action-tasks';
 
 export type VerificationStatus =
   | 'not_planned'
@@ -34,6 +35,12 @@ export interface RcaActionV2View {
   completionVerifiedBy: string | null;
   verificationWindowStart: string | null;
   verificationWindowEnd: string | null;
+  /** CA4: how the completion is verified (null = not stated) */
+  verificationMethod: string | null;
+  /** CA4: the named verifier, never the owner (null = any RCA writer other than the owner) */
+  verifierId: string | null;
+  /** the verification window is fixed once the action is done (changes answer 409 VERIFICATION_WINDOW_LOCKED) */
+  verificationWindowLocked: boolean;
   baseline: ActionBaseline | null;
   postAction: StoredPostAction | null;
   verificationStatus: VerificationStatus;
@@ -41,6 +48,16 @@ export interface RcaActionV2View {
   verdict: EffectivenessVerdict | null;
   /** the owner's claim, never added to approved or realized figures */
   claimedAvoidedLoss: { amount: string; currency: string | null } | null;
+  /** F-9: why, who and when, while the action is cancelled (null otherwise or when no reason was given) */
+  cancelReason: string | null;
+  cancelledBy: string | null;
+  cancelledAt: string | null;
+  /** item 5: the case recommendation this action implements */
+  recommendationId: string | null;
+  /** item 5: the task carrying out this action (null without one) */
+  linkedTask: RcaActionTaskV2View | null;
+  /** item 5: when the linked task was completed — recorded only, the action still needs its evidence */
+  taskCompletedAt: string | null;
   createdAt: string;
   rowVersion: number;
 }
@@ -61,6 +78,7 @@ export function verificationStatusOf(
 export function toActionView(
   action: RcaAction,
   now = new Date(),
+  task: RcaActionTaskV2View | null = null,
 ): RcaActionV2View {
   return {
     id: action.id,
@@ -79,6 +97,9 @@ export function toActionView(
     completionVerifiedBy: action.completionVerifiedBy,
     verificationWindowStart: iso(action.verificationWindowStart),
     verificationWindowEnd: iso(action.verificationWindowEnd),
+    verificationMethod: action.verificationMethod ?? null,
+    verifierId: action.verifierId ?? null,
+    verificationWindowLocked: action.status === 'done',
     baseline: action.baseline,
     postAction: action.postAction,
     verificationStatus: verificationStatusOf(action, now),
@@ -90,6 +111,12 @@ export function toActionView(
             amount: action.claimedAvoidedLoss,
             currency: action.claimedCurrency,
           },
+    cancelReason: action.cancelReason ?? null,
+    cancelledBy: action.cancelledBy ?? null,
+    cancelledAt: iso(action.cancelledAt ?? null),
+    recommendationId: action.recommendationId ?? null,
+    linkedTask: task,
+    taskCompletedAt: iso(action.taskCompletedAt ?? null),
     createdAt: action.createdAt.toISOString(),
     rowVersion: action.rowVersion,
   };

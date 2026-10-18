@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { useWaterfall } from '@/api/v2/queries/period-overview';
 import type { LedgerKind, RevisionSelector } from '@/api/v2/types/period-overview';
@@ -5,7 +6,9 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { humanize } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { StatusIcon } from '@/lib/icons';
 import { WaterfallChart } from './waterfall-chart';
+import { waterfallBarLabel } from '../model/display';
 
 export interface WaterfallPanelProps {
   periodId: string;
@@ -32,33 +35,41 @@ export function WaterfallPanel({ periodId, ledger, view }: WaterfallPanelProps) 
       <DataState state={state} error={waterfall.error} detail={state === 'empty' ? 'No computable slice for this ledger (see the status above).' : undefined}>
         {data && (
           <>
+            {data.excluded.length > 0 && (
+              <Alert className="border-warning/40 bg-warning/10 text-warning [&>svg]:text-warning" data-testid="waterfall-excluded">
+                <StatusIcon.warning aria-hidden="true" className="h-4 w-4" />
+                <AlertTitle>Totals are incomplete</AlertTitle>
+                <AlertDescription>Slices left out: {data.excluded.map((e) => humanize(e.reason)).join(', ')}.</AlertDescription>
+              </Alert>
+            )}
             <WaterfallChart bars={data.bars} uom={data.uom} />
-            <table className="w-full text-sm" aria-label="Waterfall bars">
-              <thead>
-                <tr className="text-left text-xs text-muted-foreground">
-                  <th className="font-normal">Bar</th>
-                  <th className="font-normal">Change</th>
-                  <th className="font-normal">Running total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.bars.map((bar) => (
-                  <tr key={bar.key} className="border-t" data-testid="waterfall-bar" data-key={bar.key} data-delta={bar.delta ?? ''} data-end={bar.end}>
-                    <td>{bar.label}</td>
-                    <td>{bar.delta === null ? '—' : <Quantity value={bar.delta} uom={data.uom} />}</td>
-                    <td>
-                      <Quantity value={bar.end} uom={data.uom} />
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" aria-label="Waterfall bars">
+                <thead>
+                  <tr className="text-left text-xs text-muted-foreground">
+                    <th className="font-normal">Bar</th>
+                    <th className="font-normal">Change</th>
+                    <th className="font-normal">Running total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.bars.map((bar) => (
+                    <tr key={bar.key} className="border-t" data-testid="waterfall-bar" data-key={bar.key} data-delta={bar.delta ?? ''} data-end={bar.end}>
+                      <td>{waterfallBarLabel(bar)}</td>
+                      <td>{bar.delta === null ? '—' : <Quantity value={bar.delta} uom={data.uom} />}</td>
+                      <td>
+                        <Quantity value={bar.end} uom={data.uom} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             {data.plannedTransition !== null && (
               <p className="text-xs text-muted-foreground" data-testid="waterfall-planned-transition">
                 Planned grade transition (within standard, already in the plan target): <Quantity value={data.plannedTransition} uom={data.uom} /> — not a loss
               </p>
             )}
-            {data.excluded.length > 0 && <p className="text-xs text-muted-foreground">Excluded: {data.excluded.map((e) => humanize(e.reason)).join(', ')}</p>}
           </>
         )}
       </DataState>

@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { evaluateTriggers } from '../../domain/rca/rca-triggers';
-import { FeatureFlagsService } from '../../feature-flags/feature-flags.service';
 import { AccountingPoliciesService } from '../../periods/accounting-policies.service';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import {
@@ -19,7 +18,7 @@ export { RCA_RECOMMENDED } from './trigger-recorder';
 export type { TriggerResult } from './trigger-recorder';
 
 /**
- * RCA01 / D17 trigger service (plan 3.9 step 2) for tenants with `v2.rca` on: evaluates an event against
+ * RCA01 / D17 trigger service (plan 3.9 step 2; every plant, RCA is v2 only): evaluates an event against
  * the `rca_policy` in force and the active `rca_trigger_hint` rules (pure `evaluateTriggers`), then records
  * each firing once under its idempotency key — a recommendation (`RCARecommended` on the outbox), a case
  * when the policy says `create`, or a link to the open case of the same problem (CA8). Open events fire
@@ -32,7 +31,6 @@ export class RcaTriggerService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly policies: AccountingPoliciesService,
-    private readonly flags: FeatureFlagsService,
   ) {}
 
   /** Evaluates one event in its own transaction (sweep, tests). */
@@ -50,7 +48,6 @@ export class RcaTriggerService {
     manager: EntityManager,
     input: { tenantId: string; eventId: string; now: Date },
   ): Promise<TriggerResult[]> {
-    if (!(await this.flags.isEnabled(input.tenantId, 'v2.rca'))) return [];
     const stored = await manager
       .getRepository(ProductionEvent)
       .findOneBy({ id: input.eventId, tenantId: input.tenantId });

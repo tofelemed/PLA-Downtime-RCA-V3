@@ -62,3 +62,17 @@ export function recommendationItemOf(form: RecommendationForm, id: string, timeZ
 /** Closed recommendations no longer need work (v1 counted Completed and Cancelled as closed). */
 export const isRecommendationClosed = (status: string | null) =>
   status === 'Completed' || status === 'Cancelled' || status === 'done' || status === 'cancelled';
+
+/** Item 5: the stored fields of recommendations sent back with the case (the read-only `actions` stay out). */
+export function storedRecommendations(rows: readonly RcaRecommendationItem[]): Array<Omit<RcaRecommendationItem, 'actions'>> {
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    priority: row.priority,
+    ownerId: row.ownerId,
+    dueDate: row.dueDate,
+    status: row.status,
+    estimatedCost: row.estimatedCost,
+  }));
+}

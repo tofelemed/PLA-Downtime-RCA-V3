@@ -102,7 +102,7 @@ async function acceptSource(
   const codingRevision = existing.currentCodingRevision + 1;
   const updated = await writeEvent(manager, existing.id, {
     ...sourceColumns(
-      { ...existing, userOverrides: overrides } as ProductionEvent,
+      { ...existing, userOverrides: overrides },
       source?.sourceFacts ?? {},
       [field],
     ),

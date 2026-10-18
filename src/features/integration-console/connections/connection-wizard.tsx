@@ -1,4 +1,5 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+import { hasUnsavedChanges, useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { useCreateConnection, useUpdateConnection } from '@/api/v2/queries/integration-connections';
 import type { ConnectionView, SourceType } from '@/api/v2/types/integrations';
 import { Button } from '@/components/ui/button';
@@ -54,11 +55,13 @@ export function ConnectionWizard({ connection, onClose, onSaved }: ConnectionWiz
 }
 
 function PiWizardBody({ connection, onClose, onSaved }: ConnectionWizardProps) {
-  const [form, setForm] = useState<PiConnectionForm>(() => (connection ? formFromConnection(connection) : emptyPiForm()));
+  const initial = useMemo(() => (connection ? formFromConnection(connection) : emptyPiForm()), [connection]);
+  const [form, setForm] = useState<PiConnectionForm>(initial);
   const [errors, setErrors] = useState<PiFormErrors>({});
   const create = useCreateConnection();
   const update = useUpdateConnection();
   const failed = create.error ?? update.error;
+  useUnsavedChangesGuard(hasUnsavedChanges(form, initial, [create.isPending, update.isPending]));
 
   const saveChange = async (current: ConnectionView) => {
     const body = piUpdateBody(form, current);

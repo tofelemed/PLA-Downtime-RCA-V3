@@ -1,5 +1,6 @@
 import type { LogicTreeNode, RcaTemplateView } from '../api/master-data-types';
 import { requiredText, textOrNull, type FieldErrors } from '../model/field-errors';
+import { logicTreeBodyOf } from './logic-tree-model';
 
 export interface TemplateDraft {
   name: string;
@@ -37,7 +38,7 @@ export function templateBodyOf(draft: TemplateDraft): TemplateBody {
     category: draft.category.trim(),
     description: textOrNull(draft.description),
     checklistIds: draft.checklistIds,
-    logicTree: draft.logicTree,
+    logicTree: logicTreeBodyOf(draft.logicTree),
   };
 }
 

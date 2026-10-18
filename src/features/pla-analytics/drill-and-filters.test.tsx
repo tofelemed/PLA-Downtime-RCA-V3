@@ -1,0 +1,69 @@
+import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import type { LossTreeGroupView, ScopeWaterfallView } from '@/api/v2/types/pla-analytics';
+
+vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ session: { tenant: { id: 'tenant-a' } } }) }));
+vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
+vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ timezone: 'UTC', units: [], unitName: (id: string) => id }) }));
+vi.mock('@/features/plan-dashboard/components/waterfall-chart', () => ({ WaterfallChart: () => <div>chart</div> }));
+const waterfall = vi.hoisted(() => ({ data: null as ScopeWaterfallView | null }));
+vi.mock('@/api/v2/queries/pla-analytics', async (original) => ({
+  ...await original<typeof import('@/api/v2/queries/pla-analytics')>(),
+  useScopeWaterfall: () => ({ data: { data: waterfall.data, isProvisional: false }, isLoading: false, isError: false, error: null, refetch: () => undefined }),
+}));
+
+const { parseScope } = await import('./model/analytics-scope');
+const { lossGroupLink } = await import('./model/links');
+const { LossTable } = await import('./components/loss-table');
+const { WaterfallTab } = await import('./tabs/waterfall-tab');
+const { WindowRangeControl } = await import('./components/window-range-control');
+const { LedgerApprovedToggles } = await import('./components/ledger-approved-toggles');
+
+const SCOPE = parseScope(new URLSearchParams('from=2026-10-11T00:00:00.000Z&to=2026-10-18T00:00:00.000Z&window=Last 7 days'), 0);
+const wrap = (node: ReactNode) => render(<MemoryRouter initialEntries={['/pla?tab=losses']}>{node}</MemoryRouter>);
+const group = (key: string | null, label: string | null) => ({ key, label, unit: 't', amount: '10', share: '0.5', cumulativeShare: '0.5', lines: 2, status: 'quantity' }) as LossTreeGroupView;
+const bar = (key: string, kind: 'total' | 'step') => ({ key, label: key, kind, delta: kind === 'step' ? '-5' : null, start: '100', end: '95' });
+
+describe('PLA drill-downs and the filter bar (UX audit D-6, D-13)', () => {
+  it('loss-table rows with an event filter are links; rows without one stay text', () => {
+    wrap(<LossTable groups={[group('r1', 'Pump trip'), group(null, null)]} total={undefined} metric="qty" groupTitle="Reason" testId="loss-table" rowLink={(g) => lossGroupLink(SCOPE, 'reason', g.key)} />);
+    const [coded, notCoded] = screen.getAllByTestId('loss-group');
+    expect(coded.tagName).toBe('A');
+    expect(coded.getAttribute('href')).toMatch(/^\/events\?.*reasons=r1/);
+    expect(notCoded.tagName).toBe('SPAN');
+    expect(notCoded).toHaveTextContent('Not coded');
+  });
+
+  it('waterfall loss bars are listed as links to their loss events; totals are not', () => {
+    waterfall.data = { ledger: 'plan', bars: [bar('target', 'total'), bar('availability', 'step'), bar('unaccounted', 'step'), bar('actual', 'total')], excluded: [], closes: true, opening: '100', closing: '95', uom: 't' } as unknown as ScopeWaterfallView;
+    wrap(<WaterfallTab scope={SCOPE} />);
+    const drills = within(screen.getByTestId('waterfall-drills')).getAllByTestId('waterfall-drill');
+    expect(drills.map((d) => d.getAttribute('data-key'))).toEqual(['availability', 'unaccounted']);
+    expect(drills[0].getAttribute('href')).toContain('oee=availability');
+    expect(drills[0].getAttribute('href')).toContain('breakdown=loss-events');
+    expect(drills[1].getAttribute('href')).toContain('tab=reconciliation');
+  });
+
+  it('the window control shows plant dates and holds the presets and the date range together', () => {
+    const onChange = vi.fn();
+    wrap(<WindowRangeControl scope={SCOPE} timeZone="UTC" onChange={onChange} />);
+    expect(screen.getByTestId('pla-window')).toHaveTextContent('Last 7 days · 2026-10-11 – 2026-10-17');
+    fireEvent.click(screen.getByTestId('pla-window'));
+    expect(screen.getByLabelText('From')).toHaveValue('2026-10-11');
+    fireEvent.click(screen.getByTestId('pla-window-30d'));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ windowLabel: 'Last 30 days' }));
+  });
+
+  it('ledger and "Approved only" are one segmented row of server filters', () => {
+    const onChange = vi.fn();
+    wrap(<LedgerApprovedToggles ledger="plan" approvedOnly={false} showLedger showApproved onChange={onChange} />);
+    const row = screen.getByTestId('pla-scope-toggles');
+    expect(within(row).getByTestId('ledger-plan')).toHaveAttribute('data-state', 'on');
+    fireEvent.click(within(row).getByTestId('ledger-capacity'));
+    expect(onChange).toHaveBeenCalledWith({ ledger: 'capacity' });
+    fireEvent.click(within(row).getByTestId('pla-approved'));
+    expect(onChange).toHaveBeenCalledWith({ approvedOnly: true });
+  });
+});

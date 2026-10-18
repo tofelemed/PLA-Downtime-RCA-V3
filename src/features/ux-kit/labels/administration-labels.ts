@@ -6,6 +6,7 @@ import type {
   TaskPriority,
   TaskStatus,
 } from '@/api/v2/types/administration';
+import { GLOSSARY } from './glossary';
 
 /** Labels of the administration screens: tasks, audit trail, scope grants, custom attributes, plants. */
 export const TASK_STATUS_LABELS: Readonly<Record<TaskStatus, string>> = {
@@ -23,7 +24,7 @@ export const TASK_PRIORITY_LABELS: Readonly<Record<TaskPriority, string>> = {
 };
 
 export const TASK_LINK_LABELS: Readonly<Record<TaskLinkType, string>> = {
-  RCA: 'RCA case',
+  RCA: GLOSSARY.investigation,
   RCARecommendation: 'RCA recommendation',
   ProductionEvent: 'Production event',
   ProductionPlan: 'Production plan',
@@ -49,7 +50,7 @@ export const AUDIT_ACTION_LABELS: Readonly<Record<string, string>> = {
 export const AUDIT_ENTITY_LABELS: Readonly<Record<string, string>> = {
   Tenant: 'Plant',
   USER: 'User',
-  RCA: 'RCA case',
+  RCA: GLOSSARY.investigation,
   UserScope: 'Access grant',
   AppSettings: 'Application setting',
   CustomAttributeDefinition: 'Custom attribute',
@@ -65,7 +66,7 @@ export const SCOPE_LOCK_LABELS: Readonly<Record<Exclude<ScopeLock, null>, string
 };
 
 export const SCOPE_KIND_LABELS: Readonly<Record<'tenant' | 'site' | 'unit', string>> = {
-  tenant: 'Whole plant',
+  tenant: GLOSSARY.wholePlant,
   site: 'Site',
   unit: 'Unit',
 };

@@ -20,17 +20,31 @@ export interface RcaGateIssue {
   message: string;
 }
 
+/**
+ * Item 7 closure rule of the case: `coded` cases need a root cause with a catalogue code
+ * (blocker `CODED_ROOT_CAUSE_MISSING`); older cases keep the free-text root cause (`ROOT_CAUSE_MISSING`).
+ */
+export interface RcaRootCauseRule {
+  coded: boolean;
+  codedRootCauses: number;
+}
+
 /** `GET /v2/rcas/{id}/readiness`: what the case screen shows about the next moves. */
 export interface RcaCaseReadinessView {
   rcaId: string;
   status: RcaStatus;
   next: Array<{ to: RcaStatus; gates: string[] }>;
   investigation: { blockers: RcaGateIssue[]; advice: RcaGateIssue[] };
-  closure: { blockers: RcaGateIssue[]; effectiveness: RcaEffectivenessVerdict | null };
+  closure: { blockers: RcaGateIssue[]; effectiveness: RcaEffectivenessVerdict | null; rootCauseRule?: RcaRootCauseRule };
   approver: { canApprove: boolean; reason: string | null };
   /** same-problem events linked to this case by the triggers since it opened */
   linkedRecurrences: number;
-  rules: { fiveWhyGuidelineLevels: number; consequenceClass: string | null };
+  rules: {
+    fiveWhyGuidelineLevels: number;
+    /** CA6: root-cause phrases the investigation gate refuses on their own (policy, e.g. "operator error") */
+    fiveWhyUnsupportedRootCauses: string[];
+    consequenceClass: string | null;
+  };
 }
 
 /** Same-mode unplanned incidents of a window and its run time (decimal strings in seconds). */
@@ -42,12 +56,27 @@ export interface RcaExposureWindow {
   exposureSeconds: string;
   /** unit run time, or the standby assets' own running time (CA4); absent on windows before rca-exposure-v2 */
   exposureBasis?: 'unit_run_time' | 'standby_running_time';
+  /** rca-exposure-v3 (unit run time): seconds of known unit state and without data, and known / window (decimal string 0–1) */
+  knownSeconds?: string;
+  unknownSeconds?: string;
+  coverage?: string | null;
+  /** case units without any state mapping in the window (owner, 18 Oct 2026; absent on earlier windows) */
+  unmappedUnitIds?: string[];
 }
 
 export interface RcaEffectivenessCriteria {
   requiredReduction: number;
   minExposureHours: number;
   zeroRepeat: boolean;
+  /** 0–1 coverage the post-action window needs; absent (frozen before 18 Oct 2026) = 0.95 */
+  minimumCoverage?: number;
+}
+
+/** Known-data coverage of both windows and the minimum the verdict applied (decimal strings). */
+export interface RcaEffectivenessCoverage {
+  baseline: string | null;
+  post: string | null;
+  minimum: string;
 }
 
 export interface RcaBaselineCorrection {
@@ -81,6 +110,8 @@ export interface RcaEffectivenessResult {
   reduction: string | null;
   mtbfLowerBound95Hours: string | null;
   reasons: string[];
+  /** owner, 18 Oct 2026 (absent on verdicts stored before) */
+  coverage?: RcaEffectivenessCoverage;
 }
 
 export interface RcaCompletionAttachment {

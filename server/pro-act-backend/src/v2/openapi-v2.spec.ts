@@ -8,12 +8,17 @@ import { RcaCaseWorkflowService } from '../rca-case/rca-case-workflow.service';
 import { RcaKnowledgeV2CommandsService } from '../rca-knowledge-base/knowledge-v2-commands.service';
 import { RcaKnowledgeV2Service } from '../rca-knowledge-base/knowledge-v2.service';
 import { RcaKnowledgeModule } from '../rca-knowledge-base/rca-knowledge.module';
+import { RcaActionQueueService } from '../rca-case/rca-action-queue.service';
 import { RcaActionsService } from '../rca-case/rca-actions.service';
 import { RcaAnalysesService } from '../rca-case/rca-analyses.service';
 import { RcaAttachmentsService } from '../rca-case/rca-attachments.service';
 import { RcaCaseCommandsService } from '../rca-case/rca-case-commands.service';
 import { RcaCasesService } from '../rca-case/rca-cases.service';
+import { RcaCauseReportService } from '../rca-case/rca-cause-report.service';
+import { RcaCausesService } from '../rca-case/rca-causes.service';
+import { RcaHistoryService } from '../rca-case/rca-history.service';
 import { RcaLinksService } from '../rca-case/rca-links.service';
+import { RcaOccurrencesService } from '../rca-case/rca-occurrences.service';
 import { RcaRecommendationsService } from '../rca-case/rca-recommendations.service';
 import { Global, INestApplication, Module } from '@nestjs/common';
 import { Clock, SystemClock } from '../common/clock/clock';
@@ -472,8 +477,13 @@ const RCA_SERVICES = [
   RcaLinksService,
   RcaRecommendationsService,
   RcaActionsService,
+  RcaActionQueueService,
+  RcaOccurrencesService,
   RcaCaseWorkflowService,
   RcaBaselineCorrectionsService,
+  RcaHistoryService,
+  RcaCausesService,
+  RcaCauseReportService,
 ];
 @Module({
   providers: RCA_SERVICES.map((provide) => ({ provide, useValue: {} })),

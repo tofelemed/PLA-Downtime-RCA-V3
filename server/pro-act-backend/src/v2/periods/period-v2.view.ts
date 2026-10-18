@@ -78,6 +78,8 @@ export interface PeriodV2View {
   isExcluded: boolean;
   exclusionKind: string | null;
   selectedPlanVersionId: string | null;
+  /** UX G-2: plan of the selected plan version (Plan Dashboard deep link), null without one */
+  planId: string | null;
   stateReadiness: string;
   currentActualsRunId: string | null;
   warnings: PeriodWarning[];
@@ -166,6 +168,7 @@ export function toSliceView<T>(
 
 export function toPeriodBase(
   period: ProductionPeriod,
+  planId: string | null = null,
 ): Omit<PeriodV2View, 'slices'> {
   return {
     id: period.id,
@@ -178,6 +181,7 @@ export function toPeriodBase(
     isExcluded: period.isExcluded,
     exclusionKind: period.exclusionKind,
     selectedPlanVersionId: period.selectedPlanVersionId,
+    planId,
     stateReadiness: period.stateReadiness,
     currentActualsRunId: period.currentActualsRunId,
     warnings: period.warnings,

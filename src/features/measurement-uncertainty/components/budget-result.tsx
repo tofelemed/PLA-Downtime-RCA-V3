@@ -38,26 +38,28 @@ export function BudgetResult({ combinedStandardUncertainty, expandedUncertainty,
           </>
         )}
       </dl>
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="text-left text-muted-foreground">
-            <th className="font-normal">Component</th>
-            <th className="text-right font-normal">|c·u|</th>
-            <th className="text-right font-normal">Share of variance</th>
-          </tr>
-        </thead>
-        <tbody>
-          {contributions.map((c) => (
-            <tr key={c.index}>
-              <td>
-                {c.label} <span className="text-muted-foreground">({COMPONENT_KIND_LABELS[c.kind] ?? c.kind})</span>
-              </td>
-              <td className="text-right tabular-nums">{format.decimal(c.contribution, 3)}</td>
-              <td className="text-right tabular-nums">{c.shareOfVariance === null ? '—' : format.percent(Number(c.shareOfVariance) * 100, 1)}</td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-left text-muted-foreground">
+              <th className="font-normal">Component</th>
+              <th className="text-right font-normal">|c·u|</th>
+              <th className="text-right font-normal">Share of variance</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {contributions.map((c) => (
+              <tr key={c.index}>
+                <td>
+                  {c.label} <span className="text-muted-foreground">({COMPONENT_KIND_LABELS[c.kind] ?? c.kind})</span>
+                </td>
+                <td className="text-right tabular-nums">{format.decimal(c.contribution, 3)}</td>
+                <td className="text-right tabular-nums">{c.shareOfVariance === null ? '—' : format.percent(Number(c.shareOfVariance) * 100, 1)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
-import { HOUR_MS, rollingWindow } from '@/api/v2/queries/time-window';
 import type { DowntimeReportQuery } from '@/api/v2/queries/reports';
+import { relativeWindowOf, resolveRelativeWindow, type RelativeWindowKey } from '@/features/event-hub/model/relative-window';
 
 /** Schedule class filter of the report (`all` = parameter left out). */
 export const SCHEDULE_FILTERS = ['all', 'planned', 'unplanned', 'external', 'unknown'] as const;
@@ -15,7 +15,10 @@ export type DowntimeMetric = 'duration' | 'frequency';
 export type DowntimeGroupBy = NonNullable<DowntimeReportQuery['groupBy']>;
 
 
-/** Window presets ending now; the instant is taken when a preset is chosen, never during render. */
+/**
+ * Rolling window presets (keys shared with the Event Hub, A-5): kept relative in the URL (`window=7d`)
+ * and resolved from now whenever the page fetches; never resolved during render.
+ */
 export const WINDOW_PRESETS = [
   { key: '24h', label: 'Last 24 h', hours: 24 },
   { key: '7d', label: 'Last 7 days', hours: 24 * 7 },
@@ -31,6 +34,8 @@ export interface DowntimeFilters {
   from: string;
   to: string;
   windowLabel: string;
+  /** A-5: a rolling window (bounds resolved from now); null = explicit bounds */
+  relativeWindow: RelativeWindowKey | null;
   scheduleClass: ScheduleFilter;
   includeMicroStops: boolean;
   approvedOnly: boolean;
@@ -46,7 +51,7 @@ export interface DowntimeFilters {
 
 /** A preset window ending `now`, with minute-stable bounds so a revisit hits the cached reports. */
 export function presetWindow(hours: number, now: number): { from: string; to: string } {
-  return rollingWindow(hours * HOUR_MS, now);
+  return resolveRelativeWindow({ hours }, now);
 }
 
 const oneOf = <T extends string>(values: readonly T[], value: string | null, fallback: T): T =>
@@ -56,16 +61,30 @@ const isInstant = (value: string | null): value is string => value !== null && !
 
 const list = (value: string | null) => (value ? value.split(',').filter(Boolean) : []);
 
-/** Filters from the URL; a missing or broken window falls back to the default preset ending `now`. */
-export function parseFilters(params: URLSearchParams, now: number): DowntimeFilters {
+/** True when the URL holds explicit bounds (chosen dates, or a link written before A-5). */
+export function hasAbsoluteWindow(params: URLSearchParams): boolean {
   const from = params.get('from');
   const to = params.get('to');
-  const hasWindow = isInstant(from) && isInstant(to) && Date.parse(from) < Date.parse(to);
-  const window = hasWindow ? { from, to } : presetWindow(DEFAULT_PRESET.hours, now);
+  return isInstant(from) && isInstant(to) && Date.parse(from) < Date.parse(to);
+}
+
+/** True when the URL names its window (explicit bounds or a rolling key); otherwise the default applies. */
+export const hasWindowParams = (params: URLSearchParams) => hasAbsoluteWindow(params) || relativeWindowOf(params.get('window')) !== null;
+
+function windowOf(params: URLSearchParams, now: number): Pick<DowntimeFilters, 'from' | 'to' | 'windowLabel' | 'relativeWindow'> {
+  const name = params.get('window');
+  if (hasAbsoluteWindow(params)) {
+    return { from: params.get('from') ?? '', to: params.get('to') ?? '', windowLabel: relativeWindowOf(name)?.label ?? name ?? 'Custom window', relativeWindow: null };
+  }
+  const relative = relativeWindowOf(name) ?? DEFAULT_PRESET;
+  return { ...presetWindow(relative.hours, now), windowLabel: relative.label, relativeWindow: relative.key };
+}
+
+/** Filters from the URL; a rolling or missing window (the default preset) is resolved at `now`. */
+export function parseFilters(params: URLSearchParams, now: number): DowntimeFilters {
   return {
     unitIds: list(params.get('units')).sort(),
-    ...window,
-    windowLabel: hasWindow ? params.get('window') ?? 'Custom window' : DEFAULT_PRESET.label,
+    ...windowOf(params, now),
     scheduleClass: oneOf(SCHEDULE_FILTERS, params.get('class'), 'all'),
     includeMicroStops: params.get('micro') === '1',
     approvedOnly: params.get('approved') === '1',
@@ -78,9 +97,11 @@ export function parseFilters(params: URLSearchParams, now: number): DowntimeFilt
   };
 }
 
-/** The URL form of the filters (defaults left out, so equal filters give equal URLs). */
+/** The URL form of the filters (a rolling window as its key only; defaults left out, so equal filters give equal URLs). */
 export function toSearchParams(filters: DowntimeFilters): URLSearchParams {
-  const params = new URLSearchParams({ from: filters.from, to: filters.to, window: filters.windowLabel });
+  const params = filters.relativeWindow
+    ? new URLSearchParams({ window: filters.relativeWindow })
+    : new URLSearchParams({ from: filters.from, to: filters.to, window: filters.windowLabel });
   if (filters.unitIds.length > 0) params.set('units', [...filters.unitIds].sort().join(','));
   if (filters.scheduleClass !== 'all') params.set('class', filters.scheduleClass);
   if (filters.includeMicroStops) params.set('micro', '1');
@@ -154,5 +175,5 @@ export function downtimeQuery(filters: DowntimeFilters, groupBy: DowntimeGroupBy
 export function previousWindow(filters: DowntimeFilters): DowntimeFilters {
   const length = Date.parse(filters.to) - Date.parse(filters.from);
   const from = new Date(Date.parse(filters.from) - length).toISOString();
-  return { ...filters, from, to: filters.from, windowLabel: `Previous ${filters.windowLabel.toLowerCase()}` };
+  return { ...filters, from, to: filters.from, windowLabel: `Previous ${filters.windowLabel.toLowerCase()}`, relativeWindow: null };
 }

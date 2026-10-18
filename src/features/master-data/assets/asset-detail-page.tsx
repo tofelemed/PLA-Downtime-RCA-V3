@@ -71,7 +71,7 @@ export function AssetDetailPage() {
       retired={asset.retiredAt !== null}
       kind="asset"
       name={asset.name}
-      retireNote="Events and RCA cases keep this asset; it can no longer be chosen for new records."
+      retireNote="Events and investigations keep this asset; it can no longer be chosen for new records."
     />
   ) : undefined;
   return (

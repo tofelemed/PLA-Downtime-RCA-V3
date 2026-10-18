@@ -146,17 +146,13 @@ describe('calendar versions and shift instances (plan 2.1, v2 API)', () => {
       .send({})
       .expect(428);
     await env.patch(path, { operationalDayStart: '07:00' }, '"99"').expect(412);
-    const etag = (await env.get(path).expect(200)).headers.etag as string;
+    const etag = (await env.get(path).expect(200)).headers.etag;
     const patched = await env
       .patch(path, { operationalDayStart: '07:00' }, etag)
       .expect(200);
     expect((patched.body as VersionBody).operationalDayStart).toBe('07:00');
     const back = await env
-      .patch(
-        path,
-        { operationalDayStart: '06:00' },
-        patched.headers.etag as string,
-      )
+      .patch(path, { operationalDayStart: '06:00' }, patched.headers.etag)
       .expect(200);
     expect((back.body as VersionBody).operationalDayStart).toBe('06:00');
     await env.get(path, env.adminB).expect(404);
@@ -164,7 +160,7 @@ describe('calendar versions and shift instances (plan 2.1, v2 API)', () => {
       .patch(
         path,
         { operationalDayStart: '08:00' },
-        back.headers.etag as string,
+        back.headers.etag,
         env.adminB,
       )
       .expect(404);
@@ -198,7 +194,7 @@ describe('calendar versions and shift instances (plan 2.1, v2 API)', () => {
 
   it('a published version is immutable: PATCH 409, second publish without reason 409, the database refuses edits', async () => {
     const path = `calendar-versions/${draftId}`;
-    const etag = (await env.get(path).expect(200)).headers.etag as string;
+    const etag = (await env.get(path).expect(200)).headers.etag;
     const patched = await env
       .patch(path, { operationalDayStart: '07:00' }, etag)
       .expect(409);

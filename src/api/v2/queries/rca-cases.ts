@@ -4,6 +4,7 @@ import type { RcaAnalysesView } from '../types/rca-analyses';
 import type {
   EventEvidencePackageView,
   RcaActionView,
+  RcaCaseListItemView,
   RcaCaseSummaryCounts,
   RcaCaseSummaryView,
   RcaCaseView,
@@ -12,6 +13,8 @@ import type {
   RcaOutcomeView,
   RcaRecommendationView,
 } from '../types/rca';
+import type { RcaCaseCauseView } from '../types/rca-causes';
+import type { RcaHistoryEntryView } from '../types/rca-history';
 import type { RcaCaseReadinessView } from '../types/rca-workflow';
 import type { ListResponse } from '../types/envelopes';
 import { v2 } from '../v2';
@@ -27,6 +30,8 @@ export interface RcaCaseFilters {
   priority?: string;
   /** true = target date passed and not Closed */
   overdue?: boolean;
+  /** true = not Closed (with priority Critical: the "open critical" count of the summary); false = Closed */
+  open?: boolean;
   unitId?: string;
   assetId?: string;
   reasonCodeId?: string;
@@ -47,10 +52,10 @@ export function useRcaCases(filters: RcaCaseFilters, enabled = true) {
   return { ...list, items: flattenPages(list.data?.pages) };
 }
 
-/** The case list as server pages of 20 (keyset), for the `/rca` table. */
+/** The case list as server pages of 20 (keyset), for the `/rca` table; rows carry the trigger and action counts. */
 export function useRcaCasePage(filters: RcaCaseFilters) {
   const query = Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== undefined && value !== ''));
-  return usePagedQuery<RcaCaseSummaryView>({ resource: 'rca-cases', path: '/rcas', query, key: { filters: query } });
+  return usePagedQuery<RcaCaseListItemView>({ resource: 'rca-cases', path: '/rcas', query, key: { filters: query } });
 }
 
 /** Counts of the cases in scope (status, overdue, open critical) for the list header. */
@@ -135,6 +140,23 @@ export function useRcaActions(id: string | null) {
   return useRcaDetail(id, 'actions', async (rcaId, signal) =>
     (await v2.get<RcaActionView[], '/api/v2/rcas/{id}/actions'>('/api/v2/rcas/{id}/actions', { path: { id: rcaId }, signal })).data,
   );
+}
+
+/** Item 7: the direct, contributing and root causes of a case (with their catalogue codes). */
+export function useRcaCauses(id: string | null) {
+  return useRcaDetail(id, 'causes', async (rcaId, signal) =>
+    (await v2.get<RcaCaseCauseView[], '/api/v2/rcas/{id}/causes'>('/api/v2/rcas/{id}/causes', { path: { id: rcaId }, signal })).data,
+  );
+}
+
+/** Item 2: the field history of a case, newest first, as keyset pages. */
+export function useRcaHistoryPage(id: string) {
+  return usePagedQuery<RcaHistoryEntryView>({
+    resource: 'rca-cases',
+    path: `/rcas/${encodeURIComponent(id)}/history`,
+    query: {},
+    key: { filters: { list: 'rca-history', rcaId: id } },
+  });
 }
 
 /** Approved historical loss, claimed avoided loss and realized difference — three separate figures. */

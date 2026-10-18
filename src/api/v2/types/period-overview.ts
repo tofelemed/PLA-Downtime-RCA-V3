@@ -33,6 +33,8 @@ export interface PeriodPlanFiguresView {
 
 export interface PeriodSummaryView {
   periodId: string;
+  /** plan of the selected plan version (U3: one list spans every plan of the scope) */
+  planId?: string | null;
   unitId: string;
   utcStart: string;
   utcEnd: string;

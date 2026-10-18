@@ -16,18 +16,23 @@ import {
   periodScopeUnits,
 } from '../../periods/period-scope';
 import { invalid, invalidReference } from '../../profiles/profile-errors';
-import { keysetPage } from '../common/keyset-page';
 import { ListResponse, listResponse, ListScope } from '../common/response';
 import {
   PeriodSummaryQueryDto,
   WaterfallQueryDto,
 } from './period-overview.dto';
-import { loadPeriodStates, RevisionSelector } from './period-states';
+import {
+  loadPeriodStates,
+  PeriodState,
+  RevisionSelector,
+} from './period-states';
 import {
   PeriodSummaryV2View,
   toPeriodSummaryView,
 } from './period-summary.view';
 import { WaterfallV2View, waterfallOf } from './waterfall.view';
+import { summaryPage } from './period-summary-page';
+import { planIdOf, planIdsOfVersions } from '../periods/period-plan-ids';
 import { toPeriodSlaView } from '../close/period-sla.view';
 
 /** Shown revision's workflow state in SQL (the same rule as `pickRevision` / `workflowOf`). */
@@ -64,23 +69,38 @@ export class PeriodOverviewService {
     }
     if (query.unitIds?.length) await this.assertUnits(context, query.unitIds);
     const selector = query.view ?? 'current';
-    const qb = scopedQuery(this.periods, 'p', {
-      context,
-      unitProperty: 'unitId',
-    });
-    applyFilters(qb, query, selector);
-    const page = await keysetPage(qb, {
-      alias: 'p',
-      property: 'utcStart',
-      direction: 'ASC',
+    const manager = this.periods.manager;
+    const page = await summaryPage({
+      build: () => {
+        const qb = scopedQuery(this.periods, 'p', {
+          context,
+          unitProperty: 'unitId',
+        });
+        applyFilters(qb, query, selector);
+        return qb;
+      },
+      direction: query.sort === '-utcStart' ? 'DESC' : 'ASC',
       cursor: query.cursor,
       limit: query.limit,
+      load: (periods) =>
+        loadPeriodStates(manager, periods, selector, this.policies),
+      residualStates: query.residualStates,
     });
+    const items = await this.summaryViews(context, page.states);
+    return listResponse(items, page.nextCursor, this.scope(context));
+  }
+
+  /** Grid rows of a page: active products, SLA and plan of each period (one query each, no N+1). */
+  private async summaryViews(
+    context: RequestContext,
+    states: readonly PeriodState[],
+  ): Promise<PeriodSummaryV2View[]> {
     const manager = this.periods.manager;
-    const [states, slices, slas] = await Promise.all([
-      loadPeriodStates(manager, page.items, selector, this.policies),
-      this.activeSlices(page.items.map((p) => p.id)),
-      this.slas.statuses(manager, page.items, new Date()),
+    const periods = states.map((state) => state.period);
+    const [slices, slas, plans] = await Promise.all([
+      this.activeSlices(periods.map((p) => p.id)),
+      this.slas.statuses(manager, periods, new Date()),
+      planIdsOfVersions(manager, requireTenantId(context), periods),
     ]);
     const items = states.map((state) => {
       const sla = slas.get(state.period.id);
@@ -88,9 +108,10 @@ export class PeriodOverviewService {
         state,
         slices.get(state.period.id) ?? [],
         sla ? toPeriodSlaView(sla) : null,
+        planIdOf(state.period, plans),
       );
     });
-    return listResponse(items, page.nextCursor, this.scope(context));
+    return items;
   }
 
   async waterfall(
@@ -176,5 +197,10 @@ function applyFilters(
     qb.andWhere(`${workflowStateSql(selector)} IN (:...workflowStates)`, {
       workflowStates: query.workflowState,
     });
+  }
+  // every residual state but not_computable needs a calculated revision: skip periods without one in SQL
+  const residual = query.residualStates;
+  if (residual?.length && !residual.includes('not_computable')) {
+    qb.andWhere(`${workflowStateSql(selector)} <> 'none'`);
   }
 }

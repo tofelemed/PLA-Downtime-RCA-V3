@@ -365,7 +365,10 @@ describe('tenancy, scopes and API02 concurrency (plan 0.4 part 2)', () => {
     });
 
     it('keeps a TenantAdmin inside its own organization and away from org/tenant creation', async () => {
-      const tenantAdmin = await insertUser(harness.dataSource, { tenantId: world.tenantA, role: 'TenantAdmin' });
+      const tenantAdmin = await insertUser(harness.dataSource, {
+        tenantId: world.tenantA,
+        role: 'TenantAdmin',
+      });
       const token = signToken(app, {
         userId: tenantAdmin,
         tenantId: world.tenantA,
@@ -378,9 +381,15 @@ describe('tenancy, scopes and API02 concurrency (plan 0.4 part 2)', () => {
           .set(bearer(token))
           .send({ ...payload, email: `${randomUUID()}@test.local`, ...extra })
           .expect(403);
-      expect((await register({ organizationId: randomUUID() })).body.code).toBe('ORGANIZATION_NOT_ALLOWED');
-      expect((await register({ organizationName: 'Elsewhere' })).body.code).toBe('ORGANIZATION_CREATE_NOT_ALLOWED');
-      expect((await register({ tenantName: 'Elsewhere' })).body.code).toBe('ORGANIZATION_CREATE_NOT_ALLOWED');
+      expect((await register({ organizationId: randomUUID() })).body.code).toBe(
+        'ORGANIZATION_NOT_ALLOWED',
+      );
+      expect(
+        (await register({ organizationName: 'Elsewhere' })).body.code,
+      ).toBe('ORGANIZATION_CREATE_NOT_ALLOWED');
+      expect((await register({ tenantName: 'Elsewhere' })).body.code).toBe(
+        'ORGANIZATION_CREATE_NOT_ALLOWED',
+      );
     });
   });
 
@@ -391,12 +400,31 @@ describe('tenancy, scopes and API02 concurrency (plan 0.4 part 2)', () => {
         tenantId: world.tenantB,
         role: 'TenantAdmin',
         scopes: [
-          { kind: 'tenant', id: world.tenantB, tenantId: world.tenantB, role: 'manager_approver' },
-          { kind: 'tenant', id: world.tenantA, tenantId: world.tenantA, role: 'viewer' },
+          {
+            kind: 'tenant',
+            id: world.tenantB,
+            tenantId: world.tenantB,
+            role: 'manager_approver',
+          },
+          {
+            kind: 'tenant',
+            id: world.tenantA,
+            tenantId: world.tenantA,
+            role: 'viewer',
+          },
         ],
       });
-      const token = signToken(app, { userId: admin, tenantId: world.tenantB, role: 'TenantAdmin' });
-      const body = { name: 'X', email: `${randomUUID()}@test.local`, password: 'Sup3r-Secret-Pass!', role: 'Operator' };
+      const token = signToken(app, {
+        userId: admin,
+        tenantId: world.tenantB,
+        role: 'TenantAdmin',
+      });
+      const body = {
+        name: 'X',
+        email: `${randomUUID()}@test.local`,
+        password: 'Sup3r-Secret-Pass!',
+        role: 'Operator',
+      };
       const inA = await http()
         .post('/api/auth/register')
         .set(bearer(token))
@@ -405,7 +433,11 @@ describe('tenancy, scopes and API02 concurrency (plan 0.4 part 2)', () => {
         .expect(403);
       expect(inA.body.code).toBe('FORBIDDEN_ROLE');
       // reading in A is still allowed: the viewer grant covers it
-      await http().get('/api/v2/production-events').set(bearer(token)).set('X-Tenant-Id', world.tenantA).expect(200);
+      await http()
+        .get('/api/v2/production-events')
+        .set(bearer(token))
+        .set('X-Tenant-Id', world.tenantA)
+        .expect(200);
     });
   });
 });

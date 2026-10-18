@@ -17,6 +17,7 @@ import {
 } from '../../production-event/revisions/event-revision.entity';
 import { toDecimalString } from '../common/decimal-string.transformer';
 import { EventRelationView } from './event-operation.view';
+import { ActorSourceEvent, revisionActorSource } from './revision-actor-source';
 
 /** One immutable revision of an event (spec §14.2 `event_revisions`). */
 export interface EventRevisionView {
@@ -28,6 +29,12 @@ export interface EventRevisionView {
   changeReason: string | null;
   actorId: string | null;
   actorKind: ActorKind;
+  /**
+   * Owner finding 1 (additive): the automatic service or source behind a non-user revision — a service key
+   * (`state-engine`, `stop-reconciliation`, `unit-impact`, `data-repair`, `event-operations`) or the
+   * connector / import source name; null for user revisions and when nothing recorded names it.
+   */
+  actorSource: string | null;
   sourceRevision: string | null;
   createdAt: string;
 }
@@ -50,6 +57,8 @@ export interface EventCodingView {
   newValues: EventFacts;
   reason: string | null;
   authorId: string | null;
+  /** owner finding 1 (additive): the service or source of a coding revision without a person; else null */
+  authorSource: string | null;
   createdAt: string;
 }
 
@@ -76,7 +85,10 @@ export interface ProductionEventHistoryView {
   relations: EventRelationView[];
 }
 
-export function toEventRevisionView(row: EventRevision): EventRevisionView {
+export function toEventRevisionView(
+  row: EventRevision,
+  event: ActorSourceEvent,
+): EventRevisionView {
   return {
     id: row.id,
     revision: row.revision,
@@ -86,12 +98,19 @@ export function toEventRevisionView(row: EventRevision): EventRevisionView {
     changeReason: row.changeReason ?? null,
     actorId: row.actorId ?? null,
     actorKind: row.actorKind,
+    actorSource: revisionActorSource(
+      { actorKind: row.actorKind, kind: row.kind, reason: row.changeReason },
+      event,
+    ),
     sourceRevision: row.sourceRevision ?? null,
     createdAt: new Date(row.createdAt).toISOString(),
   };
 }
 
-export function toEventCodingView(row: EventCoding): EventCodingView {
+export function toEventCodingView(
+  row: EventCoding,
+  event: ActorSourceEvent,
+): EventCodingView {
   return {
     id: row.id,
     revision: row.revision,
@@ -109,6 +128,12 @@ export function toEventCodingView(row: EventCoding): EventCodingView {
     newValues: row.newValues,
     reason: row.reason ?? null,
     authorId: row.authorId ?? null,
+    authorSource: row.authorId
+      ? null
+      : revisionActorSource(
+          { actorKind: 'system', kind: 'coding', reason: row.reason ?? null },
+          event,
+        ),
     createdAt: new Date(row.createdAt).toISOString(),
   };
 }

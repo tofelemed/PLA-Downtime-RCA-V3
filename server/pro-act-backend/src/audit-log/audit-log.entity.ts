@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 
 @Index('IDX_audit_logs_tenant_created', ['tenantId', 'createdAt'])
@@ -29,7 +38,12 @@ export class AuditLog {
   @Column({ name: 'details', type: 'text', nullable: true })
   details?: string;
 
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
@@ -54,4 +68,4 @@ export class AuditLog {
 
   @Column({ name: 'timestamp', type: 'timestamptz' })
   timestamp: Date;
-} 
+}

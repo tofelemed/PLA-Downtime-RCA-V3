@@ -15,6 +15,7 @@ export function monthCloseFixture(): MonthCloseView {
       materialityReviewedBy: null, materialityReviewedAt: null, financeSignedOffBy: null, financeSignedOffAt: null,
       lockedBy: null, lockedAt: null },
     prerequisites: { met: true, periods: 90, approved: 90, pendingCount: 0, pending: [],
+      missingPeriodCount: 0, missingPeriods: [], monthEnded: true, monthEndsAt: '2026-10-31T20:30:00Z',
       days: 30, certifiedDays: 30, uncertifiedDays: [], openProposalCount: 0, openProposals: [] },
     materiality: { findings: [], adjustmentTotals: [] }, reopenCount: 0, comment: null, history: [], asOf: '2026-10-25T08:00:00Z',
   };
@@ -24,6 +25,7 @@ export function cappedMonthCloseFixture(): MonthCloseView {
   const view = monthCloseFixture();
   view.prerequisites = {
     met: false, periods: 90, approved: 20, pendingCount: 70,
+    missingPeriodCount: 0, missingPeriods: [], monthEnded: true, monthEndsAt: '2026-10-31T20:30:00Z',
     pending: Array.from({ length: 50 }, (_, index) => ({
       periodId: `period-${index}`, unitId: 'unit100', unitName: 'Unit 100', localDate: '2026-10-20', shiftName: 'A', workflow: 'in_review',
     })),

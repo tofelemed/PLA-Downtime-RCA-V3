@@ -27,6 +27,7 @@ function reply(call: V2Call) {
   if (path.endsWith('/assets')) return jsonResponse(200, listPage([ASSET]));
   if (path.endsWith('/standby-equipment/metrics')) return jsonResponse(200, [METRICS]);
   if (path.endsWith('/standby-equipment') && call.method === 'GET') return jsonResponse(200, listPage([REGISTRATION]));
+  if (path.endsWith('/standby-equipment/s1/retire')) return jsonResponse(200, { ...REGISTRATION, effectiveTo: '2026-10-18T00:00:00.000Z' });
   if (path.endsWith('/standby-records/import')) {
     return jsonResponse(422, errorBody('STANDBY_IMPORT_INVALID', 'The import has 1 invalid row(s)', { errors: [{ line: 1, message: 'assetId / assetCode must name an asset of this plant' }] }));
   }
@@ -71,6 +72,22 @@ describe('Standby equipment page (SME D9)', () => {
     fireEvent.click(within(panel).getByRole('button', { name: 'Import' }));
     expect(await within(panel).findByText(/assetId \/ assetCode must name an asset/)).toBeInTheDocument();
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ records: [{ assetCode: 'P-9', kind: 'demand', startedAt: '2026-10-01T08:00:00Z', endedAt: null, outcome: 'success' }] });
+  });
+
+  it('Retire asks for confirmation before ending the duty', async () => {
+    const calls = stubV2Fetch(reply);
+    actAs('SuperAdmin');
+    renderPage();
+    const table = await screen.findByRole('table', { name: 'Standby registrations' });
+    fireEvent.click(await within(table).findByRole('button', { name: 'Retire' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(calls.some((c) => c.url.pathname.endsWith('/retire'))).toBe(false);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(calls.some((c) => c.url.pathname.endsWith('/retire'))).toBe(false);
+    fireEvent.click(within(table).getByRole('button', { name: 'Retire' }));
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Retire standby' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.pathname.endsWith('/standby-equipment/s1/retire'))).toBe(true));
   });
 
   it('a role that may not write sees no register, retire or import', async () => {

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { apiLogin, call, command, DEMO_PLANT, loadState, newSuffix, PREFIX, REL_USERS, uiLogin, type RelSession } from './support/reliability-world';
 import { MANAGERS } from './support/manager-users';
-import { acceptInvestigation, addVerifiedAction, finishActions, moveCase, prepareInvestigation } from './support/rca-workflow';
+import { acceptInvestigation, addCodedRootCause, addVerifiedAction, finishActions, moveCase, prepareInvestigation } from './support/rca-workflow';
 
 /**
  * RELIABILITY ENGINEER persona — journey 5, the RCA knowledge base (`/rca-knowledge-base`) as Leila:
@@ -52,6 +52,7 @@ async function ensureClosedCase(): Promise<void> {
   const jonas = await apiLogin(MANAGERS.jonas.email);
   await addVerifiedAction(leila.token, caseId, `${PREFIX}kb-action-${suffix}`);
   await prepareInvestigation(leila.token, caseId, rootCause);
+  await addCodedRootCause(leila.token, jonas.token, caseId, rootCause);
   await finishActions(leila.token, jonas.token, caseId);
   await acceptInvestigation(leila.token, caseId);
   const requested = await moveCase(leila.token, caseId, { to: 'Closure Review', residualRisk: 'Coupling alignment checked at each PM' });

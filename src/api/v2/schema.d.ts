@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/approval-inbox/{kind}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One pending record of the inbox (approval detail): same role, scope and separation-of-duties actions as the list; 404 once decided or outside the caller’s approval scope. */
+        get: operations["ApprovalInboxV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/equipment-setup/readiness": {
         parameters: {
             query?: never;
@@ -187,7 +204,7 @@ export interface paths {
         };
         /**
          * List production events of the caller tenant
-         * @description Filters AND across parameters and OR within a repeated parameter; from/to is a half-open window with overlap semantics; pages are keyset-based on (startTime, id). The tenant comes from the identity.
+         * @description Filters AND across parameters and OR within a repeated parameter; from/to is a half-open window with overlap semantics; pages are keyset-based on (sort key, id) — sort startTime or durationSeconds, where an event without an end sorts as the longest. The tenant comes from the identity.
          */
         get: operations["ProductionEventsV2Controller_list_v2"];
         put?: never;
@@ -251,7 +268,7 @@ export interface paths {
         };
         /**
          * Get one production event of the caller scope
-         * @description Returns `ETag: "<rowVersion>"`; a foreign or unknown id is 404. The body is the effective event plus `sourceFacts` (what the source last delivered) and `overriddenFields` (user overrides of source values).
+         * @description Returns `ETag: "<rowVersion>"`; a foreign or unknown id is 404. The body is the effective event plus `sourceFacts` (what the source last delivered), `overriddenFields` (user overrides of source values) and `sourceOwnedFields` (fields the source system owns: the interval of a non-manual event and the fields whose edit is recorded as a source override).
          */
         get: operations["ProductionEventsV2Controller_get_v2"];
         put?: never;
@@ -2888,8 +2905,8 @@ export interface paths {
         get: operations["SourceAuthorityV2Controller_list_v2"];
         put?: never;
         /**
-         * Draft a source authority version with a measurement hierarchy (or none) from the version in force; the top rank becomes the primary source. It applies only once approved.
-         * @description Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit), INVALID_POLICY (ranks not unique, classes out of order, estimate not manual, same signal twice, lag on a non-signal source, top rank not at the hierarchy boundary).
+         * Draft a source authority version with a measurement hierarchy (or none) from the version in force; the top rank becomes the primary source. It applies only once approved (from approval time, or from a past effectiveFrom while commissioning).
+         * @description Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit), INVALID_POLICY (ranks not unique, classes out of order, estimate not manual, same signal twice, lag on a non-signal source, top rank not at the hierarchy boundary); 422 INVALID_EFFECTIVE_FROM / BACKDATE_REASON_REQUIRED, 409 BACKDATE_REWRITES_HISTORY / BACKDATE_OVERLAPS_CALCULATION (commissioning backdate).
          */
         post: operations["SourceAuthorityV2Controller_write_v2"];
         delete?: never;
@@ -2926,7 +2943,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a draft version (production accounting, except SuperAdmin self-approval): in force from now, the previous version of the scope ends; calculated periods keep theirs until recalculated
-         * @description SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; 409 STALE_DRAFT when the version it was prepared from is no longer in force.
+         * @description SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; 409 STALE_DRAFT when the version it was prepared from is no longer in force. A draft with a commissioning backdate takes effect at its requestedEffectiveFrom; the checks are repeated now: 409 BACKDATE_REWRITES_HISTORY, 409 BACKDATE_OVERLAPS_CALCULATION (details.periods).
          */
         post: operations["SourceAuthorityV2Controller_approve_v2"];
         delete?: never;
@@ -3081,6 +3098,46 @@ export interface paths {
         };
         /** Calculation runs of a period, newest first (keyset on createdAt, id) */
         get: operations["PeriodAccountingV2Controller_runs_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-events/{id}/attributed-losses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plan-ledger loss lines whose cause is the event, per period revision: approved (published revision) and provisional (open revision run)
+         * @description Quantities per kind and unit of measure and the value of the tenant default valuation view per currency (amount null when any line is unvalued). Loss kinds only; periods of units outside the caller scope are left out. At most 200 periods, earliest first (`truncated` when cut). 404 for an event outside the tenant or the caller scope.
+         */
+        get: operations["EventAttributedLossesV2Controller_attributedLosses_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/loss-lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Loss lines of the current run of each period’s latest revision across the caller’s units, newest period first (keyset)
+         * @description Plan ledger, active lines, loss kinds (filter `kinds`). Filters: unitIds, reasonCodeIds, kinds, q (reason code, reason name, cause event description), from/to (period and line segment overlap, half-open; from ≥ to is 422 INVALID_RANGE). The `id` is the `targetId` of an RCA `loss_line` link.
+         */
+        get: operations["LossLinesV2Controller_list_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4057,7 +4114,7 @@ export interface paths {
         };
         /**
          * Search cases of your scope (newest first)
-         * @description Filters: status, unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), title (q).
+         * @description Filters: status, open (not Closed), unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), title (q). Each row carries its first linked event (trigger, null without one) and its action counts (total without cancelled, done, overdue).
          */
         get: operations["RcaCasesV2Controller_list_v2"];
         put?: never;
@@ -4208,6 +4265,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/rcas/{id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Field history of a case, newest first (append-only audit)
+         * @description Every command on the case, its actions, links, analysis tools and causes: who, when, the action, the changed top-level fields, small before / after values (status, owner, due date, root-cause length), the reason, and hashes of the row before and after. Keyset pages (cursor, limit); 404 outside your tenant and units.
+         */
+        get: operations["RcaHistoryV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rcas/{id}/causes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Direct, contributing and root causes of a case */
+        get: operations["RcaCaseCausesV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Add a cause
+         * @description Requires `Idempotency-Key`. Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE).
+         */
+        post: operations["RcaCaseCausesV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-case-causes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a cause
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE).
+         */
+        delete: operations["RcaCaseCausesV2Controller_remove_v2"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a cause
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE).
+         */
+        patch: operations["RcaCaseCausesV2Controller_update_v2"];
+        trace?: never;
+    };
+    "/api/v2/reports/rca-causes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catalogue causes ranked by the number of cases naming them, with the approved loss of those cases
+         * @description Cases of your tenant and units (unitId narrows it; kind filters the cause kind). Top `limit` (max 50) by cases; approved loss = events and loss lines linked to those cases, approved revisions only, in the policy default valuation view (null amount when not valued, never estimated). sort=approvedLoss orders that top set by the amount in `currency` (default USD).
+         */
+        get: operations["RcaCauseReportV2Controller_report_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/rcas/{id}/links": {
         parameters: {
             query?: never;
@@ -4220,9 +4362,29 @@ export interface paths {
         put?: never;
         /**
          * Link an event, loss line, work order or occurrence to the case
-         * @description Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). 422 INVALID_REFERENCE for a target outside your scope.
+         * @description Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). 409 CASE_CLOSED for a new link to a closed investigation (reopen it first). 422 INVALID_REFERENCE for a target outside your scope.
          */
         post: operations["RcaLinksV2Controller_link_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/occurrences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stop occurrences of your scope to link to an RCA case, newest first
+         * @description Needs a window (from/to, overlap, at most 366 days) or an eventId (422 WINDOW_REQUIRED / WINDOW_TOO_LONG / INVALID_RANGE). Filters: unit, asset, reason, description text (q). Each row: first and last time, event count, the first event (description, asset, reason) and the cases of your scope it is already linked to.
+         */
+        get: operations["RcaOccurrencesV2Controller_list_v2"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4377,7 +4539,7 @@ export interface paths {
         put?: never;
         /**
          * Store an evidence file of the case (25 MiB, documents / images / videos)
-         * @description Answers the stored file name; reference it from an evidence item (`attachments`) and save the case. Not idempotent: a repeated upload stores another file, an unreferenced file is never served.
+         * @description RCA writers, or the owner of an open action of the case (completion evidence; 403 FORBIDDEN_ROLE otherwise). Answers the stored file name; reference it from an evidence item (`attachments`) and save the case. Not idempotent: a repeated upload stores another file, an unreferenced file is never served.
          */
         post: operations["RcaCaseWorkspaceV2Controller_upload_v2"];
         delete?: never;
@@ -4414,7 +4576,7 @@ export interface paths {
         put?: never;
         /**
          * Link the event to an existing case or create one with it
-         * @description Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). Body: exactly one of `rcaId` / `create`. The event's RCA state becomes linked and its open recommendations accepted; no coding or loss changes.
+         * @description Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). 409 CASE_CLOSED for a new link to a closed investigation (reopen it first). Body: exactly one of `rcaId` / `create`. The event's RCA state becomes linked and its open recommendations accepted; no coding or loss changes.
          */
         post: operations["EventRcaLinkV2Controller_link_v2"];
         delete?: never;
@@ -4432,6 +4594,26 @@ export interface paths {
         };
         /** Evidence package the event would be linked with now (nothing stored) */
         get: operations["EventRcaLinkV2Controller_evidence_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/rca-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Actions across the cases of your scope, due date first (F-7 "My actions")
+         * @description Each row carries its case (id, title, status, unit). Filters: mine=true (you own them), ownerId, status (repeat), overdue (open or in progress past the due date, as in GET /v2/rcas/summary), rcaId, unitId, from/to on the due date. Keyset pages; actions without a due date come last.
+         */
+        get: operations["RcaActionsV2Controller_listAll_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4476,7 +4658,7 @@ export interface paths {
         head?: never;
         /**
          * Change an action
-         * @description Requires `If-Match` (428/412).
+         * @description Requires `If-Match` (428/412). RCA writers change any field. The owner of the action who is not an RCA writer may only set the status to open / in progress and record the completion evidence (403 FORBIDDEN_ROLE for other fields or other actions, 403 SEPARATION_OF_DUTIES for done, 409 ACTION_FINISHED on a done or cancelled action). The verification window is fixed once the action is done (409 VERIFICATION_WINDOW_LOCKED).
          */
         patch: operations["RcaActionsV2Controller_update_v2"];
         trace?: never;
@@ -4767,7 +4949,7 @@ export interface paths {
         };
         /**
          * Period grid: target, actual, signed gap, attributed, residual (state), workflow state, run and actuals quality per period
-         * @description Keyset on utcStart (ascending). Periods overlapping [from, to); unitIds must be units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Figures are the shown revision’s plan ledger after its saved decisions (the same arithmetic as GET …/reconciliation), slices summed per period only when they share one unit (else null with flag uom_mixed). Read-only.
+         * @description Keyset on utcStart (sort utcStart ascending, -utcStart descending). Rows of every plan of the scope, each with its planId; residualStates filters by the plan-ledger residual state (a filtered page may be short while nextCursor is set). Periods overlapping [from, to); unitIds must be units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Figures are the shown revision’s plan ledger after its saved decisions (the same arithmetic as GET …/reconciliation), slices summed per period only when they share one unit (else null with flag uom_mixed). Read-only.
          */
         get: operations["PeriodSummariesV2Controller_list_v2"];
         put?: never;
@@ -6126,7 +6308,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record new micro-stop settings as an approved oee_policy version, effective now
+         * Record new micro-stop settings as an approved oee_policy version, effective now (or from a past effectiveFrom while commissioning)
          * @description Requires `Idempotency-Key`. Version n+1 of the scope; other oee_policy fields are kept from the version in force. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); 422 INVALID_POLICY for a negative or non-numeric class threshold.
          */
         post: operations["MicroStopPolicyV2Controller_create_v2"];
@@ -6556,8 +6738,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record new stop-event settings as an approved oee_policy version, effective now
-         * @description Requires `Idempotency-Key`. Stated fields replace those in force; other oee_policy fields are kept. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). Already derived / merged / grouped stops keep their state; the new values apply from now on.
+         * Record new stop-event settings as an approved oee_policy version, effective now (or from a past effectiveFrom while commissioning)
+         * @description Requires `Idempotency-Key`. Stated fields replace those in force; other oee_policy fields are kept. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). Already derived / merged / grouped stops keep their state; the new values apply from now on (a commissioning backdate makes the version the one in force from effectiveFrom for later resolution and recalculation; it does not re-derive stops by itself).
          */
         post: operations["StopEventPolicyV2Controller_create_v2"];
         delete?: never;
@@ -6612,7 +6794,7 @@ export interface paths {
         };
         /**
          * Month close: state, working-day deadlines and overdue flags, sign-offs, prerequisites (periods not approved, open change proposals), materiality findings and history
-         * @description Read-only; a month never acted on is open. 422 INVALID_MONTH for a malformed key.
+         * @description Read-only; a month never acted on is open. 422 INVALID_MONTH for a malformed key, MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS for a month of the other calendar. `prerequisites` include the scheduled shifts without a period and whether the month has ended.
          */
         get: operations["MonthCloseV2Controller_get_v2"];
         put?: never;
@@ -6634,7 +6816,7 @@ export interface paths {
         put?: never;
         /**
          * Plant management closes the month’s quantities
-         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 422 CLOSE_PREREQUISITES (details list the periods not approved and the open change proposals). Fixes whether the materiality review is required.
+         * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 422 MONTH_NOT_ENDED before the month is over in the plant time zone (its last shift ended; `details.monthEndsAt`); 422 CLOSE_PREREQUISITES (details list the periods not approved, the scheduled shifts without a period and the open change proposals). Fixes whether the materiality review is required.
          */
         post: operations["MonthCloseV2Controller_closeQuantities_v2"];
         delete?: never;
@@ -6959,7 +7141,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** How many of my notifications are unread */
+        /** How many of my active (not resolved) notifications are unread */
         get: operations["NotificationsV2Controller_unreadCount_v2"];
         put?: never;
         post?: never;
@@ -6997,6 +7179,23 @@ export interface paths {
         put?: never;
         /** Mark one of my notifications read (404 for anyone else’s) */
         post: operations["NotificationsV2Controller_read_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/notifications/{id}/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark one of my notifications unread again (404 for anyone else’s) */
+        post: operations["NotificationsV2Controller_unread_v2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7094,6 +7293,13 @@ export interface components {
             scheduleClass?: "planned" | "unplanned" | "external" | "unknown";
             /** @enum {string} */
             oeeComponent?: "availability" | "performance" | "quality" | "idle" | "none";
+            /**
+             * Format: uuid
+             * @description Equipment (asset) of every event’s unit (422 INVALID_REFERENCE otherwise); on source events the value is recorded as a source override, as with a single PATCH
+             */
+            assetId?: string;
+            /** @description SME D12: no specific reason yet — the stops are explicitly under investigation (false clears the flag) */
+            investigationPending?: boolean;
         };
         BulkCodeV2Dto: {
             /** @description Why (kept in the revisions) */
@@ -7364,6 +7570,8 @@ export interface components {
             cost?: Record<string, never> | null;
             /** Format: date-time */
             startTime?: string;
+            /** @description Why the event is changed; stored on the user revision (`change_reason`) and its coding revision */
+            changeReason?: string;
         };
         ResolveReviewItemDto: {
             /**
@@ -8635,6 +8843,13 @@ export interface components {
         };
         SourceAuthorityVersionDto: {
             /**
+             * Format: date-time
+             * @description Commissioning only: a past instant the version takes effect from instead of approval / record time. Requires backdateReason; 422 INVALID_EFFECTIVE_FROM (not past), 409 BACKDATE_REWRITES_HISTORY (not after the latest approved version of the scope), 409 BACKDATE_OVERLAPS_CALCULATION (a calculated period of the unit, or of any unit for a plant-wide version, overlaps [effectiveFrom, now); details.periods lists them).
+             */
+            effectiveFrom?: string;
+            /** @description Why the version is backdated; required with effectiveFrom (422 BACKDATE_REASON_REQUIRED), refused without it */
+            backdateReason?: string;
+            /**
              * Format: uuid
              * @description Unit override; absent = the tenant-wide version
              */
@@ -8943,8 +9158,15 @@ export interface components {
             defaultQualityDisposition?: "scrap" | "downgrade" | "rework" | null;
             /** @description SME V4: manual downtime lines get a cost-per-hour value from the hours of their evidenced events */
             manualLineHours?: boolean;
-            /** @example 2027-01-01T00:00:00Z */
+            /**
+             * @description A past instant is a commissioning backdate (owner, 18 Oct 2026): it needs backdateReason (422 BACKDATE_REASON_REQUIRED), must follow the latest approved version (409 BACKDATE_REWRITES_HISTORY) and no period of the plant with an approved revision may overlap [effectiveFrom, now) (409 BACKDATE_OVERLAPS_APPROVED_VALUE, details.periods) unless restateApproved. Checked again at approval.
+             * @example 2027-01-01T00:00:00Z
+             */
             effectiveFrom: string;
+            /** @description Why the version is backdated; required with a past effectiveFrom, refused otherwise (422 BACKDATE_REASON_WITHOUT_EFFECTIVE_FROM). Kept on the version. */
+            backdateReason?: string;
+            /** @description Backdate over approved figures: approval queues the revaluation and every approved period in range gets a change proposal (approved snapshots are never rewritten). Only with a backdate (422 RESTATE_WITHOUT_BACKDATE). */
+            restateApproved?: boolean;
             notes?: Record<string, never> | null;
         };
         FeatureFlagSetDto: {
@@ -9018,6 +9240,8 @@ export interface components {
             status?: Record<string, never> | null;
             /** @description Estimated cost as a decimal string (no currency) */
             estimatedCost?: Record<string, never> | null;
+            /** @description Read-only (item 5): the actions implementing this recommendation, as the case view returns them. Accepted so a read item can be sent back; never stored (link an action with its recommendationId). */
+            actions?: Record<string, never>[];
         };
         RcaEvidenceSeriesDto: {
             /** @enum {string|null} */
@@ -9060,6 +9284,9 @@ export interface components {
             taskDueDate?: string | null;
             /** @enum {string|null} */
             taskStatus?: "pending" | "completed" | null;
+            taskAssigneeId?: string | null;
+            verifiedBy?: string | null;
+            verifiedAt?: string | null;
             nodeIds?: string[];
             timeSeries?: components["schemas"]["RcaEvidenceSeriesDto"] | null;
             attachments?: components["schemas"]["RcaEvidenceAttachmentDto"][];
@@ -9173,6 +9400,22 @@ export interface components {
             note?: string;
             /** @description SME CA1 disposition of the residual risk; required to request closure (Monitoring → Closure Review) */
             residualRisk?: string;
+        };
+        RcaCaseCauseV2CreateDto: {
+            /** @enum {string} */
+            kind: "direct" | "contributing" | "root";
+            causeCodeId?: string | null;
+            statement: string;
+            evidenceIds?: string[];
+            nodeIds?: string[];
+        };
+        RcaCaseCauseV2UpdateDto: {
+            /** @enum {string} */
+            kind?: "direct" | "contributing" | "root";
+            causeCodeId?: string | null;
+            statement?: string;
+            evidenceIds?: string[];
+            nodeIds?: string[];
         };
         RcaLinkV2CreateDto: {
             /** @enum {string} */
@@ -9314,11 +9557,19 @@ export interface components {
             completionEvidenceRef?: Record<string, never> | null;
             verificationWindowStart?: Record<string, never> | null;
             verificationWindowEnd?: Record<string, never> | null;
+            /** @description CA4: how the completion will be verified (inspection, test, record review) */
+            verificationMethod?: Record<string, never> | null;
+            /** @description CA4: the plant member named to check the completion evidence and mark the action done; never the owner (422 VERIFIER_IS_OWNER). When named, only this person marks the action done (403 NOT_THE_VERIFIER). */
+            verifierId?: Record<string, never> | null;
             baseline?: components["schemas"]["RcaActionBaselineDto"] | null;
             /** @description The owner's claimed avoided loss (decimal string); never added to approved loss */
             claimedAvoidedLoss?: Record<string, never> | null;
             /** @enum {string|null} */
             claimedCurrency?: "IRR" | "USD" | null;
+            /** @description Item 5: id of the case recommendation this action implements (422 INVALID_REFERENCE when the case has no such recommendation); null unlinks */
+            recommendationId?: Record<string, never> | null;
+            /** @description F-9: why the action is cancelled; accepted only with status cancelled (or on a cancelled action, 422 CANCEL_REASON_WITHOUT_CANCEL otherwise). Optional; who and when are recorded by the server. */
+            cancelReason?: Record<string, never> | null;
         };
         RcaActionV2UpdateDto: {
             title?: string;
@@ -9342,11 +9593,19 @@ export interface components {
             completionEvidenceRef?: Record<string, never> | null;
             verificationWindowStart?: Record<string, never> | null;
             verificationWindowEnd?: Record<string, never> | null;
+            /** @description CA4: how the completion will be verified (inspection, test, record review) */
+            verificationMethod?: Record<string, never> | null;
+            /** @description CA4: the plant member named to check the completion evidence and mark the action done; never the owner (422 VERIFIER_IS_OWNER). When named, only this person marks the action done (403 NOT_THE_VERIFIER). */
+            verifierId?: Record<string, never> | null;
             baseline?: components["schemas"]["RcaActionBaselineDto"] | null;
             /** @description The owner's claimed avoided loss (decimal string); never added to approved loss */
             claimedAvoidedLoss?: Record<string, never> | null;
             /** @enum {string|null} */
             claimedCurrency?: "IRR" | "USD" | null;
+            /** @description Item 5: id of the case recommendation this action implements (422 INVALID_REFERENCE when the case has no such recommendation); null unlinks */
+            recommendationId?: Record<string, never> | null;
+            /** @description F-9: why the action is cancelled; accepted only with status cancelled (or on a cancelled action, 422 CANCEL_REASON_WITHOUT_CANCEL otherwise). Optional; who and when are recorded by the server. */
+            cancelReason?: Record<string, never> | null;
         };
         RcaBaselineCorrectionDto: {
             /** @description Corrected metric value over the same exposure (decimal string) */
@@ -9469,6 +9728,8 @@ export interface components {
             linkType?: "RCA" | "RCARecommendation" | "ProductionEvent" | "ProductionPlan";
             /** @description Required with linkType */
             linkId?: string;
+            /** @description Item 5: the RCA action this task carries out; needs linkType RCA with the case of the action as linkId (422 INVALID_REFERENCE). One open task per action (409 ACTION_TASK_EXISTS). */
+            rcaActionId?: string;
         };
         UpdateTaskV2Dto: {
             title?: string;
@@ -9486,6 +9747,8 @@ export interface components {
              */
             linkType?: "RCA" | "RCARecommendation" | "ProductionEvent" | "ProductionPlan" | null;
             linkId?: Record<string, never> | null;
+            /** @description Item 5: the RCA action this task carries out (linkType RCA of the case of the action); null unlinks. Changing the link away from RCA clears it. */
+            rcaActionId?: Record<string, never> | null;
         };
         AuditCount: {
             key: string;
@@ -9685,7 +9948,7 @@ export interface components {
             criticalAssets?: components["schemas"]["RcaCriticalAssetsDto"];
             cumulative?: components["schemas"]["RcaCumulativeDto"] | null;
             consequence?: components["schemas"]["RcaConsequenceDto"];
-            /** @description CA2/CA3 effectiveness rules (contracts/policies/rca_policy.schema.json; checked by the server parser, 422 INVALID_POLICY) */
+            /** @description CA2/CA3 effectiveness rules: baselineLookbackDays, minExposureHours, requiredReduction, reviewDays, zeroRepeatClasses and minimumCoverage (0–1, default 0.95: state-data coverage of the window after an action needed for a verdict; a version without it behaves as 0.95) (contracts/policies/rca_policy.schema.json; checked by the server parser, 422 INVALID_POLICY) */
             effectiveness?: {
                 [key: string]: unknown;
             };
@@ -9925,6 +10188,13 @@ export interface components {
         };
         MicroStopPolicyCreateDto: {
             /**
+             * Format: date-time
+             * @description Commissioning only: a past instant the version takes effect from instead of approval / record time. Requires backdateReason; 422 INVALID_EFFECTIVE_FROM (not past), 409 BACKDATE_REWRITES_HISTORY (not after the latest approved version of the scope), 409 BACKDATE_OVERLAPS_CALCULATION (a calculated period of the unit, or of any unit for a plant-wide version, overlaps [effectiveFrom, now); details.periods lists them).
+             */
+            effectiveFrom?: string;
+            /** @description Why the version is backdated; required with effectiveFrom (422 BACKDATE_REASON_REQUIRED), refused without it */
+            backdateReason?: string;
+            /**
              * Format: uuid
              * @description Unit override; absent = the tenant-wide version
              */
@@ -10115,6 +10385,13 @@ export interface components {
         };
         StopEventPolicyCreateDto: {
             /**
+             * Format: date-time
+             * @description Commissioning only: a past instant the version takes effect from instead of approval / record time. Requires backdateReason; 422 INVALID_EFFECTIVE_FROM (not past), 409 BACKDATE_REWRITES_HISTORY (not after the latest approved version of the scope), 409 BACKDATE_OVERLAPS_CALCULATION (a calculated period of the unit, or of any unit for a plant-wide version, overlaps [effectiveFrom, now); details.periods lists them).
+             */
+            effectiveFrom?: string;
+            /** @description Why the version is backdated; required with effectiveFrom (422 BACKDATE_REASON_REQUIRED), refused without it */
+            backdateReason?: string;
+            /**
              * Format: uuid
              * @description Unit override; absent = the tenant-wide version
              */
@@ -10214,6 +10491,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalInboxView"];
+                };
+            };
+        };
+    };
+    ApprovalInboxV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalItemView"];
                 };
             };
         };
@@ -10429,8 +10728,8 @@ export interface operations {
                 /** @description Opaque cursor returned as nextCursor by the previous page */
                 cursor?: string;
                 limit?: number;
-                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
-                sort?: "startTime" | "-startTime";
+                /** @description durationSeconds: closed events by end − start; events without an end (still running) sort as the longest (first with -durationSeconds, last with durationSeconds) */
+                sort?: "startTime" | "-startTime" | "durationSeconds" | "-durationSeconds";
                 /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
@@ -10461,6 +10760,9 @@ export interface operations {
                 possibleRepeat?: boolean;
                 /** @description Window of `possibleRepeat` in seconds (SME D5 pilot: 120) */
                 repeatWindowSeconds?: number;
+                /** @description Only events lasting at least this many seconds: closed events by end − start, running events by the time elapsed until the request (the elapsedSeconds of the response) */
+                minDurationSeconds?: number;
+                verificationStates?: ("verified" | "not_verified")[];
             };
             header?: {
                 /** @description Act on another tenant the caller is a member of (SuperAdmin: any tenant) */
@@ -10532,6 +10834,9 @@ export interface operations {
                 possibleRepeat?: boolean;
                 /** @description Window of `possibleRepeat` in seconds (SME D5 pilot: 120) */
                 repeatWindowSeconds?: number;
+                /** @description Only events lasting at least this many seconds: closed events by end − start, running events by the time elapsed until the request (the elapsedSeconds of the response) */
+                minDurationSeconds?: number;
+                verificationStates?: ("verified" | "not_verified")[];
                 /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
                 from: string;
                 /** @description Window end, ISO 8601 (exclusive); at most 400 days after from */
@@ -10580,6 +10885,9 @@ export interface operations {
                 possibleRepeat?: boolean;
                 /** @description Window of `possibleRepeat` in seconds (SME D5 pilot: 120) */
                 repeatWindowSeconds?: number;
+                /** @description Only events lasting at least this many seconds: closed events by end − start, running events by the time elapsed until the request (the elapsedSeconds of the response) */
+                minDurationSeconds?: number;
+                verificationStates?: ("verified" | "not_verified")[];
                 /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
                 from: string;
                 /** @description Window end, ISO 8601 (exclusive); at most 400 days after from */
@@ -14974,6 +15282,58 @@ export interface operations {
             };
         };
     };
+    EventAttributedLossesV2Controller_attributedLosses_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LossLinesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-periodStart";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Repeat the parameter for several units */
+                unitIds?: string[];
+                reasonCodeIds?: string[];
+                kinds?: ("availability" | "performance" | "quality" | "transition_allowance" | "transition_excess" | "unaccounted_classified" | "bridge")[];
+                /** @description Text search (case-insensitive, literal) on the reason code, its name and the cause event description */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ReconciliationV2Controller_get_v2: {
         parameters: {
             query?: {
@@ -16343,6 +16703,8 @@ export interface operations {
                 priority?: "Low" | "Medium" | "High" | "Critical";
                 /** @description true = target close date passed and not Closed; false = the others */
                 overdue?: boolean;
+                /** @description true = not Closed (with priority=Critical: the "open critical" count of the summary); false = Closed */
+                open?: boolean;
             };
             header?: never;
             path?: never;
@@ -16564,6 +16926,145 @@ export interface operations {
             };
         };
     };
+    RcaHistoryV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseCausesV2Controller_list_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseCausesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaCaseCauseV2CreateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseCausesV2Controller_remove_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCaseCausesV2Controller_update_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcaCaseCauseV2UpdateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaCauseReportV2Controller_report_v2: {
+        parameters: {
+            query?: {
+                /** @description Only causes of this kind (all kinds when omitted) */
+                kind?: "direct" | "contributing" | "root";
+                /** @description Cases of this unit only */
+                unitId?: string;
+                /** @description cases: by number of cases (server ranking); approvedLoss: the top `limit` codes by cases, ordered by their approved loss in `currency` (unvalued last) */
+                sort?: "cases" | "approvedLoss";
+                currency?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RcaLinksV2Controller_list_v2: {
         parameters: {
             query?: never;
@@ -16609,6 +17110,42 @@ export interface operations {
             };
             /** @description Linked */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaOccurrencesV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-startTime";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                unitId?: string;
+                /** @description Occurrences with an event of this asset */
+                assetId?: string;
+                /** @description Occurrences with an event coded with this reason */
+                reasonCodeId?: string;
+                /** @description The occurrence of this event */
+                eventId?: string;
+                /** @description Case-insensitive search in event descriptions */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16871,6 +17408,45 @@ export interface operations {
             path: {
                 id: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaActionsV2Controller_listAll_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "dueDate";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description true = only actions you own (the signed-in user) */
+                mine?: boolean;
+                /** @description Actions of this owner */
+                ownerId?: string;
+                /** @description Statuses (repeat the parameter) */
+                status?: ("open" | "in_progress" | "done" | "cancelled")[];
+                /** @description true = open or in progress with the due date passed (the overdue count of GET /v2/rcas/summary); false = the others */
+                overdue?: boolean;
+                /** @description Actions of this case */
+                rcaId?: string;
+                /** @description Actions of cases of this unit */
+                unitId?: string;
+            };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -17300,8 +17876,8 @@ export interface operations {
                 /** @description Opaque cursor returned as nextCursor by the previous page */
                 cursor?: string;
                 limit?: number;
-                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
-                sort?: "utcStart";
+                /** @description utcStart: oldest first; -utcStart: newest first (e.g. the period just before a date with to=<its start>&limit=1) */
+                sort?: "utcStart" | "-utcStart";
                 /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
@@ -17312,6 +17888,8 @@ export interface operations {
                 workflowState?: ("none" | "draft" | "in_review" | "stale" | "approved")[];
                 /** @description current: the open revision, else the published one; approved: the published revision only */
                 view?: "current" | "approved";
+                /** @description Plan-ledger residual state of the shown revision (repeat for several). The state is computed per period, so a filtered page examines at most 2,000 periods: it may hold fewer than `limit` rows while `nextCursor` is set — keep paging until `nextCursor` is null. */
+                residualStates?: ("not_computable" | "balanced" | "within_tolerance" | "unaccounted" | "over_accounted" | "overproduction" | "conflict")[];
             };
             header?: never;
             path?: never;
@@ -20291,7 +20869,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps. */
                 month: string;
             };
             cookie?: never;
@@ -20313,7 +20891,7 @@ export interface operations {
                 "Idempotency-Key": string;
             };
             path: {
-                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps. */
                 month: string;
             };
             cookie?: never;
@@ -20339,7 +20917,7 @@ export interface operations {
                 "Idempotency-Key": string;
             };
             path: {
-                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps. */
                 month: string;
             };
             cookie?: never;
@@ -20365,7 +20943,7 @@ export interface operations {
                 "Idempotency-Key": string;
             };
             path: {
-                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps. */
                 month: string;
             };
             cookie?: never;
@@ -20391,7 +20969,7 @@ export interface operations {
                 "Idempotency-Key": string;
             };
             path: {
-                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps. */
                 month: string;
             };
             cookie?: never;
@@ -20417,7 +20995,7 @@ export interface operations {
                 "Idempotency-Key": string;
             };
             path: {
-                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07) */
+                /** @description Financial month `YYYY-MM` in the month_close policy calendar (Solar Hijri plants: e.g. 1405-07), or calendar-qualified `persian:YYYY-MM` / `gregorian:YYYY-MM`. A month of the other calendar — explicit, or a bare key whose year belongs to it (e.g. 2026-10 on a Solar Hijri plant) — is refused with 422 MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS; `details.overlaps` names the plant months it overlaps. */
                 month: string;
             };
             cookie?: never;
@@ -20721,6 +21299,8 @@ export interface operations {
                 to?: string;
                 /** @description Only unread */
                 unread?: "true" | "false";
+                /** @description active (default): open work and information; resolved: shared work someone already did (history); all */
+                state?: "active" | "resolved" | "all";
             };
             header?: never;
             path?: never;
@@ -20771,6 +21351,25 @@ export interface operations {
         };
     };
     NotificationsV2Controller_read_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NotificationsV2Controller_unread_v2: {
         parameters: {
             query?: never;
             header?: never;

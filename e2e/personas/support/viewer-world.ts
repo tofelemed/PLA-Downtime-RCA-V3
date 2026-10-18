@@ -29,9 +29,10 @@ export const OPERATOR_MENU = ['/dashboard', '/pla-analytics', '/events', '/downt
 export const OPERATOR_HIDDEN = ['/enhanced-historian', '/reports', '/planning', '/production-plans', '/rca', '/master-data/codes-rules', '/finance', '/users'];
 export const VIEWER_MENU = [
   '/dashboard', '/reports', '/pla-analytics', '/planning', '/events', '/downtime', '/rca',
-  '/rca-knowledge-base', '/master-data', '/finance', '/tasks', '/enhanced-historian',
+  '/rca-knowledge-base', '/master-data', '/finance', '/tasks',
 ];
-export const VIEWER_HIDDEN = [ '/users', '/permissions', '/admin', '/connectivity', '/audit', '/admin?tab=settings'];
+/** owner 18 Oct 2026: the Integration section (Connectivity, Enhanced Historian) is SuperAdmin-only */
+export const VIEWER_HIDDEN = [ '/users', '/permissions', '/admin', '/connectivity', '/enhanced-historian', '/audit', '/admin?tab=settings'];
 
 export interface ViewerSession {
   email: string;

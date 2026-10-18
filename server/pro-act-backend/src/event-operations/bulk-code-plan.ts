@@ -156,6 +156,10 @@ export function codingPatch(
   if (values.impactCodeId && !event.impactCodeId) {
     columns.impactCodeId = values.impactCodeId;
   }
+  if (codes.assetId !== undefined) columns.assetId = codes.assetId;
+  if (codes.investigationPending !== undefined) {
+    columns.investigationPending = codes.investigationPending;
+  }
   return columns;
 }
 
@@ -164,11 +168,35 @@ export function codingSnapshot(
 ): CodingSnapshot {
   return {
     reasonCodeId: event.reasonCodeId ?? null,
+    assetId: event.assetId ?? null,
+    investigationPending: event.investigationPending ?? false,
     impactCodeId: event.impactCodeId ?? null,
     scheduleClass: event.scheduleClass as ScheduleClass,
     oeeComponent: event.oeeComponent as OeeComponent,
     codingState: event.codingState as CodingState,
   };
+}
+
+/**
+ * UX A-1: a bulk asset must belong to every event's unit (as `EventReferencesValidator.assertOwned` checks
+ * for one event); 422 INVALID_REFERENCE naming the events of other units otherwise.
+ */
+export function assertAssetUnit(
+  events: ReadonlyArray<Pick<ProductionEvent, 'id' | 'unitId'>>,
+  asset: { unitId: string | null } | null,
+): void {
+  const foreign = events
+    .filter((event) => !asset || event.unitId !== asset.unitId)
+    .map((event) => event.id);
+  if (foreign.length === 0) return;
+  const message =
+    'codes.assetId does not refer to equipment of every selected event’s unit';
+  throw new UnprocessableEntityException({
+    code: 'INVALID_REFERENCE',
+    message: [message],
+    fieldErrors: [{ field: 'codes.assetId', message }],
+    details: { eventIds: foreign.slice(0, 100) },
+  });
 }
 
 /** Merged intervals per unit (period impact until Phase 2 periods exist); running → `to: null`. */

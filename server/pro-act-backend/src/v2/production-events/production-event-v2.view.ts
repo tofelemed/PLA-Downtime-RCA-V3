@@ -1,3 +1,4 @@
+import type { EventAccountingState } from './event-accounting-states';
 import {
   CodingState,
   ImpactMode,
@@ -117,10 +118,21 @@ export interface ProductionEventV2View {
   rowVersion: number;
   /** list and single reads: SME D5 repeat-stop incident of the occurrence (`/v2/stop-incidents`); null = none */
   incidentId?: string | null;
+  /**
+   * list and single reads (owner 18 Oct 2026): workflow of the accounting of the periods the event overlaps
+   * (`none` / `draft` / `in_review` / `stale` / `approved`; open work wins when they differ), shown next to
+   * the coding state so every role reads the same server state
+   */
+  accountingState?: EventAccountingState;
   /** single reads only: what the source last said (ING06), null for events without a source revision */
   sourceFacts?: EventFacts | null;
   /** single reads only: fields where the user's value overrides the source value */
   overriddenFields?: string[];
+  /**
+   * single reads only (UX E-5): fields the event's source system owns — interval fields a non-manual event
+   * refuses to change, and the columns whose user edit is recorded as a source override; empty for manual events
+   */
+  sourceOwnedFields?: string[];
 }
 
 const isoOrNull = (value: Date | string | null | undefined): string | null =>

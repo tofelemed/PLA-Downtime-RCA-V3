@@ -29,6 +29,15 @@ export interface LayoutInput {
   header: ExportHeader;
   presentation: ExportPresentation;
   sections: readonly PdfSection[];
+  /** the valuation bases of the revisions' loss values (`basisText`), in first-seen order */
+  bases?: readonly string[];
+}
+
+/** The running header's basis note: one basis, or a pointer to each section when they differ. */
+function basisNote(bases: readonly string[]): string {
+  if (bases.length === 0) return '';
+  if (bases.length === 1) return ` · Loss values: ${bases[0]}`;
+  return ' · Loss values: several bases (see each revision)';
 }
 
 type Header = PdfPage['header'];
@@ -97,10 +106,11 @@ function headerOf(input: LayoutInput): Header {
   );
   return {
     title: `${REPORT_TITLES[header.reportType]} · ${presentation.plantName}`,
-    subtitle:
+    subtitle: `${
       from && to
         ? plantRange(from, to, presentation)
-        : 'Named approved revisions',
+        : 'Named approved revisions'
+    }${basisNote(input.bases ?? [])}`,
     status: provisional ? 'APPROVED · PROVISIONAL FX' : 'APPROVED',
     tone: provisional ? 'provisional' : 'approved',
   };
@@ -116,7 +126,13 @@ export function layoutDocument(input: LayoutInput): PdfDocumentModel {
   const pager = new Paginator(header);
   pager.keep([
     { kind: 'heading', text: 'Export' },
-    { kind: 'facts', rows: coverFacts(input.header, input.presentation) },
+    {
+      kind: 'facts',
+      rows: [
+        ...coverFacts(input.header, input.presentation),
+        ['Loss value basis', (input.bases ?? []).join('; ') || 'Not valued'],
+      ],
+    },
   ]);
   if (input.sections.length === 0) {
     pager.keep([

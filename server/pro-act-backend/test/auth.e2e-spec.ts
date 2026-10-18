@@ -174,4 +174,3 @@ describe('Authentication Endpoints (e2e)', () => {
     });
   });
 });
-

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DateRangeInput, type InstantRange } from '@/features/ux-kit/date-inputs';
 import { humanize, labelOf, REPLAY_STATE_LABELS, SIGNAL_ENGINE_LABELS } from '@/features/ux-kit/labels';
+import { NumberText } from '@/features/ux-kit/number-text';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Section } from '@/features/ux-kit/page-layout';
 import { ConsoleRefusal } from '../components/console-refusal';
@@ -36,7 +37,7 @@ function PreviewResult({ engine, samples, result }: { engine: string; samples: n
 
 function StoredSamples({ view, timezone }: { view: SignalPreviewView; timezone: string }) {
   return <div className="overflow-x-auto">
-    <table className="w-full text-left text-xs"><caption className="text-left">Stored samples (first 50 of {view.samples.length}; boundary neighbours marked)</caption>
+    <table className="w-full text-left text-xs"><caption className="text-left">Stored samples (first <NumberText value={50} /> of <NumberText value={view.samples.length} />; boundary neighbours marked)</caption>
       <thead><tr>{['Observed at', 'Value / state', 'Quality', 'Revision', 'In period'].map((label) => <th key={label} className="p-1">{label}</th>)}</tr></thead>
       <tbody>{view.samples.slice(0, 50).map((sample) => <tr key={sample.observedAt} className="border-t"><td className="p-1"><PlantTime iso={sample.observedAt} tz={timezone} withDate /></td><td className="p-1">{sample.stateName ?? sample.value ?? 'No value'}</td><td className="p-1">{sample.quality}</td><td className="p-1">{sample.sourceRevision}</td><td className="p-1">{sample.inWindow ? 'Yes' : 'Boundary neighbour'}</td></tr>)}</tbody>
     </table>

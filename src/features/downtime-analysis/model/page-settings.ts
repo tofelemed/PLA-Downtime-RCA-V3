@@ -26,8 +26,8 @@ export function downtimePageSettings(view: DowntimeView, params: URLSearchParams
 }
 
 export const DOWNTIME_SCOPE_NOTES: Record<DowntimeFilterScope, string> = {
-  period: 'Product, shift and crew selections keep whole production periods. Event drill-down shows the underlying operational records of the selected units and dates.',
-  operational: 'Current operational events and state observations: product, shift, crew, micro-stop and approved-revision filters do not apply. The state timeline also ignores schedule class.',
+  period: 'Product, shift and crew selections keep whole production periods. Stop drill-down shows the underlying operational records of the selected units and dates.',
+  operational: 'Current operational stops and state observations: product, shift, crew, micro-stop and approved-revision filters do not apply. The state timeline also ignores schedule class.',
   output: 'Lost production uses every production period of the selected units and dates. Product, shift, crew, schedule-class and micro-stop filters do not apply.',
   reliability: 'Reliability uses every production period of the selected units and dates. Product, shift, crew, schedule-class and micro-stop filters do not apply.',
 };

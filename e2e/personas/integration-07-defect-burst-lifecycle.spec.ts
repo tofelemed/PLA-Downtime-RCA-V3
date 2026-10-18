@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { apiLogin, DEMO_UNIT_CODE, eventsByEventId, findConnection, INT_USERS, jobsOf, loadState, openConsole, PREFIX, selectConnection, uiLogin, unitByCode } from './support/integration-world';
+import { CONSOLE_ADMIN, apiLogin, DEMO_UNIT_CODE, eventsByEventId, findConnection, INT_USERS, jobsOf, loadState, openConsole, PREFIX, selectConnection, uiLogin, unitByCode } from './support/integration-world';
 
 /**
  * INTEGRATION ADMIN persona — the formerly failing assertions of journeys 3, 4 and 5 (fixed in 6164e78),
@@ -46,7 +46,8 @@ test.describe('Integration admin — formerly failing (fixed in 6164e78)', () =>
 
   test('INT-05d (elena): an untouched payload profile editor is not dirty after a fresh login', async ({ page }) => {
     const state = loadState();
-    await uiLogin(page, INT_USERS.elena);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
     await selectConnection(page, state.connectionName);
     await page.getByTestId('tab-profile').click();

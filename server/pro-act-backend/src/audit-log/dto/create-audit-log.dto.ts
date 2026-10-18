@@ -12,7 +12,10 @@ import {
  * accepted for compatibility but replaced by the caller identity on the server (WF05).
  */
 export class CreateAuditLogDto {
-  @ApiProperty({ required: false, description: 'Ignored: taken from the caller identity' })
+  @ApiProperty({
+    required: false,
+    description: 'Ignored: taken from the caller identity',
+  })
   @IsOptional()
   @IsString()
   userId?: string;
@@ -45,13 +48,19 @@ export class CreateAuditLogDto {
   @IsString()
   details?: string;
 
-  @ApiProperty({ required: false, description: 'Ignored: taken from the caller identity' })
+  @ApiProperty({
+    required: false,
+    description: 'Ignored: taken from the caller identity',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(36)
   organizationId?: string;
 
-  @ApiProperty({ required: false, description: 'Ignored: taken from the caller identity' })
+  @ApiProperty({
+    required: false,
+    description: 'Ignored: taken from the caller identity',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(36)

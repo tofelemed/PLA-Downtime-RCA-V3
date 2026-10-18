@@ -33,6 +33,12 @@ export function plantToday(timeZone: string, now: Date = new Date()): string {
   return utcToPlantLocal(now.toISOString(), timeZone).slice(0, 10);
 }
 
+/** A calendar day (`YYYY-MM-DD`) `count` days later (earlier when negative); calendar arithmetic, no time zone. */
+export function addCalendarDays(isoDate: string, count: number): string {
+  const [year, month, date] = isoDate.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, date + count)).toISOString().slice(0, 10);
+}
+
 /** UTC ISO of 00:00 plant time on `isoDate` (`YYYY-MM-DD`): the inclusive start of that plant day. */
 export function startOfPlantDayUtc(isoDate: string, timeZone: string): string | null {
   if (!DATE_PATTERN.test(isoDate)) return null;

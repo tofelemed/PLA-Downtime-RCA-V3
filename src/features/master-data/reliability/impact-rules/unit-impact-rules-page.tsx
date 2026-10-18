@@ -9,7 +9,7 @@ import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ActionIcon } from '@/lib/icons';
-import { VersionStateBadge } from '@/features/plans-profiles-calendars/components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { usePlanningRefs, type PlanningRefs } from '@/features/plans-profiles-calendars/hooks/use-planning-refs';
 import { VersionActions } from '@/features/plans-profiles-calendars/profiles/version-actions';
 import { MasterDataLayout } from '../../components/master-data-layout';

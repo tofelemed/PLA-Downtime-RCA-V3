@@ -135,6 +135,24 @@ export class BulkCodesDto {
   @IsOptional()
   @IsIn(OEE_COMPONENTS)
   oeeComponent?: OeeComponent;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description:
+      'Equipment (asset) of every event’s unit (422 INVALID_REFERENCE otherwise); on source events the value is ' +
+      'recorded as a source override, as with a single PATCH',
+  })
+  @IsOptional()
+  @IsUUID()
+  assetId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'SME D12: no specific reason yet — the stops are explicitly under investigation (false clears the flag)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  investigationPending?: boolean;
 }
 
 /** `POST /api/v2/production-events/bulk-code` */

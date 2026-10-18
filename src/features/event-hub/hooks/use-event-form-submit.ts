@@ -4,6 +4,7 @@ import { useCreateProductionEvent } from '@/api/v2/queries/event-commands';
 import { usePatchProductionEvent } from '@/api/v2/queries/production-events';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { serverFormErrors, toCreateBody, toPatchBody, validateEventForm } from '../model/event-form';
+import { sourceOwnershipOf, withoutSourceInterval } from '../model/source-ownership';
 import type { EventFormState } from './use-event-form';
 
 export type SubmitOutcome = 'saved' | 'invalid' | 'conflict' | 'failed' | 'unchanged';
@@ -40,7 +41,7 @@ export function useEventFormSubmit({ form, event, timezone, onSaved }: UseEventF
   const send = async (baseRevision: number | null): Promise<SubmitOutcome> => {
     const { values, initial } = form.draft;
     if (!event) return finish(await create.submit(toCreateBody(values, timezone)));
-    const changes = toPatchBody(initial, values, timezone);
+    const changes = withoutSourceInterval(toPatchBody(initial, values, timezone), sourceOwnershipOf(event));
     if (Object.keys(changes).length === 0) return 'unchanged';
     const revision = baseRevision ?? event.rowVersion;
     return finish(await patch.submit({ event: { ...event, rowVersion: revision }, changes }));

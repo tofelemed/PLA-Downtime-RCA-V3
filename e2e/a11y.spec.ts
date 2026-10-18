@@ -10,6 +10,8 @@ import { call } from './test-utils/downtime-world';
  * manager can read; without one the scan is skipped with a note rather than failed.
  */
 const MANAGER = { email: 'manager@acme.com', password: 'demo123' };
+/** owner 18 Oct 2026: Integration is SuperAdmin-only, so its pages are scanned as the SuperAdmin */
+const SUPER_ADMIN = { email: 'test@example.com', password: 'Test123!@#' };
 const FLAGS = ['v2.eventHub', 'v2.downtimeAnalysis', 'v2.plaAnalytics', 'v2.planDashboard', 'v2.rca'];
 const BLOCKING = new Set(['serious', 'critical']);
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
@@ -84,9 +86,7 @@ test.describe('Accessibility of the main pages (axe, WCAG 2.1 AA, serious / crit
     ['Planning', '/planning', '[data-testid="planning-page"]'],
     ['Finance', '/finance', 'main'],
     ['Uncertainty budgets', '/measurement-uncertainty', 'main'],
-    ['Source priority', '/connectivity/source-authority', 'main'],
     ['Delegations', '/delegations', 'main'],
-    ['Connectivity', '/connectivity', '[data-testid="integration-console"]'],
     ['Codes and rules', '/master-data/codes-rules', 'main'],
     ['Tasks', '/tasks', 'main'],
     ['Settings', '/admin?tab=settings', 'main'],
@@ -123,4 +123,22 @@ test.describe('Accessibility of the main pages (axe, WCAG 2.1 AA, serious / crit
     test.skip(!rca, 'no RCA case in the demo plant');
     await scan(page, `/rca/${rca!.id}`, 'main');
   });
+});
+
+test.describe('Accessibility of the Integration pages (SuperAdmin only, owner 18 Oct 2026)', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaUI(page, SUPER_ADMIN.email, SUPER_ADMIN.password);
+  });
+
+  const INTEGRATION_PAGES: ReadonlyArray<[string, string, string]> = [
+    ['Source priority', '/connectivity/source-authority', 'main'],
+    ['Connectivity', '/connectivity', '[data-testid="integration-console"]'],
+  ];
+
+  for (const [name, path, ready] of INTEGRATION_PAGES) {
+    test(`${name} (${path})`, async ({ page }) => {
+      test.setTimeout(120_000);
+      await scan(page, path, ready);
+    });
+  }
 });

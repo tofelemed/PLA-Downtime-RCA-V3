@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { requireTenantRole } from '../auth/roles/require-tenant-role';
 import { appendAudit } from '../common/audit/audit-trail';
+import { Clock } from '../common/clock/clock';
 import {
   RequestContext,
   requireTenantId,
@@ -28,22 +29,22 @@ import { MonthCloseAction } from './entities/month-close-action.entity';
 import { MonthClose } from './entities/month-close.entity';
 import {
   monthCloseRefused,
+  monthNotEnded,
   notMaterialityReviewer,
 } from './month-close-errors';
 import { applyStep } from './month-close-steps';
 import { loadMonthContext, MonthContext, MonthSelector } from './month-context';
+import { ClosePrerequisites, monthCoverage } from './month-coverage';
 import { lockMonthCloses } from './month-lock';
-import {
-  adjustmentTotals,
-  monthPrerequisites,
-  MonthPrerequisites,
-} from './month-prerequisites';
+import { adjustmentTotals, monthPrerequisites } from './month-prerequisites';
 import { WorkflowPoliciesService } from './workflow-policies.service';
 
 /** A month as the API shows it: its context, prerequisites, materiality and history. */
 export interface MonthCloseSnapshot {
   context: MonthContext;
-  prerequisites: MonthPrerequisites;
+  prerequisites: ClosePrerequisites;
+  /** when the month is over (plant time zone, after its last shift) */
+  endsAt: Date;
   findings: MaterialityFinding[];
   totals: Awaited<ReturnType<typeof adjustmentTotals>>;
   history: MonthCloseAction[];
@@ -78,6 +79,7 @@ export class MonthCloseService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly policies: WorkflowPoliciesService,
+    private readonly clock: Clock,
   ) {}
 
   snapshot(
@@ -86,7 +88,7 @@ export class MonthCloseService {
   ): Promise<MonthCloseSnapshot> {
     const tenantId = requireTenantId(context);
     return this.dataSource.transaction((manager) =>
-      this.read(manager, tenantId, selector, new Date()),
+      this.read(manager, tenantId, selector, this.clock.now()),
     );
   }
 
@@ -101,7 +103,7 @@ export class MonthCloseService {
     requireTenantRole(context, ACTION_ROLES[command.action]);
     return this.dataSource.transaction(async (manager) => {
       await lockMonthCloses(manager, tenantId, 'exclusive');
-      const now = new Date();
+      const now = this.clock.now();
       const before = await this.read(manager, tenantId, { key }, now);
       this.assertReviewer(context, command.action, before);
       const row = await this.rowFor(manager, before.context, actor);
@@ -111,6 +113,12 @@ export class MonthCloseService {
         blocked,
         isSuperAdmin: context.isSuperAdmin,
       });
+      if (command.action === 'close_quantities' && now < before.endsAt) {
+        const transitionAllowed =
+          decision.ok || decision.refusal === 'CLOSE_PREREQUISITES';
+        if (transitionAllowed)
+          throw monthNotEnded(before.context.month.key, before.endsAt);
+      }
       if (!decision.ok) {
         throw monthCloseRefused(
           decision.refusal,
@@ -140,7 +148,15 @@ export class MonthCloseService {
       now,
     });
     const dates = { tenantId, ...context.month };
-    const prerequisites = await monthPrerequisites(manager, dates);
+    const { endsAt, ...coverage } = await monthCoverage(
+      manager,
+      dates,
+      context.calendar.timezone,
+    );
+    const prerequisites = {
+      ...(await monthPrerequisites(manager, dates)),
+      ...coverage,
+    };
     const totals = await adjustmentTotals(manager, dates);
     const history = context.row
       ? await manager.find(MonthCloseAction, {
@@ -152,6 +168,7 @@ export class MonthCloseService {
     return {
       context,
       prerequisites,
+      endsAt,
       totals,
       findings: materialityFindings(totals, context.policy.policy.materiality),
       history,
@@ -288,12 +305,13 @@ async function namesOf(
 }
 
 /**
- * Prerequisites unmet: a period not approved, a production day not certified (when the policy requires day
+ * Prerequisites unmet: a scheduled period not yet created, a period not approved, a production day not certified (when the policy requires day
  * certification), or an open change proposal when the policy blocks on them.
  */
 function isBlocked(snapshot: MonthCloseSnapshot): boolean {
   const { prerequisites, context } = snapshot;
   if (prerequisites.pendingCount > 0) return true;
+  if (prerequisites.missingPeriodCount > 0) return true;
   if (
     context.policy.policy.requireCertifiedDays &&
     prerequisites.certifiedDays < prerequisites.days
@@ -310,6 +328,7 @@ function evidenceOf(snapshot: MonthCloseSnapshot): Record<string, unknown> {
   return {
     periods: snapshot.prerequisites.periods,
     approved: snapshot.prerequisites.approved,
+    missingPeriods: snapshot.prerequisites.missingPeriodCount,
     days: snapshot.prerequisites.days,
     certifiedDays: snapshot.prerequisites.certifiedDays,
     openProposals: snapshot.prerequisites.openProposalCount,

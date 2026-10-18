@@ -118,6 +118,110 @@ describe('effectivenessOf (SME CA2 / CA3)', () => {
       postRate: '7200',
     });
   });
+
+  it('D2: a post window without complete state coverage is insufficient evidence, however many hours', () => {
+    const gapped: ExposureWindow = {
+      ...window(0, 1000),
+      knownSeconds: HOURS(1000),
+      unknownSeconds: HOURS(200),
+      coverage: '0.8333',
+    };
+    const result = effectivenessOf({
+      metric: 'recurrences',
+      baseline: window(5, 1000),
+      correctedBaseline: null,
+      post: gapped,
+      criteria: CRITERIA,
+    });
+    expect(result.verdict).toBe('insufficient_evidence');
+    expect(result.reasons).toEqual([
+      'state data covers 83.3 % of the window after the action (200 h without data); a verdict needs at least 95 % coverage',
+    ]);
+    const covered = effectivenessOf({
+      metric: 'recurrences',
+      baseline: window(5, 1000),
+      correctedBaseline: null,
+      post: { ...gapped, unknownSeconds: '0', coverage: '1' },
+      criteria: CRITERIA,
+    });
+    expect(covered.verdict).toBe('effective');
+  });
+
+  const covering = (
+    coverage: string,
+    unknownHours: number,
+  ): ExposureWindow => ({
+    ...window(0, 1000),
+    knownSeconds: HOURS(1000),
+    unknownSeconds: HOURS(unknownHours),
+    coverage,
+  });
+  const judged = (post: ExposureWindow, criteria = CRITERIA) =>
+    effectivenessOf({
+      metric: 'recurrences',
+      baseline: { ...window(5, 1000), coverage: '0.9', unknownSeconds: '0' },
+      correctedBaseline: null,
+      post,
+      criteria,
+    });
+
+  it('owner 18 Oct: 96 % coverage meets the default 95 % minimum, the verdict comes from the known exposure', () => {
+    const result = judged(covering('0.96', 41.7));
+    expect(result.verdict).toBe('effective');
+    expect(result.reasons).toEqual(['rate reduced by 100 %']);
+    expect(result.coverage).toEqual({
+      baseline: '0.9',
+      post: '0.96',
+      minimum: '0.95',
+    });
+  });
+
+  it('owner 18 Oct: 94 % coverage is insufficient evidence, the reason shows coverage against the minimum', () => {
+    const result = judged(covering('0.94', 63.8));
+    expect(result.verdict).toBe('insufficient_evidence');
+    expect(result.reasons).toEqual([
+      'state data covers 94 % of the window after the action (63.8 h without data); a verdict needs at least 95 % coverage',
+    ]);
+    expect(result.coverage?.post).toBe('0.94');
+  });
+
+  it('the minimum frozen in the criteria applies; exactly at the minimum is enough', () => {
+    const strict = { ...CRITERIA, minimumCoverage: 1 };
+    expect(judged(covering('0.99', 10), strict).verdict).toBe(
+      'insufficient_evidence',
+    );
+    expect(judged(covering('0.99', 10), strict).reasons[0]).toContain(
+      'needs at least 100 % coverage',
+    );
+    const loose = { ...CRITERIA, minimumCoverage: 0.9 };
+    expect(judged(covering('0.9', 111), loose).verdict).toBe('effective');
+    expect(judged(covering('0.9', 111), loose).coverage?.minimum).toBe('0.9');
+  });
+
+  it('owner 18 Oct: a unit without a state mapping needs a state mapping, not more coverage', () => {
+    const unmapped: ExposureWindow = {
+      ...covering('0', 1000),
+      exposureSeconds: '0',
+      knownSeconds: '0',
+      unmappedUnitIds: ['unit-1'],
+    };
+    const result = judged(unmapped);
+    expect(result.verdict).toBe('insufficient_evidence');
+    expect(result.reasons).toEqual(['needs a state mapping for this unit']);
+    expect(
+      judged({ ...unmapped, unmappedUnitIds: ['unit-1', 'unit-2'] }).reasons,
+    ).toEqual(['needs a state mapping for each of these 2 units']);
+  });
+
+  it('windows before rca-exposure-v3 report no coverage and are not gated', () => {
+    const result = judged(window(1, 1000));
+    expect(result.verdict).toBe('effective');
+    expect(result.coverage).toEqual({
+      baseline: '0.9',
+      post: null,
+      minimum: '0.95',
+    });
+  });
 });
 
 describe('caseEffectiveness', () => {

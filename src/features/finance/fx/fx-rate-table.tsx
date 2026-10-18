@@ -4,7 +4,7 @@ import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { DataTable, type DataTableColumn, type DataTableEmpty, type DataTableStatus, type PagerModel } from '@/features/ux-kit/data-table';
 import { FX_RATE_TYPE_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { ProvisionalRateBadge } from '../components/provisional-rate-badge';
-import { VersionStateBadge } from '../components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 
 export interface FxRateTableProps {
   rates: readonly FxRateView[];

@@ -12,7 +12,14 @@ import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { ActionIcon } from '@/lib/icons';
+import { canCorrect, SUPERSEDES_PARAM } from '../model/disposition-form';
 import { DispositionActions } from './disposition-actions';
+
+function correctionPath(path: string, search: string, id: string): string {
+  const params = new URLSearchParams(search);
+  params.set(SUPERSEDES_PARAM, id);
+  return `${path}?${params.toString()}`;
+}
 
 export interface DispositionsSectionProps {
   planId: string;
@@ -20,7 +27,28 @@ export interface DispositionsSectionProps {
   timezone: string;
 }
 
-function columnsOf(names: { products: NameResolver; users: NameResolver }, timezone: string, canDecide: boolean): DataTableColumn<LotDispositionView>[] {
+interface ColumnOptions {
+  timezone: string;
+  canDecide: boolean;
+  /** the "Record disposition" link of a correction of row `id`, or null when the user records none */
+  correctLink: ((id: string) => string) | null;
+  rows: readonly LotDispositionView[];
+}
+
+function ActionCell({ row, options }: { row: LotDispositionView; options: ColumnOptions }) {
+  if (row.state === 'proposed' && options.canDecide) return <DispositionActions disposition={row} />;
+  if (options.correctLink && canCorrect(row, options.rows)) {
+    return (
+      <Link className="text-sm underline" to={options.correctLink(row.id)} data-testid="disposition-correct">
+        Correct this disposition…
+      </Link>
+    );
+  }
+  return <>—</>;
+}
+
+function columnsOf(names: { products: NameResolver; users: NameResolver }, options: ColumnOptions): DataTableColumn<LotDispositionView>[] {
+  const { timezone } = options;
   const columns: DataTableColumn<LotDispositionView>[] = [
     { id: 'lot', header: 'Lot', cell: (d) => <span data-testid="disposition-row" data-state={d.state} data-class={d.dispositionClass}>{d.lotCode}</span> },
     { id: 'product', header: 'Product', cell: (d) => names.products.nameOf(d.productId) },
@@ -31,8 +59,8 @@ function columnsOf(names: { products: NameResolver; users: NameResolver }, timez
     { id: 'author', header: 'Recorded by', cell: (d) => names.users.nameOf(d.authorId) },
     { id: 'state', header: 'State', cell: (d) => labelOf(DISPOSITION_STATE_LABELS, d.state) },
   ];
-  if (!canDecide) return columns;
-  return [...columns, { id: 'actions', header: 'Decision', cell: (d) => (d.state === 'proposed' ? <DispositionActions disposition={d} /> : '—') }];
+  if (!options.canDecide && !options.correctLink) return columns;
+  return [...columns, { id: 'actions', header: 'Action', cell: (d) => <ActionCell row={d} options={options} /> }];
 }
 
 /**
@@ -47,9 +75,12 @@ export function DispositionsSection({ planId, periodId, timezone }: Dispositions
   const detail = period.data?.data;
   const list = useLotDispositions(detail ? { unitId: detail.unitId, from: detail.utcStart, to: detail.utcEnd } : null);
   const names = { products: useProductNames(), users: useUserNames() };
+  const newPath = `/plans/${planId}/periods/${periodId}/dispositions/new`;
+  const correctLink = canWriteDispositions ? (id: string) => correctionPath(newPath, search, id) : null;
+  const rows = list.data?.items ?? [];
   const record = canWriteDispositions && (
     <Button asChild size="sm" variant="outline" data-testid="disposition-record">
-      <Link to={`/plans/${planId}/periods/${periodId}/dispositions/new${search}`}>
+      <Link to={`${newPath}${search}`}>
         <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
         Record disposition
       </Link>
@@ -60,8 +91,8 @@ export function DispositionsSection({ planId, periodId, timezone }: Dispositions
       <div data-testid="dispositions">
         {list.isSuccess && list.data.items.length === 0 ? <DataState state="empty" detail="No dispositions recorded for this period." /> : <DataTable
           caption="Product dispositions"
-          columns={columnsOf(names, timezone, canApproveDispositions)}
-          rows={list.data?.items ?? []}
+          columns={columnsOf(names, { timezone, canDecide: canApproveDispositions, correctLink, rows })}
+          rows={rows}
           getRowKey={(d) => d.id}
           status={{ isLoading: list.isLoading, isError: list.isError, error: list.error }}
           empty={{ text: 'No dispositions recorded for this period.' }}

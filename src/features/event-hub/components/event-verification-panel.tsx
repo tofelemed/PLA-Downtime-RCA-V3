@@ -5,6 +5,7 @@ import type { VerificationOutcomeView } from '@/api/v2/types/stop-coding';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { actorText } from '@/features/ux-kit/labels/actor-labels';
 import { useUserNames } from '@/features/ux-kit/labels/use-user-names';
 import { usePlantFormat } from '../hooks/use-plant-format';
 
@@ -47,12 +48,12 @@ export function EventVerificationPanel({ event }: { event: ProductionEventView }
       {event.investigationPending && <p data-testid="investigation-pending">Investigation pending — no specific reason yet.</p>}
       <p>
         Coding:{' '}
-        {verification.verifiedAt ? `verified by ${users.nameOf(verification.verifiedBy ?? '')}, ${dateTime(verification.verifiedAt)}` : coded ? 'not verified yet' : 'not coded yet'}
+        {verification.verifiedAt ? `verified by ${actorText({ id: verification.verifiedBy }, users.nameOf)}, ${dateTime(verification.verifiedAt)}` : coded ? 'not verified yet' : 'not coded yet'}
       </p>
       {hasFailureDetail(event) && (
         <p>
           Failure detail:{' '}
-          {verification.validatedAt ? `validated by ${users.nameOf(verification.validatedBy ?? '')}, ${dateTime(verification.validatedAt)}` : 'not validated by maintenance yet'}
+          {verification.validatedAt ? `validated by ${actorText({ id: verification.validatedBy }, users.nameOf)}, ${dateTime(verification.validatedAt)}` : 'not validated by maintenance yet'}
         </p>
       )}
       <div className="flex flex-wrap gap-2">

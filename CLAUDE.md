@@ -78,4 +78,5 @@ Docker: `cp .env.example .env` → `docker compose up -d --build` (see `docs/DOC
 - Default the plant week start to Saturday, since Iran's weekend is Thursday and Friday, not Monday.
 - Display monetary amounts in USD by default, with a user option to switch the display to IRR.
 - Before seeding data or running full plant end-to-end tests, check with the user first and wait for their go-ahead.
+- Use the single proact-postgres container (port 5432) for all test and dev data; do not use the other Postgres instance.
 <!-- end claude-reflect -->

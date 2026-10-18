@@ -57,7 +57,7 @@ export async function insertDerivedEvent(
   input: DerivedEventInput,
 ): Promise<ProductionEvent> {
   const id = randomUUID();
-  const basis = { ...input.template, ...input.columns } as ProductionEvent;
+  const basis = { ...input.template, ...input.columns };
   const fields = prepareUpdate(basis, {
     startTime: input.interval.start,
     endTime: input.interval.end,

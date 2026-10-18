@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
-import { expectHidden, expectRefused } from './support/hidden-controls';
-import { apiLogin, call, command, exceptionsOf, INT_USERS, loadState, NOAH, openConsole, runSim, selectConnection, subscribeJob, uiLogin, type IntSession, type IntState } from './support/integration-world';
+import { expectRefused } from './support/hidden-controls';
+import { apiLogin, call, command, CONSOLE_ADMIN, exceptionsOf, INT_USERS, loadState, NOAH, openConsole, runSim, selectConnection, subscribeJob, uiLogin, type IntSession, type IntState } from './support/integration-world';
 
 /**
  * INTEGRATION ADMIN persona — journey 6, the quarantine. Omar plays the `poison` scenario in the
@@ -8,8 +8,9 @@ import { apiLogin, call, command, exceptionsOf, INT_USERS, loadState, NOAH, open
  * are each quarantined (not_json / too_large / future_timestamp / schema_invalid) while the session
  * stays connected and the fifth, healthy message is accepted. The Quarantine tab of the connection is
  * filtered to it and shows the four rows; one is closed as irrecoverable with an audited reason (a state
- * change, never a delete). Noah (plain Engineer) sees the rows but not the raw payload, and
- * is offered no resolve control (the server still refuses a resolve with 403).
+ * change, never a delete). Noah (plain Engineer) has no console (the server still refuses a resolve with
+ * 403 and hides the raw payload). Owner 18 Oct 2026: Integration is SuperAdmin-only, so the console UI
+ * steps run as CONSOLE_ADMIN; the API checks keep Omar's and Noah's tokens.
  */
 const POISON_CODES = ['not_json', 'too_large', 'future_timestamp', 'schema_invalid'] as const;
 let state: IntState;
@@ -19,8 +20,8 @@ test.describe.configure({ mode: 'serial', timeout: 240_000 });
 
 const row = (page: Page, code: string) => page.locator(`[data-testid="exception-row"][data-code="${code}"]`).first();
 
-async function openConnectionQuarantine(page: Page, email: string): Promise<void> {
-  await uiLogin(page, email);
+async function openConnectionQuarantine(page: Page): Promise<void> {
+  await uiLogin(page, CONSOLE_ADMIN);
   await openConsole(page);
   await selectConnection(page, state.connectionName);
   await page.getByTestId('tab-mqtt-quarantine').click();
@@ -34,7 +35,7 @@ test.describe('Integration admin — quarantine', () => {
   });
 
   test('INT-06a (omar): the poison scenario fills the quarantine of the connection; the session survives; one row is closed as irrecoverable', async ({ page }) => {
-    await uiLogin(page, INT_USERS.omar);
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
     await selectConnection(page, state.connectionName);
     await expect(page.getByTestId('mqtt-status')).toHaveAttribute('data-status', 'connected', { timeout: 90_000 });
@@ -83,22 +84,19 @@ test.describe('Integration admin — quarantine', () => {
     expect(JSON.stringify(closed.body)).not.toContain('"password"');
   });
 
-  test('INT-06b (noah): a non-writer sees the quarantine of the connection without the raw payload, and is offered no resolve control (server: 403)', async ({ page }) => {
-    await openConnectionQuarantine(page, NOAH);
-    await expect(async () => {
-      await page.getByTestId('quarantine-refresh').click();
-      await expect(row(page, 'too_large')).toBeVisible({ timeout: 3_000 });
-    }).toPass({ timeout: 30_000 });
-    const exceptionId = await row(page, 'too_large').getAttribute('data-exception-id');
-    await row(page, 'too_large').click();
-    await expect(page.getByTestId('exception-detail')).toHaveAttribute('data-code', 'too_large');
-    await expect(page.getByTestId('raw-payload-hidden')).toBeVisible();
-    await expect(page.getByTestId('raw-payload')).toHaveCount(0);
-    // the resolve controls are not offered to a non-writer; the server still refuses a resolve
-    await expectHidden(page.locator('#resolve-reason'));
-    await expectHidden(page.getByTestId('exception-irrecoverable'));
-    await page.screenshot({ path: test.info().outputPath('int-06b-noah-hidden-payload.png'), fullPage: true });
+  test('INT-06b (noah): a non-SuperAdmin has no console; the server refuses a resolve (403) and hides the raw payload', async ({ page }) => {
     const noah = await apiLogin(NOAH);
+    const item = (await exceptionsOf(noah.token, state.connectionId, 'open')).find((entry) => entry.errorCode === 'too_large');
+    expect(item, 'the too_large row of INT-06a is still open').toBeDefined();
+    const exceptionId = item!.id;
+    await uiLogin(page, NOAH);
+    await expect(page.locator('nav a[href="/connectivity"]')).toHaveCount(0);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; a direct visit renders no exception detail
+    await page.goto(`/connectivity/quarantine/${exceptionId}`);
+    await expect(page.getByRole('heading', { name: 'Connectivity', level: 1 })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('exception-detail')).toHaveCount(0);
+    await expect(page.getByTestId('raw-payload')).toHaveCount(0);
+    await page.screenshot({ path: test.info().outputPath('int-06b-noah-no-console.png'), fullPage: true });
     expectRefused(await command(noah.token, `/v2/ingestion-exceptions/${exceptionId}/resolve`, { action: 'irrecoverable', reason: 'P-INT: engineer attempt' }), 'FORBIDDEN_ROLE');
     const detail = await call<{ state: string; raw: { payloadVisible: boolean } | null }>(noah.token, 'GET', `/v2/ingestion-exceptions/${exceptionId}`);
     expect(detail.status).toBe(200);
@@ -106,8 +104,8 @@ test.describe('Integration admin — quarantine', () => {
     expect(detail.body.raw?.payloadVisible ?? false).toBe(false);
   });
 
-  test('INT-06p (omar): the closed row stays irrecoverable and the others stay open after a fresh login', async ({ page }) => {
-    await openConnectionQuarantine(page, INT_USERS.omar);
+  test('INT-06p (SuperAdmin console): the closed row stays irrecoverable and the others stay open after a fresh login', async ({ page }) => {
+    await openConnectionQuarantine(page);
     await page.locator('#q-state').selectOption('irrecoverable');
     await expect(async () => {
       await page.getByTestId('quarantine-refresh').click();

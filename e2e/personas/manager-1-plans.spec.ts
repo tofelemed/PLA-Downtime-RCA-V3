@@ -96,6 +96,7 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     await loginViaUI(page, MANAGERS.fatima.email, MANAGERS.fatima.password);
     await openPlanOfUnit(page, planUnit.unitName, planName);
     await page.getByTestId('approve-plan-submit').click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Approve version' }).click();
     await expect(page.getByTestId('frozen-version')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('plan-detail').getByTestId('version-state').first()).toHaveAttribute('data-state', 'approved');
     await expect(page.getByTestId('plan-edit')).toHaveCount(0);

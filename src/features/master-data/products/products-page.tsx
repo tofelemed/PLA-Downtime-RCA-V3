@@ -38,7 +38,7 @@ function useColumns(): DataTableColumn<MasterProductView>[] {
   ];
 }
 
-/** `/master-data/products`: products shared by the organisation plus those kept to this plant. */
+/** `/master-data/products`: products shared by the organization plus those kept to this plant. */
 export function ProductsPage() {
   const { filters, update } = useListFilters();
   const canWrite = useMasterDataWriter();
@@ -55,7 +55,7 @@ export function ProductsPage() {
   return (
     <MasterDataLayout
       title="Products"
-      description="Products belong to the organisation and are shared by its plants, unless kept to one plant. Production profiles and plans use the plant's own products."
+      description="Products belong to the organization and are shared by its plants, unless kept to one plant. Production profiles and plans use the plant's own products."
       actions={addProduct}
     >
       <Section title="Products">

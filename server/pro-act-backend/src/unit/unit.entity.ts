@@ -1,4 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique, Index, ManyToOne, JoinColumn, VersionColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Unique,
+  Index,
+  ManyToOne,
+  JoinColumn,
+  VersionColumn,
+} from 'typeorm';
 import { Site } from '../calendar/entities/site.entity';
 
 @Entity('units')
@@ -16,13 +27,30 @@ export class Unit {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @Column({ name: 'capacity', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'capacity',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   capacity?: number;
 
-  @Column({ name: 'unit_of_measure', type: 'varchar', length: 50, nullable: true })
+  @Column({
+    name: 'unit_of_measure',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
   unitOfMeasure?: string;
 
-  @Column({ name: 'ideal_cycle_time', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'ideal_cycle_time',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   idealCycleTime?: number;
 
   @Column({ name: 'tenant_id', type: 'uuid' })
@@ -53,4 +81,4 @@ export class Unit {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

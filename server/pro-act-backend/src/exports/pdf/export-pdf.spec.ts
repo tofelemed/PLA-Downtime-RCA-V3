@@ -150,7 +150,8 @@ describe('PDF export layout', () => {
     const [page] = model.pages;
     expect(page.header).toEqual({
       title: 'Period summary · Bandar Imam',
-      subtitle: '2026-10-12 00:00 – 2026-10-13 00:00',
+      subtitle:
+        '2026-10-12 00:00 – 2026-10-13 00:00 · Loss values: Contribution margin',
       status: 'APPROVED',
       tone: 'approved',
     });
@@ -196,6 +197,57 @@ describe('PDF export layout', () => {
       'Approved · values marked * use a provisional FX rate',
     );
     expect(text).toContain('1,234.50 USD *');
+    expect(text).toContain('f; values marked * use a provisional FX rate');
+  });
+
+  it('Marun E2E: names the valuation basis and the exchange-rate source of the loss values', () => {
+    const { model } = pdfDocumentOf(job(), [source()], LATIN);
+    const blocks = model.pages[0].blocks;
+    const facts = blocks.flatMap((b) => (b.kind === 'facts' ? b.rows : []));
+    expect(facts).toEqual(
+      expect.arrayContaining([
+        ['Loss value basis', 'Contribution margin'],
+        [
+          'Loss value basis',
+          'Contribution margin (valuation policy version 1)',
+        ],
+        ['Exchange rates', 'f'],
+      ]),
+    );
+    const snapshot = source();
+    const valuation = snapshot.reviewed.valuation;
+    if (!valuation) throw new Error('fixture has a valuation');
+    valuation.fxPolicy = 'snapshot';
+    const economic = source();
+    if (economic.reviewed.valuation)
+      economic.reviewed.valuation.defaultView = 'economic_impact';
+    const mixed = pdfDocumentOf(job(), [snapshot, economic], LATIN).model;
+    expect(mixed.pages[0].header.subtitle).toContain(
+      'Loss values: several bases (see each revision)',
+    );
+    expect(allText(mixed.pages[0].blocks)).toContain(
+      'rates frozen in the approval snapshot',
+    );
+  });
+
+  it('Marun G3: a named-revision export prints its selection, not a window; a line basis reads in words', () => {
+    const named = job({
+      reportType: 'loss_lines',
+      filters: {
+        from: null,
+        to: null,
+        unitIds: null,
+        revisionIds: ['cccccccc-cccc-4ccc-8ccc-cccccccccccc'],
+      },
+    } as unknown as Partial<ExportJob>);
+    const blocks = pdfDocumentOf(named, [source({ lines: 1 })], LATIN).model
+      .pages[0].blocks;
+    const facts = blocks.flatMap((b) => (b.kind === 'facts' ? b.rows : []));
+    expect(facts).toContainEqual(['Selection', '1 named approved revision']);
+    expect(facts.map(([label]) => label)).not.toContain('Window (plant time)');
+    const text = allText(blocks);
+    expect(text).toContain('Planning rate');
+    expect(text).not.toContain('planning_rate');
   });
 
   it('uses the Persian calendar, and Persian digits only when the font has them', () => {
@@ -323,7 +375,8 @@ describe('PDF drawing', () => {
     expect(rows).toBe(1);
     expect(received).toEqual({
       title: 'Period summary · Bandar Imam',
-      subject: '2026-10-12 00:00 – 2026-10-13 00:00',
+      subject:
+        '2026-10-12 00:00 – 2026-10-13 00:00 · Loss values: Contribution margin',
       createdAt: new Date('2026-10-13T06:00:00.000Z'),
     });
   });

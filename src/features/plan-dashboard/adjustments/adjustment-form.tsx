@@ -1,13 +1,13 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { PeriodDetailView } from '@/api/v2/types/periods';
 import { DateTimeInput } from '@/features/ux-kit/date-inputs';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { FormField } from '@/features/ux-kit/form-field';
 import { useProductNames } from '@/features/ux-kit/labels';
 import { useProposeAdjustment } from '../hooks/use-adjustment-commands';
 import { ADJUSTMENT_BASIS_LABELS, ADJUSTMENT_KIND_LABELS } from '../model/actuals-labels';
@@ -21,16 +21,6 @@ export interface AdjustmentFormProps {
 }
 
 const SELECT = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
-
-function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {error && <p className="text-xs text-destructive" data-testid={`field-error-${id}`}>{error}</p>}
-    </div>
-  );
-}
 
 /** Propose a correction of one product's actuals in the period: what, how much (signed), basis, reason, evidence. */
 export function AdjustmentForm({ period, timezone, backTo, onSaved }: AdjustmentFormProps) {
@@ -49,36 +39,36 @@ export function AdjustmentForm({ period, timezone, backTo, onSaved }: Adjustment
   return (
     <div className="space-y-4" data-testid="adjustment-form">
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field id="adjSlice" label="Product" error={errors.sliceId}>
+        <FormField id="adjSlice" label="Product" error={errors.sliceId}>
           <select id="adjSlice" className={SELECT} value={values.sliceId} onChange={(e) => set('sliceId', e.target.value)}>
             {period.slices.map((s) => (
               <option key={s.id} value={s.id}>{`${products.nameOf(s.productId)}${s.quantityUom ? ` (${s.quantityUom})` : ''}`}</option>
             ))}
           </select>
-        </Field>
-        <Field id="adjKind" label="Corrects">
+        </FormField>
+        <FormField id="adjKind" label="Corrects">
           <select id="adjKind" className={SELECT} value={values.kind} onChange={(e) => set('kind', e.target.value as AdjustmentFormValues['kind'])}>
             {Object.entries(ADJUSTMENT_KIND_LABELS).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
           </select>
-        </Field>
-        <Field id="adjQuantity" label={`Change${uom ? ` (${uom})` : ''}, e.g. -5`} error={errors.quantity}>
+        </FormField>
+        <FormField id="adjQuantity" label={`Change${uom ? ` (${uom})` : ''}, e.g. -5`} error={errors.quantity}>
           <DecimalInput id="adjQuantity" value={values.quantity} allowNegative onChange={(v) => set('quantity', v)} />
-        </Field>
-        <Field id="adjBasis" label="Basis">
+        </FormField>
+        <FormField id="adjBasis" label="Basis">
           <select id="adjBasis" className={SELECT} value={values.basis} onChange={(e) => set('basis', e.target.value as AdjustmentFormValues['basis'])}>
             {Object.entries(ADJUSTMENT_BASIS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
           </select>
-        </Field>
-        <Field id="adjEvidence" label="Evidence (ticket, report, sample number)" error={errors.evidenceRef}>
+        </FormField>
+        <FormField id="adjEvidence" label="Evidence (ticket, report, sample number)" error={errors.evidenceRef}>
           <Input id="adjEvidence" value={values.evidenceRef} onChange={(e) => set('evidenceRef', e.target.value)} />
-        </Field>
-        <Field id="adjReason" label="Reason" error={errors.reason}>
+        </FormField>
+        <FormField id="adjReason" label="Reason" error={errors.reason}>
           <Textarea id="adjReason" rows={2} value={values.reason} onChange={(e) => set('reason', e.target.value)} />
-        </Field>
+        </FormField>
         <DateTimeInput label="Measured from (optional)" value={values.windowFrom} timeZone={timezone} onChange={(v) => set('windowFrom', v)} />
         <DateTimeInput label="Measured to (optional)" value={values.windowTo} timeZone={timezone} error={errors.windowTo ?? null} onChange={(v) => set('windowTo', v)} />
       </div>

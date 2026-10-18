@@ -37,8 +37,13 @@ const DUE_OPTIONS: Option[] = [
   { value: 'overdue', label: 'Overdue' },
   { value: 'on-time', label: 'Not overdue' },
 ];
+const OPEN_OPTIONS: Option[] = [
+  { value: ALL, label: 'Open and closed' },
+  { value: 'true', label: 'Open only' },
+  { value: 'false', label: 'Closed only' },
+];
 
-/** Search (debounced) and the status / priority / due filters; every filter is applied by the server. */
+/** Search (debounced) and the status / priority / due / open filters; every filter is applied by the server. */
 export function CaseFiltersBar({ value, onChange }: { value: CaseListFilters; onChange: (next: CaseListFilters) => void }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end" data-testid="case-filters">
@@ -47,7 +52,7 @@ export function CaseFiltersBar({ value, onChange }: { value: CaseListFilters; on
           Search
         </p>
         <DebouncedSearchInput
-          label="Search case titles"
+          label="Search investigation titles"
           placeholder="Search titles"
           value={value.q}
           onChange={(q) => onChange({ ...value, q })}
@@ -57,6 +62,7 @@ export function CaseFiltersBar({ value, onChange }: { value: CaseListFilters; on
       <FilterSelect id="case-status" label="Status" value={value.status} options={STATUS_OPTIONS} onChange={(status) => onChange({ ...value, status })} />
       <FilterSelect id="case-priority" label="Priority" value={value.priority} options={PRIORITY_OPTIONS} onChange={(priority) => onChange({ ...value, priority })} />
       <FilterSelect id="case-due" label="Target date" value={value.due} options={DUE_OPTIONS} onChange={(due) => onChange({ ...value, due })} />
+      <FilterSelect id="case-open" label="Open / closed" value={value.open} options={OPEN_OPTIONS} onChange={(open) => onChange({ ...value, open })} />
     </div>
   );
 }

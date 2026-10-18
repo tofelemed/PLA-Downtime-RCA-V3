@@ -14,6 +14,7 @@ import {
 } from 'class-validator';
 import { RECONCILIATION_STATES } from '../../stop-events/entities/stop-reconciliation.entity';
 import { ListQueryDto } from '../common/list-query.dto';
+import { CommissioningBackdateDto } from '../common/commissioning-backdate.dto';
 
 export class StopReconciliationListQueryDto extends ListQueryDto {
   @ApiPropertyOptional({
@@ -93,7 +94,7 @@ const seconds = (description: string) => ({
 });
 
 /** Plan 1.10 / DT-04 / SME D5 settings of a new `oee_policy` version; absent fields keep the version in force. */
-export class StopEventPolicyCreateDto {
+export class StopEventPolicyCreateDto extends CommissioningBackdateDto {
   @ApiPropertyOptional({
     format: 'uuid',
     description: 'Unit override; absent = the tenant-wide version',

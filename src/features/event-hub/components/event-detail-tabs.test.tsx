@@ -11,6 +11,7 @@ vi.mock('./source-effective-table', () => ({ SourceEffectiveTable: () => <p>Effe
 vi.mock('./revision-timeline', () => ({ RevisionTimeline: () => <p>Revision timeline</p> }));
 vi.mock('@/features/master-data/reliability/work-orders/repair-evidence-panel', () => ({ RepairEvidencePanel: () => <p>Repair evidence</p> }));
 vi.mock('../stop-links/stop-links-panel', () => ({ StopLinksPanel: () => <p>Stop relationships</p> }));
+vi.mock('./review-items-list', () => ({ ReviewItemsList: () => <p>Source conflict items</p> }));
 
 const event = (physicalType: string): ProductionEventView => ({
   id: 'event-1', canonicalId: 'event-1', eventId: null, tenantId: 'plant-1', unitId: 'unit-1', assetId: null,
@@ -49,6 +50,13 @@ describe('event detail tab deep links', () => {
   it.each([['repair', 'Repair evidence'], ['related', 'Stop relationships']])('retains %s deep links for downtime', (tab, content) => {
     open('downtime', tab);
     expect(screen.getByRole('tabpanel').textContent).toContain(content);
+  });
+
+  it.each(['conflicts', 'review'])('E-10: the source-conflict tab is named for what it holds (?tab=%s)', (tab) => {
+    open('downtime', tab);
+    expect(screen.getByRole('tab', { name: 'Source conflicts (0)' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByRole('tab', { name: /^Review/ })).toBeNull();
+    expect(screen.getByRole('tabpanel').textContent).toContain('Source conflict items');
   });
 
   it('keeps unrelated query state when leaving a fallback tab', () => {

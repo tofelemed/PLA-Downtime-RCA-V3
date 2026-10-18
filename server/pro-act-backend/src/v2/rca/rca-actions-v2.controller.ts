@@ -23,6 +23,8 @@ import { Ctx } from '../../common/context/ctx.decorator';
 import { RequestContext } from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { RcaActionV2View } from '../../rca-case/rca-action.view';
+import { RcaActionQueueItemV2View } from '../../rca-case/rca-action-queue';
+import { RcaActionQueueService } from '../../rca-case/rca-action-queue.service';
 import { RcaActionsService } from '../../rca-case/rca-actions.service';
 import { RcaBaselineCorrectionsService } from '../../rca-case/rca-baseline-corrections.service';
 import {
@@ -34,6 +36,7 @@ import { ListResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import {
   RcaActionV2CreateDto,
+  RcaActionV2ListQueryDto,
   RcaActionV2UpdateDto,
   RcaBaselineCorrectionDto,
   RcaBaselineDecisionDto,
@@ -51,9 +54,26 @@ import {
 export class RcaActionsV2Controller {
   constructor(
     private readonly actions: RcaActionsService,
+    private readonly queue: RcaActionQueueService,
     private readonly recommendations: RcaRecommendationsService,
     private readonly corrections: RcaBaselineCorrectionsService,
   ) {}
+
+  @Get('rca-actions')
+  @ApiOperation({
+    summary:
+      'Actions across the cases of your scope, due date first (F-7 "My actions")',
+    description:
+      'Each row carries its case (id, title, status, unit). Filters: mine=true (you own them), ownerId, ' +
+      'status (repeat), overdue (open or in progress past the due date, as in GET /v2/rcas/summary), rcaId, ' +
+      'unitId, from/to on the due date. Keyset pages; actions without a due date come last.',
+  })
+  listAll(
+    @Ctx() ctx: RequestContext,
+    @Query() query: RcaActionV2ListQueryDto,
+  ): Promise<ListResponse<RcaActionQueueItemV2View>> {
+    return this.queue.list(ctx, query);
+  }
 
   @Get('rcas/:id/actions')
   @ApiOperation({ summary: 'Actions of a case with their verification status' })
@@ -83,10 +103,13 @@ export class RcaActionsV2Controller {
   }
 
   @Patch('rca-actions/:id')
-  @Roles(...RCA_WRITERS)
   @ApiOperation({
     summary: 'Change an action',
-    description: 'Requires `If-Match` (428/412).',
+    description:
+      'Requires `If-Match` (428/412). RCA writers change any field. The owner of the action who is not an RCA ' +
+      'writer may only set the status to open / in progress and record the completion evidence (403 FORBIDDEN_ROLE ' +
+      'for other fields or other actions, 403 SEPARATION_OF_DUTIES for done, 409 ACTION_FINISHED on a done or ' +
+      'cancelled action). The verification window is fixed once the action is done (409 VERIFICATION_WINDOW_LOCKED).',
   })
   @ApiHeader({ name: 'If-Match', required: true })
   update(

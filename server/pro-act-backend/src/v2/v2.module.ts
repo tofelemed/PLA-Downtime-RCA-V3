@@ -11,7 +11,11 @@ import { RcaKnowledgeV2Controller } from './rca-knowledge/rca-knowledge-v2.contr
 import { EventRcaLinkV2Controller } from './rca/event-rca-link-v2.controller';
 import { RcaActionsV2Controller } from './rca/rca-actions-v2.controller';
 import { RcaCasesV2Controller } from './rca/rca-cases-v2.controller';
+import { RcaHistoryV2Controller } from './rca/rca-history-v2.controller';
+import { RcaCaseCausesV2Controller } from './rca/rca-case-causes-v2.controller';
+import { RcaCauseReportV2Controller } from './reports/rca-cause-report-v2.controller';
 import { RcaLinksV2Controller } from './rca/rca-links-v2.controller';
+import { RcaOccurrencesV2Controller } from './rca/rca-occurrences-v2.controller';
 import { RcaCaseWorkspaceV2Controller } from './rca/rca-case-workspace-v2.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProductionEvent } from '../production-event/production-event.entity';
@@ -106,6 +110,9 @@ import { CalculationRun } from '../accounting/entities/calculation-run.entity';
 import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
 import { PeriodAccountingV2Controller } from './accounting/period-accounting-v2.controller';
 import { PeriodAccountingV2Service } from './accounting/period-accounting-v2.service';
+import { EventAttributedLossesV2Controller } from './accounting/event-attributed-losses-v2.controller';
+import { LossAttributionV2Service } from './accounting/loss-attribution-v2.service';
+import { LossLinesV2Controller } from './accounting/loss-lines-v2.controller';
 import { ReconciliationModule } from '../reconciliation/reconciliation.module';
 import { ReconciliationV2Controller } from './reconciliation/reconciliation-v2.controller';
 import { ChangeProposalsV2Controller } from './reconciliation/change-proposals-v2.controller';
@@ -291,6 +298,8 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     ExternalReportsV2Controller,
     ActualsJobsV2Controller,
     PeriodAccountingV2Controller,
+    EventAttributedLossesV2Controller,
+    LossLinesV2Controller,
     ReconciliationV2Controller,
     ChangeProposalsV2Controller,
     ExportsV2Controller,
@@ -304,7 +313,11 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     FeatureFlagsV2Controller,
     RulesV2Controller,
     RcaCasesV2Controller,
+    RcaHistoryV2Controller,
+    RcaCaseCausesV2Controller,
+    RcaCauseReportV2Controller,
     RcaLinksV2Controller,
+    RcaOccurrencesV2Controller,
     RcaCaseWorkspaceV2Controller,
     EventRcaLinkV2Controller,
     RcaActionsV2Controller,
@@ -345,6 +358,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     SourceAuthorityV2Service,
     SourceAuthorityDecisionsService,
     PeriodAccountingV2Service,
+    LossAttributionV2Service,
     ReconciliationV2Service,
     KpiReportsV2Service,
     LossValueReportV2Service,

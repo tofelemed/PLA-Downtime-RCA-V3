@@ -49,12 +49,12 @@ describe('month-close contracts retained during section restructuring', () => {
     mount('?month=1405-07&section=history&source=review');
     await screen.findByTestId('month-label');
     fireEvent.click(screen.getByTestId('month-previous'));
-    await waitFor(() => expect(screen.getByTestId('month-label')).toHaveTextContent('1405-06'));
+    await waitFor(() => expect(screen.getByTestId('month-label')).toHaveTextContent('Shahrivar 1405'));
     expect(screen.getByTestId('test-location')).toHaveTextContent('month=1405-06&section=history&source=review');
     fireEvent.click(screen.getByRole('button', { name: 'Test Back' }));
-    await waitFor(() => expect(screen.getByTestId('month-label')).toHaveTextContent('1405-07'));
+    await waitFor(() => expect(screen.getByTestId('month-label')).toHaveTextContent('Mehr 1405'));
     fireEvent.click(screen.getByRole('button', { name: 'Test Forward' }));
-    await waitFor(() => expect(screen.getByTestId('month-label')).toHaveTextContent('1405-06'));
+    await waitFor(() => expect(screen.getByTestId('month-label')).toHaveTextContent('Shahrivar 1405'));
     expect(calls.every((call) => call.method === 'GET')).toBe(true);
   });
 
@@ -121,12 +121,29 @@ describe('month-close contracts retained during section restructuring', () => {
     mount(); fireEvent.click(await screen.findByTestId(`step-${step}`));
     expect(calls.some((call) => call.method === 'POST')).toBe(false);
     fireEvent.change(screen.getByTestId(`step-${step}-text`), { target: { value: '  Reviewed evidence  ' } });
+    if (step === 'lock') fireEvent.change(screen.getByTestId('step-lock-confirm'), { target: { value: 'Mehr 1405' } });
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: confirm }));
     await waitFor(() => expect(calls.some((call) => call.method === 'POST')).toBe(true));
     const post = calls.find((call) => call.method === 'POST')!;
     expect(post.path).toMatch(new RegExp(`/month-closes/1405-07/${step}$`));
     expect(post.body).toEqual({ comment: 'Reviewed evidence' });
     expect(post.headers.get('Idempotency-Key')).toMatch(/^[a-f0-9-]{36}$/);
+  });
+
+  it('locking is destructive and needs the month typed as shown; it says it cannot be undone', async () => {
+    actAs('finance_approver', 'independent-user'); view.state = 'finance_signed_off';
+    view.signOffs.quantitiesClosedBy = { id: 'manager', name: 'Manager' };
+    mount(); fireEvent.click(await screen.findByTestId('step-lock'));
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toHaveTextContent('Lock Mehr 1405?');
+    expect(dialog).toHaveTextContent('cannot be undone');
+    const confirm = within(dialog).getByRole('button', { name: 'Lock month' });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByTestId('step-lock-confirm'), { target: { value: '1405-07' } });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByTestId('step-lock-confirm'), { target: { value: ' mehr  1405 ' } });
+    expect(confirm).toBeEnabled();
+    expect(calls.some((call) => call.method === 'POST')).toBe(false);
   });
 
   it('keeps a refused confirmation open with the entered comment and error', async () => {

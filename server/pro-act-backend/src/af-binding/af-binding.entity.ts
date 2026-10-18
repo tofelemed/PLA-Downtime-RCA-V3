@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -31,7 +40,12 @@ export class AfBinding {
   tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @ApiProperty({ description: 'PI Web ID', required: false })
@@ -46,7 +60,10 @@ export class AfBinding {
   @Column({ name: 'bound_type', type: 'varchar', length: 100, nullable: true })
   boundType?: string;
 
-  @ApiProperty({ description: 'Mapping configuration as JSON', required: false })
+  @ApiProperty({
+    description: 'Mapping configuration as JSON',
+    required: false,
+  })
   @Column({ name: 'mapping_config', type: 'text', nullable: true })
   mappingConfig?: string;
 
@@ -54,4 +71,3 @@ export class AfBinding {
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 }
-

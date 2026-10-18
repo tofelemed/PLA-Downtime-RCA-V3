@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { ReconcileForm } from '../reconcile-form/reconcile-form.entity';
 import { ImpactCode } from '../impact-code/impact-code.entity';
 import { OEECode } from '../oee-code/oee-code.entity';
@@ -47,4 +55,4 @@ export class LossCategory {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}

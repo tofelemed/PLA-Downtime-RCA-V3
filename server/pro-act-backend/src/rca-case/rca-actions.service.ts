@@ -11,13 +11,19 @@ import {
   RcaActionV2UpdateDto,
 } from '../v2/rca/rca-actions-v2.dto';
 import { BaselineRequest, computeBaseline } from './action-baseline';
+import { applyCancellation } from './action-cancellation';
 import { applyCompletion } from './action-completion';
 import {
   actionColumns,
   assertActionConsistent,
   assertNoDeclaredBaseline,
+  assertRecommendationOf,
+  assertWindowOpenForEdit,
 } from './action-rules';
+import { assertOwnerPatch } from './action-owner-access';
+import { linkedTasks } from './action-tasks';
 import { casePolicy } from './case-policy';
+import { childAudit, recordRcaAudit } from './rca-audit';
 import { RcaActionV2View, toActionView } from './rca-action.view';
 import { caseOutcome, RcaOutcomeV2View } from './rca-outcome';
 import { findCase, notFound, RcaScope, scopeOf } from './rca-scope';
@@ -39,6 +45,13 @@ const EMPTY_ACTION: Partial<RcaAction> = {
   postAction: null,
   claimedAvoidedLoss: null,
   claimedCurrency: null,
+  cancelReason: null,
+  cancelledBy: null,
+  cancelledAt: null,
+  recommendationId: null,
+  taskCompletedAt: null,
+  verificationMethod: null,
+  verifierId: null,
 };
 
 const date = (value: string | null | undefined) =>
@@ -68,7 +81,13 @@ export class RcaActionsService {
       order: { createdAt: 'ASC', id: 'ASC' },
       take: 500,
     });
-    return rows.map((row) => toActionView(row));
+    const tasks = await linkedTasks(
+      this.dataSource.manager,
+      scope.tenantId,
+      rows.map((row) => row.id),
+    );
+    const now = new Date();
+    return rows.map((row) => toActionView(row, now, tasks.get(row.id)));
   }
 
   async create(
@@ -81,6 +100,7 @@ export class RcaActionsService {
     const now = new Date();
     return this.dataSource.transaction(async (manager) => {
       const rca = await findCase(manager, scope, rcaId, true);
+      assertRecommendationOf(rca, body.recommendationId);
       const repository = manager.getRepository(RcaAction);
       const action = repository.create({
         ...EMPTY_ACTION,
@@ -91,6 +111,11 @@ export class RcaActionsService {
         createdBy: scope.userId,
       });
       await assertActionConsistent(manager, scope, action);
+      applyCancellation(null, action, {
+        cancelReason: body.cancelReason,
+        actorId: scope.userId,
+        now,
+      });
       applyCompletion({ status: 'open' }, action, {
         actorId: scope.userId,
         isSuperAdmin: context.isSuperAdmin,
@@ -105,7 +130,11 @@ export class RcaActionsService {
             now,
           })
         : null;
-      return toActionView(await repository.save(action), now);
+      const saved = await repository.save(action);
+      await recordRcaAudit(manager, scope, [
+        childAudit('rca_action', 'created', { before: null, after: saved }),
+      ]);
+      return toActionView(saved, now);
     });
   }
 
@@ -120,12 +149,20 @@ export class RcaActionsService {
     return this.dataSource.transaction(async (manager) => {
       const { action, rca } = await this.lockAction(manager, scope, target.id);
       assertRevision(action.rowVersion, target.expectedRowVersion);
+      assertOwnerPatch(context, action, body);
+      assertRecommendationOf(rca, body.recommendationId);
       const next = {
         ...action,
         ...actionColumns(body),
         updatedBy: scope.userId,
       };
+      assertWindowOpenForEdit(action, next);
       await assertActionConsistent(manager, scope, next);
+      applyCancellation(action.status, next, {
+        cancelReason: body.cancelReason,
+        actorId: scope.userId,
+        now,
+      });
       applyCompletion(action, next, {
         actorId: scope.userId,
         isSuperAdmin: context.isSuperAdmin,
@@ -143,10 +180,16 @@ export class RcaActionsService {
           : null;
         next.postAction = null;
       }
-      return toActionView(
-        await manager.getRepository(RcaAction).save(next),
-        now,
-      );
+      const saved = await manager.getRepository(RcaAction).save(next);
+      await recordRcaAudit(manager, scope, [
+        childAudit(
+          'rca_action',
+          'updated',
+          { before: action, after: saved },
+          saved.status === 'cancelled' ? saved.cancelReason : null,
+        ),
+      ]);
+      return this.view(manager, saved, now);
     });
   }
 
@@ -160,10 +203,12 @@ export class RcaActionsService {
     return this.dataSource.transaction(async (manager) => {
       const { action } = await this.lockAction(manager, scope, id);
       assertRevision(action.rowVersion, expectedRowVersion);
-      return toActionView(
-        await this.verification.evaluateIn(manager, action, now),
-        now,
-      );
+      const before = { ...action };
+      const saved = await this.verification.evaluateIn(manager, action, now);
+      await recordRcaAudit(manager, scope, [
+        childAudit('rca_action', 'verified', { before, after: saved }),
+      ]);
+      return this.view(manager, saved, now);
     });
   }
 
@@ -177,6 +222,16 @@ export class RcaActionsService {
       tenantId: scope.tenantId,
       rcaId,
     });
+  }
+
+  /** The view of one action with its linked task (item 5). */
+  async view(
+    manager: EntityManager,
+    action: RcaAction,
+    now: Date,
+  ): Promise<RcaActionV2View> {
+    const tasks = await linkedTasks(manager, action.tenantId, [action.id]);
+    return toActionView(action, now, tasks.get(action.id));
   }
 
   /** The frozen CA3 baseline of an action under the case's policy in force now. */

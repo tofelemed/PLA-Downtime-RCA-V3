@@ -33,7 +33,7 @@ function useRecomputeJob(view: ReconciliationView) {
 
 /**
  * Workflow commands of the shown revision (plan 3.5 step 3, WF01–WF04) with the hashes the user read:
- * submit (run + content hash), approve (submitted hash), reject / cancel (reason), revise ("Unlock"),
+ * submit (run + content hash), approve (submitted hash), reject / cancel (reason), revise ("Reopen for revision"),
  * recompute (202 job with progress). The response view replaces the cached one; refusals keep the code.
  */
 export function useWorkflowActions(view: ReconciliationView) {
@@ -84,3 +84,6 @@ export function useWorkflowActions(view: ReconciliationView) {
       }),
   };
 }
+
+/** The commands of one period workspace, shared by the workflow bar and the sticky workflow bar. */
+export type WorkflowActions = ReturnType<typeof useWorkflowActions>;

@@ -22,7 +22,10 @@ import {
   requireTenantId,
 } from '../../common/context/request-context';
 import { UserNotification } from '../../notifications/entities/user-notification.entity';
-import { NotificationsService } from '../../notifications/notifications.service';
+import {
+  NotificationState,
+  NotificationsService,
+} from '../../notifications/notifications.service';
 import { ListQueryDto } from '../common/list-query.dto';
 import { ListResponse, listResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
@@ -32,6 +35,16 @@ export class NotificationListQueryDto extends ListQueryDto {
   @IsOptional()
   @IsIn(['true', 'false'])
   unread?: 'true' | 'false';
+
+  @ApiPropertyOptional({
+    enum: ['active', 'resolved', 'all'],
+    default: 'active',
+    description:
+      'active (default): open work and information; resolved: shared work someone already did (history); all',
+  })
+  @IsOptional()
+  @IsIn(['active', 'resolved', 'all'])
+  state?: NotificationState = 'active';
 
   @ApiPropertyOptional({ enum: ['-createdAt'] })
   @IsOptional()
@@ -49,6 +62,11 @@ export interface NotificationV2View {
   read: boolean;
   readAt: string | null;
   createdAt: string;
+  /** the shared work item every recipient's copy names; null for information only */
+  workItemKey: string | null;
+  /** when anyone did the work (the notification left the active list) */
+  resolvedAt: string | null;
+  resolution: 'completed' | 'superseded' | null;
 }
 
 function toView(n: UserNotification): NotificationV2View {
@@ -61,10 +79,16 @@ function toView(n: UserNotification): NotificationV2View {
     read: n.readAt !== null,
     readAt: n.readAt ? n.readAt.toISOString() : null,
     createdAt: n.createdAt.toISOString(),
+    workItemKey: n.workItemKey,
+    resolvedAt: n.resolvedAt ? n.resolvedAt.toISOString() : null,
+    resolution: n.resolution,
   };
 }
 
-/** The signed-in user's in-app notifications in the acting plant (SLA escalations, EXPERT_REVIEW Area 3). */
+/**
+ * The signed-in user's in-app notifications in the acting plant (SLA escalations, EXPERT_REVIEW Area 3; work
+ * reminders, item 6): active by default — shared work someone already did is resolved for every recipient.
+ */
 @ApiTags('v2 · Notifications')
 @ApiBearerAuth()
 @UseGuards(TenantQueryParamGuard)
@@ -84,6 +108,7 @@ export class NotificationsV2Controller {
       cursor: query.cursor,
       limit: query.limit,
       unreadOnly: query.unread === 'true',
+      state: query.state ?? 'active',
     });
     return listResponse(page.items.map(toView), page.nextCursor, {
       tenantId: requireTenantId(ctx),
@@ -91,7 +116,9 @@ export class NotificationsV2Controller {
   }
 
   @Get('unread-count')
-  @ApiOperation({ summary: 'How many of my notifications are unread' })
+  @ApiOperation({
+    summary: 'How many of my active (not resolved) notifications are unread',
+  })
   async unreadCount(@Ctx() ctx: RequestContext): Promise<{ unread: number }> {
     return { unread: await this.notifications.unreadCount(ctx) };
   }
@@ -113,5 +140,18 @@ export class NotificationsV2Controller {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<NotificationV2View> {
     return toView(await this.notifications.markRead(ctx, id));
+  }
+
+  @Post(':id/unread')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Mark one of my notifications unread again (404 for anyone else’s)',
+  })
+  async unread(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<NotificationV2View> {
+    return toView(await this.notifications.markUnread(ctx, id));
   }
 }

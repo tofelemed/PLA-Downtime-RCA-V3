@@ -31,14 +31,16 @@ type ExportFormat = 'csv' | 'pdf';
 export function ExportPanel({ view, timezone }: { view: ReconciliationView; timezone: string }) {
   const create = useExportApprovedRevision();
   const { currency } = useDisplayCurrency();
-  const [exportId, setExportId] = useState<string | null>(null);
-  const [format, setFormat] = useState<ExportFormat>('csv');
+  // the job and its format change together: a new request hides the previous job, so its file is never
+  // offered (or saved) under the format just requested
+  const [current, setCurrent] = useState<{ id: string | null; format: ExportFormat }>({ id: null, format: 'csv' });
   const [problem, setProblem] = useState<WorkflowProblem | null>(null);
+  const { id: exportId, format } = current;
   const job = useExportJob(exportId);
   const start = (next: ExportFormat) => {
-    setFormat(next);
+    setCurrent({ id: null, format: next });
     return create.submit({ period: periodRefOf(view), revisionId: view.revision.id, format: next, currency }).then(
-      (accepted) => setExportId(accepted.jobId),
+      (accepted) => setCurrent({ id: accepted.jobId, format: next }),
       (error: unknown) => setProblem(workflowProblemOf(error)),
     );
   };

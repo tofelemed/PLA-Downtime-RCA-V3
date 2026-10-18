@@ -12,6 +12,7 @@ import { ApproveButton } from '@/features/ux-kit/approve-button';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { RefusalNotice } from '../components/refusal-notice';
 import { useReturnPlan } from '../hooks/use-plan-review';
+import { RequiredMarker } from '@/features/ux-kit/form-field';
 
 export interface ApprovePlanVersionProps {
   version: PlanVersionView;
@@ -36,7 +37,7 @@ function ReturnToAuthor({ version, timezone, disabled }: ApprovePlanVersionProps
         onConfirm={() => back.submit({ planId: version.planId, expectedVersion: version.version, reason: reason.trim() }).then(() => setReason(''))}
       >
         <div className="space-y-1">
-          <Label htmlFor="planReturnReason">Reason (required)</Label>
+          <Label htmlFor="planReturnReason">Reason<RequiredMarker /></Label>
           <Textarea id="planReturnReason" data-testid="plan-return-reason" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
         </div>
         <RefusalNotice error={back.error} timezone={timezone} />
@@ -51,10 +52,11 @@ function ReturnToAuthor({ version, timezone, disabled }: ApprovePlanVersionProps
 export function ApprovePlanVersion({ version, timezone }: ApprovePlanVersionProps) {
   const approve = useApprovePlan();
   const [reason, setReason] = useState('');
+  const [confirming, setConfirming] = useState(false);
   const { canApprovePlans, isSuperAdmin } = useCapabilities();
   const access = approvalAccess(canApprovePlans, version.createdBy, useCurrentUserId(), isSuperAdmin);
   if (access === 'hidden') return null;
-  const submit = () => approve.submit({ planId: version.planId, expectedVersion: version.version, reason: reason.trim() || undefined }).catch(() => undefined);
+  const submit = () => approve.submit({ planId: version.planId, expectedVersion: version.version, reason: reason.trim() || undefined });
   return (
     <div className="space-y-2" data-testid="approve-plan">
       <div className="flex flex-wrap items-end gap-2">
@@ -62,12 +64,22 @@ export function ApprovePlanVersion({ version, timezone }: ApprovePlanVersionProp
           <Label htmlFor="planApprovalReason">Approval reason (optional)</Label>
           <Input id="planApprovalReason" value={reason} onChange={(e) => setReason(e.target.value)} />
         </div>
-        <ApproveButton access={access} onClick={submit} disabled={approve.isPending} data-testid="approve-plan-submit">
-          Approve version {version.version}
+        <ApproveButton access={access} onClick={() => setConfirming(true)} disabled={approve.isPending} data-testid="approve-plan-submit">
+          Approve version {version.version}…
         </ApproveButton>
         {version.approvalState === 'submitted' && <ReturnToAuthor version={version} timezone={timezone} disabled={access !== 'allowed'} />}
       </div>
       <RefusalNotice error={approve.error} timezone={timezone} />
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={`Approve plan version ${version.version}?`}
+        description={reason.trim() ? `Approval reason: “${reason.trim()}”. The approved version becomes the plan of record for its periods.` : 'The approved version becomes the plan of record for its periods.'}
+        confirmLabel="Approve version"
+        onConfirm={submit}
+      >
+        <RefusalNotice error={approve.error} timezone={timezone} />
+      </ConfirmDialog>
     </div>
   );
 }

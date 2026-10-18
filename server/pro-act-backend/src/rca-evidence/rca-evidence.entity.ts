@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { RCA } from '../rca/rca.entity';
 
 @Entity('rca_evidence')
@@ -80,4 +88,4 @@ export class RCAEvidence {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}

@@ -53,6 +53,19 @@ export function verificationReset(
   return reset;
 }
 
+/**
+ * The verification a write clears because the coding became uncoded (Marun regression R1): nothing is left
+ * for the supervisor's label to confirm, whatever field the write changed.
+ */
+export function uncodedVerificationReset(
+  before: { codingState: string },
+  after: { codingState?: string },
+): Partial<VerificationColumns> {
+  const uncodes =
+    after.codingState === 'uncoded' && before.codingState !== 'uncoded';
+  return uncodes ? { verifiedBy: null, verifiedAt: null } : {};
+}
+
 /** What a stop looks like to the verification rules. */
 export interface StopForVerification {
   isStop: boolean;

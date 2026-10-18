@@ -1,30 +1,30 @@
-import { Badge } from '@/components/ui/badge';
 import type { EventStatesView } from '@/api/v2/types/events';
-import { dimensionLabel, stateChips, type StateTone } from '../model/event-states';
+import { StatusBadge } from '@/features/ux-kit/status-badge';
+import { cn } from '@/lib/utils';
+import { dimensionLabel, stateChips, type StateChip } from '../model/event-states';
 
-const TONE_CLASS: Readonly<Record<StateTone, string>> = {
-  neutral: 'border-slate-300 text-slate-700 dark:text-slate-200',
-  active: 'border-blue-400 text-blue-800 dark:text-blue-200',
-  warning: 'border-amber-500 text-amber-800 dark:text-amber-200',
-  success: 'border-emerald-500 text-emerald-800 dark:text-emerald-200',
-  muted: 'border-slate-200 text-slate-500',
-};
+interface StateBadgesProps {
+  states: EventStatesView;
+  className?: string;
+  /** dimensions shown by another chip (the event list shows the RCA state as the shared RCA chip) */
+  omit?: ReadonlyArray<StateChip['dimension']>;
+}
 
-/** Three state chips with text labels (colour is never the only cue, UX07). */
-export function StateBadges({ states }: { states: EventStatesView }) {
+/** Three state chips with text labels in one row (colour is never the only cue, UX07). */
+export function StateBadges({ states, className, omit = [] }: StateBadgesProps) {
   return (
-    <span className="inline-flex flex-wrap gap-1" data-testid="state-badges">
-      {stateChips(states).map((chip) => (
-        <Badge
+    <span className={cn('inline-flex flex-wrap gap-1', className)} data-testid="state-badges">
+      {stateChips(states).filter((chip) => !omit.includes(chip.dimension)).map((chip) => (
+        <StatusBadge
           key={chip.dimension}
-          variant="outline"
-          className={TONE_CLASS[chip.tone]}
+          tone={chip.tone}
+          className="whitespace-nowrap"
           data-state-dimension={chip.dimension}
           data-state-value={chip.value}
           aria-label={`${dimensionLabel(chip.dimension)}: ${chip.label}`}
         >
           {chip.label}
-        </Badge>
+        </StatusBadge>
       ))}
     </span>
   );

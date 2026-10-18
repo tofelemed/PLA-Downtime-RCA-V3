@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ExportJob } from '../entities/export-job.entity';
 import { ExportHeader, RenderSource } from '../export-report';
-import { sourceSection } from './pdf-content';
+import { basisText, sourceSection } from './pdf-content';
 import { drawDocument } from './pdf-draw';
 import { PdfFonts, resolvePdfFonts } from './pdf-fonts';
 import { layoutDocument } from './pdf-layout';
@@ -46,6 +46,7 @@ export function pdfDocumentOf(
     header: exportHeaderOf(job),
     presentation,
     sections,
+    bases: [...new Set(sources.map((s) => basisText(s, false)))],
   });
   const rowCount = sections.reduce((sum, s) => sum + s.rows.length, 0);
   return { model, rowCount };

@@ -1,8 +1,9 @@
-import { Badge } from '@/components/ui/badge';
 import type { PeriodSummaryView } from '@/api/v2/types/period-overview';
 import type { DataTableColumn } from '@/features/ux-kit/data-table';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
-import { labelOf, READINESS_LABELS } from '@/features/ux-kit/labels';
+import { GRID_WORKFLOW_TONES, labelOf, READINESS_LABELS } from '@/features/ux-kit/labels';
+import { StatusBadge } from '@/features/ux-kit/status-badge';
+import { toneOf } from '@/features/ux-kit/status-tone';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { type CalendarPreference, type DigitSystem, formatOperationalDate } from '@/lib/dates';
 import { BLOCKING_RESIDUALS, formatRatioPercent, QUALITY_LABELS, RESIDUAL_LABELS, WORKFLOW_LABELS } from '../model/display';
@@ -69,13 +70,13 @@ export function periodGridColumns(timezone: string, pref: CalendarPreference): D
     },
     { id: 'gap', header: 'Gap', align: 'right', nowrap: true, cell: (row) => <span data-testid="cell-gap">{num(row.plan?.gap, row.plan?.uom, pref.digits)}</span> },
     { id: 'attributed', header: 'Attributed', align: 'right', nowrap: true, cell: (row) => <span data-testid="cell-attributed">{num(row.plan?.attributed, row.plan?.uom, pref.digits)}</span> },
-    { id: 'residual', header: 'Residual', align: 'right', nowrap: true, cell: (row) => <ResidualCell row={row} digits={pref.digits} /> },
+    { id: 'residual', header: 'Unaccounted', align: 'right', nowrap: true, cell: (row) => <ResidualCell row={row} digits={pref.digits} /> },
     { id: 'quality', header: 'Data quality', cell: (row) => <span className="text-xs">{row.qualityStates.map((q) => labelOf(QUALITY_LABELS, q)).join(', ') || '—'}</span> },
     { id: 'readiness', header: 'Inputs', cell: (row) => <span className="text-xs">{labelOf(READINESS_LABELS, row.stateReadiness)}</span> },
     {
       id: 'workflow',
       header: 'Workflow',
-      cell: (row) => <Badge variant={row.workflowState === 'approved' ? 'default' : row.workflowState === 'stale' ? 'destructive' : 'secondary'}>{WORKFLOW_LABELS[row.workflowState]}</Badge>,
+      cell: (row) => <StatusBadge tone={toneOf(GRID_WORKFLOW_TONES, row.workflowState)}>{WORKFLOW_LABELS[row.workflowState]}</StatusBadge>,
     },
     { id: 'due', header: 'Due', nowrap: true, cell: (row) => <DueCell row={row} timezone={timezone} /> },
     {

@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, VersionColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  VersionColumn,
+} from 'typeorm';
 
 @Entity('verification_status_codes')
 @Index('IDX_verification_status_codes_tenant_code', ['tenantId', 'code'])
@@ -41,4 +49,4 @@ export class VerificationStatusCode {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

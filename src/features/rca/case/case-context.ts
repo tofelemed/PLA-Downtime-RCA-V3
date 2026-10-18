@@ -17,3 +17,8 @@ export function useCaseWorkspace(): CaseWorkspaceValue {
   if (!value) throw new Error('useCaseWorkspace outside the RCA case workspace');
   return value;
 }
+
+/** The case workspace when rendered inside one (shared action components also render outside). */
+export function useOptionalCaseWorkspace(): CaseWorkspaceValue | null {
+  return useContext(CaseWorkspaceContext);
+}

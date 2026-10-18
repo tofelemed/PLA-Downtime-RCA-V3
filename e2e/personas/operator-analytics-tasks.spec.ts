@@ -68,7 +68,7 @@ test.describe('Operator — analytics, tasks and plant selection', () => {
     await expect.poll(() => new URL(page.url()).searchParams.get('class')).toBe('unplanned');
     // by value: the placeholder option carries the current label, so a label match would hit it
     await page.getByTestId('downtime-window').selectOption('30d');
-    await expect.poll(() => new URL(page.url()).searchParams.get('window')).toBe('Last 30 days');
+    await expect.poll(() => new URL(page.url()).searchParams.get('window')).toBe('30d'); // A-5: a rolling window stays relative in the URL
     await expect(page.getByTestId('downtime-analysis')).toBeVisible();
     await expect(writeControls(page)).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath('operator-downtime-j6.png'), fullPage: true });

@@ -36,10 +36,10 @@ function PreviewResult({ view }: { view: CalendarPreviewView }) {
         {number(view.diff.removed.length)} removed, {number(view.diff.changed.length)} changed, {number(view.diff.unchangedCount)} unchanged
       </p>
       {dstWarnings.length > 0 && (
-        <ul className="space-y-1 rounded-md border border-amber-400 bg-amber-50 p-2 text-sm dark:bg-amber-950" data-testid="dst-warnings" role="status">
+        <ul className="space-y-1 rounded-md border border-warning/40 bg-warning/10 p-2 text-sm" data-testid="dst-warnings" role="status">
           {dstWarnings.map((warning) => (
             <li key={`${warning.code}-${warning.localDate}-${warning.shiftName}`} className="flex items-center gap-2" data-testid="dst-warning" data-code={warning.code}>
-              <Icon className="h-4 w-4 text-amber-700" aria-hidden="true" />
+              <Icon className="h-4 w-4 text-warning" aria-hidden="true" />
               {formatOperationalDate(warning.localDate, pref)} {warning.shiftName ?? ''}: {warningText(warning)}
             </li>
           ))}

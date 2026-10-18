@@ -1,5 +1,6 @@
 import type { BadActorQuery } from '@/api/v2/queries/bad-actors';
-import type { BadActorGroupBy, BadActorRankBy, BadActorTriggerState } from '@/api/v2/types/bad-actors';
+import type { BadActorGroupBy, BadActorItemView, BadActorRankBy, BadActorTriggerState, BadActorTriggerView } from '@/api/v2/types/bad-actors';
+import type { StartRcaContext } from '../model/start-rca';
 
 /** Choices of the CA8 bad-actor review; ranking, window and trigger state are the server's. */
 export interface BadActorFilters {
@@ -72,4 +73,25 @@ export function failureModeText(identity: string | null): string {
   if (identity.startsWith('mode:')) return identity.slice(5).split('|')[0];
   if (identity.startsWith('reason:')) return 'Reason code (no failure mode)';
   return 'No failure mode recorded';
+}
+
+/** The RCA chip state of a bad-actor firing: its case (linked), or the server's open recommendation. */
+export function rcaStateOfTrigger(trigger: Pick<BadActorTriggerView, 'rcaId' | 'outcome'>): 'linked' | 'required' | 'none' {
+  if (trigger.rcaId) return 'linked';
+  return trigger.outcome === 'recommended' ? 'required' : 'none';
+}
+
+export function assetText(item: Pick<BadActorItemView, 'assetCode' | 'assetName'>): string {
+  return [item.assetCode, item.assetName].filter(Boolean).join(' ') || 'Unknown asset';
+}
+
+/** "Start RCA" from a bad actor: a case on the asset's unit, prefilled with the asset and its failure mode. */
+export function badActorStartRca(item: BadActorItemView): StartRcaContext {
+  const asset = assetText(item);
+  const mode = item.failureMode ? ` (${failureModeText(item.failureMode)})` : '';
+  return {
+    unitId: item.unitId,
+    title: `Bad actor: ${asset}${mode}`,
+    description: `${asset}${mode} ranks #${item.rank} in the bad-actor review with ${item.stops} stop(s). Link the stops behind it from Links.`,
+  };
 }

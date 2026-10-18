@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import type { BadActorItemView, BadActorReportView } from '@/api/v2/types/bad-actors';
 import { Badge } from '@/components/ui/badge';
 import { currencyDigits } from '@/features/display-currency/money-format';
@@ -6,7 +5,9 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
-import { failureModeText, TRIGGER_LABELS } from './bad-actor-model';
+import { EventRcaChip } from '../components/event-rca-chip';
+import { StartRcaLink } from '../components/start-rca-link';
+import { assetText, badActorStartRca, failureModeText, rcaStateOfTrigger, TRIGGER_LABELS } from './bad-actor-model';
 
 const TRIGGER_VARIANT: Readonly<Record<string, 'default' | 'secondary' | 'outline' | 'destructive'>> = {
   fired: 'destructive',
@@ -26,7 +27,7 @@ function ValueCell({ item }: { item: BadActorItemView }) {
         <Quantity value={value.amount} uom={value.currency} fractionDigits={currencyDigits(value.currency)} />
       )}
       {value.status === 'mixed' && <span className="ml-1 text-xs text-muted-foreground">(partly valued)</span>}
-      {value.fxProvisional && <span className="ml-1 text-xs text-amber-700 dark:text-amber-400">(provisional exchange rate)</span>}
+      {value.fxProvisional && <span className="ml-1 text-xs text-warning">(provisional exchange rate)</span>}
     </span>
   );
 }
@@ -44,11 +45,8 @@ function TriggerCell({ item }: { item: BadActorItemView }) {
           {trigger.criticalAsset ? ' (critical asset: limit halved)' : ''}
         </span>
       )}
-      {trigger.rcaId && (
-        <Link className="text-xs underline" to={`/rca/${trigger.rcaId}`}>
-          Open the case
-        </Link>
-      )}
+      <EventRcaChip rcaState={rcaStateOfTrigger(trigger)} caseId={trigger.rcaId} />
+      {!trigger.rcaId && <StartRcaLink context={badActorStartRca(item)} label={`Start an RCA for ${assetText(item)}`} />}
     </span>
   );
 }
@@ -61,7 +59,7 @@ function columnsOf(report: BadActorReportView, number: (value: number) => string
       header: 'Asset',
       cell: (item) => (
         <span data-testid="bad-actor-asset" data-key={item.key}>
-          {[item.assetCode, item.assetName].filter(Boolean).join(' ') || 'Unknown asset'}
+          {assetText(item)}
         </span>
       ),
     },

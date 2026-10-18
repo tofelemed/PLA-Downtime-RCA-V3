@@ -155,7 +155,7 @@ export class BulkJobService {
       const body = error.getResponse();
       const code =
         typeof body === 'object' && body !== null && 'code' in body
-          ? String((body as { code: unknown }).code)
+          ? String(body.code)
           : `HTTP_${error.getStatus()}`;
       return { errorCode: code, errorMessage: error.message };
     }

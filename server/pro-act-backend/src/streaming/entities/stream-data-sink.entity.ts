@@ -1,4 +1,11 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 
 @Entity('stream_data_sinks')
 @Index(['tenantId'])
@@ -45,5 +52,3 @@ export class StreamDataSink {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 }
-
-

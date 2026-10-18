@@ -29,9 +29,9 @@ function PairDetail({ pair }: { pair: StopReconciliationView }) {
   const copied = Object.keys(pair.copied);
   return (
     <p className="text-xs text-muted-foreground">
-      Starts {format.duration(pair.startDeltaSeconds, 'compact')} apart
-      {pair.endDeltaSeconds !== null && `, ends ${format.duration(pair.endDeltaSeconds, 'compact')} apart`} (tolerance{' '}
-      {format.duration(pair.toleranceSeconds, 'compact')}).
+      Starts {format.duration(pair.startDeltaSeconds)} apart
+      {pair.endDeltaSeconds !== null && `, ends ${format.duration(pair.endDeltaSeconds)} apart`} (tolerance{' '}
+      {format.duration(pair.toleranceSeconds)}).
       {pair.suggestionReason && ` Not merged automatically: ${SUGGESTION_LABELS[pair.suggestionReason]}.`}
       {pair.conflicts.length > 0 && ` Different ${fieldList(pair.conflicts)}.`}
       {pair.state === 'merged' && copied.length > 0 && ` Copied to the kept stop: ${fieldList(copied)}.`}

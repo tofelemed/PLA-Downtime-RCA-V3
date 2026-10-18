@@ -1,7 +1,7 @@
 import type { AuditEntryView } from '@/api/v2/types/administration';
 import { Badge } from '@/components/ui/badge';
 import type { DataTableColumn } from '@/features/ux-kit/data-table';
-import { AUDIT_ACTION_LABELS, AUDIT_ENTITY_LABELS, labelOf } from '@/features/ux-kit/labels';
+import { AUDIT_ACTION_LABELS, AUDIT_ENTITY_LABELS, labelOf, resolvedActorText } from '@/features/ux-kit/labels';
 import { UiIcon } from '@/lib/icons';
 
 /** The action word of an entry (`CREATE` → "Created"; client actions like `UPDATE_USER` → "User changed"). */
@@ -12,7 +12,7 @@ export const entityLabel = (entityType: string) => labelOf(AUDIT_ENTITY_LABELS, 
 export function auditColumns(formatDateTime: (iso: string) => string): ReadonlyArray<DataTableColumn<AuditEntryView>> {
   return [
     { id: 'time', header: 'Time', cell: (entry) => formatDateTime(entry.timestamp), nowrap: true },
-    { id: 'user', header: 'User', cell: (entry) => entry.actorName ?? 'Unknown user' },
+    { id: 'user', header: 'User', cell: (entry) => resolvedActorText(entry.actorId, entry.actorName) },
     { id: 'action', header: 'Action', cell: (entry) => <Badge variant="outline">{actionLabel(entry.action)}</Badge>, nowrap: true },
     { id: 'entity', header: 'Record', cell: (entry) => entityLabel(entry.entityType) },
     {

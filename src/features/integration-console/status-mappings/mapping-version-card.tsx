@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
+import { resolvedActorText } from '@/features/ux-kit/labels/actor-labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ConsoleRefusal } from '../components/console-refusal';
 
@@ -53,11 +54,11 @@ export function MappingVersionCard({ version, timezone }: { version: SourceStatu
         ))}
       </ul>
       <p className="text-xs text-muted-foreground">
-        Drafted by {version.createdByName ?? (version.createdBy ? 'a user' : 'the system')}
+        Drafted by {resolvedActorText(version.createdBy, version.createdByName)}
         {version.approvedAt && (
           <>
             {' '}
-            · approved by {version.approvedByName ?? (version.approvedBy ? 'a user' : 'the system')} on <PlantTime iso={version.approvedAt} tz={timezone} withDate />
+            · approved by {resolvedActorText(version.approvedBy, version.approvedByName)} on <PlantTime iso={version.approvedAt} tz={timezone} withDate />
           </>
         )}
       </p>

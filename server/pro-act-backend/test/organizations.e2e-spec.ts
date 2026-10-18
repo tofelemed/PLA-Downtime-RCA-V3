@@ -102,4 +102,3 @@ describe('Organizations Endpoints (e2e)', () => {
     });
   });
 });
-

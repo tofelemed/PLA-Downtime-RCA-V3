@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -28,7 +37,12 @@ export class PIConnection {
   tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @ApiProperty({ description: 'Connection name' })
@@ -48,10 +62,18 @@ export class PIConnection {
   passwordEncrypted?: string;
 
   @ApiProperty({ description: 'AF Database path', required: false })
-  @Column({ name: 'af_database_path', type: 'varchar', length: 500, nullable: true })
+  @Column({
+    name: 'af_database_path',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
   afDatabasePath?: string;
 
-  @ApiProperty({ description: 'Additional connection configuration as JSON', required: false })
+  @ApiProperty({
+    description: 'Additional connection configuration as JSON',
+    required: false,
+  })
   @Column({ name: 'connection_config', type: 'text', nullable: true })
   connectionConfig?: string;
 
@@ -63,4 +85,3 @@ export class PIConnection {
   @Column({ name: 'last_sync_time', type: 'timestamptz', nullable: true })
   lastSyncTime?: Date;
 }
-

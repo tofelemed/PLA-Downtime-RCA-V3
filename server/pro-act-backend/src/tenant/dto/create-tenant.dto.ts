@@ -79,4 +79,4 @@ export class CreateTenantDto {
   @IsOptional()
   @IsIn(DIGIT_SYSTEMS)
   digits?: DigitSystem;
-} 
+}

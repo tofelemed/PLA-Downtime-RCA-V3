@@ -14,6 +14,7 @@ import { usePlantFormat } from '../hooks/use-plant-format';
 import { usePrefetchEvent } from '../hooks/use-prefetch-event';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { UnitLabel } from './unit-label';
 
 /** The server computes elapsed time as of `asOf`; refreshed every 30 s and on realtime notices. */
 const CURRENT_STOPS_REFRESH_MS = 30_000;
@@ -25,7 +26,7 @@ export interface CurrentStopsPanelProps {
   onCode?: (event: ProductionEventView) => void;
 }
 
-/** Running events of the chosen units (§16.2 current stops), independent of the list window. */
+/** Ongoing (open) events of the chosen units (§16.2 current stops), independent of the list window. */
 export function CurrentStopsPanel({ unitIds, onClose, onCode }: CurrentStopsPanelProps) {
   const { number } = useNumberFormat();
   const env = useEventHubEnv();
@@ -37,7 +38,7 @@ export function CurrentStopsPanel({ unitIds, onClose, onCode }: CurrentStopsPane
   return (
     <Section title={`Current stops (${count})`} headingLevel={2} className="rounded-md border p-3">
       <div data-testid="current-stops" className="space-y-2">
-        <DataState state={state} error={query.error} onRetry={() => query.refetch()} detail={state === 'empty' ? 'Nothing is running.' : undefined}>
+        <DataState state={state} error={query.error} onRetry={() => query.refetch()} detail={state === 'empty' ? 'No ongoing stops.' : undefined}>
           <ul className="space-y-2">
             {stops.map((stop) => (
               <CurrentStop key={stop.id} stop={stop} onClose={onClose} onCode={onCode} />
@@ -46,7 +47,7 @@ export function CurrentStopsPanel({ unitIds, onClose, onCode }: CurrentStopsPane
         </DataState>
         {query.hasNextPage && (
           <Button size="sm" variant="outline" className="w-full" disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
-            Show more running stops
+            Show more ongoing stops
           </Button>
         )}
       </div>
@@ -69,9 +70,9 @@ function CurrentStop({ stop, onClose, onCode }: CurrentStopProps) {
   return (
     <li className="rounded border p-2 text-sm" data-testid="current-stop" data-event-id={stop.id}>
       <div className="flex items-center justify-between gap-2">
-        <span className="font-medium">{env.unitName(stop.unitId)}</span>
-        <span data-testid="current-stop-elapsed" className="font-mono">
-          <DurationText seconds={stop.elapsedSeconds} variant="clock" />
+        <span className="font-medium"><UnitLabel unitId={stop.unitId} /></span>
+        <span data-testid="current-stop-elapsed" className="tabular-nums">
+          Ongoing <DurationText seconds={stop.elapsedSeconds} />
         </span>
       </div>
       <div className="text-xs text-muted-foreground">

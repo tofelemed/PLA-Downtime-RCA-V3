@@ -12,6 +12,8 @@ import {
   ChangeTrigger,
   PeriodChangeProposal,
 } from './entities/period-change-proposal.entity';
+import { CauseCoding, codingChangesOf } from './proposal-coding';
+import { approvedValuesPart } from './proposal-values';
 import { decisionLinesOf, RevisionState } from './revision-state';
 import { canon, ledgersPart, sliceView } from './reviewed-content';
 import {
@@ -22,11 +24,15 @@ import {
 
 const CANDIDATE_KINDS = new Set(['availability', 'performance', 'quality']);
 
+/** Reasons of a valuation input change (`baseline-recalc.consumer.ts` `recalcTriggerOf`). */
+const VALUATION_REASONS = /^(fx_rate|valuation_policy|demand_status)_changed$/;
+
 /** Trigger of a proposal from the recalculation reason (2.4 / 2.5 trigger names). */
 export function triggerOf(reason: string): ChangeTrigger {
   if (reason.endsWith('_retracted')) return 'source_retraction';
   if (reason.startsWith('loss_event')) return 'event_change';
   if (/output|adjustment|report/.test(reason)) return 'actuals_change';
+  if (VALUATION_REASONS.test(reason)) return 'valuation_change';
   if (reason.includes('plan')) return 'plan_change';
   if (/rate|profile/.test(reason)) return 'rate_change';
   if (reason.includes('calendar')) return 'calendar_change';
@@ -42,6 +48,7 @@ export function beforeOf(state: RevisionState): Record<string, unknown> {
     inputHash: state.revision.inputHash,
     ledgers: ledgersPart(state),
     slices: state.reconciliation.slices.map(sliceView),
+    ...approvedValuesPart(state),
   };
 }
 
@@ -74,6 +81,7 @@ export function afterOf(
   state: RevisionState,
   preview: PeriodAccounting,
   inputHash: string,
+  causeCoding?: ReadonlyMap<string, CauseCoding>,
 ): Record<string, unknown> {
   const reconciliation = reconcile({
     candidates: preview.lines
@@ -101,6 +109,7 @@ export function afterOf(
     issues: preview.issues,
     ledgers: preview.totals.map(ledgerView),
     slices: reconciliation.slices.map(sliceView),
+    codingChanges: codingChangesOf(state, preview, causeCoding),
   };
 }
 
@@ -144,6 +153,48 @@ async function affectedReportsOf(
   }));
 }
 
+/** One cause of a (reused) change proposal, oldest first. */
+export interface ProposalTriggerEntry {
+  trigger: ChangeTrigger;
+  reason: string | null;
+  at: string;
+}
+
+const reasonOf = (detail: Record<string, unknown> | null | undefined) =>
+  typeof detail?.reason === 'string' ? detail.reason : null;
+
+/**
+ * Marun E2E note D: every cause of an open proposal, oldest first. A proposal reused by a later change
+ * (one open proposal per approved revision) keeps the earlier triggers instead of overwriting them; a
+ * proposal from before this list starts with its stored trigger.
+ */
+export function triggerHistory(
+  open: Pick<
+    PeriodChangeProposal,
+    'trigger' | 'detail' | 'updatedAt' | 'createdAt'
+  > | null,
+  draft: Pick<ProposalDraft, 'trigger' | 'detail'>,
+  at: Date = new Date(),
+): ProposalTriggerEntry[] {
+  const latest = {
+    trigger: draft.trigger,
+    reason: reasonOf(draft.detail),
+    at: at.toISOString(),
+  };
+  if (!open) return [latest];
+  const stored = open.detail?.triggers;
+  const earlier: ProposalTriggerEntry[] = Array.isArray(stored)
+    ? (stored as ProposalTriggerEntry[])
+    : [
+        {
+          trigger: open.trigger,
+          reason: reasonOf(open.detail),
+          at: (open.updatedAt ?? open.createdAt ?? at).toISOString(),
+        },
+      ];
+  return [...earlier, latest];
+}
+
 /** The open proposal refreshed with the draft, or a new open proposal. */
 async function saveProposal(
   manager: EntityManager,
@@ -153,6 +204,7 @@ async function saveProposal(
 ): Promise<PeriodChangeProposal> {
   // a system change refreshing a manual proposal keeps what the user proposed (trigger, reason, evidence)
   const manual: unknown = open?.detail?.manual;
+  const triggers = triggerHistory(open, draft);
   const values = {
     trigger: open && manual ? open.trigger : draft.trigger,
     inputHash: draft.inputHash,
@@ -160,8 +212,8 @@ async function saveProposal(
     after: draft.after,
     detail:
       open && manual
-        ? { ...draft.detail, manual, systemTrigger: draft.trigger }
-        : draft.detail,
+        ? { ...draft.detail, manual, systemTrigger: draft.trigger, triggers }
+        : { ...draft.detail, triggers },
     affectedReports: await affectedReportsOf(manager, draft.approved.id),
     updatedBy: actor.userId,
   };

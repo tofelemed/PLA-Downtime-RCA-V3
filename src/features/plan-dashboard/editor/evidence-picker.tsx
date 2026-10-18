@@ -6,6 +6,7 @@ import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { humanize } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { EventLink } from './event-link';
 
 export interface EvidencePickerProps {
   view: ReconciliationView;
@@ -34,6 +35,7 @@ export function EvidencePicker({ view, timezone, selected, onChange }: EvidenceP
     { id: 'when', header: 'When', nowrap: true, cell: (e) => <span className="text-xs"><PlantTime iso={e.startTime} tz={timezone} /> → {e.endTime ? <PlantTime iso={e.endTime} tz={timezone} /> : 'open'}</span> },
     { id: 'what', header: 'Event', cell: (e) => humanize(e.classification?.physicalType ?? e.eventType ?? 'event') },
     { id: 'description', header: 'Description', cell: (e) => e.description ?? '—' },
+    { id: 'open', header: '', headerLabel: 'Open event', width: '5rem', nowrap: true, cell: (e) => <EventLink eventId={e.id} ariaLabel={`Open event: ${e.description ?? humanize(e.classification?.physicalType ?? e.eventType ?? 'event')}`}>Open event</EventLink> },
   ];
   return (
     <fieldset className="min-w-0 space-y-1" data-testid="evidence-picker">

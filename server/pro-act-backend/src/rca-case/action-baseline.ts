@@ -70,6 +70,7 @@ export async function computeBaseline(
     criteria: {
       requiredReduction: rules.requiredReduction,
       minExposureHours: rules.minExposureHours,
+      minimumCoverage: rules.minimumCoverage,
       zeroRepeat: (rules.zeroRepeatClasses as readonly string[]).includes(
         input.consequenceClass ?? '',
       ),

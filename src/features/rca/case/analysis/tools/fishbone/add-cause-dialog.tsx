@@ -15,7 +15,7 @@ export interface NewCause {
 
 /** Short dialog: one contributing cause for a fishbone category. */
 export function AddCauseDialog({ category, onAdd, onClose }: { category: string; onAdd: (cause: NewCause) => void; onClose: () => void }) {
-  const [cause, setCause] = useState<NewCause>({ description: '', likelihood: 'Medium', isPrimary: true });
+  const [cause, setCause] = useState<NewCause>({ description: '', likelihood: 'Medium', isPrimary: false });
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">

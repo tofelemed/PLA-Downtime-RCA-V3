@@ -45,7 +45,7 @@ export function ApprovedImpact({ impact }: { impact: ApprovedImpactView }) {
               <Quantity value={row.amount} uom={row.currency} fractionDigits={currencyDigits(row.currency)} />
             )}
             {row.fxProvisional && (
-              <span className="ml-1 text-xs text-amber-700 dark:text-amber-400" data-testid="approved-impact-provisional">
+              <span className="ml-1 text-xs text-warning" data-testid="approved-impact-provisional">
                 (provisional exchange rate; revalued when the final rate is approved)
               </span>
             )}

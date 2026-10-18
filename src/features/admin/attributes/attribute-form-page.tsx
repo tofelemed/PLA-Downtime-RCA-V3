@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { hasUnsavedChanges, useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAttributeDefinition, useCreateAttribute, useDeleteAttribute, useUpdateAttribute } from '@/api/v2/queries/administration-config';
 import { ATTRIBUTE_ENTITY_TYPES, type AttributeDefinitionView, type AttributeEntityType } from '@/api/v2/types/administration';
@@ -79,6 +80,7 @@ function AttributeEditor({ mode, view, initial, save }: EditorProps) {
   const [busy, setBusy] = useState(false);
   const readOnly = !canManageMasterData || (view !== undefined && !view.editable);
   const set = (patch: Partial<AttributeFormValues>) => setValues((current) => ({ ...current, ...patch }));
+  useUnsavedChangesGuard(hasUnsavedChanges(values, initial, [readOnly, busy]));
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const found = validateAttributeForm(values, mode);

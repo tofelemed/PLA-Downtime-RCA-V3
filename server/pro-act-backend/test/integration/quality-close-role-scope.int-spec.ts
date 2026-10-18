@@ -177,7 +177,9 @@ describe('quality decisions and month close enforce the scope of the required ro
   });
 
   it('genuine plant-wide management and independent finance roles still close and lock an empty month', async () => {
-    const month = '1405-10';
+    // Azar 1404 lies before the world's calendar (effective 1 Jan 2026): no scheduled shift is missing a
+    // period (later months have shifts without periods, which block the close)
+    const month = '1404-09';
     const closed = await env
       .post(`month-closes/${month}/close-quantities`, {}, env.approver)
       .expect(200);

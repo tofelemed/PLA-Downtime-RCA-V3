@@ -188,7 +188,6 @@ export class RcaCaseWorkspaceV2Controller {
   }
 
   @Post(':id/attachments')
-  @Roles(...RCA_WRITERS)
   @UseInterceptors(FileInterceptor('file', attachmentUploadOptions()))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -201,6 +200,7 @@ export class RcaCaseWorkspaceV2Controller {
     summary:
       'Store an evidence file of the case (25 MiB, documents / images / videos)',
     description:
+      'RCA writers, or the owner of an open action of the case (completion evidence; 403 FORBIDDEN_ROLE otherwise). ' +
       'Answers the stored file name; reference it from an evidence item (`attachments`) and save the case. ' +
       'Not idempotent: a repeated upload stores another file, an unreferenced file is never served.',
   })

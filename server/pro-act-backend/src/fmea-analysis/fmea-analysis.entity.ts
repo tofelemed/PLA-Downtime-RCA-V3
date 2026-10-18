@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { RCA } from '../rca/rca.entity';
 import { ApiProperty } from '@nestjs/swagger';
@@ -30,7 +39,12 @@ export class FMEAAnalysis {
   tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @ApiProperty({ description: 'RCA ID' })
@@ -43,11 +57,15 @@ export class FMEAAnalysis {
   rca?: RCA;
 
   @ApiProperty({ description: 'Analysis name', required: false })
-  @Column({ name: 'analysis_name', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'analysis_name',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   analysisName?: string;
 
   @ApiProperty({ description: 'Failure modes as JSON', required: false })
   @Column({ name: 'failure_modes', type: 'text', nullable: true })
   failureModes?: string;
 }
-

@@ -92,7 +92,7 @@ export function WorkSummary({ window }: { window: { from: string; to: string } }
         {data && (
           <>
             <div className="grid gap-4 xl:grid-cols-2">
-              <WorkItems title="RCA cases" testId="report-rca-summary" summary={data.rcaCases} overdueLabel="past their target date" />
+              <WorkItems title="Investigations" testId="report-rca-summary" summary={data.rcaCases} overdueLabel="past their target date" />
               <WorkItems title="Tasks" testId="report-task-summary" summary={data.tasks} overdueLabel="overdue" />
             </div>
             {data.audit && <AuditActivity audit={data.audit} />}

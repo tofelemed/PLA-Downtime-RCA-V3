@@ -8,6 +8,7 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { useKnowledgePermissions } from '../use-knowledge-permissions';
 import { RCA_LESSON_STATUS_LABELS } from '@/features/ux-kit/labels/rca-labels';
+import { GLOSSARY } from '@/features/ux-kit/labels/glossary';
 import { PublishControl, ShareControl, VoteButtons } from './knowledge-actions';
 import { QualityBadge, QualityBreakdown } from './quality-score';
 
@@ -25,7 +26,7 @@ function Facts({ entry }: { entry: RcaKnowledgeView }) {
       )}
       {entry.shareScope === 'organization' && <Badge variant="outline">Shared with other plants</Badge>}
       {entry.failureMode && <span>Failure mode: {entry.failureMode}</span>}
-      <span>Unit: {entry.unitName ?? (entry.unitId ? 'Unknown unit' : 'Tenant-wide')}</span>
+      <span>Unit: {entry.unitName ?? (entry.unitId ? 'Unknown unit' : GLOSSARY.wholePlant)}</span>
       {entry.assetName && <span>Asset: {entry.assetName}</span>}
       <span>Written {date(entry.createdAt)}</span>
       <span>
@@ -56,9 +57,9 @@ function EntryBody({ entry }: { entry: RcaKnowledgeView }) {
       <div className="space-y-6">
         {entry.rcaId && (
           <p className="text-sm">
-            Source case:{' '}
+            Source investigation:{' '}
             <Link className="underline" to={`/rca/${entry.rcaId}`}>
-              {entry.caseTitle ?? 'Open case'}
+              {entry.caseTitle ?? 'Open investigation'}
             </Link>
             {entry.caseStatus ? ` (${entry.caseStatus})` : ''}
           </p>

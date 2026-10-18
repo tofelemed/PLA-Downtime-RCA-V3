@@ -58,6 +58,10 @@ const VIEW: MonthCloseView = {
     approved: 89,
     pendingCount: 1,
     pending: [{ periodId: 'per-1', unitId: 'u1', unitName: 'Demo unit 100', localDate: '2026-10-20', shiftName: 'B', workflow: 'in_review' }],
+    missingPeriodCount: 0,
+    missingPeriods: [],
+    monthEnded: true,
+    monthEndsAt: '2026-10-31T20:30:00Z',
     days: 30,
     certifiedDays: 29,
     uncertifiedDays: [{ unitId: 'u1', unitName: 'Demo unit 100', localDate: '2026-10-20' }],
@@ -109,7 +113,7 @@ describe('month close screen (SME R1 / R4)', () => {
     expect(screen.queryByTestId('step-finance-sign-off')).toBeNull();
     await userEvent.click(screen.getByRole('tab', { name: 'Periods' }));
     expect(screen.getByTestId('pending-periods').textContent).toContain('Demo unit 100');
-    expect(screen.getByTestId('pending-periods').textContent).toContain('Waiting for approval');
+    expect(screen.getByTestId('pending-periods').textContent).toContain('In review');
     await userEvent.click(screen.getByRole('tab', { name: 'Days' }));
     expect(screen.getByTestId('uncertified-days').textContent).toContain('Demo unit 100');
   });

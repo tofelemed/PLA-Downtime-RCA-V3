@@ -20,7 +20,7 @@ function columnsOf(format: ReliabilityFormat, assetLabel: (id: string | null) =>
     { id: 'start', header: 'Actual start', cell: (o) => format.dateTime(o.startedAt), nowrap: true },
     { id: 'end', header: 'Actual end', cell: (o) => (o.endedAt ? format.dateTime(o.endedAt) : 'Still running'), nowrap: true },
     { id: 'waiting', header: 'Waiting', cell: (o) => (o.waitingSeconds > 0 ? `${format.duration(o.waitingSeconds)}${o.waitingReason ? ` — ${o.waitingReason}` : ''}` : '—') },
-    { id: 'stop', header: 'Stop', cell: (o) => (o.eventId ? <Link className="underline" to={`/events/${o.eventId}?tab=repair`}>Open stop</Link> : 'Not linked') },
+    { id: 'stop', header: 'Stop', cell: (o) => (o.eventId ? <Link className="underline" to={`/events/${o.eventId}?tab=repair`}>Open the stop</Link> : 'Not linked') },
     { id: 'source', header: 'Source', cell: (o) => o.source },
   ];
 }

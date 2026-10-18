@@ -2,7 +2,7 @@ import type { ProfileView } from '@/api/v2/types/profiles';
 import { CAPACITY_MODEL_LABELS, labelOf, RATE_TIMEBASE_LABELS } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { VersionStateBadge } from '../components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import type { PlanningRefs } from '../hooks/use-planning-refs';
 import { RateTable } from './rate-table';
 import { ValuationRateTable } from './valuation-rate-table';

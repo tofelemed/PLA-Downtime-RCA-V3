@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -31,7 +40,12 @@ export class HistorianTag {
   tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @ApiProperty({ description: 'PI Web ID', required: false })
@@ -55,7 +69,12 @@ export class HistorianTag {
   category?: string;
 
   @ApiProperty({ description: 'Unit of measure', required: false })
-  @Column({ name: 'unit_of_measure', type: 'varchar', length: 50, nullable: true })
+  @Column({
+    name: 'unit_of_measure',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
   unitOfMeasure?: string;
 
   @ApiProperty({ description: 'Data type', required: false })
@@ -78,8 +97,10 @@ export class HistorianTag {
   @Column({ type: 'boolean', default: true })
   enabled: boolean;
 
-  @ApiProperty({ description: 'Additional configuration JSON', required: false })
+  @ApiProperty({
+    description: 'Additional configuration JSON',
+    required: false,
+  })
   @Column({ name: 'config', type: 'text', nullable: true })
   config?: string;
 }
-

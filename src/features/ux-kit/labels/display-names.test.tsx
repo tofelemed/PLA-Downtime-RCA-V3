@@ -71,6 +71,23 @@ describe('display-name resolvers', () => {
     expect(result.current.nameOf('u2')).toBe('Sara Ahmadi');
     expect(String(fetchMock.mock.calls[0][0])).toContain('/v2/users/directory');
 
+    fetchMock.mockClear();
+    fetchMock.mockImplementation(async (url: string) =>
+      url.includes('ids=')
+        ? json(200, page([{ id: INACTIVE, name: 'Former Lead', isActive: false }]))
+        : json(200, page([{ id: 'u2', name: 'Sara Ahmadi', isActive: true }])),
+    );
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // owner finding 1: ids first met while rendering are looked up too (one batched call), never shown as ids
+    const lazy = renderHook(() => useUserNames(), { wrapper });
+    await waitFor(() => expect(lazy.result.current.nameOf('u2')).toBe('Sara Ahmadi'));
+    expect(lazy.result.current.nameOf(INACTIVE)).toBe('…');
+    expect(lazy.result.current.nameOf('a0000000-0000-4000-8000-00000000000a')).toBe('…');
+    await waitFor(() => expect(lazy.result.current.nameOf(INACTIVE)).toBe('Former Lead'));
+    expect(lazy.result.current.nameOf('a0000000-0000-4000-8000-00000000000a')).toBe('Former user');
+    const lookups = fetchMock.mock.calls.map((call) => String(call[0])).filter((url) => url.includes('ids='));
+    expect(lookups).toHaveLength(1);
+
     client = new QueryClient({ defaultOptions: { queries: { retry: 3 } } });
     fetchMock.mockReset();
     fetchMock.mockImplementation(async () => json(403, { code: 'FORBIDDEN', message: 'Forbidden', correlationId: 'c', retryable: false }));

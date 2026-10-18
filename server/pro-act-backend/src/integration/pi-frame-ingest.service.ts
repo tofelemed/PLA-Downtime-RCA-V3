@@ -4,9 +4,14 @@ import { Repository } from 'typeorm';
 import { MappingDiagnostic } from '../attribute-mapping/attribute-conversion';
 import { mapAttributes } from '../attribute-mapping/attribute-mapper';
 import { MappingProfile } from '../attribute-mapping/attribute-mapping.service';
-import { applyCodeDefaults } from '../code-library/classification-basis';
+import {
+  applyCodeDefaults,
+  ClassificationBasis,
+} from '../code-library/classification-basis';
 import { CodeDefaultsService } from '../code-library/code-defaults.service';
+import { EventClassification } from '../domain/events/event-classification';
 import { CreateProductionEventDto } from '../production-event/dto/create-production-event.dto';
+import { prepareCreate } from '../production-event/event-write-model';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { ProductionEventService } from '../production-event/production-event.service';
 import {
@@ -16,6 +21,14 @@ import {
 import { EventRevisionService } from '../production-event/revisions/event-revision.service';
 import { CONNECTOR_ACTOR } from '../production-event/revisions/revision-actor';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
+import { RuleClassificationService } from '../rules/rule-classification.service';
+import {
+  ActiveCodingRule,
+  filledClassification,
+  fillOpenAxes,
+  openAxesOf,
+  withRuleBasis,
+} from '../rules/rule-defaults';
 import {
   ResolvedMapping,
   TenantMappingResolver,
@@ -84,10 +97,17 @@ interface MappedFrame {
  * PI event frame → production event (plan 1.3): typed attribute mapping over the field catalog (ING04),
  * exact code resolution, deterministic hierarchy mapping (ING03; unmapped and ambiguous frames are
  * quarantined in `unmapped_events` with the reason and the candidates), code-rule classification
- * defaults on create, and source revisions for known events (plan 1.2).
+ * defaults and then the active `coding_default` rules (plan 3.8) on create, and source revisions for
+ * known events (plan 1.2).
  */
 @Injectable()
 export class PiFrameIngestService {
+  /** Active rules per frame context: loaded once per PI pull (or MQTT message), never per frame. */
+  private readonly batchRules = new WeakMap<
+    FrameContext,
+    Promise<ActiveCodingRule[]>
+  >();
+
   constructor(
     @InjectRepository(ProductionEvent)
     private readonly events: Repository<ProductionEvent>,
@@ -98,6 +118,7 @@ export class PiFrameIngestService {
     private readonly codes: MasterDataCodeResolverService,
     private readonly codeDefaults: CodeDefaultsService,
     private readonly quarantine: PiUnmappedRecorder,
+    private readonly ruleDefaults: RuleClassificationService,
   ) {}
 
   async ingest(
@@ -205,7 +226,10 @@ export class PiFrameIngestService {
         eventId: existing.id,
       };
     }
-    const classified = await this.withCodeDefaults(context.tenantId, dto);
+    const classified = await this.withRuleDefaults(
+      context,
+      await this.withCodeDefaults(context.tenantId, dto),
+    );
     const created = await this.lifecycle.create(
       classified as unknown as CreateProductionEventDto,
       CONNECTOR_ACTOR,
@@ -235,6 +259,58 @@ export class PiFrameIngestService {
       classification,
       classificationBasis: Object.keys(basis).length > 0 ? basis : null,
     };
+  }
+
+  /**
+   * Plan 3.8: the tenant's active `coding_default` rules fill the axes the source and the reason code
+   * left open, each with its `declarative_rule` basis (a default, never a user override).
+   */
+  private async withRuleDefaults(
+    context: FrameContext,
+    dto: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const classification = (dto.classification ??
+      {}) as Partial<EventClassification>;
+    const impactCodeId = dto.impactCodeId as string | undefined;
+    const open = openAxesOf({ ...classification, impactCodeId });
+    if (open.size === 0) return dto;
+    const rules = await this.rulesFor(context);
+    if (rules.length === 0) return dto;
+    const draft = prepareCreate(dto);
+    const fill = fillOpenAxes(
+      rules,
+      {
+        ...draft,
+        eventType: dto.eventType as string,
+        source: sourceSystemOf(context),
+        reasonCodeId: dto.reasonCodeId as string | undefined,
+        impactCodeId,
+        unitId: String(dto.unitId),
+        assetId: dto.assetId as string | undefined,
+      },
+      open,
+    );
+    if (Object.keys(fill.basis).length === 0) return dto;
+    return {
+      ...dto,
+      ...(fill.values.impactCodeId
+        ? { impactCodeId: fill.values.impactCodeId }
+        : {}),
+      classification: { ...classification, ...filledClassification(fill) },
+      classificationBasis: withRuleBasis(
+        dto.classificationBasis as ClassificationBasis | null | undefined,
+        fill,
+      ),
+    };
+  }
+
+  private rulesFor(context: FrameContext): Promise<ActiveCodingRule[]> {
+    const cached = this.batchRules.get(context);
+    if (cached) return cached;
+    const loading = this.ruleDefaults.activeRules(context.tenantId);
+    this.batchRules.set(context, loading);
+    loading.catch(() => this.batchRules.delete(context));
+    return loading;
   }
 
   private async planIdFor(

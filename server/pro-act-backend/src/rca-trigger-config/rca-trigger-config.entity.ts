@@ -1,8 +1,24 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
-export type RCATriggerEventType = 'ProductionLoss' | 'IOW' | 'SOL' | 'APM' | 'FailureWO' | 'ProductionOutput' | 'All';
+export type RCATriggerEventType =
+  | 'ProductionLoss'
+  | 'IOW'
+  | 'SOL'
+  | 'APM'
+  | 'FailureWO'
+  | 'ProductionOutput'
+  | 'All';
 export type RCATriggerSeverity = 'Critical' | 'High' | 'Medium' | 'Low';
 export type RCATriggerStatus = 'Open' | 'In Progress' | 'Closed' | 'Cancelled';
 export type RCATriggerQualityResult = 'Pass' | 'Fail';
@@ -84,9 +100,11 @@ const jsonObjectTransformer = {
       return {
         alwaysAllowManualCreation: parsed.alwaysAllowManualCreation ?? true,
         showWarningForLowImpact: parsed.showWarningForLowImpact ?? true,
-        requireApprovalForLowImpact: parsed.requireApprovalForLowImpact ?? false,
+        requireApprovalForLowImpact:
+          parsed.requireApprovalForLowImpact ?? false,
         minCostThresholdGlobal: parsed.minCostThresholdGlobal ?? undefined,
-        minDurationThresholdGlobal: parsed.minDurationThresholdGlobal ?? undefined,
+        minDurationThresholdGlobal:
+          parsed.minDurationThresholdGlobal ?? undefined,
       };
     } catch {
       return {
@@ -124,7 +142,12 @@ export class RCATriggerConfig {
   tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @ApiProperty({ description: 'Trigger configuration name' })
@@ -165,16 +188,26 @@ export class RCATriggerConfig {
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 
-  @ApiProperty({ description: 'Automatically create RCA when triggered', required: false })
+  @ApiProperty({
+    description: 'Automatically create RCA when triggered',
+    required: false,
+  })
   @Column({ name: 'auto_create_rca', type: 'boolean', default: false })
   autoCreateRca: boolean;
 
   @ApiProperty({ description: 'Legacy trigger type', required: false })
-  @Column({ name: 'trigger_type', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'trigger_type',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   triggerType?: string;
 
-  @ApiProperty({ description: 'Legacy trigger conditions JSON', required: false })
+  @ApiProperty({
+    description: 'Legacy trigger conditions JSON',
+    required: false,
+  })
   @Column({ name: 'legacy_conditions', type: 'text', nullable: true })
   legacyConditions?: string;
 }
-

@@ -20,7 +20,7 @@ function OrganizationNode({ organization, children }: { organization: Organizati
     <HierarchyNode
       level={0}
       icon={EntityIcon.organization}
-      kind="Organisation"
+      kind="Organization"
       label={organization.name}
       expandable
       expanded={expanded}
@@ -38,6 +38,7 @@ function Tree() {
   const actingId = selection?.tenant?.id;
   const switchTo = (organization: Organization, tenant: Tenant) => setSelection({ organization, tenant });
   if (directory.isLoading) return <DataState state="loading" />;
+  if (directory.error) return <DataState state="error" error={directory.error} onRetry={directory.retry} />;
   return (
     <ul aria-label="Plant hierarchy" className="space-y-0.5">
       {directory.organizations.map((organization) => (
@@ -62,7 +63,7 @@ function Tree() {
 }
 
 /**
- * `/master-data/hierarchy`: organisation → plants → units → assets. Units and assets load when their node
+ * `/master-data/hierarchy`: organization → plants → units → assets. Units and assets load when their node
  * opens; a search lists matching units and assets of the selected plant instead of the tree.
  */
 export function HierarchyPage() {
@@ -71,13 +72,13 @@ export function HierarchyPage() {
   const { canUseAdminPanel } = useCapabilities();
   const setQ = (next: string) => setParams(next ? { q: next } : {}, { replace: true });
   return (
-    <MasterDataLayout title="Plant hierarchy" description="Organisation, plants, units and assets of the plants you can work in.">
+    <MasterDataLayout title="Plant hierarchy" description="Organization, plants, units and assets of the plants you can work in.">
       <Section
         title="Hierarchy"
         description={
           canUseAdminPanel ? (
             <>
-              Organisations and plants are managed in the <Link className="underline" to="/admin">Admin panel</Link>.
+              Organizations and plants are managed in the <Link className="underline" to="/admin">Admin panel</Link>.
             </>
           ) : undefined
         }

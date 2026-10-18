@@ -60,7 +60,7 @@ test.describe('Production Module', () => {
     await form.locator('#unitId').selectOption((await units.first().getAttribute('value')) ?? '');
     const day = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
     await fillPlantTime(form, 'Start', `${day}T08:00`);
-    await fillPlantTime(form, 'End (empty = still running)', `${day}T08:30`);
+    await fillPlantTime(form, 'End (empty = still ongoing)', `${day}T08:30`);
     const eventDescription = `E2E Test Event ${Date.now()}`;
     await form.locator('#description').fill(eventDescription);
     await form.getByRole('button', { name: 'Save' }).click();

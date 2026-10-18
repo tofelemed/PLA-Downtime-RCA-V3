@@ -30,7 +30,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   measurement_adjustment: 'Measurement adjustment',
   timing_inventory: 'Timing / inventory',
   source_data_gap: 'Source data gap',
-  unexplained_cause: 'Unexplained cause',
+  unexplained_cause: 'Cause not found',
   inventory: 'Inventory',
   timing: 'Timing',
   measurement: 'Measurement',

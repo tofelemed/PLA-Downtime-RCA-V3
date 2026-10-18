@@ -43,7 +43,7 @@ test.describe('Operator — Event Hub v2', () => {
     await expect(page.getByTestId('current-stops')).toBeVisible();
 
     // Own a named stop so repeat campaigns do not edit another journey's fixture or assume page one.
-    // Record the stop through the UI (end empty = still running).
+    // Record the stop through the UI (end empty = still ongoing).
     await page.getByRole('link', { name: 'New event' }).click();
     const form = page.getByTestId('event-form');
     await expect(form.locator('#unitId')).toHaveValue(world.unit.id);
@@ -62,7 +62,7 @@ test.describe('Operator — Event Hub v2', () => {
     await filterNamedEvents(page, label);
 
     await expect(stop(page, id)).toBeVisible();
-    await expect(stop(page, id).getByTestId('current-stop-elapsed')).toHaveText(/\d+:\d{2}/);
+    await expect(stop(page, id).getByTestId('current-stop-elapsed')).toHaveText(/^Ongoing \d+ (s|min|h|d)/);
     await stop(page, id).getByRole('link', { name: 'Open' }).click();
     await codeReason(page, world.reasons[0].id, world.reasons[0].code);
     await expect(page.getByTestId('event-detail').getByLabel('Coding state: Coded')).toBeVisible();
@@ -96,7 +96,7 @@ test.describe('Operator — Event Hub v2', () => {
     await close.locator('#close-reason').fill(`${label} restarted`);
     await close.getByRole('button', { name: 'Close stop' }).click();
     await expect(stop(page, running!.id)).toHaveCount(0);
-    await expect(row(page, running!.id).getByTestId('event-duration')).not.toContainText('Running');
+    await expect(row(page, running!.id).getByTestId('event-duration')).not.toContainText('Ongoing');
     await page.screenshot({ path: test.info().outputPath('operator-event-hub-j1.png'), fullPage: true });
 
     // persistence: reload, same filter, same values on screen and on the API
@@ -105,7 +105,7 @@ test.describe('Operator — Event Hub v2', () => {
     await filterNamedEvents(page, label);
     await expect(row(page, running!.id).getByTestId('event-reason')).toContainText(world.reasons[1].name);
     await expect(row(page, ended!.id).getByTestId('event-reason')).toContainText(world.reasons[0].name);
-    await expect(row(page, running!.id).getByTestId('event-duration')).not.toContainText('Running');
+    await expect(row(page, running!.id).getByTestId('event-duration')).not.toContainText('Ongoing');
     const first = await getEvent(world.liam, ended!.id);
     const second = await getEvent(world.liam, running!.id);
     expect(first.body.reasonCodeId).toBe(world.reasons[0].id);
@@ -127,15 +127,16 @@ test.describe('Operator — Event Hub v2', () => {
 
     // end before start: the server refuses the interval, the error lands on a field or the form
     await fillPlantTime(form, 'Start', '2026-10-01T09:00');
-    await fillPlantTime(form, 'End (empty = still running)', '2026-10-01T08:00');
+    await fillPlantTime(form, 'End (empty = still ongoing)', '2026-10-01T08:00');
     await form.getByRole('button', { name: 'Save' }).click();
     const fieldOrFormError = form.locator('[data-testid^="error-"], [data-testid="form-error"]').first();
     await expect(fieldOrFormError).toBeVisible();
     await expect(form).toBeVisible();
 
-    // end and duration disagree: the server's field error reaches the duration input
-    await fillPlantTime(form, 'End (empty = still running)', '2026-10-01T10:00');
-    await form.locator('#durationMinutes').fill('30');
+    // E-4: end time or duration is an explicit choice; an unreadable duration lands on the duration input
+    await fillPlantTime(form, 'End (empty = still ongoing)', '2026-10-01T10:00');
+    await form.getByTestId('interval-mode-duration').click();
+    await form.locator('#durationMinutes').fill('soon');
     await form.getByRole('button', { name: 'Save' }).click();
     await expect(form.getByTestId('error-durationMinutes')).toBeVisible();
     await expect(form).toBeVisible();

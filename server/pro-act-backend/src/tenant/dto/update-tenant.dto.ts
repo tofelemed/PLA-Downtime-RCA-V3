@@ -74,4 +74,4 @@ export class UpdateTenantDto {
   @IsOptional()
   @IsIn(DIGIT_SYSTEMS)
   digits?: DigitSystem;
-} 
+}

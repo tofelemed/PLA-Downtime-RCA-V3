@@ -1,12 +1,19 @@
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import type { CandidateView, ManualKind, ReconciliationLineView } from '@/api/v2/types/reconciliation';
+import { EventRcaChip } from '@/features/rca/components/event-rca-chip';
+import { StartRcaLink } from '@/features/rca/components/start-rca-link';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
-import { DRAFT_ACTION_LABELS, humanize } from '@/features/ux-kit/labels';
+import { DRAFT_ACTION_LABELS, lossBasisLabel } from '@/features/ux-kit/labels';
+import { RequiredMarker } from '@/features/ux-kit/form-field';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { effectiveDiffers } from '../model/candidate-derivation';
 import { CANDIDATE_STATE_LABELS, KIND_LABELS } from '../model/display';
 import { CandidateDecision, DecisionAction, decisionProblems, DraftState, setDecision } from '../model/draft-lines';
 import type { WorkflowIssue } from '../model/workflow-errors';
+import { CandidateDerivation } from './candidate-derivation';
+import { EventLink } from './event-link';
+import { LineCodes } from './line-codes';
 import { LineIssues } from './line-issues';
 
 export interface CandidateRowProps {
@@ -17,13 +24,14 @@ export interface CandidateRowProps {
   setDraft: (next: (state: DraftState) => DraftState) => void;
   issues: WorkflowIssue[];
   readOnly: boolean;
+  timezone: string;
 }
 
 const ACTIONS: DecisionAction[] = ['accept', 'adjust', 'replace', 'reject'];
 const REPLACE_KINDS: ManualKind[] = ['availability', 'performance', 'quality', 'bridge'];
 
 /** One candidate (ACC07/ACC08): provenance, server state, the pending decision and its fields. */
-export function CandidateRow({ candidate, uom, saved, decision, setDraft, issues, readOnly }: CandidateRowProps) {
+export function CandidateRow({ candidate, uom, saved, decision, setDraft, issues, readOnly, timezone }: CandidateRowProps) {
   const update = (next: CandidateDecision | null) => setDraft((s) => setDecision(s, candidate.autoKey, next));
   const patch = (fields: Partial<CandidateDecision>) => decision && update({ ...decision, ...fields });
   const problems = decision ? decisionProblems(decision) : [];
@@ -33,11 +41,19 @@ export function CandidateRow({ candidate, uom, saved, decision, setDraft, issues
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="outline">{KIND_LABELS[candidate.kind] ?? candidate.kind}</Badge>
         <Quantity value={candidate.quantity} uom={uom} />
+        {effectiveDiffers(candidate) && (
+          <span className="text-xs" data-testid="candidate-effective">
+            counts as <Quantity value={candidate.effectiveQuantity} uom={uom} />
+          </span>
+        )}
         <span className="text-xs text-muted-foreground">
-          Automatic ({humanize(candidate.basis).toLowerCase()})
-          {candidate.causeEventId ? ' · from a recorded event' : ' · no cause event'}
+          Automatic ({lossBasisLabel(candidate.basis).toLowerCase()}) ·{' '}
+          {candidate.causeEventId ? <EventLink eventId={candidate.causeEventId}>from a recorded event</EventLink> : 'no cause event'}
         </span>
+        {candidate.causeEventRca && <EventRcaChip rcaState={candidate.causeEventRca.state} caseId={candidate.causeEventRca.caseId} />}
+        <LineCodes reasonCodeId={saved?.reasonCodeId ?? candidate.reasonCodeId} impactCodeId={saved?.impactCodeId ?? candidate.impactCodeId} showImpact />
         <Badge variant="secondary">{CANDIDATE_STATE_LABELS[candidate.state]}</Badge>
+        <StartRcaLink context={{ eventId: candidate.causeEventId, lossLineId: candidate.lossLineId }} label="Start an RCA for this loss line" />
         {saved?.flags.includes('baseline_changed') && <Badge variant="destructive">Candidate changed since the decision — save again</Badge>}
         {!readOnly && (
           <select aria-label="Decision" data-testid="candidate-decision" className="ml-auto h-8 rounded-md border border-input bg-background px-2" value={decision?.action ?? ''} onChange={(e) => update(e.target.value ? { action: e.target.value as DecisionAction } : null)}>
@@ -50,8 +66,9 @@ export function CandidateRow({ candidate, uom, saved, decision, setDraft, issues
           </select>
         )}
       </div>
+      {candidate.derivation && <CandidateDerivation derivation={candidate.derivation} uom={uom} timezone={timezone} />}
       {overrideRemoved && !readOnly && (
-        <p className="mt-1 text-xs text-amber-700" data-testid="override-preview">
+        <p className="mt-1 text-xs text-warning" data-testid="override-preview">
           Decision removed: after saving, the candidate counts again as proposed (<Quantity value={candidate.quantity} uom={uom} />).
         </p>
       )}
@@ -70,7 +87,12 @@ export function CandidateRow({ candidate, uom, saved, decision, setDraft, issues
               ))}
             </select>
           )}
-          {decision.action !== 'accept' && <Input aria-label="Reason" placeholder="Reason (required)" value={decision.reason ?? ''} onChange={(e) => patch({ reason: e.target.value })} />}
+          {decision.action !== 'accept' && (
+            <label className="space-y-1 text-sm">
+              <span>Reason<RequiredMarker /></span>
+              <Input aria-label="Reason" required value={decision.reason ?? ''} onChange={(e) => patch({ reason: e.target.value })} />
+            </label>
+          )}
         </div>
       )}
       <LineIssues problems={readOnly ? [] : problems} issues={issues} uom={uom} />

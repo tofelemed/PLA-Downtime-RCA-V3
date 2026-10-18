@@ -6,10 +6,12 @@ import { SourceHierarchyMapping } from './entities/source-hierarchy-mapping.enti
 import { SourceMappingModule } from '../source-mapping/source-mapping.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SourceHierarchyMapping]), SourceMappingModule],
+  imports: [
+    TypeOrmModule.forFeature([SourceHierarchyMapping]),
+    SourceMappingModule,
+  ],
   controllers: [HierarchyMappingController],
   providers: [HierarchyMappingService],
   exports: [HierarchyMappingService],
 })
 export class HierarchyMappingModule {}
-

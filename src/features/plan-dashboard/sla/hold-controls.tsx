@@ -7,6 +7,7 @@ import type { DataHoldKind, PeriodSlaDetailView } from '@/api/v2/types/period-sl
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { HOLD_KIND_LABELS } from '../model/sla-labels';
+import { RequiredMarker } from '@/features/ux-kit/form-field';
 
 const KINDS: DataHoldKind[] = ['lab', 'source', 'other'];
 
@@ -26,7 +27,7 @@ export function HoldControls({ detail }: { detail: PeriodSlaDetailView }) {
     <ConfirmDialog
       trigger={
         <Button size="sm" variant="outline" data-testid={onHold ? 'hold-release' : 'hold-open'} disabled={command.isPending}>
-          {onHold ? 'Data arrived…' : 'Waiting for data…'}
+          {onHold ? 'Data arrived…' : 'Pause for late data…'}
         </Button>
       }
       title={onHold ? 'The data arrived?' : 'Mark the period as waiting for data?'}
@@ -47,7 +48,7 @@ export function HoldControls({ detail }: { detail: PeriodSlaDetailView }) {
         </fieldset>
       )}
       <div className="space-y-1">
-        <Label htmlFor={id}>{onHold ? 'What arrived (optional)' : 'Reason (required)'}</Label>
+        <Label htmlFor={id}>{onHold ? 'What arrived (optional)' : <>Reason<RequiredMarker /></>}</Label>
         <Textarea id={id} rows={3} data-testid="hold-text" value={text} onChange={(e) => setText(e.target.value)} />
       </div>
       {problem}

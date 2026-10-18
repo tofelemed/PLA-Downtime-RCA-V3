@@ -21,6 +21,7 @@ import {
   SEVERITIES,
   SOURCE_KINDS,
   toCodeFilters,
+  VERIFICATION_STATES,
   type ArrayFilter,
   type EventFilterState,
   type OpenFilter,
@@ -29,6 +30,7 @@ import { useAssetOptions } from '../hooks/use-asset-options';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { MultiCheckSelect, type CheckOption } from './multi-check-select';
 import { FilterFlagToggle } from './filter-flag-toggle';
+import { MinDurationSelect } from './min-duration-select';
 import { WindowSelect } from './window-select';
 
 export interface EventFiltersBarProps {
@@ -40,7 +42,10 @@ export interface EventFiltersBarProps {
 const optionsOf = (values: readonly string[], labels: Readonly<Record<string, string>>): CheckOption[] =>
   values.map((value) => ({ value, label: labelOf(labels, value) }));
 
-const SECONDARY: readonly ArrayFilter[] = ['eventTypes', 'scheduleClasses', 'assetIds', 'codingStates', 'rcaStates', 'sourceKinds', 'severities'];
+const SECONDARY: readonly ArrayFilter[] = ['eventTypes', 'scheduleClasses', 'assetIds', 'codingStates', 'verificationStates', 'rcaStates', 'sourceKinds', 'severities'];
+
+/** E-7: supervisor verification of the coding (SME D13). */
+const VERIFICATION_LABELS: Readonly<Record<(typeof VERIFICATION_STATES)[number], string>> = { verified: 'Verified', not_verified: 'Not verified' };
 
 interface FilterSpec {
   field: ArrayFilter;
@@ -50,14 +55,14 @@ interface FilterSpec {
 }
 
 /**
- * Server filters of the list (§16.2): search, units, window, kind, reason and running / ended up
- * front; event family, schedule class, asset, coding / RCA / physical state, source and severity under
- * "More filters" (with possible duplicate stops, DT-04). AND between filters, OR within one; ticks are sent when a list closes.
+ * Server filters of the list (§16.2): search, units, window, kind, reason and ongoing / ended up
+ * front; event family, schedule class, asset, coding / verification (E-7) / RCA / physical state, source,
+ * severity and minimum duration (E-1) under "More filters" (with possible duplicate stops, DT-04). AND between filters, OR within one; ticks are sent when a list closes.
  */
 export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarProps) {
   const env = useEventHubEnv();
   const assets = useAssetOptions(filters.unitIds);
-  const flags = [filters.possibleDuplicate, filters.possibleRepeat].filter(Boolean).length;
+  const flags = [filters.possibleDuplicate, filters.possibleRepeat, filters.minDurationSeconds !== null].filter(Boolean).length;
   const moreActive = SECONDARY.filter((field) => filters[field].length > 0).length + flags;
   const [showMore, setShowMore] = useState(moreActive > 0);
   const set = <K extends keyof EventFilterState>(key: K, value: EventFilterState[K]) => onChange({ ...filters, [key]: value });
@@ -74,6 +79,7 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
     { field: 'scheduleClasses', label: 'Schedule', testId: 'filter-schedule-classes', options: optionsOf(SCHEDULE_CLASSES, SCHEDULE_CLASS_LABELS) },
     { field: 'assetIds', label: 'Asset', testId: 'filter-assets', options: assets },
     { field: 'codingStates', label: 'Coding', testId: 'filter-coding-states', options: optionsOf(CODING_STATES, CODING_STATE_LABELS) },
+    { field: 'verificationStates', label: 'Verification', testId: 'filter-verification', options: optionsOf(VERIFICATION_STATES, VERIFICATION_LABELS) },
     { field: 'rcaStates', label: 'RCA', testId: 'filter-rca-states', options: optionsOf(RCA_STATES, EVENT_RCA_STATE_LABELS) },
     { field: 'physicalStates', label: 'State', testId: 'filter-physical-states', options: optionsOf(PHYSICAL_STATES, PHYSICAL_STATE_LABELS) },
     { field: 'sourceKinds', label: 'Origin', testId: 'filter-source-kinds', options: optionsOf(SOURCE_KINDS, SOURCE_KIND_LABELS) },
@@ -87,7 +93,12 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
       <div className="flex flex-wrap items-center gap-2">
         <DebouncedSearchInput label="Search description or source id" placeholder="Search events" value={filters.q} onChange={(q) => set('q', q)} className="w-56" />
         {select(primary[0])}
-        <WindowSelect unitId={filters.unitIds.length === 1 ? filters.unitIds[0] : null} label={filters.windowLabel} onChange={(w) => onChange({ ...filters, from: w.from, to: w.to, windowLabel: w.label })} />
+        <WindowSelect
+          unitIds={filters.unitIds}
+          label={filters.windowLabel}
+          bounds={{ from: filters.from, to: filters.to }}
+          onChange={(w) => onChange({ ...filters, from: w.from, to: w.to, windowLabel: w.label, relativeWindow: w.relative ?? null })}
+        />
         {primary.slice(1).map(select)}
         <OpenSelect value={filters.isOpen} onChange={(value) => set('isOpen', value)} />
         <Button variant="outline" size="sm" aria-expanded={showMore} onClick={() => setShowMore((open) => !open)} data-testid="more-filters">
@@ -101,6 +112,7 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
       {showMore && (
         <div className="flex flex-wrap items-center gap-2" data-testid="more-filter-row">
           {secondary.map(select)}
+          <MinDurationSelect value={filters.minDurationSeconds} onChange={(value) => set('minDurationSeconds', value)} />
           <FilterFlagToggle
             id="filter-possible-duplicates"
             label="Possible duplicate stops only"
@@ -124,14 +136,14 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
 function OpenSelect({ value, onChange }: { value: OpenFilter; onChange: (value: OpenFilter) => void }) {
   return (
     <select
-      aria-label="Running or ended"
+      aria-label="Ongoing or ended"
       data-testid="filter-open"
       className="h-9 rounded-md border border-input bg-background px-2 text-sm"
       value={value}
       onChange={(event) => onChange(event.target.value as OpenFilter)}
     >
-      <option value="any">Running and ended</option>
-      <option value="open">Running only</option>
+      <option value="any">Ongoing and ended</option>
+      <option value="open">Ongoing only</option>
       <option value="closed">Ended only</option>
     </select>
   );

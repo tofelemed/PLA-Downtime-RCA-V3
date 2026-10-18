@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Unit } from '../unit/unit.entity';
 import { Organization } from '../organization/organization.entity';
 import { Tenant } from '../tenant/tenant.entity';
@@ -47,7 +55,12 @@ export class ProductionPlanTemplate {
   @JoinColumn({ name: 'tenant_id' })
   tenant?: Tenant;
 
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   // Note: Database schema doesn't have these columns - they should be in template_data JSON
@@ -73,4 +86,4 @@ export class ProductionPlanTemplate {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

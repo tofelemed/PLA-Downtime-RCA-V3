@@ -93,4 +93,3 @@ class TestRunner {
 // Run tests
 const runner = new TestRunner();
 runner.runAllTests();
-

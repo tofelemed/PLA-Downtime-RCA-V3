@@ -35,7 +35,7 @@ export function DowntimeFiltersBar({ filters, onChange, scope = 'period', showTr
   const env = useEventHubEnv();
   const choosePreset = (key: string) => {
     const preset = WINDOW_PRESETS.find((entry) => entry.key === key);
-    if (preset) onChange({ ...presetWindow(preset.hours, Date.now()), windowLabel: preset.label });
+    if (preset) onChange({ ...presetWindow(preset.hours, Date.now()), windowLabel: preset.label, relativeWindow: preset.key });
   };
   return (
     <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Downtime filters" data-testid="downtime-filters">
@@ -49,7 +49,7 @@ export function DowntimeFiltersBar({ filters, onChange, scope = 'period', showTr
       />
       {scope === 'period' && <PeriodSelectionFilters filters={filters} onChange={onChange} />}
       <DateRangeInput label="Period dates" value={{ from: filters.from, to: filters.to }} timeZone={env.timezone} onChange={(range) => {
-        if (range.from && range.to) onChange({ from: range.from, to: range.to, windowLabel: 'Chosen dates' });
+        if (range.from && range.to) onChange({ from: range.from, to: range.to, windowLabel: 'Chosen dates', relativeWindow: null });
       }} />
       <div className="flex items-center gap-2">
         <Label htmlFor="downtime-window">Window</Label>

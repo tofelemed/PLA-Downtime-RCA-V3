@@ -45,7 +45,7 @@ export function SelectAllMatchingDialog({ query, onClose, onConfirm }: SelectAll
                 <dt className="text-muted-foreground">From</dt>
                 <dd>{dateTime(data.firstStart)}</dd>
                 <dt className="text-muted-foreground">To</dt>
-                <dd>{data.lastEnd ? dateTime(data.lastEnd) : 'still running'}</dd>
+                <dd>{data.lastEnd ? dateTime(data.lastEnd) : 'still ongoing'}</dd>
                 <dt className="text-muted-foreground">Units</dt>
                 <dd>{data.unitIds.map((id) => env.unitName(id)).join(', ')}</dd>
                 <dt className="text-muted-foreground">Assets</dt>

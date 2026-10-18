@@ -50,26 +50,43 @@ function fromNestedControl(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLEl
 /** Props that make a row activatable; empty for read-only rows. */
 export interface RowActivationProps {
   tabIndex?: number;
-  'aria-label'?: string;
   className?: string;
   onClick?: (event: MouseEvent<HTMLElement>) => void;
   onKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
 }
 
-/** Click / Enter / Space handlers and focus props of an activatable row. */
-export function rowActivationProps(activate: (() => void) | undefined, label: string | undefined): RowActivationProps {
+/**
+ * Click / Enter / Space handlers and focus props of an activatable row (H-10). The row never gets an
+ * `aria-label` (it would replace the cell text for screen readers). With `hasLink` the row's link cell is
+ * the keyboard path, so the row is clickable with the mouse but adds no tab stop of its own.
+ */
+export function rowActivationProps(activate: (() => void) | undefined, hasLink = false): RowActivationProps {
   if (!activate) return {};
+  const onClick = (event: MouseEvent<HTMLElement>) => {
+    if (!fromNestedControl(event)) activate();
+  };
+  if (hasLink) return { className: 'cursor-pointer', onClick };
   return {
     tabIndex: 0,
-    'aria-label': label,
     className: 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
-    onClick: (event: MouseEvent<HTMLElement>) => {
-      if (!fromNestedControl(event)) activate();
-    },
+    onClick,
     onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
       if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
       event.preventDefault();
       activate();
     },
   };
+}
+
+/**
+ * Visually hidden action text at the start of the first cell of a keyboard-activatable row (e.g. "Open
+ * case Pump trip."), read together with the cell text instead of replacing it.
+ */
+export function rowLabelHint(label: string | undefined): ReactNode {
+  return label ? createElement('span', { className: 'sr-only' }, `${label}. `) : null;
+}
+
+/** The hint text of a row: only rows that are their own tab stop (activatable, without a link cell). */
+export function rowHintOf<T>(row: T, opts: { onRowClick?: (row: T) => void; rowLabel?: (row: T) => string; rowsHaveLink?: boolean }): string | undefined {
+  return opts.onRowClick && !opts.rowsHaveLink ? opts.rowLabel?.(row) : undefined;
 }

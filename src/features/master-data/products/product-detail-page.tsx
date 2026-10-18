@@ -77,12 +77,12 @@ export function ProductDetailPage() {
       retired={!product.isActive}
       kind="product"
       name={product.name}
-      retireNote={`Profiles, plans and periods keep this product; it can no longer be chosen for new records${shared ? ' in any plant of the organisation' : ''}.`}
+      retireNote={`Profiles, plans and periods keep this product; it can no longer be chosen for new records${shared ? ' in any plant of the organization' : ''}.`}
     />
   ) : undefined;
   return (
     <MasterDataLayout title={product.name} description={<RecordStatusBadge retired={!product.isActive} />} back={BACK} actions={actions}>
-      <Section title="Details" description={shared ? 'Changes apply to every plant of the organisation.' : undefined}>
+      <Section title="Details" description={shared ? 'Changes apply to every plant of the organization.' : undefined}>
         <ProductEditor product={product} />
       </Section>
     </MasterDataLayout>

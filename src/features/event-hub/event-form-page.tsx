@@ -10,12 +10,16 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { useDebouncedValue } from '@/features/ux-kit/use-debounced-value';
 import { ConflictDialog } from './components/conflict-dialog';
+import { DraftOfferAlert } from './components/draft-offer-alert';
 import { EventFormFields } from './components/event-form-fields';
 import { ImpactedPeriodsPreview } from './components/impacted-periods-preview';
+import { SourceOverrideBanner } from './components/source-override-banner';
 import { EventHubFrame } from './event-hub-frame';
 import { useBackTarget } from './hooks/use-back-target';
 import { useEventForm } from './hooks/use-event-form';
 import { useEventFormSubmit } from './hooks/use-event-form-submit';
+import { usePlantFormat } from './hooks/use-plant-format';
+import { editTitleOf } from './model/edit-title';
 import { plantLocalToUtc } from './model/plant-local-time';
 import { useEventHubEnv } from './use-event-hub-env';
 
@@ -32,14 +36,22 @@ export function EventFormPage() {
   );
 }
 
+/** E-3: "Unit 100 · Stop from 2026-10-15 22:39" in plant time, once the event is loaded. */
+function useEditTitle(event: ProductionEventView | undefined): string {
+  const env = useEventHubEnv();
+  const { dateTime } = usePlantFormat();
+  return event ? editTitleOf(event, env.unitName, dateTime) : 'Edit event';
+}
+
 function EventFormScreen({ eventId }: { eventId: string | null }) {
   const detail = useProductionEvent(eventId);
   const [params] = useSearchParams();
   const listBack = useBackTarget();
+  const editTitle = useEditTitle(detail.data);
   const back = eventId ? { to: `/events/${eventId}`, label: 'Event' } : listBack;
   return (
     <Page>
-      <PageHeader title={eventId ? 'Edit / code event' : 'New event'} back={back} description="Times on the plant clock; the server validates the interval and the codes." />
+      <PageHeader title={eventId ? editTitle : 'New event'} back={back} description="Times on the plant clock; the server validates the interval and the codes." />
       <div data-testid="event-form">
         {eventId ? (
           <DataState state={dataStateOf(detail)} error={detail.error} onRetry={() => detail.refetch()}>
@@ -81,10 +93,12 @@ function EventFormBody({ event, defaultUnitId = '', backTo }: EventFormBodyProps
   return (
     <form onSubmit={(e) => { e.preventDefault(); void save.submit(); }} className="space-y-6" noValidate>
       {form.restored && <Alert data-testid="draft-restored"><AlertDescription>Unsaved changes restored from your last visit.</AlertDescription></Alert>}
+      <DraftOfferAlert form={form} />
+      {event && <SourceOverrideBanner event={event} />}
       {form.serverChanged && (
         <Alert data-testid="server-changed"><AlertDescription>The event changed on the server since you started; saving asks you to review the differences.</AlertDescription></Alert>
       )}
-      <EventFormFields form={form} mode={event ? 'edit' : 'create'} assetId={event?.assetId ?? null} />
+      <EventFormFields form={form} mode={event ? 'edit' : 'create'} event={event} />
       {unitId && start && <ImpactedPeriodsPreview unitId={unitId} from={start} to={end ?? event?.asOf ?? null} />}
       {save.formError && <Alert variant="destructive" role="alert" data-testid="form-error"><AlertDescription>{save.formError}</AlertDescription></Alert>}
       <div className="flex flex-wrap justify-end gap-2">

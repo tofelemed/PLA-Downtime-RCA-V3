@@ -1,16 +1,19 @@
 import { Link } from 'react-router-dom';
 import type { ProductionEventView } from '@/api/v2/types/events';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
-import { labelOf, PHYSICAL_TYPE_LABELS, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
-import { StateBadges } from './state-badges';
+import { labelOf, PHYSICAL_TYPE_LABELS, SCHEDULE_CLASS_LABELS, SOURCE_KIND_LABELS } from '@/features/ux-kit/labels';
+import { DurationSortHeader, StartSortHeader, type EventSortControl } from './event-sort-headers';
+import { EventStateCell } from './event-state-cell';
+import { UnitLabel } from './unit-label';
 
 export interface EventColumnContext {
   unitName: (id: string | null | undefined) => string;
   reasonName: (id: string | null | undefined) => string;
+  /** E-1: asset names (absent: "—") */
+  assetName?: (id: string | null | undefined) => string;
   dateTime: (iso: string | null | undefined) => string;
   /** query string of the list, so Back from the detail restores the filters */
   listSearch: string;
@@ -26,9 +29,14 @@ export interface EventColumnContext {
   rows?: readonly ProductionEventView[];
   /** FE-06 inline "Code" on uncoded rows (absent: no button) */
   onCode?: (event: ProductionEventView) => void;
+  /** E-1: one list order, toggled from the Start and Duration headers (absent: fixed order, no toggle) */
+  sort?: EventSortControl;
 }
 
-/** Accessible name of a row: kind, unit and start on the plant clock (never an id). */
+/** E-1 Origin column: short words; the full label is the tooltip. */
+const ORIGIN_SHORT: Readonly<Record<string, string>> = { manual: 'Manual', source: 'Source', derived: 'Derived', imported: 'Imported' };
+
+/** Kind, unit and start on the plant clock (never an id): names the row's checkbox and link. */
 export function eventRowLabel(event: ProductionEventView, context: EventColumnContext): string {
   return `${labelOf(PHYSICAL_TYPE_LABELS, event.classification.physicalType)} on ${context.unitName(event.unitId)}, starting ${context.dateTime(event.startTime)}`;
 }
@@ -101,6 +109,7 @@ function startCell(event: ProductionEventView, context: EventColumnContext) {
         onMouseEnter={() => context.prefetch(event.id)}
         onFocus={() => context.prefetch(event.id)}
       >
+        <span className="sr-only">{`Open ${labelOf(PHYSICAL_TYPE_LABELS, event.classification.physicalType)} on ${context.unitName(event.unitId)}, starting `}</span>
         {context.dateTime(event.startTime)}
       </Link>
     </span>
@@ -111,48 +120,44 @@ function durationCell(event: ProductionEventView) {
   return (
     <span data-testid="event-duration">
       {event.isOpen ? (
-        <span className="text-blue-700 dark:text-blue-300">
-          Running <DurationText seconds={event.elapsedSeconds} variant="compact" />
+        <span className="text-info">
+          Ongoing <DurationText seconds={event.elapsedSeconds} />
         </span>
       ) : (
-        <DurationText seconds={event.durationSeconds} variant="compact" />
+        <DurationText seconds={event.durationSeconds} />
       )}
     </span>
   );
 }
 
-/** States, plus SME D5 "Repeat incident" when the stop is grouped with repeats (counted once in MTBF). */
-function statesCell(event: ProductionEventView) {
+function typeCell(event: ProductionEventView) {
   return (
-    <span className="inline-flex flex-wrap gap-1">
-      <StateBadges states={event.states} />
-      {event.incidentId && (
-        <Badge variant="outline" className="border-violet-400 text-violet-800 dark:text-violet-200" data-testid="event-incident" title="Repeat stops of one asset and reason, counted once in MTBF">
-          Repeat incident
-        </Badge>
-      )}
+    <span className="whitespace-nowrap">
+      {labelOf(PHYSICAL_TYPE_LABELS, event.classification.physicalType)}
+      <span className="text-xs text-muted-foreground"> · {labelOf(SCHEDULE_CLASS_LABELS, event.classification.scheduleClass)}</span>
     </span>
   );
 }
 
-/** Columns of the event list: start (link to the detail page), duration, unit, kind, reason, states. */
+function originCell(event: ProductionEventView) {
+  return (
+    <span title={labelOf(SOURCE_KIND_LABELS, event.sourceKind)} data-testid="event-origin">
+      {(event.sourceKind !== 'manual' && event.source?.trim()) || ORIGIN_SHORT[event.sourceKind] || labelOf(SOURCE_KIND_LABELS, event.sourceKind)}
+    </span>
+  );
+}
+
+/** Columns of the event list: start (link, sortable), duration (sortable), unit, asset, kind, reason, states, data source. */
 export function eventColumns(context: EventColumnContext): DataTableColumn<ProductionEventView>[] {
   return [
     ...selectColumn(context),
-    { id: 'start', header: 'Start', nowrap: true, cell: (event) => startCell(event, context) },
-    { id: 'duration', header: 'Duration', nowrap: true, align: 'right', cell: durationCell },
-    { id: 'unit', header: 'Unit', cell: (event) => context.unitName(event.unitId) },
-    {
-      id: 'type',
-      header: 'Type',
-      cell: (event) => (
-        <span>
-          {labelOf(PHYSICAL_TYPE_LABELS, event.classification.physicalType)}
-          <span className="block text-xs text-muted-foreground">{labelOf(SCHEDULE_CLASS_LABELS, event.classification.scheduleClass)}</span>
-        </span>
-      ),
-    },
+    { id: 'start', header: <StartSortHeader sort={context.sort} />, headerLabel: 'Start', nowrap: true, cell: (event) => startCell(event, context) },
+    { id: 'duration', header: <DurationSortHeader sort={context.sort} />, headerLabel: 'Duration', nowrap: true, align: 'right', cell: durationCell },
+    { id: 'unit', header: 'Unit', nowrap: true, cell: (event) => <UnitLabel unitId={event.unitId} /> },
+    { id: 'asset', header: 'Asset', cell: (event) => <span data-testid="event-asset">{event.assetId && context.assetName ? context.assetName(event.assetId) : '—'}</span> },
+    { id: 'type', header: 'Type', cell: typeCell },
     { id: 'reason', header: 'Reason', cell: (event) => reasonCell(event, context) },
-    { id: 'states', header: 'States', cell: statesCell },
+    { id: 'states', header: 'States', cell: (event) => <EventStateCell event={event} /> },
+    { id: 'origin', header: 'Source', nowrap: true, cell: originCell },
   ];
 }

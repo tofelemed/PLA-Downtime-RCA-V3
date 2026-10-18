@@ -4,7 +4,7 @@ import { MDA, PREFIX, listMdaUnits, sessionOf, shortId, type Session } from './s
 
 /**
  * Master data admin persona — journey 7, hierarchy mappings. The only hierarchy-mapping screen lives
- * under Connectivity (integration admins), so the persona has no screen for it; the v1 API is checked
+ * under Connectivity (SuperAdmin only, owner 18 Oct 2026), so the persona has no screen for it; the v1 API is checked
  * instead: a `P-MDA-map-…` mapping of a persona unit is created (the controller declares no @Roles) and
  * previewed through `POST /hierarchy-mappings/find-mapping`. A PI mapping resolves, and so does the MQTT one
  * (mirrored into /v2/source-mappings and looked up by the request's source system; formerly a defect of the

@@ -22,7 +22,7 @@ import {
   type RelSession,
 } from './support/reliability-world';
 import { MANAGERS } from './support/manager-users';
-import { acceptInvestigation, finishActions, prepareInvestigation } from './support/rca-workflow';
+import { acceptInvestigation, ensureCauseCode, finishActions, prepareInvestigation } from './support/rca-workflow';
 
 /**
  * RELIABILITY ENGINEER persona — the RCA case journeys of plan 3.9 (RCA01–03) on the v2 Event Hub and
@@ -172,9 +172,11 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     world.secondStopId = second.body.id;
     await page.getByTestId('tab-links').click();
     const add = page.getByTestId('add-link');
-    await add.getByLabel('Link type').selectOption('event');
-    await add.getByLabel('Work order number or reference').fill(world.secondStopId);
-    await add.getByRole('button', { name: 'Link' }).click();
+    const raw = add.getByTestId('raw-reference');
+    await raw.getByText('Advanced: link by reference').click();
+    await raw.getByLabel('Reference type', { exact: true }).selectOption('event');
+    await raw.getByLabel('Reference', { exact: true }).fill(world.secondStopId);
+    await raw.getByRole('button', { name: 'Link reference' }).click();
     await expect(add.getByRole('status')).toHaveText('Linked.');
     await expect(page.getByTestId('link-row')).toHaveCount(2);
     const row = page.locator(`[data-testid="link-row"][data-target-id="${world.secondStopId}"]`);
@@ -193,8 +195,8 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await uiLogin(page, REL_USERS.amara);
     await page.goto('/rca');
     await expect(page.getByTestId('rca-v2')).toBeVisible({ timeout: 60_000 });
-    await page.getByLabel('Search case titles').fill(caseTitle);
-    await page.getByTestId('case-list').getByRole('row', { name: `Open case ${caseTitle}` }).click();
+    await page.getByLabel('Search investigation titles').fill(caseTitle);
+    await page.getByTestId('case-list').getByRole('row', { name: `Open investigation ${caseTitle}` }).click();
     await expect(page.getByRole('heading', { name: caseTitle, level: 1 })).toBeVisible();
     await page.getByTestId('tab-actions').click();
     await expect(page.getByTestId('rec')).toContainText('Realign the coupling');
@@ -259,6 +261,19 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     // than their owner (viktor owns "realign": jonas marks it done); the rest are cancelled
     const jonas = await apiLogin(MANAGERS.jonas.email);
     await prepareInvestigation(viktor.token, world.caseId, 'Coupling misalignment');
+    // item 7: a coded root cause (typed cause linked to the plant's cause catalogue) before closure
+    await ensureCauseCode(viktor.token, jonas.token);
+    await openCase(page, world.caseId, 'analysis');
+    const causes = page.getByTestId('causes-panel');
+    if ((await causes.getByTestId('causes-root').getByTestId('cause-code').count()) === 0) {
+      await causes.getByTestId('add-cause').click();
+      const editor = causes.getByTestId('cause-editor');
+      await editor.getByLabel('Kind').selectOption('root');
+      await editor.getByLabel('Cause code').selectOption({ index: 1 });
+      await editor.getByLabel(/^Statement/).fill('Coupling misalignment after the seal change');
+      await editor.getByTestId('save-cause').click();
+      await expect(causes.getByTestId('causes-root').getByTestId('cause-item')).toHaveCount(1);
+    }
     await finishActions(viktor.token, jonas.token, world.caseId);
     await acceptInvestigation(viktor.token, world.caseId);
     await page.reload();

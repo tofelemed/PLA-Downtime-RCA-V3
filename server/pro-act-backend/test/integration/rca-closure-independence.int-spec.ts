@@ -1,6 +1,7 @@
 import { HOUR } from './support/actuals-world';
 import { plus } from './support/accounting-world';
 import { ApiError } from './support/plan-world';
+import { addCodedRootCause } from './support/rca-causes';
 import { CaseBody, RcaWorld } from './support/rca-world';
 import { signToken } from './support/test-app';
 
@@ -133,6 +134,7 @@ describe('RCA closure independence (SME CA1)', () => {
   });
 
   it('the lead requests closure, leaves the team (forced around the lock) and is still refused', async () => {
+    await addCodedRootCause(env, env.world.tenantA, caseId);
     const requested = await transition(
       {
         to: 'Closure Review',

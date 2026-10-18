@@ -11,7 +11,7 @@ export class HealthService {
 
   async check() {
     const dbStatus = await this.checkDatabase();
-    
+
     return {
       status: dbStatus ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
@@ -22,7 +22,7 @@ export class HealthService {
   async detailedCheck() {
     const dbStatus = await this.checkDatabase();
     const memoryUsage = process.memoryUsage();
-    
+
     return {
       status: dbStatus ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
@@ -53,4 +53,4 @@ export class HealthService {
       return false;
     }
   }
-} 
+}

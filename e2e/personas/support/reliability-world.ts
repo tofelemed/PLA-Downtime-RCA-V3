@@ -148,7 +148,10 @@ export async function createEventViaUi(page: Page, input: NewEventInput): Promis
   await form.locator('#unitId').selectOption({ label: input.unitName });
   await form.locator('#physicalType').selectOption('downtime');
   await fillPlantTime(form, 'Start', plantLocal(input.startIso, timezone));
-  if (input.durationMinutes !== undefined) await form.locator('#durationMinutes').fill(String(input.durationMinutes));
+  if (input.durationMinutes !== undefined) {
+    await form.getByTestId('interval-mode-duration').click();
+    await form.locator('#durationMinutes').fill(String(input.durationMinutes));
+  }
   await form.locator('#scheduleClass').selectOption(input.scheduleClass);
   await form.locator('#description').fill(input.description);
   const created = page.waitForResponse((response) => response.request().method() === 'POST' && /\/v2\/production-events$/.test(response.url().split('?')[0]));
@@ -172,9 +175,9 @@ export async function openStop(page: Page, stopId: string): Promise<void> {
   await expect(page.getByTestId('event-detail')).toBeVisible();
 }
 
-/** Opens a case page: the overview, or the sub-page that holds links / actions / outcome. */
-export async function openCase(page: Page, caseId: string, tab?: 'links' | 'actions' | 'outcome'): Promise<void> {
-  const sub = tab === 'actions' ? '/actions' : tab ? '/links' : '';
+/** Opens a case page: the overview, or the sub-page that holds links / actions / outcome / analysis (causes). */
+export async function openCase(page: Page, caseId: string, tab?: 'links' | 'actions' | 'outcome' | 'analysis'): Promise<void> {
+  const sub = tab === 'actions' ? '/actions' : tab === 'analysis' ? '/analysis' : tab ? '/links' : '';
   await page.goto(`/rca/${caseId}${sub}`);
   await expect(page.getByTestId('case-detail')).toBeVisible({ timeout: 60_000 });
 }

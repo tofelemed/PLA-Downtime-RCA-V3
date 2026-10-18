@@ -15,6 +15,8 @@ import {
   parseSourceAuthority,
   PolicyBodyError,
 } from '../../periods/policy-bodies';
+import { BackdateRequest, parseBackdate } from '../../periods/policy-backdate';
+import { effectiveFromOf } from '../../periods/policy-backdate.guard';
 import { invalid, invalidReference } from '../../profiles/profile-errors';
 import { assertTenantWideWriter } from '../../profiles/profile-scope';
 import { MeasurementHierarchyDto } from './source-authority-v2.dto';
@@ -23,6 +25,13 @@ import { SOURCE_AUTHORITY_WRITERS } from './source-authority-roles';
 export const SOURCE_AUTHORITY_KIND = 'source_authority';
 /** No unit has this id: resolving with it reads the tenant-wide version only. */
 const NO_UNIT = '00000000-0000-0000-0000-000000000000';
+
+/** A draft's scope, hierarchy, note and optional commissioning backdate. */
+export interface SourceAuthorityDraft extends BackdateRequest {
+  unitId?: string;
+  measurementHierarchy: MeasurementHierarchyDto | null;
+  notes?: string;
+}
 
 export interface SourceAuthorityInForce {
   row: AccountingPolicy;
@@ -65,20 +74,20 @@ export class SourceAuthorityV2Service {
     return { row, body: resolved.sourceAuthority };
   }
 
-  /** A draft version of the scope from the version in force; it applies only once approved. */
+  /**
+   * A draft version of the scope from the version in force; it applies only once approved. A commissioning
+   * backdate is checked now and again at approval, when the version takes effect at the requested instant.
+   */
   async draft(
     context: RequestContext,
-    change: {
-      unitId?: string;
-      measurementHierarchy: MeasurementHierarchyDto | null;
-      notes?: string;
-    },
+    change: SourceAuthorityDraft,
   ): Promise<AccountingPolicy> {
     const tenantId = requireTenantId(context);
     if (!change.unitId) {
       assertTenantWideWriter(context, tenantId);
       requireTenantRole(context, SOURCE_AUTHORITY_WRITERS);
     }
+    const backdate = parseBackdate(change, new Date());
     return this.manager.transaction(async (manager) => {
       const base = await this.current(context, change.unitId, manager);
       if (change.unitId)
@@ -93,6 +102,17 @@ export class SourceAuthorityV2Service {
       );
       const scopeKey = change.unitId ?? 'tenant';
       const version = await lockedNextVersion(manager, tenantId, scopeKey);
+      await effectiveFromOf(
+        manager,
+        {
+          tenantId,
+          kind: SOURCE_AUTHORITY_KIND,
+          scopeKey,
+          unitId: change.unitId ?? null,
+        },
+        backdate,
+        new Date(),
+      );
       return manager.save(
         manager.create(AccountingPolicy, {
           tenantId,
@@ -107,6 +127,8 @@ export class SourceAuthorityV2Service {
           approvedAt: null,
           basedOnId: base.row.id,
           notes: change.notes?.trim() || null,
+          requestedEffectiveFrom: backdate?.effectiveFrom ?? null,
+          backdateReason: backdate?.reason ?? null,
           createdBy: context.userId,
           updatedBy: context.userId,
         }),

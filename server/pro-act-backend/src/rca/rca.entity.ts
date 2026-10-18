@@ -286,6 +286,13 @@ export class RCA {
   @Column({ name: 'investigator_ids', type: 'jsonb', default: () => "'[]'" })
   investigatorIds: string[];
 
+  /**
+   * Item 7: closure needs a `root` cause linked to the cause catalogue (true for every case opened since
+   * typed causes exist — the column default); false for older cases, which keep the free-text rule
+   */
+  @Column({ name: 'coded_root_cause_required', type: 'boolean', default: true })
+  codedRootCauseRequired: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

@@ -14,8 +14,9 @@ export type CasePatch = Omit<RcaCasePatch, 'evidence' | 'eventDiagram'> & { evid
 const asContract = (body: CasePatch | RcaCasePatch): RcaCasePatch => body as unknown as RcaCasePatch;
 
 /**
- * Saves part of the case (one list or the definition) with If-Match = the version on screen; the answer
- * replaces the cached case at once, so the next save carries the new version.
+ * Saves part of the case (one list or the definition) with If-Match = the version on screen, or the
+ * explicit `rowVersion` an editor opened with (the event diagram, so a newer save by someone else is a 412,
+ * not overwritten); the answer replaces the cached case at once, so the next save carries the new version.
  */
 export function useCasePatch() {
   const { rca } = useCaseWorkspace();

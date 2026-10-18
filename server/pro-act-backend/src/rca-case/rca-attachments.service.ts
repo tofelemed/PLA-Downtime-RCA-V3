@@ -7,6 +7,8 @@ import {
   resolveAttachment,
   StoredAttachment,
 } from '../common/http/attachment-download';
+import { assertCanUpload } from './action-owner-access';
+import { recordRcaAudit } from './rca-audit';
 import { readEvidence } from './rca-case-json';
 import { findCase, scopeOf } from './rca-scope';
 
@@ -32,12 +34,28 @@ export class RcaAttachmentsService {
     rcaId: string,
     file: Express.Multer.File,
   ): Promise<RcaAttachmentV2View> {
+    const scope = scopeOf(context);
     try {
-      await findCase(this.dataSource.manager, scopeOf(context), rcaId);
+      await findCase(this.dataSource.manager, scope, rcaId);
+      await assertCanUpload(this.dataSource.manager, context, {
+        tenantId: scope.tenantId,
+        rcaId,
+      });
     } catch (error) {
       await unlink(file.path).catch(() => undefined);
       throw error;
     }
+    await recordRcaAudit(this.dataSource.manager, scope, [
+      {
+        entityType: 'rca_case',
+        entityId: rcaId,
+        caseId: rcaId,
+        action: 'attachment_uploaded',
+        before: null,
+        after: null,
+        detail: { fileName: file.filename, size: file.size },
+      },
+    ]);
     return {
       fileName: file.filename,
       name: file.originalname,

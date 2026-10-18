@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { RCA } from '../rca/rca.entity';
 
 @Entity('logic_tree_nodes')
@@ -20,7 +29,7 @@ export class LogicTreeNode {
   @JoinColumn({ name: 'parentId' })
   parent: LogicTreeNode;
 
-  @OneToMany(() => LogicTreeNode, node => node.parent)
+  @OneToMany(() => LogicTreeNode, (node) => node.parent)
   children: LogicTreeNode[];
 
   @Column({ type: 'text' })
@@ -46,4 +55,4 @@ export class LogicTreeNode {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}

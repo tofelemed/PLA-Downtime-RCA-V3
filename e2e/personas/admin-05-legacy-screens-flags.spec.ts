@@ -18,7 +18,7 @@ import {
 /**
  * Admin persona — journeys 7 and 8: one version of every screen whatever the flags say, then a flag switch.
  * Lucas (Partner OrgAdmin) sees the v2 Event Hub, creates a v1 API event and keeps it, and sees the one
- * RCA module and Connectivity. Helena switches `v2.eventHub` ON for Partner Plant (there is no screen for
+ * RCA module; Connectivity is closed to him (owner 18 Oct 2026: Integration is SuperAdmin-only). Helena switches `v2.eventHub` ON for Partner Plant (there is no screen for
  * flags, so through the API) without touching its other flags or Demo Org's; an OrgAdmin of another
  * organisation cannot flip Partner Plant's flags. Flags are left on (owner requirement: never switch a
  * flag off); a plant whose flag is still off ("E2E Test Tenant …") also gets the v2 hub (ADM-07b).
@@ -111,17 +111,18 @@ test.describe('ADM-07 legacy screens on Partner Plant (flags off)', () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test('ADM-07c /rca and /connectivity have one version each, whatever the flags say', async ({ page }) => {
+  test('ADM-07c /rca has one version whatever the flags say; /connectivity is closed to the OrgAdmin', async ({ page }) => {
     await signIn(page, USERS.lucas);
     // RCA has one version (owner decision): the v2 case list, even with v2.rca off in Partner Plant
     await page.goto('/rca');
     await expect(page.getByTestId('rca-v2')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole('heading', { name: 'Root cause analysis', level: 1 })).toBeVisible();
     await page.screenshot({ path: test.info().outputPath('adm-07c-rca.png'), fullPage: true });
-    // Connectivity has one version (owner decision): the integration console, whatever the flag says
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; Lucas (OrgAdmin) has no menu entry and a direct visit shows no console
+    await expect(page.locator('nav a[href="/connectivity"]')).toHaveCount(0);
     await page.goto('/connectivity');
     await expect(page.getByRole('heading', { name: 'Connectivity', level: 1 })).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByTestId('integration-console')).toBeVisible();
+    await expect(page.getByTestId('integration-console')).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath('adm-07c-connectivity.png'), fullPage: true });
   });
 });

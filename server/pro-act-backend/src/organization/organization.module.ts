@@ -10,4 +10,4 @@ import { OrganizationController } from './organization.controller';
   controllers: [OrganizationController],
   exports: [OrganizationService],
 })
-export class OrganizationModule {} 
+export class OrganizationModule {}

@@ -108,6 +108,8 @@ export interface ProductionPeriodView {
   isExcluded: boolean;
   exclusionKind: string | null;
   selectedPlanVersionId: string | null;
+  /** plan of the selected plan version (null = none selected); absent on older servers */
+  planId?: string | null;
   stateReadiness: string;
   currentActualsRunId: string | null;
   warnings: PeriodWarningView[];

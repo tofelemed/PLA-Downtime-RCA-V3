@@ -87,6 +87,14 @@ export function decisionLinesOf(
 /** Capacity-ledger flags the plan workflow must see (LA-02b: claims beyond the measured component). */
 const CAPACITY_FLAGS_FOR_PLAN = ['claim_exceeds_component'];
 
+/** The unit of measure of a slice (its ledger totals); a manual line is in the unit of its slice. */
+export function sliceUomOf(
+  totals: readonly PeriodLedgerTotal[],
+  sliceId: string,
+): string | null {
+  return totals.find((t) => t.sliceId === sliceId && t.uom)?.uom ?? null;
+}
+
 export function slicesOf(totals: readonly PeriodLedgerTotal[]): SliceBasis[] {
   const capacityFlags = new Map(
     totals

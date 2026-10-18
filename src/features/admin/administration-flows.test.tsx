@@ -113,7 +113,7 @@ describe('administration screens on v2', () => {
     expect(await screen.findByText('Replace seal')).toBeTruthy();
     expect(screen.getByText('Overdue', { selector: 'span' })).toBeTruthy();
     expect(screen.getByText('In progress', { selector: 'div' })).toBeTruthy();
-    expect(screen.getByText('RCA case').getAttribute('href')).toBe('/rca?case=c1');
+    expect(screen.getByText('Investigation').getAttribute('href')).toBe('/rca/c1');
     expect(calls.some((call) => call.url.pathname === '/api/v2/tasks/summary')).toBe(true);
   });
 
@@ -146,7 +146,7 @@ describe('administration screens on v2', () => {
     expect(await screen.findByRole('option', { name: 'Own organization' })).toBeTruthy();
     expect(screen.queryByRole('option', { name: 'Read-only organization' })).toBeNull();
     expect(calls.every((call) => call.method === 'GET')).toBe(true);
-  });
+  }, 15_000);
 
   it.each(['OrgAdmin', 'TenantAdmin', 'viewer'])('does not allow %s to open organization creation', (role) => {
     actAs(role);

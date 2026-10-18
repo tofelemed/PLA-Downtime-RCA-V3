@@ -4,6 +4,7 @@ import { StatusIcon } from '@/lib/icons';
 import { describeError } from './describe-error';
 import type { ErrorMessage } from './error-message';
 import { FieldMessageList } from './field-message-list';
+import type { FieldVocabulary } from './field-vocabulary';
 import { SupportReference } from './support-reference';
 
 export interface FriendlyErrorAlertProps {
@@ -13,6 +14,8 @@ export interface FriendlyErrorAlertProps {
   title?: string;
   /** a `messages-context.ts` map: codes worded for this kind of screen */
   context?: Readonly<Record<string, ErrorMessage>>;
+  /** the form's labels and choice labels for refused fields (fallback: humanized server paths) */
+  fields?: FieldVocabulary;
   className?: string;
 }
 
@@ -20,8 +23,8 @@ export interface FriendlyErrorAlertProps {
  * A failed request in plain language: title, what to do, field messages, "Copy support reference" and
  * Retry. The server code sits in `data-code` for tests and telemetry only; it is never visible.
  */
-export function FriendlyErrorAlert({ error, onRetry, title, context, className }: FriendlyErrorAlertProps) {
-  const friendly = describeError(error, context);
+export function FriendlyErrorAlert({ error, onRetry, title, context, fields, className }: FriendlyErrorAlertProps) {
+  const friendly = describeError(error, context, fields);
   const Icon = StatusIcon.error;
   return (
     <Alert variant="destructive" className={className} data-code={friendly.reference?.code ?? undefined}>

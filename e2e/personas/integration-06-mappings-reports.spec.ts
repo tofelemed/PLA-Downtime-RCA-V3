@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect } from '@playwright/test';
-import { apiLogin, call, command, DEMO_UNIT_CODE, INT_USERS, loadState, newSuffix, openConsole, PREFIX, uiLogin, unitByCode, type IntSession, type IntState } from './support/integration-world';
+import { CONSOLE_ADMIN, apiLogin, call, command, DEMO_UNIT_CODE, INT_USERS, loadState, newSuffix, openConsole, PREFIX, uiLogin, unitByCode, type IntSession, type IntState } from './support/integration-world';
 
 /**
  * INTEGRATION ADMIN persona — journeys 7 (mappings) and 10 (external report import) as Freya.
@@ -67,7 +67,9 @@ test.describe('Integration admin — mappings and report import', () => {
     });
     expect([404, 422]).toContain(invalid.status);
 
-    await uiLogin(page, INT_USERS.freya);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
     await page.getByTestId('tab-mappings').click();
     // the rules are paged (20 per page, oldest first): narrow to patterns and page forward to the new rule

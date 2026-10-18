@@ -1,7 +1,10 @@
 import { ConflictException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { assertRevision } from '../../common/concurrency/revision';
-import { verificationReset } from '../../domain/events/coding-verification';
+import {
+  uncodedVerificationReset,
+  verificationReset,
+} from '../../domain/events/coding-verification';
 import { ProductionEvent } from '../production-event.entity';
 import { changeMessage, EventChangeMessage } from './event-change.notifier';
 import {
@@ -39,6 +42,11 @@ export interface UserChange {
   /** columns to write, or a function computing them from the locked row */
   patch: EventPatch;
   reason?: string;
+  /**
+   * fields whose user override is released by this change (read after `patch` ran): a cleared reason gives
+   * back the classification its code had filled, so later source revisions own those fields again
+   */
+  releaseOverrides?: () => readonly string[];
 }
 
 /**
@@ -58,8 +66,12 @@ export async function applyUserChangeIn(
   if (change.expectedRowVersion !== undefined) {
     assertRevision(existing.rowVersion, change.expectedRowVersion);
   }
-  const patch =
+  const proposed =
     typeof change.patch === 'function' ? change.patch(existing) : change.patch;
+  const patch = {
+    ...proposed,
+    ...uncodedVerificationReset(existing, proposed),
+  };
   const changed = changedFields(
     factsOf(existing, EFFECTIVE_FIELDS),
     factsOf({ ...existing, ...definedOnly(patch) }, EFFECTIVE_FIELDS),
@@ -83,15 +95,24 @@ async function recordUserChange(
       ? await latestSourceRevision(manager, existing.id)
       : null;
   const codingRevision = existing.currentCodingRevision + 1;
+  const released = change.releaseOverrides?.() ?? [];
   const overridden = source
-    ? changed.filter((field) => OVERRIDABLE_FIELDS.includes(field))
+    ? changed.filter(
+        (field) =>
+          OVERRIDABLE_FIELDS.includes(field) && !released.includes(field),
+      )
     : [];
   const updated = await writeEvent(manager, existing.id, {
     ...patch,
     // SME D13: a changed coding / failure detail is no longer what the supervisor / maintenance confirmed
     ...verificationReset(changed),
     currentCodingRevision: codingRevision,
-    userOverrides: withOverrides(existing, overridden, codingRevision),
+    userOverrides: withOverrides(
+      existing,
+      overridden,
+      codingRevision,
+      released,
+    ),
   });
   const isOverride = changed.some(
     (field) => (source?.sourceFacts?.[field] ?? null) !== null,
@@ -164,8 +185,10 @@ function withOverrides(
   existing: ProductionEvent,
   fields: readonly string[],
   codingRevision: number,
+  released: readonly string[] = [],
 ): Record<string, number> {
   const overrides = { ...(existing.userOverrides ?? {}) };
+  for (const field of released) delete overrides[field];
   for (const field of fields) overrides[field] = codingRevision;
   return overrides;
 }

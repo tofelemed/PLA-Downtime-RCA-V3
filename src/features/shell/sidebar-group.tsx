@@ -1,14 +1,17 @@
-import { isNavItemActive, type NavGroup } from '@/features/auth/navigation-items';
+import type { NavGroup } from '@/features/auth/navigation-items';
 import { UiIcon } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { SidebarLink } from './sidebar-link';
 
 export interface SidebarGroupProps {
   group: NavGroup;
-  pathname: string;
+  /** href of the one highlighted item of the whole menu (longest match), if any */
+  activeHref: string | undefined;
   collapsed: boolean;
   open: boolean;
   onToggle: () => void;
+  /** called after one of its links is followed (closes the drawer) */
+  onNavigate?: () => void;
 }
 
 /**
@@ -16,11 +19,11 @@ export interface SidebarGroupProps {
  * links; a closed section keeps its links in the DOM (`hidden`) and the section holding the current
  * page is always open. Collapsed rail: the links only, separated from the next section by a divider.
  */
-export function SidebarGroup({ group, pathname, collapsed, open, onToggle }: SidebarGroupProps) {
+export function SidebarGroup({ group, activeHref, collapsed, open, onToggle, onNavigate }: SidebarGroupProps) {
   const { section, items } = group;
-  const holdsActive = items.some((item) => isNavItemActive(item, pathname));
+  const holdsActive = items.some((item) => item.href === activeHref);
   const shown = collapsed || open || holdsActive;
-  const visible = railItems(group, pathname, collapsed);
+  const visible = railItems(group, activeHref, collapsed);
   const listId = `nav-section-${section.key}`;
   const Chevron = shown ? UiIcon.chevronDown : UiIcon.chevronRight;
   return (
@@ -41,7 +44,7 @@ export function SidebarGroup({ group, pathname, collapsed, open, onToggle }: Sid
       <ul id={listId} hidden={!shown} aria-label={collapsed ? section.label : undefined} className="space-y-1">
         {visible.map((item) => (
           <li key={item.href}>
-            <SidebarLink item={item} collapsed={collapsed} active={isNavItemActive(item, pathname)} />
+            <SidebarLink item={item} collapsed={collapsed} active={item.href === activeHref} onNavigate={onNavigate} />
           </li>
         ))}
       </ul>
@@ -49,7 +52,7 @@ export function SidebarGroup({ group, pathname, collapsed, open, onToggle }: Sid
   );
 }
 
-function railItems(group: NavGroup, pathname: string, collapsed: boolean) {
+function railItems(group: NavGroup, activeHref: string | undefined, collapsed: boolean) {
   if (!collapsed || (group.section.key !== 'downtime' && group.section.key !== 'pla')) return group.items;
-  return [group.items.find((item) => isNavItemActive(item, pathname)) ?? group.items[0]].filter(Boolean);
+  return [group.items.find((item) => item.href === activeHref) ?? group.items[0]].filter(Boolean);
 }

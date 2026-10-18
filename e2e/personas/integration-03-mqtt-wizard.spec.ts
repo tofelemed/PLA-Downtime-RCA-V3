@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { apiLogin, BROKER, caPem, findConnection, INT_USERS, newSuffix, openConsole, PREFIX, saveState, selectConnection, subscribeJob, uiLogin, type IntSession } from './support/integration-world';
+import { CONSOLE_ADMIN, apiLogin, BROKER, caPem, findConnection, INT_USERS, newSuffix, openConsole, PREFIX, saveState, selectConnection, subscribeJob, uiLogin, type IntSession } from './support/integration-world';
 
 /**
  * INTEGRATION ADMIN persona — journey 3, the MQTT wizard as Omar against the Compose broker's password
@@ -59,7 +59,8 @@ test.describe('Integration admin — MQTT wizard', () => {
       if (!response.url().includes('/api/')) return;
       bodies.push(await response.text().catch(() => ''));
     });
-    await uiLogin(page, INT_USERS.omar);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
 
     // validation: a broker URL that is not mqtt(s)://host is refused inline before anything is sent
@@ -109,7 +110,8 @@ test.describe('Integration admin — MQTT wizard', () => {
       if (!response.url().includes('/api/')) return;
       bodies.push(await response.text().catch(() => ''));
     });
-    await uiLogin(page, INT_USERS.omar);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
     await createMqtt(page, { name, family: `test/p-int-badpw-${suffix}`, brokerUrl: BROKER.plain, password: `wrong-${suffix}` });
     await page.getByTestId('run-diagnostics').click();
@@ -134,7 +136,8 @@ test.describe('Integration admin — MQTT wizard', () => {
 
   test('INT-03c (omar): TLS on 8885 without the CA fails with the servername / CA hint; with the CA PEM pasted it connects', async ({ page }) => {
     const name = `${PREFIX}mqtt-tls-${suffix}`;
-    await uiLogin(page, INT_USERS.omar);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
     await createMqtt(page, { name, family: `test/p-int-tls-${suffix}`, brokerUrl: BROKER.tls, password: BROKER.password });
     await page.getByTestId('run-diagnostics').click();
@@ -171,7 +174,8 @@ test.describe('Integration admin — MQTT wizard', () => {
       expect(row?.isActive, name).toBe(true);
       expect(row?.hasSecret, name).toBe(true);
     }
-    await uiLogin(page, INT_USERS.omar);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
     await selectConnection(page, mainName);
     await expect(page.getByTestId('connection-secret')).toHaveText('Credential stored (write-only)');

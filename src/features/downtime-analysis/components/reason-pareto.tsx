@@ -6,10 +6,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { StartRcaLink } from '@/features/rca/components/start-rca-link';
 import { useCalendarPreference } from '@/lib/dates';
 import type { DowntimeFilters, DowntimeMetric } from '../model/downtime-filters';
 import { formatCount, formatRatio } from '../model/kpi-display';
 import { barAction, drillCrumbs, paretoQuery, type DrillSelection } from '../model/reason-drill';
+import { reasonStartRca } from '../model/start-rca-context';
 import { ReportCard } from './report-card';
 
 const ParetoChart = lazy(() => import('./charts/pareto-chart').then((module) => ({ default: module.ParetoChart })));
@@ -53,10 +55,10 @@ export function ReasonPareto({ filters, onChange, onEvents }: ReasonParetoProps)
       </Suspense>
       <ol className="space-y-1" aria-label="Reasons, largest first">
         {groups.map((group) => (
-          <li key={group.key ?? 'none'}>
+          <li key={group.key ?? 'none'} className="flex items-center gap-2">
             <button
               type="button"
-              className="flex w-full flex-wrap items-center justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               data-testid="pareto-bar"
               data-key={group.key ?? ''}
               data-value={group.value}
@@ -65,16 +67,22 @@ export function ReasonPareto({ filters, onChange, onEvents }: ReasonParetoProps)
             >
               <span className="font-medium">{labelOf(group)}</span>
               <span className="flex gap-3 font-mono text-xs">
-                <span data-testid="pareto-value">{report?.unit === 'count' ? formatCount(group.value, digits) : <DurationText seconds={group.value} variant="compact" />}</span>
+                <span data-testid="pareto-value">{report?.unit === 'count' ? formatCount(group.value, digits) : <DurationText seconds={group.value} />}</span>
                 <span>{formatRatio(group.share, 1, digits)}</span>
                 <span data-testid="pareto-cumulative">Σ {formatRatio(group.cumulativeShare, 1, digits)}</span>
               </span>
             </button>
+            <ReasonStartRca group={group} label={labelOf(group)} filters={filters} />
           </li>
         ))}
       </ol>
     </ReportCard>
   );
+}
+
+function ReasonStartRca({ group, label, filters }: { group: DowntimeGroupView; label: string; filters: DowntimeFilters }) {
+  const context = reasonStartRca(group, label, filters);
+  return context ? <StartRcaLink context={context} label={`Start an RCA for ${label}`} /> : null;
 }
 
 function MetricToggle({ metric, onChange }: { metric: DowntimeMetric; onChange: (metric: DowntimeMetric) => void }) {

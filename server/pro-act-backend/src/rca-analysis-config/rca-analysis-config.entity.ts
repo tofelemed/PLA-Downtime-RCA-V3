@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -28,13 +37,23 @@ export class RCAAnalysisConfig {
   tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   // Note: Database schema has: analysis_type, config_name, config_data, is_default
   // The entity structure doesn't match - all config fields should be stored in config_data JSON
   @ApiProperty({ description: 'Analysis type', required: false })
-  @Column({ name: 'analysis_type', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'analysis_type',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   analysisType?: string;
 
   @ApiProperty({ description: 'Configuration name' })
@@ -47,7 +66,10 @@ export class RCAAnalysisConfig {
   // description?: string;
 
   // Note: Database schema has 'is_default', but we map it to isActive for application logic
-  @ApiProperty({ description: 'Whether this configuration is active', default: true })
+  @ApiProperty({
+    description: 'Whether this configuration is active',
+    default: true,
+  })
   @Column({ name: 'is_default', type: 'boolean', default: true })
   isActive: boolean;
 
@@ -81,8 +103,10 @@ export class RCAAnalysisConfig {
   // @Column({ name: 'required_fields', type: 'simple-json', nullable: true })
   // requiredFields?: Record<string, any>;
 
-  @ApiProperty({ description: 'Legacy configuration payload for backward compatibility', required: false })
+  @ApiProperty({
+    description: 'Legacy configuration payload for backward compatibility',
+    required: false,
+  })
   @Column({ name: 'config_data', type: 'text', nullable: true })
   legacyConfigData?: string;
 }
-

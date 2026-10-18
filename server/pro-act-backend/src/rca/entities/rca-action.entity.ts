@@ -60,6 +60,18 @@ export interface StoredPostAction extends PostActionObservation {
   'tenantId',
   'verificationWindowEnd',
 ])
+@Index('IDX_rca_actions_tenant_owner_due', [
+  'tenantId',
+  'ownerId',
+  'dueDate',
+  'id',
+])
+@Index('IDX_rca_actions_tenant_due', ['tenantId', 'dueDate', 'id'])
+@Index('IDX_rca_actions_tenant_rca_recommendation', [
+  'tenantId',
+  'rcaId',
+  'recommendationId',
+])
 @Check(
   'CHK_rca_actions_action_type',
   `"action_type" IS NULL OR "action_type" IN ('repair', 'design_change', 'procedure_change', 'instrument_change', 'training', 'other')`,
@@ -146,6 +158,41 @@ export class RcaAction extends TenantScopedEntity {
     transformer: decimalStringTransformer,
   })
   claimedAvoidedLoss: string | null;
+
+  /** why the action was cancelled (optional; kept while the action stays cancelled) */
+  @Column({ name: 'cancel_reason', type: 'text', nullable: true })
+  cancelReason: string | null;
+
+  /** who moved the action to cancelled (set by the server) */
+  @Column({ name: 'cancelled_by', type: 'uuid', nullable: true })
+  cancelledBy: string | null;
+
+  @Column({ name: 'cancelled_at', type: 'timestamptz', nullable: true })
+  cancelledAt: Date | null;
+
+  /** item 5: id of the case recommendation (item of `rcas.recommendations`) this action implements */
+  @Column({
+    name: 'recommendation_id',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  recommendationId: string | null;
+
+  /**
+   * item 5: when the task linked to this action was last completed (cleared when that task is reopened).
+   * Recorded only: the action itself is completed with its evidence and verifier (CA4), never by a task.
+   */
+  @Column({ name: 'task_completed_at', type: 'timestamptz', nullable: true })
+  taskCompletedAt: Date | null;
+
+  /** CA4: how the completion is verified (inspection, test, record review), free text */
+  @Column({ name: 'verification_method', type: 'text', nullable: true })
+  verificationMethod: string | null;
+
+  /** CA4: the member of the plant named to check the completion evidence (never the owner) */
+  @Column({ name: 'verifier_id', type: 'uuid', nullable: true })
+  verifierId: string | null;
 
   /** currency (IRR / USD) of the claimed avoided loss */
   @Column({

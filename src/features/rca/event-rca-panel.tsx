@@ -32,7 +32,7 @@ export function EventRcaPanel({ event }: EventRcaPanelProps) {
         )}
         {event.rcaId && (
           <Link className="text-sm underline" to={`/rca/${event.rcaId}`} data-testid="event-rca-case">
-            Open the linked RCA case
+            Open the linked investigation
           </Link>
         )}
       </div>

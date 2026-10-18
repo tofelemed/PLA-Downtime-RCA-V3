@@ -10,6 +10,8 @@ import {
 } from '../../common/context/request-context';
 import { scopedQuery } from '../../common/query/scoped-query';
 import { AccountingPolicy } from '../../periods/entities/accounting-policy.entity';
+import { Backdate } from '../../periods/policy-backdate';
+import { effectiveFromOf } from '../../periods/policy-backdate.guard';
 import {
   assertNotAuthor,
   invalidTransition,
@@ -43,6 +45,8 @@ interface Decision {
  * rejects a draft, never its author. Approval makes the draft the scope's version in force from now — the
  * open approved version of the scope ends there — and refuses a draft prepared from a version that is no
  * longer in force (409 STALE_DRAFT). Periods already calculated keep their version until recalculated.
+ * A draft with a commissioning backdate (owner, 18 Oct 2026) takes effect at its requested instant once the
+ * backdate checks pass again at approval (409 BACKDATE_OVERLAPS_CALCULATION / BACKDATE_REWRITES_HISTORY).
  */
 @Injectable()
 export class SourceAuthorityDecisionsService {
@@ -123,6 +127,12 @@ export class SourceAuthorityDecisionsService {
       );
       if (base.row.id !== draft.basedOnId) throw staleDraft(base.row.version);
       const now = new Date();
+      const from = await effectiveFromOf(
+        manager,
+        { ...scopeOf(draft), kind: SOURCE_AUTHORITY_KIND },
+        requestedBackdate(draft),
+        now,
+      );
       await manager.query(
         `UPDATE "accounting_policies" SET "effective_to" = $4, "updated_by" = $5
           WHERE "tenant_id" = $1 AND "policy_kind" = $2 AND "scope_key" = $3
@@ -131,12 +141,12 @@ export class SourceAuthorityDecisionsService {
           draft.tenantId,
           SOURCE_AUTHORITY_KIND,
           draft.scopeKey,
-          now,
+          from,
           context.userId,
         ],
       );
       await manager.update(AccountingPolicy, draft.id, {
-        effectiveFrom: now,
+        effectiveFrom: from,
         approvedBy: context.userId,
         approvedAt: now,
         updatedBy: context.userId,
@@ -206,12 +216,34 @@ export class SourceAuthorityDecisionsService {
           revision: draft.version,
           reason: decision.reason?.trim() || null,
           correlationId: context.correlationId || null,
-          detail: { unitId: draft.unitId, scopeKey: draft.scopeKey },
+          detail: {
+            unitId: draft.unitId,
+            scopeKey: draft.scopeKey,
+            requestedEffectiveFrom: draft.requestedEffectiveFrom
+              ? new Date(draft.requestedEffectiveFrom).toISOString()
+              : null,
+            backdateReason: draft.backdateReason,
+          },
         },
       ]);
       return manager.findOneByOrFail(AccountingPolicy, { id: draft.id });
     });
   }
+}
+
+const scopeOf = (draft: AccountingPolicy) => ({
+  tenantId: draft.tenantId,
+  scopeKey: draft.scopeKey,
+  unitId: draft.unitId,
+});
+
+/** The commissioning backdate a draft carries (owner, 18 Oct 2026), re-checked at approval. */
+function requestedBackdate(draft: AccountingPolicy): Backdate | null {
+  if (!draft.requestedEffectiveFrom) return null;
+  return {
+    effectiveFrom: new Date(draft.requestedEffectiveFrom),
+    reason: draft.backdateReason ?? '',
+  };
 }
 
 function staleDraft(inForceVersion: number): ConflictException {

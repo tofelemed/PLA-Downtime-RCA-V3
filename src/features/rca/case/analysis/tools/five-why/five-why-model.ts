@@ -29,6 +29,28 @@ export function removeLevel(levels: readonly FiveWhyLevel[], index: number): Fiv
   return levels.filter((_, at) => at !== index).map((level, at) => ({ ...level, level: at + 1 }));
 }
 
+/** True when a level holds typed text (removing it then asks first). */
+export const levelHasText = (level: FiveWhyLevel | undefined): boolean =>
+  Boolean(level && (level.answer.trim() !== '' || (level.justification ?? '').trim() !== ''));
+
+/**
+ * "Also set as the case's root cause" starts checked only when it cannot overwrite another root cause:
+ * the case has none, or it is the one this 5-Why saved.
+ */
+export function applyByDefault(caseRootCause: string | null, recordRootCause: string | null | undefined): boolean {
+  const current = (caseRootCause ?? '').trim();
+  return current === '' || current === (recordRootCause ?? '').trim();
+}
+
+/**
+ * CA6, as the server's gate normalizes it: a root cause that is only a listed phrase ("operator error",
+ * from the RCA policy) is not a system-level cause.
+ */
+export function isUnsupportedRootCause(text: string, unsupported: readonly string[]): boolean {
+  const normalized = text.trim().toLowerCase().replace(/[.!\s]+$/u, '').replace(/\s+/g, ' ');
+  return unsupported.includes(normalized);
+}
+
 export interface FiveWhyCheck {
   label: string;
   done: boolean;
@@ -38,7 +60,8 @@ export interface FiveWhyCheck {
  * The completeness checklist the server's investigation gate applies (SME CA6): answers, evidence for every
  * answer and a root cause. The number of levels is not a check — five is guidance (`depthGuidance`).
  */
-export function fiveWhyChecks(content: FiveWhyContent): FiveWhyCheck[] {
+export function fiveWhyChecks(content: FiveWhyContent, unsupported: readonly string[] = []): FiveWhyCheck[] {
+  const rootCause = content.rootCause.trim();
   return [
     { label: 'Problem statement written', done: content.problem.trim() !== '' },
     { label: 'Every level answered', done: content.whyLevels.every((level) => level.answer.trim() !== '') },
@@ -46,7 +69,7 @@ export function fiveWhyChecks(content: FiveWhyContent): FiveWhyCheck[] {
       label: 'Every answer backed by evidence',
       done: content.whyLevels.every((level) => (level.justification ?? '').trim() !== ''),
     },
-    { label: 'System-level root cause written', done: content.rootCause.trim() !== '' },
+    { label: 'System-level root cause written', done: rootCause !== '' && !isUnsupportedRootCause(rootCause, unsupported) },
   ];
 }
 

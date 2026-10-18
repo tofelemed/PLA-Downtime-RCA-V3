@@ -43,6 +43,10 @@ export interface ValuationPolicyV2View {
   /** reporting currencies as valuation applies them (empty for the `XXX` placeholder) */
   reportingCurrencies: string[];
   notes: string | null;
+  /** commissioning backdate reason (null = not backdated, owner 18 Oct 2026) */
+  backdateReason: string | null;
+  /** a backdate over approved figures revalues them through change proposals */
+  restateApproved: boolean;
   createdBy: string | null;
   createdAt: string;
 }
@@ -101,6 +105,8 @@ export function toValuationPolicyView(
     body: policy.body,
     reportingCurrencies: snapshotOf(policy).currencies,
     notes: policy.notes,
+    backdateReason: policy.backdateReason,
+    restateApproved: policy.restateApproved,
     createdBy: policy.createdBy,
     createdAt: policy.createdAt.toISOString(),
   };

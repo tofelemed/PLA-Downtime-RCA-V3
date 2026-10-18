@@ -31,6 +31,9 @@ export interface MicroStopPolicyV2View {
   tripReasonCodes: string[];
   effectiveFrom: string;
   notes: string | null;
+  /** commissioning backdate: the past instant requested and why (null = effective when recorded) */
+  requestedEffectiveFrom: string | null;
+  backdateReason: string | null;
 }
 
 function toView({ row, body }: PolicyInForce): MicroStopPolicyV2View {
@@ -43,6 +46,8 @@ function toView({ row, body }: PolicyInForce): MicroStopPolicyV2View {
     tripReasonCodes: body.tripReasonCodes ?? [],
     effectiveFrom: row.effectiveFrom.toISOString(),
     notes: row.notes,
+    requestedEffectiveFrom: row.requestedEffectiveFrom?.toISOString() ?? null,
+    backdateReason: row.backdateReason,
   };
 }
 
@@ -74,7 +79,7 @@ export class MicroStopPolicyV2Controller {
   @Roles('manager_approver')
   @ApiOperation({
     summary:
-      'Record new micro-stop settings as an approved oee_policy version, effective now',
+      'Record new micro-stop settings as an approved oee_policy version, effective now (or from a past effectiveFrom while commissioning)',
     description:
       'Requires `Idempotency-Key`. Version n+1 of the scope; other oee_policy fields are kept from the version in ' +
       'force. Tenant-wide needs a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); 422 INVALID_POLICY for a ' +

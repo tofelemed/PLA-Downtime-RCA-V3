@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useImportFailureDictionary } from '@/api/v2/queries/failure-dictionary';
-import { describeError } from '@/features/ux-kit/errors';
+import { friendlyToastContent } from '@/features/ux-kit/errors';
 import { CSV_HEADER, importErrorsOf, importSummaryOf as summaryOf, type RowError } from './dictionary-import-model';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
@@ -24,7 +24,7 @@ export function DictionaryImportPanel() {
       setResult(summaryOf(await command.submit({ csv, dryRun })));
     } catch (error: unknown) {
       setErrors(importErrorsOf(error));
-      setResult(describeError(error).message);
+      setResult(friendlyToastContent(error).description);
     }
   };
   return (

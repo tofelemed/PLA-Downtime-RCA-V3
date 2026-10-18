@@ -62,8 +62,8 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
 
     // KPI tiles: the unit's union downtime (90 + 30 + 15 min) and occurrences; unknown → lower-bound note
     await expect(tile(page, 'downtime_total')).toHaveAttribute('data-value', '8100');
-    await expect(tile(page, 'downtime_total').getByTestId('kpi-value')).toHaveText('2:15');
-    await expect(tile(page, 'unknown_time').getByTestId('kpi-value')).toHaveText('0:15');
+    await expect(tile(page, 'downtime_total').getByTestId('kpi-value')).toHaveText('2 h 15 min');
+    await expect(tile(page, 'unknown_time').getByTestId('kpi-value')).toHaveText('15 min');
     await expect(tile(page, 'stop_count').getByTestId('kpi-value')).toHaveText('4');
     await expect(page.getByTestId('unknown-lower-bound')).toBeVisible();
     // snapshot widgets state approval once, in the page header (UX03)

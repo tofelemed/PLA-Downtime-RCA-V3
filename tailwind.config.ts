@@ -60,6 +60,49 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// semantic status tones, chart palette and unit states (src/index.css, UX_AUDIT C-1)
+				success: {
+					DEFAULT: 'hsl(var(--success))',
+					foreground: 'hsl(var(--success-foreground))'
+				},
+				warning: {
+					DEFAULT: 'hsl(var(--warning))',
+					foreground: 'hsl(var(--warning-foreground))'
+				},
+				info: {
+					DEFAULT: 'hsl(var(--info))',
+					foreground: 'hsl(var(--info-foreground))'
+				},
+				neutral: {
+					DEFAULT: 'hsl(var(--neutral))',
+					foreground: 'hsl(var(--neutral-foreground))'
+				},
+				danger: {
+					DEFAULT: 'hsl(var(--danger))',
+					foreground: 'hsl(var(--danger-foreground))'
+				},
+				chart: {
+					'1': 'hsl(var(--chart-1))',
+					'2': 'hsl(var(--chart-2))',
+					'3': 'hsl(var(--chart-3))',
+					'4': 'hsl(var(--chart-4))',
+					'5': 'hsl(var(--chart-5))',
+					'6': 'hsl(var(--chart-6))',
+					'7': 'hsl(var(--chart-7))',
+					'8': 'hsl(var(--chart-8))'
+				},
+				state: {
+					running: 'hsl(var(--state-running))',
+					reduced: 'hsl(var(--state-reduced))',
+					stopped: 'hsl(var(--state-stopped))',
+					planned: 'hsl(var(--state-planned))',
+					starved: 'hsl(var(--state-starved))',
+					blocked: 'hsl(var(--state-blocked))',
+					idle: 'hsl(var(--state-idle))',
+					'not-scheduled': 'hsl(var(--state-not-scheduled))',
+					unknown: 'hsl(var(--state-unknown))',
+					'unknown-stripe': 'hsl(var(--state-unknown-stripe))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',

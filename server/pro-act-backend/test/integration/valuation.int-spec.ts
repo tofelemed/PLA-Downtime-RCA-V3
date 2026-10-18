@@ -113,6 +113,7 @@ describe('valuation (plan 2.6)', () => {
       reportingCurrencies: ['IRR', 'USD'],
       fxPolicy: 'snapshot',
       effectiveFrom: '2020-01-01T00:00:00Z',
+      backdateReason: 'test plant valued from its first test day',
     };
     const [foreignCode] = await env.rows<{ id: string }>(
       `INSERT INTO impact_codes (code, name, tenant_id, is_active) VALUES ('IMP-B-VAL', 'B', $1, true) RETURNING id`,

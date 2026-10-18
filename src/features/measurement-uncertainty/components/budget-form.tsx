@@ -1,26 +1,16 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useProposeUncertaintyBudget, useUncertaintyPreview } from '@/api/v2/queries/uncertainty-budgets';
 import { DateTimeInput } from '@/features/ux-kit/date-inputs';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { FormField } from '@/features/ux-kit/form-field';
 import { budgetBody, emptyBudget, previewBody, validateBudget, type BudgetErrors, type BudgetFormValues } from '../model/budget-form';
 import { BudgetResult } from './budget-result';
 import { ComponentsEditor } from './components-editor';
 import { CorrelationsEditor } from './correlations-editor';
-
-function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {error && <p className="text-xs text-destructive" data-testid={`field-error-${id}`}>{error}</p>}
-    </div>
-  );
-}
 
 export interface BudgetFormProps {
   unitId: string;
@@ -51,15 +41,15 @@ export function BudgetForm({ unitId, timezone, onDone }: BudgetFormProps) {
   return (
     <div className="space-y-4 rounded-md border p-4" data-testid="budget-form">
       <div className="grid gap-3 sm:grid-cols-3">
-        <Field id="budgetBoundary" label="Measurement boundary" error={errors.boundary}>
+        <FormField id="budgetBoundary" label="Measurement boundary" error={errors.boundary}>
           <Input id="budgetBoundary" placeholder="reactor_outlet" maxLength={64} value={values.boundary} onChange={(e) => set('boundary', e.target.value)} />
-        </Field>
-        <Field id="budgetUom" label="Unit" error={errors.uom}>
+        </FormField>
+        <FormField id="budgetUom" label="Unit" error={errors.uom}>
           <Input id="budgetUom" maxLength={50} value={values.uom} onChange={(e) => set('uom', e.target.value)} />
-        </Field>
-        <Field id="budgetK" label="Coverage factor k">
+        </FormField>
+        <FormField id="budgetK" label="Coverage factor k">
           <DecimalInput id="budgetK" scale={3} value={values.coverageFactor} onChange={(v) => set('coverageFactor', v)} />
-        </Field>
+        </FormField>
       </div>
       <ComponentsEditor rows={values.components} uom={values.uom} onChange={(rows) => set('components', rows)} />
       {errors.components && <p className="text-xs text-destructive">{errors.components}</p>}
@@ -73,17 +63,17 @@ export function BudgetForm({ unitId, timezone, onDone }: BudgetFormProps) {
         {preview.data && <BudgetResult {...preview.data} uom={values.uom} />}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field id="budgetCalibration" label="Calibration evidence" error={errors.calibrationRef}>
+        <FormField id="budgetCalibration" label="Calibration evidence" error={errors.calibrationRef}>
           <Input id="budgetCalibration" placeholder="Calibration certificates, test reports" value={values.calibrationRef} onChange={(e) => set('calibrationRef', e.target.value)} />
-        </Field>
-        <Field id="budgetEvidence" label="Further evidence (optional)">
+        </FormField>
+        <FormField id="budgetEvidence" label="Further evidence (optional)">
           <Input id="budgetEvidence" value={values.evidenceRef} onChange={(e) => set('evidenceRef', e.target.value)} />
-        </Field>
+        </FormField>
         <DateTimeInput label="Takes effect" value={values.effectiveFrom} timeZone={timezone} error={errors.effectiveFrom ?? null} onChange={(v) => set('effectiveFrom', v)} />
         <DateTimeInput label="Next review" value={values.reviewDueAt} timeZone={timezone} error={errors.reviewDueAt ?? null} onChange={(v) => set('reviewDueAt', v)} />
-        <Field id="budgetNotes" label="Note (optional)">
+        <FormField id="budgetNotes" label="Note (optional)">
           <Textarea id="budgetNotes" rows={2} value={values.notes} onChange={(e) => set('notes', e.target.value)} />
-        </Field>
+        </FormField>
       </div>
       {propose.error !== null && <FriendlyErrorAlert error={propose.error} title="The budget was not saved" />}
       <div className="flex gap-2">

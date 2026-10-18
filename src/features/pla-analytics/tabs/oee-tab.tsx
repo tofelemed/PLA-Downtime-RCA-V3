@@ -8,7 +8,7 @@ import { findKpi, OEE_METRIC_LABELS } from '../model/display';
 
 const POLICIES: ReadonlyArray<{ policy: OeePolicy; prefix: string; denominator: string }> = [
   { policy: 'operational', prefix: '', denominator: 'good output at the sustained rate (as time) ÷ scheduled time' },
-  { policy: 'reconciled', prefix: 'reconciled_', denominator: 'capacity-ledger good ÷ capacity (only when the capacity residual closes)' },
+  { policy: 'reconciled', prefix: 'reconciled_', denominator: 'capacity-ledger good ÷ capacity (only when the capacity ledger has nothing unaccounted)' },
 ];
 
 const COMPONENT_NOTES: Readonly<Record<string, string>> = {

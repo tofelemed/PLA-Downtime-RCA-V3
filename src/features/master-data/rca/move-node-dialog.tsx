@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FriendlyErrorAlert } from '@/features/ux-kit/errors/friendly-error-alert';
 
 const TOP = '__top__';
 
@@ -21,16 +22,22 @@ export interface MoveNodeDialogProps {
   onClose: () => void;
 }
 
-/** "Move under…": a new parent (or the top level) for a node and its subtree; keyboard instead of drag. */
+/**
+ * "Move under…": a new parent (or the top level) for a node and its subtree; keyboard instead of drag.
+ * A refused move stays open and says why (in plain language) so the user can pick another parent.
+ */
 export function MoveNodeDialog({ name, targets, currentParentId, onMove, onClose }: MoveNodeDialogProps) {
   const [parent, setParent] = useState(currentParentId ?? TOP);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   const move = async () => {
     setBusy(true);
+    setError(null);
     try {
       await onMove(parent === TOP ? null : parent);
       onClose();
-    } catch {
+    } catch (failure) {
+      setError(failure);
       setBusy(false);
     }
   };
@@ -57,6 +64,7 @@ export function MoveNodeDialog({ name, targets, currentParentId, onMove, onClose
             </SelectContent>
           </Select>
         </div>
+        {error !== null && <FriendlyErrorAlert error={error} title={`Could not move ${name}`} />}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel

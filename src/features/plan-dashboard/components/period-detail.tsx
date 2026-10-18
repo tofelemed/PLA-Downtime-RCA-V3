@@ -8,6 +8,7 @@ import { DetailToolbar } from './detail-toolbar';
 import { PeriodSectionNav } from './period-section-nav';
 import { PeriodWorkspace } from './period-workspace';
 import { usePeriodDraftOwner } from '../hooks/use-period-draft-owner';
+import type { PlanWindow } from '../model/period-neighbours';
 
 export interface PeriodDetailProps {
   planId: string;
@@ -16,6 +17,8 @@ export interface PeriodDetailProps {
   planLabel: string;
   timezone: string;
   section: PeriodSection;
+  /** the plan version's validity: bounds of the previous / next period links */
+  planWindow: PlanWindow;
 }
 
 /** Persistent period owner: URL-selected revision/ledger and authoritative accounting reads. */

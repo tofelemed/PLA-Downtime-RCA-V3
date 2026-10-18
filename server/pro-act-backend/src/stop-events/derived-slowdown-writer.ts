@@ -5,7 +5,6 @@ import {
   DerivedWritePlan,
   EngineOwnedEvent,
 } from '../domain/reliability/derived-stop-writes';
-import { prepareCreate } from '../production-event/event-write-model';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { EventChangeMessage } from '../production-event/revisions/event-change.notifier';
 import { EventRevisionService } from '../production-event/revisions/event-revision.service';
@@ -15,11 +14,12 @@ import {
   retractIn,
 } from '../production-event/revisions/source-revision';
 import { applyUserChangeIn } from '../production-event/revisions/user-change';
+import { engineCreateFields } from './derived-rule-defaults';
 import {
   derivedEventIdPrefix,
+  EngineTarget,
   sourceFacts,
   STATE_ENGINE_SOURCE,
-  UnitScope,
 } from './derived-stop-writer';
 
 /** Key prefix of the engine's reduced-rate slowdowns (`state:<unit>:reduced_rate@<start ms>`). */
@@ -42,24 +42,31 @@ const impactOf = (slowdown: DerivedSlowdown) =>
 async function createSlowdown(
   manager: EntityManager,
   revisions: EventRevisionService,
-  scope: UnitScope,
+  target: EngineTarget,
   write: SlowdownWrite,
 ): Promise<EventChangeMessage | null> {
+  const { scope } = target;
   const impact = impactOf(write.stop);
-  const fields = prepareCreate({
-    ...sourceFacts(write),
-    source: STATE_ENGINE_SOURCE,
-    classification: {
-      physicalType: 'slowdown',
-      scheduleClass: 'unplanned',
-      oeeComponent: 'performance',
-      impactMode: impact.impactMode,
+  // only the physical type and the measured impact are engine facts; the axes are engine defaults
+  const { fields, columns } = engineCreateFields(target.rules, {
+    unitId: scope.unitId,
+    stated: [],
+    input: {
+      ...sourceFacts(write),
+      source: STATE_ENGINE_SOURCE,
+      classification: {
+        physicalType: 'slowdown',
+        scheduleClass: 'unplanned',
+        oeeComponent: 'performance',
+        impactMode: impact.impactMode,
+      },
     },
   });
   const repository = manager.getRepository(ProductionEvent);
   const saved = await repository.save(
     repository.create({
       ...fields,
+      ...columns,
       impactFraction: impact.impactFraction,
       id: write.id,
       canonicalId: write.id,
@@ -105,23 +112,23 @@ async function updateFraction(
 
 /**
  * Applies a slowdown write plan (plan 1.10 reduced-rate segments) like the stop plan: new slowdown events
- * (`physical_type = slowdown`, OEE performance, the measured fraction as a derate) with revision 1, changed
+ * (`physical_type = slowdown`, OEE performance unless a rule fills it, the measured fraction as a derate)
+ * with revision 1, changed
  * ends / descriptions as source revisions plus the new fraction, gone keys retracted.
  */
 export async function applySlowdownWrites(
   manager: EntityManager,
   revisions: EventRevisionService,
-  input: {
-    scope: UnitScope;
+  input: EngineTarget & {
     plan: DerivedWritePlan<DerivedSlowdown>;
     owned: readonly EngineOwnedEvent[];
   },
 ): Promise<EventChangeMessage[]> {
-  const { scope, plan } = input;
+  const { plan } = input;
   const byId = new Map(input.owned.map((o) => [o.id, o]));
   const messages: Array<EventChangeMessage | null> = [];
   for (const write of plan.create) {
-    messages.push(await createSlowdown(manager, revisions, scope, write));
+    messages.push(await createSlowdown(manager, revisions, input, write));
   }
   for (const write of plan.update) {
     const outcome = await applySourceIn(manager, write.id, sourceFacts(write), {

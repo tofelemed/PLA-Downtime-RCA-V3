@@ -11,4 +11,4 @@ import { PlansModule } from '../plans/plans.module';
   providers: [ProductionPlanService],
   exports: [ProductionPlanService],
 })
-export class ProductionPlanModule {} 
+export class ProductionPlanModule {}

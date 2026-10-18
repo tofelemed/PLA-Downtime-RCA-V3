@@ -148,6 +148,15 @@ export class CreateTaskV2Dto {
   @ValidateIf((dto: CreateTaskV2Dto) => dto.linkType !== undefined)
   @IsUUID()
   linkId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Item 5: the RCA action this task carries out; needs linkType RCA with the case of the action as linkId ' +
+      '(422 INVALID_REFERENCE). One open task per action (409 ACTION_TASK_EXISTS).',
+  })
+  @IsOptional()
+  @IsUUID()
+  rcaActionId?: string;
 }
 
 export class UpdateTaskV2Dto {
@@ -203,4 +212,15 @@ export class UpdateTaskV2Dto {
   @ValidateIf((_dto, value) => value !== null)
   @IsUUID()
   linkId?: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Item 5: the RCA action this task carries out (linkType RCA of the case of the action); null unlinks. ' +
+      'Changing the link away from RCA clears it.',
+  })
+  @IsOptional()
+  @ValidateIf((_dto, value) => value !== null)
+  @IsUUID()
+  rcaActionId?: string | null;
 }

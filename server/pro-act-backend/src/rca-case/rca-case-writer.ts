@@ -4,14 +4,14 @@ import { RCA } from '../rca/rca.entity';
 import {
   RcaCaseV2CreateDto,
   RcaCaseV2UpdateDto,
+  RcaRecommendationItemDto,
 } from '../v2/rca/rca-cases-v2.dto';
+import { attributeEvidence, evidenceAssignees } from './evidence-attribution';
+import { caseAudit, recordRcaAudit } from './rca-audit';
 import { writeDiagram } from './rca-case-diagram';
 import { writeJson } from './rca-case-json';
 import { templateLogicTree } from './rca-case-template';
-import {
-  START_STATUSES,
-  withInvestigators,
-} from '../domain/rca/case-workflow';
+import { START_STATUSES, withInvestigators } from '../domain/rca/case-workflow';
 import {
   assertCaseUnit,
   invalidBody,
@@ -21,6 +21,21 @@ import {
 
 const date = (value: string | null | undefined) =>
   value === undefined ? undefined : value === null ? null : new Date(value);
+
+/**
+ * Item 5: every recommendation keeps a stable id (actions point at it): items sent without one get a
+ * server id, ids the client sends back (including the `rec-N` read of an id-less v1 item) are kept. The
+ * read-only `actions` list of the view is never stored.
+ */
+function withRecommendationIds(
+  items: readonly RcaRecommendationItemDto[] | undefined,
+): RcaRecommendationItemDto[] | undefined {
+  return items?.map((item) => {
+    const stored = { ...item, id: item.id || randomUUID() };
+    delete stored.actions;
+    return stored;
+  });
+}
 
 /**
  * Columns of `rcas` a body sets (undefined = untouched; JSON text for the nested content). The status is
@@ -40,7 +55,7 @@ export function caseColumns(body: RcaCaseV2UpdateDto): Partial<RCA> {
     actualCloseDate: date(body.actualCloseDate),
     rootCause: body.rootCause,
     templateId: body.templateId,
-    recommendations: writeJson(body.recommendations),
+    recommendations: writeJson(withRecommendationIds(body.recommendations)),
     evidence: writeJson(body.evidence),
     logicTree: writeJson(body.logicTree),
     teamCharter: body.teamCharter,
@@ -98,6 +113,12 @@ export async function assertCaseReferences(
   if (body.teamLeadId)
     await assertUsers(manager, scope, [body.teamLeadId], 'teamLeadId');
   await assertUsers(manager, scope, body.teamMemberIds ?? [], 'teamMemberIds');
+  await assertUsers(
+    manager,
+    scope,
+    evidenceAssignees(body.evidence),
+    'evidence.taskAssigneeId',
+  );
   if (body.templateId) {
     const ok = await exists(
       manager,
@@ -132,8 +153,18 @@ export async function insertCase(
       `a case opens as ${START_STATUSES.join(' or ')}; later statuses are reached through transitions`,
     );
   }
+  const evidence = body.evidence
+    ? attributeEvidence([], body.evidence, {
+        userId: scope.userId,
+        now: new Date(),
+      })
+    : undefined;
   const entity = repository.create({
-    ...caseColumns(fromTemplate ? { ...body, logicTree: fromTemplate } : body),
+    ...caseColumns({
+      ...body,
+      evidence,
+      ...(fromTemplate ? { logicTree: fromTemplate } : {}),
+    }),
     id: randomUUID(),
     status,
     priority: body.priority ?? 'Medium',
@@ -145,5 +176,9 @@ export async function insertCase(
       [scope.userId, body.teamLeadId, ...(body.teamMemberIds ?? [])],
     ),
   });
-  return repository.save(entity);
+  const saved = await repository.save(entity);
+  await recordRcaAudit(manager, scope, [
+    caseAudit('created', { before: null, after: saved }),
+  ]);
+  return saved;
 }

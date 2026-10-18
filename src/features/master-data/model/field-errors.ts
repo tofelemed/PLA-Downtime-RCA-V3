@@ -1,12 +1,13 @@
-import { V2ApiError } from '@/api/v2/errors';
+import { V2ApiError, type FieldError } from '@/api/v2/errors';
+import { fieldMessage } from '@/features/ux-kit/errors/field-messages';
 
 /** Messages per form field, e.g. `{ code: 'This code is already used…' }`. */
 export type FieldErrors = Partial<Record<string, string>>;
 
 const DECIMAL = /^\d+(\.\d+)?$/;
 
-/** Plain-language text of a refused field; the server's own wording is never shown verbatim. */
-function messageOf(error: V2ApiError, field: string): string {
+/** Plain-language text of a refused field: known refusals in our words, else the server's reason as a sentence. */
+function messageOf(error: V2ApiError, field: string, entry: FieldError): string {
   if (error.code === 'MASTER_DATA_CODE_EXISTS' && field === 'code') {
     return 'This code is already used. Codes must be unique — choose another code.';
   }
@@ -14,20 +15,22 @@ function messageOf(error: V2ApiError, field: string): string {
   if (field === 'checklistIds') return 'Choose active verification checklists only.';
   if (error.code === 'INVALID_REFERENCE') return 'Choose an active entry from the list.';
   if (error.code === 'CODE_CYCLE') return 'A cause cannot be placed under itself or one of its sub-causes.';
-  return 'Check this value.';
+  return fieldMessage(entry.field, entry.message, entry.constraint).message;
 }
 
 /**
  * The fields a refused write names (422 `fieldErrors`, 409 MASTER_DATA_CODE_EXISTS on `code`), keyed by the
- * form's own field names via `fieldMap` (server field → form field); empty for any other failure.
+ * form's own field names via `fieldMap` (server field → form field); empty for any other failure. A property
+ * the server does not accept at all is not put on an input (the editor's toast names it).
  */
 export function fieldErrorsOf(error: unknown, fieldMap: Readonly<Record<string, string>> = {}): FieldErrors {
   if (!(error instanceof V2ApiError)) return {};
   const result: FieldErrors = {};
   for (const entry of error.fieldErrors) {
+    if (fieldMessage(entry.field, entry.message, entry.constraint).unexpected) continue;
     const root = entry.field.split(/[.[]/)[0];
     const field = fieldMap[root] ?? root;
-    result[field] = messageOf(error, root);
+    result[field] = messageOf(error, root, entry);
   }
   return result;
 }

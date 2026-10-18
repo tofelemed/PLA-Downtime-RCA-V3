@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -29,7 +38,12 @@ export class CustomAttributeDefinition {
   tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @ApiProperty({ description: 'Entity type' })
@@ -41,7 +55,12 @@ export class CustomAttributeDefinition {
   attributeName: string;
 
   @ApiProperty({ description: 'Display name', required: false })
-  @Column({ name: 'display_name', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'display_name',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   displayName?: string;
 
   @ApiProperty({ description: 'Description', required: false })
@@ -80,4 +99,3 @@ export class CustomAttributeDefinition {
   @Column({ name: 'created_by', type: 'varchar', length: 255, nullable: true })
   createdBy?: string;
 }
-

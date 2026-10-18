@@ -132,6 +132,18 @@ describe('month-close section navigation and command ownership', () => {
     expect(screen.getByRole('table', { name: 'Days not certified' }).querySelectorAll('tbody tr')).toHaveLength(50);
   });
 
+  it('says when the month ends and lists the expected periods that do not exist yet (Marun G1)', async () => {
+    view.prerequisites = { ...view.prerequisites, met: false, monthEnded: false, monthEndsAt: '2026-10-23T02:30:00Z', missingPeriodCount: 13,
+      missingPeriods: [{ unitId: 'u1', unitName: 'Extruder 1', localDate: '2026-10-21', shiftName: 'A', utcStart: '2026-10-21T02:30:00Z' }] };
+    mount(); await screen.findByTestId('close-month-end');
+    expect(screen.getByTestId('step-close-quantities')).toBeDisabled();
+    expect(screen.getByTestId('close-month-end-status')).toHaveTextContent(/Month ends .*not ended yet/);
+    const missing = screen.getByTestId('close-missing-periods');
+    expect(missing).toHaveTextContent('13 expected periods do not exist yet');
+    expect(missing).toHaveTextContent('Extruder 1 · 2026-10-21 · shift A');
+    expect(missing).toHaveTextContent('and 12 more');
+  });
+
   it('shows explicit empty states for all lists and history', async () => {
     mount(); await screen.findByTestId('close-prerequisites');
     for (const [label, id] of [['Periods', 'pending-none'], ['Days', 'days-certified'], ['Proposals', 'proposals-none'], ['History', 'close-history-empty']]) {
@@ -150,13 +162,13 @@ describe('month-close section navigation and command ownership', () => {
 
   it('drops an unsubmitted confirmation when browser navigation changes the month', async () => {
     mount(); fireEvent.click(await screen.findByTestId('step-close-quantities'));
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('1405-07');
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Mehr 1405');
     fireEvent.change(screen.getByTestId('step-close-quantities-text'), { target: { value: 'Old month notes' } });
     fireEvent.click(screen.getByRole('button', { name: 'Test external month change', hidden: true }));
-    await waitFor(() => expect(screen.getByTestId('month-label')).toHaveTextContent('1405-06'));
+    await waitFor(() => expect(screen.getByTestId('month-label')).toHaveTextContent('Shahrivar 1405'));
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('step-close-quantities'));
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('1405-06');
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Shahrivar 1405');
     expect(screen.getByTestId('step-close-quantities-text')).toHaveValue('');
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Close quantities' }));
     await waitFor(() => expect(calls.filter((call) => call.method === 'POST')).toEqual([{ method: 'POST', path: '/api/v2/month-closes/1405-06/close-quantities' }]));
@@ -178,7 +190,7 @@ describe('month-close section navigation and command ownership', () => {
     await waitFor(() => expect(calls.some((call) => call.method === 'POST')).toBe(true));
     expect(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Test external month change', hidden: true }));
-    await waitFor(() => expect(screen.getByTestId('month-label')).toHaveTextContent('1405-06'));
+    await waitFor(() => expect(screen.getByTestId('month-label')).toHaveTextContent('Shahrivar 1405'));
     complete(json({ ...view, state: 'quantities_closed' }));
     await waitFor(() => expect(screen.getByTestId('step-close-quantities')).toBeEnabled());
     expect(calls.filter((call) => call.method === 'POST')).toEqual([{ method: 'POST', path: '/api/v2/month-closes/1405-07/close-quantities' }]);

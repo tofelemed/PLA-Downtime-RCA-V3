@@ -20,4 +20,4 @@ export class HealthController {
   async detailedCheck() {
     return this.healthService.detailedCheck();
   }
-} 
+}

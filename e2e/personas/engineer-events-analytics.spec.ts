@@ -33,7 +33,7 @@ async function openHub(page: Page): Promise<void> {
   await page.getByRole('checkbox', { name: world.unitName, exact: true }).check();
   await page.keyboard.press('Escape');
   // the day under analysis is three days back: pick "Last 7 days" explicitly (the remembered window may differ)
-  await page.getByTestId('event-window').selectOption('preset:168');
+  await page.getByTestId('event-window').selectOption('preset:7d');
   await expect(row(page, world.stops.a)).toBeVisible({ timeout: 30_000 });
 }
 
@@ -113,7 +113,7 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
     await expect(waterfall).toHaveAttribute('data-opening', '2160');
     await expect(waterfall).toHaveAttribute('data-closing', '1710');
     const capacity = page.waitForRequest((request) => request.url().includes('/v2/reports/scope-waterfall') && new URL(request.url()).searchParams.get('ledger') === 'capacity');
-    await page.getByTestId('ledger-capacity').check();
+    await page.getByTestId('ledger-capacity').click();
     await capacity;
     await expect(waterfall).toHaveAttribute('data-ledger', 'capacity');
     await expect(waterfall).toHaveAttribute('data-closes', 'true');
@@ -142,7 +142,7 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
     await page.goto(`/downtime?${params.toString()}`);
     await expect(page.getByTestId('downtime-analysis')).toBeVisible({ timeout: 60_000 });
     await expect(tile(page, 'downtime_total')).toHaveAttribute('data-value', '9000', { timeout: 60_000 });
-    await expect(tile(page, 'downtime_total').getByTestId('kpi-value')).toHaveText('2:30');
+    await expect(tile(page, 'downtime_total').getByTestId('kpi-value')).toHaveText('2 h 30 min');
     await expect(tile(page, 'stop_count').getByTestId('kpi-value')).toHaveText('3');
     await expect(bar(page, world.reasons.motor)).toHaveAttribute('data-value', '5400');
     await expect(bar(page, world.reasons.feed)).toHaveAttribute('data-value', '3600');

@@ -1,12 +1,22 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsArray, IsNumber, IsDateString, ValidateBy } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  IsOptional,
+  IsArray,
+  IsNumber,
+  IsDateString,
+  ValidateBy,
+} from 'class-validator';
 
 /** JSON text (v1 clients) or the array itself (the service serializes it; plan 3.9). */
 function IsJsonTextOrArray(): PropertyDecorator {
   return ValidateBy({
     name: 'isJsonTextOrArray',
     validator: {
-      validate: (value: unknown) => typeof value === 'string' || Array.isArray(value),
+      validate: (value: unknown) =>
+        typeof value === 'string' || Array.isArray(value),
       defaultMessage: () => '$property must be JSON text or an array',
     },
   });
@@ -14,7 +24,10 @@ function IsJsonTextOrArray(): PropertyDecorator {
 import { Type } from 'class-transformer';
 
 export class CreateRcaDto {
-  @ApiProperty({ required: false, description: 'Optional since 3.9: a case may start without an event' })
+  @ApiProperty({
+    required: false,
+    description: 'Optional since 3.9: a case may start without an event',
+  })
   @IsOptional()
   @IsUUID()
   eventId?: string;
@@ -29,7 +42,9 @@ export class CreateRcaDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ enum: ['Draft', 'In Progress', 'Analysis', 'Published', 'Closed'] })
+  @ApiProperty({
+    enum: ['Draft', 'In Progress', 'Analysis', 'Published', 'Closed'],
+  })
   @IsString()
   @IsNotEmpty()
   status: string;
@@ -167,4 +182,4 @@ export class CreateRcaDto {
   @IsOptional()
   @IsNumber()
   productivityImprovement?: number;
-} 
+}

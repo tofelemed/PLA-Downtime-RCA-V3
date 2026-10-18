@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { UnitSelect } from '@/features/master-data/components/unit-select';
+import { NumberText } from '@/features/ux-kit/number-text';
 import { useEquipmentJourney } from './journey-context';
 import { SETUP_PHASES, SETUP_STEPS, setupStep, stepPrerequisite } from './setup-steps';
 
@@ -20,13 +21,13 @@ export function SetupJourneyBar() {
   const nextRestriction = next ? stepPrerequisite(next, journey) : null;
   return <aside aria-label="Equipment setup navigation" className="mb-5 space-y-3 rounded-lg border border-primary/30 bg-background p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <p className="font-medium">Equipment setup · {phase.title} · Step {index + 1} of {SETUP_STEPS.length}: {step.title}{step.optional ? ' (optional)' : ''}</p>
+      <p className="font-medium">Equipment setup · {phase.title} · Step <NumberText value={index + 1} /> of <NumberText value={SETUP_STEPS.length} />: {step.title}{step.optional ? ' (optional)' : ''}</p>
       <div className="flex gap-2"><Button asChild size="sm" variant="outline"><Link to="/equipment-setup">All setup steps</Link></Button><Button size="sm" variant="ghost" onClick={context.stop}>Exit guide</Button></div>
     </div>
     <p className="text-sm">{step.action}</p>
     <p className="text-sm text-muted-foreground"><strong>Check before continuing:</strong> {step.verify}</p>
     <div className="max-w-sm"><UnitSelect id="setup-unit" label="Setup production unit" value={journey.unitId} onChange={context.chooseUnit} /></div>
-    {restriction && <p className="text-sm text-amber-700">{restriction}</p>}
+    {restriction && <p className="text-sm text-warning">{restriction}</p>}
     {!capabilities[step.capability] && <p className="text-sm text-muted-foreground">Your current role cannot open this step. Ask a permitted user to configure it, or use an authorized account.</p>}
     <div className="flex flex-wrap gap-2">
       <Button size="sm" variant="outline" disabled={!previous || !capabilities[previous.capability] || !!stepPrerequisite(previous, journey)} onClick={() => previous && openStep(previous.id)}>Previous setup step</Button>

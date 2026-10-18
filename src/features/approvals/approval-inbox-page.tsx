@@ -10,21 +10,22 @@ import { Label } from '@/components/ui/label';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
+import { resolvedActorText } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
-import { ApprovalRecordReview } from './approval-record-review';
+import { approvalHref } from './approval-links';
 import { ApprovalDecisionDialog } from './approval-decision-dialog';
 
 const KINDS = [['profile', 'Production profiles'], ['rate', 'Production rates'], ['valuation-rate', 'Valuation rates'], ['transition-standard', 'Transition standards'], ['unit-stream', 'Unit streams'], ['flow-route', 'Plant flow routes'], ['unit-impact-rule', 'Unit impact rules'], ['plan', 'Production plans'], ['fx-rate', 'Exchange rates'], ['valuation-policy', 'Valuation policies'], ['demand-status', 'Demand statuses'], ['source-authority', 'Source priority'], ['source-status', 'Source status rules'], ['adjustment', 'Actuals adjustments'], ['disposition', 'Quality dispositions'], ['uncertainty-budget', 'Uncertainty budgets'], ['rule', 'Rule activations'], ['period-review', 'Period reconciliation'], ['finance-posting', 'Restatement postings'], ['change-proposal', 'Period change proposals'], ['rca-closure', 'RCA closures'], ['month-materiality', 'Month materiality review'], ['month-finance', 'Month finance sign-off'], ['month-lock', 'Month lock'], ['stop-merge', 'Duplicate stop reviews']];
 function ApprovalActions({ item }: { item: ApprovalItem }) {
   const { isSuperAdmin } = useCapabilities();
   const disabled = item.actions.find((action) => action.disabledReason)?.disabledReason;
-  return <div className="min-w-48 space-y-2"><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" asChild><Link to={item.reviewHref}>{item.actions.length ? 'Open workspace' : isSuperAdmin ? 'Review & decide' : 'Review record'}</Link></Button>{item.resource && item.resource !== 'source-status-mappings' && <ApprovalRecordReview item={item} />}{item.actions.filter((action) => !action.disabledReason).map((action) => <ApprovalDecisionDialog key={action.action} item={item} action={action.action} />)}</div>{disabled && <p className="text-xs text-muted-foreground">{disabled}</p>}{!item.actions.length && <p className="text-xs text-muted-foreground">{isSuperAdmin ? 'You can complete this review as SuperAdmin in the workspace.' : 'Decide in the review workspace after checking its evidence and gates.'}</p>}</div>;
+  return <div className="min-w-48 space-y-2"><div className="flex flex-wrap gap-2"><Button size="sm" asChild><Link to={approvalHref(item)} aria-label={`Review ${item.title}`}>Review</Link></Button><Button size="sm" variant="outline" asChild><Link to={item.reviewHref}>{item.actions.length ? 'Open workspace' : isSuperAdmin ? 'Review & decide' : 'Review record'}</Link></Button>{item.actions.filter((action) => !action.disabledReason).map((action) => <ApprovalDecisionDialog key={action.action} item={item} action={action.action} />)}</div>{disabled && <p className="text-xs text-muted-foreground">{disabled}</p>}{!item.actions.length && <p className="text-xs text-muted-foreground">{isSuperAdmin ? 'You can complete this review as SuperAdmin in the workspace.' : 'Decide in the review workspace after checking its evidence and gates.'}</p>}</div>;
 }
 function columns(timezone: string): DataTableColumn<ApprovalItem>[] {
   return [
-    { id: 'record', header: 'Pending record', cell: (item) => <div className="max-w-md space-y-1"><p className="font-medium">{item.title}</p><p className="text-xs text-muted-foreground">{item.kindLabel}{item.version != null ? ` · v${item.version}` : ''}</p><p className="line-clamp-2 break-words text-xs text-muted-foreground">{item.summary}</p></div> },
-    { id: 'scope', header: 'Unit / owner', cell: (item) => <div>{item.unitName ?? 'Plant-wide'}<p className="text-xs text-muted-foreground">{item.authorName ?? (item.authorId ? 'User ' + item.authorId : 'System / legacy record')}</p></div> },
+    { id: 'record', header: 'Pending record', cell: (item) => <div className="max-w-md space-y-1"><Link className="font-medium underline-offset-4 hover:underline" to={approvalHref(item)}>{item.title}</Link><p className="text-xs text-muted-foreground">{item.kindLabel}{item.version != null ? ` · v${item.version}` : ''}</p><p className="line-clamp-2 break-words text-xs text-muted-foreground">{item.summary}</p></div> },
+    { id: 'scope', header: 'Unit / owner', cell: (item) => <div>{item.unitName ?? 'Plant-wide'}<p className="text-xs text-muted-foreground">{resolvedActorText(item.authorId, item.authorName)}</p></div> },
     { id: 'created', header: 'Created', cell: (item) => <PlantTime iso={item.createdAt} tz={timezone} withDate /> },
     { id: 'state', header: 'State / required approval role', cell: (item) => <ApprovalStateCell item={item} /> },
     { id: 'actions', header: 'Review & decide', cell: (item) => <ApprovalActions item={item} /> },

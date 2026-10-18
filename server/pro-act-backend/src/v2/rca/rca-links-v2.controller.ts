@@ -31,7 +31,8 @@ import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import { RcaLinkV2CreateDto } from './rca-links-v2.dto';
 
 export const IDEMPOTENT_LINK =
-  'Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent).';
+  'Requires `Idempotency-Key`. 201 new link, 200 when the target is already linked (idempotent). ' +
+  '409 CASE_CLOSED for a new link to a closed investigation (reopen it first).';
 
 /** Links of a case (RCA02): events, loss lines, work orders and occurrences, each with its evidence package. */
 @ApiTags('v2 · RCA')

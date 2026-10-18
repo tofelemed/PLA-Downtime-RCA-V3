@@ -6,6 +6,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { ApproveButton } from '@/features/ux-kit/approve-button';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
+import { BackdateOverlapList } from '@/features/policy-backdate/backdate-overlap-list';
 import { FinanceRefusalAlert } from '../components/finance-refusal-alert';
 import { currenciesLabel, type PolicyStatus } from '../model/policy-status';
 
@@ -42,7 +43,12 @@ export function PolicyApprove({ policy, status }: PolicyApproveProps) {
         confirmLabel={`Approve version ${policy.version}`}
         onConfirm={() => approve.submit({ id: policy.id })}
       >
-        {approve.error ? <FinanceRefusalAlert error={approve.error} /> : null}
+        {approve.error ? (
+          <>
+            <FinanceRefusalAlert error={approve.error} />
+            <BackdateOverlapList error={approve.error} />
+          </>
+        ) : null}
       </ConfirmDialog>
     </>
   );

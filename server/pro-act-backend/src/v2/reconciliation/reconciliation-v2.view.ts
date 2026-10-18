@@ -19,6 +19,15 @@ import {
   linesPart,
   sliceView,
 } from '../../reconciliation/reviewed-content';
+import { ApprovedValuationV2View } from './approved-valuation-view';
+import { CandidateDerivationV2View } from './candidate-derivation';
+import {
+  EventRcaV2View,
+  LinkedEventRcaV2View,
+  withCandidateRca,
+  withLinkedEventRca,
+} from './event-rca';
+import { MonthCloseStateV2View } from './month-close-state';
 
 const iso = (value: Date | null) => (value ? value.toISOString() : null);
 
@@ -45,6 +54,11 @@ export interface RevisionWorkflowV2View {
   cancelledAt: string | null;
   /** SME R4: a correction opened through a change proposal of a locked month */
   afterClose: boolean;
+  /**
+   * who opened this revision of an approved period (revise or an accepted change proposal); null for a
+   * first revision. They never approve it (SEPARATION_OF_DUTIES), so the UI can say why.
+   */
+  openedBy: string | null;
   comment: string | null;
 }
 
@@ -63,6 +77,10 @@ export interface CandidateV2View {
   /** proposed | accepted | adjusted | replaced | rejected */
   state: string;
   effectiveQuantity: string | null;
+  /** UX D-2: the stored inputs the engine derived the candidate from (absent when not loaded) */
+  derivation?: CandidateDerivationV2View;
+  /** UX G-4: RCA state of the cause event (null = event not found; absent = no cause event / not loaded) */
+  causeEventRca?: EventRcaV2View | null;
 }
 
 export interface ReconciliationLineV2View {
@@ -94,6 +112,8 @@ export interface ReconciliationLineV2View {
   authorId: string | null;
   /** baseline_changed | candidate_missing */
   flags: string[];
+  /** UX G-4: RCA state of the events in `evidence` that were found (absent = no evidence / not loaded) */
+  linkedEventRca?: LinkedEventRcaV2View[];
 }
 
 export interface ReconciliationV2View {
@@ -131,6 +151,10 @@ export interface ReconciliationV2View {
   codingGate: CodingGateResult;
   /** SME R8: bridges above the unit limit and their second review of the current submission */
   bridgeReview: BridgeReviewState;
+  /** UX D-7: close state of the period's financial month (locked = correct through a change proposal) */
+  monthClose: MonthCloseStateV2View;
+  /** owner, 18 Oct 2026: an approved revision's frozen valuation view vs the current policy (else null) */
+  approvedValuation: ApprovedValuationV2View | null;
 }
 
 export function toRevisionWorkflowView(
@@ -158,6 +182,7 @@ export function toRevisionWorkflowView(
     cancelledBy: r.cancelledBy,
     cancelledAt: iso(r.cancelledAt),
     afterClose: r.afterClose,
+    openedBy: r.supersedesId ? r.createdBy : null,
     comment: r.comment,
   };
 }
@@ -171,6 +196,10 @@ export function toReconciliationView(
     codingGate: CodingGateResult;
     bridgeReview: BridgeReviewState;
     justification?: ToleranceJustification | null;
+    monthClose: MonthCloseStateV2View;
+    approvedValuation?: ApprovedValuationV2View | null;
+    derivations?: ReadonlyMap<string, CandidateDerivationV2View>;
+    eventRca?: ReadonlyMap<string, EventRcaV2View>;
   },
 ): ReconciliationV2View {
   const { period, revision, tolerance } = state;
@@ -191,12 +220,29 @@ export function toReconciliationView(
       justification: extra.justification ?? null,
     },
     slices: state.reconciliation.slices.map(sliceView),
-    candidates: candidatesPart(state),
-    lines: linesPart(state),
+    candidates: withCandidateRca(
+      withDerivations(candidatesPart(state), extra.derivations),
+      extra.eventRca,
+    ),
+    lines: withLinkedEventRca(linesPart(state), extra.eventRca),
     openProposalId: extra.openProposalId,
     codingGate: extra.codingGate,
     bridgeReview: extra.bridgeReview,
+    monthClose: extra.monthClose,
+    approvedValuation: extra.approvedValuation ?? null,
   };
+}
+
+/** Candidates with their derivation; the reviewed content (and its hash) never includes it. */
+function withDerivations(
+  candidates: CandidateV2View[],
+  derivations?: ReadonlyMap<string, CandidateDerivationV2View>,
+): CandidateV2View[] {
+  if (!derivations) return candidates;
+  return candidates.map((candidate) => {
+    const derivation = derivations.get(candidate.lossLineId);
+    return derivation ? { ...candidate, derivation } : candidate;
+  });
 }
 
 export interface ApprovalActionV2View {

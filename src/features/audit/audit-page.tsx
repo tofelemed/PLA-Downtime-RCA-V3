@@ -9,6 +9,8 @@ import { PageGate } from '@/features/admin/shared/page-gate';
 import { usePlantDates } from '@/features/admin/shared/use-plant-dates';
 import { useUrlFilters } from '@/features/admin/shared/use-url-filters';
 import { useCapabilities } from '@/features/auth/use-capabilities';
+import { DataState } from '@/features/ux-kit/data-state';
+import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DataTable } from '@/features/ux-kit/data-table';
 import { DateRangeInput } from '@/features/ux-kit/date-inputs';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
@@ -104,7 +106,9 @@ function AuditEntries({ filters, values, setValues }: AuditEntriesProps) {
         collapsible
         defaultOpen={false}
       >
-        <Suspense fallback={<Skeleton className="h-72 w-full" />}>{summary.data && <AuditCharts summary={summary.data} />}</Suspense>
+        <DataState state={dataStateOf(summary, { isEmpty: summary.data?.total === 0 })} error={summary.error} onRetry={() => void summary.refetch()} detail="Nothing was recorded in this period.">
+          <Suspense fallback={<Skeleton className="h-72 w-full" />}>{summary.data && <AuditCharts summary={summary.data} />}</Suspense>
+        </DataState>
       </Section>
       <Section title="Entries">
         <DataTable

@@ -15,6 +15,8 @@ const policy = (patch: Partial<ValuationPolicyView>): ValuationPolicyView => ({
   reportingCurrencies: ['IRR', 'USD'], notes: null, createdBy: null, createdAt: '2026-10-09T00:00:00.000Z', ...patch,
 });
 
+const NOW = new Date('2026-10-18T12:00:00Z');
+
 describe('FX rate form (mirrors the 422 fieldErrors of POST /fx-rates)', () => {
   it('accepts a decimal string with 10 decimals and sends it unchanged, instants in UTC', () => {
     const values = fx({ rate: '42000.0123456789', effectiveTo: '2026-11-01T02:30:00.000Z', source: ' CBI ' });
@@ -55,7 +57,7 @@ describe('valuation policy form and status', () => {
 
   it('validates start and currencies; impact codes are sent only for independent components', () => {
     const values = { ...policyFormOf(null), effectiveFrom: '2026-11-01T02:30:00.000Z', independentImpactCodeIds: ['c1'] };
-    expect(validatePolicyForm(values)).toEqual({});
+    expect(validatePolicyForm(values, NOW)).toEqual({});
     expect(policyCreateBody(values)).toEqual({
       defaultBasis: 'economic_impact', timeBasisRule: 'exclusive', reportingCurrencies: ['IRR', 'USD'], fxPolicy: 'snapshot',
       independentImpactCodeIds: [], effectiveFrom: '2026-11-01T02:30:00.000Z', notes: null,
@@ -63,10 +65,24 @@ describe('valuation policy form and status', () => {
       demandRule: 'demand_constrained_only', qualityDispositions: {}, defaultQualityDisposition: null, manualLineHours: true,
     });
     const off = { ...values, economic: { ...values.economic, demandRule: 'none' as const } };
-    expect(validatePolicyForm(off)).toEqual({ defaultBasis: 'The economic view needs a lost-sales rule.' });
+    expect(validatePolicyForm(off, NOW)).toEqual({ defaultBasis: 'The economic view needs a lost-sales rule.' });
     expect(policyCreateBody({ ...off, defaultBasis: 'contribution_margin' })).not.toHaveProperty('demandRule');
-    expect(validatePolicyForm({ ...values, effectiveFrom: null, reportingCurrencies: [] })).toEqual({
+    expect(validatePolicyForm({ ...values, effectiveFrom: null, reportingCurrencies: [] }, NOW)).toEqual({
       effectiveFrom: 'Enter the date and time it starts.', reportingCurrencies: 'Choose at least one reporting currency.',
+    });
+  });
+
+  it('a past start is a commissioning backdate: it needs a reason and is sent with it (owner, 18 Oct 2026)', () => {
+    const values = { ...policyFormOf(null), defaultBasis: 'contribution_margin' as const };
+    expect(validatePolicyForm({ ...values, effectiveFrom: '2026-10-17T02:30:00.000Z' }, NOW).effectiveFrom).toMatch(/Commissioning/);
+    const backdated = { ...values, backdate: { effectiveFrom: '2026-10-17T02:30:00.000Z', reason: '' } };
+    expect(validatePolicyForm(backdated, NOW)).toEqual({ backdateReason: 'Give the reason for backdating' });
+    const reasoned = { ...backdated, backdate: { ...backdated.backdate, reason: ' Commissioning: guide baseline ' }, restateApproved: true };
+    expect(validatePolicyForm(reasoned, NOW)).toEqual({});
+    expect(policyCreateBody(reasoned)).toMatchObject({ effectiveFrom: '2026-10-17T02:30:00.000Z', backdateReason: 'Commissioning: guide baseline', restateApproved: true });
+    expect(policyCreateBody({ ...reasoned, restateApproved: false })).not.toHaveProperty('restateApproved');
+    expect(validatePolicyForm({ ...values, effectiveFrom: '2026-11-01T02:30:00.000Z', backdate: { effectiveFrom: null, reason: 'x' } }, NOW)).toEqual({
+      backdateEffectiveFrom: 'Choose the effective-from, or clear the reason',
     });
   });
 

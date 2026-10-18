@@ -1,21 +1,25 @@
 import { Link, useParams } from 'react-router-dom';
-import { useProductionEvent } from '@/api/v2/queries/production-events';
+import { useProductionEvent, useProductionEventHistory } from '@/api/v2/queries/production-events';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EventRcaPanel } from '@/features/rca/event-rca-panel';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { labelOf, PHYSICAL_TYPE_LABELS, SOURCE_KIND_LABELS } from '@/features/ux-kit/labels';
+import { eventNoun, labelOf, PHYSICAL_TYPE_LABELS, SOURCE_KIND_LABELS } from '@/features/ux-kit/labels';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { DisplayCurrencyToggle } from '@/features/display-currency/display-currency-toggle';
+import { AttributedLossesCard } from './components/attributed-losses-card';
 import { EventDetailActions } from './components/event-detail-actions';
 import { EventDetailTabs } from './components/event-detail-tabs';
 import { EventSummary } from './components/event-summary';
 import { EventVerificationPanel } from './components/event-verification-panel';
 import { EventHubFrame } from './event-hub-frame';
 import { useBackTarget } from './hooks/use-back-target';
+import { eventHeaderDescription } from './model/event-header';
+import { latestRevisionNumber } from './model/source-facts';
 import { useEventHubEnv } from './use-event-hub-env';
 
-/** `/events/:eventId`: one production event as a page (summary, commands, RCA, five tabs). */
+/** `/events/:eventId`: one production event as a page (summary, attributed losses, commands, RCA, tabs). */
 export function EventDetailPage() {
   const { eventId = '' } = useParams();
   return (
@@ -29,7 +33,9 @@ function EventDetailScreen({ eventId }: { eventId: string }) {
   const env = useEventHubEnv();
   const back = useBackTarget();
   const detail = useProductionEvent(eventId);
+  const history = useProductionEventHistory(eventId);
   const event = detail.data;
+  const latestRevision = latestRevisionNumber(history.data?.revisions ?? []);
   const title = event ? `${labelOf(PHYSICAL_TYPE_LABELS, event.classification.physicalType)} · ${env.unitName(event.unitId)}` : 'Event';
   return (
     <Page>
@@ -37,7 +43,7 @@ function EventDetailScreen({ eventId }: { eventId: string }) {
         <PageHeader
           title={title}
           back={back}
-          description={event ? `${labelOf(SOURCE_KIND_LABELS, event.sourceKind)} · revision ${event.rowVersion}` : undefined}
+          description={event ? eventHeaderDescription(labelOf(SOURCE_KIND_LABELS, event.sourceKind), latestRevision) : undefined}
           actions={event ? <EventDetailActions event={event} /> : undefined}
         />
         <DataState state={dataStateOf(detail)} error={detail.error} onRetry={() => detail.refetch()}>
@@ -54,13 +60,16 @@ function EventBody({ event, timezone }: { event: ProductionEventView; timezone: 
       {event.supersededByEventId && (
         <Alert>
           <AlertDescription>
-            This event was replaced by a split or merge.{' '}
-            <Link className="underline" to={`/events/${event.supersededByEventId}`}>Open the newer event</Link>
+            This {eventNoun(event.classification.physicalType)} was replaced by a split or merge.{' '}
+            <Link className="underline" to={`/events/${event.supersededByEventId}`}>Open the newer {eventNoun(event.classification.physicalType)}</Link>
           </AlertDescription>
         </Alert>
       )}
       <Section title="Summary">
         <EventSummary event={event} />
+      </Section>
+      <Section title="Attributed losses" description="Loss lines of the periods this event touched, as accounted" actions={<DisplayCurrencyToggle />}>
+        <AttributedLossesCard eventId={event.id} />
       </Section>
       {event.classification.physicalType === 'downtime' && event.verification && (
         <Section title="Coding verification">

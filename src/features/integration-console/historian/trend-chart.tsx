@@ -2,6 +2,7 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 import { formatDate, formatDateTime, formatTime, useCalendarPreference } from '@/lib/dates';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import type { TrendPoint } from './historian-model';
+import { ChartFigure } from '@/features/ux-kit/chart-figure';
 
 export interface TrendSeries {
   id: string;
@@ -16,7 +17,7 @@ export interface TrendChartProps {
   multiDay: boolean;
 }
 
-const COLORS = ['hsl(210 70% 45%)', 'hsl(25 85% 50%)', 'hsl(150 55% 35%)', 'hsl(280 50% 50%)', 'hsl(0 65% 50%)'];
+const COLORS = [1, 2, 3, 4, 5].map((n) => `hsl(var(--chart-${n}))`);
 
 /** Line trend of stored samples per signal on the plant clock (lazy chunk with Recharts). */
 export function TrendChart({ series, timezone, multiDay }: TrendChartProps) {
@@ -27,8 +28,9 @@ export function TrendChart({ series, timezone, multiDay }: TrendChartProps) {
   const value = (raw: unknown) => (typeof raw === 'number' ? number(raw, 4) : String(raw));
   const tick = (value: number) => (multiDay ? formatDate : formatTime)(new Date(value).toISOString(), options);
   const label = (value: unknown) => (typeof value === 'number' ? formatDateTime(new Date(value).toISOString(), options) : '');
+  const caption = `Step trend of the stored samples of ${series.length} signals (${series.map((entry) => entry.name).join(', ')}) on the plant clock.`;
   return (
-    <div className="h-80 w-full" aria-hidden>
+    <ChartFigure caption={caption} chartClassName="h-80 w-full" testId="historian-trend-chart">
       <ResponsiveContainer>
         <LineChart margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -41,6 +43,6 @@ export function TrendChart({ series, timezone, multiDay }: TrendChartProps) {
           ))}
         </LineChart>
       </ResponsiveContainer>
-    </div>
+    </ChartFigure>
   );
 }

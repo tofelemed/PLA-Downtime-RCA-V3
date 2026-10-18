@@ -34,7 +34,7 @@ function normalizeRcaPayload(data: RcaWriteBody): Partial<RCA> {
   }
   return Object.fromEntries(
     Object.entries(payload).filter(([, value]) => value !== undefined),
-  ) as Partial<RCA>;
+  );
 }
 
 @Injectable()

@@ -22,6 +22,14 @@ describe('capabilitiesOf', () => {
     expect(caps.canViewAnalysis).toBe(false);
   });
 
+  it('Marun E2E: operators record dispositions, so they reach the period Actuals & quality section (DISPOSITION_WRITERS)', () => {
+    const operator = capabilitiesOf(['operator']);
+    expect(operator.canWriteDispositions).toBe(true);
+    expect(operator.canReachPeriodQuality).toBe(true);
+    expect(capabilitiesOf(['production_engineer']).canReachPeriodQuality).toBe(true);
+    expect(capabilitiesOf([]).canReachPeriodQuality).toBe(false);
+  });
+
   it('any writable role next to viewer lifts the read-only state (mirrors WriteAccessGuard.canWrite)', () => {
     expect(capabilitiesOf(['viewer', 'operator']).isReadOnly).toBe(false);
     expect(capabilitiesOf(['Analyst', 'production_engineer']).isReadOnly).toBe(false);
@@ -148,6 +156,20 @@ describe('capabilitiesOf', () => {
       expect([manager.canWriteDispositions, manager.canApproveDispositions]).toEqual([true, false]);
       const engineer = capabilitiesOf(effectiveRoles({ role: 'Engineer' }, { tenantId: null }));
       expect([engineer.canWritePlans, engineer.canWritePeriods, engineer.canApprovePlans, engineer.canWriteCodes]).toEqual([true, true, false, false]);
+    });
+
+    it('Marun: an Analyst account with a plant-wide finance_approver grant decides restatement postings (Kamran)', () => {
+      const plant = 'plant-1';
+      const kamran: Parameters<typeof effectiveRoles>[0] = {
+        role: 'Analyst',
+        tenantId: plant,
+        scopes: [
+          { tenantId: plant, role: 'production_engineer' },
+          { tenantId: plant, role: 'finance_approver' },
+        ],
+      };
+      const caps = capabilitiesOf(effectiveRoles(kamran, { tenantId: plant }));
+      expect([caps.canDecidePosting, caps.canSignOffMonth, caps.canApproveValuation]).toEqual([true, true, true]);
     });
 
     it('canWriteEvents: any non-viewer member; a viewer (or no role) has no write capability at all', () => {

@@ -33,7 +33,9 @@ export class RolesGuard implements CanActivate {
     if (!required?.length || isPublicRoute(this.reflector, executionContext)) {
       return true;
     }
-    const request = executionContext.switchToHttp().getRequest<RequestWithContext>();
+    const request = executionContext
+      .switchToHttp()
+      .getRequest<RequestWithContext>();
     const context = request.requestContext ?? getRequestContext();
     if (!context?.userId) {
       throw new UnauthorizedException('Unauthorized');

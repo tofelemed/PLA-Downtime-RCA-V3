@@ -22,7 +22,7 @@ export interface AdminRefusal {
 
 const TITLES: Record<AdminRefusalKind, string> = {
   role: 'Your role does not allow this (master data administrator or manager approver needed)',
-  'tenant-scope': 'A tenant-wide grant is required (your access is limited to some units)',
+  'tenant-scope': 'A whole-plant grant is required (your access is limited to some units)',
   duties: 'Separation of duties: someone other than the author must do this',
   stale: 'Changed by someone else — reload and try again',
   state: 'Not allowed in the current state',

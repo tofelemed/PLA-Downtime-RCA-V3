@@ -1,4 +1,11 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -12,6 +19,7 @@ import { ApprovalInboxService } from './approval-inbox.service';
 import {
   ApprovalInboxQueryDto,
   ApprovalInboxView,
+  ApprovalItemView,
 } from './approval-inbox-v2.dto';
 @ApiTags('v2 · Approvals')
 @ApiBearerAuth()
@@ -30,5 +38,18 @@ export class ApprovalInboxV2Controller {
     @Query() query: ApprovalInboxQueryDto,
   ): Promise<ApprovalInboxView> {
     return this.inbox.list(context, query);
+  }
+  @Get(':kind/:id')
+  @ApiOperation({
+    summary:
+      'One pending record of the inbox (approval detail): same role, scope and separation-of-duties actions as the list; 404 once decided or outside the caller’s approval scope.',
+  })
+  @ApiOkResponse({ type: ApprovalItemView })
+  get(
+    @Ctx() context: RequestContext,
+    @Param('kind') kind: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<ApprovalItemView> {
+    return this.inbox.get(context, kind, id);
   }
 }

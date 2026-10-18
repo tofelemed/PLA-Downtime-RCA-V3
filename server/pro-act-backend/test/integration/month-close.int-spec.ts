@@ -37,6 +37,9 @@ interface MonthCloseBody {
     approved: number;
     pendingCount: number;
     pending: Array<{ periodId: string; workflow: string }>;
+    missingPeriodCount: number;
+    monthEnded: boolean;
+    monthEndsAt: string;
     openProposalCount: number;
   };
   materiality: {
@@ -131,6 +134,52 @@ describe('month close (SME R1 / R4)', () => {
     expect((bad.body as ApiError).code).toBeDefined();
   });
 
+  it('reads the month key in the plant close calendar: a Gregorian key is refused, a qualified key is accepted', async () => {
+    // Marun E2E: 2026-10 was read as Persian year 2026 (Gregorian 2647)
+    const gregorian = await env.get('month-closes/2026-10').expect(422);
+    expect(gregorian.body).toMatchObject({
+      code: 'MONTH_KEY_AMBIGUOUS',
+      details: { calendar: 'persian', overlaps: ['1405-07', '1405-08'] },
+    });
+    const explicit = await env
+      .get('month-closes/gregorian:2026-10')
+      .expect(422);
+    expect((explicit.body as ApiError).code).toBe('MONTH_CALENDAR_MISMATCH');
+    const qualified = (
+      await env.get(`month-closes/persian:${MONTH}`).expect(200)
+    ).body as MonthCloseBody;
+    expect(qualified).toMatchObject({
+      monthKey: MONTH,
+      firstDate: '2027-02-20',
+    });
+    const refused = await env
+      .post('month-closes/2026-10/close-quantities', {}, env.approver)
+      .expect(422);
+    expect((refused.body as ApiError).code).toBe('MONTH_KEY_AMBIGUOUS');
+    expect(await env.rows(`SELECT 1 FROM month_closes`)).toHaveLength(0);
+  });
+
+  it('refuses the quantity close of a month that has not ended (422 MONTH_NOT_ENDED), even with nothing pending', async () => {
+    // Dey 1408 = 21 Dec 2029 – 19 Jan 2030 holds the test clock (1 Jan 2030); it has no shift or period
+    const open = (await env.get('month-closes/1408-10').expect(200))
+      .body as MonthCloseBody;
+    expect(open.prerequisites).toMatchObject({
+      met: false,
+      periods: 0,
+      missingPeriodCount: 0,
+      monthEnded: false,
+      monthEndsAt: '2030-01-19T20:30:00.000Z',
+    });
+    const refused = await env
+      .post('month-closes/1408-10/close-quantities', {}, env.approver)
+      .expect(422);
+    expect(refused.body).toMatchObject({
+      code: 'MONTH_NOT_ENDED',
+      details: { monthEndsAt: '2030-01-19T20:30:00.000Z' },
+    });
+    expect(await env.rows(`SELECT 1 FROM month_close_actions`)).toHaveLength(0);
+  });
+
   it('refuses the quantity close while periods are not approved (422 CLOSE_PREREQUISITES)', async () => {
     const refused = await step('close-quantities', env.approver).expect(422);
     expect((refused.body as ApiError).code).toBe('CLOSE_PREREQUISITES');
@@ -138,6 +187,25 @@ describe('month close (SME R1 / R4)', () => {
       (refused.body as { details: { pendingCount: number } }).details
         .pendingCount,
     ).toBe(3);
+  });
+
+  it('a scheduled shift of the month without a production period blocks the close', async () => {
+    const body = await month();
+    expect(body.prerequisites.monthEnded).toBe(true);
+    expect(body.prerequisites.missingPeriodCount).toBeGreaterThan(0);
+    const refused = await step('close-quantities', env.approver).expect(422);
+    expect(refused.body).toMatchObject({
+      code: 'CLOSE_PREREQUISITES',
+      details: { missingPeriodCount: body.prerequisites.missingPeriodCount },
+    });
+    // fixture: the plant calendar no longer schedules the other days (only 1 Mar 2027 is accounted here)
+    await env.rows(
+      `DELETE FROM shift_instances si WHERE si.tenant_id = $1 AND NOT EXISTS (
+         SELECT 1 FROM production_periods p WHERE p.unit_id = si.unit_id
+            AND tstzrange(p.utc_start, p.utc_end, '[)') && tstzrange(si.utc_start, si.utc_end, '[)'))`,
+      [env.world.tenantA],
+    );
+    expect((await month()).prerequisites.missingPeriodCount).toBe(0);
   });
 
   it('materiality routing: an adjustment at the policy threshold needs the extra review', async () => {

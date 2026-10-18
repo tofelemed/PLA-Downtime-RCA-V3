@@ -10,6 +10,8 @@ import { OeePolicy, parseOeePolicy } from '../../periods/engine-policy-bodies';
 import { AccountingPolicy } from '../../periods/entities/accounting-policy.entity';
 import { assertBodyUnitsInScope } from '../../periods/period-scope';
 import { PolicyBodyError } from '../../periods/policy-bodies';
+import { BackdateRequest, parseBackdate } from '../../periods/policy-backdate';
+import { effectiveFromOf } from '../../periods/policy-backdate.guard';
 import { invalid, invalidReference } from '../../profiles/profile-errors';
 import { assertTenantWideWriter } from '../../profiles/profile-scope';
 
@@ -22,8 +24,11 @@ export interface PolicyInForce {
   body: OeePolicy;
 }
 
-/** Scope and note of a new version; `unitId` absent = the tenant-wide version. */
-export interface PolicyVersionScope {
+/**
+ * Scope and note of a new version; `unitId` absent = the tenant-wide version. `effectiveFrom` (with
+ * `backdateReason`) is the commissioning backdate (owner, 18 Oct 2026); absent = effective now.
+ */
+export interface PolicyVersionScope extends BackdateRequest {
   unitId?: string;
   notes?: string;
 }
@@ -32,7 +37,8 @@ export interface PolicyVersionScope {
  * `oee_policy` versions written over HTTP (SME D6 micro-stops, 2.5.6 transition allowance): the version in
  * force for a unit (its override, else tenant-wide) and a new approved version of a scope, effective now —
  * the previous open version of the same scope ends, every field the change does not touch is kept from the
- * version in force. Periods already calculated keep the version they used.
+ * version in force. Periods already calculated keep the version they used. A commissioning backdate takes
+ * effect at its past instant instead, when no calculated period of the scope overlaps it.
  */
 @Injectable()
 export class OeePolicyVersionsService {
@@ -69,17 +75,24 @@ export class OeePolicyVersionsService {
   ): Promise<PolicyInForce> {
     const tenantId = requireTenantId(context);
     if (!scope.unitId) assertTenantWideWriter(context, tenantId);
+    const backdate = parseBackdate(scope, new Date());
     return this.manager.transaction(async (manager) => {
       const base = await this.current(context, scope.unitId, manager);
       const body = checked(change(base.body));
       const scopeKey = scope.unitId ?? 'tenant';
-      const now = new Date();
       const version = await nextVersion(manager, tenantId, scopeKey);
+      const now = new Date();
+      const from = await effectiveFromOf(
+        manager,
+        { tenantId, kind: KIND, scopeKey, unitId: scope.unitId ?? null },
+        backdate,
+        now,
+      );
       await manager.query(
         `UPDATE "accounting_policies" SET "effective_to" = $4, "updated_by" = $5
           WHERE "tenant_id" = $1 AND "policy_kind" = $2 AND "scope_key" = $3
             AND "effective_to" IS NULL AND "effective_from" < $4`,
-        [tenantId, KIND, scopeKey, now, context.userId],
+        [tenantId, KIND, scopeKey, from, context.userId],
       );
       const row = await manager.save(
         manager.create(AccountingPolicy, {
@@ -89,11 +102,13 @@ export class OeePolicyVersionsService {
           scopeKey,
           version,
           body: { ...body },
-          effectiveFrom: now,
+          effectiveFrom: from,
           effectiveTo: null,
           approvedBy: context.userId,
           approvedAt: now,
           notes: scope.notes?.trim() || null,
+          requestedEffectiveFrom: backdate?.effectiveFrom ?? null,
+          backdateReason: backdate?.reason ?? null,
           createdBy: context.userId,
           updatedBy: context.userId,
         }),

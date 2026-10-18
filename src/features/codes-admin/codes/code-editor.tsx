@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { hasUnsavedChanges, useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { useChangeCode, useCodeList } from '@/api/v2/queries/codes-admin';
 import type { CodeDetailView, CodeLibraryPath } from '@/api/v2/types/codes-admin';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,7 @@ export function CodeEditor({ library, code }: CodeEditorProps) {
   const set = (key: keyof CodeForm) => (value: string | null) => setForm((current) => ({ ...current, [key]: value ?? '' }));
   const readOnly = !code.active || !canWriteCodes;
   const save = () => change.submit({ code, body: changeBodyOf(spec, form) }).catch(() => undefined);
+  useUnsavedChangesGuard(hasUnsavedChanges(form, formOf(code), [readOnly, change.isPending]));
   return (
     <div className="space-y-4" data-testid="code-editor">
       {!code.active && <p className="text-sm text-muted-foreground">This code is retired and can no longer be changed.</p>}

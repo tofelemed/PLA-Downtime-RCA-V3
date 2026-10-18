@@ -10,7 +10,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DEMAND_STATUS_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { ActionIcon } from '@/lib/icons';
-import { VersionStateBadge } from '../components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { DemandActions } from './demand-actions';
 import { DemandStatusForm } from './demand-status-form';
 

@@ -28,8 +28,10 @@ const CASE: RcaCaseView = {
 const ACTION: RcaActionView = {
   id: 'a1', rcaId: 'c1', title: 'Align the coupling', description: null, ownerId: 'owner', dueDate: '2026-10-20T00:00:00Z', status: 'open',
   actionType: null, evidenceExpected: 'Alignment report', completionEvidenceRef: null, completionAttachments: [], hasEvidence: false,
-  completedAt: null, completionVerifiedBy: null, verificationWindowStart: null, verificationWindowEnd: null, baseline: null, postAction: null,
-  verificationStatus: 'due', verdict: null, claimedAvoidedLoss: null, createdAt: '2026-10-01T00:00:00Z', rowVersion: 2,
+  completedAt: null, completionVerifiedBy: null, verificationWindowStart: null, verificationWindowEnd: null, verificationMethod: null, verifierId: null, verificationWindowLocked: false, baseline: null, postAction: null,
+  verificationStatus: 'due', verdict: null, claimedAvoidedLoss: null, cancelReason: null, cancelledBy: null, cancelledAt: null,
+  recommendationId: null, linkedTask: null, taskCompletedAt: null,
+  createdAt: '2026-10-01T00:00:00Z', rowVersion: 2,
 };
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const BASE = '/rca/c1';
@@ -43,7 +45,7 @@ function Harness() {
   </>;
 }
 const unload = () => { const event = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented; };
-const nav = (name: string) => fireEvent.click(within(screen.getByRole('navigation', { name: 'Case sections' })).getByRole('link', { name }));
+const nav = (name: string) => fireEvent.click(within(screen.getByRole('navigation', { name: 'Investigation sections' })).getByRole('link', { name }));
 
 describe('RCA detail workspace and definition draft safety', () => {
   let client: QueryClient;
@@ -66,6 +68,7 @@ describe('RCA detail workspace and definition draft safety', () => {
         return json(200, { ...ACTION, ...body, rowVersion: 3 });
       }
       if (path.endsWith('/readiness')) return json(200, { rcaId: 'c1', status: 'Draft', next: [], investigation: { blockers: [], advice: [] }, closure: { blockers: [], effectiveness: null }, approver: { canApprove: false, reason: null }, linkedRecurrences: 0, rules: { fiveWhyGuidelineLevels: 5, consequenceClass: 'minor' } });
+      if (path.endsWith('/links')) return json(200, []);
       if (path.endsWith('/analyses')) return json(200, { fiveWhy: null, fishbone: null, fmea: null, faultTree: null, barrier: null, change: null });
       return json(200, { items: [], nextCursor: null });
     }));
@@ -77,7 +80,7 @@ describe('RCA detail workspace and definition draft safety', () => {
     expect(screen.queryByTestId('case-editor')).toBeNull();
     expect(screen.getByText(CASE.description!)).toBeVisible();
     expect(screen.getByTestId('tab-overview')).toHaveAttribute('aria-current', 'page');
-    expect(within(screen.getByRole('navigation', { name: 'Case sections' })).getAllByRole('link')).toHaveLength(5);
+    expect(within(screen.getByRole('navigation', { name: 'Investigation sections' })).getAllByRole('link')).toHaveLength(6);
     fireEvent.click(screen.getByTestId('edit-definition'));
     await screen.findByTestId('case-editor');
     expect(screen.getByTestId('location')).toHaveTextContent(`${BASE}/definition?origin=queue`);
@@ -107,6 +110,7 @@ describe('RCA detail workspace and definition draft safety', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Restore definition draft' }));
     expect(screen.getByLabelText('Title')).toHaveValue('Unfinished alignment review');
     fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Discard changes' }));
     expect(screen.getByLabelText('Title')).toHaveValue(CASE.title);
     expect(unload()).toBe(false);
     expect(writes).toHaveLength(0);
@@ -131,6 +135,7 @@ describe('RCA detail workspace and definition draft safety', () => {
     expect(screen.getByLabelText('Title')).toHaveValue('My unsaved title');
     expect(unload()).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Discard changes' }));
     expect(screen.getByLabelText('Title')).toHaveValue('New server title');
     expect(unload()).toBe(false);
     rejectSave = false;

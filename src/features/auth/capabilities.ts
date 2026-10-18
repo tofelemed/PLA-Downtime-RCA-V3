@@ -15,6 +15,11 @@ export interface Capabilities {
   canViewOperations: boolean;
   /** the analysis and planning screens (reports, plans, RCA, codes, finance, historian) */
   canViewAnalysis: boolean;
+  /**
+   * the period workspace's Actuals & quality section: analysis readers, and the disposition writers
+   * (operators record lot dispositions, SME E3 / `DISPOSITION_WRITERS`) who see only that section
+   */
+  canReachPeriodQuality: boolean;
   canManageMasterData: boolean;
   /**
    * the Master data menu entry: code-library readers, master-data administrators, and writers of
@@ -22,6 +27,18 @@ export interface Capabilities {
    */
   canReachMasterData: boolean;
   canUseIntegrationConsole: boolean;
+  /**
+   * owner 18 Oct 2026: the Integration section (Connectivity, Source Status Rules, Source Priority, Enhanced
+   * Historian) is shown to SuperAdmin only; the server keeps its own role rules
+   */
+  canReachIntegration: boolean;
+  /**
+   * maker-checker reviewers reach their review page by the approvals inbox link although the Integration
+   * menu is hidden: Source Priority for its approvers (production accounting), Source Status Rules for the
+   * source owner; SuperAdmin always
+   */
+  canReviewSourcePriority: boolean;
+  canReviewSourceStatusRules: boolean;
   /** user management, permissions, settings of the plant */
   canAdministerTenant: boolean;
   canUseUserManagement: boolean;
@@ -118,7 +135,7 @@ const READ_ONLY_ROLES: ReadonlySet<string> = new Set(ServerRoles.READ_ONLY_ROLES
 const holdsAny = (roles: readonly string[], wanted: readonly string[]): boolean =>
   roles.some((role) => wanted.includes(role));
 
-type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseUserManagement' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canReachPeriodQuality' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canReachIntegration' | 'canReviewSourcePriority' | 'canReviewSourceStatusRules' | 'canAdministerTenant' | 'canUseUserManagement' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
 
 /** The v2 write capabilities; a read-only plant gets none (the server's WriteAccessGuard runs first). */
 function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteCapabilities {
@@ -176,17 +193,22 @@ export function capabilitiesOf(roles: readonly string[]): Capabilities {
   const writes = writeCapabilitiesOf(held, readOnly);
   const canViewAnalysis = held.some((role) => !OPERATIONS_ONLY_ROLES.has(role));
   const canManageMasterData = holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'master_data_admin']);
+  const isSuperAdmin = held.includes('SuperAdmin');
   return {
     ...writes,
     roles: held,
-    isSuperAdmin: held.includes('SuperAdmin'),
+    isSuperAdmin,
     isReadOnly: readOnly,
     canViewOperations: held.length > 0,
     canViewAnalysis,
+    canReachPeriodQuality: canViewAnalysis || writes.canWriteDispositions,
     canManageMasterData,
     canReachMasterData:
       canViewAnalysis || canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteWorkOrders || writes.canWriteStateMappings || writes.canWriteUnitImpactRules,
     canUseIntegrationConsole: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'integration_admin']),
+    canReachIntegration: isSuperAdmin,
+    canReviewSourcePriority: isSuperAdmin || writes.canApproveSourceAuthority,
+    canReviewSourceStatusRules: isSuperAdmin || writes.canApproveStatusMappings,
     canAdministerTenant: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
     canUseUserManagement: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']) || writes.canDelegateApprovals,
     canUseAdminPanel: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']) || writes.canManagePlantSettings,

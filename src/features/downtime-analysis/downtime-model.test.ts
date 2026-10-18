@@ -4,7 +4,7 @@ import type { CodeView } from '@/api/v2/types/flags';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import type { DowntimeGroupView, KpiAggregateView, ReliabilityRowView } from '@/api/v2/types/reports';
 import { downtimeQuery, parseFilters, previousWindow, reportBase, toSearchParams } from './model/downtime-filters';
-import { formatCount, formatRatio, hasUnknownTime, reasonText, restoreColumn, restoreTitle, SUMMARY_TILES } from './model/kpi-display';
+import { formatCount, formatRatio, hasUnknownTime, reasonText, REPAIR_COLUMNS, SUMMARY_TILES } from './model/kpi-display';
 import { barAction, drillEventQuery, paretoQuery, subtreeIds } from './model/reason-drill';
 import { timelineRows } from './model/timeline';
 import { trendRows } from './model/trend-rows';
@@ -98,14 +98,17 @@ describe('KPI labels and formatting (KPI05–KPI08)', () => {
     expect(tile?.note).toMatch(/95 %.*99 %/);
   });
 
-  it('SME D10: "Mean active repair time" only with repair evidence, otherwise "Mean time to restore production"', () => {
+  it('SME D10: mean active repair time and mean time to restore production side by side', () => {
     const row = (mttr: string | null): ReliabilityRowView => ({
       unitId: 'u1', assetId: null, label: null, exposureSeconds: '3600', failures: '0',
       mtbf: kpi('mtbf', null, 'no_failures'), meanDowntimeToRestore: kpi('mean_downtime_to_restore', '600'), mttr: kpi('mttr', mttr, mttr ? null : 'repair_evidence_missing'),
     });
-    expect(restoreColumn(row(null))).toMatchObject({ title: 'Mean time to restore production', view: { value: '600' } });
-    expect(restoreColumn(row('300')).title).toBe('Mean active repair time');
-    expect(restoreTitle([row('300'), row(null)])).toBe('Mean time to restore production');
+    expect(REPAIR_COLUMNS.map((column) => column.title)).toEqual(['Mean active repair time (MTTR)', 'Mean time to restore production']);
+    const [mttr, restore] = REPAIR_COLUMNS;
+    expect(mttr.view(row('300')).value).toBe('300');
+    expect(restore.view(row('300')).value).toBe('600');
+    expect(mttr.view(row(null))).toMatchObject({ value: null, reason: 'repair_evidence_missing' });
+    expect(restore.view(row(null)).value).toBe('600');
   });
 });
 

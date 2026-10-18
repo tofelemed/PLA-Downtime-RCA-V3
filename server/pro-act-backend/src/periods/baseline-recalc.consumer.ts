@@ -9,6 +9,7 @@ import {
   BaselineChangedPayload,
   BaselineLookups,
   baselineRecalcScope,
+  VALUATION_SUBJECTS,
 } from './baseline-recalc-scope';
 
 const CONSUMER = 'period-baseline';
@@ -52,11 +53,22 @@ export class BaselineRecalcConsumer implements OnModuleInit {
     await this.jobs.enqueue(manager, {
       tenantId: message.tenantId,
       ...scope,
-      trigger: 'profile_baseline_changed',
+      trigger: recalcTriggerOf(payload),
       scopeUnitIds: null,
       requestedBy: null,
     });
   }
+}
+
+/**
+ * The recalculation reason: `<subject>_changed` for a valuation input (FX rate, valuation policy, demand
+ * status — its change proposal reads "valuation change"), else `profile_baseline_changed`.
+ */
+export function recalcTriggerOf(payload: BaselineChangedPayload): string {
+  const subject = payload.subject ?? '';
+  return (VALUATION_SUBJECTS as readonly string[]).includes(subject)
+    ? `${subject}_changed`
+    : 'profile_baseline_changed';
 }
 
 async function lookupsOf(

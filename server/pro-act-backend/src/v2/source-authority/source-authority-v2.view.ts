@@ -30,7 +30,7 @@ export interface SourceAuthorityVersionV2View {
   state: SourceAuthorityVersionState;
   /** approved and in force now for its scope */
   inForce: boolean;
-  /** a draft's is its creation; approval moves it to the approval instant */
+  /** a draft's is its creation; approval moves it to the approval instant (or the requested backdate) */
   effectiveFrom: string;
   effectiveTo: string | null;
   /** the version in force the draft was prepared from */
@@ -43,6 +43,9 @@ export interface SourceAuthorityVersionV2View {
   rejectedAt: string | null;
   rejectionReason: string | null;
   notes: string | null;
+  /** commissioning backdate: the past instant it takes effect from on approval, and why (null = approval time) */
+  requestedEffectiveFrom: string | null;
+  backdateReason: string | null;
   policy: SourceAuthorityPolicy;
 }
 
@@ -93,6 +96,8 @@ export function toSourceAuthorityVersionView(
     rejectedAt: iso(row.rejectedAt),
     rejectionReason: row.rejectionReason,
     notes: row.notes,
+    requestedEffectiveFrom: iso(row.requestedEffectiveFrom),
+    backdateReason: row.backdateReason,
     policy: parseSourceAuthority(row.body),
   };
 }

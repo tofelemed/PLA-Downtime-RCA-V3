@@ -58,8 +58,7 @@ describe('RCA case bodies (v2 contract, the verified v1 save bug)', () => {
 describe('action body and labels', () => {
   it('sends a counted baseline without value (CA3), its type and a claim with its currency', () => {
     const body = buildActionBody(
-      { ...EMPTY_ACTION_FORM, title: 'Realign', actionType: 'repair', windowStart: '2026-09-01', windowEnd: '2026-09-15', baselineMetric: 'recurrences', claimed: '1000', claimedCurrency: 'USD' },
-      'u1',
+      { ...EMPTY_ACTION_FORM, title: 'Realign', actionType: 'repair', windowStart: '2026-09-01', windowEnd: '2026-09-15', baselineMetric: 'recurrences', claimed: '1000', claimedCurrency: 'USD', ownerId: 'u1' },
       'UTC',
     );
     expect(body).toMatchObject({
@@ -73,7 +72,8 @@ describe('action body and labels', () => {
     });
     expect(body.baseline).not.toHaveProperty('value');
     expect(body.baseline).not.toHaveProperty('windowDays');
-    const days = buildActionBody({ ...EMPTY_ACTION_FORM, title: 'x', baselineMetric: 'recurrences', baselineDays: '60' }, null, 'UTC');
+    const days = buildActionBody({ ...EMPTY_ACTION_FORM, title: 'x', baselineMetric: 'recurrences', baselineDays: '60' }, 'UTC');
+    expect(days.ownerId).toBeNull();
     expect(days.baseline).toEqual({ metric: 'recurrences', windowDays: 60 });
   });
 

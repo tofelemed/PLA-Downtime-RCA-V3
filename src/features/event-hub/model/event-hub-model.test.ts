@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { StaleRevisionError, toV2Error, V2ApiError } from '@/api/v2/errors';
 import type { ProductionEventView } from '@/api/v2/types/events';
+import { UNEXPECTED_FIELDS_TEXT } from '@/features/ux-kit/errors/describe-error';
 import { changedFields } from './event-draft';
-import { currentStopsQuery, defaultFilters, selectionQuery, toCodeFilters, toEventQuery, type EventFilterState } from './event-filters';
+import { currentStopsQuery, defaultFilters, isToCodeFilters, selectionQuery, toCodeFilters, toEventQuery, type EventFilterState } from './event-filters';
 import {
   EMPTY_FORM,
   formValuesOf,
-  minutesToSeconds,
   serverFormErrors,
   toCreateBody,
   toPatchBody,
   validateEventForm,
 } from './event-form';
+import { parseDurationInput } from './duration-input';
 import { stateChips } from './event-states';
 import { plantLocalToUtc, utcToPlantLocal } from './plant-local-time';
 
@@ -35,7 +36,6 @@ describe('event filters → v2 query (plan 3.2 step 1)', () => {
       }),
     );
     expect(query).toEqual({
-      limit: 100,
       sort: '-startTime',
       unitIds: ['u1', 'u2'],
       assetIds: ['a1'],
@@ -61,6 +61,14 @@ describe('event filters → v2 query (plan 3.2 step 1)', () => {
   it('FE-07 "To code": uncoded live stops of the same units and window; other narrowing dropped', () => {
     const next = toCodeFilters(filters({ unitIds: ['u1'], reasonIds: ['r1'], physicalTypes: ['slowdown'], physicalStates: [], q: 'belt' }));
     expect(next).toMatchObject({ unitIds: ['u1'], from: window.from, to: window.to, physicalTypes: ['downtime'], codingStates: ['uncoded'], physicalStates: ['open', 'closed'], reasonIds: [], q: '' });
+  });
+
+  it('recognises the "To code" preset for its empty text (E-L6)', () => {
+    const preset = toCodeFilters(filters({ unitIds: ['u1'], q: 'belt' }));
+    expect(isToCodeFilters(preset)).toBe(true);
+    expect(isToCodeFilters({ ...preset, unitIds: ['u1'], windowLabel: 'Shift A' })).toBe(true);
+    expect(isToCodeFilters(filters())).toBe(false);
+    expect(isToCodeFilters({ ...preset, reasonIds: ['r1'] })).toBe(false);
   });
 
   it('SME D13 "all matching": the list filters without paging and sort; a window is required', () => {
@@ -96,9 +104,9 @@ describe('plant clock input (D03)', () => {
 });
 
 describe('event form (plan 3.2 step 3)', () => {
-  const values = { ...EMPTY_FORM, unitId: 'u1', startLocal: '2026-10-09T08:00', durationMinutes: '45' };
+  const values = { ...EMPTY_FORM, unitId: 'u1', startLocal: '2026-10-09T08:00', intervalMode: 'duration' as const, durationMinutes: '45' };
 
-  it('checks only the request shape: required unit/start, parseable times, minutes ≥ 0', () => {
+  it('checks only the request shape: required unit/start, parseable times, a readable duration', () => {
     expect(validateEventForm(EMPTY_FORM, 'create', TEHRAN)).toEqual({ unitId: 'Choose a unit', startLocal: 'Enter the start time' });
     expect(validateEventForm({ ...values, durationMinutes: '-1' }, 'create', TEHRAN).durationMinutes).toBeDefined();
     expect(validateEventForm({ ...values, durationMinutes: 'x' }, 'create', TEHRAN).durationMinutes).toBeDefined();
@@ -107,8 +115,8 @@ describe('event form (plan 3.2 step 3)', () => {
   });
 
   it('sends minutes as seconds and plant times as UTC (DTO §15.3)', () => {
-    expect(minutesToSeconds('1.5')).toBe(90);
-    expect(minutesToSeconds('')).toBeNull();
+    expect(parseDurationInput('1.5')).toBe(90);
+    expect(parseDurationInput('')).toBeNull();
     expect(toCreateBody({ ...values, reasonCodeId: 'r1', description: '  belt  ' }, TEHRAN)).toEqual({
       unitId: 'u1',
       startTime: '2026-10-09T04:30:00.000Z',
@@ -144,6 +152,13 @@ describe('event form (plan 3.2 step 3)', () => {
     expect(toPatchBody(initial, { ...initial, originAssetId: 'a7' }, TEHRAN)).toEqual({ originAssetId: 'a7' });
   });
 
+  it('Marun E2E: the change reason travels with a real change only (clearing a reason sends null)', () => {
+    const initial = { ...values, durationMinutes: '', reasonCodeId: 'speed-loss' };
+    expect(toPatchBody(initial, { ...initial, reasonCodeId: '', changeReason: '  Coded by mistake  ' }, TEHRAN)).toEqual({ reasonCodeId: null, changeReason: 'Coded by mistake' });
+    expect(toPatchBody(initial, { ...initial, changeReason: 'nothing else changed' }, TEHRAN)).toEqual({});
+    expect(toPatchBody(initial, { ...initial, reasonCodeId: '', changeReason: '   ' }, TEHRAN)).toEqual({ reasonCodeId: null });
+  });
+
   it('PATCH carries only changed fields; a duration alone re-derives the end', () => {
     const event = {
       unitId: 'u1',
@@ -155,7 +170,7 @@ describe('event form (plan 3.2 step 3)', () => {
     } as unknown as ProductionEventView;
     const initial = formValuesOf(event, TEHRAN);
     expect(toPatchBody(initial, { ...initial, reasonCodeId: 'r2' }, TEHRAN)).toEqual({ reasonCodeId: 'r2' });
-    expect(toPatchBody(initial, { ...initial, durationMinutes: '30' }, TEHRAN)).toEqual({ durationSeconds: 1800, endTime: null });
+    expect(toPatchBody(initial, { ...initial, intervalMode: 'duration', durationMinutes: '30' }, TEHRAN)).toEqual({ durationSeconds: 1800, endTime: null });
     expect(changedFields(initial, { ...initial, description: 'x' })).toEqual(['description']);
   });
 
@@ -191,7 +206,20 @@ describe('event form (plan 3.2 step 3)', () => {
       correlationId: 'c1',
       retryable: false,
     });
-    expect(serverFormErrors(conflict)).toEqual({ fields: { durationMinutes: 'Duration does not match the end' }, form: null });
+    const mapped = serverFormErrors(conflict);
+    expect(mapped.fields).toEqual({ durationMinutes: 'Duration does not match the end' });
+    expect(mapped.form).toMatch(/· Duration[^:]*: Duration does not match the end$/);
+    const extra = new V2ApiError(422, {
+      code: 'VALIDATION_FAILED',
+      message: 'property changeReason should not exist',
+      fieldErrors: [{ field: 'changeReason', message: 'property changeReason should not exist', constraint: 'whitelistValidation' }],
+      correlationId: 'c3',
+      retryable: false,
+    });
+    expect(serverFormErrors(extra)).toEqual({
+      fields: {},
+      form: `Some values were not accepted. ${UNEXPECTED_FIELDS_TEXT} · Unexpected field: changeReason`,
+    });
     const owned = new V2ApiError(409, { code: 'SOURCE_OWNED', message: 'owned by source', correlationId: null, retryable: false });
     expect(serverFormErrors(owned).form).toBe('This value comes from the connected source. It is updated by the source system and cannot be edited here.');
     const listed = toV2Error(422, { code: 'END_BEFORE_START', message: ['endTime must be after startTime'] }, null, 'c2');
@@ -204,7 +232,7 @@ describe('event form (plan 3.2 step 3)', () => {
 describe('state chips (DT11)', () => {
   it('shows the three server states with text labels; unknown values humanized, never hidden', () => {
     const chips = stateChips({ physical: 'open', coding: 'uncoded', rca: 'mystery_state' });
-    expect(chips.map((chip) => chip.label)).toEqual(['Running', 'Uncoded', 'Mystery state']);
+    expect(chips.map((chip) => chip.label)).toEqual(['Ongoing', 'Uncoded', 'Mystery state']);
     expect(chips.map((chip) => chip.dimension)).toEqual(['physical', 'coding', 'rca']);
   });
 });

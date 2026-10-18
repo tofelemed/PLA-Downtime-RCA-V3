@@ -1,73 +1,60 @@
-import { useNavigate } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
-import { useReconciliationQueue } from '@/api/v2/queries/period-sla';
+import { useSearchParams } from 'react-router-dom';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
-import type { QueueItemView } from '@/api/v2/types/period-sla';
-import { QUEUE_TASK_LABELS } from '@/features/plan-dashboard/model/sla-labels';
-import { SlaBadges } from '@/features/plan-dashboard/sla/sla-badges';
-import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCapabilities } from '@/features/auth/use-capabilities';
+import { MyRcaActionsList } from '@/features/rca/actions/my-rca-actions-list';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
-import { PlantTime } from '@/features/ux-kit/plant-time';
-import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
-import { type CalendarPreference, formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { MyPeriodsTab } from './my-periods-tab';
+import { MyTasksTab } from './my-tasks-tab';
+import { MY_WORK_TABS, myWorkSearchOf, myWorkTabOf } from './my-work-tabs';
 
-function columns(timezone: string, pref: CalendarPreference): DataTableColumn<QueueItemView>[] {
-  return [
-    {
-      id: 'task',
-      header: 'To do',
-      cell: (row) => (
-        <Badge variant={row.task === 'escalated' ? 'destructive' : 'secondary'} data-testid="queue-task" data-task={row.task}>
-          {QUEUE_TASK_LABELS[row.task]}
-        </Badge>
-      ),
-    },
-    {
-      id: 'period',
-      header: 'Period',
-      nowrap: true,
-      cell: (row) => (
-        <span data-testid="queue-row" data-period-id={row.periodId}>
-          {row.unitName ?? 'Unit'} · {formatOperationalDate(row.localDate, pref)}
-          {row.shiftName ? ` · ${row.shiftName}` : ''}
-        </span>
-      ),
-    },
-    { id: 'due', header: 'Due', nowrap: true, cell: (row) => (row.onHold ? 'paused' : <PlantTime iso={row.dueAt} tz={timezone} withDate />) },
-    { id: 'flags', header: 'Status', cell: (row) => <SlaBadges sla={row} /> },
-  ];
-}
+/** Rows per page of the RCA actions tab (a full page, not the compact embed's default). */
+const RCA_ACTIONS_PAGE_SIZE = 20;
 
-function QueueScreen() {
-  const navigate = useNavigate();
-  const pref = useCalendarPreference();
-  const { timezone } = usePlantTimezone();
-  const queue = useReconciliationQueue();
+function MyWorkScreen() {
+  const { canViewAnalysis } = useCapabilities();
+  const [params, setParams] = useSearchParams();
+  // operators have no period work: their RCA actions and tasks only (Marun E2E owner rule)
+  const tabs = canViewAnalysis ? MY_WORK_TABS : MY_WORK_TABS.filter((entry) => entry.key !== 'periods');
+  const asked = myWorkTabOf(params.get('tab'));
+  const tab = tabs.some((entry) => entry.key === asked) ? asked : 'rca-actions';
   return (
     <Page width="wide">
       <div className="space-y-4" data-testid="my-queue">
-        <PageHeader title="My queue" description="Periods waiting for you — to prepare, to review, or escalated to your role — earliest due first. Deadlines follow the plant's reconciliation policy." />
-        <DataTable
-          caption="My reconciliation queue"
-          columns={columns(timezone, pref)}
-          rows={queue.rows}
-          getRowKey={(row) => row.periodId}
-          pager={queue.pager}
-          status={queue.status}
-          density="compact"
-          empty={{ title: 'Nothing waiting for you', text: 'No ended period of the last two months needs your action.' }}
-          onRowClick={(row) => row.planId && navigate(`/plans/${row.planId}/periods/${row.periodId}`)}
-          rowLabel={(row) => `Open period ${row.localDate}${row.shiftName ? ` ${row.shiftName}` : ''}`}
-        />
+        <PageHeader title="My work" description="What is waiting for you in this plant: periods to prepare or review, your RCA actions and your tasks." />
+        <Tabs value={tab} onValueChange={(next) => setParams(myWorkSearchOf(myWorkTabOf(next)), { replace: true })}>
+          <TabsList className="h-auto flex-wrap justify-start">
+            {tabs.map((entry) => (
+              <TabsTrigger key={entry.key} value={entry.key} data-testid={`my-work-tab-${entry.key}`}>
+                {entry.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {canViewAnalysis && (
+            <TabsContent value="periods">
+              <MyPeriodsTab />
+            </TabsContent>
+          )}
+          <TabsContent value="rca-actions">
+            <MyRcaActionsList mine limit={RCA_ACTIONS_PAGE_SIZE} />
+          </TabsContent>
+          <TabsContent value="tasks">
+            <MyTasksTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </Page>
   );
 }
 
-/** "My queue" (SME R3 / R6, phase R-C) at `/my-queue`: the server picks the periods and their order. */
+/**
+ * "My work" (UX audit §5.7) at `/my-queue`: tabs Periods (the reconciliation queue, SME R3 / R6) ·
+ * RCA actions (the user's corrective actions) · Tasks (the user's open tasks), chosen with `?tab=`.
+ * Each tab reads only its own list from the server.
+ */
 export function MyQueuePage() {
   const tenantId = useV2TenantId();
-  if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to see its reconciliation queue." />;
-  return <QueueScreen />;
+  if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to see your work." />;
+  return <MyWorkScreen />;
 }

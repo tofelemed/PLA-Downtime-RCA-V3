@@ -30,6 +30,7 @@ import {
   SOURCE_AUTHORITY_VERSION_STATES,
   SourceAuthorityVersionState,
 } from './source-authority-v2.view';
+import { CommissioningBackdateDto } from '../common/commissioning-backdate.dto';
 
 const BOUNDARY = /^[A-Za-z0-9_.-]{1,64}$/;
 const CONDITIONS: readonly FallbackCondition[] = [
@@ -131,7 +132,7 @@ export class MeasurementHierarchyDto {
 }
 
 /** Body of POST /source-authority/versions (SME E7). */
-export class SourceAuthorityVersionDto {
+export class SourceAuthorityVersionDto extends CommissioningBackdateDto {
   @ApiPropertyOptional({
     format: 'uuid',
     description: 'Unit override; absent = the tenant-wide version',

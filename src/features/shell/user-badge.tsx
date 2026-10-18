@@ -21,7 +21,7 @@ export function UserBadge() {
           <span className="truncate">{roleLabel(session.user.role)}</span>
           {isReadOnly && (
             <span
-              className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800"
+              className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-warning"
               title="Every role you hold in the selected plant is read-only; changes are refused by the server"
             >
               Read-only

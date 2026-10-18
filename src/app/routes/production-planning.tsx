@@ -3,6 +3,7 @@ import { lazyNamedWithPreload } from '@/lib/lazy-with-preload';
 import type { AppRoute } from './route-types';
 
 const Approvals = lazyNamedWithPreload(() => import('@/features/approvals/approval-inbox-page'), 'ApprovalInboxPage');
+const ApprovalDetail = lazyNamedWithPreload(() => import('@/features/approvals/approval-detail-page'), 'ApprovalDetailPage');
 
 /** Plans, profiles & calendars: the list page and its record / form sub-pages. */
 const Planning = lazyNamedWithPreload(() => import('@/features/plans-profiles-calendars/planning-page'), 'PlanningPage');
@@ -21,10 +22,12 @@ const PlanDashboard = lazyNamedWithPreload(() => import('@/features/plan-dashboa
 const PeriodPage = lazyNamedWithPreload(() => import('@/features/plan-dashboard/period-page'), 'PeriodPage');
 /** Month close of the plant (EXPERT_REVIEW Area 3, phase R-B). */
 const MonthClose = lazyNamedWithPreload(() => import('@/features/month-close/month-close-page'), 'MonthClosePage');
-/** "My queue" of the reconciliation workflow (EXPERT_REVIEW Area 3, phase R-C). */
+/** "My work" (UX audit §5.7): the reconciliation queue (EXPERT_REVIEW Area 3, phase R-C), RCA actions and tasks. */
 const MyQueue = lazyNamedWithPreload(() => import('@/features/month-close/my-queue-page'), 'MyQueuePage');
 const ProposeAdjustment = lazyNamedWithPreload(() => import('@/features/plan-dashboard/adjustments/propose-adjustment-page'), 'ProposeAdjustmentPage');
 const RecordDisposition = lazyNamedWithPreload(() => import('@/features/plan-dashboard/dispositions/record-disposition-page'), 'RecordDispositionPage');
+/** UX audit B-5: PLA menu entry that resolves the plan and redirects to its period grid (or the plan list). */
+const PeriodAccounting = lazyNamedWithPreload(() => import('@/features/shell/period-accounting/period-accounting-page'), 'PeriodAccountingPage');
 /** SME E4 uncertainty budgets per measurement boundary (justification of the reconciliation tolerance). */
 const MeasurementUncertainty = lazyNamedWithPreload(() => import('@/features/measurement-uncertainty/uncertainty-page'), 'UncertaintyPage');
 
@@ -34,6 +37,7 @@ const MeasurementUncertainty = lazyNamedWithPreload(() => import('@/features/mea
  */
 export const PLANNING_ROUTES: readonly AppRoute[] = [
   { path: '/approvals', element: <Approvals />, preload: Approvals.preload },
+  { path: '/approvals/:kind/:id', element: <ApprovalDetail />, preload: ApprovalDetail.preload },
   { path: '/production-plans', element: <Navigate to="/planning?tab=plans" replace />, preload: Planning.preload },
   { path: '/planning', element: <Planning />, preload: Planning.preload },
   { path: '/planning/plans/new', element: <NewPlan />, preload: NewPlan.preload },
@@ -46,10 +50,11 @@ export const PLANNING_ROUTES: readonly AppRoute[] = [
   { path: '/planning/profiles/:profileId/edit', element: <EditProfile />, preload: EditProfile.preload },
   { path: '/planning/calendars/new', element: <NewCalendarVersion />, preload: NewCalendarVersion.preload },
   { path: '/planning/calendars/:versionId/edit', element: <CalendarVersion />, preload: CalendarVersion.preload },
+  { path: '/period-accounting', element: <PeriodAccounting />, preload: PeriodAccounting.preload },
   { path: '/plans/:planId', element: <PlanDashboard />, preload: PlanDashboard.preload },
-  { path: '/plans/:planId/periods/:periodId/*', element: <PeriodPage />, preload: PeriodPage.preload },
+  { path: '/plans/:planId/periods/:periodId/*', element: <PeriodPage />, preload: PeriodPage.preload, requires: 'canReachPeriodQuality', gateTitle: 'Period accounting' },
   { path: '/plans/:planId/periods/:periodId/adjustments/new', element: <ProposeAdjustment />, preload: ProposeAdjustment.preload },
-  { path: '/plans/:planId/periods/:periodId/dispositions/new', element: <RecordDisposition />, preload: RecordDisposition.preload },
+  { path: '/plans/:planId/periods/:periodId/dispositions/new', element: <RecordDisposition />, preload: RecordDisposition.preload, requires: 'canReachPeriodQuality', gateTitle: 'Product dispositions' },
   { path: '/month-close', element: <MonthClose />, preload: MonthClose.preload },
   { path: '/my-queue', element: <MyQueue />, preload: MyQueue.preload },
   { path: '/measurement-uncertainty', element: <MeasurementUncertainty />, preload: MeasurementUncertainty.preload },

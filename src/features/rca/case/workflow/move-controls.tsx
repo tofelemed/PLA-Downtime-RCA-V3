@@ -3,8 +3,9 @@ import type { RcaCaseReadinessView } from '@/api/v2/types/rca-workflow';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { RcaErrorAlert } from '../../components/rca-error-alert';
-import { blockersOf, moveReady, statusSlug, transitionBody, workflowMoves, type WorkflowMove } from '../../model/case-workflow';
+import { blockersOf, moveConfirmation, moveReady, statusSlug, transitionBody, workflowMoves, type WorkflowMove } from '../../model/case-workflow';
 import { useCaseTransition } from './use-case-transition';
 
 function TextField(props: { id: string; label: string; hint: string; value: string; onChange: (value: string) => void }) {
@@ -29,11 +30,14 @@ export function MoveControls({ readiness }: { readiness: RcaCaseReadinessView })
   const transition = useCaseTransition();
   const [note, setNote] = useState('');
   const [residualRisk, setResidualRisk] = useState('');
+  const [confirming, setConfirming] = useState<WorkflowMove | null>(null);
   const moves = workflowMoves(readiness).filter((move) => !move.needsApprover || readiness.approver.canApprove);
   if (moves.length === 0) return null;
   const input = { note, residualRisk };
   // the panel remounts these controls with the new row version after a move, which clears the inputs
   const run = (move: WorkflowMove) => void transition.move(transitionBody(move, input)).catch(() => null);
+  const request = (move: WorkflowMove) => (moveConfirmation(move, readiness.status) ? setConfirming(move) : run(move));
+  const confirmation = confirming ? moveConfirmation(confirming, readiness.status) : null;
   return (
     <div className="space-y-3" data-testid="workflow-moves">
       {moves.some((move) => move.needsResidualRisk) && (
@@ -48,7 +52,7 @@ export function MoveControls({ readiness }: { readiness: RcaCaseReadinessView })
             key={move.to}
             variant={variantOf(move)}
             disabled={transition.isPending || !moveReady(move, blockersOf(move, readiness, residualRisk), input)}
-            onClick={() => run(move)}
+            onClick={() => request(move)}
             data-testid={`workflow-move-${statusSlug(move.to)}`}
           >
             {move.label}
@@ -56,6 +60,16 @@ export function MoveControls({ readiness }: { readiness: RcaCaseReadinessView })
         ))}
       </div>
       {transition.error ? <RcaErrorAlert error={transition.error} /> : null}
+      {confirming && confirmation && (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => !open && setConfirming(null)}
+          title={confirmation.title}
+          description={confirmation.description}
+          confirmLabel={confirmation.confirmLabel}
+          onConfirm={() => run(confirming)}
+        />
+      )}
     </div>
   );
 }

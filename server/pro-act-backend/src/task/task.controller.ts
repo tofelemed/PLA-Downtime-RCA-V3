@@ -1,7 +1,23 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { TaskService } from './task.service';
 import { Task } from './task.entity';
-import { ApiTags, ApiBearerAuth, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiQuery,
+  ApiBody,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -17,7 +33,11 @@ export class TaskController {
   constructor(private readonly taskService: TaskService) {}
 
   @Get()
-  @ApiResponse({ status: 200, description: 'List tasks with combined filters', type: [Task] })
+  @ApiResponse({
+    status: 200,
+    description: 'List tasks with combined filters',
+    type: [Task],
+  })
   @ApiQuery({ name: 'assignedTo', required: false })
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'priority', required: false })
@@ -35,7 +55,13 @@ export class TaskController {
     @Query('overdue') overdue?: string,
   ): Promise<Task[]> {
     const hasFilters =
-      assignedTo || status || priority || tenantId || entityType || entityId || overdue === 'true';
+      assignedTo ||
+      status ||
+      priority ||
+      tenantId ||
+      entityType ||
+      entityId ||
+      overdue === 'true';
     if (!hasFilters) {
       return this.taskService.findAll();
     }
@@ -67,7 +93,10 @@ export class TaskController {
   @Put(':id')
   @ApiBody({ type: UpdateTaskDto })
   @ApiResponse({ status: 200, description: 'Update task', type: Task })
-  update(@Param('id') id: string, @Body() data: UpdateTaskDto): Promise<Task | null> {
+  update(
+    @Param('id') id: string,
+    @Body() data: UpdateTaskDto,
+  ): Promise<Task | null> {
     const payload = this.transformDateFields(data);
     return this.taskService.update(id, payload);
   }
@@ -78,7 +107,9 @@ export class TaskController {
     return this.taskService.remove(id);
   }
 
-  private transformDateFields<T extends Partial<CreateTaskDto> | Partial<UpdateTaskDto>>(data: T): Partial<Task> {
+  private transformDateFields<
+    T extends Partial<CreateTaskDto> | Partial<UpdateTaskDto>,
+  >(data: T): Partial<Task> {
     const transformed: Record<string, unknown> = { ...data };
     const dateFields: (keyof T)[] = ['dueDate', 'completedDate'];
     for (const field of dateFields) {
@@ -87,6 +118,6 @@ export class TaskController {
         transformed[field as string] = value ? new Date(value) : undefined;
       }
     }
-    return transformed as Partial<Task>;
+    return transformed;
   }
 }

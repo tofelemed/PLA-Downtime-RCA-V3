@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { ProductionLoss } from '../production-loss/production-loss.entity';
 import { ImpactCode } from '../impact-code/impact-code.entity';
 import { OEECode } from '../oee-code/oee-code.entity';
@@ -47,4 +55,4 @@ export class ReconcileForm {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}

@@ -21,6 +21,15 @@ export interface PendingPeriodView {
   workflow: string;
 }
 
+/** A scheduled shift of the month that has no production period yet. */
+export interface MissingPeriodView {
+  unitId: string;
+  unitName: string | null;
+  localDate: string;
+  shiftName: string;
+  utcStart: string;
+}
+
 export interface OpenProposalView {
   proposalId: string;
   periodId: string;
@@ -94,6 +103,12 @@ export interface MonthCloseView {
     approved: number;
     pendingCount: number;
     pending: PendingPeriodView[];
+    /** scheduled shifts of the month without a production period yet (each blocks the close; list capped) */
+    missingPeriodCount: number;
+    missingPeriods: MissingPeriodView[];
+    /** the month is over in the plant time zone (its last shift ended): closing quantities needs it */
+    monthEnded: boolean;
+    monthEndsAt: string;
     /** production days (unit × date) and the certified ones (owner decision: day certification) */
     days: number;
     certifiedDays: number;

@@ -18,7 +18,7 @@ const ROWS: Array<[keyof LedgerTotalsView, string]> = [
   ['quality', 'Quality'],
   ['gain', 'Gain'],
   ['attributed', 'Attributed'],
-  ['residual', 'Residual'],
+  ['residual', 'Unaccounted'],
   ['good', 'Good (actual)'],
   ['overproduction', 'Overproduction'],
   ['overAccounted', 'Over-accounted'],
@@ -34,38 +34,40 @@ export function LedgerComparison({ accounting, ledger }: LedgerComparisonProps) 
   const slices = [...new Set(totals.map((t) => t.sliceId))];
   if (!slices.length) return null;
   return (
-    <div className="space-y-2" data-testid="ledger-comparison">
-      <h3 className="text-sm font-medium">Run ledgers (plan vs capacity)</h3>
-      <p className="text-xs text-muted-foreground">Calculated totals before loss-line decisions. The reconciliation figures above include saved decisions and manual lines.</p>
+    <details className="space-y-2" data-testid="ledger-comparison">
+      <summary className="cursor-pointer text-sm font-medium">Raw calculation (before loss-line decisions)</summary>
+      <p className="text-xs text-muted-foreground">Run ledgers (plan vs capacity) as calculated, before loss-line decisions. The reconciliation figures above include saved decisions and manual lines.</p>
       {slices.map((sliceId) => {
         const plan = totals.find((t) => t.sliceId === sliceId && t.ledger === 'plan');
         const capacity = totals.find((t) => t.sliceId === sliceId && t.ledger === 'capacity');
         return (
-          <table key={sliceId} className="w-full text-sm" aria-label="Ledger totals">
-            <thead>
-              <tr className="text-left text-xs text-muted-foreground">
-                <th className="font-normal">Figure</th>
-                <th className={ledger === 'plan' ? 'font-semibold text-foreground' : 'font-normal'}>Plan ledger</th>
-                <th className={ledger === 'capacity' ? 'font-semibold text-foreground' : 'font-normal'}>Capacity ledger</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ROWS.map(([key, label]) => (
-                <tr key={key} className="border-t">
-                  <td>{label}</td>
-                  <td>{plan ? <Quantity value={plan[key] as string | null} uom={plan.uom} /> : '—'}</td>
-                  <td>{capacity ? <Quantity value={capacity[key] as string | null} uom={capacity.uom} /> : '—'}</td>
+          <div key={sliceId} className="overflow-x-auto">
+            <table className="w-full text-sm" aria-label="Ledger totals">
+              <thead>
+                <tr className="text-left text-xs text-muted-foreground">
+                  <th className="font-normal">Figure</th>
+                  <th className={ledger === 'plan' ? 'font-semibold text-foreground' : 'font-normal'}>Plan ledger</th>
+                  <th className={ledger === 'capacity' ? 'font-semibold text-foreground' : 'font-normal'}>Capacity ledger</th>
                 </tr>
-              ))}
-              <tr className="border-t text-xs text-muted-foreground">
-                <td>Status</td>
-                <td>{plan?.flags.map((f) => labelOf(FLAG_LABELS, f)).join(', ') || '—'}</td>
-                <td>{capacity?.flags.map((f) => labelOf(FLAG_LABELS, f)).join(', ') || '—'}</td>
-              </tr>
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {ROWS.map(([key, label]) => (
+                  <tr key={key} className="border-t">
+                    <td>{label}</td>
+                    <td>{plan ? <Quantity value={plan[key] as string | null} uom={plan.uom} /> : '—'}</td>
+                    <td>{capacity ? <Quantity value={capacity[key] as string | null} uom={capacity.uom} /> : '—'}</td>
+                  </tr>
+                ))}
+                <tr className="border-t text-xs text-muted-foreground">
+                  <td>Status</td>
+                  <td>{plan?.flags.map((f) => labelOf(FLAG_LABELS, f)).join(', ') || '—'}</td>
+                  <td>{capacity?.flags.map((f) => labelOf(FLAG_LABELS, f)).join(', ') || '—'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         );
       })}
-    </div>
+    </details>
   );
 }

@@ -1,9 +1,22 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
+import { RcaAction } from '../rca/entities/rca-action.entity';
 
 @Index('IDX_tasks_tenant_created', ['tenantId', 'createdAt'])
 @Index('IDX_tasks_tenant_due', ['tenantId', 'dueDate', 'id'])
 @Index('IDX_tasks_tenant_assignee', ['tenantId', 'assignedTo'])
+@Index('IDX_tasks_tenant_rca_action', ['tenantId', 'rcaActionId'])
+// one open task per RCA action (partial unique index, migration RcaRecommendationActionTasks)
+@Index('UQ_tasks_open_rca_action', { synchronize: false })
 @Entity('tasks')
 export class Task {
   @PrimaryGeneratedColumn('uuid')
@@ -38,6 +51,17 @@ export class Task {
 
   @Column({ name: 'entity_id', type: 'varchar', length: 36, nullable: true })
   entityId?: string;
+
+  /** item 5: the RCA action this task carries out (with `entity_type` RCA = the action's case) */
+  @Column({ name: 'rca_action_id', type: 'uuid', nullable: true })
+  rcaActionId?: string | null;
+
+  @ManyToOne(() => RcaAction, { onDelete: 'SET NULL' })
+  @JoinColumn({
+    name: 'rca_action_id',
+    foreignKeyConstraintName: 'FK_tasks_rca_action',
+  })
+  rcaAction?: RcaAction;
 
   @Column({ name: 'organization_id', type: 'varchar', length: 36 })
   organizationId: string;

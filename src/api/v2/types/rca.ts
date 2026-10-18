@@ -29,6 +29,15 @@ export interface RcaRecommendationItem {
   status: string | null;
   /** decimal string, no currency */
   estimatedCost: string | null;
+  /** read-only (item 5): the case's actions implementing this recommendation; never sent back */
+  actions?: RcaRecommendationActionRef[];
+}
+
+/** An action implementing a recommendation, as the case view lists it (item 5). */
+export interface RcaRecommendationActionRef {
+  id: string;
+  title: string;
+  status: string;
 }
 
 /** Historian query recorded with a time-series evidence item (parameters, not samples). */
@@ -70,6 +79,11 @@ export interface RcaEvidenceItem {
   task: string | null;
   taskDueDate: string | null;
   taskStatus: string | null;
+  /** who has to bring the evidence (a member of the plant; null = not assigned) */
+  taskAssigneeId: string | null;
+  /** recorded by the server when `verified` becomes true (values sent back are ignored) */
+  verifiedBy: string | null;
+  verifiedAt: string | null;
   /** logic-tree nodes and diagram events this item supports */
   nodeIds: string[];
   timeSeries: RcaEvidenceSeries | null;
@@ -123,6 +137,13 @@ export interface RcaCaseSummaryView {
   createdAt: string;
   updatedAt: string;
   rowVersion: number;
+}
+
+/** A row of `GET /v2/rcas` (U3): the first linked event (by link time) and the action counts. */
+export interface RcaCaseListItemView extends RcaCaseSummaryView {
+  trigger: { eventId: string; startTime: string; unitId: string } | null;
+  /** `total` leaves cancelled actions out; `overdue` = open or in progress past the due date */
+  actions: { total: number; done: number; overdue: number };
 }
 
 export interface RcaCaseView extends RcaCaseSummaryView {
@@ -244,6 +265,14 @@ export interface RcaLinkResultView {
   rca: RcaCaseSummaryView;
 }
 
+export interface RcaRecommendationEventFacts {
+  reasonCodeId: string | null;
+  reasonName: string | null;
+  assetId: string | null;
+  assetName: string | null;
+  startTime: string;
+}
+
 export interface RcaRecommendationView {
   id: string;
   eventId: string;
@@ -256,6 +285,8 @@ export interface RcaRecommendationView {
   outcome: string;
   state: string;
   rcaId: string | null;
+  /** F-1: facts of the event (null when the event is not readable any more) */
+  event: RcaRecommendationEventFacts | null;
   detail: Record<string, unknown>;
   firedAt: string;
   confirmedAt: string | null;
@@ -301,13 +332,38 @@ export interface RcaActionView {
   completionVerifiedBy: string | null;
   verificationWindowStart: string | null;
   verificationWindowEnd: string | null;
+  /** CA4: how the completion is verified (null = not stated) */
+  verificationMethod: string | null;
+  /** CA4: the named verifier, never the owner; when set, only this person marks the action done */
+  verifierId: string | null;
+  /** the verification window is fixed once the action is done (409 VERIFICATION_WINDOW_LOCKED) */
+  verificationWindowLocked: boolean;
   baseline: RcaActionBaseline | null;
   postAction: RcaPostAction | null;
   verificationStatus: 'not_planned' | 'pending' | 'due' | 'evaluated';
   verdict: RcaEffectivenessVerdict | null;
   claimedAvoidedLoss: { amount: string; currency: string | null } | null;
+  /** F-9: why, who and when, while the action is cancelled (null otherwise or when no reason was given) */
+  cancelReason: string | null;
+  cancelledBy: string | null;
+  cancelledAt: string | null;
+  /** item 5: the case recommendation this action implements (null = none) */
+  recommendationId: string | null;
+  /** item 5: the open (else the latest) task of Task Management carrying out this action */
+  linkedTask: RcaActionTaskView | null;
+  /** item 5: when the linked task was completed — recorded only, the action still needs its evidence */
+  taskCompletedAt: string | null;
   createdAt: string;
   rowVersion: number;
+}
+
+/** The Task Management task linked to an action (item 5). */
+export interface RcaActionTaskView {
+  id: string;
+  status: string;
+  assigneeId: string;
+  dueDate: string | null;
+  completedAt: string | null;
 }
 
 export interface RcaOutcomeView {

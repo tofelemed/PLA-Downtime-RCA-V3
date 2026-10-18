@@ -13,6 +13,8 @@ export interface EventHubEnv {
   /** every reason code, retired ones included (pickers keep a retired current value, FE-04 / FE-05) */
   allReasonCodes: CodeView[];
   unitName: (id: string | null | undefined) => string;
+  /** C-10: the unit's code when it differs from its name (secondary text); null when they are the same */
+  unitCode?: (id: string | null | undefined) => string | null;
   reasonName: (id: string | null | undefined) => string;
 }
 

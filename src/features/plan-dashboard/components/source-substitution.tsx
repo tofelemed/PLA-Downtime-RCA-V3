@@ -19,7 +19,7 @@ export function SourceSubstitution({ substitution }: { substitution: SourceSubst
   const { text } = useNumberFormat();
   const bridge = substitution.crossBoundary;
   return (
-    <p className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs" data-testid="source-substitution" data-source-class={substitution.used.sourceClass ?? ''}>
+    <p className="rounded border border-warning/40 bg-warning/10 px-2 py-1 text-xs" data-testid="source-substitution" data-source-class={substitution.used.sourceClass ?? ''}>
       <span className="font-medium">Substituted source: </span>
       {text(sourceText(substitution.used))} instead of {text(sourceText(substitution.replaced))} — {labelOf(SUBSTITUTION_REASON_LABELS, substitution.reason).toLowerCase()}.
       {bridge && (

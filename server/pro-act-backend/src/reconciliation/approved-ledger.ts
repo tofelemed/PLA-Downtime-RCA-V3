@@ -8,7 +8,7 @@ import { ValuationContext } from '../domain/valuation/valuation.types';
 import { ApprovedLossLine } from './entities/approved-loss-line.entity';
 import { ApprovedLossLineValuation } from './entities/approved-loss-line-valuation.entity';
 import { approvedLedgerLines } from './reviewed-valuation';
-import { RevisionState } from './revision-state';
+import { RevisionState, sliceUomOf } from './revision-state';
 
 const CHUNK = 500;
 const OEE_KINDS = new Set(['availability', 'performance', 'quality']);
@@ -43,7 +43,8 @@ function metaOf(line: ReconciledLine, state: RevisionState): LineMeta {
     oeeComponent: OEE_KINDS.has(line.kind) ? line.kind : null,
     reasonCodeId: own?.reasonCodeId ?? null,
     impactCodeId: own?.impactCodeId ?? null,
-    uom: own?.uom ?? null,
+    // lines saved before the slice unit was stored on manual lines carry none
+    uom: own?.uom ?? sliceUomOf(state.totals, line.sliceId),
   };
 }
 

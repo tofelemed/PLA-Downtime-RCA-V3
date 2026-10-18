@@ -44,4 +44,4 @@ export class UnitService {
     await this.unitRepository.delete(id);
     this.realtimeGateway.broadcastEntityEvent('Deleted', 'unit', { id });
   }
-} 
+}

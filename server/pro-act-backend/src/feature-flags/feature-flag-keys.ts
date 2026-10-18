@@ -10,7 +10,12 @@ export const FEATURE_FLAG_DEFAULTS = {
   'v2.plaAnalytics': false,
   'v2.integrationConsole': false,
   'v2.codesAdmin': false,
-  'v2.rca': false,
+  /**
+   * RCA is v2 for every plant (owner, 2026-10-18): the server no longer reads this flag (RCA triggers and
+   * the open-event sweep always run; the v1 trigger-config auto-create is retired). Kept in the registry
+   * so cutover tooling and existing tenant rows stay valid.
+   */
+  'v2.rca': true,
 } as const satisfies Record<string, boolean>;
 
 export type FeatureFlagKey = keyof typeof FEATURE_FLAG_DEFAULTS;

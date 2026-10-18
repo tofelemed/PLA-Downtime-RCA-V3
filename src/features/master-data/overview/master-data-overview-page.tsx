@@ -22,7 +22,7 @@ interface Tile {
 const PLANT_TILES: readonly Tile[] = [
   { to: '/master-data/units', title: 'Units', text: 'Production units and lines of this plant', icon: EntityIcon.unit, count: 'units' },
   { to: '/master-data/assets', title: 'Assets', text: 'Equipment and instruments, each under a unit', icon: EntityIcon.asset, count: 'assets' },
-  { to: '/master-data/products', title: 'Products', text: 'Shared by the organisation or kept to this plant', icon: EntityIcon.product, count: 'products' },
+  { to: '/master-data/products', title: 'Products', text: 'Shared by the organization or kept to this plant', icon: EntityIcon.product, count: 'products' },
 ];
 
 const RCA_TILES: readonly Tile[] = [
@@ -86,7 +86,7 @@ function PlantRecordsOverview() {
       <Section title="Hierarchy and code libraries">
         <ul className="list-inside list-disc space-y-1 text-sm">
           <li>
-            <Link className="underline" to="/master-data/hierarchy">Plant hierarchy</Link> — organisation, plants, units and assets as a tree.
+            <Link className="underline" to="/master-data/hierarchy">Plant hierarchy</Link> — organization, plants, units and assets as a tree.
           </li>
           <li>
             <Link className="underline" to="/master-data/codes-rules">Codes & rules</Link> — reason, impact and OEE codes, loss categories and rules.

@@ -55,14 +55,16 @@ const LATEST = (
 /**
  * Lines of the latest approved revision per period, filtered by `$2` (event ids or line ids): the approved
  * plan lines (VA-01b: decided quantities, manual lines with their evidence event), or — for revisions
- * approved before they were stored — the active loss lines of the approved run.
+ * approved before they were stored — the active plan-ledger loss lines of the approved run (the capacity
+ * ledger is an alternative baseline of the same loss and is never added on top).
  */
 const APPROVED_LINES = (filter: 'event' | 'line') => `
   WITH cand AS (
     SELECT l."id", l."run_id", l."period_id", l."kind"::text AS "kind", l."uom", l."quantity"
       FROM "loss_lines" l
      WHERE l."tenant_id" = $1 AND ${filter === 'event' ? 'l."cause_event_id"' : 'l."id"'} = ANY($2::uuid[])
-       AND l."state" = 'active' AND l."source" <> 'candidate_superseded' AND l."kind"::text = ANY($3::text[])),
+       AND l."ledger" = 'plan' AND l."state" = 'active' AND l."source" <> 'candidate_superseded'
+       AND l."kind"::text = ANY($3::text[])),
   approved AS (
     SELECT a."id", 'approved' AS "origin", a."kind"::text AS "kind", a."uom", a."quantity"
       FROM "approved_loss_lines" a

@@ -43,7 +43,12 @@ export class ProductionPlan {
   @JoinColumn({ name: 'tenant_id' })
   tenant?: Tenant;
 
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @Column({ name: 'start_date', type: 'timestamptz' })
@@ -52,16 +57,34 @@ export class ProductionPlan {
   @Column({ name: 'end_date', type: 'timestamptz' })
   endDate: Date;
 
-  @Column({ name: 'target_quantity', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'target_quantity',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   plannedQuantity?: number;
 
-  @Column({ name: 'actual_quantity', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'actual_quantity',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   actualQuantity?: number;
 
   @Column({ name: 'status', type: 'varchar', length: 50, nullable: true })
   status?: string;
 
-  @Column({ name: 'tolerance_limit', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'tolerance_limit',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   toleranceLimit?: number;
 
   @Column({ name: 'plan_basis', type: 'varchar', length: 255, nullable: true })
@@ -73,7 +96,12 @@ export class ProductionPlan {
   @Column({ name: 'recurrence', type: 'varchar', length: 100, nullable: true })
   recurrence?: string;
 
-  @Column({ name: 'data_entry_frequency', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'data_entry_frequency',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   dataEntryFrequency?: string;
 
   @Column({ name: 'shift', type: 'varchar', length: 50, nullable: true })
@@ -88,7 +116,12 @@ export class ProductionPlan {
   @Column({ name: 'comments', type: 'text', nullable: true })
   comments?: string; // JSON string
 
-  @Column({ name: 'approval_status', type: 'varchar', length: 50, nullable: true })
+  @Column({
+    name: 'approval_status',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
   approvalStatus?: string;
 
   @Column({ name: 'submitted_by', type: 'varchar', length: 36, nullable: true })

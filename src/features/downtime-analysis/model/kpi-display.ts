@@ -103,21 +103,30 @@ export function hasUnknownTime(views: readonly KpiAggregateView[] | undefined): 
   return value !== null && value !== undefined && /[1-9]/.test(value);
 }
 
-export interface RestoreColumn {
-  /**
-   * SME D10: "Mean active repair time" (MTTR: diagnosis, repair and test, from repair evidence) only with repair evidence;
-   * otherwise "Mean time to restore production" (failure to production resumed). KPI08 / D13.
-   */
-  title: 'Mean active repair time' | 'Mean time to restore production';
-  view: KpiAggregateView;
+export interface RepairColumn {
+  title: string;
+  /** what the column measures, shown under the title */
+  note: string;
+  testId: string;
+  view: (row: ReliabilityRowView) => KpiAggregateView;
 }
 
-export function restoreColumn(row: ReliabilityRowView): RestoreColumn {
-  if (row.mttr.value !== null) return { title: 'Mean active repair time', view: row.mttr };
-  return { title: 'Mean time to restore production', view: row.meanDowntimeToRestore };
-}
-
-/** The restore column title of a whole table: active repair time only when every row has repair evidence. */
-export function restoreTitle(rows: readonly ReliabilityRowView[]): RestoreColumn['title'] {
-  return rows.length > 0 && rows.every((row) => row.mttr.value !== null) ? 'Mean active repair time' : 'Mean time to restore production';
-}
+/**
+ * SME D10 / KPI08: both repair figures side by side. Mean active repair time (MTTR) is diagnosis, repair and
+ * test from work-order evidence; mean time to restore production is the full outage, failure to production
+ * resumed. A row without repair evidence shows the server's reason in the MTTR column, never the outage mean.
+ */
+export const REPAIR_COLUMNS: readonly RepairColumn[] = [
+  {
+    title: 'Mean active repair time (MTTR)',
+    note: 'Active repair from work orders',
+    testId: 'mttr-title',
+    view: (row) => row.mttr,
+  },
+  {
+    title: 'Mean time to restore production',
+    note: 'Full outage, failure to production resumed',
+    testId: 'restore-title',
+    view: (row) => row.meanDowntimeToRestore,
+  },
+];

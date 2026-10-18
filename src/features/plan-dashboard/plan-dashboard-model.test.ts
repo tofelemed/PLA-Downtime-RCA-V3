@@ -134,11 +134,25 @@ describe('display formatting and gates', () => {
     expect(formatRatioPercent(null)).toBe('—');
   });
 
+  it('rounds the percentage like the server gate message (half away from zero, one decimal)', () => {
+    expect(formatRatioPercent('0.6666666667')).toBe('66.7 %');
+    expect(formatRatioPercent('0.66649')).toBe('66.6 %');
+    expect(formatRatioPercent('0.99996')).toBe('100 %');
+    expect(formatRatioPercent('0.00004')).toBe('0 %');
+  });
+
   it('the submitter is told why approve is not offered (separation of duties)', () => {
     const submitted = view({ revision: { ...view().revision, lifecycle: 'in_review', submittedBy: 'me', submittedHash: 'b'.repeat(64) } });
     expect(reviewGate(submitted, 'me')).toMatchObject({ allowed: false, code: 'SEPARATION_OF_DUTIES' });
     expect(reviewGate(submitted, 'someone-else')).toMatchObject({ allowed: true });
     expect(reviewGate(view(), 'someone-else').allowed).toBe(false);
+  });
+
+  it('Marun E2E: whoever reopened the period is told why they cannot approve its revision', () => {
+    const reopened = view({ revision: { ...view().revision, lifecycle: 'in_review', submittedBy: 'sara', submittedHash: 'b'.repeat(64), supersedesId: 'r1', openedBy: 'maryam' } });
+    expect(approveGate(reopened, 'maryam')).toMatchObject({ allowed: false, code: 'SEPARATION_OF_DUTIES', reason: expect.stringContaining('You reopened this revision') });
+    expect(approveGate(reopened, 'reza')).toMatchObject({ allowed: true });
+    expect(approveGate(reopened, 'maryam', true)).toMatchObject({ allowed: true });
   });
 
   it('SuperAdmin reviews and approves their own lines but cannot approve stale inputs', () => {

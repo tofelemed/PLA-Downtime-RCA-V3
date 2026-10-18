@@ -24,6 +24,19 @@ export function share(value: unknown, field: string): number {
   return value;
 }
 
+/** A decimal in [0, 1] (0 and 1 included). */
+export function fraction(value: unknown, field: string): number {
+  if (
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    value < 0 ||
+    value > 1
+  ) {
+    throw new RcaPolicyError(`${field} must be a number in [0, 1]`);
+  }
+  return value;
+}
+
 export function nullableNumber(value: unknown, field: string): number | null {
   if (value === null) return null;
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {

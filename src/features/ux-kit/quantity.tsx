@@ -20,7 +20,7 @@ export function Quantity({ value, uom, fractionDigits = 2, className }: Quantity
         (uom ? (
           <span className="ml-1 text-muted-foreground">{uom}</span>
         ) : (
-          <span className="ml-1 text-amber-600" title="The source did not state a unit">
+          <span className="ml-1 text-warning" title="The source did not state a unit">
             (unit unknown)
           </span>
         ))}

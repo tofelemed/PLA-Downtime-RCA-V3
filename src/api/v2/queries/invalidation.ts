@@ -42,7 +42,8 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   demand_status: ['valuation'],
   user: ['users', 'user-scopes'],
   user_scope: ['user-scopes', 'users'],
-  task: ['tasks'],
+  // item 5: a task carrying out an RCA action shows on the action (linked task, task completed)
+  task: ['tasks', 'rca-cases'],
   admin_config: ['admin-config'],
   unit: ['units', 'assets', 'master-data'],
   asset: ['assets', 'master-data'],

@@ -20,7 +20,9 @@ describe('OrganizationService', () => {
     }).compile();
 
     service = module.get<OrganizationService>(OrganizationService);
-    repo = module.get<Repository<Organization>>(getRepositoryToken(Organization));
+    repo = module.get<Repository<Organization>>(
+      getRepositoryToken(Organization),
+    );
   });
 
   it('should be defined', () => {
@@ -45,7 +47,9 @@ describe('OrganizationService', () => {
 
   it('should remove an organization', async () => {
     jest.spyOn(repo, 'delete').mockResolvedValue(undefined as any);
-    jest.spyOn(service, 'findOne').mockResolvedValue({ id: '1' } as Organization);
+    jest
+      .spyOn(service, 'findOne')
+      .mockResolvedValue({ id: '1' } as Organization);
     await expect(service.remove('1')).resolves.toBeUndefined();
   });
-}); 
+});

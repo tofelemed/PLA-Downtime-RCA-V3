@@ -295,4 +295,273 @@ describe('state-derived stops, duplicate merge and incidents (plan 1.10, DT-04, 
     const after = await env.get(`stop-incidents/by-event/${first}`).expect(200);
     expect(after.body).toEqual({});
   });
+
+  it('a late stop sample older than the 24 h lookback but inside the late-sample horizon derives its stop', async () => {
+    // a corrected archive value delivered late: observed 110 min after A, stored when the engine runs 30 h after A
+    await env.app.get(SampleStore).insertSample({
+      tenantId: env.world.tenantA,
+      signalId,
+      observedAt: new Date(Date.parse(A) + 110 * MINUTE),
+      value: '0',
+      stateName: null,
+      stateValue: null,
+      quality: 'good',
+      qualityFlags: null,
+      rawId: randomUUID(),
+      rawReceivedAt: new Date(),
+      sourceRevision: '2',
+    });
+    const outcome = await engine().processUnit(
+      scope(),
+      new Date(Date.parse(A) + 30 * 60 * MINUTE),
+    );
+    expect(outcome).toEqual({ created: 1, updated: 0, retracted: 0 });
+    const late = (await derived()).filter(
+      (e) =>
+        e.physical_state === 'closed' &&
+        new Date(e.start_time).toISOString() === plus(A, 110 * MINUTE),
+    );
+    expect(late).toHaveLength(1);
+    expect(new Date(late[0].end_time as Date).toISOString()).toBe(
+      plus(A, 111 * MINUTE),
+    );
+  });
+
+  it('coding a derived stop keeps it derived, so the engine still owns it', async () => {
+    const [stop] = (await derived()).filter(
+      (e) =>
+        e.physical_state === 'closed' &&
+        new Date(e.start_time).toISOString() === plus(A, 110 * MINUTE),
+    );
+    const current = await env.get(`production-events/${stop.id}`).expect(200);
+    const { rowVersion } = current.body as { rowVersion: number };
+    await env
+      .patch(
+        `production-events/${stop.id}`,
+        { reasonCodeId: reasonId },
+        `"${rowVersion}"`,
+      )
+      .expect(200);
+    const [row] = await env.rows<{ source_kind: string; coding_state: string }>(
+      `SELECT "source_kind", "coding_state" FROM "production_events" WHERE "id" = $1`,
+      [stop.id],
+    );
+    expect(row).toEqual({ source_kind: 'derived', coding_state: 'coded' });
+  });
+
+  it('clearing the reason of a coded stop uncodes it and gives back the classification its code filled (Marun E2E A–C)', async () => {
+    const speedLoss = randomUUID();
+    await env.rows(
+      `INSERT INTO reason_codes (id, code, name, tenant_id, is_active, default_oee_component)
+       VALUES ($1, $2, 'Reduced rate', $3, true, 'performance')`,
+      [speedLoss, `SPEED-${speedLoss.slice(0, 6)}`, env.world.tenantA],
+    );
+    const [stop] = (await derived()).filter(
+      (e) =>
+        e.physical_state === 'closed' &&
+        new Date(e.start_time).toISOString() === plus(A, 110 * MINUTE),
+    );
+    const read = async () =>
+      (
+        (await env.get(`production-events/${stop.id}`).expect(200)).body as {
+          rowVersion: number;
+        }
+      ).rowVersion;
+    await env
+      .patch(
+        `production-events/${stop.id}`,
+        { reasonCodeId: speedLoss },
+        `"${await read()}"`,
+      )
+      .expect(200);
+    const state = () =>
+      env.rows<{
+        coding_state: string;
+        oee_component: string;
+        basis: unknown;
+        overrides: Record<string, number> | null;
+      }>(
+        `SELECT "coding_state", "oee_component", "classification_basis" AS basis, "user_overrides" AS overrides
+           FROM "production_events" WHERE "id" = $1`,
+        [stop.id],
+      );
+    expect((await state())[0]).toMatchObject({
+      coding_state: 'coded',
+      oee_component: 'performance',
+    });
+    await env
+      .patch(
+        `production-events/${stop.id}`,
+        {
+          reasonCodeId: null,
+          changeReason: 'Coded by mistake: the owner keeps this stop uncoded',
+        },
+        `"${await read()}"`,
+      )
+      .expect(200);
+    const [after] = await state();
+    expect(after).toMatchObject({
+      coding_state: 'uncoded',
+      oee_component: 'availability',
+      basis: null,
+    });
+    expect(after.overrides ?? {}).not.toHaveProperty('oeeComponent');
+    const [revision] = await env.rows<{ change_reason: string | null }>(
+      `SELECT "change_reason" FROM "event_revisions" WHERE "event_id" = $1 AND "kind" = 'user' ORDER BY "revision" DESC LIMIT 1`,
+      [stop.id],
+    );
+    expect(revision.change_reason).toBe(
+      'Coded by mistake: the owner keeps this stop uncoded',
+    );
+    await env
+      .patch(
+        `production-events/${stop.id}`,
+        { changeReason: 'x'.repeat(1001) },
+        `"${await read()}"`,
+      )
+      .expect(422);
+  });
+
+  describe('a reasonless stop left coded (Marun regression R1)', () => {
+    const stopId = async () =>
+      (await derived()).filter(
+        (e) =>
+          e.physical_state === 'closed' &&
+          new Date(e.start_time).toISOString() === plus(A, 110 * MINUTE),
+      )[0].id;
+    const leaveCoded = (id: string, pending = false) =>
+      env.rows(
+        `UPDATE "production_events" SET "reason_code_id" = NULL, "coding_state" = 'coded', "status" = 'Coded',
+                "investigation_pending" = $2, "verified_by" = $3, "verified_at" = now() WHERE "id" = $1`,
+        [id, pending, randomUUID()],
+      );
+    const codingOf = async (id: string) =>
+      (
+        await env.rows<{
+          coding_state: string;
+          status: string;
+          verified_by: string | null;
+        }>(
+          `SELECT "coding_state", "status", "verified_by" FROM "production_events" WHERE "id" = $1`,
+          [id],
+        )
+      )[0];
+
+    it('an OEE-only edit on a reasonless coded stop makes it uncoded and clears its verification', async () => {
+      const id = await stopId();
+      await leaveCoded(id);
+      const current = await env.get(`production-events/${id}`).expect(200);
+      const { rowVersion } = current.body as { rowVersion: number };
+      await env
+        .patch(
+          `production-events/${id}`,
+          { oeeComponent: 'performance' },
+          `"${rowVersion}"`,
+        )
+        .expect(200);
+      expect(await codingOf(id)).toEqual({
+        coding_state: 'uncoded',
+        status: 'Open',
+        verified_by: null,
+      });
+    });
+
+    it('the repair migration uncodes reasonless coded stops, except those under investigation', async () => {
+      const { UncodeReasonlessCodedStops1794221600000 } = await import(
+        '../../src/database/migrations/1794221600000-UncodeReasonlessCodedStops'
+      );
+      const migration = new UncodeReasonlessCodedStops1794221600000();
+      const runner = env.harness.dataSource.createQueryRunner();
+      await runner.connect();
+      try {
+        const id = await stopId();
+        await leaveCoded(id);
+        await migration.up(runner);
+        expect(await codingOf(id)).toEqual({
+          coding_state: 'uncoded',
+          status: 'Open',
+          verified_by: null,
+        });
+        await leaveCoded(id, true);
+        await migration.up(runner);
+        expect(await codingOf(id)).toMatchObject({
+          coding_state: 'coded',
+          status: 'Coded',
+        });
+        await migration.down();
+      } finally {
+        await runner.release();
+      }
+    });
+
+    it('the repair is recorded as a System revision so the latest revision matches the row (O1)', async () => {
+      const { UncodeReasonlessCodedStops1794221600000 } = await import(
+        '../../src/database/migrations/1794221600000-UncodeReasonlessCodedStops'
+      );
+      const { RecordUncodedStopRepairRevision1794222400000 } = await import(
+        '../../src/database/migrations/1794222400000-RecordUncodedStopRepairRevision'
+      );
+      const record = new RecordUncodedStopRepairRevision1794222400000();
+      const runner = env.harness.dataSource.createQueryRunner();
+      await runner.connect();
+      const latestOf = async (id: string) =>
+        (
+          await env.rows<{
+            revision: number;
+            kind: string;
+            actor_kind: string;
+            actor_id: string | null;
+            change_reason: string | null;
+            coding_state: string;
+            status: string;
+          }>(
+            `SELECT "revision", "kind", "actor_kind", "actor_id", "change_reason",
+                    "effective_facts"->>'codingState' AS "coding_state", "effective_facts"->>'status' AS "status"
+               FROM "event_revisions" WHERE "event_id" = $1 ORDER BY "revision" DESC LIMIT 1`,
+            [id],
+          )
+        )[0];
+      try {
+        const id = await stopId();
+        await leaveCoded(id, false);
+        await env.rows(
+          `UPDATE "event_revisions" r SET "effective_facts" = r."effective_facts"
+                  || '{"codingState": "coded", "status": "Coded", "reasonCodeId": null}'::jsonb
+            WHERE r."event_id" = $1
+              AND r."revision" = (SELECT max("revision") FROM "event_revisions" WHERE "event_id" = $1)`,
+          [id],
+        );
+        const before = await latestOf(id);
+        await new UncodeReasonlessCodedStops1794221600000().up(runner);
+        await record.up(runner);
+        const after = await latestOf(id);
+        expect(after).toEqual({
+          revision: before.revision + 1,
+          kind: 'system',
+          actor_kind: 'system',
+          actor_id: null,
+          change_reason: 'Repair: reasonless stop marked uncoded',
+          coding_state: 'uncoded',
+          status: 'Open',
+        });
+        await record.up(runner);
+        expect((await latestOf(id)).revision).toBe(after.revision);
+        const history = await env
+          .get(`production-events/${id}/revisions`)
+          .expect(200);
+        const { revisions } = history.body as {
+          revisions: Array<{ revision: number; actorSource: string | null }>;
+        };
+        expect(
+          revisions.find((r) => r.revision === after.revision),
+        ).toMatchObject({
+          actorSource: 'data-repair',
+        });
+        await record.down(runner);
+        expect((await latestOf(id)).revision).toBe(before.revision);
+      } finally {
+        await runner.release();
+      }
+    });
+  });
 });

@@ -7,7 +7,10 @@ import {
 } from '../common/context/request-context';
 import { RequestWithContext } from '../common/context/request-context.middleware';
 import { RequestContextFactory } from './context/request-context.factory';
-import { AuthenticatedUser, JwtPayload } from './interfaces/jwt-payload.interface';
+import {
+  AuthenticatedUser,
+  JwtPayload,
+} from './interfaces/jwt-payload.interface';
 import { JWT_SECRET } from './jwt.constants';
 import { isAccessToken } from './tokens/token-config';
 

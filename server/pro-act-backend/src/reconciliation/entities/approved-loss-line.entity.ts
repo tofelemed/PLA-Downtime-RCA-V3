@@ -13,6 +13,7 @@ import { decimalStringTransformer } from '../../v2/common/decimal-string.transfo
 @Entity('approved_loss_lines')
 @Index('IDX_approved_loss_lines_tenant_revision', ['tenantId', 'revisionId'])
 @Index('IDX_approved_loss_lines_tenant_cause', ['tenantId', 'causeEventId'])
+@Index('IDX_approved_loss_lines_tenant_source', ['tenantId', 'sourceId'])
 export class ApprovedLossLine extends TenantOwnedEntity {
   @Column({ name: 'revision_id', type: 'uuid' })
   revisionId: string;

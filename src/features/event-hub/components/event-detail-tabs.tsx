@@ -11,12 +11,17 @@ import { ImpactedPeriodsPreview } from './impacted-periods-preview';
 import { ReviewItemsList } from './review-items-list';
 import { RevisionTimeline } from './revision-timeline';
 import { SourceEffectiveTable } from './source-effective-table';
+import { currentStateFacts } from '../model/source-facts';
 import { StopLinksPanel } from '../stop-links/stop-links-panel';
 
-const TABS = ['details', 'history', 'review', 'evidence', 'repair', 'related', 'periods'] as const;
+const TABS = ['details', 'history', 'conflicts', 'evidence', 'repair', 'related', 'periods'] as const;
 type DetailTab = (typeof TABS)[number];
 
-function tabOf(value: string | null, isStop: boolean): DetailTab {
+/** Links written before E-10 used `?tab=review` for the source-conflict tab. */
+const TAB_ALIASES: Readonly<Record<string, DetailTab>> = { review: 'conflicts' };
+
+function tabOf(raw: string | null, isStop: boolean): DetailTab {
+  const value = raw ? TAB_ALIASES[raw] ?? raw : null;
   if (!isStop && (value === 'repair' || value === 'related')) return 'details';
   return (TABS as readonly string[]).includes(value ?? '') ? (value as DetailTab) : 'details';
 }
@@ -45,17 +50,17 @@ export function EventDetailTabs({ event }: { event: ProductionEventView }) {
       <TabsList className="h-auto flex-wrap">
         <TabsTrigger value="details">Values</TabsTrigger>
         <TabsTrigger value="history">History</TabsTrigger>
-        <TabsTrigger value="review">Review ({openReviews})</TabsTrigger>
+        <TabsTrigger value="conflicts">Source conflicts ({openReviews})</TabsTrigger>
         <TabsTrigger value="evidence">Evidence</TabsTrigger>
         {isStop && <TabsTrigger value="repair">Repair</TabsTrigger>}
         {isStop && <TabsTrigger value="related">Duplicates &amp; repeats</TabsTrigger>}
         <TabsTrigger value="periods">Periods</TabsTrigger>
       </TabsList>
       <TabsContent value="details">
-        {loaded(() => data && <SourceEffectiveTable revisions={data.revisions} overriddenFields={event.overriddenFields ?? []} />)}
+        {loaded(() => data && <SourceEffectiveTable revisions={data.revisions} overriddenFields={event.overriddenFields ?? []} current={currentStateFacts(event)} />)}
       </TabsContent>
-      <TabsContent value="history">{loaded(() => data && <RevisionTimeline history={data} />)}</TabsContent>
-      <TabsContent value="review">{loaded(() => data && <ReviewItemsList event={event} items={data.reviewItems} />)}</TabsContent>
+      <TabsContent value="history">{loaded(() => data && <RevisionTimeline history={data} sourceName={event.source} />)}</TabsContent>
+      <TabsContent value="conflicts">{loaded(() => data && <ReviewItemsList event={event} items={data.reviewItems} />)}</TabsContent>
       <TabsContent value="evidence">{loaded(() => data && <EvidencePanel history={data} eventId={event.id} />)}</TabsContent>
       {isStop && (
         <TabsContent value="repair">

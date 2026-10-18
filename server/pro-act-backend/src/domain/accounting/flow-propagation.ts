@@ -167,12 +167,10 @@ export function starvationStops(input: PeriodAccountingInput): LossEvent[] {
   const flow = input.flow;
   if (!flow || flow.routes.length === 0) return [];
   const asOf = input.asOf.getTime();
-  const own = input.events
-    .filter(isStoppingDowntime)
-    .map((e) => ({
-      start: e.start.getTime(),
-      end: (e.end ?? input.asOf).getTime(),
-    }));
+  const own = input.events.filter(isStoppingDowntime).map((e) => ({
+    start: e.start.getTime(),
+    end: (e.end ?? input.asOf).getTime(),
+  }));
   const window = [
     { start: input.window.start.getTime(), end: input.window.end.getTime() },
   ];

@@ -11,6 +11,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { CommissioningBackdateDto } from '../common/commissioning-backdate.dto';
 
 const UNIT = 'Unit override; absent = the tenant-wide version';
 
@@ -22,7 +23,7 @@ export class MicroStopPolicyQueryDto {
 }
 
 /** SME D6: the micro-stop part of a new `oee_policy` version; every other field is kept from the version in force. */
-export class MicroStopPolicyCreateDto {
+export class MicroStopPolicyCreateDto extends CommissioningBackdateDto {
   @ApiPropertyOptional({ format: 'uuid', description: UNIT })
   @IsOptional()
   @IsUUID()

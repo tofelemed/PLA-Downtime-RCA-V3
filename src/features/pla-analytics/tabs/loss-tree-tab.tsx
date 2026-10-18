@@ -12,7 +12,7 @@ import { SELECT_CLASS } from '../components/analytics-filters';
 import { LossTable } from '../components/loss-table';
 import { LOSS_GROUPS, LOSS_METRICS, lossTreeQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { LOSS_GROUP_LABELS, METRIC_LABELS, shownMetricLabel } from '../model/display';
-import { downtimeLink, LOSS_LINES_NOTE } from '../model/links';
+import { downtimeLink, LOSS_LINES_NOTE, lossGroupLink } from '../model/links';
 
 const LossTreemap = lazy(() => import('../charts/loss-treemap').then((m) => ({ default: m.LossTreemap })));
 
@@ -64,7 +64,7 @@ export function LossTreeTab({ scope, onChange }: LossTreeTabProps) {
       note={LOSS_LINES_NOTE}
       actions={<LossTreeControls scope={scope} onChange={onChange} />}
     >
-      {data && <LossTreeBody data={data} />}
+      {data && <LossTreeBody data={data} scope={scope} />}
       <p className="text-xs">
         <Link className="underline" to={downtimeLink(scope)}>
           Drill into the stops of this scope (Downtime Analysis)
@@ -74,7 +74,7 @@ export function LossTreeTab({ scope, onChange }: LossTreeTabProps) {
   );
 }
 
-function LossTreeBody({ data }: { data: LossTreeView }) {
+function LossTreeBody({ data, scope }: { data: LossTreeView; scope: AnalyticsScope }) {
   const units = data.totals.map((t) => t.unit);
   const { currency } = useDisplayCurrency();
   const [chosen, setChosen] = useState<string | null>(null);
@@ -96,7 +96,7 @@ function LossTreeBody({ data }: { data: LossTreeView }) {
       <Suspense fallback={<Skeleton className="h-64 w-full" />}>
         <LossTreemap groups={groups} unit={unit} />
       </Suspense>
-      <LossTable groups={groups} total={data.totals.find((t) => t.unit === unit)} metric={data.metric} groupTitle={LOSS_GROUP_LABELS[data.groupBy]} testId="loss-table" />
+      <LossTable groups={groups} total={data.totals.find((t) => t.unit === unit)} metric={data.metric} groupTitle={LOSS_GROUP_LABELS[data.groupBy]} testId="loss-table" rowLink={(group) => lossGroupLink(scope, data.groupBy, group.key)} />
     </div>
   );
 }

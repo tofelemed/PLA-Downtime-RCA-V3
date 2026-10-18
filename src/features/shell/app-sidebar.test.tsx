@@ -37,8 +37,48 @@ describe('AppSidebar', () => {
     await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
     expect(within(nav).getByRole('button', { name: 'Downtime Analysis' })).toHaveAttribute('aria-expanded', 'true');
     expect(within(nav).getByRole('link', { name: 'Stops & Timeline' })).toHaveAttribute('href', '/downtime/stops?units=u1&products=p1');
-    expect(within(nav).getByRole('link', { name: 'Downtime Analysis' })).not.toHaveAttribute('aria-current');
+    expect(within(nav).getByRole('link', { name: 'Downtime overview' })).not.toHaveAttribute('aria-current');
     expect(within(nav).getByRole('link', { name: 'Loss Valuation' })).toHaveAttribute('href', '/pla-analytics/valuation?units=u1');
+  });
+
+  it('carries the shared analysis context (B-8) from the Event Hub to Downtime, PLA and Reports, not to other modules', async () => {
+    window.localStorage.clear();
+    renderAt('/events?window=24h&units=u1&kinds=downtime');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    expect(within(nav).getByRole('link', { name: 'Event Hub' })).toHaveAttribute('href', '/events?window=24h&units=u1&kinds=downtime');
+    expect(within(nav).getByRole('link', { name: 'Downtime overview' })).toHaveAttribute('href', '/downtime?window=24h&units=u1');
+    expect(within(nav).getByRole('link', { name: 'PLA overview' })).toHaveAttribute('href', '/pla-analytics?window=24h&units=u1');
+    expect(within(nav).getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/reports?window=24h&units=u1');
+    expect(within(nav).getByRole('link', { name: 'My work' })).toHaveAttribute('href', '/my-queue');
+    expect(within(nav).getByRole('link', { name: 'RCA Analysis' })).toHaveAttribute('href', '/rca');
+  });
+
+  it('expanded (UX audit B-1): the two overviews are named apart, long labels wrap with the full name as title', async () => {
+    window.localStorage.clear();
+    renderAt('/planning/plans/p1');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    expect(within(nav).getByRole('link', { name: 'Downtime overview' })).toHaveAttribute('href', '/downtime');
+    expect(within(nav).getByRole('link', { name: 'PLA overview' })).toHaveAttribute('href', '/pla-analytics');
+    expect(within(nav).queryByRole('link', { name: 'Overview' })).toBeNull();
+    // label in name (WCAG 2.5.3): a short label keeps the fuller name
+    expect(within(nav).getByRole('link', { name: 'PLA Trends' })).toHaveTextContent('Trends');
+    const plans = within(nav).getByRole('link', { name: 'Plans, Profiles & Calendars' });
+    expect(plans).toHaveAttribute('aria-current', 'page');
+    expect(plans).toHaveAttribute('title', 'Plans, Profiles & Calendars');
+    expect(plans.querySelector('span')).toHaveClass('line-clamp-2');
+    expect(plans.querySelector('span')).not.toHaveClass('truncate');
+  });
+
+  it('PLA lists "Period accounting" (UX audit B-5), a plain link resolved by its own route', async () => {
+    window.localStorage.clear();
+    renderAt('/pla-analytics/oee?units=u1');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    const pla = within(nav).getByRole('button', { name: 'Production Loss Analysis (PLA)' });
+    const list = document.getElementById(pla.getAttribute('aria-controls') ?? '');
+    expect(within(list as HTMLElement).getByRole('link', { name: 'Period accounting' })).toHaveAttribute('href', '/period-accounting');
   });
 
   it('collapsed rail: every link has an accessible name, the toggle is "Expand sidebar"', () => {

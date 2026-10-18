@@ -8,7 +8,7 @@ export interface ErrorFacts {
   /** the server's own message, unchecked */
   serverMessage: string | null;
   correlationId: string | null;
-  fieldErrors: ReadonlyArray<{ field: string; message: string }>;
+  fieldErrors: ReadonlyArray<{ field: string; message: string; constraint?: string }>;
   /** legacy validation messages (`message: string[]` of a v1 400) */
   messageList: readonly string[];
   /** no response at all (fetch `TypeError`) */
@@ -31,7 +31,11 @@ const NETWORK_TEXT = /failed to fetch|networkerror|network request failed|load f
 
 function fieldErrorsOf(value: unknown): ErrorFacts['fieldErrors'] {
   if (!Array.isArray(value)) return [];
-  return value.filter(isRecord).map((entry) => ({ field: String(entry.field ?? ''), message: String(entry.message ?? '') }));
+  return value.filter(isRecord).map((entry) => ({
+    field: String(entry.field ?? ''),
+    message: String(entry.message ?? ''),
+    constraint: typeof entry.constraint === 'string' ? entry.constraint : undefined,
+  }));
 }
 
 function v1Facts(error: ApiError): ErrorFacts {

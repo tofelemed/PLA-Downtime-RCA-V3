@@ -1,7 +1,10 @@
-import { looksLikeRawId } from '../labels/assert-no-raw-id';
 import { factsOf, type ErrorFacts } from './error-facts';
 import { ERROR_MESSAGES, NETWORK_MESSAGE, statusMessage, type ErrorMessage } from './error-messages';
-import { fieldLabel } from './field-label';
+import { fieldMessage, isHumanMessage, legacyFieldMessage, sentence, type FieldMessage } from './field-messages';
+import type { FieldVocabulary } from './field-vocabulary';
+
+export { isHumanMessage } from './field-messages';
+export type { FieldMessage } from './field-messages';
 
 /** What support needs to find a failed request; shown only behind "Copy support reference". */
 export interface SupportReferenceInfo {
@@ -14,52 +17,50 @@ export interface SupportReferenceInfo {
 export interface FriendlyError {
   title: string;
   message: string;
-  fieldMessages: ReadonlyArray<{ label: string; message: string }>;
+  fieldMessages: ReadonlyArray<FieldMessage>;
   reference: SupportReferenceInfo | null;
 }
 
-const GENERATED = /^(api )?request failed with status|^validation failed:|^internal server error$|^http \d{3}/i;
-const CODE_LIKE = /^[A-Z0-9_]+$/;
-const POLICY_REF = /\b[a-z]+(?:_[a-z]+)+@\d+/;
+/** Codes that only say "a value was refused": their mapped text needs the field list or the server's reason. */
+const GENERIC_VALUE_CODES: ReadonlySet<string> = new Set(['BAD_REQUEST', 'VALIDATION_FAILED', 'REQUEST_FAILED']);
 
-/** True for a sentence a person can read: not a code, not generated status text, no internal id. */
-export function isHumanMessage(text: string | null, code: string | null = null): text is string {
-  if (!text) return false;
-  const trimmed = text.trim();
-  if (trimmed.length < 3 || trimmed.length > 300 || trimmed === code) return false;
-  if (CODE_LIKE.test(trimmed) || GENERATED.test(trimmed) || POLICY_REF.test(trimmed)) return false;
-  return !looksLikeRawId(trimmed);
-}
+/** A refused value the server did not name: never ask to "check the highlighted values" when nothing is. */
+export const UNNAMED_VALUE_TEXT =
+  'The server did not say which value. Copy the support reference and include it when you report this.';
 
-const sentence = (text: string) => {
-  const trimmed = text.trim().replace(/^Error:\s*/, '');
-  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-};
+/** Only properties the server does not accept were refused: a fault of the screen, not of the person. */
+export const UNEXPECTED_FIELDS_TEXT =
+  'This screen sent a field the server does not accept. Report the field named below with the support reference.';
 
 /** Title of a refusal: the mapped code, else its HTTP status class. */
 export function refusalTitle(code: string | null | undefined, status: number | null | undefined): string {
   return (code ? ERROR_MESSAGES[code]?.title : undefined) ?? statusMessage(status ?? null).title;
 }
 
-function messageOf(facts: ErrorFacts): string {
-  const mapped = facts.code ? ERROR_MESSAGES[facts.code]?.text : undefined;
-  if (mapped) return mapped;
+const isGeneric = (code: string | null) => code === null || GENERIC_VALUE_CODES.has(code);
+const isValueRefusal = (facts: ErrorFacts) =>
+  (facts.code !== null && GENERIC_VALUE_CODES.has(facts.code)) || facts.status === 400 || facts.status === 422;
+
+/** The server's own reason when it is a sentence a person can read (never for a 5xx). */
+function serverReason(facts: ErrorFacts): string | null {
   const serverSide = facts.status !== null && facts.status >= 500;
-  if (!serverSide && isHumanMessage(facts.serverMessage, facts.code)) return sentence(facts.serverMessage);
-  return statusMessage(facts.status).text;
+  return !serverSide && isHumanMessage(facts.serverMessage, facts.code) ? sentence(facts.serverMessage) : null;
 }
 
-function fieldMessage(field: string, message: string): { label: string; message: string } {
-  const withoutField = message.trim().startsWith(`${field} `) ? message.trim().slice(field.length + 1) : message;
-  return { label: fieldLabel(field) || 'Value', message: isHumanMessage(withoutField) ? sentence(withoutField) : 'Is not valid' };
-}
-
-/** Legacy class-validator text: "property x should not exist", "quantity must be positive". */
-function legacyFieldMessage(text: string): { label: string; message: string } {
-  const extra = /^property (\S+) should not exist$/.exec(text);
-  if (extra) return { label: fieldLabel(extra[1]), message: 'Is not accepted here' };
-  const [field, ...rest] = text.split(' ');
-  return rest.length > 0 ? fieldMessage(field, rest.join(' ')) : { label: 'Value', message: 'Is not valid' };
+/**
+ * What to do: the mapped text of the code. A generic "value refused" code says it through its field
+ * messages; with only unexpected properties it says the screen is at fault; without any it gives the
+ * server's own reason (when it is a sentence), else that the server named no value.
+ */
+function messageOf(facts: ErrorFacts, fields: readonly FieldMessage[]): string {
+  const mapped = facts.code ? ERROR_MESSAGES[facts.code]?.text : undefined;
+  const generic = isGeneric(facts.code);
+  if (fields.length > 0) {
+    if (generic && fields.every((entry) => entry.unexpected)) return UNEXPECTED_FIELDS_TEXT;
+    return mapped ?? serverReason(facts) ?? statusMessage(facts.status).text;
+  }
+  if (mapped && !generic) return mapped;
+  return serverReason(facts) ?? (isValueRefusal(facts) ? UNNAMED_VALUE_TEXT : statusMessage(facts.status).text);
 }
 
 function referenceOf(facts: ErrorFacts): SupportReferenceInfo | null {
@@ -72,18 +73,24 @@ function referenceOf(facts: ErrorFacts): SupportReferenceInfo | null {
  * for alerts and toasts. The code, status and correlation id only go to `reference`. `context` is a map
  * of `messages-context.ts` that words a code for one kind of screen (a generic code like
  * TENANT_SCOPE_REQUIRED means something specific on a plant-wide policy form); it wins over the generic map.
+ * A property the server does not accept at all is listed as "Unexpected field: <name>". `fields` is the
+ * form's vocabulary: refused fields are named with the form's labels and choices (fallback: humanized).
  */
-export function describeError(error: unknown, context?: Readonly<Record<string, ErrorMessage>>): FriendlyError {
+export function describeError(
+  error: unknown,
+  context?: Readonly<Record<string, ErrorMessage>>,
+  fields?: FieldVocabulary,
+): FriendlyError {
   const facts = factsOf(error);
-  const specific = facts.code ? context?.[facts.code] : undefined;
   if (facts.network) return { title: NETWORK_MESSAGE.title, message: NETWORK_MESSAGE.text, fieldMessages: [], reference: null };
+  const specific = facts.code ? context?.[facts.code] : undefined;
   const fieldMessages = [
-    ...facts.fieldErrors.map((entry) => fieldMessage(entry.field, entry.message)),
-    ...facts.messageList.map(legacyFieldMessage),
+    ...facts.fieldErrors.map((entry) => fieldMessage(entry.field, entry.message, entry.constraint, fields)),
+    ...facts.messageList.map((text) => legacyFieldMessage(text, fields)),
   ];
   return {
     title: specific?.title ?? refusalTitle(facts.code, facts.status),
-    message: specific?.text ?? messageOf(facts),
+    message: specific?.text ?? messageOf(facts, fieldMessages),
     fieldMessages,
     reference: referenceOf(facts),
   };

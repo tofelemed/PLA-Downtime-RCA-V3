@@ -56,7 +56,7 @@ export function MappingPreview({ preview, timezone }: { preview: AttributeMappin
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-green-700 dark:text-green-400">No mapping problems.</p>
+        <p className="text-sm text-success">No mapping problems.</p>
       )}
     </section>
   );

@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useRcaActions } from '@/api/v2/queries/rca-cases';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
@@ -5,11 +7,19 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { ActionForm } from './action-form';
 import { ActionRow } from './action-row';
 
+/** `?recommendation=<id>` (item 5: "Create action for this recommendation") opens the form with it chosen. */
+export const ACTION_FOR_RECOMMENDATION_PARAM = 'recommendation';
+
 /** RCA03 actions of the case with their verification against a baseline. */
 export function ActionsTab({ rcaId }: { rcaId: string }) {
   const { canWriteRca } = useCapabilities();
   const actions = useRcaActions(rcaId);
+  const [params] = useSearchParams();
+  const preset = params.get(ACTION_FOR_RECOMMENDATION_PARAM) ?? '';
   const items = actions.data ?? [];
+  useEffect(() => {
+    if (preset) document.getElementById('new-action')?.scrollIntoView?.({ block: 'start' });
+  }, [preset]);
   return (
     <div className="space-y-3" data-testid="actions-tab">
       <DataState state={dataStateOf(actions, { isEmpty: items.length === 0 })} error={actions.error} detail="No actions yet.">
@@ -19,9 +29,9 @@ export function ActionsTab({ rcaId }: { rcaId: string }) {
           ))}
         </ul>
       </DataState>
-      {canWriteRca && <details className="rounded border p-3" data-testid="new-action-disclosure">
+      {canWriteRca && <details key={preset} id="new-action" open={preset ? true : undefined} className="rounded border p-3" data-testid="new-action-disclosure">
         <summary className="cursor-pointer text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Add action</summary>
-        <div className="mt-3"><ActionForm rcaId={rcaId} /></div>
+        <div className="mt-3"><ActionForm rcaId={rcaId} recommendationId={preset} /></div>
       </details>}
     </div>
   );

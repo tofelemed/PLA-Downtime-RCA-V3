@@ -44,3 +44,24 @@ export const removeEvent = (diagram: RcaEventDiagram, id: string): RcaEventDiagr
   nodes: diagram.nodes.filter((node) => node.id !== id),
   edges: diagram.edges.filter((edge) => edge.source !== id && edge.target !== id),
 });
+
+/** True when a cause → effect connection between two different events is not drawn yet. */
+export const canConnect = (diagram: RcaEventDiagram, source: string, target: string): boolean =>
+  source !== '' && target !== '' && source !== target && !diagram.edges.some((edge) => edge.source === source && edge.target === target);
+
+/** The diagram with one more connection (same id scheme as a dragged connection); unchanged when not allowed. */
+export function addConnection(diagram: RcaEventDiagram, source: string, target: string): RcaEventDiagram {
+  if (!canConnect(diagram, source, target)) return diagram;
+  return { ...diagram, edges: [...diagram.edges, { id: `edge-${source}-${target}`, source, target }] };
+}
+
+/** The diagram in words, one line per event and connection (kept on screen after a concurrent save). */
+export function diagramText(diagram: RcaEventDiagram): string {
+  const label = (id: string) => diagram.nodes.find((node) => node.id === id)?.label ?? 'Removed event';
+  const events = diagram.nodes.map((node) => {
+    const facts = [node.type, node.timestamp, node.asset, node.severity].filter(Boolean).join(', ');
+    return `Event: ${node.label}${facts ? ` (${facts})` : ''}${node.description ? ` — ${node.description}` : ''}`;
+  });
+  const connections = diagram.edges.map((edge) => `Connection: ${label(edge.source)} → ${label(edge.target)}`);
+  return [...events, ...connections].join('\n');
+}

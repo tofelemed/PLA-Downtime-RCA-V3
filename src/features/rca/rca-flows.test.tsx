@@ -51,7 +51,7 @@ const READINESS = {
   closure: { blockers: [], effectiveness: null },
   approver: { canApprove: false, reason: 'closure is approved by a manager approver' },
   linkedRecurrences: 0,
-  rules: { fiveWhyGuidelineLevels: 5, consequenceClass: 'minor' },
+  rules: { fiveWhyGuidelineLevels: 5, fiveWhyUnsupportedRootCauses: ['operator error'], consequenceClass: 'minor' },
 };
 
 const reviewReadiness = (canApprove: boolean) => ({
@@ -68,6 +68,7 @@ const reviewReadiness = (canApprove: boolean) => ({
 /** A GET answer of the overview: readiness, analyses or an empty list. */
 const overviewGet = (call: { url: URL }, readiness: unknown = READINESS) => {
   if (call.url.pathname.endsWith('/readiness')) return json(200, readiness);
+  if (call.url.pathname.endsWith('/actions')) return json(200, []);
   return json(200, call.url.pathname.endsWith('/analyses') ? NO_ANALYSES : list([]));
 };
 
@@ -107,7 +108,7 @@ describe('RCA flows (v2 case workspace)', () => {
     };
     wrap(<EventCaseSection eventId="e1" />);
     expect((await screen.findByTestId('evidence-recurrence')).textContent).toContain('same asset 3');
-    fireEvent.click(screen.getByLabelText('Add to an existing case'));
+    fireEvent.click(screen.getByLabelText('Add to an existing investigation'));
     fireEvent.click(await screen.findByRole('option', { name: /Pump trips/ }));
     const search = calls.find((call) => call.url.pathname.endsWith('/rcas'));
     expect(search?.url.searchParams.get('assetId')).toBe('a1');
@@ -131,7 +132,7 @@ describe('RCA flows (v2 case workspace)', () => {
     wrap(<OutcomePanel rcaId="c1" />);
     expect((await screen.findByTestId('approved-impact')).textContent).toContain('Not valued');
     expect(screen.getByTestId('outcome-claimed').textContent).toContain('1,000.00');
-    expect(screen.getByTestId('outcome-realized').textContent).toContain('Realign: 2 recurrences');
+    expect(screen.getByTestId('outcome-realized').textContent).toContain('Realign: 2.00 recurrences');
   });
 
   it('SME V7 / V8: the approved impact names its view (economic impact) and a provisional exchange rate', async () => {
@@ -194,6 +195,9 @@ describe('RCA flows (v2 case workspace)', () => {
     wrap(<OverviewPage />);
     expect((await screen.findByTestId('investigation-advice')).textContent).toContain('3 of the 5 levels');
     fireEvent.click(screen.getByTestId('workflow-move-monitoring'));
+    // F-5: accepting locks the team, so it is confirmed first
+    expect(calls.some((call) => call.method === 'POST')).toBe(false);
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept the investigation' }));
     await waitFor(() => expect(calls.some((call) => call.method === 'POST')).toBe(true));
     const post = calls.find((call) => call.method === 'POST');
     expect(post?.url.pathname).toBe('/api/v2/rcas/c1/transitions');
@@ -213,6 +217,7 @@ describe('RCA flows (v2 case workspace)', () => {
     reply = (call) => (call.method === 'POST' ? json(422, refusal) : overviewGet(call));
     wrap(<OverviewPage />);
     fireEvent.click(await screen.findByTestId('workflow-move-monitoring'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept the investigation' }));
     const alert = await screen.findByTestId('rca-refusal');
     expect(alert.textContent).toContain('The investigation cannot be accepted yet');
     expect(alert.textContent).toContain('Set the consequence class');
@@ -230,18 +235,19 @@ describe('RCA flows (v2 case workspace)', () => {
     const reject = await screen.findByTestId('workflow-move-monitoring');
     expect(reject).toBeDisabled();
     fireEvent.click(screen.getByTestId('workflow-move-closed'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve the closure' }));
     await waitFor(() => expect(calls.some((call) => call.method === 'POST')).toBe(true));
     expect(calls.find((call) => call.method === 'POST')?.body).toEqual({ to: 'Closed' });
   });
 
   it('dismisses an open recommendation with the required reason', async () => {
-    const rec = { id: 'r1', eventId: 'e1', occurrenceId: null, unitId: 'u-1', trigger: 'downtime_threshold', source: { kind: 'rule', id: 'p', version: 1 }, firedOn: 'event', provisional: false, outcome: 'recommended', state: 'open', rcaId: null, detail: {}, firedAt: '2026-10-10T00:00:00Z', confirmedAt: null, resolvedAt: null };
+    const rec = { id: 'r1', eventId: 'e1', occurrenceId: null, unitId: 'u-1', trigger: 'downtime_threshold', source: { kind: 'rule', id: 'p', version: 1 }, firedOn: 'event', provisional: false, outcome: 'recommended', state: 'open', rcaId: null, event: null, detail: {}, firedAt: '2026-10-10T00:00:00Z', confirmedAt: null, resolvedAt: null };
     reply = () => json(200, { ...rec, state: 'dismissed' });
     wrap(<RecommendationBadges items={[rec]} canDismiss />);
     fireEvent.click(screen.getByTestId('dismiss-recommendation'));
     const confirm = await screen.findByRole('button', { name: 'Dismiss recommendation' });
     expect(confirm).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'Planned stop' } });
+    fireEvent.change(screen.getByLabelText(/^Reason/), { target: { value: 'Planned stop' } });
     fireEvent.click(confirm);
     await waitFor(() => expect(calls.some((call) => call.method === 'POST')).toBe(true));
     const post = calls.find((call) => call.method === 'POST');
@@ -252,7 +258,7 @@ describe('RCA flows (v2 case workspace)', () => {
 
   it('offers no dismiss without the RCA writer capability', () => {
     reply = () => json(200, {});
-    const rec = { id: 'r1', eventId: 'e1', occurrenceId: null, unitId: 'u-1', trigger: 't', source: { kind: 'rule', id: 'p', version: 1 }, firedOn: 'event', provisional: false, outcome: 'recommended', state: 'open', rcaId: null, detail: {}, firedAt: '2026-10-10T00:00:00Z', confirmedAt: null, resolvedAt: null };
+    const rec = { id: 'r1', eventId: 'e1', occurrenceId: null, unitId: 'u-1', trigger: 't', source: { kind: 'rule', id: 'p', version: 1 }, firedOn: 'event', provisional: false, outcome: 'recommended', state: 'open', rcaId: null, event: null, detail: {}, firedAt: '2026-10-10T00:00:00Z', confirmedAt: null, resolvedAt: null };
     wrap(<RecommendationBadges items={[rec]} />);
     expect(screen.queryByTestId('dismiss-recommendation')).toBeNull();
   });

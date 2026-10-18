@@ -119,3 +119,20 @@ export function useSignalBackfillRun(signalId: string, runId: string | null) {
       })).data,
   });
 }
+
+/** Signal names of one unit (id → name) for provenance labels; every page followed. */
+export function useUnitSignalNames(unitId: string | null) {
+  const list = useV2InfiniteList<SignalView>({
+    resource: 'signals',
+    path: '/signals',
+    query: { unitId: unitId ?? '', limit: 200 },
+    key: { scope: { unitIds: unitId ? [unitId] : [] }, filters: { names: true } },
+    enabled: Boolean(unitId),
+  });
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = list;
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const names = new Map(flattenPages(list.data?.pages).map((s) => [s.id, s.name]));
+  return (signalId: string): string | null => names.get(signalId) ?? null;
+}

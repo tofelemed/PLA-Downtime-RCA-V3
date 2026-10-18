@@ -179,7 +179,7 @@ export class PlanGenerationJobsService {
       const body = error.getResponse();
       const code =
         typeof body === 'object' && body !== null && 'code' in body
-          ? String((body as { code: unknown }).code)
+          ? String(body.code)
           : `HTTP_${error.getStatus()}`;
       return refused(code, error.message);
     }

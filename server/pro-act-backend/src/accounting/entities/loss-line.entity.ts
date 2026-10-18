@@ -122,6 +122,26 @@ export class LossLine extends TenantOwnedEntity {
   })
   rateVersion?: UnitProductRate | null;
 
+  /**
+   * UX D-2: the rate value the quantity was computed with — the plan ledger's planning rate scaled to the
+   * target (SME Q1), else the version's rate; null on non-rate lines and on lines of earlier runs
+   */
+  @Column({
+    name: 'applied_rate',
+    type: 'numeric',
+    nullable: true,
+    transformer: decimalStringTransformer,
+  })
+  appliedRate: string | null;
+
+  @Column({
+    name: 'applied_rate_timebase',
+    type: 'varchar',
+    length: 8,
+    nullable: true,
+  })
+  appliedRateTimebase: string | null;
+
   /** the cause event's reason / impact code (the code row the event referenced at run time) */
   @Column({ name: 'reason_code_id', type: 'uuid', nullable: true })
   reasonCodeId: string | null;

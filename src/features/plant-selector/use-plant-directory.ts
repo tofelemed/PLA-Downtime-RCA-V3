@@ -38,6 +38,10 @@ export interface PlantDirectory {
   organizations: DirectoryOrganization[];
   tenants: DirectoryPlant[];
   isLoading: boolean;
+  /** the failure of either list (null while both load or succeeded) */
+  error: unknown;
+  /** reloads the failed list(s) */
+  retry: () => void;
 }
 
 /**
@@ -67,6 +71,11 @@ export function usePlantDirectory(): PlantDirectory {
     organizations: (organizations.data ?? []).filter((org) => allowed.some((tenant) => tenant.organizationId === org.id)),
     tenants: allowed,
     isLoading: organizations.isLoading || tenants.isLoading,
+    error: organizations.error ?? tenants.error ?? null,
+    retry: () => {
+      if (organizations.isError) void organizations.refetch();
+      if (tenants.isError) void tenants.refetch();
+    },
   };
 }
 

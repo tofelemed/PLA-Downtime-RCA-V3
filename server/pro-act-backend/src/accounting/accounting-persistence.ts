@@ -56,6 +56,8 @@ function lineRow(
     uom: line.uom,
     basis: line.basis,
     rateVersionId: line.rateVersionId,
+    appliedRate: line.appliedRate?.value ?? null,
+    appliedRateTimebase: line.appliedRate?.timebase ?? null,
     reasonCodeId: cause?.reasonCodeId ?? null,
     impactCodeId: cause?.impactCodeId ?? null,
     oeeComponent: line.oeeComponent,

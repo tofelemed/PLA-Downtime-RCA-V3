@@ -4,7 +4,8 @@ import { GRID_WORKFLOW_LABELS } from '@/features/ux-kit/labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '../components/analytics-card';
-import { scopeToParams, statusQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { statusQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { plaHref } from './dashboard-links';
 
 /** Reconciliation tiles of the dashboard: periods per workflow state and the overdue count (server counts). */
 export function ReconciliationTiles({ scope }: { scope: AnalyticsScope }) {
@@ -12,7 +13,7 @@ export function ReconciliationTiles({ scope }: { scope: AnalyticsScope }) {
   const query = useReconciliationStatus(statusQuery(scope), env.timezone);
   const data = query.data?.data;
   const { number } = useNumberFormat();
-  const link = `/pla-analytics?${scopeToParams({ ...scope, tab: 'reconciliation' }).toString()}`;
+  const link = plaHref(scope, '/pla-analytics/reconciliation');
   return (
     <AnalyticsCard
       title="Periods by workflow state"

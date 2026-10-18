@@ -13,6 +13,9 @@ export interface MicroStopPolicyView {
   tripReasonCodes: string[];
   effectiveFrom: string;
   notes: string | null;
+  /** commissioning backdate: the past instant requested and why (null = effective when recorded) */
+  requestedEffectiveFrom: string | null;
+  backdateReason: string | null;
 }
 
 export type TransitionAllowanceOption = 'planned' | 'loss';

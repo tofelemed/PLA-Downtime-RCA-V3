@@ -1,9 +1,17 @@
-import { Badge } from '@/components/ui/badge';
-import type { MonthCloseView } from '@/api/v2/types/month-close';
+import type { MonthCloseState, MonthCloseView } from '@/api/v2/types/month-close';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Section } from '@/features/ux-kit/page-layout';
+import { StatusBadge } from '@/features/ux-kit/status-badge';
+import type { StatusTone } from '@/features/ux-kit/status-tone';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { CLOSE_STATE_LABELS, weekendText } from '../model/close-labels';
+
+const CLOSE_STATE_TONES: Readonly<Record<MonthCloseState, StatusTone>> = {
+  open: 'neutral',
+  quantities_closed: 'info',
+  finance_signed_off: 'info',
+  locked: 'success',
+};
 
 function Deadline({ label, date, at, overdue, timezone, testId }: { label: string; date: string; at: string; overdue: boolean; timezone: string; testId: string }) {
   const pref = useCalendarPreference();
@@ -11,7 +19,7 @@ function Deadline({ label, date, at, overdue, timezone, testId }: { label: strin
     <div className="rounded-md border p-3" data-testid={testId} data-overdue={overdue}>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="font-medium">
-        {formatOperationalDate(date, pref)} {overdue && <Badge variant="destructive">Overdue</Badge>}
+        {formatOperationalDate(date, pref)} {overdue && <StatusBadge tone="danger">Overdue</StatusBadge>}
       </p>
       <p className="text-xs text-muted-foreground">
         until <PlantTime iso={at} tz={timezone} withDate />
@@ -31,9 +39,9 @@ export function CloseDeadlines({ view }: { view: MonthCloseView }) {
     >
       <div className="space-y-3">
         <p>
-          <Badge data-testid="close-state" data-state={view.state} variant={view.state === 'locked' ? 'default' : 'secondary'}>
+          <StatusBadge tone={CLOSE_STATE_TONES[view.state]} data-testid="close-state" data-state={view.state}>
             {CLOSE_STATE_LABELS[view.state]}
-          </Badge>
+          </StatusBadge>
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <Deadline

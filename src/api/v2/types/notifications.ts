@@ -11,7 +11,15 @@ export interface NotificationView {
   read: boolean;
   readAt: string | null;
   createdAt: string;
+  /** the shared work item every recipient's copy names (null = information only) */
+  workItemKey?: string | null;
+  /** set once anyone did the work: the notification left every recipient's active list */
+  resolvedAt?: string | null;
+  resolution?: 'completed' | 'superseded' | null;
 }
+
+/** Bell filter: only unread active notifications, or every active one. */
+export type NotificationFilter = 'unread' | 'all';
 
 /** `detail` of an `sla_escalation` notification (SME R3 / R6). */
 export interface SlaEscalationDetail {

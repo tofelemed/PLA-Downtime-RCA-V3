@@ -39,15 +39,20 @@ export class ProductionEventHistoryService {
     context: RequestContext,
     eventId: string,
   ): Promise<ProductionEventHistoryView> {
-    const visible = await scopedQuery(this.events, 'event', {
+    const event = await scopedQuery(this.events, 'event', {
       context,
       unitProperty: 'unitId',
     })
+      .select(['event.id', 'event.sourceKind', 'event.source'])
       .andWhere('event.id = :eventId', { eventId })
-      .getCount();
-    if (visible === 0) {
+      .getOne();
+    if (!event) {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
     }
+    const origin = {
+      sourceKind: event.sourceKind ?? null,
+      source: event.source ?? null,
+    };
     const [revisions, coding, reviewItems, relations] = await Promise.all([
       this.forEvent(this.revisions, context, eventId, 'revision'),
       this.forEvent(this.coding, context, eventId, 'revision'),
@@ -55,8 +60,8 @@ export class ProductionEventHistoryService {
       this.lineage(context, eventId),
     ]);
     return {
-      revisions: revisions.map(toEventRevisionView),
-      coding: coding.map(toEventCodingView),
+      revisions: revisions.map((row) => toEventRevisionView(row, origin)),
+      coding: coding.map((row) => toEventCodingView(row, origin)),
       reviewItems: reviewItems.map(toEventReviewItemView),
       relations: relations.map(toEventRelationView),
     };

@@ -3,6 +3,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { uncodedVerificationReset } from '../../domain/events/coding-verification';
 import { toLegacyStatus } from '../../domain/events/legacy-status';
 import { prepareUpdate } from '../event-write-model';
 import { ProductionEvent } from '../production-event.entity';
@@ -163,7 +164,11 @@ export function sourceColumns(
       Object.assign(derived, { [key]: existing[key] });
     }
   }
-  return { ...values, ...derived } as Partial<ProductionEvent>;
+  return {
+    ...values,
+    ...derived,
+    ...uncodedVerificationReset(existing, derived),
+  } as Partial<ProductionEvent>;
 }
 
 /** Tombstones an event (ING01): never deleted, `retracted` everywhere, legacy status 'Cancelled'. */

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import type { AnalyticsResponse } from '@/api/v2/types/envelopes';
 import type { PeriodAccountingView } from '@/api/v2/types/period-overview';
@@ -13,6 +14,8 @@ export interface PeriodHeaderProps {
   unitName: string;
   planLabel: string;
   timezone: string;
+  /** previous / next period links, beside the period's dates */
+  neighbours?: ReactNode;
 }
 
 function CalculationDetails({ accounting, timezone }: { accounting: PeriodAccountingView['run']; timezone: string }) {
@@ -32,15 +35,18 @@ function CalculationDetails({ accounting, timezone }: { accounting: PeriodAccoun
 }
 
 /** Period scope, plan version, revision and lifecycle, when it was calculated and the tolerance; versions behind "Details". */
-export function PeriodHeader({ view, accounting, unitName, planLabel, timezone }: PeriodHeaderProps) {
+export function PeriodHeader({ view, accounting, unitName, planLabel, timezone, neighbours }: PeriodHeaderProps) {
   const users = useUserNames();
   const uom = view.slices[0]?.uom ?? null;
   const revision = view.revision;
   return (
     <header className="space-y-2" data-testid="period-header">
-      <h2 className="text-lg font-semibold">
-        <PlantTime iso={view.utcStart} tz={timezone} withDate /> → <PlantTime iso={view.utcEnd} tz={timezone} withDate />
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">
+          <PlantTime iso={view.utcStart} tz={timezone} withDate /> → <PlantTime iso={view.utcEnd} tz={timezone} withDate />
+        </h2>
+        {neighbours}
+      </div>
       <ScopeHeader scopeLabel={unitName} timezone={timezone} uom={uom} baseline={planLabel} isProvisional={revision.lifecycle !== 'approved'} asOf={accounting?.asOf ?? null} />
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <Badge variant="outline" data-testid="revision-badge" data-lifecycle={revision.lifecycle}>

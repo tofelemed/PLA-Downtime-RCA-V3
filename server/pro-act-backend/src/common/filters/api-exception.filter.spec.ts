@@ -202,9 +202,14 @@ describe('ApiExceptionFilter', () => {
 });
 
 describe('ApiExceptionFilter database refusals (plan 3.11)', () => {
-  const { QueryFailedError } = jest.requireActual<typeof import('typeorm')>('typeorm');
+  const { QueryFailedError } =
+    jest.requireActual<typeof import('typeorm')>('typeorm');
   const failure = (code: string) =>
-    new QueryFailedError('INSERT INTO x VALUES ($1)', ['secret-value'], Object.assign(new Error('driver says no'), { code }));
+    new QueryFailedError(
+      'INSERT INTO x VALUES ($1)',
+      ['secret-value'],
+      Object.assign(new Error('driver says no'), { code }),
+    );
 
   beforeEach(() => {
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
@@ -225,10 +230,14 @@ describe('ApiExceptionFilter database refusals (plan 3.11)', () => {
 
   it('answers a delete blocked by referencing rows with 409 RECORD_IN_USE', () => {
     const { host, response } = createHost('/api/rca-templates/1');
-    const error = new QueryFailedError('DELETE', [], Object.assign(new Error('x'), {
-      code: '23503',
-      detail: 'Key (id)=(1) is still referenced from table "rcas".',
-    }));
+    const error = new QueryFailedError(
+      'DELETE',
+      [],
+      Object.assign(new Error('x'), {
+        code: '23503',
+        detail: 'Key (id)=(1) is still referenced from table "rcas".',
+      }),
+    );
     new ApiExceptionFilter().catch(error, host);
     expect(response.statusCode).toBe(409);
     expect(response.body?.code).toBe('RECORD_IN_USE');

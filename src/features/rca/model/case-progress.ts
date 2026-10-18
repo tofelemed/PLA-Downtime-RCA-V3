@@ -1,6 +1,4 @@
-import type { RcaCaseView } from '@/api/v2/types/rca';
-import { RCA_STATUSES } from '@/api/v2/types/rca';
-import { isRecommendationClosed } from './recommendation-form';
+import type { RcaActionView, RcaCaseView } from '@/api/v2/types/rca';
 
 /** One step of the investigation checklist (shown with its state; the workflow gates are the server's). */
 export interface ProgressStep {
@@ -12,11 +10,12 @@ export interface ProgressStep {
 
 /**
  * The investigation steps of v1's phase stepper (definition → data collection → analysis →
- * recommendations → closure), read from the case content. A guide for the team, not a rule.
+ * actions → closure), read from the case content. A guide for the team, not a rule. The actions step
+ * counts corrective actions, the basis of closure (DECISIONS 2026-10-18, F-3); `actions` is undefined
+ * while they load and 'error' when they could not be loaded.
  */
-export function progressSteps(rca: RcaCaseView, hasToolRecord: boolean): ProgressStep[] {
+export function progressSteps(rca: RcaCaseView, hasToolRecord: boolean, actions?: readonly Pick<RcaActionView, 'status'>[] | 'error'): ProgressStep[] {
   const evidence = rca.evidence.length;
-  const recommendations = rca.recommendations.length;
   return [
     {
       key: 'definition',
@@ -31,12 +30,7 @@ export function progressSteps(rca: RcaCaseView, hasToolRecord: boolean): Progres
       done: rca.logicTree.length > 0 || hasToolRecord || Boolean(rca.rootCause),
       hint: rca.rootCause ? 'Root cause written down.' : 'Logic tree or an analysis tool, then the root cause.',
     },
-    {
-      key: 'recommendations',
-      label: 'Recommendations',
-      done: recommendations > 0,
-      hint: `${recommendations} recommendation(s), ${rca.recommendations.filter((r) => isRecommendationClosed(r.status)).length} closed.`,
-    },
+    actionsStep(actions),
     {
       key: 'closure',
       label: 'Closure',
@@ -46,8 +40,16 @@ export function progressSteps(rca: RcaCaseView, hasToolRecord: boolean): Progres
   ];
 }
 
-/** Position of the case status in the workflow (Draft = 1 … Closed = 7). */
-export function statusStep(status: string | null): number {
-  const index = RCA_STATUSES.findIndex((value) => value === status);
-  return index < 0 ? 1 : index + 1;
+/** Corrective actions: done when there is one and every action not cancelled is done. */
+function actionsStep(actions: readonly Pick<RcaActionView, 'status'>[] | 'error' | undefined): ProgressStep {
+  if (actions === 'error') return { key: 'actions', label: 'Actions', done: false, hint: 'The actions could not be loaded.' };
+  if (!actions) return { key: 'actions', label: 'Actions', done: false, hint: 'Loading the actions…' };
+  const live = actions.filter((action) => action.status !== 'cancelled');
+  const done = live.filter((action) => action.status === 'done').length;
+  return {
+    key: 'actions',
+    label: 'Actions',
+    done: live.length > 0 && done === live.length,
+    hint: `${live.length} action(s), ${done} done.`,
+  };
 }

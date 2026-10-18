@@ -23,7 +23,9 @@ export class HierarchyMappingService {
   /**
    * Create a new hierarchy mapping
    */
-  async create(createDto: CreateSourceHierarchyMappingDto): Promise<SourceHierarchyMapping> {
+  async create(
+    createDto: CreateSourceHierarchyMappingDto,
+  ): Promise<SourceHierarchyMapping> {
     const mapping = this.mappingRepository.create({
       ...createDto,
       isPattern: createDto.isPattern ?? false,
@@ -38,19 +40,28 @@ export class HierarchyMappingService {
   /**
    * Find all mappings for a tenant
    */
-  async findAll(tenantId: string, filters?: { sourceType?: string; isActive?: boolean }): Promise<SourceHierarchyMapping[]> {
-    const queryBuilder = this.mappingRepository.createQueryBuilder('mapping')
+  async findAll(
+    tenantId: string,
+    filters?: { sourceType?: string; isActive?: boolean },
+  ): Promise<SourceHierarchyMapping[]> {
+    const queryBuilder = this.mappingRepository
+      .createQueryBuilder('mapping')
       .where('mapping.tenantId = :tenantId', { tenantId });
 
     if (filters?.sourceType) {
-      queryBuilder.andWhere('mapping.sourceType = :sourceType', { sourceType: filters.sourceType });
+      queryBuilder.andWhere('mapping.sourceType = :sourceType', {
+        sourceType: filters.sourceType,
+      });
     }
 
     if (filters?.isActive !== undefined) {
-      queryBuilder.andWhere('mapping.isActive = :isActive', { isActive: filters.isActive });
+      queryBuilder.andWhere('mapping.isActive = :isActive', {
+        isActive: filters.isActive,
+      });
     }
 
-    queryBuilder.orderBy('mapping.priority', 'DESC')
+    queryBuilder
+      .orderBy('mapping.priority', 'DESC')
       .addOrderBy('mapping.createdAt', 'DESC');
 
     return await queryBuilder.getMany();
@@ -70,7 +81,10 @@ export class HierarchyMappingService {
   /**
    * Update a mapping
    */
-  async update(id: string, updateDto: UpdateSourceHierarchyMappingDto): Promise<SourceHierarchyMapping> {
+  async update(
+    id: string,
+    updateDto: UpdateSourceHierarchyMappingDto,
+  ): Promise<SourceHierarchyMapping> {
     const mapping = await this.findOne(id);
     Object.assign(mapping, updateDto);
     const saved = await this.mappingRepository.save(mapping);
@@ -93,7 +107,9 @@ export class HierarchyMappingService {
    * containment and per-call full-table scans are gone. The rules are those of the request's source
    * type (the word the mirror stores as `source_system`) plus the `*` rules.
    */
-  async findHierarchyMapping(request: MappingRequest): Promise<HierarchyIds | null> {
+  async findHierarchyMapping(
+    request: MappingRequest,
+  ): Promise<HierarchyIds | null> {
     const resolver = await this.sourceMappings.loadResolver(
       request.tenantId,
       request.connectionId ?? null,

@@ -89,7 +89,8 @@ describe('CA8 bad-actor review', () => {
     expect(values[0].textContent).toMatch(/provisional exchange rate/);
     expect(values[1].textContent).toContain('Not valued');
     expect(screen.getAllByTestId('bad-actor-trigger').map((cell) => cell.dataset.state)).toEqual(['over_threshold', 'fired']);
-    expect(screen.getByText('Open the case').getAttribute('href')).toBe('/rca/c9');
+    expect(screen.getByTestId('event-rca-chip').getAttribute('href')).toBe('/rca/c9');
+    expect(screen.getByTestId('event-rca-chip').textContent).toContain('RCA linked');
     fireEvent.change(screen.getByLabelText('Rank by'), { target: { value: 'stops' } });
     await waitFor(() => expect(urls.some((url) => url.searchParams.get('rankBy') === 'stops')).toBe(true));
   });

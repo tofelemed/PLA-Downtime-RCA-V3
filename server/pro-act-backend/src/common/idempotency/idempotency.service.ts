@@ -142,7 +142,7 @@ function sortKeys(value: unknown): unknown {
     return value.map(sortKeys);
   }
   if (value && typeof value === 'object' && !(value instanceof Date)) {
-    return Object.keys(value as Record<string, unknown>)
+    return Object.keys(value)
       .sort()
       .reduce<Record<string, unknown>>((acc, key) => {
         const entry = (value as Record<string, unknown>)[key];

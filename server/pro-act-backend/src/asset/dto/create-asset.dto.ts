@@ -81,4 +81,4 @@ export class CreateAssetDto {
   @IsUUID()
   @IsOptional()
   organizationId?: string;
-} 
+}

@@ -2,9 +2,12 @@ import type { DowntimeGroupView } from '@/api/v2/types/reports';
 import { type DigitSystem, useCalendarPreference } from '@/lib/dates';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
+import { StartRcaLink } from '@/features/rca/components/start-rca-link';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
 import { viewOf, type PageViews } from '../model/bundle-views';
+import type { DowntimeFilters } from '../model/downtime-filters';
 import { formatCount, formatRatio } from '../model/kpi-display';
+import { assetStartRca } from '../model/start-rca-context';
 import { ReportCard } from './report-card';
 
 interface ActorRow {
@@ -12,7 +15,7 @@ interface ActorRow {
   stops: string | undefined;
 }
 
-const columnsFor = (digits: DigitSystem): DataTableColumn<ActorRow>[] => [
+const columnsFor = (digits: DigitSystem, filters: DowntimeFilters): DataTableColumn<ActorRow>[] => [
   { id: 'asset', header: 'Asset', cell: (row) => row.group.label ?? (row.group.key ? 'Unknown asset' : 'No asset') },
   {
     id: 'downtime',
@@ -21,12 +24,20 @@ const columnsFor = (digits: DigitSystem): DataTableColumn<ActorRow>[] => [
     nowrap: true,
     cell: (row) => (
       <span data-testid="bad-actor" data-key={row.group.key ?? ''} data-value={row.group.value}>
-        <DurationText seconds={row.group.value} variant="compact" />
+        <DurationText seconds={row.group.value} />
       </span>
     ),
   },
   { id: 'share', header: 'Share', align: 'right', nowrap: true, cell: (row) => formatRatio(row.group.share, 1, digits) },
   { id: 'stops', header: 'Stops', align: 'right', nowrap: true, cell: (row) => (row.stops === undefined ? '—' : formatCount(row.stops, digits)) },
+  {
+    id: 'rca',
+    header: <span className="sr-only">Investigate</span>,
+    cell: (row) => {
+      const context = assetStartRca(row.group, filters);
+      return context ? <StartRcaLink context={context} label={`Start an RCA for ${row.group.label ?? 'this asset'}`} /> : null;
+    },
+  },
 ];
 
 /**
@@ -34,7 +45,7 @@ const columnsFor = (digits: DigitSystem): DataTableColumn<ActorRow>[] => [
  * from the page snapshot. The breakdown is allocated: where stops of several assets overlap, each
  * moment is shared, so the asset rows add up to the unit downtime (decision 2.7).
  */
-export function BadActors({ bundle, views }: { bundle: DowntimeBundleResult; views: PageViews }) {
+export function BadActors({ bundle, views, filters }: { bundle: DowntimeBundleResult; views: PageViews; filters: DowntimeFilters }) {
   const { digits } = useCalendarPreference();
   const duration = viewOf(bundle.data?.data, views.assetDuration);
   const frequency = viewOf(bundle.data?.data, views.assetFrequency);
@@ -50,7 +61,7 @@ export function BadActors({ bundle, views }: { bundle: DowntimeBundleResult; vie
       isEmpty={rows.length === 0}
       note="Allocated: overlapping stops of several assets share each moment, so asset totals add up to the unit downtime. Stops without an asset are listed as “No asset”."
     >
-      <DataTable caption="Downtime by asset" columns={columnsFor(digits)} rows={rows} getRowKey={(row) => row.group.key ?? 'none'} density="compact" />
+      <DataTable caption="Downtime by asset" columns={columnsFor(digits, filters)} rows={rows} getRowKey={(row) => row.group.key ?? 'none'} density="compact" />
     </ReportCard>
   );
 }

@@ -10,4 +10,4 @@ import { AppSettings } from './app-settings.entity';
   providers: [AppSettingsService],
   exports: [AppSettingsService],
 })
-export class AppSettingsModule {} 
+export class AppSettingsModule {}

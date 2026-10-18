@@ -1,4 +1,5 @@
 import {
+  fraction,
   integer,
   listOf,
   oneOf,
@@ -42,7 +43,15 @@ export interface EffectivenessRules {
   reviewDays: number;
   /** consequence classes where any repeat in the window is not effective (CA2 high consequence) */
   zeroRepeatClasses: ConsequenceClass[];
+  /**
+   * Owner, 18 Oct 2026: state-data coverage (known / window, 0–1) the window after the action needs for a
+   * verdict; below it the action is insufficient evidence. A version written before the field = 0.95.
+   */
+  minimumCoverage: number;
 }
+
+/** Owner default (18 Oct 2026) of `effectiveness.minimumCoverage`, also for versions without the field. */
+export const DEFAULT_MINIMUM_COVERAGE = 0.95;
 
 /** One rule of the configurable severity / occurrence / detection → priority set (CA5). */
 export interface PriorityRule {
@@ -98,6 +107,7 @@ export const RCA_RULES_DEFAULT: RcaRules = {
     requiredReduction: 0.5,
     reviewDays: 90,
     zeroRepeatClasses: ['major'],
+    minimumCoverage: DEFAULT_MINIMUM_COVERAGE,
   },
   fmea: {
     method: 'rpn',
@@ -172,6 +182,11 @@ export function parseEffectiveness(raw: Raw): EffectivenessRules {
       CONSEQUENCE_CLASSES,
       'zeroRepeatClasses',
     ),
+    // a version written before the owner decision of 18 Oct 2026 carries no minimum: the default applies
+    minimumCoverage:
+      raw.minimumCoverage === undefined
+        ? DEFAULT_MINIMUM_COVERAGE
+        : fraction(raw.minimumCoverage, 'minimumCoverage'),
   };
 }
 

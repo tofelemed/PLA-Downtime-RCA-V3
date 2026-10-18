@@ -2,7 +2,7 @@ import type { PlanVersionView } from '@/api/v2/types/plans';
 import { BASIS_SHORT_LABELS, DISTRIBUTION_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
-import { VersionStateBadge } from '../components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 
 /** Header targets use each slice's profile unit; only generated periods carry a frozen quantity UOM. */
 export function PlanVersionSummary({ version, timezone }: { version: PlanVersionView; timezone: string }) {

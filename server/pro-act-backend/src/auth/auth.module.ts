@@ -32,4 +32,4 @@ import { SessionAuditService } from './session-audit.service';
   controllers: [AuthController],
   exports: [JwtModule, PassportModule, AuthService, AuthTokensModule],
 })
-export class AuthModule {} 
+export class AuthModule {}

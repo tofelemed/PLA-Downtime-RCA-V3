@@ -7,7 +7,7 @@ export const RESTATEMENT_FIGURE_LABELS: Record<string, string> = {
   gap: 'Gap',
   attributed: 'Attributed',
   toleranceAdjustment: 'Tolerance adjustment',
-  residual: 'Residual',
+  residual: 'Unaccounted',
   gross: 'Gross production',
   good: 'Good production',
   reject: 'Rejected',

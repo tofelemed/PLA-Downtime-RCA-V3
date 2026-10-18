@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ifMatchOf } from '../etag-cache';
 import type { QueryParams } from '../request-url';
 import type { BodyOf, QueryOf } from '../schema-types';
-import type { EventSelectionView, ProductionEventHistoryView, ProductionEventView } from '../types/events';
+import type { EventAttributedLossesView, EventSelectionView, ProductionEventHistoryView, ProductionEventView } from '../types/events';
 import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
@@ -72,6 +72,24 @@ export function useProductionEventHistory(id: string | null) {
     queryFn: async ({ signal }) =>
       (await v2.get<ProductionEventHistoryView, '/api/v2/production-events/{id}/revisions'>(
         '/api/v2/production-events/{id}/revisions',
+        { path: { id: id as string }, signal },
+      )).data,
+  });
+}
+
+/**
+ * G-2(b): the loss lines whose cause is the event, per period revision (approved / provisional), as the
+ * server stores them — quantities per kind and unit, values per currency; nothing is summed here.
+ */
+export function useEventAttributedLosses(id: string | null) {
+  const tenantId = useV2TenantId();
+  return useQuery({
+    queryKey: v2Keys.detail(tenantId ?? '-', 'production-events', id ?? '-', 'attributed-losses'),
+    enabled: Boolean(tenantId && id),
+    staleTime: STALE_TIME['production-events'],
+    queryFn: async ({ signal }) =>
+      (await v2.get<EventAttributedLossesView, '/api/v2/production-events/{id}/attributed-losses'>(
+        '/api/v2/production-events/{id}/attributed-losses',
         { path: { id: id as string }, signal },
       )).data,
   });

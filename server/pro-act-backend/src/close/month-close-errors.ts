@@ -5,12 +5,12 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { MonthCloseRefusal } from '../domain/close/month-close-machine';
-import { MonthPrerequisites } from './month-prerequisites';
+import { ClosePrerequisites } from './month-coverage';
 
 const MESSAGES: Readonly<Record<MonthCloseRefusal, string>> = {
   INVALID_TRANSITION: 'the month is not in a state that allows this step',
   CLOSE_PREREQUISITES:
-    'every period of the month must be approved, every production day certified (when the policy requires it) and no change proposal open',
+    'every scheduled period of the month must exist and be approved, every production day certified (when the policy requires it) and no change proposal open',
   SEPARATION_OF_DUTIES:
     'finance signs off independently of the quantity close and of the materiality review',
   MATERIALITY_REVIEW_REQUIRED:
@@ -23,7 +23,7 @@ const MESSAGES: Readonly<Record<MonthCloseRefusal, string>> = {
 export function monthCloseRefused(
   refusal: MonthCloseRefusal,
   state: string,
-  prerequisites: MonthPrerequisites,
+  prerequisites: ClosePrerequisites,
 ): HttpException {
   const body = { code: refusal, message: MESSAGES[refusal] };
   if (refusal === 'SEPARATION_OF_DUTIES') return new ForbiddenException(body);
@@ -34,12 +34,29 @@ export function monthCloseRefused(
         pendingCount: prerequisites.pendingCount,
         pending: prerequisites.pending,
         uncertifiedDays: prerequisites.uncertifiedDays,
+        missingPeriodCount: prerequisites.missingPeriodCount,
+        missingPeriods: prerequisites.missingPeriods,
         openProposalCount: prerequisites.openProposalCount,
         openProposals: prerequisites.openProposals,
       },
     });
   }
   return new ConflictException({ ...body, details: { state } });
+}
+
+/**
+ * 422 MONTH_NOT_ENDED: quantities are closed only after the month is over in the plant time zone (its last
+ * local date and its last shift ended), whatever the state of its periods.
+ */
+export function monthNotEnded(
+  monthKey: string,
+  endsAt: Date,
+): UnprocessableEntityException {
+  return new UnprocessableEntityException({
+    code: 'MONTH_NOT_ENDED',
+    message: `${monthKey} has not ended: its quantities can be closed from ${endsAt.toISOString()}`,
+    details: { monthEndsAt: endsAt.toISOString() },
+  });
 }
 
 /** 403 MATERIALITY_REVIEWER: the caller holds none of the policy's reviewer roles. */

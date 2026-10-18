@@ -1,22 +1,26 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCompleteTask } from '@/api/v2/queries/administration-tasks';
 import type { TaskView } from '@/api/v2/types/administration';
 import { useCommandFeedback } from '@/features/admin/shared/use-command-feedback';
 import type { DataTableColumn } from '@/features/ux-kit/data-table';
+import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { IconButton } from '@/features/ux-kit/icon-button';
-import { labelOf, TASK_LINK_LABELS } from '@/features/ux-kit/labels';
+import { labelOf, resolvedActorText, TASK_LINK_LABELS } from '@/features/ux-kit/labels';
 import { ActionIcon } from '@/lib/icons';
 import { DueDate, PriorityBadge, TaskStatusBadge } from './task-badges';
 
 /** Where a linked record opens (only links with a screen of their own). */
-export function linkTargetOf(task: Pick<TaskView, 'linkType' | 'linkId'>): string | null {
-  if (task.linkType === 'RCA' && task.linkId) return `/rca?case=${encodeURIComponent(task.linkId)}`;
-  return null;
+export function linkTargetOf(task: Pick<TaskView, 'linkType' | 'linkId' | 'rcaActionId'>): string | null {
+  if (task.linkType !== 'RCA' || !task.linkId) return null;
+  const casePath = `/rca/${encodeURIComponent(task.linkId)}`;
+  return task.rcaActionId ? `${casePath}/actions#action-${encodeURIComponent(task.rcaActionId)}` : casePath;
 }
 
 export function LinkedTo({ task }: { task: TaskView }) {
   if (!task.linkType) return <span className="text-muted-foreground">—</span>;
-  const label = labelOf(TASK_LINK_LABELS, task.linkType);
+  const linked = labelOf(TASK_LINK_LABELS, task.linkType);
+  const label = task.linkType === 'RCA' && task.rcaActionId ? `${linked} action` : linked;
   const target = linkTargetOf(task);
   return target ? (
     <Link to={target} className="underline-offset-2 hover:underline" onClick={(event) => event.stopPropagation()}>
@@ -30,17 +34,21 @@ export function LinkedTo({ task }: { task: TaskView }) {
 function CompleteButton({ task }: { task: TaskView }) {
   const complete = useCompleteTask();
   const feedback = useCommandFeedback();
+  const [open, setOpen] = useState(false);
   if (task.status === 'Completed' || task.status === 'Cancelled') return null;
   return (
-    <IconButton
-      icon={ActionIcon.approve}
-      label={`Mark "${task.title}" complete`}
-      disabled={complete.isPending}
-      onClick={(event) => {
-        event.stopPropagation();
-        void feedback(() => complete.submit(task.id), 'Task completed').catch(() => undefined);
-      }}
-    />
+    // the dialog renders in a portal, but its clicks still bubble through React to the row's open handler
+    <span onClick={(event) => event.stopPropagation()}>
+      <IconButton icon={ActionIcon.approve} label={`Mark "${task.title}" complete`} disabled={complete.isPending} onClick={() => setOpen(true)} />
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={`Mark "${task.title}" complete?`}
+        description="The task is closed for its assignee and leaves the open and overdue counts."
+        confirmLabel="Mark complete"
+        onConfirm={() => feedback(() => complete.submit(task.id), 'Task completed')}
+      />
+    </span>
   );
 }
 
@@ -57,7 +65,7 @@ export function taskColumns(formatDate: (iso: string | null | undefined) => stri
         </div>
       ),
     },
-    { id: 'assignee', header: 'Assignee', cell: (task) => task.assigneeName ?? 'Unknown user' },
+    { id: 'assignee', header: 'Assignee', cell: (task) => resolvedActorText(task.assigneeId, task.assigneeName) },
     { id: 'priority', header: 'Priority', cell: (task) => <PriorityBadge priority={task.priority} />, nowrap: true },
     { id: 'status', header: 'Status', cell: (task) => <TaskStatusBadge status={task.status} />, nowrap: true },
     { id: 'due', header: 'Due', cell: (task) => <DueDate task={task} format={formatDate} />, nowrap: true },

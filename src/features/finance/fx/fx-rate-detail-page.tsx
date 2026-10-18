@@ -9,7 +9,7 @@ import { Fact } from '../components/fact';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { ProvisionalRateBadge } from '../components/provisional-rate-badge';
-import { VersionStateBadge } from '../components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { FxVersionActions } from './fx-version-actions';
 
 const BACK = { to: '/finance?tab=fx', label: 'Exchange rates' };
@@ -31,7 +31,7 @@ function RatePage({ rate }: { rate: FxRateView & WithRevaluation }) {
       />
       <RevaluationQueued revaluation={rate.revaluation} />
       {rate.provisional && (
-        <p className="rounded-md border border-amber-500/60 p-3 text-sm" data-testid="fx-provisional-note">
+        <p className="rounded-md border border-warning/60 p-3 text-sm" data-testid="fx-provisional-note">
           Provisional rate: it converts only dates without an approved final rate, and every value it converts is shown as provisional. Approving the final rate revalues those
           figures; approved periods get a change proposal.
         </p>

@@ -19,6 +19,10 @@ export interface CodingSnapshotView {
   scheduleClass: string;
   oeeComponent: string;
   codingState: string;
+  /** A-1: asset before / after a bulk change (absent on older servers) */
+  assetId?: string | null;
+  /** SME D12 (absent on older servers) */
+  investigationPending?: boolean;
 }
 
 export type BulkExclusionReason = 'not_found' | 'duplicate' | 'superseded' | 'retracted' | 'stale_version';

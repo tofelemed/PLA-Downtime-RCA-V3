@@ -91,11 +91,12 @@ export class SourceAuthorityV2Controller {
   @Roles(...SOURCE_AUTHORITY_WRITERS)
   @ApiOperation({
     summary:
-      'Draft a source authority version with a measurement hierarchy (or none) from the version in force; the top rank becomes the primary source. It applies only once approved.',
+      'Draft a source authority version with a measurement hierarchy (or none) from the version in force; the top rank becomes the primary source. It applies only once approved (from approval time, or from a past effectiveFrom while commissioning).',
     description:
       'Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; ' +
       '422 INVALID_REFERENCE (unit), INVALID_POLICY (ranks not unique, classes out of order, estimate not manual, ' +
-      'same signal twice, lag on a non-signal source, top rank not at the hierarchy boundary).',
+      'same signal twice, lag on a non-signal source, top rank not at the hierarchy boundary); ' +
+      '422 INVALID_EFFECTIVE_FROM / BACKDATE_REASON_REQUIRED, 409 BACKDATE_REWRITES_HISTORY / BACKDATE_OVERLAPS_CALCULATION (commissioning backdate).',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async write(
@@ -128,7 +129,9 @@ export class SourceAuthorityV2Controller {
       'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; ' +
       '403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; ' +
-      '409 STALE_DRAFT when the version it was prepared from is no longer in force.',
+      '409 STALE_DRAFT when the version it was prepared from is no longer in force. A draft with a commissioning ' +
+      'backdate takes effect at its requestedEffectiveFrom; the checks are repeated now: 409 BACKDATE_REWRITES_HISTORY, ' +
+      '409 BACKDATE_OVERLAPS_CALCULATION (details.periods).',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async approve(

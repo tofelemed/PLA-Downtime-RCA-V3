@@ -1,23 +1,21 @@
 import type { ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
+import { FormField } from '@/features/ux-kit/form-field';
 
-/** Small labelled controls shared by the RCA forms (every input has a visible label). */
-export function Field({ id, label, wide, children }: { id: string; label: string; wide?: boolean; children: ReactNode }) {
+/** Small labelled controls shared by the RCA forms (every input has a visible label; kit `FormField`). */
+export function Field({ id, label, wide, required, children }: { id: string; label: string; wide?: boolean; required?: boolean; children: ReactNode }) {
   return (
-    <div className={cn('space-y-1', wide && 'md:col-span-2')}>
-      <Label htmlFor={id}>{label}</Label>
+    <FormField id={id} label={label} required={required} className={wide ? 'md:col-span-2' : undefined}>
       {children}
-    </div>
+    </FormField>
   );
 }
 
 export function TextField(props: { id: string; label: string; value: string; onChange: (value: string) => void; wide?: boolean; maxLength?: number; placeholder?: string; required?: boolean }) {
   return (
-    <Field id={props.id} label={props.label} wide={props.wide}>
+    <Field id={props.id} label={props.label} wide={props.wide} required={props.required}>
       <Input id={props.id} value={props.value} maxLength={props.maxLength} placeholder={props.placeholder} required={props.required} onChange={(e) => props.onChange(e.target.value)} />
     </Field>
   );

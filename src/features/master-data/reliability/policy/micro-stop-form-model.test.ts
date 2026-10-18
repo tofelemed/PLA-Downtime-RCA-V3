@@ -6,6 +6,7 @@ import { policyVersionLine } from './policy-version-line';
 const CURRENT: MicroStopPolicyView = {
   id: 'p1', unitId: null, version: 2, microStopSeconds: 60, microStopSecondsByAssetClass: { Bagger: 120 },
   tripReasonCodes: ['ELEC-MTR'], effectiveFrom: '2026-10-14T00:00:00.000Z', notes: null,
+  requestedEffectiveFrom: null, backdateReason: null,
 };
 
 describe('micro-stop form (SME D6)', () => {

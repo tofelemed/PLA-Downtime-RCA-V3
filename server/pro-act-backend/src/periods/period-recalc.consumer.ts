@@ -4,6 +4,7 @@ import { InProcessEventBus } from '../common/outbox/in-process-event-bus';
 import { InboxService } from '../common/outbox/inbox.service';
 import { PublishedMessage } from '../common/outbox/outbox-transport';
 import { downstreamUnits } from '../plant-model/flow-inputs.loader';
+import { isWorkflowOnly } from '../production-event/revisions/event-change.notifier';
 import { PLAN_VERSION_APPROVED } from '../plans/plan-events';
 import { ActualsJobsService } from './actuals-jobs.service';
 import { ProductionPeriod } from './entities/production-period.entity';
@@ -30,7 +31,7 @@ const RECALCULATING_TYPES = new Set([
  * - `EventChanged` / `EventRetracted` of a production output event → `PeriodRecalculateRequested` for its
  *   unit and affected interval; of a downtime / slowdown / quality event (loss explanation) → the same
  *   request, so the 2.5 calculation run re-derives the ledgers while the actuals run is reused (its input
- *   hash is unchanged, T44);
+ *   hash is unchanged, T44); workflow-only changes (verification labels) are skipped;
  * - `PlanVersionApproved` in the accounting-baseline scenario → slices of the unit's not-reconciled
  *   periods in the version window are re-resolved and changed periods recalculated; reconciled periods
  *   are handed to the 2.8 workflow (`PeriodRestatementPort`), which opens `period_change_proposals`;
@@ -81,6 +82,8 @@ export class PeriodRecalcConsumer implements OnModuleInit {
     manager: EntityManager,
     message: PublishedMessage,
   ): Promise<void> {
+    // SME D13 verification labels change no quantity, timing or coding: nothing to recalculate
+    if (isWorkflowOnly(message.payload)) return;
     const rows: Array<{ unit_id: string; physical_type: string }> =
       await manager.query(
         `SELECT "unit_id", "physical_type" FROM "production_events" WHERE "id" = $1`,

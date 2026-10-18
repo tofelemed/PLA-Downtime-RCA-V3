@@ -28,7 +28,7 @@ export const MANAGERS = {
   laura: persona('laura.rossi', 'Laura Rossi'),
 } as const;
 
-/** Legacy `TenantAdmin` → `manager_approver` plus the admin screens (Users, Connectivity, Master Data). */
+/** Legacy `TenantAdmin` → `manager_approver` plus the admin screens (Users, Master Data); Connectivity is SuperAdmin-only (owner 18 Oct 2026). */
 export const ADMINS = {
   anna: persona('anna.keller', 'Anna Keller'),
   benjamin: persona('benjamin.carter', 'Benjamin Carter'),

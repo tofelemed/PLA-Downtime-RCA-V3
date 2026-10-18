@@ -12,7 +12,7 @@ import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { ActionIcon } from '@/lib/icons';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
-import { VersionStateBadge } from '../components/version-state-badge';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
 import { hoursOfSeconds } from '../model/transition-standard-form';
 import { TransitionStandardForm } from './transition-standard-form';

@@ -59,8 +59,11 @@ function LinkRow({ link, timezone }: { link: RcaLinkView; timezone: string }) {
   );
 }
 
-/** RCA02 references of the case with the evidence package each link stored when it was made. */
-export function LinksTab({ rcaId, timezone }: { rcaId: string; timezone: string }) {
+/**
+ * RCA02 references of the case with the evidence package each link stored when it was made. A closed case
+ * takes no new link (server 409 CASE_CLOSED, Marun G4), so the add-link form is replaced by a note.
+ */
+export function LinksTab({ rcaId, timezone, closed = false }: { rcaId: string; timezone: string; closed?: boolean }) {
   const { canWriteRca } = useCapabilities();
   const links = useRcaLinks(rcaId);
   const items = links.data ?? [];
@@ -77,7 +80,12 @@ export function LinksTab({ rcaId, timezone }: { rcaId: string; timezone: string 
           ))}
         </ul>
       </DataState>
-      {canWriteRca && <AddLinkForm rcaId={rcaId} />}
+      {canWriteRca && !closed && <AddLinkForm rcaId={rcaId} />}
+      {canWriteRca && closed && (
+        <p className="text-sm text-muted-foreground" data-testid="links-closed">
+          This investigation is closed: reopen it to add a link.
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">Work orders are referenced by their number; pushing work to the maintenance system is not available yet.</p>
     </div>
   );

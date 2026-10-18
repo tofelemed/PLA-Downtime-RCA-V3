@@ -66,7 +66,7 @@ export function TimelineTool() {
         </Button>
       )}
       {patch.error ? <FriendlyErrorAlert error={patch.error} /> : null}
-      {entries.length === 0 && <p className="text-sm text-muted-foreground">No events yet: add one here or on the event diagram, or link production events to the case.</p>}
+      {entries.length === 0 && <p className="text-sm text-muted-foreground">No events yet: add one here or on the event diagram, or link production events to the investigation.</p>}
       <ol className="space-y-2">
         {entries.map((entry) => (
           <li key={entry.id} className="flex flex-wrap items-start justify-between gap-2 rounded border p-3" data-testid="timeline-entry">

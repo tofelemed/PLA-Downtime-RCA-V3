@@ -30,15 +30,32 @@ import {
 import { EnumArrayParam } from '../common/enum-array-param';
 import { ListQueryDto } from '../common/list-query.dto';
 
-export const PRODUCTION_EVENT_SORT_FIELDS = ['startTime'] as const;
+export const PRODUCTION_EVENT_SORT_FIELDS = [
+  'startTime',
+  'durationSeconds',
+] as const;
 export type ProductionEventSortField =
   (typeof PRODUCTION_EVENT_SORT_FIELDS)[number];
-const SORT_OPTIONS = ['startTime', '-startTime'] as const;
+const SORT_OPTIONS = [
+  'startTime',
+  '-startTime',
+  'durationSeconds',
+  '-durationSeconds',
+] as const;
+/** UX E-7: supervisor verification of the coding (SME D13): `verified_at` set or not. */
+export const VERIFICATION_STATES = ['verified', 'not_verified'] as const;
+export type VerificationState = (typeof VERIFICATION_STATES)[number];
 
 /** `GET /api/v2/production-events` filters: AND between parameters, OR within a repeated parameter. */
 export class ProductionEventListQueryDto extends ListQueryDto {
   // Redeclared with an initializer (TS2612) so the resource-specific allowlist applies on top of the base validators.
-  @ApiPropertyOptional({ enum: SORT_OPTIONS, default: '-startTime' })
+  @ApiPropertyOptional({
+    enum: SORT_OPTIONS,
+    default: '-startTime',
+    description:
+      'durationSeconds: closed events by end − start; events without an end (still running) sort as the ' +
+      'longest (first with -durationSeconds, last with durationSeconds)',
+  })
   @IsOptional()
   @IsIn(SORT_OPTIONS)
   sort?: string = undefined;
@@ -187,4 +204,22 @@ export class ProductionEventListQueryDto extends ListQueryDto {
   @Min(1)
   @Max(3600)
   repeatWindowSeconds?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 31_536_000,
+    description:
+      'Only events lasting at least this many seconds: closed events by end − start, running events by the ' +
+      'time elapsed until the request (the elapsedSeconds of the response)',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(31_536_000)
+  minDurationSeconds?: number;
+
+  /** UX E-7: verified = the coding was verified by a supervisor (SME D13); not_verified = not (yet). */
+  @EnumArrayParam(VERIFICATION_STATES)
+  verificationStates?: VerificationState[];
 }

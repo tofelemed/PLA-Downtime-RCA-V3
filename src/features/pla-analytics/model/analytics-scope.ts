@@ -11,6 +11,7 @@ import type { LedgerKind } from '@/api/v2/types/period-overview';
 import type { LossTreeGroupBy, LossTreeMetricParam, TrendGroup } from '@/api/v2/types/pla-analytics';
 import { HOUR_MS, rollingWindow } from '@/api/v2/queries/time-window';
 import { DEFAULT_PRESET } from '@/features/downtime-analysis/model/downtime-filters';
+import { relativeWindowOf } from '@/features/event-hub/model/relative-window';
 
 /** Five views (UI guidelines §2: at most 5 tabs); the former eight are sections inside them. */
 export const PLA_TABS = ['waterfall', 'losses', 'trends', 'reconciliation', 'oee'] as const;
@@ -26,6 +27,9 @@ const LEGACY_TABS: Readonly<Record<string, PlaTab>> = {
 
 export const LOSS_EVENT_TYPES = ['all', 'downtime', 'slowdown', 'quality_loss'] as const;
 export type LossEventType = (typeof LOSS_EVENT_TYPES)[number];
+/** OEE component of the listed loss events (a waterfall bar or loss-tree row drills into it); `all` = no filter. */
+export const LOSS_EVENT_OEE = ['all', 'availability', 'performance', 'quality'] as const;
+export type LossEventOee = (typeof LOSS_EVENT_OEE)[number];
 
 /** A preset window ending now, with minute-stable bounds (cache keys repeat within the minute). */
 export const presetWindowOf = (hours: number, now: number = Date.now()) => rollingWindow(hours * HOUR_MS, now);
@@ -57,6 +61,8 @@ export interface AnalyticsScope {
   valueMetric: LossTreeMetricParam;
   /** physical type of the loss events listed under Losses */
   eventType: LossEventType;
+  /** OEE component of the loss events listed under Losses (server filter `oeeComponents`) */
+  eventOee: LossEventOee;
 }
 
 const oneOf = <T extends string>(values: readonly T[], value: string | null, fallback: T): T =>
@@ -77,15 +83,25 @@ function approvedOf(params: URLSearchParams, defaults: ScopeDefaults): boolean {
   return defaults.approvedByDefault ?? false;
 }
 
-/** Scope from the URL; a missing or broken window falls back to the last 7 days ending `now`. */
-export function parseScope(params: URLSearchParams, now: number, defaults: ScopeDefaults = {}): AnalyticsScope {
+/**
+ * The window of the URL: explicit bounds, else a rolling key of the Downtime / Event Hub links
+ * (`window=24h`, or its label) resolved at `now`, else the last 7 days ending `now`.
+ */
+function windowOf(params: URLSearchParams, now: number): Pick<AnalyticsScope, 'from' | 'to' | 'windowLabel'> {
   const from = params.get('from');
   const to = params.get('to');
-  const hasWindow = isInstant(from) && isInstant(to) && Date.parse(from) < Date.parse(to);
+  const name = params.get('window');
+  const rolling = relativeWindowOf(name);
+  if (isInstant(from) && isInstant(to) && Date.parse(from) < Date.parse(to)) return { from, to, windowLabel: rolling?.label ?? name ?? 'Custom window' };
+  const preset = rolling ?? DEFAULT_PRESET;
+  return { ...presetWindowOf(preset.hours, now), windowLabel: preset.label };
+}
+
+/** Scope from the URL; a missing or broken window falls back to the last 7 days ending `now`. */
+export function parseScope(params: URLSearchParams, now: number, defaults: ScopeDefaults = {}): AnalyticsScope {
   return {
     unitIds: (params.get('units') ?? '').split(',').filter(Boolean).sort(),
-    ...(hasWindow ? { from, to } : presetWindowOf(DEFAULT_PRESET.hours, now)),
-    windowLabel: hasWindow ? params.get('window') ?? 'Custom window' : DEFAULT_PRESET.label,
+    ...windowOf(params, now),
     approvedOnly: approvedOf(params, defaults),
     ledger: oneOf(['plan', 'capacity'] as const, params.get('ledger'), 'plan'),
     policy: oneOf(['operational', 'reconciled'] as const, params.get('policy'), 'operational'),
@@ -95,6 +111,7 @@ export function parseScope(params: URLSearchParams, now: number, defaults: Scope
     lossMetric: oneOf(LOSS_METRICS, params.get('metric'), 'qty'),
     valueMetric: oneOf(VALUE_METRICS, params.get('value'), 'value'),
     eventType: oneOf(LOSS_EVENT_TYPES, params.get('events'), 'all'),
+    eventOee: oneOf(LOSS_EVENT_OEE, params.get('oee'), 'all'),
   };
 }
 
@@ -107,6 +124,7 @@ const DEFAULTS: Partial<Record<keyof AnalyticsScope, string>> = {
   lossMetric: 'qty',
   valueMetric: 'value',
   eventType: 'all',
+  eventOee: 'all',
 };
 const PARAM: Partial<Record<keyof AnalyticsScope, string>> = {
   ledger: 'ledger',
@@ -117,6 +135,7 @@ const PARAM: Partial<Record<keyof AnalyticsScope, string>> = {
   lossMetric: 'metric',
   valueMetric: 'value',
   eventType: 'events',
+  eventOee: 'oee',
 };
 
 /** Every URL parameter the scope owns; other parameters of the page (e.g. the Reports view) are kept. */
@@ -204,5 +223,6 @@ export function lossEventsQuery(scope: AnalyticsScope): QueryOf<'/api/v2/product
     physicalStates: ['open', 'closed'],
   };
   if (scope.unitIds.length > 0) query.unitIds = [...scope.unitIds].sort();
+  if (scope.eventOee !== 'all') query.oeeComponents = [scope.eventOee];
   return query;
 }

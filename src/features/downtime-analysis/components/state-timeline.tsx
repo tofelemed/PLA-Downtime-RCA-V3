@@ -15,8 +15,18 @@ import { timelineRows, type TimelineRow } from '../model/timeline';
 
 const ROW_HEIGHT = 36;
 const PAGE = 500;
-const HATCH = 'repeating-linear-gradient(45deg, hsl(0 0% 45%) 0 3px, hsl(0 0% 85%) 3px 6px)';
-
+/**
+ * Stops coloured by schedule class with the shared unit-state tokens (UX_AUDIT C-7: the same colours as the
+ * master-data state timeline); an unclassified stop is the hatched unknown gap. External causes (starved /
+ * blocked) share the amber family.
+ */
+const CLASS_FILL: Readonly<Record<string, string>> = {
+  planned: 'bg-state-planned',
+  unplanned: 'bg-state-stopped',
+  external: 'bg-state-starved',
+  unknown: 'bg-state-unknown bg-hatch-unknown',
+};
+const LEGEND = ['unplanned', 'planned', 'external', 'unknown'] as const;
 
 /**
  * State timeline (lazy chunk): downtime intervals per unit across the window, unknown schedule class
@@ -57,8 +67,9 @@ export function StateTimeline({ filters }: { filters: DowntimeFilters }) {
     >
       <div className="space-y-2" data-testid="state-timeline">
         <p className="text-xs text-muted-foreground">
-          {dateTime(filters.from)} – {dateTime(filters.to)} · hatched = schedule class unknown · outlined = still running
+          {dateTime(filters.from)} – {dateTime(filters.to)} · hatched = schedule class unknown · outlined = still ongoing
         </p>
+        <ClassLegend />
         <DataState state={dataStateOf(query, { isEmpty: rows.length === 0 })} error={query.error} onRetry={() => query.refetch()}>
           <VirtualList
             items={rows}
@@ -73,11 +84,24 @@ export function StateTimeline({ filters }: { filters: DowntimeFilters }) {
   );
 }
 
+function ClassLegend() {
+  return (
+    <ul className="flex flex-wrap gap-3 text-xs text-muted-foreground" aria-label="Legend">
+      {LEGEND.map((scheduleClass) => (
+        <li key={scheduleClass} className="flex items-center gap-1">
+          <span aria-hidden="true" className={`inline-block h-3 w-3 rounded-sm ${CLASS_FILL[scheduleClass]}`} />
+          {labelOf(SCHEDULE_CLASS_LABELS, scheduleClass)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 interface LaneProps {
   row: TimelineRow;
   unitName: string;
   dateTime: (iso: string) => string;
-  duration: (seconds: number | null, style: 'compact') => string;
+  duration: (seconds: number | null) => string;
   onOpen: (event: ProductionEventView) => void;
 }
 
@@ -88,7 +112,7 @@ function TimelineLane({ row, unitName, dateTime, duration, onOpen }: LaneProps) 
       <div className="relative h-5 flex-1 rounded bg-muted">
         {row.segments.map((segment) => {
           const { event } = segment;
-          const label = `${dateTime(event.startTime)} · ${event.isOpen ? 'running' : duration(event.durationSeconds, 'compact')} · ${labelOf(SCHEDULE_CLASS_LABELS, event.classification.scheduleClass)}`;
+          const label = `${dateTime(event.startTime)} · ${event.isOpen ? 'ongoing' : duration(event.durationSeconds)} · ${labelOf(SCHEDULE_CLASS_LABELS, event.classification.scheduleClass)}`;
           return (
             <button
               key={event.id}
@@ -96,12 +120,8 @@ function TimelineLane({ row, unitName, dateTime, duration, onOpen }: LaneProps) 
               title={label}
               aria-label={`Stop ${label}`}
               data-testid="timeline-segment"
-              className={`absolute top-0 h-5 rounded-sm ${segment.open ? 'border-2 border-destructive' : ''}`}
-              style={{
-                left: `${segment.left}%`,
-                width: `${segment.width}%`,
-                background: segment.unknown ? HATCH : 'hsl(var(--destructive))',
-              }}
+              className={`absolute top-0 h-5 rounded-sm ${CLASS_FILL[event.classification.scheduleClass] ?? CLASS_FILL.unknown} ${segment.open ? 'border-2 border-foreground' : ''}`}
+              style={{ left: `${segment.left}%`, width: `${segment.width}%` }}
               onClick={() => onOpen(event)}
             />
           );

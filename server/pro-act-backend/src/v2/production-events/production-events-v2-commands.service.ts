@@ -55,9 +55,12 @@ import {
   PatchProductionEventV2Dto,
   ProductionEventV2EditableDto,
 } from './production-event-v2-write.dto';
+import { INTERVAL_FIELDS } from './source-owned-fields';
+import { clearedReason } from './cleared-reason';
+import { EventFacts } from '../../production-event/revisions/event-facts';
+import { latestSourceRevision } from '../../production-event/revisions/revision-store';
 
 const MANUAL_SOURCE = 'Manual';
-const INTERVAL_FIELDS = ['startTime', 'endTime', 'durationSeconds'] as const;
 
 /** Writes of the v2 event resource (DT08 manual create, user edits with `If-Match`). */
 @Injectable()
@@ -162,20 +165,43 @@ export class ProductionEventsV2CommandService {
       existing.startTime,
     );
     const now = this.clock.now();
+    const sourceFacts = await this.sourceFactsWhenCleared(existing, dto);
+    let released: readonly string[] = [];
     const updated = await this.revisions.applyUserChange({
       actor: actorFromContext(context),
       eventId: id,
       tenantId,
       expectedRowVersion: expectedRevision,
-      patch: (locked) => ({
-        ...patchColumns(locked, coded.dto, now),
-        ...withoutKeptImpactCode(locked, coded.columns),
-      }),
+      reason: dto.changeReason?.trim() || undefined,
+      patch: (locked) => {
+        const cleared = clearedReason(locked, coded.dto, sourceFacts);
+        released = cleared.released;
+        return {
+          ...patchColumns(
+            locked,
+            { ...coded.dto, ...cleared.classification },
+            now,
+          ),
+          ...withoutKeptImpactCode(locked, coded.columns),
+          ...cleared.columns,
+        };
+      },
+      releaseOverrides: () => released,
     });
     if (!updated) {
       throw notFound();
     }
     this.lifecycle.publishUpdated(updated);
+  }
+
+  /** The latest source facts of an event whose reason this request clears (the classification to go back to). */
+  private async sourceFactsWhenCleared(
+    existing: ProductionEvent,
+    dto: PatchProductionEventV2Dto,
+  ): Promise<EventFacts | null> {
+    if (dto.reasonCodeId !== null || !existing.reasonCodeId) return null;
+    const source = await latestSourceRevision(this.events.manager, existing.id);
+    return source?.sourceFacts ?? null;
   }
 
   /**
@@ -355,6 +381,7 @@ function writeInput(
     endTime: dto.endTime,
     durationSeconds: dto.durationSeconds,
     reasonCodeId: dto.reasonCodeId,
+    investigationPending: dto.investigationPending,
     classification,
   };
 }

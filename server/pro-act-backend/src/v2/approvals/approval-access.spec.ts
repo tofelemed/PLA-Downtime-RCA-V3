@@ -73,6 +73,29 @@ describe('approval role scope and cursor isolation', () => {
       ).sql,
     ).toBe('TRUE');
   });
+  it('a plant-wide finance_approver grant on an Analyst account decides restatement postings (Marun: Kamran)', () => {
+    const kamran = context({
+      legacyRole: 'Analyst',
+      roles: ['Analyst', 'production_engineer', 'finance_approver'],
+      scopes: [
+        { kind: 'tenant', id: tenantId, tenantId, role: 'production_engineer' },
+        { kind: 'tenant', id: tenantId, tenantId, role: 'finance_approver' },
+      ],
+    });
+    expect(approvalScope(kamran, ['finance_approver'], 'p.unitId').sql).toBe(
+      'TRUE',
+    );
+    expect(
+      approvalScope(
+        context({
+          legacyRole: 'Manager',
+          roles: ['Manager', 'manager_approver'],
+        }),
+        ['finance_approver'],
+        'p.unitId',
+      ).sql,
+    ).toBe('FALSE');
+  });
   it('preserves microseconds and rejects cursors after a role or tenant change', () => {
     const binding = cursorBinding(context());
     const row = {

@@ -3,24 +3,38 @@ import type { CreateEventBody } from '@/api/v2/queries/event-commands';
 import type { PatchEventInput } from '@/api/v2/queries/production-events';
 import { StaleRevisionError, V2ApiError } from '@/api/v2/errors';
 import type { ProductionEventView } from '@/api/v2/types/events';
+import { parseDurationInput } from './duration-input';
 import { EMPTY_FAILURE, failureCreateFields, failurePatchFields, failureValuesOf, type FailureValues } from './failure-form';
 import { plantLocalToUtc, utcToPlantLocal } from './plant-local-time';
 import { EMPTY_QUALITY, qualityCreateFields, qualityPatchFields, qualityValuesOf, type QualityValues } from './quality-form';
 
+/** E-4: how the event's end is given — an end time, or a duration from the start (an explicit choice). */
+export type IntervalMode = 'end' | 'duration';
+
 /**
- * Create / edit form of an event (plan 3.2 step 3, DTO = §15.3). Times are entered on the plant clock,
- * the duration in minutes (C1) and sent in seconds; the end **or** the duration closes the event. The
- * browser only checks what it must to build a request — interval rules (end after start, end and
- * duration agreeing within 1 s) are the server's and come back as 422 field errors.
+ * Create / edit form of an event (plan 3.2 step 3, DTO = §15.3). Times are entered on the plant clock;
+ * the end is given **either** as an end time **or** as a duration ("2h 30m", "2:30", minutes), chosen
+ * explicitly (E-4), and sent in seconds. The browser only checks what it must to build a request —
+ * interval rules (end after start, end and duration agreeing within 1 s) are the server's and come back
+ * as 422 field errors.
  */
 export interface EventFormValues extends FailureValues, QualityValues {
   unitId: string;
+  /** A-1: the asset that stopped (one of the unit's assets); '' = not recorded */
+  assetId: string;
   startLocal: string;
   endLocal: string;
+  /** E-4: which of end time / duration the user gives */
+  intervalMode: IntervalMode;
+  /** the duration as typed ("2h 30m", "2:30", "150" minutes); the field keeps its historical name */
   durationMinutes: string;
   physicalType: string;
   scheduleClass: string;
+  /** '' = the reason code's default (as the schedule class); otherwise the person's choice (PATCH / create DTO) */
+  oeeComponent: string;
   reasonCodeId: string;
+  /** SME D12 (E-3): no specific reason yet — the stop is under investigation */
+  investigationPending: boolean;
   description: string;
   /** SME Q5, downtime only: '' = not stated (the server treats it as a full stop), full_stop, fractional, none */
   impactMode: string;
@@ -33,6 +47,8 @@ export interface EventFormValues extends FailureValues, QualityValues {
   originAssetId: string;
   /** SME D4: approved end of a planned stop's window (plant clock); time after it is overrun */
   plannedEndLocal: string;
+  /** edit only: why the event is changed, stored on its user revision (PATCH `changeReason`, ≤ 1000) */
+  changeReason: string;
 }
 
 export type EventFormField = keyof EventFormValues;
@@ -40,12 +56,16 @@ export type FieldErrors = Partial<Record<EventFormField, string>>;
 
 export const EMPTY_FORM: EventFormValues = {
   unitId: '',
+  assetId: '',
   startLocal: '',
   endLocal: '',
+  intervalMode: 'end',
   durationMinutes: '',
   physicalType: 'downtime',
   scheduleClass: '',
+  oeeComponent: '',
   reasonCodeId: '',
+  investigationPending: false,
   description: '',
   impactMode: '',
   impactPercent: '',
@@ -53,6 +73,7 @@ export const EMPTY_FORM: EventFormValues = {
   originUnitId: '',
   originAssetId: '',
   plannedEndLocal: '',
+  changeReason: '',
   ...EMPTY_FAILURE,
   ...EMPTY_QUALITY,
 };
@@ -60,12 +81,16 @@ export const EMPTY_FORM: EventFormValues = {
 export function formValuesOf(event: ProductionEventView, timezone: string): EventFormValues {
   return {
     unitId: event.unitId,
+    assetId: event.assetId ?? '',
     startLocal: utcToPlantLocal(event.startTime, timezone),
     endLocal: utcToPlantLocal(event.endTime, timezone),
+    intervalMode: 'end',
     durationMinutes: '',
     physicalType: event.classification.physicalType,
     scheduleClass: event.classification.scheduleClass,
+    oeeComponent: event.classification.oeeComponent ?? '',
     reasonCodeId: event.reasonCodeId ?? '',
+    investigationPending: event.investigationPending === true,
     description: event.description ?? '',
     impactMode: event.classification.impactMode ?? '',
     impactPercent: event.classification.impactFraction ? String(Number(event.classification.impactFraction) * 100) : '',
@@ -73,6 +98,7 @@ export function formValuesOf(event: ProductionEventView, timezone: string): Even
     originUnitId: event.originUnitId ?? '',
     originAssetId: event.originAssetId ?? '',
     plannedEndLocal: utcToPlantLocal(event.plannedEndTime, timezone),
+    changeReason: '',
     ...failureValuesOf(event),
     ...qualityValuesOf(event),
   };
@@ -83,12 +109,9 @@ function fractionOf(percent: string): string {
   return String(Number(percent) / 100);
 }
 
-/** Minutes text → seconds with at most 3 decimals (the API's precision); null when empty. */
-export function minutesToSeconds(text: string): number | null {
-  if (text.trim() === '') return null;
-  const minutes = Number(text);
-  if (!Number.isFinite(minutes)) return Number.NaN;
-  return Math.round(minutes * 60_000) / 1000;
+/** The duration the form sends, in seconds: only in "duration" mode; null when none is given. */
+export function durationSecondsOf(values: Pick<EventFormValues, 'intervalMode' | 'durationMinutes'>): number | null {
+  return values.intervalMode === 'duration' ? parseDurationInput(values.durationMinutes) : null;
 }
 
 /** Request-shape checks only; everything about the interval itself is decided by the server. */
@@ -97,10 +120,10 @@ export function validateEventForm(values: EventFormValues, mode: 'create' | 'edi
   if (mode === 'create' && !values.unitId) errors.unitId = 'Choose a unit';
   if (!values.startLocal) errors.startLocal = 'Enter the start time';
   else if (!plantLocalToUtc(values.startLocal, timezone)) errors.startLocal = 'Not a valid time';
-  if (values.endLocal && !plantLocalToUtc(values.endLocal, timezone)) errors.endLocal = 'Not a valid time';
+  if (values.intervalMode !== 'duration' && values.endLocal && !plantLocalToUtc(values.endLocal, timezone)) errors.endLocal = 'Not a valid time';
   if (values.plannedEndLocal && !plantLocalToUtc(values.plannedEndLocal, timezone)) errors.plannedEndLocal = 'Not a valid time';
-  const seconds = minutesToSeconds(values.durationMinutes);
-  if (seconds !== null && (Number.isNaN(seconds) || seconds < 0)) errors.durationMinutes = 'Enter minutes (0 or more)';
+  const seconds = durationSecondsOf(values);
+  if (values.intervalMode === 'duration' && (seconds === null || Number.isNaN(seconds))) errors.durationMinutes = 'Enter a duration such as 2h 30m, 2:30 or 150 (minutes)';
   if ((values.physicalType === 'downtime' && values.impactMode === 'fractional') || (values.physicalType === 'slowdown' && values.impactPercent.trim() !== '')) {
     const percent = Number(values.impactPercent);
     if (values.impactPercent.trim() === '' || !(percent > 0 && percent <= 100)) errors.impactPercent = 'Enter the share of output lost (above 0, up to 100 %)';
@@ -119,17 +142,20 @@ export function validateEventForm(values: EventFormValues, mode: 'create' | 'edi
 const optional = (value: string) => (value === '' ? undefined : value);
 
 export function toCreateBody(values: EventFormValues, timezone: string): CreateEventBody {
-  const seconds = minutesToSeconds(values.durationMinutes);
+  const seconds = durationSecondsOf(values);
   const body: CreateEventBody = {
     unitId: values.unitId,
     startTime: plantLocalToUtc(values.startLocal, timezone) ?? values.startLocal,
     physicalType: values.physicalType as CreateEventBody['physicalType'],
   };
-  const endTime = values.endLocal ? plantLocalToUtc(values.endLocal, timezone) : null;
+  const endTime = values.intervalMode === 'end' && values.endLocal ? plantLocalToUtc(values.endLocal, timezone) : null;
   if (endTime) body.endTime = endTime;
+  if (values.assetId) body.assetId = values.assetId;
   if (seconds !== null) body.durationSeconds = seconds;
   if (values.scheduleClass) body.scheduleClass = values.scheduleClass as CreateEventBody['scheduleClass'];
+  if (values.oeeComponent) body.oeeComponent = values.oeeComponent as CreateEventBody['oeeComponent'];
   if (values.reasonCodeId) body.reasonCodeId = values.reasonCodeId;
+  if (values.investigationPending) body.investigationPending = true;
   const downtime = values.physicalType === 'downtime';
   if (values.physicalType === 'slowdown' && values.quantity.trim() && !values.impactPercent.trim()) body.impactMode = 'measured';
   if (values.physicalType === 'slowdown' && values.impactPercent.trim()) { body.impactMode = 'fractional'; body.impactFraction = fractionOf(values.impactPercent); }
@@ -147,17 +173,23 @@ export function toCreateBody(values: EventFormValues, timezone: string): CreateE
 
 type PatchBody = PatchEventInput['changes'];
 
+/**
+ * Start, and the end as the user chose to give it (E-4): in "end" mode a changed end time; in "duration"
+ * mode the duration, with the stored end released so the server derives it from the start (the user
+ * picked "Duration", which says so — nothing is cleared silently).
+ */
 function intervalChanges(initial: EventFormValues, values: EventFormValues, timezone: string): PatchBody {
   const changes: PatchBody = {};
   if (values.startLocal !== initial.startLocal) changes.startTime = plantLocalToUtc(values.startLocal, timezone) ?? undefined;
-  const endChanged = values.endLocal !== initial.endLocal;
-  if (endChanged) changes.endTime = values.endLocal ? plantLocalToUtc(values.endLocal, timezone) : null;
-  const seconds = minutesToSeconds(values.durationMinutes);
-  if (seconds !== null) {
-    changes.durationSeconds = seconds;
-    // a duration alone sets the end from the start (the old end would otherwise conflict)
-    if (!endChanged) changes.endTime = null;
+  if (values.intervalMode === 'duration') {
+    const seconds = durationSecondsOf(values);
+    if (seconds !== null) {
+      changes.durationSeconds = seconds;
+      changes.endTime = null;
+    }
+    return changes;
   }
+  if (values.endLocal !== initial.endLocal) changes.endTime = values.endLocal ? plantLocalToUtc(values.endLocal, timezone) : null;
   return changes;
 }
 
@@ -168,7 +200,12 @@ export function toPatchBody(initial: EventFormValues, values: EventFormValues, t
   if (values.scheduleClass !== initial.scheduleClass && values.scheduleClass) {
     changes.scheduleClass = values.scheduleClass as PatchBody['scheduleClass'];
   }
+  if (values.oeeComponent !== initial.oeeComponent && values.oeeComponent) {
+    changes.oeeComponent = values.oeeComponent as PatchBody['oeeComponent'];
+  }
   if (values.reasonCodeId !== initial.reasonCodeId) changes.reasonCodeId = values.reasonCodeId || null;
+  if (values.investigationPending !== initial.investigationPending) changes.investigationPending = values.investigationPending;
+  if (values.assetId !== initial.assetId) changes.assetId = values.assetId || null;
   if (values.description !== initial.description) changes.description = values.description.trim() || null;
   if (values.originUnitId !== initial.originUnitId) changes.originUnitId = values.originUnitId || null;
   if (values.plannedEndLocal !== initial.plannedEndLocal) {
@@ -185,17 +222,26 @@ export function toPatchBody(initial: EventFormValues, values: EventFormValues, t
     changes.impactMode = values.impactMode as PatchBody['impactMode'];
     changes.impactFraction = values.impactMode === 'fractional' ? fractionOf(values.impactPercent) : null;
   }
-  return changes;
+  return withChangeReason(changes, values.changeReason);
+}
+
+/** The change reason travels with a real change only (a reason alone changes nothing). */
+function withChangeReason(changes: PatchBody, reason: string): PatchBody {
+  const text = reason.trim();
+  return text && Object.keys(changes).length > 0 ? { ...changes, changeReason: text } : changes;
 }
 
 /** API field → form field (§15.3 names to the inputs that produced them). */
 const SERVER_FIELDS: Readonly<Record<string, EventFormField>> = {
   unitId: 'unitId',
+  assetId: 'assetId',
+  investigationPending: 'investigationPending',
   startTime: 'startLocal',
   endTime: 'endLocal',
   durationSeconds: 'durationMinutes',
   physicalType: 'physicalType',
   scheduleClass: 'scheduleClass',
+  oeeComponent: 'oeeComponent',
   reasonCodeId: 'reasonCodeId',
   description: 'description',
   impactMode: 'impactMode',
@@ -203,6 +249,7 @@ const SERVER_FIELDS: Readonly<Record<string, EventFormField>> = {
   originUnitId: 'originUnitId',
   originAssetId: 'originAssetId',
   plannedEndTime: 'plannedEndLocal',
+  changeReason: 'changeReason',
   failureMode: 'failureMode',
   failureSeverity: 'failureSeverity',
   maintainableItem: 'maintainableItem',
@@ -220,19 +267,21 @@ export interface ServerFormErrors {
   form: string | null;
 }
 
-/** API03 envelope → inline field messages plus a form-level message (422 DURATION_CONFLICT etc.). */
+/**
+ * API03 envelope → inline field messages plus a form-level message (422 DURATION_CONFLICT etc.). The
+ * form-level message also names every refused field ("Duration: …"), so the alert says what to fix even
+ * when the input is off screen; a property the server does not accept ("Unexpected field: xyz") is only
+ * listed there, never put on an input.
+ */
 export function serverFormErrors(error: unknown): ServerFormErrors {
   if (!(error instanceof V2ApiError)) return { fields: {}, form: 'The request failed. Try again.' };
   if (error instanceof StaleRevisionError) return { fields: {}, form: null };
-  const fields: FieldErrors = {};
-  const unmatched: string[] = [];
-  for (const entry of error.fieldErrors) {
-    const field = SERVER_FIELDS[entry.field.split('.')[0]];
-    if (field && !fields[field]) fields[field] = entry.message;
-    else if (!field) unmatched.push(entry.message);
-  }
-  const hasFields = Object.keys(fields).length > 0;
   const friendly = describeError(error);
-  const form = hasFields && unmatched.length === 0 ? null : [`${friendly.title}. ${friendly.message}`, ...unmatched].join(' · ');
-  return { fields, form };
+  const fields: FieldErrors = {};
+  error.fieldErrors.forEach((entry, index) => {
+    const field = SERVER_FIELDS[entry.field.split('.')[0]];
+    if (field && !fields[field] && !friendly.fieldMessages[index]?.unexpected) fields[field] = entry.message;
+  });
+  const listed = friendly.fieldMessages.map((entry) => `${entry.label}: ${entry.message}`);
+  return { fields, form: [`${friendly.title}. ${friendly.message}`, ...listed].join(' · ') };
 }

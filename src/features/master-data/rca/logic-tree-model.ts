@@ -92,3 +92,21 @@ export function sanitizeTree(value: unknown): LogicTreeNode[] {
     }];
   });
 }
+
+/**
+ * The tree as the template DTO accepts it (`LogicTreeNodeDto`): only its fields, at every level. A stored
+ * tree read back (v1 or imported templates) can carry other keys, and the server refuses any undeclared
+ * property (`forbidNonWhitelisted`), so a save must never echo the read model as is.
+ */
+export function logicTreeBodyOf(nodes: readonly LogicTreeNode[]): LogicTreeNode[] {
+  return nodes.map((node) => ({
+    id: node.id,
+    name: node.name,
+    code: node.code,
+    category: node.category,
+    ...(node.description !== undefined ? { description: node.description } : {}),
+    ...(node.note !== undefined ? { note: node.note } : {}),
+    ...(node.finding !== undefined ? { finding: node.finding } : {}),
+    ...(node.children ? { children: logicTreeBodyOf(node.children) } : {}),
+  }));
+}

@@ -1,6 +1,6 @@
 /**
  * JWT Constants
- * 
+ *
  * Centralized JWT configuration to ensure signing and verification
  * use the EXACT same secret value.
  */

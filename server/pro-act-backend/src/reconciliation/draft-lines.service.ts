@@ -28,6 +28,7 @@ import {
   candidatesOf,
   loadRevisionState,
   RevisionState,
+  sliceUomOf,
 } from './revision-state';
 import { contentHashOf } from './reviewed-content';
 import { saveIssues } from './save-issues';
@@ -167,7 +168,9 @@ export class DraftLinesService {
     const decisions = shaped.map(decisionOf);
     const issues = saveIssues(state, shaped, decisions);
     if (issues.length > 0) throw workflowIssues(issues);
-    return shaped.map((line, i) => rowOf(line, evidence[i], actorId));
+    return shaped.map((line, i) =>
+      rowOf(line, evidence[i], actorId, sliceUomOf(state.totals, line.sliceId)),
+    );
   }
 }
 
@@ -189,6 +192,7 @@ function rowOf(
   line: ShapedLine,
   evidence: LineEvidenceRef[],
   actorId: string,
+  sliceUom: string | null,
 ): LineDraft {
   const { input, candidate } = line;
   return {
@@ -200,7 +204,7 @@ function rowOf(
     baseQuantity: candidate
       ? formatDec(candidatesOf([candidate])[0].quantity)
       : null,
-    uom: candidate?.uom ?? null,
+    uom: candidate?.uom ?? sliceUom,
     basis: input.basis ?? candidate?.basis ?? null,
     reasonCodeId: input.reasonCodeId ?? candidate?.reasonCodeId ?? null,
     impactCodeId: input.impactCodeId ?? candidate?.impactCodeId ?? null,

@@ -2,16 +2,23 @@ import type { DigitSystem } from './calendar-types';
 import { localizeNumber } from './digits';
 
 /**
- * Durations as text — identical output to `features/ux-kit/format/duration.ts` for Latin digits
- * (the API speaks seconds; lists `compact` minutes, KPI tiles `clock` h:mm, detail text `long`).
+ * Durations as text — one rule everywhere (UX audit C-3): under 1 h "42 min", 1–48 h "3 h 25 min", over
+ * 48 h "2 d 11 h"; under a minute "45 s". Never a bare `h:mm`, which reads as min:s.
+ *
+ * @deprecated The styles are kept only so existing call sites compile; every style renders the same text.
  */
 export type DurationDisplayStyle = 'long' | 'compact' | 'clock';
 
 /** Options of {@link formatDuration}. */
 export interface DurationDisplayOptions {
+  /** @deprecated ignored — one duration format everywhere (C-3) */
   style?: DurationDisplayStyle;
   digits?: DigitSystem;
 }
+
+const MINUTES_PER_HOUR = 60;
+const HOURS_PER_DAY = 24;
+const DAYS_FROM_HOURS = 48;
 
 function toSeconds(value: number | string | null | undefined): number | null {
   if (value === null || value === undefined || value === '') return null;
@@ -19,32 +26,25 @@ function toSeconds(value: number | string | null | undefined): number | null {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
 }
 
-function long(seconds: number): string {
+function days(totalHours: number): string {
+  const wholeDays = Math.floor(totalHours / HOURS_PER_DAY);
+  const hours = totalHours % HOURS_PER_DAY;
+  return hours === 0 ? `${wholeDays} d` : `${wholeDays} d ${hours} h`;
+}
+
+function durationText(seconds: number): string {
   if (seconds < 60) return `${Math.round(seconds)} s`;
   const totalMinutes = Math.round(seconds / 60);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes} min`;
-  return minutes === 0 ? `${hours} h` : `${hours} h ${minutes} min`;
+  if (totalMinutes < MINUTES_PER_HOUR) return `${totalMinutes} min`;
+  if (totalMinutes > DAYS_FROM_HOURS * MINUTES_PER_HOUR) return days(Math.round(totalMinutes / MINUTES_PER_HOUR));
+  const hours = Math.floor(totalMinutes / MINUTES_PER_HOUR);
+  const minutes = totalMinutes % MINUTES_PER_HOUR;
+  return minutes === 0 ? `${hours} h` : `${hours} h ${String(minutes).padStart(2, '0')} min`;
 }
 
-function compact(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)} s`;
-  // fixed `1,234` grouping: the browser locale is never consulted
-  return `${String(Math.round(seconds / 60)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} min`;
-}
-
-function clock(seconds: number): string {
-  const totalMinutes = Math.round(seconds / 60);
-  const hours = Math.floor(totalMinutes / 60);
-  return `${hours}:${String(totalMinutes % 60).padStart(2, '0')}`;
-}
-
-/** `5400` → "1 h 30 min" (long), "90 min" (compact), "1:30" (clock); invalid → "—". */
+/** `2520` → "42 min", `12300` → "3 h 25 min", `213000` → "2 d 11 h"; invalid → "—". */
 export function formatDuration(value: number | string | null | undefined, opts: DurationDisplayOptions = {}): string {
   const seconds = toSeconds(value);
   if (seconds === null) return '—';
-  const style = opts.style ?? 'long';
-  const text = style === 'compact' ? compact(seconds) : style === 'clock' ? clock(seconds) : long(seconds);
-  return localizeNumber(text, opts.digits);
+  return localizeNumber(durationText(seconds), opts.digits);
 }

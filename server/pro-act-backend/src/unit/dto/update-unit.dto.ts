@@ -41,4 +41,4 @@ export class UpdateUnitDto {
   @IsNumber()
   @IsOptional()
   idealCycleTime?: number;
-} 
+}

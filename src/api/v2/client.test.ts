@@ -60,6 +60,18 @@ describe('v2 client (plan 3.1)', () => {
     expect(isApiUrl(`${v2BaseUrl()}/x`, v2BaseUrl())).toBe(true);
   });
 
+  it('keeps a downloaded file byte for byte, including the UTF-8 BOM of a CSV export (Marun E2E)', async () => {
+    const bytes = new Uint8Array([0xef, 0xbb, 0xbf, 0x61, 0x2c, 0x62, 0x0d, 0x0a]);
+    responses.push(new Response(bytes, { status: 200, headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="x.csv"' } }));
+    const { data } = await v2Request<Blob>({ method: 'GET', path: '/exports/e1/download', asFile: true });
+    const read = await new Promise<ArrayBuffer>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.readAsArrayBuffer(data);
+    });
+    expect(Array.from(new Uint8Array(read))).toEqual(Array.from(bytes));
+  });
+
   it('412 surfaces StaleRevisionError with the latest revision', async () => {
     responses.push(
       json(412, {

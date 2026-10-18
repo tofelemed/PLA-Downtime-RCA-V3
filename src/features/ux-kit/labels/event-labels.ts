@@ -3,8 +3,8 @@ import type { BulkExclusionReason, BulkJobState } from '@/api/v2/types/event-ope
 import type { ReviewItemState } from '@/api/v2/types/events';
 
 /**
- * Labels of production-event enums (spec §3.2 classification axes, DT11 state dimensions). Wording follows
- * `event-hub/model/event-states.ts`. The API sends these as strings: show them with `labelOf(MAP, value)`.
+ * Labels of production-event enums (spec §3.2 classification axes, DT11 state dimensions). The single
+ * source of the state wording: `event-hub/model/event-states.ts` adds only tones. The API sends these as strings: show them with `labelOf(MAP, value)`.
  */
 type EventDto = components['schemas']['CreateProductionEventV2Dto'];
 export type PhysicalType = NonNullable<EventDto['physicalType']>;
@@ -22,7 +22,7 @@ export type RevisionKind = 'source' | 'user' | 'system' | 'retraction';
 export type ActorKind = 'user' | 'connector' | 'system';
 
 export const PHYSICAL_STATE_LABELS: Readonly<Record<PhysicalState, string>> = {
-  open: 'Running',
+  open: 'Ongoing',
   closed: 'Ended',
   superseded: 'Superseded',
   retracted: 'Retracted',
@@ -124,7 +124,7 @@ export const EVENT_FIELD_LABELS: Readonly<Record<string, string>> = {
   reasonCodeId: 'Reason',
   impactCodeId: 'Impact code',
   oeeCodeId: 'OEE code',
-  rcaId: 'RCA case',
+  rcaId: 'Investigation',
   eventType: 'Event type',
   apmType: 'Event type',
   startTime: 'Start',
@@ -141,10 +141,26 @@ export const EVENT_FIELD_LABELS: Readonly<Record<string, string>> = {
   rcaState: 'RCA state',
   quantity: 'Quantity',
   quantityUom: 'Quantity unit',
-  severity: 'Severity',
+  severity: 'Event severity',
   description: 'Description',
   comment: 'Comment',
   status: 'Status',
   source: 'Source',
-  sourceKind: 'Origin',
+  sourceKind: 'Source type',
 };
+
+/** Glossary (docs/GLOSSARY.md): a downtime event is a "stop"; the generic record of any kind is an "event". */
+export type EventNoun = 'stop' | 'event';
+
+export function eventNoun(physicalType: string | null | undefined): EventNoun {
+  return physicalType === 'downtime' ? 'stop' : 'event';
+}
+
+/** "stop" only when every listed event is a downtime stop; a mixed or empty list is "event". */
+export function eventNounOfAll(physicalTypes: ReadonlyArray<string | null | undefined>): EventNoun {
+  return physicalTypes.length > 0 && physicalTypes.every((type) => type === 'downtime') ? 'stop' : 'event';
+}
+
+export function capitalizedNoun(noun: EventNoun): 'Stop' | 'Event' {
+  return noun === 'stop' ? 'Stop' : 'Event';
+}

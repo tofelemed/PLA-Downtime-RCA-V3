@@ -20,7 +20,7 @@ export function CrewComparison({ bundle, views }: { bundle: DowntimeBundleResult
       header: isCount ? 'Stops' : 'Downtime',
       align: 'right',
       nowrap: true,
-      cell: (group) => (isCount ? formatCount(group.value, digits) : <DurationText seconds={group.value} variant="compact" />),
+      cell: (group) => (isCount ? formatCount(group.value, digits) : <DurationText seconds={group.value} />),
     },
     { id: 'share', header: 'Share', align: 'right', cell: (group) => formatRatio(group.share, 1, digits) },
     { id: 'periods', header: 'Periods', align: 'right', cell: (group) => number(group.periods) },

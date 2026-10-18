@@ -58,7 +58,8 @@ export class ProductionEventsV2Controller {
     summary: 'List production events of the caller tenant',
     description:
       'Filters AND across parameters and OR within a repeated parameter; from/to is a half-open window with ' +
-      'overlap semantics; pages are keyset-based on (startTime, id). The tenant comes from the identity.',
+      'overlap semantics; pages are keyset-based on (sort key, id) — sort startTime or durationSeconds, where an event ' +
+      'without an end sorts as the longest. The tenant comes from the identity.',
   })
   @ApiHeader({
     name: 'X-Tenant-Id',
@@ -122,7 +123,9 @@ export class ProductionEventsV2Controller {
     summary: 'Get one production event of the caller scope',
     description:
       'Returns `ETag: "<rowVersion>"`; a foreign or unknown id is 404. The body is the effective event plus ' +
-      '`sourceFacts` (what the source last delivered) and `overriddenFields` (user overrides of source values).',
+      '`sourceFacts` (what the source last delivered), `overriddenFields` (user overrides of source values) and ' +
+      '`sourceOwnedFields` (fields the source system owns: the interval of a non-manual event and the fields whose ' +
+      'edit is recorded as a source override).',
   })
   get(
     @Ctx() ctx: RequestContext,

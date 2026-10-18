@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { MicroStopPolicyView, TransitionAllowanceView } from '@/api/v2/types/reliability';
@@ -14,6 +14,7 @@ const { StopPolicyPage } = await import('./stop-policy-page');
 const MICRO: MicroStopPolicyView = {
   id: 'p1', unitId: null, version: 4, microStopSeconds: 60, microStopSecondsByAssetClass: { Bagger: 120 },
   tripReasonCodes: ['ELEC-MTR'], effectiveFrom: '2026-10-14T00:00:00.000Z', notes: null,
+  requestedEffectiveFrom: null, backdateReason: null,
 };
 const ALLOWANCE: TransitionAllowanceView = { id: 'p1', unitId: null, version: 4, transitionAllowanceInPlan: 'planned', effectiveFrom: MICRO.effectiveFrom, notes: null };
 
@@ -89,6 +90,31 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     fireEvent.click(save);
     await screen.findByRole('status');
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ deriveFromState: true, debounceSeconds: 8, restartConfirmSeconds: 10, duplicateToleranceSeconds: 120, autoMergeDuplicates: true, incidentWindowSeconds: 120, notes: '' });
+  });
+
+  it('sends a commissioning backdate with its reason and lists the calculated periods the server refuses it over', async () => {
+    const overlap = {
+      ...errorBody('BACKDATE_OVERLAPS_CALCULATION', 'effectiveFrom overlaps 1 calculated period(s)'),
+      details: { total: 1, periods: [{ periodId: 'pp1', unitId: 'u1', unitName: 'Extruder 1', localDate: '2026-10-02', shiftName: 'Day', utcStart: '2026-10-02T02:30:00.000Z', utcEnd: '2026-10-02T10:30:00.000Z' }] },
+    };
+    const calls = stubV2Fetch((call) => (call.method === 'POST' && call.url.pathname.endsWith('/stop-event-policies') ? jsonResponse(409, overlap) : reply(call)));
+    actAs('SuperAdmin');
+    renderPage();
+    await screen.findByLabelText('Stop debounce (seconds)');
+    const commissioning = screen.getByTestId('stop-engine-commissioning');
+    expect(commissioning).toHaveTextContent('Only while commissioning');
+    fireEvent.change(within(commissioning).getByLabelText('Effective from (commissioning only) date'), { target: { value: '2026-10-01' } });
+    const save = screen.getByRole('button', { name: 'Record stop-engine settings (backdated)' });
+    fireEvent.click(save);
+    expect(await within(commissioning).findByText('Give the reason for backdating')).toBeInTheDocument();
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+    fireEvent.change(within(commissioning).getByLabelText(/Reason for backdating/), { target: { value: ' meter commissioned 1 Oct ' } });
+    fireEvent.click(save);
+    expect(await screen.findByText('Figures were already calculated in this range')).toBeInTheDocument();
+    expect(screen.getByTestId('backdate-overlap')).toHaveTextContent('Extruder 1 · 2026-10-02 · Day');
+    const body = calls.find((c) => c.method === 'POST')?.body;
+    expect(body).toMatchObject({ backdateReason: 'meter commissioned 1 Oct' });
+    expect(typeof body?.effectiveFrom).toBe('string');
   });
 
   it('a reader sees the settings without any way to record a version', async () => {

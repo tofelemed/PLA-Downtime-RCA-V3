@@ -21,7 +21,7 @@ export async function backToList(page: Page): Promise<void> {
 }
 
 /** Types a plant wall-clock time (`YYYY-MM-DDTHH:mm`) into a date + time field of the event form. */
-export async function fillPlantTime(form: Locator, label: 'Start' | 'End (empty = still running)', local: string): Promise<void> {
+export async function fillPlantTime(form: Locator, label: 'Start' | 'End (empty = still ongoing)', local: string): Promise<void> {
   await form.getByLabel(`${label} date`, { exact: true }).fill(local.slice(0, 10));
   await form.getByLabel(`${label} time`, { exact: true }).fill(local.slice(11, 16));
 }

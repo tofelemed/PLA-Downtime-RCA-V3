@@ -30,7 +30,7 @@ function UnexplainedShare({ bucket }: { bucket: Bucket }) {
   const above = bucket.unexplainedAboveTarget === true;
   const target = bucket.unexplainedTarget === null ? '' : ` (target < ${formatRatioPercent(bucket.unexplainedTarget, digits)})`;
   return (
-    <span data-testid="unexplained-share" data-above-target={above ? 'true' : 'false'} className={above ? 'font-medium text-destructive' : undefined} title={`Unexplained loss / shortfall${target}`}>
+    <span data-testid="unexplained-share" data-above-target={above ? 'true' : 'false'} className={above ? 'font-medium text-destructive' : undefined} title={`Unaccounted loss / gap${target}`}>
       {formatRatioPercent(bucket.unexplainedOfShortfall, digits)}
     </span>
   );
@@ -49,8 +49,8 @@ function columnsOf(label: (key: string) => string, digits: DigitSystem): Array<D
       ),
     },
     ...SERIES.map<DataTableColumn<Bucket>>((s) => ({ id: s.key, header: s.label, align: 'right', nowrap: true, cell: (b) => <Quantity value={b[s.key]} uom={b.uom} /> })),
-    { id: 'unexplainedOfShortfall', header: 'Unexplained / shortfall', align: 'right', nowrap: true, cell: (b) => <UnexplainedShare bucket={b} /> },
-    { id: 'unexplainedOfPlan', header: 'Unexplained / plan', align: 'right', nowrap: true, cell: (b) => formatRatioPercent(b.unexplainedOfPlan, digits) },
+    { id: 'unexplainedOfShortfall', header: 'Unaccounted / gap', align: 'right', nowrap: true, cell: (b) => <UnexplainedShare bucket={b} /> },
+    { id: 'unexplainedOfPlan', header: 'Unaccounted / plan', align: 'right', nowrap: true, cell: (b) => formatRatioPercent(b.unexplainedOfPlan, digits) },
     { id: 'periods', header: 'Periods', align: 'right', cell: (b) => formatNumber(b.periods, 0, digits) },
   ];
 }
@@ -73,7 +73,7 @@ export function ResidualTrendCard({ scope }: { scope: AnalyticsScope }) {
       query={query}
       response={query.data}
       isEmpty={data?.buckets.length === 0}
-      note="After the saved decisions of each period; buckets without a computable slice show —. Unexplained loss counts the open residual, tolerance adjustments and classified Unaccounted lines; it is shown against the shortfall and the plan, in red above the policy's improvement target."
+      note="After the saved decisions of each period; buckets without a computable slice show —. Unaccounted loss counts the open remainder, tolerance adjustments and classified Unaccounted lines; it is shown against the gap (shortfall) and the plan, in red above the policy's improvement target."
     >
       {data && (
         <div className="space-y-4" data-testid="residual-trend" data-group-by={data.groupBy}>
@@ -83,7 +83,7 @@ export function ResidualTrendCard({ scope }: { scope: AnalyticsScope }) {
                 <SeriesChart rows={residualRows(data, uom).map((row) => ({ ...row, label: label(row.label) }))} series={SERIES} kind="bar" />
               </Suspense>
               <DataTable
-                caption={`Residual trend in ${uom ?? 'unknown unit'}`}
+                caption={`Unaccounted trend in ${uom ?? 'unknown unit'}`}
                 columns={columns}
                 rows={data.buckets.filter((b) => b.uom === uom)}
                 getRowKey={(b) => `${b.key}|${b.uom ?? ''}`}

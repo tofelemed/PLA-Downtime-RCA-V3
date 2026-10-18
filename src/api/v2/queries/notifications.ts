@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { v2Request } from '../client';
 import type { ListResponse } from '../types/envelopes';
-import type { NotificationView } from '../types/notifications';
+import type { NotificationFilter, NotificationView } from '../types/notifications';
 import { v2Keys } from './query-keys';
 import { STALE_TIME } from './stale-times';
 import { useV2Command } from './use-v2-command';
@@ -9,14 +9,19 @@ import { useV2TenantId } from './use-v2-tenant';
 
 const PAGE = 20;
 
-/** The newest notifications of the signed-in user in the acting plant (refreshed by realtime hints). */
-export function useNotifications(enabled = true) {
+/**
+ * The newest active notifications of the signed-in user in the acting plant (refreshed by realtime hints):
+ * shared work someone already did is resolved on the server and no longer listed. `unread` lists only the
+ * unread ones.
+ */
+export function useNotifications(enabled = true, filter: NotificationFilter = 'all') {
   const tenantId = useV2TenantId();
+  const query = { limit: PAGE, ...(filter === 'unread' ? { unread: 'true' } : {}) };
   return useQuery({
-    queryKey: v2Keys.list(tenantId ?? '-', 'notifications', { filters: { limit: PAGE } }),
+    queryKey: v2Keys.list(tenantId ?? '-', 'notifications', { filters: query }),
     enabled: Boolean(tenantId) && enabled,
     staleTime: STALE_TIME.notifications,
-    queryFn: async ({ signal }) => (await v2Request<ListResponse<NotificationView>>({ method: 'GET', path: '/notifications', query: { limit: PAGE }, signal })).data,
+    queryFn: async ({ signal }) => (await v2Request<ListResponse<NotificationView>>({ method: 'GET', path: '/notifications', query, signal })).data,
   });
 }
 
@@ -42,6 +47,10 @@ function useNotificationCommand<TInput>(path: (input: TInput) => string) {
 
 export function useMarkNotificationRead() {
   return useNotificationCommand<{ id: string }>(({ id }) => `/notifications/${id}/read`);
+}
+
+export function useMarkNotificationUnread() {
+  return useNotificationCommand<{ id: string }>(({ id }) => `/notifications/${id}/unread`);
 }
 
 export function useMarkAllNotificationsRead() {

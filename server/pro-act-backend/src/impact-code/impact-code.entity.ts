@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Unique,
+} from 'typeorm';
 
 /** Per-tenant, versioned code library (plan 1.3): unique per tenant, history in `code_versions`. */
 @Entity('impact_codes')
@@ -19,10 +26,22 @@ export class ImpactCode {
   @Column({ name: 'category', type: 'varchar', length: 50, nullable: true })
   category?: string;
 
-  @Column({ name: 'cost_per_unit', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'cost_per_unit',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   costPerUnit?: number;
 
-  @Column({ name: 'cost_per_hour', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'cost_per_hour',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   costPerHour?: number;
 
   @Column({ name: 'cost_basis', type: 'varchar', length: 20, nullable: true })
@@ -57,4 +76,4 @@ export class ImpactCode {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

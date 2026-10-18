@@ -10,7 +10,6 @@ import { bootstrapWorker } from './worker';
 import { runMigrationsOnBoot } from './database/run-migrations-on-boot';
 import { reportTzdataProblems } from './common/startup/report-tzdata';
 
-
 async function bootstrap() {
   reportTzdataProblems();
   await runMigrationsOnBoot();
@@ -20,32 +19,53 @@ async function bootstrap() {
 
   // Enable CORS - Allow all origins in development, configured origins in production
   const isDevelopment = process.env.NODE_ENV !== 'production';
-  
+
   console.log('🔧 CORS Configuration:');
-  console.log(`   Environment: ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`);
-  
+  console.log(
+    `   Environment: ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`,
+  );
+
   // CORS configuration - use origin: true directly (simplest and most reliable)
   const corsOptions = {
-    origin: isDevelopment 
-      ? true  // Allow all origins in development
-      : (process.env.CORS_ORIGIN 
-          ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-          : true),
+    origin: isDevelopment
+      ? true // Allow all origins in development
+      : process.env.CORS_ORIGIN
+        ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
+        : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Correlation-Id', 'X-Tenant-Id', 'X-Client-Audited', 'If-Match', 'Idempotency-Key'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Correlation-Id', 'Retry-After', 'ETag'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'X-Correlation-Id',
+      'X-Tenant-Id',
+      'X-Client-Audited',
+      'If-Match',
+      'Idempotency-Key',
+    ],
+    exposedHeaders: [
+      'Content-Range',
+      'X-Content-Range',
+      'X-Correlation-Id',
+      'Retry-After',
+      'ETag',
+    ],
     maxAge: 86400,
     preflightContinue: false,
     optionsSuccessStatus: 204,
   };
-  
+
   app.enableCors(corsOptions);
-  
+
   if (isDevelopment) {
     console.log('   CORS: Allowing ALL origins (development mode)');
   } else {
-    console.log(`   CORS: Allowing origins: ${Array.isArray(corsOptions.origin) ? corsOptions.origin.join(', ') : 'ALL'}`);
+    console.log(
+      `   CORS: Allowing origins: ${Array.isArray(corsOptions.origin) ? corsOptions.origin.join(', ') : 'ALL'}`,
+    );
   }
 
   // /api prefix, URI versioning (/api/v2), API03 error filter, global validation pipe
@@ -60,7 +80,9 @@ async function bootstrap() {
     .build();
   const v1Document = SwaggerModule.createDocument(app, v1Config);
   v1Document.paths = Object.fromEntries(
-    Object.entries(v1Document.paths).filter(([path]) => !path.startsWith('/api/v2/')),
+    Object.entries(v1Document.paths).filter(
+      ([path]) => !path.startsWith('/api/v2/'),
+    ),
   );
   SwaggerModule.setup('api', app, v1Document);
 
@@ -70,15 +92,21 @@ async function bootstrap() {
   // Uploaded files are no longer served statically: downloads need a token and tenant membership
   // (the owning v2 route streams them, plan 3.11, owner decision 2026-10-10).
 
-
-
   const port = process.env.PORT || 3000;
   await app.listen(port);
   console.log('');
   console.log('✅ Application is running on: http://localhost:' + port);
-  console.log('✅ API documentation available at: http://localhost:' + port + '/api (v2: /api/docs/v2)');
-  console.log('✅ CORS enabled - Frontend can connect from any origin in development');
-  console.log(`✅ Process role: ${getProcessRole()} (schedulers ${getProcessRole() === 'api' ? 'off' : 'on'})`);
+  console.log(
+    '✅ API documentation available at: http://localhost:' +
+      port +
+      '/api (v2: /api/docs/v2)',
+  );
+  console.log(
+    '✅ CORS enabled - Frontend can connect from any origin in development',
+  );
+  console.log(
+    `✅ Process role: ${getProcessRole()} (schedulers ${getProcessRole() === 'api' ? 'off' : 'on'})`,
+  );
   console.log('');
 }
 

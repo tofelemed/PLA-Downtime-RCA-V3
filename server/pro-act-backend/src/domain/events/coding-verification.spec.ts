@@ -1,5 +1,6 @@
 import {
   StopForVerification,
+  uncodedVerificationReset,
   validateRefusal,
   verificationReset,
   verifyRefusal,
@@ -82,5 +83,32 @@ describe('coding verification (SME D13)', () => {
       validatedAt: null,
     });
     expect(verificationReset(['description'])).toEqual({});
+  });
+});
+
+describe('uncodedVerificationReset (Marun regression R1)', () => {
+  it('clears the verification when the coding becomes uncoded', () => {
+    expect(
+      uncodedVerificationReset(
+        { codingState: 'coded' },
+        { codingState: 'uncoded' },
+      ),
+    ).toEqual({ verifiedBy: null, verifiedAt: null });
+  });
+
+  it('keeps it otherwise', () => {
+    expect(
+      uncodedVerificationReset(
+        { codingState: 'coded' },
+        { codingState: 'coded' },
+      ),
+    ).toEqual({});
+    expect(
+      uncodedVerificationReset(
+        { codingState: 'uncoded' },
+        { codingState: 'uncoded' },
+      ),
+    ).toEqual({});
+    expect(uncodedVerificationReset({ codingState: 'coded' }, {})).toEqual({});
   });
 });

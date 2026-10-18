@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { evaluateApprovedTriggers } from '../../domain/rca/approved-triggers';
-import { FeatureFlagsService } from '../../feature-flags/feature-flags.service';
 import { AccountingPoliciesService } from '../../periods/accounting-policies.service';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import {
@@ -26,7 +25,6 @@ export class RcaApprovedTriggerService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly policies: AccountingPoliciesService,
-    private readonly flags: FeatureFlagsService,
   ) {}
 
   evaluate(
@@ -47,7 +45,6 @@ export class RcaApprovedTriggerService {
       now: Date;
     },
   ): Promise<TriggerResult[]> {
-    if (!(await this.flags.isEnabled(input.tenantId, 'v2.rca'))) return [];
     const eventIds = await approvedCauseEvents(manager, input);
     if (eventIds.length === 0) return [];
     const dailyPlan = await dailyPlanOf(manager, input);

@@ -85,7 +85,7 @@ export function RcaTemplateDetailPage() {
       retired={!template.isActive}
       kind="template"
       name={template.name}
-      retireNote="RCA cases that used it keep it; new cases can no longer start from it."
+      retireNote="Investigations that used it keep it; new investigations can no longer start from it."
     />
   ) : undefined;
   return (

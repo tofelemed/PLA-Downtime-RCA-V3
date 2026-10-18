@@ -62,6 +62,11 @@ export interface RcaEvidenceItem {
   task: string | null;
   taskDueDate: string | null;
   taskStatus: string | null;
+  /** F-11: who should collect it */
+  taskAssigneeId: string | null;
+  /** recorded by the server when `verified` became true */
+  verifiedBy: string | null;
+  verifiedAt: string | null;
   nodeIds: string[];
   timeSeries: RcaEvidenceSeries | null;
   attachments: RcaEvidenceAttachment[];
@@ -153,6 +158,9 @@ export function readEvidence(stored: unknown): RcaEvidenceItem[] {
     task: text(raw.task),
     taskDueDate: text(raw.taskDueDate) ?? text(raw.dueDate),
     taskStatus: text(raw.taskStatus) ?? text(raw.status),
+    taskAssigneeId: text(raw.taskAssigneeId),
+    verifiedBy: text(raw.verifiedBy),
+    verifiedAt: text(raw.verifiedAt),
     nodeIds: strings(raw.nodeIds),
     timeSeries: readSeries(raw),
     attachments: readAttachments(raw.attachments),

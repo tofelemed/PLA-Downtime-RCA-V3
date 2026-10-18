@@ -25,6 +25,7 @@ import {
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
 import { FmeaRules } from '../domain/rca/rca-policy-rules';
 import { casePolicy } from './case-policy';
+import { recordRcaAudit } from './rca-audit';
 import {
   barrierView,
   BarrierView,
@@ -244,15 +245,40 @@ export class RcaAnalysesService {
           rcaId: target.rcaId,
           tenantId: scope.tenantId,
         } as DeepPartial<E>);
-        return repository.save(created);
+        const saved = await repository.save(created);
+        return this.audited(manager, scope, type, { before: null, saved });
       }
       if (target.expected === null)
         throw staleRevision('this tool was saved meanwhile');
       assertRevision(existing.rowVersion, target.expected);
-      return repository.save({
+      const saved = await repository.save({
         ...existing,
         ...values,
       } as DeepPartial<E>);
+      return this.audited(manager, scope, type, { before: existing, saved });
     });
+  }
+
+  /** Field history of a tool save (`rca_analysis.saved`, the tool named by its table). */
+  private async audited<E extends AnalysisRow>(
+    manager: EntityManager,
+    scope: RcaScope,
+    type: RowClass<E>,
+    rows: { before: AnalysisRow | null; saved: E },
+  ): Promise<E> {
+    const { before, saved } = rows;
+    await recordRcaAudit(manager, scope, [
+      {
+        entityType: 'rca_analysis',
+        entityId: saved.id,
+        caseId: saved.rcaId,
+        action: 'saved',
+        before,
+        after: saved,
+        revision: saved.rowVersion,
+        detail: { tool: manager.getRepository(type).metadata.tableName },
+      },
+    ]);
+    return saved;
   }
 }

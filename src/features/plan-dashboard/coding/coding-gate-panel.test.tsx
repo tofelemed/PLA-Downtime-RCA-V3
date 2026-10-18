@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import type { CodingGateView } from '@/api/v2/types/stop-coding';
@@ -32,13 +33,18 @@ const GATE: CodingGateView = {
   verification: { verified: 0, unverified: 3, failureDetailed: 1, validated: 0, unvalidated: 1 },
 };
 
-const view = (gate: CodingGateView | undefined) => ({ periodId: 'p1', codingGate: gate }) as unknown as ReconciliationView;
+const view = (gate: CodingGateView | undefined) =>
+  ({ periodId: 'p1', unitId: 'u1', utcStart: '2026-10-15T06:00:00.000Z', utcEnd: '2026-10-15T14:00:00.000Z', codingGate: gate }) as unknown as ReconciliationView;
 
 /** SME D12 / D13: the server's gate verdict and verification counts on the period page, bulk verify of the shift. */
 describe('coding gate panel (SME D12 / D13)', () => {
   let bodies: unknown[];
   const wrap = (node: ReactNode) =>
-    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>{node}</QueryClientProvider>);
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>{node}</QueryClientProvider>
+      </MemoryRouter>,
+    );
 
   beforeEach(() => {
     bodies = [];
@@ -76,10 +82,39 @@ describe('coding gate panel (SME D12 / D13)', () => {
     expect(screen.queryByTestId('coding-gate')).toBeNull();
   });
 
+  it('E-7: the uncoded count opens the Event Hub on the period\'s uncoded stops of the unit', () => {
+    actAs('viewer');
+    wrap(<CodingGatePanel view={view(GATE)} />);
+    const link = screen.getByTestId('coding-gate-uncoded-link');
+    expect(link).toHaveTextContent('1 stop(s) uncoded');
+    const target = new URL(link.getAttribute('href') ?? '', 'http://test');
+    expect(target.pathname).toBe('/events');
+    expect(Object.fromEntries(target.searchParams)).toEqual({
+      from: '2026-10-15T06:00:00.000Z', to: '2026-10-15T14:00:00.000Z', window: 'This period', units: 'u1', kinds: 'downtime', coding: 'uncoded',
+    });
+  });
+
+  it('E-7: verifying the shift asks first, stating how many stops wait; cancel sends nothing', async () => {
+    actAs('production_engineer');
+    wrap(<CodingGatePanel view={view(GATE)} />);
+    fireEvent.click(screen.getByTestId('verify-shift'));
+    expect(await screen.findByRole('alertdialog', { name: 'Verify 3 stop(s) of this shift?' })).toBeInTheDocument();
+    const review = screen.getByTestId('verify-shift-review-link');
+    expect(review).toHaveTextContent('Review the 3 stop(s) waiting for verification');
+    const target = new URL(review.getAttribute('href') ?? '', 'http://test');
+    expect(target.searchParams.get('verified')).toBe('not_verified');
+    expect(target.searchParams.get('coding')).toBeNull();
+    expect(target.searchParams.get('units')).toBe('u1');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(bodies).toHaveLength(0);
+  });
+
   it('a production engineer verifies the shift and sees what was skipped', async () => {
     actAs('production_engineer');
     wrap(<CodingGatePanel view={view(GATE)} />);
     fireEvent.click(screen.getByTestId('verify-shift'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Verify 3 stop(s)' }));
     await waitFor(() => expect(screen.getByTestId('verify-outcome').textContent).toContain('2 verified, 1 skipped'));
     expect(bodies[0]).toEqual({ periodId: 'p1' });
   });

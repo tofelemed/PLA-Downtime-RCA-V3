@@ -25,6 +25,8 @@ export interface V2RequestOptions {
    * server checks the caller may act on it (403 TENANT_NOT_ALLOWED otherwise)
    */
   tenantId?: string;
+  /** a file to save as is: the body stays bytes (a CSV keeps its UTF-8 BOM, so it matches its published sha256) */
+  asFile?: boolean;
 }
 
 export interface V2Response<T> {
@@ -77,12 +79,12 @@ function headersFor(options: V2RequestOptions, url: string, correlationId: strin
   return headers;
 }
 
-async function readBody(response: Response): Promise<unknown> {
+async function readBody(response: Response, asFile = false): Promise<unknown> {
   if (response.status === 204) return undefined;
   const type = response.headers.get('Content-Type') ?? '';
   if (type.includes('application/json')) return response.json().catch(() => undefined);
-  // binary files (PDF exports) stay bytes; text would corrupt them
-  if (type.includes('application/pdf')) return response.blob().catch(() => undefined);
+  // binary files (PDF exports) and files to save stay bytes; text would corrupt a PDF and drop a CSV's BOM
+  if (asFile || type.includes('application/pdf')) return response.blob().catch(() => undefined);
   return response.text().catch(() => undefined);
 }
 
@@ -133,7 +135,7 @@ export async function v2Request<T>(request: V2RequestOptions): Promise<V2Respons
       ? { ...request, idempotencyKey: newIdempotencyKey() }
       : request;
   const response = await sendWithRetries(options, correlationId, context);
-  const body = await readBody(response);
+  const body = await readBody(response, options.asFile === true && response.ok);
   context.assertCurrent();
   const etag = response.headers.get('ETag');
   if (!response.ok) {

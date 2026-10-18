@@ -33,5 +33,5 @@ export {
   jalaliToGregorian,
   jalaliToIsoDate,
 } from './jalali';
-export { nextPlantDayUtc, plantLocalToUtc, startOfPlantDayUtc, utcToPlantLocal } from './zoned-time';
+export { addCalendarDays, nextPlantDayUtc, plantLocalToUtc, startOfPlantDayUtc, utcToPlantLocal } from './zoned-time';
 export { currentPlantMonth, monthNames, parsePlantMonth, plantMonthOf, shiftPlantMonth } from './plant-month';

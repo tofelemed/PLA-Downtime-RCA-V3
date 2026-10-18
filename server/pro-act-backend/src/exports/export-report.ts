@@ -138,7 +138,6 @@ export const REPORT_COLUMNS: Record<ExportReportType, readonly string[]> = {
   ],
 };
 
-
 /** Lines that add a quantity of their own (decisions on candidates are shown on the candidate rows). */
 const OWN_QUANTITY_ACTIONS = new Set(['manual', 'replace', 'tolerance']);
 

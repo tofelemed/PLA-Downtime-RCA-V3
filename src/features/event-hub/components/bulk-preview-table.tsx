@@ -7,6 +7,7 @@ import {
   labelOf,
   OEE_COMPONENT_LABELS,
   SCHEDULE_CLASS_LABELS,
+  useAssetNames,
 } from '@/features/ux-kit/labels';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { useEventHubEnv } from '../use-event-hub-env';
@@ -24,14 +25,31 @@ export interface BulkPreviewTableProps {
   preview: BulkCodePreviewView;
   /** the selected events, to name excluded ones by unit and start */
   events: readonly BulkTarget[];
+  /** A-1 / SME D12: before / after columns of the asset and of "investigation pending" (when they change) */
+  show?: { asset: boolean; investigation: boolean };
+}
+
+const pendingText = (value: CodingSnapshotView) => (value.investigationPending ? 'Investigation pending' : 'No');
+
+/** The optional before → after columns of the asset and the investigation flag. */
+function useExtraColumns(show: BulkPreviewTableProps['show']): DataTableColumn<PreviewItem>[] {
+  const assets = useAssetNames();
+  const assetText = (value: CodingSnapshotView) => (value.assetId ? assets.nameOf(value.assetId) : '—');
+  const columns: DataTableColumn<PreviewItem>[] = [];
+  if (show?.asset) columns.push({ id: 'asset', header: 'Asset', cell: (item) => `${assetText(item.before)} → ${assetText(item.after)}` });
+  if (show?.investigation) {
+    columns.push({ id: 'investigation', header: 'Investigation pending', cell: (item) => `${pendingText(item.before)} → ${pendingText(item.after)}` });
+  }
+  return columns;
 }
 
 /** DT10 preview: before / after per event (paged), exclusions with reasons, and the windows that will recalculate. */
-export function BulkPreviewTable({ preview, events }: BulkPreviewTableProps) {
+export function BulkPreviewTable({ preview, events, show }: BulkPreviewTableProps) {
   const { number } = useNumberFormat();
   const env = useEventHubEnv();
   const { dateTime } = usePlantFormat();
   const codingText = useCodingText();
+  const extra = useExtraColumns(show);
   const byId = new Map(events.map((event) => [event.id, event]));
   const eventText = (id: string) => {
     const event = byId.get(id);
@@ -41,6 +59,7 @@ export function BulkPreviewTable({ preview, events }: BulkPreviewTableProps) {
     { id: 'event', header: 'Event', nowrap: true, cell: (item) => eventText(item.eventId) },
     { id: 'before', header: 'Before', cell: (item) => codingText(item.before) },
     { id: 'after', header: 'After', cell: (item) => codingText(item.after) },
+    ...extra,
   ];
   return (
     <div className="space-y-3" data-testid="bulk-preview">
@@ -62,7 +81,7 @@ export function BulkPreviewTable({ preview, events }: BulkPreviewTableProps) {
         <span className="font-medium">Recalculates: </span>
         {preview.affectedWindows.map((window) => (
           <span key={`${window.unitId}:${window.from}`} className="mr-2 inline-block">
-            {env.unitName(window.unitId)} {dateTime(window.from)} – {window.to ? dateTime(window.to) : 'running'}
+            {env.unitName(window.unitId)} {dateTime(window.from)} – {window.to ? dateTime(window.to) : 'ongoing'}
           </span>
         ))}
       </div>

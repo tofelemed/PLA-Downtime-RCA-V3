@@ -1,5 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RequiredMarker } from '@/features/ux-kit/form-field';
 import { Textarea } from '@/components/ui/textarea';
 
 export interface TextFieldProps {
@@ -35,7 +36,7 @@ export function TextField(props: TextFieldProps) {
     <div className="space-y-1.5">
       <Label htmlFor={id}>
         {label}
-        {required && <span aria-hidden="true"> *</span>}
+        {required && <RequiredMarker />}
       </Label>
       {multiline ? (
         <Textarea {...common} rows={3} onChange={(event) => onChange(event.target.value)} />

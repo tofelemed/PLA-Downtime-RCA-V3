@@ -223,7 +223,9 @@ export class RcaPolicyCreateDto {
     type: 'object',
     additionalProperties: true,
     description:
-      'CA2/CA3 effectiveness rules (contracts/policies/rca_policy.schema.json; checked by the server parser, 422 INVALID_POLICY)',
+      'CA2/CA3 effectiveness rules: baselineLookbackDays, minExposureHours, requiredReduction, reviewDays, zeroRepeatClasses and ' +
+      'minimumCoverage (0–1, default 0.95: state-data coverage of the window after an action needed for a verdict; a version ' +
+      'without it behaves as 0.95) (contracts/policies/rca_policy.schema.json; checked by the server parser, 422 INVALID_POLICY)',
   })
   @IsOptional()
   @IsObject()

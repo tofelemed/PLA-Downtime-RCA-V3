@@ -4,12 +4,14 @@ import { useCalendarPreference } from '@/lib/dates';
 import type { ScheduleClass } from '../../model/downtime-filters';
 import { formatCount } from '../../model/kpi-display';
 import type { TrendRow } from '../../model/trend-rows';
+import { ChartFigure } from '@/features/ux-kit/chart-figure';
 
+/** Same schedule-class colours as the stop timeline (shared unit-state tokens, UX_AUDIT C-7). */
 const COLORS: Record<ScheduleClass, string> = {
-  planned: 'hsl(210 70% 50%)',
-  unplanned: 'hsl(0 70% 50%)',
-  external: 'hsl(35 85% 50%)',
-  unknown: 'hsl(0 0% 55%)',
+  planned: 'hsl(var(--state-planned))',
+  unplanned: 'hsl(var(--state-stopped))',
+  external: 'hsl(var(--state-starved))',
+  unknown: 'hsl(var(--state-not-scheduled))',
 };
 
 export interface TrendChartProps {
@@ -25,9 +27,10 @@ export function TrendChart({ rows, classes, unit }: TrendChartProps) {
     ...Object.fromEntries(classes.map((scheduleClass) => [scheduleClass, Number(row.values[scheduleClass] ?? 0)])),
   }));
   const { digits } = useCalendarPreference();
-  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact', digits) : formatCount(String(value), digits));
+  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'long', digits) : formatCount(String(value), digits));
+  const caption = `Stacked ${unit === 's' ? 'downtime' : 'stop counts'} for ${rows.length} periods, split by schedule class (${classes.join(', ')}).`;
   return (
-    <div className="h-64 w-full" aria-hidden>
+    <ChartFigure caption={caption} chartClassName="h-64 w-full" testId="trend-chart">
       <ResponsiveContainer>
         <BarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -40,6 +43,6 @@ export function TrendChart({ rows, classes, unit }: TrendChartProps) {
           ))}
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </ChartFigure>
   );
 }

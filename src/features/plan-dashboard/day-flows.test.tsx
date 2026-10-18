@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configureV2Session } from '@/api/v2/config';
 import type { DayView } from '@/api/v2/types/production-day';
@@ -9,6 +9,8 @@ vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user'
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
 const { DayCertificationPanel } = await import('./day/day-certification-panel');
+
+const confirmCertify = async () => fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Certify the day' }));
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
@@ -67,7 +69,23 @@ describe('day certification panel (SME R2, owner decision 14 Oct)', () => {
     wrap();
     expect((await screen.findByTestId('day-rollup')).textContent).toContain('3 shifts');
     fireEvent.click(screen.getByTestId('day-certify'));
+    await confirmCertify();
     await waitFor(() => expect(posts).toEqual(['/api/v2/production-days/u1/2026-10-08/certify']));
+  });
+
+  it('Marun E2E: certifying asks for confirmation with the roll-up and the coding verdict', async () => {
+    actAs('manager_approver', 'manager-1');
+    wrap();
+    fireEvent.click(await screen.findByTestId('day-certify'));
+    const dialog = await screen.findByRole('alertdialog');
+    const summary = within(dialog).getByTestId('day-certify-summary').textContent ?? '';
+    expect(summary).toContain('Good 300.00 t of target 3,000.00 t');
+    expect(summary).toContain('loss 2,700.00 t');
+    expect(summary).toContain('residual 0.00 t');
+    expect(within(dialog).getByTestId('day-coding-gate').textContent).toContain('shown as a warning');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(posts).toEqual([]);
   });
 
   it('SME D12: the server’s daily coding verdict is shown with the daily target', async () => {
@@ -85,6 +103,7 @@ describe('day certification panel (SME R2, owner decision 14 Oct)', () => {
     const button = await screen.findByTestId('day-certify');
     expect((button as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(button);
+    await confirmCertify();
     await waitFor(() => expect(posts).toEqual(['/api/v2/production-days/u1/2026-10-08/certify']));
   });
 

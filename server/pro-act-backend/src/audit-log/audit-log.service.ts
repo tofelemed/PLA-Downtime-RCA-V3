@@ -51,7 +51,9 @@ export class AuditLogService {
       qb.andWhere('log.userId = :userId', { userId: filters.userId });
     }
     if (filters.entityType) {
-      qb.andWhere('log.entityType = :entityType', { entityType: filters.entityType });
+      qb.andWhere('log.entityType = :entityType', {
+        entityType: filters.entityType,
+      });
     }
     if (filters.entityId) {
       qb.andWhere('log.entityId = :entityId', { entityId: filters.entityId });
@@ -65,7 +67,9 @@ export class AuditLogService {
         endDate: filters.endDate,
       });
     } else if (filters.startDate) {
-      qb.andWhere('log.createdAt >= :startDate', { startDate: filters.startDate });
+      qb.andWhere('log.createdAt >= :startDate', {
+        startDate: filters.startDate,
+      });
     } else if (filters.endDate) {
       qb.andWhere('log.createdAt <= :endDate', { endDate: filters.endDate });
     }
@@ -86,7 +90,13 @@ export class AuditLogService {
     return this.auditLogRepository.findOneBy({ id, tenantId });
   }
 
-  async create(data: Partial<AuditLog> & { userName?: string; ipAddress?: string; userAgent?: string }): Promise<AuditLog> {
+  async create(
+    data: Partial<AuditLog> & {
+      userName?: string;
+      ipAddress?: string;
+      userAgent?: string;
+    },
+  ): Promise<AuditLog> {
     const { userName, ipAddress, userAgent, ...rest } = data;
     let details = rest.details;
     if (userName || ipAddress || userAgent) {
@@ -102,7 +112,8 @@ export class AuditLogService {
     const log = this.auditLogRepository.create({
       id: randomUUID(),
       ...rest,
-      details: typeof details === 'string' ? details : JSON.stringify(details ?? {}),
+      details:
+        typeof details === 'string' ? details : JSON.stringify(details ?? {}),
       timestamp: rest.timestamp ? new Date(rest.timestamp) : new Date(),
     });
     const saved = await this.auditLogRepository.save(log);

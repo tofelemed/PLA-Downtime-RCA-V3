@@ -6,6 +6,7 @@ import {
   Segment,
   SliceInput,
 } from './accounting.types';
+import { withAppliedRates } from './applied-rate';
 import { ClaimPool } from './claim-pooling';
 import { sumOf } from './claims';
 import {
@@ -226,6 +227,7 @@ function planCandidates(
       : ZERO;
   const planned = plannedSegments(eligible, target, deducted);
   const found = candidates({ ...ctx, segments: planned.segments });
+  found.lines = withAppliedRates(found.lines, planned.segments, 'planning');
   if (planned.scaled) found.flags.push(PLANNED_RATE_SCALED);
   return allowanceInPlan === 'planned'
     ? withoutAllowance(found)

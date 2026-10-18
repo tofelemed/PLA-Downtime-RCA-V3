@@ -20,14 +20,14 @@ const node = (id: string, parentId: string | null, extra: Partial<RcaLogicNode> 
   ...extra,
 });
 
-const base = { id: 'ev-1', collectedAt: '2026-10-01T00:00:00Z', collectedBy: null, nodeIds: ['n1'] };
+const base = { id: 'ev-1', collectedAt: '2026-10-01T00:00:00Z', collectedBy: null, nodeIds: ['n1'], verifiedBy: null, verifiedAt: null };
 
 describe('case list filters', () => {
   it('round-trips the URL and builds the server query (nothing filtered in the browser)', () => {
     const filters = filtersFromParams(new URLSearchParams('q=pump&status=Draft&priority=Bogus&due=overdue'));
-    expect(filters).toEqual({ q: 'pump', status: 'Draft', priority: 'all', due: 'overdue' });
+    expect(filters).toEqual({ q: 'pump', status: 'Draft', priority: 'all', due: 'overdue', open: 'all' });
     expect(paramsFromFilters(filters)).toEqual({ q: 'pump', status: 'Draft', due: 'overdue' });
-    expect(toCaseQuery(filters)).toEqual({ q: 'pump', status: 'Draft', priority: undefined, overdue: true });
+    expect(toCaseQuery(filters)).toEqual({ q: 'pump', status: 'Draft', priority: undefined, overdue: true, open: undefined });
   });
 
   it('sends old links to the routes that replaced them', () => {
@@ -92,6 +92,15 @@ describe('5-Why and timeline', () => {
     expect(checks.map((c) => c.label)).not.toContain(expect.stringContaining('At least'));
     expect(checks.find((c) => c.label.startsWith('Every answer backed'))?.done).toBe(false);
     expect(depthGuidance(3, 5)).toContain('3 of the 5 levels of the guideline');
+  });
+
+  it('does not tick the system-level root cause for a phrase the gate refuses (CA6, Marun RCA test)', () => {
+    const answered = [{ level: 1, question: 'Why?', answer: 'Gearbox tripped', justification: 'trip record' }];
+    const rootCauseCheck = (rootCause: string) =>
+      fiveWhyChecks({ problem: 'x', whyLevels: answered, rootCause }, ['operator error']).find((c) => c.label.startsWith('System-level'))?.done;
+    expect(rootCauseCheck('Operator error')).toBe(false);
+    expect(rootCauseCheck('  operator   ERROR. ')).toBe(false);
+    expect(rootCauseCheck('The inspection process failed to detect progressive lubrication contamination')).toBe(true);
   });
 
   it('orders diagram events and linked events by time; undated last', () => {

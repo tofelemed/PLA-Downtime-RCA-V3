@@ -71,3 +71,21 @@ export async function keysetPage<T extends ObjectLiteral & { id: string }>(
       : null;
   return { items, nextCursor };
 }
+
+/**
+ * Cursor positioned at one row (`id`) of a `keysetPage` sort, with the stored sort value at microsecond
+ * precision: lets a filtered scan stop in the middle of a fetched page and resume right after that row.
+ */
+export async function keysetCursorAt<T extends ObjectLiteral>(
+  qb: SelectQueryBuilder<T>,
+  property: string,
+  id: string,
+): Promise<string | null> {
+  const column =
+    qb.expressionMap.mainAlias?.metadata.findColumnWithPropertyName(
+      property,
+    )?.databaseName;
+  if (!column) throw new Error(`keysetCursorAt: unknown property ${property}`);
+  const value = await exactSortValue(qb, column, id);
+  return value ? CursorCodec.encode({ sortValue: value, id }) : null;
+}

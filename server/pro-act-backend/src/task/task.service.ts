@@ -25,7 +25,9 @@ export class TaskService {
   ) {}
 
   findAll(): Promise<Task[]> {
-    return this.taskRepository.find({ order: { dueDate: 'ASC', createdAt: 'DESC' } });
+    return this.taskRepository.find({
+      order: { dueDate: 'ASC', createdAt: 'DESC' },
+    });
   }
 
   findWithFilters(filters: TaskQuery): Promise<Task[]> {
@@ -35,7 +37,9 @@ export class TaskService {
       qb.andWhere('task.tenantId = :tenantId', { tenantId: filters.tenantId });
     }
     if (filters.assignedTo) {
-      qb.andWhere('task.assignedTo = :assignedTo', { assignedTo: filters.assignedTo });
+      qb.andWhere('task.assignedTo = :assignedTo', {
+        assignedTo: filters.assignedTo,
+      });
     }
     if (filters.status) {
       qb.andWhere('task.status = :status', { status: filters.status });
@@ -44,7 +48,9 @@ export class TaskService {
       qb.andWhere('task.priority = :priority', { priority: filters.priority });
     }
     if (filters.entityType) {
-      qb.andWhere('task.entityType = :entityType', { entityType: filters.entityType });
+      qb.andWhere('task.entityType = :entityType', {
+        entityType: filters.entityType,
+      });
     }
     if (filters.entityId) {
       qb.andWhere('task.entityId = :entityId', { entityId: filters.entityId });
@@ -54,7 +60,10 @@ export class TaskService {
       qb.andWhere('task.status != :completed', { completed: 'Completed' });
     }
 
-    return qb.orderBy('task.dueDate', 'ASC').addOrderBy('task.createdAt', 'DESC').getMany();
+    return qb
+      .orderBy('task.dueDate', 'ASC')
+      .addOrderBy('task.createdAt', 'DESC')
+      .getMany();
   }
 
   findOne(id: string): Promise<Task | null> {
@@ -66,7 +75,9 @@ export class TaskService {
       id: data.id ?? randomUUID(),
       ...data,
       completedDate:
-        data.status === 'Completed' ? data.completedDate ?? new Date() : data.completedDate,
+        data.status === 'Completed'
+          ? (data.completedDate ?? new Date())
+          : data.completedDate,
     });
     const saved = await this.taskRepository.save(task);
     this.realtimeGateway.broadcastEntityEvent('Created', 'task', saved);

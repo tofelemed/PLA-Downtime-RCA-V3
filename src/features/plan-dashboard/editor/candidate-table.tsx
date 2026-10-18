@@ -9,10 +9,12 @@ export interface CandidateTableProps {
   setDraft: (next: (state: DraftState) => DraftState) => void;
   issues: Map<string, WorkflowIssue[]>;
   readOnly: boolean;
+  /** plant timezone of the derivation windows */
+  timezone: string;
 }
 
 /** Automatic candidates of the current run with their saved state and the user's pending decision. */
-export function CandidateTable({ view, draft, setDraft, issues, readOnly }: CandidateTableProps) {
+export function CandidateTable({ view, draft, setDraft, issues, readOnly, timezone }: CandidateTableProps) {
   if (!view.candidates.length) {
     return (
       <p className="text-sm text-muted-foreground" data-testid="no-candidates">
@@ -33,6 +35,7 @@ export function CandidateTable({ view, draft, setDraft, issues, readOnly }: Cand
           setDraft={setDraft}
           issues={issues.get(`decision:${candidate.autoKey}`) ?? []}
           readOnly={readOnly}
+          timezone={timezone}
         />
       ))}
     </div>

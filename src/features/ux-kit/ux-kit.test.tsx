@@ -18,11 +18,14 @@ const apiError = (status: number, code: string) =>
   new V2ApiError(status, { code, message: code, correlationId: 'corr-9', retryable: false });
 
 describe('UX kit formatting (plan 3.1)', () => {
-  it('DurationText(5400) → "1 h 30 min", compact "90 min", KPI clock "1:30"', () => {
-    render(<DurationText seconds={5400} />);
-    expect(screen.getByText('1 h 30 min')).toBeInTheDocument();
-    expect(formatDuration(5400, 'compact')).toBe('90 min');
-    expect(formatDuration('5400.000', 'clock')).toBe('1:30');
+  it('DurationText(5400) → "1 h 30 min"; one duration format whatever the legacy style (C-3)', () => {
+    render(<DurationText seconds={5400} variant="clock" />);
+    expect(screen.getByText('1 h 30 min')).toHaveAttribute('title', '5400 s');
+    expect(formatDuration(5400, 'compact')).toBe('1 h 30 min');
+    expect(formatDuration('5400.000', 'clock')).toBe('1 h 30 min');
+    expect(formatDuration(2520)).toBe('42 min');
+    expect(formatDuration(12_300)).toBe('3 h 25 min');
+    expect(formatDuration(213_000)).toBe('2 d 11 h');
     expect(formatDuration(7200)).toBe('2 h');
     expect(formatDuration(45)).toBe('45 s');
     expect(formatDuration(null)).toBe('—');

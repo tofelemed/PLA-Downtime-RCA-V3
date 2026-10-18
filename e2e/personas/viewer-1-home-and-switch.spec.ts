@@ -55,7 +55,7 @@ test.describe('Viewer — home plant, plant switch, persistence', () => {
     await expect(form.locator('#unitId')).toHaveValue(line1.id);
     const timezone = await plantTimezoneOf(form);
     await fillPlantTime(form, 'Start', plantLocal(new Date(Date.now() - 40 * MINUTE), timezone));
-    await fillPlantTime(form, 'End (empty = still running)', plantLocal(new Date(Date.now() - 10 * MINUTE), timezone));
+    await fillPlantTime(form, 'End (empty = still ongoing)', plantLocal(new Date(Date.now() - 10 * MINUTE), timezone));
     await form.locator('#description').fill(label);
     const created = page.waitForResponse((r) => r.url().endsWith('/v2/production-events') && r.request().method() === 'POST');
     await form.getByRole('button', { name: 'Save' }).click();

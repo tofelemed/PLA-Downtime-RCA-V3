@@ -52,13 +52,13 @@ export function ProposeCorrectionDialog({ onPropose }: ProposeCorrectionDialogPr
       onConfirm={submit}
     >
       <div className="space-y-3">
-        <Field id="correction-reason" label="What is wrong (required)">
+        <Field id="correction-reason" label="What is wrong" required>
           <Textarea id="correction-reason" rows={3} data-testid="correction-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
         </Field>
-        <Field id="correction-evidence-type" label="Evidence (required)">
+        <Field id="correction-evidence-type" label="Evidence" required>
           <NativeSelect id="correction-evidence-type" testId="correction-evidence-type" value={evidenceType} onChange={(v) => setEvidenceType(v as EvidenceType | '')} options={EVIDENCE_OPTIONS} placeholder="Choose the record" />
         </Field>
-        <Field id="correction-evidence-ref" label="Reference (required)" hint="Work order, sample, log entry or tag reading">
+        <Field id="correction-evidence-ref" label="Reference" required hint="Work order, sample, log entry or tag reading">
           <Input id="correction-evidence-ref" data-testid="correction-evidence-ref" maxLength={200} value={evidenceRef} onChange={(e) => setEvidenceRef(e.target.value)} />
         </Field>
       </div>

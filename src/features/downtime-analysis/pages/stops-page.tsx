@@ -20,8 +20,8 @@ export function DowntimeStopsPage({ filters }: DowntimePageProps) {
       {params.get('presentation') === 'timeline' ? (
         <Suspense fallback={<Skeleton className="h-64 w-full" />}><StateTimeline filters={filters} /></Suspense>
       ) : (
-        <Section title="Stop records" description="Open an event to inspect its evidence, code it or close an open stop. Records are current operational events; they are not restricted to approved period revisions.">
-          <EventTable caption="Downtime events" query={query} testId="downtime-stop-list" />
+        <Section title="Stop records" description="Open a stop to inspect its evidence, code it or close it while ongoing. Records are current operational stops; they are not restricted to approved period revisions.">
+          <EventTable caption="Stops" query={query} testId="downtime-stop-list" />
         </Section>
       )}
     </div>

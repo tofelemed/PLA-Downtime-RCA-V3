@@ -8,10 +8,23 @@ import { labelOf, useAssetNames, useUserNames } from '@/features/ux-kit/labels';
 import { RCA_EVIDENCE_TASK_LABELS, RCA_SERIES_MODE_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
+import { verifiedText } from '../../model/evidence-form';
 import { useRcaFormat } from '../../use-rca-format';
 import { useCaseWorkspace } from '../case-context';
+import { TaskOverdueBadge } from './task-overdue-badge';
 import { useCasePatch } from '../use-case-patch';
 import { AttachmentList } from './attachment-list';
+
+function TaskDue({ item }: { item: RcaEvidenceItem }) {
+  const { day } = useRcaFormat();
+  if (!item.taskDueDate) return null;
+  return (
+    <>
+      {day(item.taskDueDate)}
+      <TaskOverdueBadge item={item} />
+    </>
+  );
+}
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -38,6 +51,8 @@ function SeriesFacts({ item }: { item: RcaEvidenceItem }) {
   );
 }
 
+const peopleOf = (item: RcaEvidenceItem | undefined) => (item ? [item.collectedBy, item.verifiedBy, item.taskAssigneeId] : []);
+
 function linkedNodeNames(item: RcaEvidenceItem, labels: Map<string, string>): string {
   return item.nodeIds.map((id) => labels.get(id)).filter(Boolean).join(', ');
 }
@@ -48,10 +63,10 @@ export function EvidenceDetailPage() {
   const { evidenceId } = useParams();
   const navigate = useNavigate();
   const patch = useCasePatch();
-  const users = useUserNames();
-  const assets = useAssetNames();
-  const { dateTime, day } = useRcaFormat();
   const item = rca.evidence.find((entry) => entry.id === evidenceId);
+  const users = useUserNames(peopleOf(item));
+  const assets = useAssetNames();
+  const { dateTime } = useRcaFormat();
   if (!item) return <Navigate to={`${basePath}/evidence`} replace />;
   const labels = new Map([...rca.logicTree.map((n) => [n.id, n.label] as const), ...rca.eventDiagram.nodes.map((n) => [n.id, n.label] as const)]);
   const remove = async () => {
@@ -69,7 +84,7 @@ export function EvidenceDetailPage() {
       <ConfirmDialog
         trigger={<Button size="sm" variant="outline">Delete</Button>}
         title="Delete this evidence?"
-        description="The item, its file references and its links to logic-tree nodes are removed from the case."
+        description="The item, its file references and its links to logic-tree nodes are removed from the investigation."
         confirmLabel="Delete evidence"
         destructive
         onConfirm={remove}
@@ -97,9 +112,14 @@ export function EvidenceDetailPage() {
           <Fact label="Severity">{item.severity}</Fact>
           <Fact label="5P">{item.fiveP}</Fact>
           <Fact label="Tags">{item.tags.join(', ')}</Fact>
-          <Fact label="Verified">{item.verified ? 'Yes' : 'No'}</Fact>
+          <Fact label="Verified">
+            <span data-testid="evidence-verified">{verifiedText(item, users.nameOf, dateTime)}</span>
+          </Fact>
           <Fact label="Task">{item.task}</Fact>
-          <Fact label="Task due">{item.taskDueDate ? day(item.taskDueDate) : null}</Fact>
+          <Fact label="Assigned to">{item.taskAssigneeId && users.nameOf(item.taskAssigneeId)}</Fact>
+          <Fact label="Task due">
+            <TaskDue item={item} />
+          </Fact>
           <Fact label="Task status">{labelOf(RCA_EVIDENCE_TASK_LABELS, item.taskStatus, 'Pending')}</Fact>
           <Fact label="Supports">{linkedNodeNames(item, labels)}</Fact>
           <Fact label="Collected">{[item.collectedBy ? users.nameOf(item.collectedBy) : null, item.collectedAt ? dateTime(item.collectedAt) : null].filter(Boolean).join(' · ')}</Fact>

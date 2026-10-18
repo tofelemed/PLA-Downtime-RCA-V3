@@ -6,12 +6,14 @@ import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { Section } from '@/features/ux-kit/page-layout';
+import { useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { newItemId } from '../../model/rca-form';
 import {
   EMPTY_RECOMMENDATION_FORM,
   isCostValid,
   recommendationFormOf,
   recommendationItemOf,
+  storedRecommendations,
   RECOMMENDATION_PRIORITIES,
   RECOMMENDATION_STATUSES,
   type RecommendationForm,
@@ -45,16 +47,18 @@ export function RecommendationFormPage() {
   const navigate = useNavigate();
   const patch = useCasePatch();
   const existing = recommendationId ? rca.recommendations.find((row) => row.id === recommendationId) : undefined;
-  const [form, setForm] = useState<RecommendationForm>(() => (existing ? recommendationFormOf(existing, timezone) : EMPTY_RECOMMENDATION_FORM));
+  const [initial] = useState<RecommendationForm>(() => (existing ? recommendationFormOf(existing, timezone) : EMPTY_RECOMMENDATION_FORM));
+  const [form, setForm] = useState<RecommendationForm>(initial);
+  useUnsavedChangesGuard(JSON.stringify(form) !== JSON.stringify(initial));
   const back = () => navigate(`${basePath}/actions`);
   if (readOnly || (recommendationId && !existing)) return <Navigate to={`${basePath}/actions`} replace />;
   const save = async () => {
     const item = recommendationItemOf(form, existing?.id ?? newItemId('rec', rca.recommendations), timezone);
     const recommendations = existing ? rca.recommendations.map((row) => (row.id === item.id ? item : row)) : [...rca.recommendations, item];
-    if (await patch.save({ recommendations }).catch(() => null)) back();
+    if (await patch.save({ recommendations: storedRecommendations(recommendations) }).catch(() => null)) back();
   };
   const remove = async () => {
-    await patch.save({ recommendations: rca.recommendations.filter((row) => row.id !== existing?.id) });
+    await patch.save({ recommendations: storedRecommendations(rca.recommendations.filter((row) => row.id !== existing?.id)) });
     back();
   };
   const costOk = isCostValid(form.estimatedCost);
@@ -81,7 +85,7 @@ export function RecommendationFormPage() {
             <ConfirmDialog
               trigger={<Button type="button" variant="outline">Delete</Button>}
               title="Delete this recommendation?"
-              description="It is removed from the case; tasks already created stay in Task Management."
+              description="It is removed from the investigation; tasks already created stay in Task Management."
               confirmLabel="Delete recommendation"
               destructive
               onConfirm={remove}

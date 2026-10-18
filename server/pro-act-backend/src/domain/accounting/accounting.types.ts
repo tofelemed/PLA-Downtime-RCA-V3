@@ -331,6 +331,8 @@ export interface LossLineDraft {
   uom: string | null;
   basis: LossBasis;
   rateVersionId: string | null;
+  /** UX D-2: the rate value the quantity was computed with (set by `withAppliedRates`; absent = none) */
+  appliedRate?: { value: string; timebase: string };
   cause: LossEvent | null;
   scheduleClass: string | null;
   oeeComponent: string | null;

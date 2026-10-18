@@ -63,7 +63,7 @@ describe('focused analysis pages and their server reads', () => {
       const url = new URL(input);
       calls.push(url);
       if (url.pathname.includes('/reports/')) return json(envelope(reportData(url)));
-      const events = includeEvent && url.pathname.endsWith('/production-events') ? [{ id: 'event-1', unitId: 'u1', startTime: FROM, reasonCodeId: null, classification: { physicalType: 'downtime' }, durationSeconds: 3600, quantity: null, quantityUom: null }] : [];
+      const events = includeEvent && url.pathname.endsWith('/production-events') ? [{ id: 'event-1', unitId: 'u1', startTime: FROM, reasonCodeId: null, classification: { physicalType: 'downtime' }, durationSeconds: 3600, quantity: null, quantityUom: null, rcaId: null, states: { physical: 'closed', coding: 'uncoded', rca: 'none' } }] : [];
       return json({ items: events, nextCursor: null, asOf: TO, scope: { tenantId: 'tenant-a' } });
     }));
   });

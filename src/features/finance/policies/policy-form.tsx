@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { hasUnsavedChanges, useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -13,9 +14,11 @@ import { useCalendarPreference } from '@/lib/dates';
 import { FinanceField } from '../components/finance-field';
 import { FinanceRefusalAlert } from '../components/finance-refusal-alert';
 import { serverFieldErrors, type FieldErrors } from '../model/field-errors';
+import { POLICY_FIELD_VOCABULARY } from '../model/policy-field-vocabulary';
 import { policyCreateBody, policyFormOf, REPORTING_CURRENCIES, validatePolicyForm, type PolicyFormValues } from '../model/policy-form';
 import { EconomicFields } from './economic-fields';
 import { ImpactCodePicker } from './impact-code-picker';
+import { PolicyBackdateFields } from './policy-backdate-fields';
 
 const options = (labels: Readonly<Record<string, string>>) => Object.entries(labels).map(([value, label]) => ({ value, label }));
 
@@ -42,11 +45,14 @@ function CurrencyChoice({ values, toggle }: { values: PolicyFormValues; toggle: 
 export function PolicyForm({ source, onSaved, onCancel }: PolicyFormProps) {
   const { timezone } = usePlantDates();
   const calendar = useCalendarPreference().calendar;
-  const [values, setValues] = useState<PolicyFormValues>(() => policyFormOf(source));
+  const initial = useMemo(() => policyFormOf(source), [source]);
+  const [values, setValues] = useState<PolicyFormValues>(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
   const create = useCreateValuationPolicy();
+  useUnsavedChangesGuard(hasUnsavedChanges(values, initial, [create.isPending]));
   const set = <K extends keyof PolicyFormValues>(key: K, value: PolicyFormValues[K]) => setValues((prev) => ({ ...prev, [key]: value }));
-  const fieldError = (key: string) => errors[key] ?? serverFieldErrors(create.error)[key];
+  const serverErrors = serverFieldErrors(create.error, POLICY_FIELD_VOCABULARY);
+  const fieldError = (key: string) => errors[key] ?? serverErrors[key];
   const toggleCurrency = (code: string, on: boolean) =>
     set('reportingCurrencies', on ? [...values.reportingCurrencies, code] : values.reportingCurrencies.filter((entry) => entry !== code));
   const save = async () => {
@@ -70,8 +76,24 @@ export function PolicyForm({ source, onSaved, onCancel }: PolicyFormProps) {
         </FinanceField>
       </div>
       <FinanceField id="effectiveFrom" label="Starts" withLabel={false} error={fieldError('effectiveFrom')}>
-        <DateTimeInput label={`Starts (${timezone})`} value={values.effectiveFrom} timeZone={timezone} calendar={calendar} onChange={(iso) => set('effectiveFrom', iso)} required />
+        <DateTimeInput
+          label={`Starts (${timezone})`}
+          value={values.effectiveFrom}
+          timeZone={timezone}
+          calendar={calendar}
+          onChange={(iso) => set('effectiveFrom', iso)}
+          required={values.backdate.effectiveFrom === null}
+          disabled={values.backdate.effectiveFrom !== null}
+        />
       </FinanceField>
+      <PolicyBackdateFields
+        backdate={values.backdate}
+        restateApproved={values.restateApproved}
+        onBackdate={(backdate) => set('backdate', backdate)}
+        onRestate={(restate) => set('restateApproved', restate)}
+        errors={{ ...serverErrors, ...errors }}
+        saveError={create.error}
+      />
       <FinanceField id="reportingCurrencies" label="Reporting currencies" error={fieldError('reportingCurrencies')}>
         <CurrencyChoice values={values} toggle={toggleCurrency} />
       </FinanceField>
@@ -82,7 +104,7 @@ export function PolicyForm({ source, onSaved, onCancel }: PolicyFormProps) {
       <FinanceField id="policyNotes" label="Notes (optional)" error={fieldError('notes')}>
         <Textarea id="policyNotes" value={values.notes} onChange={(e) => set('notes', e.target.value)} />
       </FinanceField>
-      <FinanceRefusalAlert error={create.error} />
+      <FinanceRefusalAlert error={create.error} fields={POLICY_FIELD_VOCABULARY} />
       <div className="flex gap-2">
         <Button onClick={save} disabled={create.isPending} data-testid="policy-save">
           Save version (not approved)

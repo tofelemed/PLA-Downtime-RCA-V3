@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { RequestContext } from '../common/context/request-context';
@@ -13,6 +13,7 @@ import {
 import { eventEvidencePackage, EventEvidencePackage } from './evidence-package';
 import { moveEventRcaState } from './event-rca-pointer';
 import { findEvent, resolveTarget, ResolvedTarget } from './link-targets';
+import { recordRcaAudit } from './rca-audit';
 import { insertCase } from './rca-case-writer';
 import { RcaCaseSummaryV2View, toRcaCaseSummary } from './rca-case.view';
 import { findCase, invalidBody, RcaScope, scopeOf } from './rca-scope';
@@ -52,6 +53,18 @@ export const toLinkView = (link: RcaCaseLink): RcaLinkV2View => ({
   reason: link.reason,
   evidence: link.evidence,
 });
+
+/**
+ * 409 CASE_CLOSED (Marun regression G4): a closed investigation takes no new link — its findings, impact and
+ * closure verdict were approved on the links it had. Reopening it (independent approver) allows linking.
+ */
+function assertCaseOpen(rca: RCA): void {
+  if (rca.status !== 'Closed') return;
+  throw new ConflictException({
+    code: 'CASE_CLOSED',
+    message: 'The investigation is closed; reopen it to add a link',
+  });
+}
 
 interface LinkInput {
   rca: RCA;
@@ -133,6 +146,7 @@ export class RcaLinksService {
       );
       if (existing)
         return { ...this.result(rca, existing, false), caseCreated: false };
+      assertCaseOpen(rca);
       const target = await resolveTarget(manager, scope, {
         linkType: body.linkType,
         targetId: body.targetId,
@@ -205,6 +219,7 @@ export class RcaLinksService {
     const { rca, event } = input;
     const existing = await this.existing(manager, rca.id, 'event', event.id);
     if (existing) return this.result(rca, existing, false);
+    assertCaseOpen(rca);
     const evidence = await eventEvidencePackage(
       manager,
       rca.tenantId ?? '',
@@ -226,7 +241,7 @@ export class RcaLinksService {
       eventId: event.id,
       tenantId: rca.tenantId ?? '',
       rcaId: rca.id,
-      state: rca.status === 'Closed' ? 'completed' : 'linked',
+      state: 'linked',
       actor,
     });
     await manager.query(
@@ -255,7 +270,7 @@ export class RcaLinksService {
     input: LinkInput,
   ): Promise<RcaCaseLink> {
     const repository = manager.getRepository(RcaCaseLink);
-    return repository.save(
+    const saved = await repository.save(
       repository.create({
         tenantId: input.rca.tenantId ?? '',
         rcaId: input.rca.id,
@@ -271,6 +286,19 @@ export class RcaLinksService {
         createdBy: actorFromContext(context).id,
       }),
     );
+    await recordRcaAudit(manager, scopeOf(context), [
+      {
+        entityType: 'rca_case_link',
+        entityId: saved.id,
+        caseId: saved.rcaId,
+        action: 'created',
+        before: null,
+        after: saved,
+        reason: saved.reason,
+        detail: { linkType: saved.linkType, targetId: saved.targetId },
+      },
+    ]);
+    return saved;
   }
 
   private result(

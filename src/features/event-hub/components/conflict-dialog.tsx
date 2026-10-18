@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { eventNoun } from '@/features/ux-kit/labels';
 import { changedFields, type EventDraft } from '../model/event-draft';
 import { formValuesOf, type EventFormValues } from '../model/event-form';
 import { useEventHubEnv } from '../use-event-hub-env';
@@ -21,12 +22,16 @@ export interface ConflictDialogProps {
 
 const FIELD_LABEL: Readonly<Record<keyof EventFormValues, string>> = {
   unitId: 'Unit',
+  assetId: 'Asset',
   startLocal: 'Start',
   endLocal: 'End',
-  durationMinutes: 'Duration (min)',
+  intervalMode: 'End given as',
+  durationMinutes: 'Duration',
   physicalType: 'Type',
   scheduleClass: 'Schedule class',
+  oeeComponent: 'OEE component',
   reasonCodeId: 'Reason code',
+  investigationPending: 'Investigation pending',
   description: 'Description',
   impactMode: 'Impact on production',
   impactPercent: 'Output lost (%)',
@@ -34,6 +39,7 @@ const FIELD_LABEL: Readonly<Record<keyof EventFormValues, string>> = {
   originUnitId: 'Caused by unit',
   originAssetId: 'Caused by asset',
   plannedEndLocal: 'Approved planned end',
+  changeReason: 'Reason for the change',
   failureMode: 'Failure mode',
   failureSeverity: 'Failure severity',
   maintainableItem: 'Maintainable item',
@@ -58,12 +64,15 @@ export function ConflictDialog({ open, eventId, draft, onApplyMine, onDiscardMin
   }, [open, refetch]);
   const server = latest.data ? formValuesOf(latest.data, env.timezone) : null;
   const fields = changedFields(draft.initial, draft.values);
-  const show = (field: keyof EventFormValues, value: string) => (field === 'reasonCodeId' ? env.reasonName(value || null) : value || '—');
+  const show = (field: keyof EventFormValues, value: string | boolean) => {
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    return field === 'reasonCodeId' ? env.reasonName(value || null) : value || '—';
+  };
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto" data-testid="conflict-dialog">
         <DialogHeader>
-          <DialogTitle>Someone changed this event</DialogTitle>
+          <DialogTitle>Someone changed this {eventNoun(draft.initial.physicalType)}</DialogTitle>
           <DialogDescription>
             You started from revision {draft.baseRevision}; the server now holds revision {latest.data?.rowVersion ?? '…'}. Review before saving.
           </DialogDescription>

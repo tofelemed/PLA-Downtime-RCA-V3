@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Barrier, BarrierContent } from '@/api/v2/types/rca-analyses';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +7,7 @@ import { ActionIcon } from '@/lib/icons';
 import { BARRIER_EFFECTIVENESS, BARRIER_TYPES, rowId } from '../../../../model/analysis-settings';
 import { useCaseWorkspace } from '../../../case-context';
 import { ChoiceField, optionsOf } from '../../../evidence/form-controls';
+import { useToolDraft } from '../tool-draft';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
@@ -44,7 +44,7 @@ function BarrierRow(props: { barrier: Barrier; index: number; readOnly: boolean;
 function Editor({ record, save }: { record: ToolRecord<'barrier'>; save: (body: BarrierContent) => Promise<unknown> }) {
   const { number } = useNumberFormat();
   const { rca, readOnly } = useCaseWorkspace();
-  const [content, setContent] = useState<BarrierContent>(() => ({ hazard: record?.hazard ?? (rca.description ?? rca.title).slice(0, 255), barriers: record?.barriers ?? [] }));
+  const [content, setContent] = useToolDraft<BarrierContent>(() => ({ hazard: record?.hazard ?? (rca.description ?? rca.title).slice(0, 255), barriers: record?.barriers ?? [] }));
   const setBarriers = (barriers: Barrier[]) => setContent({ ...content, barriers });
   const failed = content.barriers.filter((b) => b.effectiveness === 'Failed').length;
   const add = () => setBarriers([...content.barriers, { id: rowId('barrier', content.barriers), type: 'Prevention', description: '', effectiveness: 'Moderate', failureReason: null, recommendations: [] }]);

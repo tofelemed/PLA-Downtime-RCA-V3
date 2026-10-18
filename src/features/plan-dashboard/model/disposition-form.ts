@@ -1,4 +1,5 @@
 import type { BodyOf } from '@/api/v2/schema-types';
+import type { LotDispositionView } from '@/api/v2/types/periods';
 
 /** `POST /lot-dispositions` body (LotDispositionCreateDto): only these fields (the API refuses others). */
 export type DispositionProposal = BodyOf<'/api/v2/lot-dispositions', 'post'>;
@@ -18,6 +19,8 @@ export interface DispositionFormValues {
   recovery: boolean;
   recoveryOfId: string;
   remeasured: boolean;
+  /** a correction: the approved disposition this one replaces once approved (empty = a new record) */
+  supersedesId: string;
 }
 
 export type DispositionErrors = Partial<Record<keyof DispositionFormValues, string>>;
@@ -36,7 +39,36 @@ export const emptyDisposition = (period: { utcStart: string; utcEnd: string }, p
   recovery: false,
   recoveryOfId: '',
   remeasured: true,
+  supersedesId: '',
 });
+
+/** The query parameter of "Record disposition" naming the approved disposition a correction replaces. */
+export const SUPERSEDES_PARAM = 'supersedes';
+
+/** The form for correcting an approved disposition: its lot, product and interval, the new figures to enter. */
+export function correctionOf(original: LotDispositionView): DispositionFormValues {
+  return {
+    productId: original.productId,
+    lotCode: original.lotCode,
+    dispositionClass: original.dispositionClass === 'recovered' ? 'downgrade' : original.dispositionClass,
+    quantity: original.quantity,
+    productionStart: original.productionStart,
+    productionEnd: original.productionEnd,
+    labReleasedAt: original.labReleasedAt,
+    evidenceRef: '',
+    reason: '',
+    recovery: original.dispositionClass === 'recovered',
+    recoveryOfId: original.recoveryOfId ?? '',
+    remeasured: original.remeasured,
+    supersedesId: original.id,
+  };
+}
+
+/** An approved row not yet corrected, and no correction of it waiting for approval, may be corrected. */
+export function canCorrect(row: LotDispositionView, rows: readonly LotDispositionView[]): boolean {
+  if (row.state !== 'approved' || row.supersededAt !== null) return false;
+  return !rows.some((other) => other.supersedesId === row.id && other.state === 'proposed');
+}
 
 const ZERO = /^0*(\.0*)?$/;
 
@@ -63,6 +95,7 @@ export function dispositionBody(values: DispositionFormValues, scope: { unitId: 
     evidenceRef: text(values.evidenceRef),
     reason: text(values.reason),
     ...(values.recovery ? { recoveryOfId: values.recoveryOfId, remeasured: values.remeasured } : {}),
+    supersedesId: text(values.supersedesId),
   };
   return {
     unitId: scope.unitId,

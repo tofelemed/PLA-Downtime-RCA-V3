@@ -64,7 +64,9 @@ export class MonthCloseV2Controller {
       'Month close: state, working-day deadlines and overdue flags, sign-offs, prerequisites (periods not ' +
       'approved, open change proposals), materiality findings and history',
     description:
-      'Read-only; a month never acted on is open. 422 INVALID_MONTH for a malformed key.',
+      'Read-only; a month never acted on is open. 422 INVALID_MONTH for a malformed key, ' +
+      'MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS for a month of the other calendar. ' +
+      '`prerequisites` include the scheduled shifts without a period and whether the month has ended.',
   })
   async get(
     @Ctx() ctx: RequestContext,
@@ -83,7 +85,9 @@ export class MonthCloseV2Controller {
     summary: 'Plant management closes the month’s quantities',
     description:
       STEP +
-      '422 CLOSE_PREREQUISITES (details list the periods not approved and the open change proposals). ' +
+      '422 MONTH_NOT_ENDED before the month is over in the plant time zone (its last shift ended; ' +
+      '`details.monthEndsAt`); 422 CLOSE_PREREQUISITES (details list the periods not approved, the ' +
+      'scheduled shifts without a period and the open change proposals). ' +
       'Fixes whether the materiality review is required.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })

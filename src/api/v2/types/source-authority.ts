@@ -59,6 +59,9 @@ export interface SourceAuthorityVersionView {
   rejectedAt: string | null;
   rejectionReason: string | null;
   notes: string | null;
+  /** commissioning backdate: the past instant it takes effect from on approval, and why (null = approval time) */
+  requestedEffectiveFrom: string | null;
+  backdateReason: string | null;
   policy: SourceAuthorityPolicyView;
 }
 
@@ -79,4 +82,7 @@ export interface SourceAuthorityDraftBody {
     }>;
   } | null;
   notes?: string;
+  /** commissioning only: a past instant the version takes effect from once approved (with backdateReason) */
+  effectiveFrom?: string;
+  backdateReason?: string;
 }

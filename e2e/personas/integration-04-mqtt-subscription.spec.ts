@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { apiLogin, call, DEMO_UNIT_CODE, eventsByEventId, findConnection, INT_USERS, jobCommand, loadState, newSuffix, openConsole, runSim, saveState, seededEventIds, selectConnection, simEventId, subscribeJob, uiLogin, unitByCode, type IntSession, type IntState } from './support/integration-world';
+import { CONSOLE_ADMIN, apiLogin, call, DEMO_UNIT_CODE, eventsByEventId, findConnection, INT_USERS, jobCommand, loadState, newSuffix, openConsole, runSim, saveState, seededEventIds, selectConnection, simEventId, subscribeJob, uiLogin, unitByCode, type IntSession, type IntState } from './support/integration-world';
 import { eventRowOf, showMoreFilters } from './support/event-hub-ui';
 
 /**
@@ -29,7 +29,8 @@ test.describe('Integration admin — MQTT subscription and payload profile', () 
   });
 
   test('INT-04a (omar): the job runs; an open-close run raises the counters and the event lands on the demo unit', async ({ page }) => {
-    await uiLogin(page, INT_USERS.omar);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
     await selectConnection(page, state.connectionName);
     await expect(page.getByTestId('mqtt-status')).toHaveAttribute('data-status', 'connected', { timeout: 90_000 });
@@ -71,7 +72,8 @@ test.describe('Integration admin — MQTT subscription and payload profile', () 
 
   test('INT-04b (omar): pause → publish → resume: the broker queued the messages in the persistent session; left running', async ({ page }) => {
     const run = newSuffix(); // seeds are unique per attempt: a re-run with the same seed is a set of duplicates
-    await uiLogin(page, INT_USERS.omar);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
     await selectConnection(page, state.connectionName);
     await expect(page.getByTestId('mqtt-status')).toHaveAttribute('data-status', 'connected', { timeout: 90_000 });
@@ -109,7 +111,8 @@ test.describe('Integration admin — MQTT subscription and payload profile', () 
 
   test('INT-05 (elena): a state map without running / stopped is refused with the field error; a valid one is merge-patched with live classification', async ({ page }) => {
     const elena = await apiLogin(INT_USERS.elena);
-    await uiLogin(page, INT_USERS.elena);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
     await selectConnection(page, state.connectionName);
     const versionBefore = (await findConnection(elena.token, state.connectionName))?.configVersion ?? 0;
@@ -160,7 +163,8 @@ test.describe('Integration admin — MQTT subscription and payload profile', () 
   });
 
   test('INT-05p (elena): the saved value map is shown again after a fresh login', async ({ page }) => {
-    await uiLogin(page, INT_USERS.elena);
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await openConsole(page);
     await selectConnection(page, state.connectionName);
     await page.getByTestId('tab-profile').click();

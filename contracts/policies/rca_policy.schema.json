@@ -218,6 +218,13 @@
                   "major"
                 ]
               }
+            },
+            "minimumCoverage": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.95,
+              "description": "Owner, 18 Oct 2026: state-data coverage (known time / window) the window after the action needs for a verdict; below it the verdict is insufficient_evidence. Versions without the field behave as 0.95."
             }
           },
           "description": "CA2/CA3: same-mode rate per run hour (planned and unplanned downtime excluded) after an action vs a server-computed baseline; criteria frozen into the action when verification is planned."

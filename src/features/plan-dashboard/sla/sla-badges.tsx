@@ -1,5 +1,6 @@
-import { Badge } from '@/components/ui/badge';
 import { roleLabel } from '@/features/ux-kit/labels';
+import { StatusBadge } from '@/features/ux-kit/status-badge';
+import { StatusIcon } from '@/lib/icons';
 
 export interface SlaFlags {
   overdue: boolean;
@@ -10,29 +11,32 @@ export interface SlaFlags {
   rejectionEscalated: boolean;
 }
 
-/** Overdue, waiting, escalation and repeated rejection as badges — all server verdicts. */
+/**
+ * Overdue, waiting, escalation and repeated rejection as badges — all server verdicts. Only Overdue is red
+ * (§5.8, C-5); escalation says who acts now (information, not an alarm).
+ */
 export function SlaBadges({ sla }: { sla: SlaFlags }) {
   return (
     <span className="inline-flex flex-wrap gap-1" data-testid="sla-badges">
       {sla.overdue && (
-        <Badge variant="destructive" data-testid="sla-overdue">
+        <StatusBadge tone="danger" icon={StatusIcon.warning} data-testid="sla-overdue">
           Overdue
-        </Badge>
+        </StatusBadge>
       )}
       {sla.onHold && (
-        <Badge variant="secondary" data-testid="sla-waiting">
+        <StatusBadge tone="neutral" data-testid="sla-waiting">
           Waiting for data
-        </Badge>
+        </StatusBadge>
       )}
       {sla.escalationLevel > 0 && (
-        <Badge variant="outline" data-testid="sla-escalated" data-level={sla.escalationLevel}>
+        <StatusBadge tone="info" data-testid="sla-escalated" data-level={sla.escalationLevel}>
           Escalated to {roleLabel(sla.escalatedTo)}
-        </Badge>
+        </StatusBadge>
       )}
       {sla.rejectionEscalated && (
-        <Badge variant="outline" data-testid="sla-rejections">
+        <StatusBadge tone="neutral" data-testid="sla-rejections">
           Rejected {sla.rejections}×
-        </Badge>
+        </StatusBadge>
       )}
     </span>
   );

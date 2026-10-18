@@ -1,6 +1,6 @@
 import type { EventRevisionView, ProductionEventHistoryView } from '@/api/v2/types/events';
 import {
-  ACTOR_KIND_LABELS,
+  actorText,
   labelOf,
   OEE_COMPONENT_LABELS,
   REVISION_KIND_LABELS,
@@ -10,19 +10,13 @@ import {
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { useEventHubEnv } from '../use-event-hub-env';
 
-/** Who made a revision: the user's name, else the connector or system label. */
-function useActorText() {
-  const users = useUserNames();
-  return (revision: Pick<EventRevisionView, 'actorKind' | 'actorId'>) =>
-    revision.actorKind === 'user' && revision.actorId ? users.nameOf(revision.actorId) : labelOf(ACTOR_KIND_LABELS, revision.actorKind);
-}
-
 /** Revisions (who changed what, why) and coding history, newest first (DT11 audit trail). */
-export function RevisionTimeline({ history }: { history: ProductionEventHistoryView }) {
+export function RevisionTimeline({ history, sourceName }: { history: ProductionEventHistoryView; sourceName?: string | null }) {
   const env = useEventHubEnv();
-  const users = useUserNames();
+  const users = useUserNames([...history.revisions.map((r) => r.actorId), ...history.coding.map((c) => c.authorId)]);
   const { dateTime } = usePlantFormat();
-  const actorText = useActorText();
+  const actorOf = (revision: EventRevisionView) =>
+    actorText({ kind: revision.actorKind, id: revision.actorId, source: revision.actorSource ?? (revision.actorKind === 'connector' ? sourceName : null) }, users.nameOf);
   const revisions = [...history.revisions].sort((a, b) => b.revision - a.revision);
   const coding = [...history.coding].sort((a, b) => b.revision - a.revision);
   return (
@@ -32,7 +26,7 @@ export function RevisionTimeline({ history }: { history: ProductionEventHistoryV
         <ol className="space-y-1 border-l pl-3" data-testid="revision-timeline">
           {revisions.map((revision) => (
             <li key={revision.id} className="text-xs">
-              <span className="font-medium">Revision {revision.revision}</span> · {labelOf(REVISION_KIND_LABELS, revision.kind)} by {actorText(revision)} ·{' '}
+              <span className="font-medium">Revision {revision.revision}</span> · {labelOf(REVISION_KIND_LABELS, revision.kind)} by <span data-testid="revision-actor">{actorOf(revision)}</span> ·{' '}
               {dateTime(revision.createdAt)}
               {revision.changeReason && <span className="block text-muted-foreground">{revision.changeReason}</span>}
             </li>
@@ -47,8 +41,9 @@ export function RevisionTimeline({ history }: { history: ProductionEventHistoryV
             <li key={entry.id} className="text-xs">
               <span className="font-medium">Coding {entry.revision}</span> · {env.reasonName(entry.reasonCodeId)} ·{' '}
               {labelOf(SCHEDULE_CLASS_LABELS, entry.scheduleClass)} / {labelOf(OEE_COMPONENT_LABELS, entry.oeeComponent)}
-              {entry.isOverride && ' · changed by a user'}
-              {entry.authorId && ` · by ${users.nameOf(entry.authorId)}`} · {dateTime(entry.createdAt)}
+              {entry.isOverride && ' · classification set manually'}
+              {' · by '}
+              <span data-testid="coding-actor">{actorText({ id: entry.authorId, source: entry.authorSource }, users.nameOf)}</span> · {dateTime(entry.createdAt)}
             </li>
           ))}
         </ol>

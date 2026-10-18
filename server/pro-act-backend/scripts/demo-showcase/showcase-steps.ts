@@ -23,6 +23,7 @@ import { seedValuationPolicy } from './seed-policy';
 import { seedProfiles } from './seed-profiles';
 import { seedRcaCases } from './seed-rca';
 import { seedRcaFailureStops } from './seed-rca-events';
+import { seedRcaCauses } from './seed-rca-causes';
 import { seedRcaPolicy } from './seed-rca-policy';
 import { seedReliabilityRecords } from './seed-reliability-records';
 import { seedReliabilitySetup } from './seed-reliability-setup';
@@ -71,6 +72,8 @@ const STEPS: readonly Step[] = [
   },
   // Demo RCA trigger policy before the events and approvals evaluate the triggers
   { name: 'rca-policy', always: false, kinds: PLANTS, run: seedRcaPolicy },
+  // Demo cause catalogue: investigations need a coded root cause before closure
+  { name: 'rca-causes', always: false, kinds: PLANTS, run: seedRcaCauses },
   { name: 'plans', always: false, kinds: PLANTS, run: seedPlans },
   {
     name: 'transitions',

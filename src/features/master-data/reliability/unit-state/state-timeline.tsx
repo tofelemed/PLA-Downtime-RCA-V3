@@ -3,15 +3,17 @@ import { humanize } from '@/features/ux-kit/labels';
 import type { ReliabilityFormat } from '../shared/use-reliability-format';
 import { STATE_LABELS } from './mapping-editor-model';
 
+/** The shared unit-state tokens (src/index.css `--state-*`, UX_AUDIT C-7); unknown stays a hatched gap. */
 const STATE_CLASS: Readonly<Record<string, string>> = {
-  running: 'bg-emerald-500',
-  internal_stop: 'bg-red-500',
-  planned_stop: 'bg-sky-500',
-  starved: 'bg-amber-400',
-  blocked: 'bg-amber-600',
-  standby: 'bg-violet-400',
-  not_scheduled: 'bg-slate-400',
-  unknown: 'bg-muted-foreground/25',
+  running: 'bg-state-running',
+  reduced_rate: 'bg-state-reduced',
+  internal_stop: 'bg-state-stopped',
+  planned_stop: 'bg-state-planned',
+  starved: 'bg-state-starved',
+  blocked: 'bg-state-blocked',
+  standby: 'bg-state-idle',
+  not_scheduled: 'bg-state-not-scheduled',
+  unknown: 'bg-state-unknown bg-hatch-unknown',
 };
 
 const labelOf = (segment: StateSegmentView) =>

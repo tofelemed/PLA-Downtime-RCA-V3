@@ -27,8 +27,7 @@ export function UxKitPlayground() {
         </CardHeader>
         <CardContent className="grid gap-2 text-sm">
           <div>
-            Duration 5400 s: <DurationText seconds={5400} /> · <DurationText seconds={5400} variant="compact" /> ·{' '}
-            <DurationText seconds={5400} variant="clock" />
+            Duration: <DurationText seconds={2520} /> · <DurationText seconds={12300} /> · <DurationText seconds={213000} />
           </div>
           <div>
             Plant time: <PlantTime iso={SAMPLE_INSTANT} tz="Asia/Tehran" /> · <PlantTime iso={SAMPLE_INSTANT} tz="Asia/Dubai" withDate />

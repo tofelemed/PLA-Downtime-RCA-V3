@@ -34,7 +34,7 @@ describe('humanize / labelOf', () => {
 
   it('labelOf uses the map, humanizes unknown values and never returns the raw token', () => {
     expect(labelOf(READINESS_LABELS, 'complete_inputs')).toBe('Inputs complete');
-    expect(labelOf(PHYSICAL_STATE_LABELS, 'open')).toBe('Running');
+    expect(labelOf(PHYSICAL_STATE_LABELS, 'open')).toBe('Ongoing');
     expect(labelOf(READINESS_LABELS, 'brand_new_state')).toBe('Brand new state');
     expect(labelOf(READINESS_LABELS, null)).toBe('—');
     expect(labelOf(READINESS_LABELS, undefined, 'Not set')).toBe('Not set');
@@ -107,5 +107,17 @@ describe('no raw ids', () => {
     expect(String(warn.mock.calls[0][0])).toContain('[no-raw-id] events table renders an internal id');
     assertNoRawId('d9800d1c', 'plan grid');
     expect(warn).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('accounting labels (Marun regression G3)', () => {
+  it('names a loss basis and a segment method in words, never the raw key', async () => {
+    const { lossBasisLabel, segmentMethodLabel } = await import('./accounting-labels');
+    expect(lossBasisLabel('planning_rate')).toBe('Planning rate');
+    expect(lossBasisLabel('new_basis')).toBe('New basis');
+    expect(segmentMethodLabel('counter_delta/step:delta')).toBe('Counter difference, step interpolation, counted');
+    expect(segmentMethodLabel('rate_integration/linear:gap')).toBe('Rate integration, linear interpolation, no data');
+    expect(segmentMethodLabel('output_events')).toBe('Output events');
+    expect(segmentMethodLabel('odd_engine/curve:blip')).toBe('Odd engine, curve, blip');
   });
 });

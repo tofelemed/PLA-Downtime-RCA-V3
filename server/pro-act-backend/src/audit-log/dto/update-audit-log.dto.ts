@@ -36,4 +36,4 @@ export class UpdateAuditLogDto {
   @IsUUID()
   @IsOptional()
   tenantId?: string;
-} 
+}

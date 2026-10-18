@@ -26,6 +26,8 @@ export interface EvidenceForm {
   /** ISO calendar date or '' */
   taskDueDate: string;
   taskStatus: 'pending' | 'completed';
+  /** a member of the plant who collects the evidence ('' = not assigned) */
+  taskAssigneeId: string;
   series: SeriesForm;
   attachments: RcaEvidenceAttachment[];
 }
@@ -58,6 +60,7 @@ export const EMPTY_EVIDENCE_FORM: EvidenceForm = {
   task: '',
   taskDueDate: '',
   taskStatus: 'pending',
+  taskAssigneeId: '',
   series: EMPTY_SERIES,
   attachments: [],
 };
@@ -93,6 +96,7 @@ export function evidenceFormOf(item: RcaEvidenceItem, timeZone: string): Evidenc
     task: item.task ?? '',
     taskDueDate: plantDayOf(item.taskDueDate, timeZone),
     taskStatus: item.taskStatus === 'completed' ? 'completed' : 'pending',
+    taskAssigneeId: item.taskAssigneeId ?? '',
     series: seriesForm(item.timeSeries),
     attachments: item.attachments,
   };
@@ -115,10 +119,18 @@ function seriesOf(form: EvidenceForm): RcaEvidenceSeries | null {
   };
 }
 
+/** Provenance kept from the stored item (verifiedBy / verifiedAt are recorded by the server; sent back, they are ignored). */
+export type EvidenceBase = Pick<RcaEvidenceItem, 'id' | 'collectedAt' | 'collectedBy' | 'nodeIds' | 'verifiedBy' | 'verifiedAt'>;
+
 /** The stored item: the previous item's links (node ids) and provenance are kept as they were. */
-export function evidenceItemOf(form: EvidenceForm, base: Pick<RcaEvidenceItem, 'id' | 'collectedAt' | 'collectedBy' | 'nodeIds'>): RcaEvidenceItem {
+export function evidenceItemOf(form: EvidenceForm, base: EvidenceBase): RcaEvidenceItem {
   return {
-    ...base,
+    id: base.id,
+    collectedAt: base.collectedAt,
+    collectedBy: base.collectedBy,
+    nodeIds: base.nodeIds,
+    verifiedBy: base.verifiedBy,
+    verifiedAt: base.verifiedAt,
     title: form.title.trim(),
     description: orNull(form.description),
     type: form.type,
@@ -134,7 +146,16 @@ export function evidenceItemOf(form: EvidenceForm, base: Pick<RcaEvidenceItem, '
     task: orNull(form.task),
     taskDueDate: form.taskDueDate || null,
     taskStatus: form.taskStatus,
+    taskAssigneeId: form.taskAssigneeId || null,
     timeSeries: seriesOf(form),
     attachments: form.attachments,
   };
+}
+
+/** "Verified by Sara Karimi at …" from the server-recorded fields (older items carry only the flag). */
+export function verifiedText(item: Pick<RcaEvidenceItem, 'verified' | 'verifiedBy' | 'verifiedAt'>, nameOf: (id: string) => string, dateTime: (iso: string) => string): string {
+  if (!item.verified) return 'No';
+  const by = item.verifiedBy ? ` by ${nameOf(item.verifiedBy)}` : '';
+  const at = item.verifiedAt ? ` at ${dateTime(item.verifiedAt)}` : '';
+  return by || at ? `Verified${by}${at}` : 'Yes';
 }

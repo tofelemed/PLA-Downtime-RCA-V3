@@ -12,15 +12,27 @@ import { ActionIcon } from '@/lib/icons';
 import { EVIDENCE_TYPES } from '../../model/evidence-form';
 import { useRcaFormat } from '../../use-rca-format';
 import { useCaseWorkspace } from '../case-context';
+import { TaskOverdueBadge } from './task-overdue-badge';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
-function columns(day: (value: string | null) => string): DataTableColumn<RcaEvidenceItem>[] {
+function columns(day: (value: string | null) => string, userName: (id: string | null) => string): DataTableColumn<RcaEvidenceItem>[] {
   return [
     { id: 'title', header: 'Evidence', cell: (row) => <span className="font-medium">{row.title}</span> },
     { id: 'type', header: 'Type', cell: (row) => row.type ?? 'Note', nowrap: true },
     { id: 'fiveP', header: '5P', cell: (row) => (row.fiveP ? <Badge variant="outline">{row.fiveP}</Badge> : '—') },
     { id: 'task', header: 'Task', cell: (row) => <span className="line-clamp-2">{row.task ?? '—'}</span> },
-    { id: 'due', header: 'Task due', cell: (row) => day(row.taskDueDate), nowrap: true },
+    { id: 'assignee', header: 'Assigned to', cell: (row) => (row.taskAssigneeId ? userName(row.taskAssigneeId) : '—') },
+    {
+      id: 'due',
+      header: 'Task due',
+      cell: (row) => (
+        <span className="inline-flex flex-wrap items-center">
+          {day(row.taskDueDate)}
+          <TaskOverdueBadge item={row} />
+        </span>
+      ),
+      nowrap: true,
+    },
     { id: 'status', header: 'Task status', cell: (row) => labelOf(RCA_EVIDENCE_TASK_LABELS, row.taskStatus, 'Pending'), nowrap: true },
     { id: 'verified', header: 'Verified', cell: (row) => (row.verified ? 'Yes' : 'No'), nowrap: true },
     { id: 'files', header: 'Files', cell: (row) => row.attachments.length, align: 'right' },
@@ -39,12 +51,13 @@ export function EvidenceListPage() {
   const { number } = useNumberFormat();
   const { rca, readOnly, basePath } = useCaseWorkspace();
   const navigate = useNavigate();
-  const users = useUserNames();
+  const peopleIds = useMemo(() => rca.evidence.flatMap((item) => [item.collectedBy, item.taskAssigneeId]), [rca.evidence]);
+  const users = useUserNames(peopleIds);
   const { day } = useRcaFormat();
   const [text, setText] = useState('');
   const search = useDeferredValue(text.trim());
   const rows = useMemo(() => rca.evidence.filter((item) => matches(item, search, users.nameOf(item.collectedBy))), [rca.evidence, search, users]);
-  const cols = useMemo(() => columns(day), [day]);
+  const cols = useMemo(() => columns(day, users.nameOf), [day, users.nameOf]);
   const counts = EVIDENCE_TYPES.map((type) => ({ type, count: rca.evidence.filter((item) => (item.type ?? 'Note') === type).length }));
   const add = readOnly ? null : (
     <Button asChild size="sm">
@@ -55,7 +68,7 @@ export function EvidenceListPage() {
     </Button>
   );
   return (
-    <Section title="Evidence" description="Photos, documents, notes and historian queries collected for this case." actions={add}>
+    <Section title="Evidence" description="Photos, documents, notes and historian queries collected for this investigation." actions={add}>
       <div className="space-y-3" data-testid="evidence-list">
         <div className="flex flex-wrap items-center gap-2" aria-label="Evidence by type">
           {counts.map(({ type, count }) => (
@@ -66,7 +79,7 @@ export function EvidenceListPage() {
         </div>
         <Input className="max-w-sm" aria-label="Search evidence" placeholder="Search title, type, task or collector" value={text} onChange={(e) => setText(e.target.value)} />
         <DataTable
-          caption="Evidence of the case"
+          caption="Evidence of the investigation"
           columns={cols}
           rows={rows}
           getRowKey={(row) => row.id}

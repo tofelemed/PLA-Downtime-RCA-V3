@@ -22,6 +22,7 @@ import { ExportsModule } from './exports/exports.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { RcaCaseModule } from './rca-case/rca-case.module';
 import { AuthTokensModule } from './auth/tokens/auth-tokens.module';
+import { NotificationResolutionModule } from './notifications/notification-resolution.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { StopEventsModule } from './stop-events/stop-events.module';
 
@@ -72,8 +73,10 @@ registerPgTypeParsers();
     RcaCaseModule,
     // hourly purge of expired refresh-token records (plan 3.11)
     AuthTokensModule,
-    // SLA escalation notifications, evaluated every 10 minutes (EXPERT_REVIEW Area 3)
+    // SLA escalation and work / downtime reminder notifications, every 10 minutes (EXPERT_REVIEW Area 3, item 6)
     NotificationsModule,
+    // shared work-item notifications resolved for every recipient after coding / period messages (owner 18 Oct)
+    NotificationResolutionModule,
     // state-derived stop events, duplicate merges and repeat-stop incidents (plan 1.10, DT-04, SME D5)
     StopEventsModule,
   ],

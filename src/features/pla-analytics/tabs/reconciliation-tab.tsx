@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useReconciliationStatus } from '@/api/v2/queries/pla-analytics';
 import type { OverduePeriodView } from '@/api/v2/types/pla-analytics';
 import { Badge } from '@/components/ui/badge';
@@ -11,11 +11,13 @@ import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '../components/analytics-card';
 import { statusQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { ageText } from '../model/display';
+import { withPeriodList } from '../model/period-list';
 
 /**
  * Reconciliation status and age (AN02): periods per workflow and residual state of their current revision,
  * the age of the periods not approved since they ended, and the overdue list (20 per page) with a link to
- * the period in the Plan Dashboard (plan 3.5). Counts are the server's.
+ * the period in the Plan Dashboard (plan 3.5). Counts are the server's; a workflow or Unaccounted count opens
+ * the cross-plan list of its periods (UX D-6).
  */
 export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
@@ -38,8 +40,8 @@ export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
     >
       {data && (
         <div className="space-y-3" data-testid="reconciliation-status" data-overdue={data.overdueCount}>
-          <CountRow title="Workflow" testId="workflow-count" items={data.workflow.map((w) => ({ key: w.state, label: GRID_WORKFLOW_LABELS[w.state], count: w.periods }))} />
-          <CountRow title="Residual" testId="residual-count" items={data.residual.map((r) => ({ key: r.state, label: RESIDUAL_LABELS[r.state], count: r.periods }))} />
+          <CountRow title="Workflow" testId="workflow-count" linked items={data.workflow.map((w) => ({ key: w.state, label: GRID_WORKFLOW_LABELS[w.state], count: w.periods }))} />
+          <CountRow title="Unaccounted" testId="residual-count" linked items={data.residual.map((r) => ({ key: r.state, label: RESIDUAL_LABELS[r.state], count: r.periods }))} />
           <CountRow title="Age (not approved)" testId="age-count" items={data.ages.map((a) => ({ key: a.key, label: a.label, count: a.periods }))} />
           <h4 className="text-sm font-medium">Overdue ({number(data.overdueCount)})</h4>
           <OverdueTable rows={data.overdue} timezone={env.timezone} />
@@ -50,15 +52,35 @@ export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
   );
 }
 
-function CountRow({ title, items, testId }: { title: string; testId: string; items: Array<{ key: string; label: string; count: number }> }) {
+interface CountItem {
+  key: string;
+  label: string;
+  count: number;
+}
+
+/** One count; with `linked` a non-zero count opens the periods behind it (`?periods=<state>`, UX D-6). */
+function CountBadge({ item, testId, linked }: { item: CountItem; testId: string; linked: boolean }) {
   const { number, text } = useNumberFormat();
+  const [search] = useSearchParams();
+  const badge = (
+    <Badge variant={item.count > 0 ? 'secondary' : 'outline'} data-testid={testId} data-key={item.key} data-count={item.count}>
+      {text(item.label)}: {number(item.count)}
+    </Badge>
+  );
+  if (!linked || item.count === 0) return badge;
+  return (
+    <Link to={withPeriodList(search, item.key)} aria-label={`List the ${number(item.count)} periods: ${text(item.label)}`} data-testid={`${testId}-link`} data-key={item.key}>
+      {badge}
+    </Link>
+  );
+}
+
+function CountRow({ title, items, testId, linked = false }: { title: string; testId: string; items: CountItem[]; linked?: boolean }) {
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <span className="w-36 text-muted-foreground">{title}</span>
       {items.map((item) => (
-        <Badge key={item.key} variant={item.count > 0 ? 'secondary' : 'outline'} data-testid={testId} data-key={item.key} data-count={item.count}>
-          {text(item.label)}: {number(item.count)}
-        </Badge>
+        <CountBadge key={item.key} item={item} testId={testId} linked={linked} />
       ))}
     </div>
   );
@@ -79,7 +101,7 @@ function OverdueTable({ rows, timezone }: { rows: readonly OverduePeriodView[]; 
       ),
     },
     { id: 'state', header: 'State', cell: (row) => `${GRID_WORKFLOW_LABELS[row.workflowState]}${row.revision !== null ? ` · revision ${row.revision}` : ''}` },
-    { id: 'residual', header: 'Residual', cell: (row) => (row.residualState ? RESIDUAL_LABELS[row.residualState] : '—') },
+    { id: 'residual', header: 'Unaccounted', cell: (row) => (row.residualState ? RESIDUAL_LABELS[row.residualState] : '—') },
     { id: 'age', header: 'Age', align: 'right', nowrap: true, cell: (row) => ageText(row.ageSeconds, pref.digits) },
     {
       id: 'open',

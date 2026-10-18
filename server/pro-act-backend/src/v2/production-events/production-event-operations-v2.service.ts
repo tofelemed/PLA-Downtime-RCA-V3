@@ -154,10 +154,22 @@ export class ProductionEventOperationsV2Service {
 }
 
 function assertSomeCode(command: BulkCodeCommand): void {
-  const { reasonCodeId, scheduleClass, oeeComponent } = command.codes;
-  if (!reasonCodeId && !scheduleClass && !oeeComponent) {
+  const {
+    reasonCodeId,
+    scheduleClass,
+    oeeComponent,
+    assetId,
+    investigationPending,
+  } = command.codes;
+  const some =
+    reasonCodeId ||
+    scheduleClass ||
+    oeeComponent ||
+    assetId ||
+    investigationPending !== undefined;
+  if (!some) {
     const message =
-      'codes must set reasonCodeId, scheduleClass or oeeComponent';
+      'codes must set reasonCodeId, scheduleClass, oeeComponent, assetId or investigationPending';
     throw new UnprocessableEntityException({
       code: 'NO_CODES',
       message: [message],

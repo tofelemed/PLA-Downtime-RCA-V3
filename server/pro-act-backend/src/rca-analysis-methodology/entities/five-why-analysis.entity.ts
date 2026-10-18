@@ -1,5 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Column, Index, ManyToOne, JoinColumn, VersionColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Column,
+  Index,
+  ManyToOne,
+  JoinColumn,
+  VersionColumn,
+} from 'typeorm';
 import { Tenant } from '../../tenant/tenant.entity';
 import { RCA } from '../../rca/rca.entity';
 
@@ -33,7 +43,12 @@ export class RcaFiveWhyAnalysis {
   tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @ApiProperty({ description: 'Associated RCA ID' })
@@ -65,5 +80,3 @@ export class RcaFiveWhyAnalysis {
   @Column({ name: 'verified_date', type: 'timestamptz', nullable: true })
   verifiedDate?: Date;
 }
-
-

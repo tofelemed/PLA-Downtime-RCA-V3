@@ -30,6 +30,9 @@ export async function seedValuationPolicy(ctx: ShowcaseContext): Promise<void> {
         reportingCurrencies: ['USD'],
         fxPolicy: 'none',
         effectiveFrom: `${MASTER_DATA_FROM}T00:00:00.000Z`,
+        backdateReason:
+          'Showcase setup: the plant is valued from its master-data start',
+        restateApproved: true,
         notes:
           'Demo: showcase plant policy, losses valued at contribution margin, reported in USD',
       },

@@ -72,7 +72,7 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     await expect(page.getByTestId('scope-export')).toHaveAttribute('data-request', ''); // provisional scope: no export
 
     const capacityRequest = reportRequest(page, 'scope-waterfall', (url) => url.searchParams.get('ledger') === 'capacity' && url.searchParams.getAll('unitIds').includes(unit));
-    await page.getByTestId('ledger-capacity').check();
+    await page.getByTestId('ledger-capacity').click();
     await capacityRequest;
     await expect(waterfall).toHaveAttribute('data-ledger', 'capacity');
     await expect(waterfall).toHaveAttribute('data-closes', 'true');
@@ -111,6 +111,10 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     await expect(status.locator('[data-testid="workflow-count"][data-key="draft"]')).toHaveAttribute('data-count', '2');
     const overdueB = page.locator(`[data-testid="overdue-link"][data-period-id="${world.dashboard.periods.b}"]`);
     await expect(overdueB).toHaveAttribute('href', `/plans/${world.dashboard.planId}/periods/${world.dashboard.periods.b}`);
+    await status.locator('[data-testid="workflow-count-link"][data-key="draft"]').click(); // UX D-6: a count opens its periods
+    await expect(page.getByTestId('pla-period-list').getByTestId('period-list-row')).toHaveCount(2);
+    await page.getByTestId('period-list-back').click();
+    await expect(page.getByTestId('reconciliation-status')).toBeVisible();
 
     await page.getByRole('button', { name: 'Actuals quality coverage' }).click(); // a section of Reconciliation
     await expect(page.getByTestId('quality-coverage')).toHaveAttribute('data-slices', '3');

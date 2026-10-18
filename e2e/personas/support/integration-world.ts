@@ -25,6 +25,11 @@ export const INT_USERS = {
 } as const;
 /** plain Engineer (production_engineer only): sees no console menu, every console write is refused */
 export const NOAH = 'noah.schmidt@demo.acme.com';
+/**
+ * owner 18 Oct 2026: Integration is SuperAdmin-only, so the console UI steps sign in as this SuperAdmin
+ * (docs/DEMO_PERSONAS.md); the API checks keep the integration admins' tokens (server rules unchanged).
+ */
+export const CONSOLE_ADMIN = 'helena.fischer@demo.acme.com';
 export const DEMO_PLANT = '5f011848-1cb5-4b7c-b75a-8938b46260a9';
 export const DEMO_PLANT_2 = '1c19bda6-1c5e-42ac-af59-e1bda46b804f';
 export const PREFIX = 'P-INT-';

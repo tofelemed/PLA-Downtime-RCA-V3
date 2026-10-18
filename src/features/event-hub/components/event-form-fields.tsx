@@ -1,89 +1,51 @@
 import type { ReactNode } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import type { ProductionEventView } from '@/api/v2/types/events';
 import { Textarea } from '@/components/ui/textarea';
-import { DateTimeInput } from '@/features/ux-kit/date-inputs';
+import { FormField, type FormFieldProps } from '@/features/ux-kit/form-field';
 import { labelOf, PHYSICAL_TYPE_LABELS, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
-import { useCalendarPreference } from '@/lib/dates';
 import { PHYSICAL_TYPES, SCHEDULE_CLASSES } from '../model/event-filters';
-import type { EventFormField, EventFormValues } from '../model/event-form';
-import { plantLocalToUtc, utcToPlantLocal } from '../model/plant-local-time';
 import type { EventFormState } from '../hooks/use-event-form';
+import { useSourceOverrides, type SourceOverrides } from '../hooks/use-source-overrides';
 import { useEventHubEnv } from '../use-event-hub-env';
-import { ImpactFields } from './impact-fields';
+import { AssetField } from './asset-field';
+import { ImpactSection } from './impact-section';
 import { FailureFields } from './failure-fields';
+import { IntervalFields } from './interval-fields';
+import { OeeComponentField } from './oee-component-field';
 import { OriginFields } from './origin-fields';
+import { PlantTimeField } from './plant-time-field';
 import { QualityFields } from './quality-fields';
-import { ReasonCodeSelect } from './reason-code-select';
+import { ReasonFields } from './reason-fields';
+import { SourceOwnedField } from './source-owned-field';
 
-interface FieldProps {
-  id: string;
-  label: string;
-  error?: string;
-  hint?: string;
-  children: ReactNode;
-}
-
-function FieldMessages({ id, error, hint }: { id: string; error?: string; hint?: string }) {
-  return (
-    <>
-      {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
-      {error && (
-        <p id={`${id}-error`} className="text-xs text-destructive" data-testid={`error-${id}`}>
-          {error}
-        </p>
-      )}
-    </>
-  );
-}
-
-function Field({ id, label, error, hint, children }: FieldProps) {
-  return (
-    <div className="space-y-1">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      <FieldMessages id={id} error={error} hint={hint} />
-    </div>
-  );
+/** Kit field with the event form's historical error test id (`error-<id>`). */
+function Field(props: FormFieldProps) {
+  return <FormField errorTestId={`error-${props.id}`} {...props} />;
 }
 
 const SELECT_CLASS = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 
-interface PlantTimeFieldProps {
-  field: 'startLocal' | 'endLocal' | 'plannedEndLocal';
-  label: string;
+export interface EventFormFieldsProps {
   form: EventFormState;
+  mode: 'create' | 'edit';
+  /** edit: the stored event (its server duration is shown read-only) */
+  event?: ProductionEventView | null;
 }
 
-/** A plant-clock date and time (tenant calendar); the form keeps the wall-clock text it always had. */
-function PlantTimeField({ field, label, form }: PlantTimeFieldProps) {
-  const env = useEventHubEnv();
-  const preference = useCalendarPreference();
-  const value = plantLocalToUtc(form.values[field], env.timezone);
-  return (
-    <div className="space-y-1" data-testid={`field-${field}`}>
-      <DateTimeInput
-        label={label}
-        value={value}
-        timeZone={env.timezone}
-        calendar={preference.calendar}
-        onChange={(iso) => form.setField(field, utcToPlantLocal(iso, env.timezone) as EventFormValues[typeof field])}
-      />
-      <FieldMessages id={field} error={form.errors[field]} hint={`Plant time (${env.timezone})`} />
-    </div>
-  );
-}
+const QUANTITY_TYPES = ['quality_loss', 'production_output', 'slowdown'];
 
-/** Inputs of the event form; times are on the plant clock (shown in the hint), duration in minutes. */
-export function EventFormFields({ form, mode, assetId }: { form: EventFormState; mode: 'create' | 'edit'; assetId?: string | null }) {
+function UnitAndType({ form, mode, overrides }: Pick<EventFormFieldsProps, 'form' | 'mode'> & { overrides: SourceOverrides }) {
   const env = useEventHubEnv();
   const { values, errors, setField } = form;
-  const aria = (field: EventFormField) => ({ 'aria-invalid': Boolean(errors[field]), 'aria-describedby': errors[field] ? `${field}-error` : undefined });
+  const chooseUnit = (unitId: string) => {
+    setField('unitId', unitId);
+    setField('assetId', '');
+  };
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <>
       {mode === 'create' && (
-        <Field id="unitId" label="Unit" error={errors.unitId}>
-          <select id="unitId" className={SELECT_CLASS} value={values.unitId} onChange={(e) => setField('unitId', e.target.value)} {...aria('unitId')}>
+        <Field id="unitId" label="Unit" error={errors.unitId} required>
+          <select id="unitId" className={SELECT_CLASS} value={values.unitId} onChange={(e) => chooseUnit(e.target.value)}>
             <option value="">— choose —</option>
             {env.units.map((unit) => (
               <option key={unit.id} value={unit.id}>{unit.name}</option>
@@ -91,37 +53,66 @@ export function EventFormFields({ form, mode, assetId }: { form: EventFormState;
           </select>
         </Field>
       )}
-      <Field id="physicalType" label="Type" error={errors.physicalType}>
-        <select id="physicalType" className={SELECT_CLASS} value={values.physicalType} onChange={(e) => setField('physicalType', e.target.value)} {...aria('physicalType')}>
-          {PHYSICAL_TYPES.map((type) => <option key={type} value={type}>{labelOf(PHYSICAL_TYPE_LABELS, type)}</option>)}
-        </select>
-      </Field>
-      <PlantTimeField field="startLocal" label="Start" form={form} />
-      <PlantTimeField field="endLocal" label="End (empty = still running)" form={form} />
-      <Field id="durationMinutes" label="or duration (minutes)" error={errors.durationMinutes} hint="Sets the end from the start; must agree with an end you enter">
-        <Input id="durationMinutes" inputMode="decimal" value={values.durationMinutes} onChange={(e) => setField('durationMinutes', e.target.value)} {...aria('durationMinutes')} />
-      </Field>
-      <Field id="scheduleClass" label="Schedule class" error={errors.scheduleClass} hint="Empty = the reason code's default">
-        <select id="scheduleClass" className={SELECT_CLASS} value={values.scheduleClass} onChange={(e) => setField('scheduleClass', e.target.value)} {...aria('scheduleClass')}>
-          <option value="">— default —</option>
-          {SCHEDULE_CLASSES.map((value) => <option key={value} value={value}>{labelOf(SCHEDULE_CLASS_LABELS, value)}</option>)}
-        </select>
-      </Field>
-      <ImpactFields form={form} />
+      <SourceOwnedField fields={['physicalType']} overrides={overrides}>
+        <Field id="physicalType" label="Type" error={errors.physicalType}>
+          <select id="physicalType" className={SELECT_CLASS} value={values.physicalType} onChange={(e) => setField('physicalType', e.target.value)}>
+            {PHYSICAL_TYPES.map((type) => <option key={type} value={type}>{labelOf(PHYSICAL_TYPE_LABELS, type)}</option>)}
+          </select>
+        </Field>
+      </SourceOwnedField>
+    </>
+  );
+}
+
+/**
+ * Inputs of the event form; times are on the plant clock (shown in the hint). For a stop the reason code
+ * comes first (E-3: coding is the main task), then the interval (end time **or** duration, E-4), the
+ * asset (A-1) and the details. E-5: fields the source owns say so and unlock with "Override…"; a
+ * source-owned interval is read only.
+ */
+export function EventFormFields({ form, mode, event = null }: EventFormFieldsProps) {
+  const { values, errors, setField } = form;
+  const overrides = useSourceOverrides(event, form);
+  const reasonFirst = values.physicalType === 'downtime';
+  const owned = (fields: readonly string[], applies: boolean, className?: string) => (children: ReactNode) =>
+    applies ? <SourceOwnedField fields={fields} overrides={overrides} className={className}>{children}</SourceOwnedField> : children;
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {reasonFirst && <ReasonFields form={form} />}
+      <UnitAndType form={form} mode={mode} overrides={overrides} />
+      <IntervalFields form={form} mode={mode} event={event} sourceName={overrides.intervalOwned ? overrides.source : null} />
+      {owned(['assetId'], true)(<AssetField form={form} />)}
+      {owned(['scheduleClass'], true)(
+        <Field id="scheduleClass" label="Schedule class" error={errors.scheduleClass} hint="Empty = the reason code's default">
+          <select id="scheduleClass" className={SELECT_CLASS} value={values.scheduleClass} onChange={(e) => setField('scheduleClass', e.target.value)}>
+            <option value="">— default —</option>
+            {SCHEDULE_CLASSES.map((value) => <option key={value} value={value}>{labelOf(SCHEDULE_CLASS_LABELS, value)}</option>)}
+          </select>
+        </Field>,
+      )}
+      <OeeComponentField form={form} />
+      <ImpactSection form={form} overrides={overrides} event={event} />
       {values.physicalType === 'downtime' && values.scheduleClass === 'planned' && (
         <PlantTimeField field="plannedEndLocal" label="Approved planned end (time after it is overrun)" form={form} />
       )}
       <OriginFields form={form} />
-      <FailureFields form={form} assetId={assetId ?? null} />
-      <QualityFields form={form} />
-      <div className="sm:col-span-2">
-        <ReasonCodeSelect id="reasonCodeId" value={values.reasonCodeId} onChange={(value) => setField('reasonCodeId', value)} error={errors.reasonCodeId} />
-      </div>
-      <div className="sm:col-span-2">
-        <Field id="description" label="Description" error={errors.description}>
-          <Textarea id="description" value={values.description} maxLength={4000} onChange={(e) => setField('description', e.target.value)} {...aria('description')} />
-        </Field>
-      </div>
+      {owned(['failureMode'], values.physicalType === 'downtime', 'sm:col-span-2')(<FailureFields form={form} assetId={values.assetId || null} />)}
+      {owned(['quantity', 'quantityUom'], QUANTITY_TYPES.includes(values.physicalType), 'sm:col-span-2')(<QualityFields form={form} />)}
+      {!reasonFirst && <ReasonFields form={form} />}
+      {owned(['description'], true, 'sm:col-span-2')(
+        <div className="sm:col-span-2">
+          <Field id="description" label="Description" error={errors.description}>
+            <Textarea id="description" value={values.description} maxLength={4000} onChange={(e) => setField('description', e.target.value)} />
+          </Field>
+        </div>,
+      )}
+      {mode === 'edit' && (
+        <div className="sm:col-span-2">
+          <Field id="changeReason" label="Reason for the change (optional)" error={errors.changeReason} hint="Kept in the event history with this revision">
+            <Textarea id="changeReason" value={values.changeReason} maxLength={1000} rows={2} onChange={(e) => setField('changeReason', e.target.value)} />
+          </Field>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { Label } from '@/components/ui/label';
+import { RequiredMarker } from '@/features/ux-kit/form-field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { MasterUnitView } from '../api/master-data-types';
 import { UNITS } from '../api/record-resource';
@@ -28,7 +29,7 @@ export function UnitSelect({ id, label, value, onChange, allowAll, allLabel = 'A
     <div className="space-y-1.5">
       <Label htmlFor={id}>
         {label}
-        {required && <span aria-hidden="true"> *</span>}
+        {required && <RequiredMarker />}
       </Label>
       <Select value={current} onValueChange={(next) => onChange(next === ALL ? '' : next)} disabled={disabled}>
         <SelectTrigger id={id} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined}>

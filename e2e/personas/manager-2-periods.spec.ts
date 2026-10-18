@@ -96,6 +96,7 @@ test.describe('Manager persona — period accounting and adjustments (Plan Dashb
     await openPeriodSection(page, 'Review & close');
     await expect(page.getByTestId('approve-gate')).toHaveCount(0);
     await page.getByTestId('wf-approve').click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Approve revision' }).click();
     await expect(page.getByTestId('period-detail')).toHaveAttribute('data-lifecycle', 'approved');
     await openPeriodSection(page, 'History & exports');
     await expect(page.getByTestId('revision-history').locator('[data-action="approve"]')).toBeVisible();

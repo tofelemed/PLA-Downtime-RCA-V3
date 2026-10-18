@@ -3,6 +3,7 @@ import type { DowntimeGroupView } from '@/api/v2/types/reports';
 import { formatDuration } from '@/features/ux-kit/format/duration';
 import { localizeNumber, useCalendarPreference } from '@/lib/dates';
 import { formatCount, formatRatio } from '../../model/kpi-display';
+import { ChartFigure } from '@/features/ux-kit/chart-figure';
 
 export interface ParetoChartProps {
   groups: readonly DowntimeGroupView[];
@@ -31,9 +32,13 @@ export function ParetoChart({ groups, unit, labelOf, onBar }: ParetoChartProps) 
     cumulative: group.cumulativeShare === null ? null : Number(group.cumulativeShare) * 100,
   }));
   const { digits } = useCalendarPreference();
-  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'compact', digits) : formatCount(String(value), digits));
+  const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'long', digits) : formatCount(String(value), digits));
+  const top = points[0];
+  const caption = top
+    ? `Pareto of ${points.length} groups by ${unit === 's' ? 'downtime' : 'stop count'}, largest first; the largest is ${top.name} (${format(top.value)}).`
+    : 'Pareto with no groups.';
   return (
-    <div className="h-72 w-full" aria-hidden>
+    <ChartFigure caption={caption} chartClassName="h-72 w-full" testId="pareto-chart">
       <ResponsiveContainer>
         <ComposedChart data={points} margin={{ top: 16, right: 16, bottom: 8, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -51,6 +56,6 @@ export function ParetoChart({ groups, unit, labelOf, onBar }: ParetoChartProps) 
           <Line yAxisId="share" dataKey="cumulative" stroke="hsl(var(--destructive))" dot />
         </ComposedChart>
       </ResponsiveContainer>
-    </div>
+    </ChartFigure>
   );
 }

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
+import { statusLabel } from '../model/rca-labels';
 
 export interface SearchContext {
   assetId: string | null;
@@ -45,9 +46,9 @@ export function CaseSearch({ context, selectedId, onSelect }: CaseSearchProps) {
         <Toggle id="by-reason" label="Same reason" checked={byReason} disabled={!context.reasonCodeId} onChange={setByReason} />
         <Toggle id="by-window" label="Within ±7 days" checked={byWindow} onChange={setByWindow} />
       </div>
-      <DebouncedSearchInput label="Search case titles" value={q} onChange={(text) => setQ(text.trim())} />
-      <DataState state={dataStateOf(cases, { isEmpty: cases.items.length === 0 })} error={cases.error} detail="No case matches.">
-        <ul className="divide-y rounded border" role="listbox" aria-label="Existing cases">
+      <DebouncedSearchInput label="Search investigation titles" value={q} onChange={(text) => setQ(text.trim())} />
+      <DataState state={dataStateOf(cases, { isEmpty: cases.items.length === 0 })} error={cases.error} detail="No investigation matches.">
+        <ul className="divide-y rounded border" role="listbox" aria-label="Existing investigations">
           {cases.items.map((item) => (
             <li key={item.id}>
               <button
@@ -57,14 +58,14 @@ export function CaseSearch({ context, selectedId, onSelect }: CaseSearchProps) {
                 className={`w-full px-2 py-1 text-left text-sm hover:bg-muted ${item.id === selectedId ? 'bg-muted font-medium' : ''}`}
                 onClick={() => onSelect(item.id)}
               >
-                {item.title} <span className="text-xs text-muted-foreground">· {item.status ?? 'Draft'} · {item.priority ?? 'Medium'}</span>
+                {item.title} <span className="text-xs text-muted-foreground">· {statusLabel(item.status)} · {item.priority ?? 'Medium'}</span>
               </button>
             </li>
           ))}
         </ul>
         {cases.hasNextPage && (
           <Button variant="outline" size="sm" className="mt-2" disabled={cases.isFetchingNextPage} onClick={() => void cases.fetchNextPage()}>
-            Show more cases
+            Show more investigations
           </Button>
         )}
       </DataState>

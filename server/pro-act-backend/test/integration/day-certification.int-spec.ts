@@ -27,6 +27,7 @@ interface DayBody {
     target: string;
     stops: number;
     uncoded: number;
+    codedRatio: string | null;
     passes: boolean;
   } | null;
 }
@@ -59,6 +60,10 @@ describe('day certification over the shift periods (SME R2)', () => {
     const open = await day();
     expect(open.state).toBe('open');
     expect(open.periods.map((p) => p.shiftName)).toEqual(['A', 'B', 'C']);
+    // Marun regression R2: the ratio covers the same shifts as the count, approved or not
+    expect(open.codingGate).toMatchObject({ stops: 1, uncoded: 1 });
+    expect(open.codingGate?.codedRatio).not.toBeNull();
+    expect(Number(open.codingGate?.codedRatio)).toBe(0);
     const refused = await env
       .post(`${path()}/certify`, {}, env.approver)
       .expect(422);

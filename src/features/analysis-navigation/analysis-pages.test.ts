@@ -24,7 +24,14 @@ describe('focused analysis navigation', () => {
 
   it('retains PLA ledger/detail filters and removes legacy tab state', () => {
     expect(analysisHref('/pla-analytics/trends', { pathname: '/pla-analytics/losses', search: '?ledger=capacity&breakdown=opportunities&tab=losses' })).toBe('/pla-analytics/trends?ledger=capacity&breakdown=opportunities');
-    expect(analysisHref('/events', { pathname: '/downtime', search: SEARCH })).toBe('/events');
+    expect(analysisHref('/rca', { pathname: '/downtime', search: SEARCH })).toBe('/rca');
+  });
+
+  it('carries the shared analysis context to the Event Hub, Reports and back (B-8)', () => {
+    const events = new URL(analysisHref('/events', { pathname: '/downtime', search: SEARCH }), 'http://test');
+    expect([...events.searchParams.keys()].sort()).toEqual(['approved', 'from', 'to', 'units']);
+    expect(analysisHref('/reports', { pathname: '/events', search: '?window=24h&units=u2&kinds=downtime' })).toBe('/reports?window=24h&units=u2');
+    expect(analysisHref('/downtime', { pathname: '/dashboard', search: '?window=30d' })).toBe('/downtime?window=30d');
   });
 
   it.each([
@@ -41,7 +48,8 @@ describe('focused analysis navigation', () => {
   it.each([['operator'], ['viewer'], ['SuperAdmin']])('keeps analysis access under the original read capability: %s', (...roles) => {
     const groups = groupNavigationItems(visibleNavigationItems(capabilitiesOf(roles), {}));
     expect(groups.find((group) => group.section.key === 'downtime')?.items).toHaveLength(5);
-    expect(groups.find((group) => group.section.key === 'pla')?.items).toHaveLength(6);
+    // the PLA section also lists "Period accounting" (UX audit B-5, analysis roles only)
+    expect(groups.find((group) => group.section.key === 'pla')?.items.filter((item) => item.href.startsWith('/pla-analytics'))).toHaveLength(6);
     expect(groups.find((group) => group.section.key === 'production')?.items.some((item) => item.href.startsWith('/downtime') || item.href.startsWith('/pla-analytics'))).toBe(false);
   });
 

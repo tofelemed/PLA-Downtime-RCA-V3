@@ -12,7 +12,7 @@ import { useNumberFormat } from '@/features/ux-kit/use-number-format';
  * plan 2.7) — never summed from loaded rows. The report covers calculated periods only, so it is
  * labelled provisional/incomplete exactly as the API says.
  */
-export function QuickStats({ filters }: { filters: EventFilterState }) {
+export function QuickStats({ filters, windowText }: { filters: EventFilterState; windowText: string }) {
   const { number } = useNumberFormat();
   const env = useEventHubEnv();
   const query = useDowntimeReport(
@@ -29,14 +29,14 @@ export function QuickStats({ filters }: { filters: EventFilterState }) {
       <CardContent className="flex flex-wrap items-center gap-6 py-3 text-sm">
         <DataState state={state} error={query.error} detail={incomplete ? 'Only calculated periods are counted.' : undefined}>
           <div>
-            <div className="text-xs text-muted-foreground">Downtime in window ({filters.windowLabel})</div>
+            <div className="text-xs text-muted-foreground">Downtime in window ({windowText})</div>
             <div className="text-2xl font-semibold" data-testid="quick-stats-downtime">
-              <DurationText seconds={report?.data.total} variant="clock" />
+              <DurationText seconds={report?.data.total} />
             </div>
           </div>
           {report && (
-            <div className="text-xs text-muted-foreground">
-              {report.isProvisional ? 'Provisional' : 'Approved'} · {number(report.data.calculationRunIds.length)} calculation runs
+            <div className="text-xs text-muted-foreground" title={`Based on ${number(report.data.calculationRunIds.length)} calculation runs`}>
+              {report.isProvisional ? 'Provisional' : 'Approved'}
             </div>
           )}
         </DataState>

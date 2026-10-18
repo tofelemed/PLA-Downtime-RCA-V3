@@ -39,4 +39,4 @@ export class BulkOperationResponseDto {
 
   @ApiProperty({ required: false })
   failedIds?: string[];
-} 
+}

@@ -27,3 +27,5 @@ export function approvalCommand(input: ApprovalDecision): { path: string; body: 
   return { path: `/${item.resource}/${item.commandId}/${action}`, body: policy.body(input), ...(item.resource === 'rules' ? { ifMatch: ifMatchOf(item.rowVersion) } : {}) };
 }
 export const ACTION_LABELS: Record<ApprovalAction, string> = { approve: 'Approve', reject: 'Reject', return: 'Return to author', retire: 'Retire', activate: 'Approve & activate' };
+/** Toast title once the server confirmed a decision. */
+export const DECIDED_LABELS: Record<ApprovalAction, string> = { approve: 'Approved', reject: 'Rejected', return: 'Returned to author', retire: 'Retired', activate: 'Approved and activated' };

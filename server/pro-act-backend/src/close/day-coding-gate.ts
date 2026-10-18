@@ -14,7 +14,7 @@ import { stopCodingCounts } from '../reconciliation/coding-gate.loader';
 import { DayPeriodRow } from './day-periods';
 
 /**
- * Σ coded / Σ stopped seconds of the period-level `coded_downtime_ratio` of the runs the approved shift
+ * Σ coded / Σ stopped seconds of the period-level `coded_downtime_ratio` of the runs the day's shift
  * revisions show (each shift measured its own part of a stop, so the sums are the day's). Uses
  * IDX_accounting_revisions_current_run and the kpi_results run index.
  */
@@ -64,9 +64,12 @@ async function dayGatePolicy(
 /**
  * SME D12 daily target of a production day (pilot 99 % by daily approval): every stop overlapping the
  * day's shift periods has a reason or "investigation pending", and the coded share of the day's stopped
- * time (the approved shifts' runs) reaches `dayGate.codedRatioTarget` of the `reconciliation_tolerance`
- * version in force for the unit at the day's first period (absent option: `warn` at 99 %). Null = the day
- * has no period.
+ * time reaches `dayGate.codedRatioTarget` of the `reconciliation_tolerance`
+ * version in force for the unit at the day's first period (absent option: `warn` at 99 %). The count and
+ * the ratio cover the same shifts (Marun regression R2): the ratio sums the current run of every shift's
+ * latest revision, whatever its workflow (a shift in review counts as its run shows it). Once every shift
+ * is approved — the certification case — that is the approved runs, as before. Null = the day has no
+ * period.
  */
 export async function loadDayCodingGate(
   manager: EntityManager,
@@ -76,11 +79,11 @@ export async function loadDayCodingGate(
   if (periods.length === 0) return null;
   const from = new Date(Math.min(...periods.map((p) => p.utcStart.getTime())));
   const to = new Date(Math.max(...periods.map((p) => p.utcEnd.getTime())));
-  const approved = periods.flatMap((p) =>
-    p.workflow === 'approved' && p.revisionId ? [p.revisionId] : [],
+  const revisions = periods.flatMap((p) =>
+    p.revisionId ? [p.revisionId] : [],
   );
   const counts = await stopCodingCounts(manager, { ...key, from, to });
-  const ratio = await dayRatio(manager, key.tenantId, approved);
+  const ratio = await dayRatio(manager, key.tenantId, revisions);
   const policy = await dayGatePolicy(manager, { ...key, at: from });
   return codingGate(counts, ratio, policy);
 }

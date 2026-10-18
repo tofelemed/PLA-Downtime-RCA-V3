@@ -5,11 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { DateInput } from '@/features/ux-kit/date-inputs';
+import { useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { RCA_ACTION_TYPES } from '@/api/v2/types/rca-workflow';
 import { RCA_ACTION_TYPE_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { RcaErrorAlert } from '../components/rca-error-alert';
 import { useRcaFormat } from '../use-rca-format';
-import { asActionType, buildActionBody, EMPTY_ACTION_FORM, type ActionForm as Form } from '../model/action-form';
+import { asActionType, buildActionBody, EMPTY_ACTION_FORM, verifierIsOwner, type ActionForm as Form } from '../model/action-form';
+import { useOptionalCaseWorkspace } from '../case/case-context';
+import { OwnerSelect } from './owner-select';
+import { RecommendationSelect } from './recommendation-select';
+import { VerificationPlanFields } from './verification-plan-fields';
 
 function NativeChoice(props: { id: string; label: string; value: string; options: Array<[string, string]>; onChange: (value: string) => void }) {
   return (
@@ -41,25 +46,35 @@ const asMetric = (value: string): Form['baselineMetric'] => (value === 'recurren
 const asCurrency = (value: string): Form['claimedCurrency'] => (value === 'IRR' || value === 'USD' ? value : '');
 
 /**
- * New action with owner (you), type, due date, verification window, baseline metric and an optional claim.
- * The baseline itself is counted by the server from the history before the window.
+ * New action with owner (you by default; any member of the plant), type, due date, verification method and
+ * verifier, verification window,
+ * baseline metric and an optional claim. The baseline itself is counted by the server from the history
+ * before the window.
  */
-export function ActionForm({ rcaId }: { rcaId: string }) {
+export function ActionForm({ rcaId, recommendationId = '' }: { rcaId: string; recommendationId?: string }) {
   const { session } = useAuth();
   const { timezone } = useRcaFormat();
   const create = useCreateRcaAction();
-  const [form, setForm] = useState<Form>(EMPTY_ACTION_FORM);
+  const recommendations = useOptionalCaseWorkspace()?.rca.recommendations ?? [];
+  const initial: Form = { ...EMPTY_ACTION_FORM, ownerId: session?.user.id ?? '', recommendationId };
+  const [form, setForm] = useState<Form>(initial);
   const set = (patch: Partial<Form>) => setForm((current) => ({ ...current, ...patch }));
+  useUnsavedChangesGuard(JSON.stringify(form) !== JSON.stringify(initial));
   const submit = async () => {
-    const created = await create.submit({ rcaId, body: buildActionBody(form, session?.user.id ?? null, timezone) }).catch(() => null);
-    if (created) setForm(EMPTY_ACTION_FORM);
+    const created = await create.submit({ rcaId, body: buildActionBody(form, timezone) }).catch(() => null);
+    if (created) setForm(initial);
   };
   return (
     <fieldset className="grid min-w-0 gap-3 rounded border p-3 md:grid-cols-3" data-testid="action-form">
-      <legend className="px-1 text-sm font-medium">New action (owner: you)</legend>
+      <legend className="px-1 text-sm font-medium">New action</legend>
       <TextInput id="action-title" label="Action" value={form.title} onChange={(title) => set({ title })} />
+      <OwnerSelect id="action-owner" value={form.ownerId} onChange={(ownerId) => set({ ownerId })} />
       <NativeChoice id="action-type" label="Type of action" value={form.actionType} options={TYPE_OPTIONS} onChange={(value) => set({ actionType: asActionType(value) })} />
+      {recommendations.length > 0 && (
+        <RecommendationSelect id="action-recommendation" value={form.recommendationId} recommendations={recommendations} onChange={(value) => set({ recommendationId: value })} />
+      )}
       <DateInput id="action-due" label="Due" value={form.dueDate} onChange={(dueDate) => set({ dueDate })} />
+      <VerificationPlanFields idPrefix="action" value={form} onChange={set} />
       <DateInput id="action-window-start" label="Verify from" value={form.windowStart} onChange={(windowStart) => set({ windowStart })} />
       <DateInput id="action-window-end" label="Verify until" value={form.windowEnd} onChange={(windowEnd) => set({ windowEnd })} />
       <NativeChoice
@@ -81,7 +96,7 @@ export function ActionForm({ rcaId }: { rcaId: string }) {
       <div className="space-y-2 md:col-span-3">
         <p className="text-xs text-muted-foreground">The baseline is counted by the server from the same-mode history before the verification window.</p>
         {create.error ? <RcaErrorAlert error={create.error} /> : null}
-        <Button size="sm" disabled={form.title.trim() === '' || create.isPending} onClick={() => void submit()} data-testid="add-action">
+        <Button size="sm" disabled={form.title.trim() === '' || verifierIsOwner(form) || create.isPending} onClick={() => void submit()} data-testid="add-action">
           Add action
         </Button>
       </div>

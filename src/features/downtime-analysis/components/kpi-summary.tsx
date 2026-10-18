@@ -56,7 +56,7 @@ export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundle
 
 function TileValue({ spec, view }: { spec: TileSpec; view: KpiAggregateView }) {
   const { digits } = useCalendarPreference();
-  if (spec.kind === 'duration') return <DurationText seconds={view.value} variant="clock" />;
+  if (spec.kind === 'duration') return <DurationText seconds={view.value} />;
   if (spec.kind === 'ratio') return <>{formatRatio(view.value, 1, digits)}</>;
   return <>{formatCount(view.value, digits)}</>;
 }
@@ -72,9 +72,9 @@ export function KpiTile({ spec, view }: { spec: TileSpec; view: KpiAggregateView
       <dd className="text-xl font-semibold" data-testid="kpi-value">
         {view && view.value !== null ? <TileValue spec={spec} view={view} /> : '—'}
       </dd>
-      <dd className="text-[11px] text-muted-foreground">{spec.note}</dd>
+      <dd className="text-xs text-muted-foreground">{spec.note}</dd>
       {view && view.quality !== 'ok' && (
-        <dd className="mt-1 flex flex-wrap items-center gap-1 text-[11px]">
+        <dd className="mt-1 flex flex-wrap items-center gap-1 text-xs">
           <Badge variant={view.quality === 'exception' ? 'destructive' : 'secondary'}>{labelOf(QUALITY_LABELS, view.quality)}</Badge>
           {reason && <span>{reason}</span>}
         </dd>

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
-import { selectConnection } from './support/integration-world';
+import { CONSOLE_ADMIN, selectConnection } from './support/integration-world';
 import { api, itemsOf } from './support/manager-api';
 import { ADMINS, MANAGERS, PASSWORD, PREFIX, sessionOf, shortId, utcDate, type Session } from './support/manager-users';
 
@@ -11,9 +11,10 @@ import { ADMINS, MANAGERS, PASSWORD, PREFIX, sessionOf, shortId, utcDate, type S
  *    login form; a duplicate e-mail is refused; granting SuperAdmin through either write route is
  *    refused by the server. Anna sees Grace (home plant Demo Plant 2, viewer in Demo Plant) by name with a
  *    "From Demo Plant 2" badge; her profile is read-only here (owner decision 2026-10-12).
- * 9. Integration console (`/connectivity`, TenantAdmin): Benjamin opens the MQTT demo connection card,
- *    sees the subscription health, pauses and resumes the subscription (left running), views the
- *    quarantine of the connection. A Manager has no Connectivity entry in the menu.
+ * 9. Integration console (`/connectivity`): owner 18 Oct 2026, Integration is SuperAdmin-only. The
+ *    SuperAdmin opens the MQTT demo connection card, sees the subscription health, pauses and resumes the
+ *    subscription (left running), views the quarantine of the connection; Benjamin (TenantAdmin) reads
+ *    the job through the API. Neither a TenantAdmin nor a Manager has a Connectivity entry or the console.
  * Data: user `P-MGR-operator …` (`p-mgr-operator-….@demo.acme.com`) — kept; two audited job commands.
  * The SuperAdmin-grant check (J8c) runs last so that a failure there never blocks J9.
  */
@@ -91,8 +92,9 @@ test.describe('Manager persona — users and the MQTT demo connection', () => {
     await expect(page.locator('nav a[href="/planning"]')).toHaveCount(0);
   });
 
-  test('J9a Benjamin opens the MQTT demo card: health shown, pause and resume audited, subscription left running, quarantine', async ({ page }) => {
-    await loginViaUI(page, ADMINS.benjamin.email, ADMINS.benjamin.password);
+  test('J9a the SuperAdmin opens the MQTT demo card: health shown, pause and resume audited, subscription left running, quarantine', async ({ page }) => {
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await loginViaUI(page, CONSOLE_ADMIN, PASSWORD);
     await expect(page.locator('nav a[href="/connectivity"]')).toBeVisible();
     await page.goto('/connectivity');
     await expect(page.getByTestId('integration-console')).toBeVisible({ timeout: 60_000 });
@@ -124,17 +126,18 @@ test.describe('Manager persona — users and the MQTT demo connection', () => {
     await expect(page.getByTestId('quarantine-inbox')).toBeVisible();
   });
 
-  test('J9b a Manager has no Connectivity entry; opening the route directly does not crash', async ({ page }) => {
-    await loginViaUI(page, MANAGERS.jonas.email, MANAGERS.jonas.password);
-    await expect(page.locator('nav a[href="/connectivity"]')).toHaveCount(0);
-    await expect(page.locator('nav a[href="/users"]')).toHaveCount(0);
-    await page.goto('/connectivity');
-    await expect(page.getByRole('banner')).toBeVisible({ timeout: 60_000 }); // the app header (pages have their own <header>)
-    const console = page.getByTestId('integration-console');
-    const opened = await console.isVisible().catch(() => false);
-    test.info().annotations.push({ type: 'observation', description: opened ? 'Manager can open /connectivity directly (menu hides it)' : 'Manager is refused on /connectivity' });
-    await expect(page.getByText(/something went wrong|unexpected error/i)).toHaveCount(0);
-  });
+  for (const user of [ADMINS.benjamin, MANAGERS.jonas]) {
+    test(`J9b ${user.name} has no Connectivity entry and a direct visit shows no console`, async ({ page }) => {
+      await loginViaUI(page, user.email, user.password);
+      await expect(page.locator('nav a[href="/connectivity"]')).toHaveCount(0);
+      if (user === MANAGERS.jonas) await expect(page.locator('nav a[href="/users"]')).toHaveCount(0);
+      // owner 18 Oct 2026: Integration is SuperAdmin-only
+      await page.goto('/connectivity');
+      await expect(page.getByRole('heading', { name: 'Connectivity', level: 1 })).toBeVisible({ timeout: 60_000 });
+      await expect(page.getByTestId('integration-console')).toHaveCount(0);
+      await expect(page.getByText(/something went wrong|unexpected error/i)).toHaveCount(0);
+    });
+  }
 
   test('J8d Anna sees Grace (home Demo Plant 2, viewer here) by name with her home plant; her profile stays read-only', async ({ page }) => {
     // owner decision 2026-10-12: plant admins see and manage the access of users granted into their plant

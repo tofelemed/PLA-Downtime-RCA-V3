@@ -96,3 +96,75 @@ export const RCA_CORRECTION_STATUS_LABELS: Readonly<Record<string, string>> = {
   approved: 'Approved',
   rejected: 'Rejected',
 };
+
+/** Item 7 kinds of a case cause. */
+export const RCA_CAUSE_KIND_LABELS: Readonly<Record<string, string>> = {
+  root: 'Root cause',
+  direct: 'Direct cause',
+  contributing: 'Contributing cause',
+};
+
+/** Item 2 history: what was done, by audit action (`<entityType>.<verb>`); others are humanized. */
+export const RCA_HISTORY_ACTION_LABELS: Readonly<Record<string, string>> = {
+  'rca_case.created': 'Investigation opened',
+  'rca_case.updated': 'Investigation details changed',
+  'rca_case.transitioned': 'Status changed',
+  'rca_case.closure_requested': 'Closure requested',
+  'rca_case.closure_rejected': 'Closure sent back',
+  'rca_case.closed': 'Investigation closed',
+  'rca_case.reopened': 'Investigation reopened',
+  'rca_case.deleted': 'Investigation deleted',
+  'rca_case.attachment_uploaded': 'File uploaded',
+  'rca_action.created': 'Action added',
+  'rca_action.updated': 'Action changed',
+  'rca_action.deleted': 'Action removed',
+  'rca_action.verified': 'Action effectiveness checked',
+  'rca_action.task_completed': 'Linked task completed',
+  'rca_action.task_reopened': 'Linked task reopened',
+  'rca_action.baseline_correction_proposed': 'Baseline correction proposed',
+  'rca_action.baseline_correction_approved': 'Baseline correction approved',
+  'rca_action.baseline_correction_rejected': 'Baseline correction rejected',
+  'rca_case_link.created': 'Link added',
+  'rca_case_link.deleted': 'Link removed',
+  'rca_analysis.saved': 'Analysis saved',
+  'rca_analysis.updated': 'Analysis changed',
+  'rca_cause.created': 'Cause added',
+  'rca_cause.updated': 'Cause changed',
+  'rca_cause.deleted': 'Cause removed',
+};
+
+/** Item 2 history: the record an audit entry is about (fallback wording of unknown actions). */
+export const RCA_HISTORY_ENTITY_LABELS: Readonly<Record<string, string>> = {
+  rca_case: 'Investigation',
+  rca_action: 'Action',
+  rca_case_link: 'Link',
+  rca_analysis: 'Analysis',
+  rca_cause: 'Cause',
+};
+
+/** Item 2 history: names of changed fields (others are humanized). */
+export const RCA_HISTORY_FIELD_LABELS: Readonly<Record<string, string>> = {
+  status: 'Status',
+  ownerId: 'Owner',
+  dueDate: 'Due date',
+  teamLeadId: 'Team lead',
+  teamMemberIds: 'Team members',
+  priority: 'Priority',
+  targetCloseDate: 'Target close date',
+  unitId: 'Unit',
+  assetId: 'Asset',
+  kind: 'Kind of cause',
+  causeCodeId: 'Cause code',
+  recommendationId: 'Recommendation',
+  rootCause: 'Root cause',
+  rootCauseLength: 'Root cause (characters)',
+  statement: 'Statement',
+  statementLength: 'Statement (characters)',
+  evidenceIds: 'Supporting evidence',
+  nodeIds: 'Logic-tree nodes',
+  verificationWindowStart: 'Verify from',
+  verificationWindowEnd: 'Verify until',
+  completionEvidenceRef: 'Completion evidence',
+  actionType: 'Type of action',
+  taskCompletedAt: 'Task completed',
+};

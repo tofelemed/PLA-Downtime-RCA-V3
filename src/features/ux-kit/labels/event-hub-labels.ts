@@ -11,6 +11,13 @@ export const EVENT_TYPE_LABELS: Readonly<Record<string, string>> = {
   ProductionOutput: 'Production output',
 };
 
+/** SME D8: failure severity of a stop (ISO 14224); distinct from the event severity. */
+export const FAILURE_SEVERITY_LABELS: Readonly<Record<string, string>> = {
+  critical: 'Critical',
+  degraded: 'Degraded',
+  incipient: 'Incipient',
+};
+
 export const SEVERITY_LABELS: Readonly<Record<string, string>> = {
   Critical: 'Critical',
   High: 'High',

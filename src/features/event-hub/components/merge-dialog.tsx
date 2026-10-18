@@ -6,10 +6,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { labelOf, PHYSICAL_TYPE_LABELS } from '@/features/ux-kit/labels';
+import { eventNounOfAll, labelOf, PHYSICAL_TYPE_LABELS } from '@/features/ux-kit/labels';
 import { useEventHubEnv } from '../use-event-hub-env';
+import { AuditReasonField } from './audit-reason-field';
 import { CommandError } from './command-error';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
@@ -31,8 +32,10 @@ export function MergeDialog({ events, onClose, onDone }: MergeDialogProps) {
   const [override, setOverride] = useState(false);
   const [reason, setReason] = useState('');
   const ordered = [...events].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const noun = eventNounOfAll(events.map((event) => event.classification.physicalType));
   const gap = Number(gapMinutes);
   const gapValid = Number.isInteger(gap) && gap >= 0 && gap <= MAX_GAP_MINUTES;
+  const blocked = !gapValid ? `Enter a gap of 0 to ${MAX_GAP_MINUTES} whole minutes.` : reason.trim() === '' ? 'Enter why (kept in the history) to continue.' : null;
   const submit = async () => {
     const body = { reason: reason.trim(), maxGapSeconds: gap * 60, overrideClassification: override };
     const result = await merge.submit({ events: ordered, body }).catch(() => null);
@@ -42,8 +45,8 @@ export function MergeDialog({ events, onClose, onDone }: MergeDialogProps) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto" data-testid="merge-dialog">
         <DialogHeader>
-          <DialogTitle>Merge {number(events.length)} events</DialogTitle>
-          <DialogDescription>One event spans the union; the merged events become superseded. One unit only.</DialogDescription>
+          <DialogTitle>Merge {number(events.length)} {noun}s</DialogTitle>
+          <DialogDescription>One {noun} spans the union; the merged {noun}s become superseded. One unit only.</DialogDescription>
         </DialogHeader>
         <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
           {ordered.map((event) => (
@@ -61,15 +64,13 @@ export function MergeDialog({ events, onClose, onDone }: MergeDialogProps) {
             <Checkbox id="merge-override" checked={override} onCheckedChange={(checked) => setOverride(checked === true)} />
             Merge different types or schedule classes (the earliest event wins)
           </label>
-          <div className="space-y-1">
-            <Label htmlFor="merge-reason">Why (kept in the history)</Label>
-            <Textarea id="merge-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} />
-          </div>
+          <AuditReasonField id="merge-reason" value={reason} onChange={setReason} maxLength={1000} />
         </div>
         <CommandError error={merge.error} />
+        <DisabledReason id="merge-blocked" reason={blocked} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button disabled={!gapValid || reason.trim() === '' || merge.isPending} onClick={() => void submit()}>Merge</Button>
+          <Button disabled={blocked !== null || merge.isPending} aria-describedby={blocked ? 'merge-blocked' : undefined} onClick={() => void submit()}>Merge</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

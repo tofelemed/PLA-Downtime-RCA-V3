@@ -14,7 +14,7 @@ function Scheduled({ instance, warnings }: { instance: ShiftInstancePreview; war
     <span className="text-xs">
       {instance.isExcluded ? excluded : 'Yes'}
       {warnings.map((warning) => (
-        <span key={warning.code} className="mt-1 flex items-center gap-1 text-amber-700" data-testid="instance-warning" data-code={warning.code}>
+        <span key={warning.code} className="mt-1 flex items-center gap-1 text-warning" data-testid="instance-warning" data-code={warning.code}>
           <Icon className="h-3 w-3" aria-hidden="true" />
           {warningText(warning)}
         </span>
@@ -35,7 +35,7 @@ export function CalendarPreviewTable({ preview }: { preview: CalendarPreviewView
       cell: (i) => {
         const dst = warningsOf(byRow, i).some(isDstWarning);
         return (
-          <span data-testid="preview-instance" data-dst={dst || undefined} data-duration={i.durationSeconds} className={dst ? 'font-medium text-amber-700' : undefined}>
+          <span data-testid="preview-instance" data-dst={dst || undefined} data-duration={i.durationSeconds} className={dst ? 'font-medium text-warning' : undefined}>
             {formatOperationalDate(i.localDate, pref)}
           </span>
         );

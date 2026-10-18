@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsNumber, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  IsOptional,
+  IsNumber,
+  IsDateString,
+} from 'class-validator';
 
 export class CreateProductionPlanDto {
   @ApiProperty()
@@ -44,7 +51,10 @@ export class CreateProductionPlanDto {
   @IsDateString()
   endDate: string;
 
-  @ApiProperty({ required: false, enum: ['Planned', 'Active', 'Completed', 'Cancelled'] })
+  @ApiProperty({
+    required: false,
+    enum: ['Planned', 'Active', 'Completed', 'Cancelled'],
+  })
   @IsOptional()
   @IsString()
   status?: string;
@@ -59,7 +69,10 @@ export class CreateProductionPlanDto {
   @IsString()
   planBasis?: string;
 
-  @ApiProperty({ required: false, description: 'JSON string of useful production time' })
+  @ApiProperty({
+    required: false,
+    description: 'JSON string of useful production time',
+  })
   @IsOptional()
   @IsString()
   usefulProductionTime?: string;
@@ -89,12 +102,24 @@ export class CreateProductionPlanDto {
   @IsString()
   plannerNotes?: string;
 
-  @ApiProperty({ required: false, description: 'JSON string of comments array' })
+  @ApiProperty({
+    required: false,
+    description: 'JSON string of comments array',
+  })
   @IsOptional()
   @IsString()
   comments?: string;
 
-  @ApiProperty({ required: false, enum: ['Draft', 'Pending Review', 'Pending Approval', 'Approved', 'Rejected'] })
+  @ApiProperty({
+    required: false,
+    enum: [
+      'Draft',
+      'Pending Review',
+      'Pending Approval',
+      'Approved',
+      'Rejected',
+    ],
+  })
   @IsOptional()
   @IsString()
   approvalStatus?: string;
@@ -134,12 +159,18 @@ export class CreateProductionPlanDto {
   @IsString()
   rejectionReason?: string;
 
-  @ApiProperty({ required: false, description: 'JSON string of custom attributes' })
+  @ApiProperty({
+    required: false,
+    description: 'JSON string of custom attributes',
+  })
   @IsOptional()
   @IsString()
   customAttributes?: string;
 
-  @ApiProperty({ required: false, description: 'JSON string of audit trail array' })
+  @ApiProperty({
+    required: false,
+    description: 'JSON string of audit trail array',
+  })
   @IsOptional()
   @IsString()
   auditTrail?: string;

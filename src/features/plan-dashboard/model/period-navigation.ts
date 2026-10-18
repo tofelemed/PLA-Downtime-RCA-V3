@@ -10,6 +10,14 @@ export const PERIOD_SECTIONS = [
 
 export type PeriodSection = (typeof PERIOD_SECTIONS)[number]['path'];
 
+/** The only section of a disposition writer without the analysis screens (an operator records dispositions there). */
+export const QUALITY_ONLY_SECTION: PeriodSection = 'actuals';
+
+/** The sections the user reaches: all of them with the analysis screens, otherwise Actuals & quality only. */
+export function sectionsFor(canViewAnalysis: boolean) {
+  return canViewAnalysis ? PERIOD_SECTIONS : PERIOD_SECTIONS.filter((section) => section.path === QUALITY_ONLY_SECTION);
+}
+
 export function isPeriodSection(value: string): value is PeriodSection {
   return PERIOD_SECTIONS.some((section) => section.path === value);
 }

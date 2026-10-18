@@ -40,7 +40,7 @@ import {
 } from '../../rca-case/rca-case-workflow.service';
 import { RcaEvidenceOptionsV2View } from '../../rca-case/rca-evidence-options';
 import {
-  RcaCaseSummaryV2View as RcaCaseListItemV2View,
+  RcaCaseListItemV2View,
   RcaCaseV2View,
 } from '../../rca-case/rca-case.view';
 import { RCA_WRITERS } from '../../rca-case/rca-scope';
@@ -78,7 +78,8 @@ export class RcaCasesV2Controller {
   @ApiOperation({
     summary: 'Search cases of your scope (newest first)',
     description:
-      'Filters: status, unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), title (q).',
+      'Filters: status, open (not Closed), unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), title (q). ' +
+      'Each row carries its first linked event (trigger, null without one) and its action counts (total without cancelled, done, overdue).',
   })
   list(
     @Ctx() ctx: RequestContext,

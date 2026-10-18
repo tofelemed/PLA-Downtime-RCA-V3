@@ -89,6 +89,25 @@ describe('loss accounting calculation runs (plan 2.5)', () => {
     expect(plan.residual).toBe('0');
     expect(plan.flags).toContain('planned_rate_scaled');
     expect(plan.flags).not.toContain('over_accounted');
+    // UX D-2: the line stores the scaled rate it was computed with, per its timebase
+    const [planStop] = await env.rows<{ rate: string; timebase: string }>(
+      `SELECT applied_rate::text AS rate, applied_rate_timebase AS timebase FROM loss_lines
+        WHERE run_id = $1 AND ledger = 'plan' AND kind = 'availability'`,
+      [firstRun],
+    );
+    const perHour: Record<string, number> = {
+      s: 3600,
+      min: 60,
+      h: 1,
+      d: 1 / 24,
+    };
+    expect(perHour[planStop.timebase]).toBeDefined();
+    const appliedPerHour = new Dec(planStop.rate).mul(
+      perHour[planStop.timebase],
+    );
+    expect(appliedPerHour.minus(plannedRate).abs().lte('0.00000001')).toBe(
+      true,
+    );
   });
 
   it('identical inputs create no run (T44: the actuals run is reused too)', async () => {

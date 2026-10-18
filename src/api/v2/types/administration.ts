@@ -111,6 +111,8 @@ export interface TaskView {
   overdue: boolean;
   linkType: TaskLinkType | string | null;
   linkId: string | null;
+  /** item 5: the RCA action this task carries out (linkType RCA, linkId = the action's case) */
+  rcaActionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -134,6 +136,8 @@ export interface CreateTaskInput {
   dueDate?: string;
   linkType?: TaskLinkType;
   linkId?: string;
+  /** item 5: the RCA action this task carries out (needs linkType RCA with the action's case; 409 ACTION_TASK_EXISTS) */
+  rcaActionId?: string;
 }
 
 export interface UpdateTaskInput {

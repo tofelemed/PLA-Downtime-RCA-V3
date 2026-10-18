@@ -89,6 +89,18 @@ export class RcaRecommendationItemDto {
   @IsString()
   @Matches(/^\d{1,13}(\.\d{1,4})?$/)
   estimatedCost?: string | null;
+
+  @ApiPropertyOptional({
+    type: 'array',
+    items: { type: 'object' },
+    description:
+      'Read-only (item 5): the actions implementing this recommendation, as the case view returns them. ' +
+      'Accepted so a read item can be sent back; never stored (link an action with its recommendationId).',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(500)
+  actions?: unknown[];
 }
 
 /** Historian query recorded with a "Time Series" evidence item (the parameters, not the samples). */
@@ -162,6 +174,16 @@ export class RcaEvidenceItemDto {
   @OptionalText(2000) task?: string | null;
   @OptionalIso() taskDueDate?: string | null;
   @OptionalIn(RCA_TASK_STATES) taskStatus?: string | null;
+
+  /** F-11: who should collect the evidence (a user of the tenant, 422 INVALID_REFERENCE otherwise) */
+  @OptionalUuid() taskAssigneeId?: string | null;
+
+  /**
+   * Read-only, accepted so a read item can be sent back: the server records who set `verified` and when,
+   * and ignores these values.
+   */
+  @OptionalUuid() verifiedBy?: string | null;
+  @OptionalIso() verifiedAt?: string | null;
 
   /** logic tree nodes / diagram events this item supports */
   @OptionalStrings(100, 64) nodeIds?: string[];

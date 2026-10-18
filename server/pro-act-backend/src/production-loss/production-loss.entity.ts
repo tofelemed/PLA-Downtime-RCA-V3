@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { ImpactCode } from '../impact-code/impact-code.entity';
 import { OEECode } from '../oee-code/oee-code.entity';
@@ -19,16 +27,40 @@ export class ProductionLoss {
   period: string;
 
   // Frontend Required Fields - Need to be added to database via migration
-  @Column({ name: 'actual', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'actual',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   actual?: number;
 
-  @Column({ name: 'short_range_plan', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'short_range_plan',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   shortRangePlan?: number;
 
-  @Column({ name: 'losses', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'losses',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   losses?: number;
 
-  @Column({ name: 'unaccounted_loss', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'unaccounted_loss',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   unaccountedLoss?: number;
 
   @Column({ name: 'action', type: 'varchar', length: 50, nullable: true })
@@ -38,13 +70,30 @@ export class ProductionLoss {
   @Column({ name: 'loss_type', type: 'varchar', length: 100, nullable: true })
   lossType?: string;
 
-  @Column({ name: 'loss_category', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'loss_category',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   lossCategory?: string;
 
-  @Column({ name: 'quantity', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  @Column({
+    name: 'quantity',
+    type: 'decimal',
+    precision: 15,
+    scale: 4,
+    nullable: true,
+  })
   quantity?: number;
 
-  @Column({ name: 'cost', type: 'decimal', precision: 15, scale: 2, nullable: true })
+  @Column({
+    name: 'cost',
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    nullable: true,
+  })
   cost?: number;
 
   @Column({ name: 'description', type: 'text', nullable: true })
@@ -61,4 +110,4 @@ export class ProductionLoss {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
-} 
+}

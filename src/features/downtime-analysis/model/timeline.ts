@@ -18,7 +18,7 @@ export interface TimelineRow {
 
 const MIN_WIDTH = 0.4;
 
-/** Where an event ends on the chart: its end, or the server's `asOf` while it is still running. */
+/** Where an event ends on the chart: its end, or the server's `asOf` while it is still ongoing. */
 function endOf(event: ProductionEventView): number {
   return Date.parse(event.endTime ?? event.asOf);
 }

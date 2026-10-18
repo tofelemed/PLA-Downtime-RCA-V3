@@ -25,7 +25,9 @@ export class PeriodSummariesV2Controller {
     summary:
       'Period grid: target, actual, signed gap, attributed, residual (state), workflow state, run and actuals quality per period',
     description:
-      'Keyset on utcStart (ascending). Periods overlapping [from, to); unitIds must be units of the tenant and of the ' +
+      'Keyset on utcStart (sort utcStart ascending, -utcStart descending). Rows of every plan of the scope, each with ' +
+      'its planId; residualStates filters by the plan-ledger residual state (a filtered page may be short while ' +
+      'nextCursor is set). Periods overlapping [from, to); unitIds must be units of the tenant and of the ' +
       'caller’s scope (422 INVALID_REFERENCE). Figures are the shown revision’s plan ledger after its saved decisions ' +
       '(the same arithmetic as GET …/reconciliation), slices summed per period only when they share one unit ' +
       '(else null with flag uom_mixed). Read-only.',

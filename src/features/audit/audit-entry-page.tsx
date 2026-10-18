@@ -6,6 +6,7 @@ import { usePlantDates } from '@/features/admin/shared/use-plant-dates';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { resolvedActorText } from '@/features/ux-kit/labels/actor-labels';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { actionLabel, entityLabel } from './components/audit-columns';
 
@@ -34,7 +35,7 @@ function EntryDetail({ entry }: { entry: AuditEntryView }) {
   const dates = usePlantDates();
   const facts: Array<[string, string]> = [
     ['Time', dates.dateTime(entry.timestamp)],
-    ['User', entry.actorName ?? 'Unknown user'],
+    ['User', resolvedActorText(entry.actorId, entry.actorName)],
     ['Action', actionLabel(entry.action)],
     ['Record type', entityLabel(entry.entityType)],
     ['Summary', entry.message ?? '—'],

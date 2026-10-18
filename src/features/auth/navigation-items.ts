@@ -38,19 +38,10 @@ export interface NavigationItem {
   activeAlso?: readonly string[];
 }
 
-const DEV_ITEMS: readonly NavigationItem[] = import.meta.env.DEV
-  ? [
-      // legacy demo seeding: development builds only (plan 3.1 step 7, decision A4)
-      {
-        name: 'Data Seeding',
-        href: '/data-seeding',
-        icon: EntityIcon.dataSource,
-        section: 'administration',
-        capability: 'canAdministerTenant',
-        description: 'Manage test data for PLA and RCA',
-      },
-    ]
-  : [];
+/** Both analysis sections start with an "Overview" page; the sidebar names them apart (UX audit B-1). */
+function sidebarLabel(page: { key: string; label: string }, overviewLabel: string): string {
+  return page.key === 'overview' ? overviewLabel : page.label;
+}
 
 /**
  * The sidebar, section by section and in order. Each entry names the capability that shows it, so a
@@ -72,13 +63,15 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     activeAlso: ['/plans/'],
   },
   {
-    name: 'My Queue',
+    // UX audit §5.7: "My work" (route kept); tabs Periods · RCA actions · Tasks
+    name: 'My work',
     href: '/my-queue',
     icon: EntityIcon.plan,
     section: 'production',
-    // a read screen: the server lists only what the caller's roles can act on (empty for read-only roles)
-    capability: 'canViewAnalysis',
-    description: 'Periods to prepare, review or handle as an escalation, earliest due first',
+    // a read screen: the server lists only what the caller's roles can act on (empty for read-only roles);
+    // operators reach it for their RCA actions and tasks (Marun E2E owner rule)
+    capability: 'canViewOperations',
+    description: 'Periods to prepare or review, your RCA actions and your tasks',
   },
   {
     name: 'Month Close',
@@ -97,19 +90,28 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     capability: 'canViewAnalysis',
     description: 'Uncertainty budgets per measurement boundary that justify the reconciliation tolerance',
   },
-  ...DOWNTIME_PAGES.map((page): NavigationItem => ({ name: page.name, label: page.label, href: page.path, icon: page.icon, section: 'downtime', capability: 'canViewOperations', description: page.description, exact: true })),
-  ...PLA_PAGES.map((page): NavigationItem => ({ name: page.name, label: page.label, href: page.path, icon: page.icon, section: 'pla', capability: 'canViewOperations', description: page.description, exact: true })),
-  { name: 'RCA Analysis', href: '/rca', icon: EntityIcon.rcaCase, section: 'reliability', capability: 'canViewAnalysis', description: 'Root cause investigations' },
+  ...DOWNTIME_PAGES.map((page): NavigationItem => ({ name: page.name, label: sidebarLabel(page, 'Downtime overview'), href: page.path, icon: page.icon, section: 'downtime', capability: 'canViewOperations', description: page.description, exact: true })),
+  ...PLA_PAGES.map((page): NavigationItem => ({ name: page.name, label: sidebarLabel(page, 'PLA overview'), href: page.path, icon: page.icon, section: 'pla', capability: 'canViewOperations', description: page.description, exact: true })),
+  {
+    // UX audit B-5: resolves the plan (`/period-accounting` → `/plans/:id`, or the plan list) on click, not on every render
+    name: 'Period accounting',
+    href: '/period-accounting',
+    icon: EntityIcon.periodAccounting,
+    section: 'pla',
+    capability: 'canViewAnalysis',
+    description: "Period grid of the unit's active approved plan; the plan list when several plans are active",
+  },
+  // operators see their RCA actions and the investigations they belong to, read-only (Marun E2E owner rule)
+  { name: 'RCA Analysis', href: '/rca', icon: EntityIcon.rcaCase, section: 'reliability', capability: 'canViewOperations', description: 'Root cause investigations' },
   { name: 'Bad Actors', href: '/reliability/bad-actors', icon: EntityIcon.badActor, section: 'reliability', capability: 'canViewAnalysis', description: 'Monthly top assets and failure modes by approved loss' },
   { name: 'Knowledge Base', href: '/rca-knowledge-base', icon: EntityIcon.knowledge, section: 'reliability', capability: 'canViewAnalysis', description: 'Closed investigations and lessons learned' },
-  { name: 'Tasks', href: '/tasks', icon: EntityIcon.task, section: 'reliability', capability: 'canViewOperations', description: 'Assign and track action items' },
-  { name: 'Connectivity', href: '/connectivity', icon: EntityIcon.connection, section: 'integration', capability: 'canUseIntegrationConsole', description: 'Connections, ingestion jobs and mappings' },
-  // SME R13: drafted by integration admins / production accounting, approved by the source owner; every member reads
-  { name: 'Source Status Rules', href: '/connectivity/source-status', icon: EntityIcon.rule, section: 'integration', capability: 'canViewAnalysis', description: 'Which source statuses count as the released record, per source system' },
-  // owner 15 Oct 2026: drafted by integration admins / production accounting, approved by production accounting; every member reads
-  { name: 'Source Priority', href: '/connectivity/source-authority', icon: EntityIcon.library, section: 'integration', capability: 'canViewAnalysis', description: 'Which measurement source counts for each unit, and the versions waiting for approval' },
-  // listed for integration roles; the page reads signals and their samples, which every plant member may read
-  { name: 'Enhanced Historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canViewAnalysis', description: 'Time series of plant signals' },
+  { name: 'Tasks', href: '/tasks', icon: EntityIcon.task, section: 'reliability', capability: 'canViewOperations', description: 'Assign and track tasks' },
+  // owner 18 Oct 2026: the whole Integration section is SuperAdmin-only (menu and routes); approvers of Source
+  // Priority / Source Status Rules reach those two review pages from the approvals inbox (route gates below)
+  { name: 'Connectivity', href: '/connectivity', icon: EntityIcon.connection, section: 'integration', capability: 'canReachIntegration', description: 'Connections, ingestion jobs and mappings' },
+  { name: 'Source Status Rules', href: '/connectivity/source-status', icon: EntityIcon.rule, section: 'integration', capability: 'canReachIntegration', description: 'Which source statuses count as the released record, per source system' },
+  { name: 'Source Priority', href: '/connectivity/source-authority', icon: EntityIcon.library, section: 'integration', capability: 'canReachIntegration', description: 'Which measurement source counts for each unit, and the versions waiting for approval' },
+  { name: 'Enhanced Historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canReachIntegration', description: 'Time series of plant signals' },
   { name: 'Equipment Setup Guide', href: '/equipment-setup', icon: EntityIcon.equipmentSetup, section: 'administration', capability: 'canReachMasterData', description: 'Six phases from equipment records to the first approved period and analysis' },
   { name: 'Master Data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canReachMasterData', activeAlso: ['/codes-admin'], description: 'Plant records, codes, rules and reliability data' },
   {
@@ -125,9 +127,6 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   // the page's gate: TenantAdmin gets the plant-level tabs, the application-wide ones stay SuperAdmin-only
   { name: 'Admin Panel', href: '/admin', activeAlso: ['/settings'], icon: EntityIcon.admin, section: 'administration', capability: 'canUseAdminPanel', description: 'Plants, branding, custom attributes and plant settings' },
   { name: 'Audit Logs', href: '/audit', icon: EntityIcon.audit, section: 'administration', capability: 'canViewAuditLogs', description: 'Who changed what, and when' },
-  // the server's tenant-setting write rule (TenantAdmin / manager_approver in the plant, SuperAdmin)
-
-  ...DEV_ITEMS,
 ];
 
 /** The items the user sees: capability held in the selected plant and, when flagged, the flag on. */
@@ -152,13 +151,37 @@ export function groupNavigationItems(items: readonly NavigationItem[], sections:
 }
 
 /**
- * Whether `pathname` belongs to the item: the path itself or a sub-path (`/rca/cases/1` is RCA, but
- * `/rca-knowledge-base` is not), plus the item's `activeAlso` prefixes.
+ * How specifically `pathname` belongs to the item: the length of the matched path (its own path, a
+ * sub-path — `/rca/cases/1` is RCA, `/rca-knowledge-base` is not — or an `activeAlso` prefix); 0 when
+ * it does not belong.
  */
+export function navMatchLength(item: Pick<NavigationItem, 'href' | 'activeAlso' | 'exact'>, pathname: string): number {
+  if (item.exact) return pathname === item.href ? item.href.length : 0;
+  const own = pathname === item.href || pathname.startsWith(`${item.href}/`) ? item.href.length : 0;
+  const also = (item.activeAlso ?? []).filter((prefix) => pathname.startsWith(prefix)).map((prefix) => prefix.length);
+  return Math.max(own, ...also);
+}
+
+/** Whether `pathname` belongs to the item at all (several items may; `activeNavItem` picks one). */
 export function isNavItemActive(item: Pick<NavigationItem, 'href' | 'activeAlso' | 'exact'>, pathname: string): boolean {
-  if (item.exact) return pathname === item.href;
-  if (pathname === item.href || pathname.startsWith(`${item.href}/`)) return true;
-  return (item.activeAlso ?? []).some((prefix) => pathname.startsWith(prefix));
+  return navMatchLength(item, pathname) > 0;
+}
+
+/**
+ * The one item the menu highlights for `pathname`: the longest match wins, so
+ * `/connectivity/source-status` is Source Status Rules, not also Connectivity.
+ */
+export function activeNavItem<T extends Pick<NavigationItem, 'href' | 'activeAlso' | 'exact'>>(items: readonly T[], pathname: string): T | undefined {
+  let best: T | undefined;
+  let bestLength = 0;
+  for (const item of items) {
+    const length = navMatchLength(item, pathname);
+    if (length > bestLength) {
+      best = item;
+      bestLength = length;
+    }
+  }
+  return best;
 }
 
 /** The flags the menu depends on (every `flag` named by an item). */

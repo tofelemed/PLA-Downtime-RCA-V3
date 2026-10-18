@@ -14,9 +14,11 @@ import { EventListDialogs } from './components/event-list-dialogs';
 import { EventTable } from './components/event-table';
 import { ExportEventsButton } from './components/export-events-button';
 import { QuickStats } from './components/quick-stats';
+import { RcaTriggerSettingsLink } from './components/rca-trigger-settings-link';
 import { EventHubFrame } from './event-hub-frame';
 import { useEventHubState, type EventHubState } from './hooks/use-event-hub-state';
-import { selectionQuery, toEventQuery } from './model/event-filters';
+import { useWindowRangeText } from './hooks/use-window-range-text';
+import { isToCodeFilters, selectionQuery, shownWindow, toEventQuery, type EventSort } from './model/event-filters';
 import { useEventHubEnv } from './use-event-hub-env';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
@@ -33,6 +35,8 @@ export function EventHubPage() {
   );
 }
 
+const TO_CODE_EMPTY = { title: 'Nothing to code', text: 'All stops in this window are coded.' };
+
 function scopeLabel(unitIds: readonly string[], unitName: (id: string) => string): string {
   if (unitIds.length === 0) return 'All units in your scope';
   return unitIds.map(unitName).join(', ');
@@ -44,13 +48,8 @@ function HeaderActions({ hub }: { hub: EventHubState }) {
   const single = hub.filters.unitIds.length === 1 ? `?unitId=${hub.filters.unitIds[0]}` : '';
   return (
     <>
-      <Button variant="outline" asChild>
-        <Link to="/events/rca-triggers">
-          <ActionIcon.settings aria-hidden className="mr-1 h-4 w-4" />
-          RCA trigger settings
-        </Link>
-      </Button>
       <ExportEventsButton filters={hub.filters} />
+      <RcaTriggerSettingsLink />
       {canWriteEvents ? (
         <Button asChild data-testid="new-event">
           <Link to={`/events/new${single}`} state={{ listSearch: `${location.pathname}${location.search}` }}>
@@ -69,8 +68,11 @@ function EventHubScreen() {
   const { canWriteEvents } = useCapabilities();
   const env = useEventHubEnv();
   const hub = useEventHubState();
-  const { filters } = hub;
+  const { filters, changeFilters } = hub;
+  const rangeText = useWindowRangeText();
+  const windowText = rangeText(shownWindow(filters));
   const query = useMemo(() => toEventQuery(filters), [filters]);
+  const sort = useMemo(() => ({ value: filters.sort, onChange: (next: EventSort) => changeFilters({ ...filters, sort: next }) }), [filters, changeFilters]);
   const selection = useMemo(
     () => (canWriteEvents ? { selectedIds: hub.selectedIds, toggle: hub.toggle, toggleMany: hub.toggleMany } : undefined),
     [canWriteEvents, hub.selectedIds, hub.toggle, hub.toggleMany],
@@ -84,27 +86,41 @@ function EventHubScreen() {
           title="Event Hub"
           description="Stops, losses and other production events of your units"
           actions={<HeaderActions hub={hub} />}
-          meta={<ScopeHeader scopeLabel={scopeLabel(filters.unitIds, env.unitName)} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback} />}
+          meta={<ScopeHeader scopeLabel={`${scopeLabel(filters.unitIds, env.unitName)} · ${windowText}`} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback} />}
         />
         <EventFiltersBar filters={filters} onChange={hub.changeFilters} onReset={hub.resetFilters} />
-        <QuickStats filters={filters} />
+        <QuickStats filters={filters} windowText={windowText} />
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="min-w-0 space-y-2">
             {canWriteEvents && <SelectionToolbar hub={hub} />}
-            <EventTable caption="Production events" query={query} selection={selection} onCode={canWriteEvents ? openCode : undefined} />
+            <EventTable
+              caption="Production events"
+              query={query}
+              selection={selection}
+              onCode={canWriteEvents ? openCode : undefined}
+              sort={sort}
+              empty={isToCodeFilters(filters) ? TO_CODE_EMPTY : undefined}
+            />
           </div>
           <CurrentStopsPanel unitIds={filters.unitIds} onClose={(event) => hub.openDialog({ kind: 'close', event })} onCode={openCode} />
         </div>
-        <EventListDialogs
-          dialog={hub.dialog}
-          selectedEvents={hub.selectedEvents}
-          onClose={hub.closeDialog}
-          onSettled={hub.clearSelection}
-          selection={selectionQuery(filters)}
-          onOpen={hub.openDialog}
-        />
+        <HubDialogs hub={hub} />
       </div>
     </Page>
+  );
+}
+
+function HubDialogs({ hub }: { hub: EventHubState }) {
+  return (
+    <EventListDialogs
+      dialog={hub.dialog}
+      selectedEvents={hub.selectedEvents}
+      onClose={hub.closeDialog}
+      onSettled={hub.clearSelection}
+      onEventChanged={hub.deselect}
+      selection={selectionQuery(hub.filters)}
+      onOpen={hub.openDialog}
+    />
   );
 }
 

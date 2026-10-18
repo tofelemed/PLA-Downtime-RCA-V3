@@ -9,18 +9,29 @@ import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { useRcaFormat } from '../use-rca-format';
 import { buildCreateBody, emptyCaseForm, type RcaCaseForm } from '../model/rca-form';
+import { readStartRca, type StartRcaContext } from '../model/start-rca';
 import { EventCaseSection } from './event-case-section';
 import { NewCaseFields } from './new-case-form';
+import { LossLineFollowUpError } from './loss-line-follow-up-error';
+import { useLossLineFollowUp } from './use-loss-line-follow-up';
 
-function StandaloneCase() {
+const prefilledForm = (start: StartRcaContext): RcaCaseForm => ({
+  ...emptyCaseForm(start.unitId ?? null),
+  title: start.title ?? '',
+  description: start.description ?? '',
+});
+
+function StandaloneCase({ start }: { start: StartRcaContext }) {
   const navigate = useNavigate();
   const create = useCreateRcaCase();
+  const followUp = useLossLineFollowUp(start.lossLineId);
   const { timezone } = useRcaFormat();
-  const [form, setForm] = useState<RcaCaseForm>(() => emptyCaseForm(null));
+  const [form, setForm] = useState<RcaCaseForm>(() => prefilledForm(start));
   const submit = async () => {
     const created = await create.submit(buildCreateBody(form, timezone)).catch(() => null);
-    if (created) navigate(`/rca/${created.id}`, { replace: true });
+    if (created) await followUp.finish(created.id);
   };
+  const busy = create.isPending || followUp.isPending || followUp.unlinkedCaseId !== null;
   return (
     <Section title="Investigation">
       <form
@@ -32,9 +43,10 @@ function StandaloneCase() {
       >
         <NewCaseFields form={form} onChange={(patch) => setForm((current) => ({ ...current, ...patch }))} />
         {create.error ? <FriendlyErrorAlert error={create.error} /> : null}
+        <LossLineFollowUpError error={followUp.error} caseId={followUp.unlinkedCaseId} />
         <div className="flex gap-2">
-          <Button type="submit" disabled={form.title.trim() === '' || create.isPending} data-testid="create-case">
-            Create case
+          <Button type="submit" disabled={form.title.trim() === '' || busy} data-testid="create-case">
+            {start.lossLineId ? 'Create investigation and link the loss line' : 'Create investigation'}
           </Button>
           <Button type="button" variant="outline" onClick={() => navigate('/rca')}>
             Cancel
@@ -45,29 +57,37 @@ function StandaloneCase() {
   );
 }
 
+const DESCRIPTIONS = {
+  event: 'Add the event to an existing investigation or open a new one. The link stores the evidence package; it never codes the event or changes its loss.',
+  lossLine: 'The new investigation is linked to the loss line, with its approved impact in the evidence package.',
+  standalone: 'The investigation starts as Draft. Link events, approved loss lines or work orders from it afterwards.',
+};
+
 /**
- * `/rca/new` (`?eventId=` from the Event Hub): opens a case, or — for an event — links it to an existing
- * case or a new one with the event's evidence package. Starts as Draft; the event's RCA state becomes linked.
+ * `/rca/new`: opens a case. `?eventId=` (Event Hub, loss lines with a cause event) links the event to an
+ * existing case or a new one with its evidence package; `?lossLineId=` also links that loss line; the
+ * Pareto and bad-actor actions prefill `title`, `description` and `unitId`. Starts as Draft.
  */
 export function NewCasePage() {
   const tenantId = useV2TenantId();
   const { canWriteRca } = useCapabilities();
   const [params] = useSearchParams();
-  const eventId = params.get('eventId');
-  if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to open an RCA case." />;
-  if (!canWriteRca) return <DataState state="no-permission" detail="Only reliability engineers and manager approvers open RCA cases." />;
+  const start = readStartRca(params);
+  const eventId = start.eventId;
+  if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to open an investigation." />;
+  if (!canWriteRca) return <DataState state="no-permission" detail="Only reliability engineers and manager approvers open investigations." />;
   return (
     <Page>
       <PageHeader
-        title={eventId ? 'Investigate an event' : 'New RCA case'}
-        description={
-          eventId
-            ? 'Add the event to an existing case or open a new one. The link stores the evidence package; it never codes the event or changes its loss.'
-            : 'The case starts as Draft. Link events, approved loss lines or work orders from the case afterwards.'
-        }
-        back={{ to: '/rca', label: 'RCA cases' }}
+        title={eventId ? 'Investigate an event' : 'New investigation'}
+        description={eventId ? DESCRIPTIONS.event : start.lossLineId ? DESCRIPTIONS.lossLine : DESCRIPTIONS.standalone}
+        back={eventId ? { to: `/events/${encodeURIComponent(eventId)}`, label: 'Back to the stop' } : { to: '/rca', label: 'Investigations' }}
       />
-      {eventId ? <EventCaseSection eventId={eventId} /> : <StandaloneCase />}
+      {eventId ? (
+        <EventCaseSection eventId={eventId} initialMode={params.get('mode') === 'existing' ? 'existing' : 'new'} lossLineId={start.lossLineId} />
+      ) : (
+        <StandaloneCase start={start} />
+      )}
     </Page>
   );
 }

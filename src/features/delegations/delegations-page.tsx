@@ -10,6 +10,7 @@ import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DataState } from '@/features/ux-kit/data-state';
+import { resolvedActorText } from '@/features/ux-kit/labels/actor-labels';
 import { roleLabel } from '@/features/ux-kit/labels/role-labels';
 import { SectionPage } from '@/features/admin/shared/section-page';
 import { PlantTime } from '@/features/ux-kit/plant-time';
@@ -50,8 +51,8 @@ function RevokeButton({ delegation }: { delegation: RoleDelegationView }) {
 function columns(timezone: string, mayRevoke: (d: RoleDelegationView) => boolean): DataTableColumn<RoleDelegationView>[] {
   return [
     { id: 'role', header: 'Role', cell: (d) => roleLabel(d.role) },
-    { id: 'from', header: 'Hands over', cell: (d) => d.delegatorName ?? 'Unknown user' },
-    { id: 'to', header: 'Delegate', cell: (d) => d.delegateName ?? 'Unknown user' },
+    { id: 'from', header: 'Hands over', cell: (d) => resolvedActorText(d.delegatorId, d.delegatorName) },
+    { id: 'to', header: 'Delegate', cell: (d) => resolvedActorText(d.delegateId, d.delegateName) },
     { id: 'scope', header: 'Where', cell: (d) => SCOPE_LABELS[d.scopeKind] },
     {
       id: 'when',

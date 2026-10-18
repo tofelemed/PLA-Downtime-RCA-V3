@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from 'react';
+import { hasUnsavedChanges, useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { useGrantableRoles } from '@/api/v2/queries/administration-users';
 import { usePlantOptions } from '@/api/v2/queries/administration-config';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ export function UserDetailsForm({ mode, initial, choosePlant, readOnly = false, 
   const [errors, setErrors] = useState<UserFormErrors>({});
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<UserFormValues>) => setValues((current) => ({ ...current, ...patch }));
+  useUnsavedChangesGuard(hasUnsavedChanges(values, initial, [readOnly, busy]));
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();

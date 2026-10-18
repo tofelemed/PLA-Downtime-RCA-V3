@@ -1,7 +1,11 @@
 import { ProductionEvent } from '../../production-event/production-event.entity';
 
 /** SME D8: severity of a failure finding; `critical` and `degraded` are functional failures (MTBF). */
-export const FAILURE_SEVERITIES = ['critical', 'degraded', 'incipient'] as const;
+export const FAILURE_SEVERITIES = [
+  'critical',
+  'degraded',
+  'incipient',
+] as const;
 
 export interface FailureDetailBody {
   failureMode?: string | null;

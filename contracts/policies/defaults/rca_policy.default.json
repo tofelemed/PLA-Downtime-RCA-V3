@@ -43,7 +43,8 @@
       "reviewDays": 90,
       "zeroRepeatClasses": [
         "major"
-      ]
+      ],
+      "minimumCoverage": 0.95
     },
     "fmea": {
       "method": "rpn",

@@ -60,4 +60,39 @@ describe('RCA SuperAdmin independence exception', () => {
       }),
     ).toThrow();
   });
+
+  it('owner 18 Oct (maker-checker): a named verifier alone marks the action done, SuperAdmin excepted', () => {
+    const named = () =>
+      Object.assign(new RcaAction(), {
+        status: 'done',
+        ownerId: 'owner',
+        verifierId: 'verifier',
+        actionType: 'repair',
+        completionEvidenceRef: 'WO-123 acceptance test',
+      });
+    const by = (actorId: string, isSuperAdmin = false) => ({
+      actorId,
+      completedAt: null,
+      now: new Date('2026-10-18T00:00:00Z'),
+      isSuperAdmin,
+    });
+    const other = named();
+    let refused: unknown = null;
+    try {
+      applyCompletion({ status: 'open' }, other, by('engineer'));
+    } catch (error: unknown) {
+      refused = error;
+    }
+    expect(refused).toBeInstanceOf(ForbiddenException);
+    expect((refused as ForbiddenException).getResponse()).toMatchObject({
+      code: 'NOT_THE_VERIFIER',
+    });
+    expect(other.completionVerifiedBy).toBeUndefined();
+    const verified = named();
+    applyCompletion({ status: 'open' }, verified, by('verifier'));
+    expect(verified.completionVerifiedBy).toBe('verifier');
+    const admin = named();
+    applyCompletion({ status: 'open' }, admin, by('admin', true));
+    expect(admin.completionVerifiedBy).toBe('admin');
+  });
 });

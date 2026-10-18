@@ -1,5 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Column, Index, ManyToOne, JoinColumn, VersionColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Column,
+  Index,
+  ManyToOne,
+  JoinColumn,
+  VersionColumn,
+} from 'typeorm';
 import { Tenant } from '../../tenant/tenant.entity';
 import { RCA } from '../../rca/rca.entity';
 
@@ -33,7 +43,12 @@ export class RcaFaultTreeAnalysis {
   tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @ApiProperty({ description: 'Associated RCA ID' })
@@ -53,9 +68,11 @@ export class RcaFaultTreeAnalysis {
   @Column({ name: 'nodes', type: 'simple-json' })
   nodes: Record<string, any>[];
 
-  @ApiProperty({ description: 'Minimum cut sets', required: false, type: 'array' })
+  @ApiProperty({
+    description: 'Minimum cut sets',
+    required: false,
+    type: 'array',
+  })
   @Column({ name: 'minimum_cut_sets', type: 'simple-json', nullable: true })
   minimumCutSets?: string[][];
 }
-
-

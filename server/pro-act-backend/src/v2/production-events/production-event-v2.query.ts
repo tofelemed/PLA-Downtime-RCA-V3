@@ -2,14 +2,15 @@ import { SelectQueryBuilder } from 'typeorm';
 import { applyIsOpenFilter } from '../../common/query/open-event-filter';
 import { applyOverlapWindow } from '../../common/query/overlap-window';
 import { ProductionEvent } from '../../production-event/production-event.entity';
-import { CursorCodec, invalidCursor } from '../common/cursor-codec';
 import { SortSpec } from '../common/sort-spec';
 import { applyPossibleDuplicateFilter } from './possible-duplicate-filter';
 import { applyPossibleRepeatFilter } from './possible-repeat-filter';
 import {
   ProductionEventListQueryDto,
   ProductionEventSortField,
+  VerificationState,
 } from './production-event-list-query.dto';
+import { applyEventKeyset, sortKeyOf } from './production-event-sort';
 
 type ArrayFilter = Extract<
   keyof ProductionEventListQueryDto,
@@ -60,6 +61,7 @@ export function applyProductionEventV2Filters(
   qb: SelectQueryBuilder<ProductionEvent>,
   query: ProductionEventFilters,
   alias = 'event',
+  asOf: Date = new Date(),
 ): SelectQueryBuilder<ProductionEvent> {
   for (const [param, property] of ARRAY_FILTERS) {
     const values = query[param];
@@ -78,6 +80,8 @@ export function applyProductionEventV2Filters(
   applyIsOpenFilter(qb, query.isOpen, alias);
   applyPossibleDuplicateFilter(qb, query.possibleDuplicate, alias);
   applyPossibleRepeatFilter(qb, query, alias);
+  applyMinDurationFilter(qb, query.minDurationSeconds, { alias, asOf });
+  applyVerificationFilter(qb, query.verificationStates, alias);
   if (query.q) {
     qb.andWhere(
       `(${alias}.description ILIKE :textQuery OR ${alias}.eventId ILIKE :textQuery)`,
@@ -87,30 +91,48 @@ export function applyProductionEventV2Filters(
   return qb;
 }
 
-/**
- * Keyset condition for `ORDER BY <sort> <dir>, id <dir>`: rows strictly after the cursor position, as a
- * row comparison so an index on `(…, sort, id)` bounds the scan (DB-06). Never OFFSET (API01): inserting
- * or deleting rows elsewhere cannot shift the page boundary.
- */
+/** Keyset condition of the list for its sort (see `applyEventKeyset`). */
 export function applyKeysetCursor(
   qb: SelectQueryBuilder<ProductionEvent>,
   cursor: string | undefined,
   sort: SortSpec<ProductionEventSortField>,
   alias = 'event',
 ): SelectQueryBuilder<ProductionEvent> {
-  if (!cursor) {
-    return qb;
-  }
-  const { sortValue, id } = CursorCodec.decode(cursor);
-  const boundary = sortValue === null ? new Date(NaN) : new Date(sortValue);
-  if (Number.isNaN(boundary.getTime())) {
-    throw invalidCursor();
-  }
-  const operator = sort.direction === 'DESC' ? '<' : '>';
-  const column = `${alias}.${sort.field}`;
-  qb.andWhere(`(${column}, ${alias}.id) ${operator} (:cursorSort, :cursorId)`, {
-    cursorSort: boundary,
-    cursorId: id,
-  });
-  return qb;
+  return applyEventKeyset(qb, cursor, sort, alias);
+}
+
+/**
+ * UX E-1 `minDurationSeconds`: closed events by their stored `end − start`, events without an end by the
+ * time elapsed until `asOf` (the `elapsedSeconds` the response shows), written as a start bound.
+ */
+export function applyMinDurationFilter(
+  qb: SelectQueryBuilder<ProductionEvent>,
+  minDurationSeconds: number | undefined,
+  input: { alias: string; asOf: Date },
+): SelectQueryBuilder<ProductionEvent> {
+  if (minDurationSeconds === undefined) return qb;
+  const { alias, asOf } = input;
+  // closed branch on the duration sort key (IDX_production_events_tenant_duration), open branch on the start
+  const key = sortKeyOf('durationSeconds', alias);
+  return qb.andWhere(
+    `((${alias}.endTime IS NOT NULL AND ${key} >= :minDurationSeconds) OR ` +
+      `(${alias}.endTime IS NULL AND ${alias}.startTime <= :openStartedBy))`,
+    {
+      minDurationSeconds,
+      openStartedBy: new Date(asOf.getTime() - minDurationSeconds * 1000),
+    },
+  );
+}
+
+/** UX E-7: verified = `verified_at` set (SME D13 supervisor verification); both values = no filter. */
+export function applyVerificationFilter(
+  qb: SelectQueryBuilder<ProductionEvent>,
+  states: readonly VerificationState[] | undefined,
+  alias: string,
+): SelectQueryBuilder<ProductionEvent> {
+  const wanted = new Set(states ?? []);
+  if (wanted.size !== 1) return qb;
+  return wanted.has('verified')
+    ? qb.andWhere(`${alias}.verifiedAt IS NOT NULL`)
+    : qb.andWhere(`${alias}.verifiedAt IS NULL`);
 }

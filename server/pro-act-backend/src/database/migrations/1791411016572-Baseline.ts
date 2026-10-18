@@ -1,560 +1,1491 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class Baseline1791411016572 implements MigrationInterface {
-    name = 'Baseline1791411016572'
+  name = 'Baseline1791411016572';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // uuid_generate_v4() defaults below need the extension; it is left in place by down().
-        await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
-        await queryRunner.query(`CREATE TABLE "users" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "email" character varying(255) NOT NULL, "password_hash" character varying(255) NOT NULL, "role" character varying(50) NOT NULL, "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_97672ac88f789774dd47f7c8be3" UNIQUE ("email"), CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "unmapped_events" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "tenant_id" character varying(36), "organization_id" character varying(36), "unit_id" character varying(36), "event_name" character varying(255), "event_type" character varying(100), "start_time" TIMESTAMP WITH TIME ZONE, "end_time" TIMESTAMP WITH TIME ZONE, "source_system" character varying(100), "source_id" character varying(255), "event_data" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_c2cb177b4d33a513e5171fa5749" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "verification_status_codes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_547ed4b92d53d98e137c8e20c91" UNIQUE ("code"), CONSTRAINT "PK_5cae70cab49bac4d6f1e8f46e2e" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "units" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "capacity" numeric(15,4), "unit_of_measure" character varying(50), "ideal_cycle_time" numeric(10,2), "tenant_id" uuid NOT NULL, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_47635c1ab22d02fc3ebae3608b8" UNIQUE ("code"), CONSTRAINT "PK_5a8f2f064919b587d93936cb223" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "tenants" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "organization_id" uuid NOT NULL, "is_active" boolean NOT NULL DEFAULT true, "address" character varying(500), "contact_person" character varying(255), "contact_email" character varying(255), "contact_phone" character varying(50), "timezone" character varying(100), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_3021c18db2b363ae9324c826c5a" UNIQUE ("code"), CONSTRAINT "PK_53be67a04681c66b87ee27c9321" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "tasks" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "title" character varying(255) NOT NULL, "description" text, "assigned_to" character varying(36) NOT NULL, "assigned_by" character varying(36) NOT NULL, "priority" character varying(50) NOT NULL, "status" character varying(50) NOT NULL, "due_date" TIMESTAMP WITH TIME ZONE, "completed_date" TIMESTAMP WITH TIME ZONE, "entity_type" character varying(100), "entity_id" character varying(36), "organization_id" character varying(36) NOT NULL, "tenant_id" character varying(36) NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_8d12ff38fcc62aaba2cab748772" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "production_plans" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "plan_name" character varying(255) NOT NULL, "unit_id" character varying(36) NOT NULL, "product_id" character varying(36), "tenant_id" character varying(36), "organization_id" character varying(36), "start_date" TIMESTAMP WITH TIME ZONE NOT NULL, "end_date" TIMESTAMP WITH TIME ZONE NOT NULL, "target_quantity" numeric(15,4), "actual_quantity" numeric(15,4), "status" character varying(50), "tolerance_limit" numeric(15,4), "plan_basis" character varying(255), "useful_production_time" text, "recurrence" character varying(100), "data_entry_frequency" character varying(100), "shift" character varying(50), "crew" character varying(100), "planner_notes" text, "comments" text, "approval_status" character varying(50), "submitted_by" character varying(36), "submitted_at" TIMESTAMP WITH TIME ZONE, "reviewed_by" character varying(36), "reviewed_at" TIMESTAMP WITH TIME ZONE, "approved_by" character varying(36), "approved_at" TIMESTAMP WITH TIME ZONE, "rejection_reason" text, "custom_attributes" text, "audit_trail" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_171d3990efc1882102b85f3b71e" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "production_losses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "plan_id" uuid NOT NULL, "period" character varying(50), "actual" numeric(15,4), "short_range_plan" numeric(15,4), "losses" numeric(15,4), "unaccounted_loss" numeric(15,4), "action" character varying(50), "loss_type" character varying(100), "loss_category" character varying(100), "quantity" numeric(15,4), "cost" numeric(15,2), "description" text, "tenant_id" uuid NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_bab3174baa416b40eaa88acf8cf" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "reconcile_forms" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "lossId" uuid NOT NULL, "totalLossAmount" double precision NOT NULL, "categorizedLossAmount" double precision NOT NULL, "unaccountedLossAmount" double precision NOT NULL, "productionEvent" character varying(255) NOT NULL, "comment" text NOT NULL, "status" character varying(50) NOT NULL, "categories" text NOT NULL, "tenantId" uuid NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_c089521661142a1cd1b1b54a7b6" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "rca_trigger_configs" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "name" character varying(255) NOT NULL, "description" text, "rules" text, "global_settings" text, "is_active" boolean NOT NULL DEFAULT true, "auto_create_rca" boolean NOT NULL DEFAULT false, "trigger_type" character varying(100), "legacy_conditions" text, CONSTRAINT "PK_cb345a4a138fe548514c518809b" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_6d3a73b904484a86a6f7fa706d" ON "rca_trigger_configs" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_1a68e66eb10626fe366c03494b" ON "rca_trigger_configs" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_632e962cb6b605ccb5a7d42ebf" ON "rca_trigger_configs" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "roles" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(100) NOT NULL, "description" text, "permissions" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_648e3f5447f725579d7d4ffdfb7" UNIQUE ("name"), CONSTRAINT "PK_c1433d71a4838793a49dcad46ab" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "rca_cause_codes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "category" character varying(100), "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_dd288509552d6a52b39bdff81f1" UNIQUE ("code"), CONSTRAINT "PK_7469109ba189e280ad139ebed8c" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "assets" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(50) NOT NULL, "name" character varying(255) NOT NULL, "unit_id" character varying(36) NOT NULL, "description" text, "asset_type" character varying(50), "manufacturer" character varying(255), "model" character varying(255), "serial_number" character varying(255), "criticality" character varying(50), "status" character varying(50), "location" character varying(255), "installation_date" TIMESTAMP WITH TIME ZONE, "last_maintenance_date" TIMESTAMP WITH TIME ZONE, "next_maintenance_date" TIMESTAMP WITH TIME ZONE, "tenant_id" character varying(36), "organization_id" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_da96729a8b113377cfb6a62439c" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "impact_codes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "category" character varying(50), "cost_per_unit" numeric(15,4), "cost_per_hour" numeric(15,4), "cost_basis" character varying(20), "severity" character varying(50), "color" character varying(7), "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_83aeac110d18f6080f118f6b597" UNIQUE ("code"), CONSTRAINT "PK_dac4bfca776b3ccf9c5698a5c25" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "oee_codes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "category" character varying(100), "impact_type" character varying(50), "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_d8ba3be5670be09142d190594a1" UNIQUE ("code"), CONSTRAINT "PK_536c1d9ccef5ff5c263b4846e25" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "reason_codes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(50) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "category" character varying(100), "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_10a9f60ddba7bc9f6396a38eaae" UNIQUE ("code"), CONSTRAINT "PK_64e9bc3e20d2e61416a5134650f" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "production_events" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "event_id" character varying(255), "plan_id" uuid, "unit_id" uuid NOT NULL, "asset_id" uuid, "impact_code_id" uuid, "oee_code_id" uuid, "description" text, "start_time" TIMESTAMP WITH TIME ZONE NOT NULL, "end_time" TIMESTAMP WITH TIME ZONE, "source" character varying(50), "quantity" numeric(10,2), "cost" numeric(10,2), "status" character varying(50), "rca_id" uuid, "event_type" character varying(50), "parameter" character varying(255), "value" numeric(15,4), "limit_value" numeric(10,2), "limit_type" character varying(10), "breach_duration" integer, "sol_type" character varying(50), "apm_type" character varying(100), "severity" character varying(50), "recommended_action" text, "work_order_id" character varying(255), "failure_mode" character varying(255), "defective_quantity" numeric(10,2), "shift" character varying(50), "crew" character varying(100), "audit_trail" text, "loss_category" character varying(100), "operator_name" character varying(255), "reason_code_id" uuid, "duration" numeric(10,2), "tenant_id" character varying(36), "organization_id" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_b60ec956f8e608ebfbffe05d093" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "rca_templates" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "template_name" character varying(255) NOT NULL, "description" text, "template_type" character varying(100), "template_data" text, "is_active" boolean NOT NULL DEFAULT true, "organization_id" uuid NOT NULL, "tenant_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_61a07aeb26e387f734cd18e5967" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "rcas" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "event_id" uuid, "title" character varying(255) NOT NULL, "description" text, "status" character varying(50), "team_lead_id" uuid, "team_members" text, "priority" character varying(50), "target_completion_date" TIMESTAMP WITH TIME ZONE, "actual_completion_date" TIMESTAMP WITH TIME ZONE, "root_cause" text, "recommendations" text, "logic_tree" text, "evidence" text, "template_id" uuid, "team_charter" text, "event_diagram" text, "pre_failure_rate" numeric(5,2), "post_failure_rate" numeric(5,2), "failure_cost_per_incident" numeric(10,2), "implementation_cost" numeric(10,2), "time_to_resolution" numeric(10,2), "time_to_implementation" numeric(10,2), "effectiveness_score" numeric(5,2), "last_updated" TIMESTAMP WITH TIME ZONE, "tracking_notes" text, "phase_timeline" text, "calculated_roi" numeric(10,2), "cost_savings" numeric(10,2), "downtime_reduction" numeric(5,2), "productivity_improvement" numeric(5,2), "tenant_id" character varying(36), "organization_id" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_9bdfb12ad025954407386c84352" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "rca_recommendations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "rcaId" uuid NOT NULL, "title" character varying(255) NOT NULL, "description" text NOT NULL, "priority" character varying(50) NOT NULL, "assigneeId" uuid NOT NULL, "dueDate" TIMESTAMP WITH TIME ZONE, "status" character varying(50) NOT NULL, "cmmsWorkOrderId" character varying(255), "estimatedCost" double precision, "actualCost" double precision, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_8c1d396d67af15542f450e31374" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "rca_evidence" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "rcaId" uuid NOT NULL, "title" character varying(255) NOT NULL, "description" text NOT NULL, "type" character varying(50) NOT NULL, "fileName" character varying(255), "filePath" character varying(255), "collectedBy" character varying(255) NOT NULL, "collectedAt" TIMESTAMP WITH TIME ZONE NOT NULL, "nodeIds" text, "fileBlob" bytea, "category" character varying(100), "location" character varying(100), "timestamp" TIMESTAMP WITH TIME ZONE, "relatedAssetId" uuid, "severity" character varying(50), "tags" text, "verified" boolean, "fiveP" character varying(50), "task" character varying(255), "dueDate" TIMESTAMP WITH TIME ZONE, "status" character varying(50), "attachments" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_bc9a78f7c9fa546369e2ebef50c" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "rca_knowledge_base" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "title" character varying(255) NOT NULL, "description" text, "problem_statement" text, "event_type" character varying(100), "unit_id" character varying(36), "unit_name" character varying(255), "asset_id" character varying(36), "asset_name" character varying(255), "equipment_category" character varying(150), "category" character varying(100), "symptoms" text, "impact_codes" text, "oee_codes" text, "root_cause" text, "root_cause_category" character varying(150), "contributing_factors" text, "recommendations" text, "recurrence_count" integer NOT NULL DEFAULT '0', "effectiveness" double precision NOT NULL DEFAULT '0', "cost_saved" double precision, "downtime_reduced" double precision, "keywords" text, "tags" text, "content" text, "related_rcas" text, "author" character varying(36), "is_published" boolean NOT NULL DEFAULT false, "times_referenced" integer NOT NULL DEFAULT '0', "helpful_votes" integer NOT NULL DEFAULT '0', "closed_date" character varying(50), CONSTRAINT "PK_c971545b619ef871835d0f6e352" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_c5074ce654cea7bb387994f253" ON "rca_knowledge_base" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_ada1a4a28cc8c8a6d4faddb64f" ON "rca_knowledge_base" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_52477a3c4a6cb7e34a8a27b8cb" ON "rca_knowledge_base" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "rca_analysis_configs" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "analysis_type" character varying(100), "config_name" character varying(255), "is_default" boolean NOT NULL DEFAULT true, "config_data" text, CONSTRAINT "PK_00f0a11efecffc9cdb6dbec7416" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_d2d97aadc174ec0d0c62488dc2" ON "rca_analysis_configs" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_b096d83c9704cbbc387fe6c803" ON "rca_analysis_configs" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_47db4c22f1a45dd6d8503df8dc" ON "rca_analysis_configs" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "production_plan_templates" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" text, "template_data" text, "is_active" boolean NOT NULL DEFAULT true, "tenant_id" character varying(36), "organization_id" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_affeac036100de4e94f08646cf0" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "products" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "code" character varying(50) NOT NULL, "uom" character varying(50), "description" text, "standard_rate" numeric(15,4), "tenant_id" character varying(36), "organization_id" character varying(36), "unit_id" character varying(36), "is_active" boolean NOT NULL DEFAULT true, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_7cfc24d6c24f0ec91294003d6b8" UNIQUE ("code"), CONSTRAINT "PK_0806c755e0aca124e67c0cf6d7d" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "pi_sync_jobs" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "job_name" character varying(255), "job_type" character varying(100), "schedule" character varying(255), "last_run_time" TIMESTAMP WITH TIME ZONE, "next_run_time" TIMESTAMP WITH TIME ZONE, "status" character varying(50), "error_message" text, "job_config" text, "is_active" boolean NOT NULL DEFAULT true, CONSTRAINT "PK_f851c487ed5d4feda4b0e8935fe" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_bb56578ccb47df6ef52551b1ad" ON "pi_sync_jobs" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_41870904cacc3982b156128bb6" ON "pi_sync_jobs" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_03bc03f60cf3ead27d2290f93c" ON "pi_sync_jobs" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "pi_sync_watermarks" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "sync_type" character varying(100), "last_sync_timestamp" TIMESTAMP WITH TIME ZONE, "last_sync_marker" character varying(255), "sync_status" character varying(50), CONSTRAINT "PK_8265039f1043d909c7e2b99875f" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_7c1ca69fdcb693137f615eafab" ON "pi_sync_watermarks" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_3b38ccc53896cd40077d5c23be" ON "pi_sync_watermarks" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_68e74a0ab6e2aa327b5c0fe677" ON "pi_sync_watermarks" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "pi_events" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "web_id" character varying(255), "name" character varying(255), "template" character varying(255), "primary_af_id" character varying(255), "start_utc" TIMESTAMP WITH TIME ZONE, "end_utc" TIMESTAMP WITH TIME ZONE, "acknowledged" boolean NOT NULL DEFAULT false, "event_data" text, CONSTRAINT "PK_02cefa18eaf1664541667e3e0da" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_1ca559a671f86ff006f1aba6f9" ON "pi_events" ("start_utc") `);
-        await queryRunner.query(`CREATE INDEX "IDX_faf6bc79e85331733cd0d567b4" ON "pi_events" ("primary_af_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_928802dbf538f07a75f2c3ba48" ON "pi_events" ("template") `);
-        await queryRunner.query(`CREATE INDEX "IDX_d8eac7c75d2762a9c33f2b8617" ON "pi_events" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_366bf98ce45a78fc04c5d2be12" ON "pi_events" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_243a82722abeb72cbadcddd7ff" ON "pi_events" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "pi_mappings" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "source_type" character varying(100), "source_id" character varying(255), "target_type" character varying(100), "target_id" character varying(36), "mapping_rules" text, "is_active" boolean NOT NULL DEFAULT true, CONSTRAINT "PK_47985c609cdcbe0c5c483b036e0" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_ee8876d8d96b2ec9e7356b5933" ON "pi_mappings" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_a15f110084e26bf1a96caef2bd" ON "pi_mappings" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_7fa81bd4264b9df8d18f9d26f0" ON "pi_mappings" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "pi_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "connection_name" character varying(255) NOT NULL, "pi_web_api_url" character varying(500) NOT NULL, "username" character varying(255), "password_encrypted" text, "af_database_path" character varying(500), "connection_config" text, "is_active" boolean NOT NULL DEFAULT true, "last_sync_time" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_40888c881beaf673504c899a8d5" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_560a5a557df886c4a8a15d840e" ON "pi_connections" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_0a60561d49d2defb80153b5a3c" ON "pi_connections" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_dc14cf1cea5a5b8eb72f6d95b3" ON "pi_connections" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "pi_af_elements" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "web_id" character varying(255), "name" character varying(255), "description" text, "path" character varying(1000), "template" character varying(255), "categories" text, "parent_id" character varying(36), "hierarchy_level" integer, "last_seen_at" TIMESTAMP WITH TIME ZONE, "has_children" boolean NOT NULL DEFAULT false, "metadata" text, CONSTRAINT "UQ_583df9e4a4a26098718f37c8e6f" UNIQUE ("web_id"), CONSTRAINT "PK_4949d4548f2e7e4cfed8ba7a03b" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_583df9e4a4a26098718f37c8e6" ON "pi_af_elements" ("web_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_e6313f2722a8d39dd852218507" ON "pi_af_elements" ("template") `);
-        await queryRunner.query(`CREATE INDEX "IDX_dcac91bdb09d8fd2aa4ef1ca10" ON "pi_af_elements" ("parent_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_297cd1f53bb77990c39dc04c4a" ON "pi_af_elements" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_278ac79c0bba2b29cca67c4352" ON "pi_af_elements" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_a067299e14d010580eebfb86cb" ON "pi_af_elements" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "organizations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "is_active" boolean NOT NULL DEFAULT true, "address" character varying(500), "contact_email" character varying(255), "contact_phone" character varying(50), "tenant_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_7e27c3b62c681fbe3e2322535f2" UNIQUE ("code"), CONSTRAINT "PK_6b031fcd0863e3f6b44230163f9" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "oee_summaries" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "plan_id" uuid NOT NULL, "availability" numeric(5,2), "performance" numeric(5,2), "quality" numeric(5,2), "oee" numeric(5,2), "period" character varying(50), "planned_production_time" numeric(10,2), "actual_production_time" numeric(10,2), "downtime" numeric(10,2), "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_da8ccd227a8d771ae634d198e31" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "query_history" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "attributes" text NOT NULL, "query_params" text NOT NULL, "result_count" integer NOT NULL, "tenant_id" character varying(36) NOT NULL, CONSTRAINT "PK_d14e08569f855cccc762004f7d1" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_459e5caad164d68ba08510f128" ON "query_history" ("timestamp") `);
-        await queryRunner.query(`CREATE INDEX "IDX_8662ec50511259be3076f9c81a" ON "query_history" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "historian_tags" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "web_id" character varying(255), "tag_name" character varying(255) NOT NULL, "tag_path" character varying(1000), "description" text, "category" character varying(100), "unit_of_measure" character varying(50), "data_type" character varying(50), "update_interval" integer, "warning_threshold" double precision, "alarm_threshold" double precision, "enabled" boolean NOT NULL DEFAULT true, "config" text, CONSTRAINT "PK_75ec1f39b7eeb6052daa8f6a6d6" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_6ed7925463b87855c10381624f" ON "historian_tags" ("enabled") `);
-        await queryRunner.query(`CREATE INDEX "IDX_fbba362107909d51dd06f54617" ON "historian_tags" ("category") `);
-        await queryRunner.query(`CREATE INDEX "IDX_b5af1a62e3f1afa08dd2d359f1" ON "historian_tags" ("web_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_e09ac90c0669bb7e638c0bfa2a" ON "historian_tags" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_09df7426df1326499f89b39491" ON "historian_tags" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_8d77df8595e77a6d7f866b406c" ON "historian_tags" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "five_why_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "problem_statement" text, "why_levels" text, "root_cause" text, CONSTRAINT "PK_12693e215a2bafc07aa6d9793fe" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_b3c45d6e6a61c86943298a702e" ON "five_why_analyses" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_bbbc016f1489fd92ff413957b8" ON "five_why_analyses" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_c087539c265e0d2b1886cbbd38" ON "five_why_analyses" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_707919a300bbb088ba707dbe92" ON "five_why_analyses" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "loss_categories" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "reconcileFormId" uuid NOT NULL, "categoryName" character varying(255) NOT NULL, "lossAmount" double precision NOT NULL, "impactCodeId" uuid NOT NULL, "oeeCodeId" uuid NOT NULL, "description" text NOT NULL, "tenantId" uuid NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_2fa7cdd00a5efbd0c41d7806599" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "logic_tree_nodes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "rcaId" uuid NOT NULL, "parentId" uuid, "question" text NOT NULL, "answer" text, "type" character varying(50) NOT NULL, "verified" boolean NOT NULL DEFAULT false, "evidenceIds" text NOT NULL, "position" text NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_336064ed7879d9fa710c9c6c696" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "fmea_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "analysis_name" character varying(255), "failure_modes" text, CONSTRAINT "PK_0761fc32d03b229c64ddafbf52c" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_491a32514a4c2611323a3bc986" ON "fmea_analyses" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_af7b065900a91fd28781526e76" ON "fmea_analyses" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_45ecd1369d8e7754ddaf36fc1a" ON "fmea_analyses" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_fba9d32f43f51fc0b45c5a26a1" ON "fmea_analyses" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "fault_tree_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "top_event" text, "tree_data" text, CONSTRAINT "PK_7a4d3fb71d122fe590d0073b05a" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_537bc41b31a70177f34238e934" ON "fault_tree_analyses" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_d7d4b83e2c43370585421d6d65" ON "fault_tree_analyses" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_773a16f0da066ebd71b1accc1d" ON "fault_tree_analyses" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_9caeb54c670d4b0d80c7d470c1" ON "fault_tree_analyses" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "data_sources" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "source_name" character varying(255) NOT NULL, "type" character varying(100), "connection_string" text, "credentials_encrypted" text, "status" character varying(50), "enabled" boolean NOT NULL DEFAULT true, "last_sync_time" TIMESTAMP WITH TIME ZONE, "config" text, CONSTRAINT "PK_dc70b1c6b641726739857fd938d" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_f6dbc499812b60d690c5c3f359" ON "data_sources" ("enabled") `);
-        await queryRunner.query(`CREATE INDEX "IDX_c76edc1e50d935210c73ba27bb" ON "data_sources" ("status") `);
-        await queryRunner.query(`CREATE INDEX "IDX_aa258f6d6c837000eb837c8141" ON "data_sources" ("type") `);
-        await queryRunner.query(`CREATE INDEX "IDX_386fe3a14ca7ab15da185351e2" ON "data_sources" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_1eec9b8ac8a36e3150f35d401b" ON "data_sources" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_39dceb76a83f68b33494034bca" ON "data_sources" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "fishbone_diagrams" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "problem_statement" text, "categories" text, "causes" text, CONSTRAINT "PK_fe8614706c6d50d3130e1e86566" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_20ce2e2e0b18596ad41f8a9459" ON "fishbone_diagrams" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_f20600e078a6ba3b8efb928775" ON "fishbone_diagrams" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_d253e2f3d22fb390a12fc40b33" ON "fishbone_diagrams" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_d099cf8e70daabd3851892d9b8" ON "fishbone_diagrams" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "evidence_locations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "location_name" character varying(255) NOT NULL, "description" text, "tenant_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_45d3400a5784cab15ad44761689" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "evidence_categories" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "category_name" character varying(255) NOT NULL, "description" text, "tenant_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_9b65089011c8ec5f49e5ce6f1dd" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "custom_attribute_values" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "entity_id" character varying(36) NOT NULL, "entity_type" character varying(100) NOT NULL, "attribute_definition_id" character varying(36) NOT NULL, "value" text, CONSTRAINT "PK_03ad98b91a6e738144a780bde41" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_b15d66428823c8b8113f7c8a41" ON "custom_attribute_values" ("attribute_definition_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_cb5dd318884707fdb160842660" ON "custom_attribute_values" ("entity_type") `);
-        await queryRunner.query(`CREATE INDEX "IDX_a10a6ecb685dcadfb8196eb20c" ON "custom_attribute_values" ("entity_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_736faece0ea92fc5e8574115a7" ON "custom_attribute_values" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_feb3331b1d18cafdbf9e96f1f7" ON "custom_attribute_values" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_6c05f068f12c3d0f0e399670d7" ON "custom_attribute_values" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "dashboard_configurations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "dashboard_name" character varying(255) NOT NULL, "dashboard_type" character varying(100), "layout_config" text, "widget_config" text, "tenant_id" character varying(36), "organization_id" character varying(36), "is_default" boolean NOT NULL DEFAULT false, "is_public" boolean NOT NULL DEFAULT false, "created_by" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_82164825b0d6cca17ca2f8bf932" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "custom_attribute_definitions" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "entity_type" character varying(100) NOT NULL, "attribute_name" character varying(255) NOT NULL, "display_name" character varying(255), "description" text, "data_type" character varying(50), "is_required" boolean NOT NULL DEFAULT false, "default_value" text, "validation_rules" text, "select_options" text, "display_order" integer, "is_active" boolean NOT NULL DEFAULT true, "created_by" character varying(255), CONSTRAINT "PK_bc25a5e0aaca1b8bd0a8cf33e3c" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_3b6e486e49a2353c4456e72751" ON "custom_attribute_definitions" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_19d7cfd5c6d832f26e9cd6f959" ON "custom_attribute_definitions" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_a66f57e74944f56f8426399892" ON "custom_attribute_definitions" ("tenant_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_139c530dcddcd1c0f040f8a7e7" ON "custom_attribute_definitions" ("entity_type") `);
-        await queryRunner.query(`CREATE TABLE "barrier_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "hazard" text, "barriers" text, CONSTRAINT "PK_b0108ccb065c3b4212d2cbfd5e8" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_8d42a346e61169120ae97510fa" ON "barrier_analyses" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_c46a7ad67c0b78d6f92d381e6a" ON "barrier_analyses" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_1a96c779ad73d283135a62d6f9" ON "barrier_analyses" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_80e0ce436793d531e24612d267" ON "barrier_analyses" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "audit_logs" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "user_id" uuid NOT NULL, "action" character varying(100) NOT NULL, "entity_type" character varying(100) NOT NULL, "entity_id" character varying(36) NOT NULL, "details" text, "organization_id" character varying(36), "tenant_id" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, CONSTRAINT "PK_1bb179d048bbc581caa3b013439" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "change_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "change_description" text, "changes" text, CONSTRAINT "PK_e0eb89281f2308c934b0a6a0cd3" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_baf96330ad2e93bf54f0617689" ON "change_analyses" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_de6783dc8220ac36576a84c086" ON "change_analyses" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_d66335073f378c5e772e48d3f6" ON "change_analyses" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_ce8e4d371840bbeff8beda50c8" ON "change_analyses" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "af_bindings" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "web_id" character varying(255), "local_id" character varying(36), "bound_type" character varying(100), "mapping_config" text, "is_active" boolean NOT NULL DEFAULT true, CONSTRAINT "PK_3253600520c1b5087dd810f612b" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_90d257c2c4f58a6b01c7211c7c" ON "af_bindings" ("local_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_86d28b5a6cccf3bd81c0cbb327" ON "af_bindings" ("bound_type") `);
-        await queryRunner.query(`CREATE INDEX "IDX_268ab8531f11ebd5d619fc33ae" ON "af_bindings" ("web_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_6f2183f735a5b87eaf2f557f60" ON "af_bindings" ("created_at") `);
-        await queryRunner.query(`CREATE INDEX "IDX_92c1f2c75417c27d0b2559d012" ON "af_bindings" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_1463179e78a90d088ae8374743" ON "af_bindings" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "app_settings" ("key" character varying(255) NOT NULL, "value" text NOT NULL, CONSTRAINT "PK_975c2db59c65c05fd9c6b63a2ab" PRIMARY KEY ("key"))`);
-        await queryRunner.query(`CREATE TABLE "stream_alerts" ("id" character varying(120) NOT NULL, "type" character varying(50) NOT NULL, "message" text NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "source" character varying(255) NOT NULL, "severity" integer NOT NULL DEFAULT '0', "acknowledged" boolean NOT NULL DEFAULT false, "metadata" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_6d39fdeba26e1d4ae6339b6aa45" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_22776255c9e7c95b90d543eb70" ON "stream_alerts" ("timestamp") `);
-        await queryRunner.query(`CREATE INDEX "IDX_4c418bf452d0e118261bd0995f" ON "stream_alerts" ("acknowledged") `);
-        await queryRunner.query(`CREATE INDEX "IDX_d3d4d5b235928fe4605a45b48e" ON "stream_alerts" ("type") `);
-        await queryRunner.query(`CREATE INDEX "IDX_cf8b40fcf36b0fee6a2e81e833" ON "stream_alerts" ("organizationId") `);
-        await queryRunner.query(`CREATE INDEX "IDX_086a5ec69875c0c87463002f29" ON "stream_alerts" ("tenantId") `);
-        await queryRunner.query(`CREATE TABLE "stream_data_sinks" ("id" character varying(100) NOT NULL, "name" character varying(255) NOT NULL, "type" character varying(100) NOT NULL, "config" text, "enabled" boolean NOT NULL DEFAULT true, "lastWrite" TIMESTAMP WITH TIME ZONE, "writeCount" integer NOT NULL DEFAULT '0', "errorCount" integer NOT NULL DEFAULT '0', "metadata" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_ae62cc9c7ea75ba272b57e73578" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_aedbc5f7844f468f578dd9f4d8" ON "stream_data_sinks" ("enabled") `);
-        await queryRunner.query(`CREATE INDEX "IDX_119be1602e564fc35b68bc7539" ON "stream_data_sinks" ("type") `);
-        await queryRunner.query(`CREATE INDEX "IDX_dd618b11743f397901dd416a40" ON "stream_data_sinks" ("organizationId") `);
-        await queryRunner.query(`CREATE INDEX "IDX_d77f0ad25d88557fa83bf55c9d" ON "stream_data_sinks" ("tenantId") `);
-        await queryRunner.query(`CREATE TABLE "stream_metrics" ("id" character varying(120) NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "totalEvents" integer NOT NULL DEFAULT '0', "processedEvents" integer NOT NULL DEFAULT '0', "droppedEvents" integer NOT NULL DEFAULT '0', "averageLatency" double precision NOT NULL DEFAULT '0', "throughput" double precision NOT NULL DEFAULT '0', "activeSources" integer NOT NULL DEFAULT '0', "activeSinks" integer NOT NULL DEFAULT '0', "activeProcessors" integer NOT NULL DEFAULT '0', "errorRate" double precision NOT NULL DEFAULT '0', "dataQuality" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_9f692873e7aa367896f5a820b22" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_8468622057cdfce2c423fb73be" ON "stream_metrics" ("timestamp") `);
-        await queryRunner.query(`CREATE INDEX "IDX_aba1b638438bb1267e4b5f0381" ON "stream_metrics" ("organizationId") `);
-        await queryRunner.query(`CREATE INDEX "IDX_6edca99b81ac062b893c1f35ed" ON "stream_metrics" ("tenantId") `);
-        await queryRunner.query(`CREATE TABLE "stream_processors" ("id" character varying(100) NOT NULL, "name" character varying(255) NOT NULL, "type" character varying(100) NOT NULL, "config" text, "enabled" boolean NOT NULL DEFAULT true, "order" integer NOT NULL DEFAULT '0', "inputSchema" text, "outputSchema" text, "metadata" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_c1231e36e2c5b9d4cce3b910a26" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_2a256a9847af5aae8afc3f6d54" ON "stream_processors" ("order") `);
-        await queryRunner.query(`CREATE INDEX "IDX_6026665bcdb9cce25a1306d560" ON "stream_processors" ("enabled") `);
-        await queryRunner.query(`CREATE INDEX "IDX_ab4b1540c768e5c421adffe34e" ON "stream_processors" ("type") `);
-        await queryRunner.query(`CREATE INDEX "IDX_4aaa9ba241ad8f86ec4584159a" ON "stream_processors" ("organizationId") `);
-        await queryRunner.query(`CREATE INDEX "IDX_831fa8d64f8cf5c57a85208906" ON "stream_processors" ("tenantId") `);
-        await queryRunner.query(`CREATE TABLE "stream_connection_configs" ("id" character varying(120) NOT NULL, "name" character varying(255) NOT NULL, "type" character varying(100) NOT NULL, "config" text, "enabled" boolean NOT NULL DEFAULT true, "lastConnection" TIMESTAMP WITH TIME ZONE, "connectionStatus" character varying(50) NOT NULL DEFAULT 'disconnected', "errorCount" integer NOT NULL DEFAULT '0', "metadata" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_bc409782898d5b34b84eef1c048" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_3b14a168ddf22e64110d530f3d" ON "stream_connection_configs" ("connectionStatus") `);
-        await queryRunner.query(`CREATE INDEX "IDX_b53402d3b212b5a166572c5ca7" ON "stream_connection_configs" ("enabled") `);
-        await queryRunner.query(`CREATE INDEX "IDX_8550095330d18590e7cead3500" ON "stream_connection_configs" ("type") `);
-        await queryRunner.query(`CREATE INDEX "IDX_e820a37dde387b103af49eebc5" ON "stream_connection_configs" ("organizationId") `);
-        await queryRunner.query(`CREATE INDEX "IDX_bae5b07021480819ce31e933f3" ON "stream_connection_configs" ("tenantId") `);
-        await queryRunner.query(`CREATE TABLE "stream_data_sources" ("id" character varying(100) NOT NULL, "name" character varying(255) NOT NULL, "connectorType" character varying(100) NOT NULL, "config" text, "enabled" boolean NOT NULL DEFAULT true, "lastData" text, "lastUpdate" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "status" character varying(50) NOT NULL DEFAULT 'inactive', "metadata" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_da681a5e70a568aaf21242f9472" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_6cb936610cd3733aa89611e597" ON "stream_data_sources" ("enabled") `);
-        await queryRunner.query(`CREATE INDEX "IDX_2353d831240b19fcc34d6803a9" ON "stream_data_sources" ("status") `);
-        await queryRunner.query(`CREATE INDEX "IDX_4a14c733b1d1421f1ce0eedbe1" ON "stream_data_sources" ("connectorType") `);
-        await queryRunner.query(`CREATE INDEX "IDX_7a24bfafd08197338686845431" ON "stream_data_sources" ("organizationId") `);
-        await queryRunner.query(`CREATE INDEX "IDX_5f19ca962634e4010e60c3e572" ON "stream_data_sources" ("tenantId") `);
-        await queryRunner.query(`CREATE TABLE "rca_change_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "question" character varying(255) NOT NULL, "changes" text NOT NULL, CONSTRAINT "PK_c7ade9f85999597b5addf8889f9" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_8b6ad2bccf50753849263a521e" ON "rca_change_analyses" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_7e5b997af65eb13f932573fc34" ON "rca_change_analyses" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_4eab5ecd3f4166db8c7db5e17d" ON "rca_change_analyses" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "rca_fmea_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "failure_mode" character varying(255) NOT NULL, "effects" text NOT NULL, "causes" text NOT NULL, CONSTRAINT "PK_251fce5d03bc898689efda27262" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_97ae496f70b45daddfa927e068" ON "rca_fmea_analyses" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_68e47c91039617fea2ff36313b" ON "rca_fmea_analyses" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_ffae41607f1c369f1c87975ce8" ON "rca_fmea_analyses" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "rca_five_why_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "problem" text NOT NULL, "why_levels" text NOT NULL, "root_cause" text NOT NULL, "verified_by" character varying(255), "verified_date" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_d3bef094d46b53fac64e6bec875" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_b3ca481cb9edf1c55d002aece9" ON "rca_five_why_analyses" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_4bca7afdf5e1a9164295b81ad4" ON "rca_five_why_analyses" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_1614859f262a4b0df6cc307026" ON "rca_five_why_analyses" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "rca_fishbone_diagrams" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "effect" text NOT NULL, "categories" text NOT NULL, CONSTRAINT "PK_551c262c49bbf0d50d594452354" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_3a1adec9dc81f00da6920ceda8" ON "rca_fishbone_diagrams" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_6a2e35fcbd3f5f6b09f0f0eccd" ON "rca_fishbone_diagrams" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_10c88127427a6b9e64da2bea0b" ON "rca_fishbone_diagrams" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "rca_fault_tree_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "top_event" character varying(255) NOT NULL, "nodes" text NOT NULL, "minimum_cut_sets" text, CONSTRAINT "PK_de910b9b14c0013c625a8a79b77" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_da67fcf410e52cca13513d5fbf" ON "rca_fault_tree_analyses" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_06830eabae1dc4cafe121af8be" ON "rca_fault_tree_analyses" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_40bfa9eb36b30927422f2b51f4" ON "rca_fault_tree_analyses" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "source_hierarchy_mappings" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "source_type" character varying(50) NOT NULL, "source_connection_id" uuid, "source_identifier" character varying(1000) NOT NULL, "source_path" character varying(1000), "target_type" character varying(50) NOT NULL, "target_id" uuid NOT NULL, "tenant_id" character varying(36) NOT NULL, "organization_id" character varying(36), "is_pattern" boolean NOT NULL DEFAULT false, "pattern" character varying(500), "priority" integer NOT NULL DEFAULT '50', "is_active" boolean NOT NULL DEFAULT true, "description" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_2c866d3bc72058309481c3d36cf" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_8915d9aba8665e9fd0e74ba600" ON "source_hierarchy_mappings" ("is_active") `);
-        await queryRunner.query(`CREATE INDEX "IDX_ea042a30a025ca09ee724ba571" ON "source_hierarchy_mappings" ("priority") `);
-        await queryRunner.query(`CREATE INDEX "IDX_5f6667abd5bde682568dc0e831" ON "source_hierarchy_mappings" ("pattern") `);
-        await queryRunner.query(`CREATE INDEX "IDX_78d0844a70c25eda3dabeed97a" ON "source_hierarchy_mappings" ("source_identifier") `);
-        await queryRunner.query(`CREATE INDEX "IDX_fdb271a23d58c7a948ee730e40" ON "source_hierarchy_mappings" ("target_type") `);
-        await queryRunner.query(`CREATE INDEX "IDX_0adf29d9a8e4b154d18dfd2d8c" ON "source_hierarchy_mappings" ("source_type") `);
-        await queryRunner.query(`CREATE INDEX "IDX_bf3eb0c0607310d1195ed28d33" ON "source_hierarchy_mappings" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "scada_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "ipAddress" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '502', "protocol" character varying(20) NOT NULL DEFAULT 'modbus', "connectionType" character varying(20) NOT NULL DEFAULT 'tcp', "unitId" integer NOT NULL DEFAULT '1', "timeoutMs" integer NOT NULL DEFAULT '10000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "operationType" character varying(50) NOT NULL DEFAULT 'read', "registerType" character varying(100), "startAddress" integer, "registerCount" integer, "dataType" character varying(20) NOT NULL DEFAULT 'uint16', "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_8f05c55ca77f78e90516c5a2e49" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_14bbf3e0251a28add502cc5fc3" ON "scada_connections" ("tenantId", "enabled") `);
-        await queryRunner.query(`CREATE TABLE "profinet_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "ipAddress" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '34964', "connectionType" character varying(20) NOT NULL DEFAULT 'tcp', "deviceId" integer NOT NULL DEFAULT '1', "timeoutMs" integer NOT NULL DEFAULT '10000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '100', "operationType" character varying(50) NOT NULL DEFAULT 'read', "slotNumber" character varying(100), "subslotNumber" character varying(100), "index" character varying(100), "subindex" character varying(100), "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_098af12178c29e7a51896a86b2b" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_d366d7817cb50f1c76e4196862" ON "profinet_connections" ("tenantId", "enabled") `);
-        await queryRunner.query(`CREATE TABLE "modbus_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "connection_type" character varying(20) NOT NULL, "ip_address" character varying(45), "port" integer, "serial_port" character varying(50), "baud_rate" integer, "timeout_ms" integer NOT NULL DEFAULT '5000', "retry_count" integer NOT NULL DEFAULT '3', "unit_id" integer NOT NULL DEFAULT '1', "polling_interval_ms" integer NOT NULL DEFAULT '1000', "start_address" integer NOT NULL DEFAULT '0', "register_count" integer NOT NULL DEFAULT '10', "data_type" character varying(20) NOT NULL DEFAULT 'uint16', "byte_ordering" character varying(20) NOT NULL DEFAULT 'big-endian', "scaling_factor" numeric(10,4) NOT NULL DEFAULT '1', "unit" character varying(50), "enabled" boolean NOT NULL DEFAULT true, "tenant_id" uuid NOT NULL, "organization_id" character varying(36), "status" character varying(50) NOT NULL DEFAULT 'disconnected', "last_connected" TIMESTAMP WITH TIME ZONE, "error_count" integer NOT NULL DEFAULT '0', "last_error" text, "metadata" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenantId" uuid, CONSTRAINT "PK_9ea1d72ff4a6c26bb4f28eee9cf" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "ethernetip_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "ipAddress" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '44818', "timeoutMs" integer NOT NULL DEFAULT '10000', "retryCount" integer NOT NULL DEFAULT '3', "backplaneSlot" integer NOT NULL DEFAULT '0', "cipSecurity" boolean NOT NULL DEFAULT false, "vendorId" integer NOT NULL DEFAULT '1', "productCode" integer NOT NULL DEFAULT '0', "pollingIntervalMs" integer NOT NULL DEFAULT '100', "tagPaths" text, "dataTypes" text, "arraySizes" text, "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "organizationId" character varying(36), "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_97a529cc8ffe2a5425b4b626742" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "mqtt_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "broker_url" character varying(500) NOT NULL, "port" integer NOT NULL DEFAULT '1883', "client_id" character varying(255), "username" character varying(255), "password_hash" character varying(255), "keep_alive_seconds" integer NOT NULL DEFAULT '60', "reconnect_period_ms" integer NOT NULL DEFAULT '1000', "connect_timeout_ms" integer NOT NULL DEFAULT '30000', "clean_session" boolean NOT NULL DEFAULT true, "subscribe_topics" text, "publish_topic" character varying(500), "qos_level" integer NOT NULL DEFAULT '1', "use_tls" boolean NOT NULL DEFAULT false, "ca_cert" character varying(500), "client_cert" character varying(500), "client_key" character varying(500), "last_will_topic" character varying(500), "last_will_message" text, "last_will_qos" integer NOT NULL DEFAULT '1', "last_will_retain" boolean NOT NULL DEFAULT false, "enabled" boolean NOT NULL DEFAULT true, "tenant_id" uuid NOT NULL, "organization_id" character varying(36), "status" character varying(50) NOT NULL DEFAULT 'disconnected', "last_connected" TIMESTAMP WITH TIME ZONE, "error_count" integer NOT NULL DEFAULT '0', "last_error" text, "metadata" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenantId" uuid, CONSTRAINT "PK_3cc7fa986d0abea35d7d25ecb69" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "connection_health" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "connectionType" character varying(50) NOT NULL, "opcuaConnectionId" uuid, "modbusConnectionId" uuid, "ethernetipConnectionId" uuid, "mqttConnectionId" uuid, "systemIntegrationId" uuid, "status" character varying(20) NOT NULL, "responseTimeMs" integer, "dataPointCount" integer, "errorRate" numeric(10,4), "lastDataReceivedMs" integer, "errorMessage" text, "metrics" text, "configuration" text, "checkedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "createdAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_de3bf73e723eb657f27e664ee12" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "opcua_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "endpoint" character varying(500) NOT NULL, "security_mode" character varying(50) NOT NULL DEFAULT 'SignAndEncrypt', "security_policy" character varying(100) NOT NULL DEFAULT 'Basic256Sha256', "authentication" character varying(50) NOT NULL DEFAULT 'Anonymous', "certificate_path" character varying(500), "private_key_path" character varying(500), "reconnect_interval_ms" integer NOT NULL DEFAULT '5000', "max_reconnect_attempts" integer NOT NULL DEFAULT '5', "username" character varying(255), "password_hash" character varying(255), "timeout_ms" integer NOT NULL DEFAULT '30000', "session_timeout_ms" integer NOT NULL DEFAULT '60000', "keep_alive_ms" integer NOT NULL DEFAULT '10000', "max_message_size" integer NOT NULL DEFAULT '65536', "polling_interval_ms" integer NOT NULL DEFAULT '1000', "subscription_size" integer NOT NULL DEFAULT '1000', "default_nodes" text, "application_name" character varying(500), "enabled" boolean NOT NULL DEFAULT true, "tenant_id" uuid NOT NULL, "organization_id" character varying(36), "status" character varying(50) NOT NULL DEFAULT 'disconnected', "last_connected" TIMESTAMP WITH TIME ZONE, "error_count" integer NOT NULL DEFAULT '0', "last_error" text, "metadata" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenantId" uuid, CONSTRAINT "PK_460e0457ef0adabaff2dfd51349" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "data_transformations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "bindingId" uuid NOT NULL, "transformationType" character varying(50) NOT NULL, "parameters" text, "orderIndex" integer NOT NULL DEFAULT '0', "enabled" boolean NOT NULL DEFAULT true, "description" character varying(500), "inputMapping" text, "outputMapping" text, "formula" character varying(1000), "conditions" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_8e6b5bffeb7d5bd1c785b992ba3" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "data_bindings" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "sourceOPCUAConnectionId" uuid, "sourceModbusConnectionId" uuid, "sourceEtherNetIPConnectionId" uuid, "sourceMQTTConnectionId" uuid, "sourceSystemIntegrationId" uuid, "targetOPCUAConnectionId" uuid, "targetModbusConnectionId" uuid, "targetEtherNetIPConnectionId" uuid, "targetMQTTConnectionId" uuid, "targetSystemIntegrationId" uuid, "sourcePath" character varying(500), "targetPath" character varying(500), "transformationRules" text, "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "enabled" boolean NOT NULL DEFAULT true, "active" boolean NOT NULL DEFAULT false, "triggerMode" character varying(50) NOT NULL DEFAULT 'manual', "schedule" text, "filters" text, "tenantId" uuid NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_d934c725d13f71962cc18d529e9" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "system_integrations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "integrationType" character varying(50) NOT NULL, "endpoint" character varying(500), "apiKey" character varying(255), "username" character varying(255), "passwordHash" character varying(255), "systemType" character varying(50), "database" character varying(500), "syncIntervalSeconds" integer NOT NULL DEFAULT '300', "enabled" boolean NOT NULL DEFAULT true, "configuration" text, "authentication" text, "description" character varying(500), "tenantId" uuid NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_906ed1d97f84b3cad4e6b09a3a2" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "rca_barrier_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "hazard" character varying(255) NOT NULL, "barriers" text NOT NULL, CONSTRAINT "PK_fc75893e8c95b19094180792083" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_b452cba15c834ab797e539860b" ON "rca_barrier_analyses" ("rca_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_f20b36faff75f435f9452aa68e" ON "rca_barrier_analyses" ("organization_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_b6a8953d43eaf93d4aa0898ebc" ON "rca_barrier_analyses" ("tenant_id") `);
-        await queryRunner.query(`CREATE TABLE "dnp3_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "ipAddress" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '20000', "connectionType" character varying(20) NOT NULL DEFAULT 'tcp', "sourceAddress" integer NOT NULL DEFAULT '1', "destinationAddress" integer NOT NULL DEFAULT '1', "timeoutMs" integer NOT NULL DEFAULT '10000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "operationType" character varying(50) NOT NULL DEFAULT 'read', "objectGroup" character varying(100), "objectVariation" integer, "startIndex" integer, "stopIndex" integer, "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_ab80284ceba00c0f61857a224fd" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_b52ed93e1ad0bcc5ac4f15385a" ON "dnp3_connections" ("tenantId", "enabled") `);
-        await queryRunner.query(`CREATE TABLE "restapi_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "baseUrl" character varying(500) NOT NULL, "protocol" character varying(20) NOT NULL DEFAULT 'https', "defaultMethod" character varying(50) NOT NULL DEFAULT 'GET', "username" character varying(100), "passwordHash" character varying(255), "apiKey" character varying(255), "authType" character varying(100), "timeoutMs" integer NOT NULL DEFAULT '30000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "operationType" character varying(50) NOT NULL DEFAULT 'request', "headers" text, "queryParams" text, "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_01a9efe285161ab550157c43453" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_8375dd95ca704bf99eed7f4af3" ON "restapi_connections" ("tenantId", "enabled") `);
-        await queryRunner.query(`CREATE TABLE "database_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "databaseType" character varying(50) NOT NULL, "host" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '5432', "database" character varying(100) NOT NULL, "username" character varying(100), "passwordHash" character varying(255), "schema" character varying(100), "table" character varying(100), "timeoutMs" integer NOT NULL DEFAULT '30000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "operationType" character varying(50) NOT NULL DEFAULT 'query', "query" text, "connectionString" text, "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_0e22db8b41302c3c47fffb530c7" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_a646bf5f4a0b20b911bfe624b0" ON "database_connections" ("tenantId", "enabled") `);
-        await queryRunner.query(`CREATE TABLE "bacnet_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "ipAddress" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '47808', "deviceId" integer NOT NULL DEFAULT '123', "timeoutMs" integer NOT NULL DEFAULT '10000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "operationType" character varying(50) NOT NULL DEFAULT 'readProperty', "objectType" character varying(100), "objectInstance" integer, "propertyId" character varying(100), "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_2310e757b1cf7c0ee1901fe35e4" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_a3ba97b71e803f5a330c66d1f9" ON "bacnet_connections" ("tenantId", "enabled") `);
-        await queryRunner.query(`CREATE TABLE "websocket_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "url" character varying(500) NOT NULL, "protocol" character varying(20) NOT NULL DEFAULT 'ws', "subprotocol" character varying(100), "timeoutMs" integer NOT NULL DEFAULT '30000', "retryCount" integer NOT NULL DEFAULT '3', "reconnectIntervalMs" integer NOT NULL DEFAULT '5000', "operationType" character varying(50) NOT NULL DEFAULT 'connect', "messageHandlers" text, "eventHandlers" text, "autoReconnect" boolean NOT NULL DEFAULT true, "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_ead282edc24a39682982185fb21" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_832d253b7c15500aaf919d1ce0" ON "websocket_connections" ("tenantId", "enabled") `);
-        await queryRunner.query(`ALTER TABLE "production_losses" ADD CONSTRAINT "FK_043210fc4ee9601d5be253ed7fa" FOREIGN KEY ("plan_id") REFERENCES "production_plans"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "production_losses" ADD CONSTRAINT "FK_c01238245c8d3209352cd791379" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "reconcile_forms" ADD CONSTRAINT "FK_b6a13399b1a6b1cb64c745c314d" FOREIGN KEY ("lossId") REFERENCES "production_losses"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "reconcile_forms" ADD CONSTRAINT "FK_829750e1b655f62473fbf34b36c" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "production_events" ADD CONSTRAINT "FK_8e36b4c91cff4344b1ed8da72d8" FOREIGN KEY ("plan_id") REFERENCES "production_plans"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "production_events" ADD CONSTRAINT "FK_fda378c707c43df7d9730fdac8c" FOREIGN KEY ("unit_id") REFERENCES "units"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "production_events" ADD CONSTRAINT "FK_91c1cd9e89d1db1d05f14d395e0" FOREIGN KEY ("asset_id") REFERENCES "assets"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "production_events" ADD CONSTRAINT "FK_9c89eb92722994c19f0be0ba0a1" FOREIGN KEY ("impact_code_id") REFERENCES "impact_codes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "production_events" ADD CONSTRAINT "FK_165571c3016f2aae50852324396" FOREIGN KEY ("oee_code_id") REFERENCES "oee_codes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "production_events" ADD CONSTRAINT "FK_f6b86cfe4d0085cf0ab70695b6a" FOREIGN KEY ("rca_id") REFERENCES "rcas"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "production_events" ADD CONSTRAINT "FK_09af81053b4af55cdc775bc3bd5" FOREIGN KEY ("reason_code_id") REFERENCES "reason_codes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "rcas" ADD CONSTRAINT "FK_a0e2a9c25b398c12e232d861b3b" FOREIGN KEY ("event_id") REFERENCES "production_events"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "rcas" ADD CONSTRAINT "FK_90f1f10ffd6d8366913f112d6ab" FOREIGN KEY ("team_lead_id") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "rcas" ADD CONSTRAINT "FK_790ced6e47d966eb4fc70d5d56a" FOREIGN KEY ("template_id") REFERENCES "rca_templates"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "rca_recommendations" ADD CONSTRAINT "FK_da1882bdc7e97c6f2169e95753f" FOREIGN KEY ("rcaId") REFERENCES "rcas"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "rca_recommendations" ADD CONSTRAINT "FK_882aeb3d1b3de219e0396922f12" FOREIGN KEY ("assigneeId") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "rca_evidence" ADD CONSTRAINT "FK_82d0f82dec4406f3cbd2df14bf4" FOREIGN KEY ("rcaId") REFERENCES "rcas"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "oee_summaries" ADD CONSTRAINT "FK_5266210a97774dca8df05d96d09" FOREIGN KEY ("plan_id") REFERENCES "production_plans"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "oee_summaries" ADD CONSTRAINT "FK_834d98877996ec31892e24edb8d" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "loss_categories" ADD CONSTRAINT "FK_f8ba443e0240f5c682948a1d434" FOREIGN KEY ("reconcileFormId") REFERENCES "reconcile_forms"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "loss_categories" ADD CONSTRAINT "FK_90bd0d20e1a2d29260118eb88a7" FOREIGN KEY ("impactCodeId") REFERENCES "impact_codes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "loss_categories" ADD CONSTRAINT "FK_193c29b91ad1a8c51a93795ad2e" FOREIGN KEY ("oeeCodeId") REFERENCES "oee_codes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "loss_categories" ADD CONSTRAINT "FK_a4e0812d81eaa05f0ca64b8b2c2" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "logic_tree_nodes" ADD CONSTRAINT "FK_791df580d6b173be0d1fb294f06" FOREIGN KEY ("rcaId") REFERENCES "rcas"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "logic_tree_nodes" ADD CONSTRAINT "FK_5c7c4a7010b9d0897735b611256" FOREIGN KEY ("parentId") REFERENCES "logic_tree_nodes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "modbus_connections" ADD CONSTRAINT "FK_941fc289173aadb1999f35f38cc" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "ethernetip_connections" ADD CONSTRAINT "FK_f0b06fb847659c8c11ac72e3860" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "mqtt_connections" ADD CONSTRAINT "FK_83f500201cd0f88f9d2fffd2986" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "connection_health" ADD CONSTRAINT "FK_671f511028ef4da6d1f33c50761" FOREIGN KEY ("opcuaConnectionId") REFERENCES "opcua_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "connection_health" ADD CONSTRAINT "FK_4dc9c9f58017162ed446f07e1ae" FOREIGN KEY ("modbusConnectionId") REFERENCES "modbus_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "connection_health" ADD CONSTRAINT "FK_47556682b92aae9d92c8d1eb9d6" FOREIGN KEY ("ethernetipConnectionId") REFERENCES "ethernetip_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "connection_health" ADD CONSTRAINT "FK_cf62fd05e752296936a42ad0eb6" FOREIGN KEY ("mqttConnectionId") REFERENCES "mqtt_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "connection_health" ADD CONSTRAINT "FK_b247d26494f07e284c642b41e16" FOREIGN KEY ("systemIntegrationId") REFERENCES "system_integrations"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "opcua_connections" ADD CONSTRAINT "FK_c8e81a6ca6c4e4decedae3f2e59" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_transformations" ADD CONSTRAINT "FK_691e17d14a722afe00d51a8fef6" FOREIGN KEY ("bindingId") REFERENCES "data_bindings"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_bb225d12d357e55db9510d6b6ef" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_8ae43b12236e907c68055ee0b5c" FOREIGN KEY ("sourceOPCUAConnectionId") REFERENCES "opcua_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_fc1593a9ec86506eb3f7a2eef8c" FOREIGN KEY ("sourceModbusConnectionId") REFERENCES "modbus_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_5d009f74b2274f0d3b620f0195e" FOREIGN KEY ("sourceEtherNetIPConnectionId") REFERENCES "ethernetip_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_6975ed005c96539055da31b7d86" FOREIGN KEY ("sourceMQTTConnectionId") REFERENCES "mqtt_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_8b79d96b53cb58bb05694cc624f" FOREIGN KEY ("sourceSystemIntegrationId") REFERENCES "system_integrations"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_78d7de931e8445efc767aa378e0" FOREIGN KEY ("targetOPCUAConnectionId") REFERENCES "opcua_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_ee8022d1372c9a5670bd611196d" FOREIGN KEY ("targetModbusConnectionId") REFERENCES "modbus_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_a6b1a1234541040a7053c4a5f70" FOREIGN KEY ("targetEtherNetIPConnectionId") REFERENCES "ethernetip_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_f3cff418b88f34697ea8dc660a4" FOREIGN KEY ("targetMQTTConnectionId") REFERENCES "mqtt_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_e71d86958c7184c058ca8eac56d" FOREIGN KEY ("targetSystemIntegrationId") REFERENCES "system_integrations"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "system_integrations" ADD CONSTRAINT "FK_c8ebae12649b35319e78dcf84ca" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-    }
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // uuid_generate_v4() defaults below need the extension; it is left in place by down().
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+    await queryRunner.query(
+      `CREATE TABLE "users" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "email" character varying(255) NOT NULL, "password_hash" character varying(255) NOT NULL, "role" character varying(50) NOT NULL, "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_97672ac88f789774dd47f7c8be3" UNIQUE ("email"), CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "unmapped_events" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "tenant_id" character varying(36), "organization_id" character varying(36), "unit_id" character varying(36), "event_name" character varying(255), "event_type" character varying(100), "start_time" TIMESTAMP WITH TIME ZONE, "end_time" TIMESTAMP WITH TIME ZONE, "source_system" character varying(100), "source_id" character varying(255), "event_data" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_c2cb177b4d33a513e5171fa5749" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "verification_status_codes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_547ed4b92d53d98e137c8e20c91" UNIQUE ("code"), CONSTRAINT "PK_5cae70cab49bac4d6f1e8f46e2e" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "units" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "capacity" numeric(15,4), "unit_of_measure" character varying(50), "ideal_cycle_time" numeric(10,2), "tenant_id" uuid NOT NULL, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_47635c1ab22d02fc3ebae3608b8" UNIQUE ("code"), CONSTRAINT "PK_5a8f2f064919b587d93936cb223" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "tenants" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "organization_id" uuid NOT NULL, "is_active" boolean NOT NULL DEFAULT true, "address" character varying(500), "contact_person" character varying(255), "contact_email" character varying(255), "contact_phone" character varying(50), "timezone" character varying(100), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_3021c18db2b363ae9324c826c5a" UNIQUE ("code"), CONSTRAINT "PK_53be67a04681c66b87ee27c9321" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "tasks" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "title" character varying(255) NOT NULL, "description" text, "assigned_to" character varying(36) NOT NULL, "assigned_by" character varying(36) NOT NULL, "priority" character varying(50) NOT NULL, "status" character varying(50) NOT NULL, "due_date" TIMESTAMP WITH TIME ZONE, "completed_date" TIMESTAMP WITH TIME ZONE, "entity_type" character varying(100), "entity_id" character varying(36), "organization_id" character varying(36) NOT NULL, "tenant_id" character varying(36) NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_8d12ff38fcc62aaba2cab748772" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "production_plans" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "plan_name" character varying(255) NOT NULL, "unit_id" character varying(36) NOT NULL, "product_id" character varying(36), "tenant_id" character varying(36), "organization_id" character varying(36), "start_date" TIMESTAMP WITH TIME ZONE NOT NULL, "end_date" TIMESTAMP WITH TIME ZONE NOT NULL, "target_quantity" numeric(15,4), "actual_quantity" numeric(15,4), "status" character varying(50), "tolerance_limit" numeric(15,4), "plan_basis" character varying(255), "useful_production_time" text, "recurrence" character varying(100), "data_entry_frequency" character varying(100), "shift" character varying(50), "crew" character varying(100), "planner_notes" text, "comments" text, "approval_status" character varying(50), "submitted_by" character varying(36), "submitted_at" TIMESTAMP WITH TIME ZONE, "reviewed_by" character varying(36), "reviewed_at" TIMESTAMP WITH TIME ZONE, "approved_by" character varying(36), "approved_at" TIMESTAMP WITH TIME ZONE, "rejection_reason" text, "custom_attributes" text, "audit_trail" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_171d3990efc1882102b85f3b71e" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "production_losses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "plan_id" uuid NOT NULL, "period" character varying(50), "actual" numeric(15,4), "short_range_plan" numeric(15,4), "losses" numeric(15,4), "unaccounted_loss" numeric(15,4), "action" character varying(50), "loss_type" character varying(100), "loss_category" character varying(100), "quantity" numeric(15,4), "cost" numeric(15,2), "description" text, "tenant_id" uuid NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_bab3174baa416b40eaa88acf8cf" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "reconcile_forms" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "lossId" uuid NOT NULL, "totalLossAmount" double precision NOT NULL, "categorizedLossAmount" double precision NOT NULL, "unaccountedLossAmount" double precision NOT NULL, "productionEvent" character varying(255) NOT NULL, "comment" text NOT NULL, "status" character varying(50) NOT NULL, "categories" text NOT NULL, "tenantId" uuid NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_c089521661142a1cd1b1b54a7b6" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_trigger_configs" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "name" character varying(255) NOT NULL, "description" text, "rules" text, "global_settings" text, "is_active" boolean NOT NULL DEFAULT true, "auto_create_rca" boolean NOT NULL DEFAULT false, "trigger_type" character varying(100), "legacy_conditions" text, CONSTRAINT "PK_cb345a4a138fe548514c518809b" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_6d3a73b904484a86a6f7fa706d" ON "rca_trigger_configs" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_1a68e66eb10626fe366c03494b" ON "rca_trigger_configs" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_632e962cb6b605ccb5a7d42ebf" ON "rca_trigger_configs" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "roles" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(100) NOT NULL, "description" text, "permissions" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_648e3f5447f725579d7d4ffdfb7" UNIQUE ("name"), CONSTRAINT "PK_c1433d71a4838793a49dcad46ab" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_cause_codes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "category" character varying(100), "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_dd288509552d6a52b39bdff81f1" UNIQUE ("code"), CONSTRAINT "PK_7469109ba189e280ad139ebed8c" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "assets" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(50) NOT NULL, "name" character varying(255) NOT NULL, "unit_id" character varying(36) NOT NULL, "description" text, "asset_type" character varying(50), "manufacturer" character varying(255), "model" character varying(255), "serial_number" character varying(255), "criticality" character varying(50), "status" character varying(50), "location" character varying(255), "installation_date" TIMESTAMP WITH TIME ZONE, "last_maintenance_date" TIMESTAMP WITH TIME ZONE, "next_maintenance_date" TIMESTAMP WITH TIME ZONE, "tenant_id" character varying(36), "organization_id" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_da96729a8b113377cfb6a62439c" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "impact_codes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "category" character varying(50), "cost_per_unit" numeric(15,4), "cost_per_hour" numeric(15,4), "cost_basis" character varying(20), "severity" character varying(50), "color" character varying(7), "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_83aeac110d18f6080f118f6b597" UNIQUE ("code"), CONSTRAINT "PK_dac4bfca776b3ccf9c5698a5c25" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "oee_codes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "category" character varying(100), "impact_type" character varying(50), "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_d8ba3be5670be09142d190594a1" UNIQUE ("code"), CONSTRAINT "PK_536c1d9ccef5ff5c263b4846e25" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "reason_codes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(50) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "category" character varying(100), "is_active" boolean NOT NULL DEFAULT true, "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_10a9f60ddba7bc9f6396a38eaae" UNIQUE ("code"), CONSTRAINT "PK_64e9bc3e20d2e61416a5134650f" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "production_events" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "event_id" character varying(255), "plan_id" uuid, "unit_id" uuid NOT NULL, "asset_id" uuid, "impact_code_id" uuid, "oee_code_id" uuid, "description" text, "start_time" TIMESTAMP WITH TIME ZONE NOT NULL, "end_time" TIMESTAMP WITH TIME ZONE, "source" character varying(50), "quantity" numeric(10,2), "cost" numeric(10,2), "status" character varying(50), "rca_id" uuid, "event_type" character varying(50), "parameter" character varying(255), "value" numeric(15,4), "limit_value" numeric(10,2), "limit_type" character varying(10), "breach_duration" integer, "sol_type" character varying(50), "apm_type" character varying(100), "severity" character varying(50), "recommended_action" text, "work_order_id" character varying(255), "failure_mode" character varying(255), "defective_quantity" numeric(10,2), "shift" character varying(50), "crew" character varying(100), "audit_trail" text, "loss_category" character varying(100), "operator_name" character varying(255), "reason_code_id" uuid, "duration" numeric(10,2), "tenant_id" character varying(36), "organization_id" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_b60ec956f8e608ebfbffe05d093" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_templates" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "template_name" character varying(255) NOT NULL, "description" text, "template_type" character varying(100), "template_data" text, "is_active" boolean NOT NULL DEFAULT true, "organization_id" uuid NOT NULL, "tenant_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_61a07aeb26e387f734cd18e5967" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rcas" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "event_id" uuid, "title" character varying(255) NOT NULL, "description" text, "status" character varying(50), "team_lead_id" uuid, "team_members" text, "priority" character varying(50), "target_completion_date" TIMESTAMP WITH TIME ZONE, "actual_completion_date" TIMESTAMP WITH TIME ZONE, "root_cause" text, "recommendations" text, "logic_tree" text, "evidence" text, "template_id" uuid, "team_charter" text, "event_diagram" text, "pre_failure_rate" numeric(5,2), "post_failure_rate" numeric(5,2), "failure_cost_per_incident" numeric(10,2), "implementation_cost" numeric(10,2), "time_to_resolution" numeric(10,2), "time_to_implementation" numeric(10,2), "effectiveness_score" numeric(5,2), "last_updated" TIMESTAMP WITH TIME ZONE, "tracking_notes" text, "phase_timeline" text, "calculated_roi" numeric(10,2), "cost_savings" numeric(10,2), "downtime_reduction" numeric(5,2), "productivity_improvement" numeric(5,2), "tenant_id" character varying(36), "organization_id" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_9bdfb12ad025954407386c84352" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_recommendations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "rcaId" uuid NOT NULL, "title" character varying(255) NOT NULL, "description" text NOT NULL, "priority" character varying(50) NOT NULL, "assigneeId" uuid NOT NULL, "dueDate" TIMESTAMP WITH TIME ZONE, "status" character varying(50) NOT NULL, "cmmsWorkOrderId" character varying(255), "estimatedCost" double precision, "actualCost" double precision, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_8c1d396d67af15542f450e31374" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_evidence" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "rcaId" uuid NOT NULL, "title" character varying(255) NOT NULL, "description" text NOT NULL, "type" character varying(50) NOT NULL, "fileName" character varying(255), "filePath" character varying(255), "collectedBy" character varying(255) NOT NULL, "collectedAt" TIMESTAMP WITH TIME ZONE NOT NULL, "nodeIds" text, "fileBlob" bytea, "category" character varying(100), "location" character varying(100), "timestamp" TIMESTAMP WITH TIME ZONE, "relatedAssetId" uuid, "severity" character varying(50), "tags" text, "verified" boolean, "fiveP" character varying(50), "task" character varying(255), "dueDate" TIMESTAMP WITH TIME ZONE, "status" character varying(50), "attachments" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_bc9a78f7c9fa546369e2ebef50c" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_knowledge_base" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "title" character varying(255) NOT NULL, "description" text, "problem_statement" text, "event_type" character varying(100), "unit_id" character varying(36), "unit_name" character varying(255), "asset_id" character varying(36), "asset_name" character varying(255), "equipment_category" character varying(150), "category" character varying(100), "symptoms" text, "impact_codes" text, "oee_codes" text, "root_cause" text, "root_cause_category" character varying(150), "contributing_factors" text, "recommendations" text, "recurrence_count" integer NOT NULL DEFAULT '0', "effectiveness" double precision NOT NULL DEFAULT '0', "cost_saved" double precision, "downtime_reduced" double precision, "keywords" text, "tags" text, "content" text, "related_rcas" text, "author" character varying(36), "is_published" boolean NOT NULL DEFAULT false, "times_referenced" integer NOT NULL DEFAULT '0', "helpful_votes" integer NOT NULL DEFAULT '0', "closed_date" character varying(50), CONSTRAINT "PK_c971545b619ef871835d0f6e352" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_c5074ce654cea7bb387994f253" ON "rca_knowledge_base" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_ada1a4a28cc8c8a6d4faddb64f" ON "rca_knowledge_base" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_52477a3c4a6cb7e34a8a27b8cb" ON "rca_knowledge_base" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_analysis_configs" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "analysis_type" character varying(100), "config_name" character varying(255), "is_default" boolean NOT NULL DEFAULT true, "config_data" text, CONSTRAINT "PK_00f0a11efecffc9cdb6dbec7416" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_d2d97aadc174ec0d0c62488dc2" ON "rca_analysis_configs" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_b096d83c9704cbbc387fe6c803" ON "rca_analysis_configs" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_47db4c22f1a45dd6d8503df8dc" ON "rca_analysis_configs" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "production_plan_templates" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" text, "template_data" text, "is_active" boolean NOT NULL DEFAULT true, "tenant_id" character varying(36), "organization_id" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_affeac036100de4e94f08646cf0" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "products" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "code" character varying(50) NOT NULL, "uom" character varying(50), "description" text, "standard_rate" numeric(15,4), "tenant_id" character varying(36), "organization_id" character varying(36), "unit_id" character varying(36), "is_active" boolean NOT NULL DEFAULT true, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_7cfc24d6c24f0ec91294003d6b8" UNIQUE ("code"), CONSTRAINT "PK_0806c755e0aca124e67c0cf6d7d" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "pi_sync_jobs" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "job_name" character varying(255), "job_type" character varying(100), "schedule" character varying(255), "last_run_time" TIMESTAMP WITH TIME ZONE, "next_run_time" TIMESTAMP WITH TIME ZONE, "status" character varying(50), "error_message" text, "job_config" text, "is_active" boolean NOT NULL DEFAULT true, CONSTRAINT "PK_f851c487ed5d4feda4b0e8935fe" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_bb56578ccb47df6ef52551b1ad" ON "pi_sync_jobs" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_41870904cacc3982b156128bb6" ON "pi_sync_jobs" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_03bc03f60cf3ead27d2290f93c" ON "pi_sync_jobs" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "pi_sync_watermarks" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "sync_type" character varying(100), "last_sync_timestamp" TIMESTAMP WITH TIME ZONE, "last_sync_marker" character varying(255), "sync_status" character varying(50), CONSTRAINT "PK_8265039f1043d909c7e2b99875f" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_7c1ca69fdcb693137f615eafab" ON "pi_sync_watermarks" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_3b38ccc53896cd40077d5c23be" ON "pi_sync_watermarks" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_68e74a0ab6e2aa327b5c0fe677" ON "pi_sync_watermarks" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "pi_events" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "web_id" character varying(255), "name" character varying(255), "template" character varying(255), "primary_af_id" character varying(255), "start_utc" TIMESTAMP WITH TIME ZONE, "end_utc" TIMESTAMP WITH TIME ZONE, "acknowledged" boolean NOT NULL DEFAULT false, "event_data" text, CONSTRAINT "PK_02cefa18eaf1664541667e3e0da" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_1ca559a671f86ff006f1aba6f9" ON "pi_events" ("start_utc") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_faf6bc79e85331733cd0d567b4" ON "pi_events" ("primary_af_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_928802dbf538f07a75f2c3ba48" ON "pi_events" ("template") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_d8eac7c75d2762a9c33f2b8617" ON "pi_events" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_366bf98ce45a78fc04c5d2be12" ON "pi_events" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_243a82722abeb72cbadcddd7ff" ON "pi_events" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "pi_mappings" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "source_type" character varying(100), "source_id" character varying(255), "target_type" character varying(100), "target_id" character varying(36), "mapping_rules" text, "is_active" boolean NOT NULL DEFAULT true, CONSTRAINT "PK_47985c609cdcbe0c5c483b036e0" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_ee8876d8d96b2ec9e7356b5933" ON "pi_mappings" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_a15f110084e26bf1a96caef2bd" ON "pi_mappings" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_7fa81bd4264b9df8d18f9d26f0" ON "pi_mappings" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "pi_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "connection_name" character varying(255) NOT NULL, "pi_web_api_url" character varying(500) NOT NULL, "username" character varying(255), "password_encrypted" text, "af_database_path" character varying(500), "connection_config" text, "is_active" boolean NOT NULL DEFAULT true, "last_sync_time" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_40888c881beaf673504c899a8d5" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_560a5a557df886c4a8a15d840e" ON "pi_connections" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_0a60561d49d2defb80153b5a3c" ON "pi_connections" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_dc14cf1cea5a5b8eb72f6d95b3" ON "pi_connections" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "pi_af_elements" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "web_id" character varying(255), "name" character varying(255), "description" text, "path" character varying(1000), "template" character varying(255), "categories" text, "parent_id" character varying(36), "hierarchy_level" integer, "last_seen_at" TIMESTAMP WITH TIME ZONE, "has_children" boolean NOT NULL DEFAULT false, "metadata" text, CONSTRAINT "UQ_583df9e4a4a26098718f37c8e6f" UNIQUE ("web_id"), CONSTRAINT "PK_4949d4548f2e7e4cfed8ba7a03b" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_583df9e4a4a26098718f37c8e6" ON "pi_af_elements" ("web_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_e6313f2722a8d39dd852218507" ON "pi_af_elements" ("template") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_dcac91bdb09d8fd2aa4ef1ca10" ON "pi_af_elements" ("parent_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_297cd1f53bb77990c39dc04c4a" ON "pi_af_elements" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_278ac79c0bba2b29cca67c4352" ON "pi_af_elements" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_a067299e14d010580eebfb86cb" ON "pi_af_elements" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "organizations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "code" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "is_active" boolean NOT NULL DEFAULT true, "address" character varying(500), "contact_email" character varying(255), "contact_phone" character varying(50), "tenant_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_7e27c3b62c681fbe3e2322535f2" UNIQUE ("code"), CONSTRAINT "PK_6b031fcd0863e3f6b44230163f9" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "oee_summaries" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "plan_id" uuid NOT NULL, "availability" numeric(5,2), "performance" numeric(5,2), "quality" numeric(5,2), "oee" numeric(5,2), "period" character varying(50), "planned_production_time" numeric(10,2), "actual_production_time" numeric(10,2), "downtime" numeric(10,2), "tenant_id" uuid, "organization_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_da8ccd227a8d771ae634d198e31" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "query_history" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "attributes" text NOT NULL, "query_params" text NOT NULL, "result_count" integer NOT NULL, "tenant_id" character varying(36) NOT NULL, CONSTRAINT "PK_d14e08569f855cccc762004f7d1" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_459e5caad164d68ba08510f128" ON "query_history" ("timestamp") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_8662ec50511259be3076f9c81a" ON "query_history" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "historian_tags" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "web_id" character varying(255), "tag_name" character varying(255) NOT NULL, "tag_path" character varying(1000), "description" text, "category" character varying(100), "unit_of_measure" character varying(50), "data_type" character varying(50), "update_interval" integer, "warning_threshold" double precision, "alarm_threshold" double precision, "enabled" boolean NOT NULL DEFAULT true, "config" text, CONSTRAINT "PK_75ec1f39b7eeb6052daa8f6a6d6" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_6ed7925463b87855c10381624f" ON "historian_tags" ("enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_fbba362107909d51dd06f54617" ON "historian_tags" ("category") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_b5af1a62e3f1afa08dd2d359f1" ON "historian_tags" ("web_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_e09ac90c0669bb7e638c0bfa2a" ON "historian_tags" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_09df7426df1326499f89b39491" ON "historian_tags" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_8d77df8595e77a6d7f866b406c" ON "historian_tags" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "five_why_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "problem_statement" text, "why_levels" text, "root_cause" text, CONSTRAINT "PK_12693e215a2bafc07aa6d9793fe" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_b3c45d6e6a61c86943298a702e" ON "five_why_analyses" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_bbbc016f1489fd92ff413957b8" ON "five_why_analyses" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_c087539c265e0d2b1886cbbd38" ON "five_why_analyses" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_707919a300bbb088ba707dbe92" ON "five_why_analyses" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "loss_categories" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "reconcileFormId" uuid NOT NULL, "categoryName" character varying(255) NOT NULL, "lossAmount" double precision NOT NULL, "impactCodeId" uuid NOT NULL, "oeeCodeId" uuid NOT NULL, "description" text NOT NULL, "tenantId" uuid NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_2fa7cdd00a5efbd0c41d7806599" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "logic_tree_nodes" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "rcaId" uuid NOT NULL, "parentId" uuid, "question" text NOT NULL, "answer" text, "type" character varying(50) NOT NULL, "verified" boolean NOT NULL DEFAULT false, "evidenceIds" text NOT NULL, "position" text NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_336064ed7879d9fa710c9c6c696" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "fmea_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "analysis_name" character varying(255), "failure_modes" text, CONSTRAINT "PK_0761fc32d03b229c64ddafbf52c" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_491a32514a4c2611323a3bc986" ON "fmea_analyses" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_af7b065900a91fd28781526e76" ON "fmea_analyses" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_45ecd1369d8e7754ddaf36fc1a" ON "fmea_analyses" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_fba9d32f43f51fc0b45c5a26a1" ON "fmea_analyses" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "fault_tree_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "top_event" text, "tree_data" text, CONSTRAINT "PK_7a4d3fb71d122fe590d0073b05a" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_537bc41b31a70177f34238e934" ON "fault_tree_analyses" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_d7d4b83e2c43370585421d6d65" ON "fault_tree_analyses" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_773a16f0da066ebd71b1accc1d" ON "fault_tree_analyses" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_9caeb54c670d4b0d80c7d470c1" ON "fault_tree_analyses" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "data_sources" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "source_name" character varying(255) NOT NULL, "type" character varying(100), "connection_string" text, "credentials_encrypted" text, "status" character varying(50), "enabled" boolean NOT NULL DEFAULT true, "last_sync_time" TIMESTAMP WITH TIME ZONE, "config" text, CONSTRAINT "PK_dc70b1c6b641726739857fd938d" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_f6dbc499812b60d690c5c3f359" ON "data_sources" ("enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_c76edc1e50d935210c73ba27bb" ON "data_sources" ("status") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_aa258f6d6c837000eb837c8141" ON "data_sources" ("type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_386fe3a14ca7ab15da185351e2" ON "data_sources" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_1eec9b8ac8a36e3150f35d401b" ON "data_sources" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_39dceb76a83f68b33494034bca" ON "data_sources" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "fishbone_diagrams" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "problem_statement" text, "categories" text, "causes" text, CONSTRAINT "PK_fe8614706c6d50d3130e1e86566" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_20ce2e2e0b18596ad41f8a9459" ON "fishbone_diagrams" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_f20600e078a6ba3b8efb928775" ON "fishbone_diagrams" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_d253e2f3d22fb390a12fc40b33" ON "fishbone_diagrams" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_d099cf8e70daabd3851892d9b8" ON "fishbone_diagrams" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "evidence_locations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "location_name" character varying(255) NOT NULL, "description" text, "tenant_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_45d3400a5784cab15ad44761689" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "evidence_categories" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "category_name" character varying(255) NOT NULL, "description" text, "tenant_id" uuid, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_9b65089011c8ec5f49e5ce6f1dd" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "custom_attribute_values" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "entity_id" character varying(36) NOT NULL, "entity_type" character varying(100) NOT NULL, "attribute_definition_id" character varying(36) NOT NULL, "value" text, CONSTRAINT "PK_03ad98b91a6e738144a780bde41" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_b15d66428823c8b8113f7c8a41" ON "custom_attribute_values" ("attribute_definition_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_cb5dd318884707fdb160842660" ON "custom_attribute_values" ("entity_type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_a10a6ecb685dcadfb8196eb20c" ON "custom_attribute_values" ("entity_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_736faece0ea92fc5e8574115a7" ON "custom_attribute_values" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_feb3331b1d18cafdbf9e96f1f7" ON "custom_attribute_values" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_6c05f068f12c3d0f0e399670d7" ON "custom_attribute_values" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "dashboard_configurations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "dashboard_name" character varying(255) NOT NULL, "dashboard_type" character varying(100), "layout_config" text, "widget_config" text, "tenant_id" character varying(36), "organization_id" character varying(36), "is_default" boolean NOT NULL DEFAULT false, "is_public" boolean NOT NULL DEFAULT false, "created_by" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_82164825b0d6cca17ca2f8bf932" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "custom_attribute_definitions" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "entity_type" character varying(100) NOT NULL, "attribute_name" character varying(255) NOT NULL, "display_name" character varying(255), "description" text, "data_type" character varying(50), "is_required" boolean NOT NULL DEFAULT false, "default_value" text, "validation_rules" text, "select_options" text, "display_order" integer, "is_active" boolean NOT NULL DEFAULT true, "created_by" character varying(255), CONSTRAINT "PK_bc25a5e0aaca1b8bd0a8cf33e3c" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_3b6e486e49a2353c4456e72751" ON "custom_attribute_definitions" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_19d7cfd5c6d832f26e9cd6f959" ON "custom_attribute_definitions" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_a66f57e74944f56f8426399892" ON "custom_attribute_definitions" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_139c530dcddcd1c0f040f8a7e7" ON "custom_attribute_definitions" ("entity_type") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "barrier_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "hazard" text, "barriers" text, CONSTRAINT "PK_b0108ccb065c3b4212d2cbfd5e8" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_8d42a346e61169120ae97510fa" ON "barrier_analyses" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_c46a7ad67c0b78d6f92d381e6a" ON "barrier_analyses" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_1a96c779ad73d283135a62d6f9" ON "barrier_analyses" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_80e0ce436793d531e24612d267" ON "barrier_analyses" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "audit_logs" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "user_id" uuid NOT NULL, "action" character varying(100) NOT NULL, "entity_type" character varying(100) NOT NULL, "entity_id" character varying(36) NOT NULL, "details" text, "organization_id" character varying(36), "tenant_id" character varying(36), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, CONSTRAINT "PK_1bb179d048bbc581caa3b013439" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "change_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "change_description" text, "changes" text, CONSTRAINT "PK_e0eb89281f2308c934b0a6a0cd3" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_baf96330ad2e93bf54f0617689" ON "change_analyses" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_de6783dc8220ac36576a84c086" ON "change_analyses" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_d66335073f378c5e772e48d3f6" ON "change_analyses" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_ce8e4d371840bbeff8beda50c8" ON "change_analyses" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "af_bindings" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "web_id" character varying(255), "local_id" character varying(36), "bound_type" character varying(100), "mapping_config" text, "is_active" boolean NOT NULL DEFAULT true, CONSTRAINT "PK_3253600520c1b5087dd810f612b" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_90d257c2c4f58a6b01c7211c7c" ON "af_bindings" ("local_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_86d28b5a6cccf3bd81c0cbb327" ON "af_bindings" ("bound_type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_268ab8531f11ebd5d619fc33ae" ON "af_bindings" ("web_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_6f2183f735a5b87eaf2f557f60" ON "af_bindings" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_92c1f2c75417c27d0b2559d012" ON "af_bindings" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_1463179e78a90d088ae8374743" ON "af_bindings" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "app_settings" ("key" character varying(255) NOT NULL, "value" text NOT NULL, CONSTRAINT "PK_975c2db59c65c05fd9c6b63a2ab" PRIMARY KEY ("key"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "stream_alerts" ("id" character varying(120) NOT NULL, "type" character varying(50) NOT NULL, "message" text NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "source" character varying(255) NOT NULL, "severity" integer NOT NULL DEFAULT '0', "acknowledged" boolean NOT NULL DEFAULT false, "metadata" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_6d39fdeba26e1d4ae6339b6aa45" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_22776255c9e7c95b90d543eb70" ON "stream_alerts" ("timestamp") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_4c418bf452d0e118261bd0995f" ON "stream_alerts" ("acknowledged") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_d3d4d5b235928fe4605a45b48e" ON "stream_alerts" ("type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_cf8b40fcf36b0fee6a2e81e833" ON "stream_alerts" ("organizationId") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_086a5ec69875c0c87463002f29" ON "stream_alerts" ("tenantId") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "stream_data_sinks" ("id" character varying(100) NOT NULL, "name" character varying(255) NOT NULL, "type" character varying(100) NOT NULL, "config" text, "enabled" boolean NOT NULL DEFAULT true, "lastWrite" TIMESTAMP WITH TIME ZONE, "writeCount" integer NOT NULL DEFAULT '0', "errorCount" integer NOT NULL DEFAULT '0', "metadata" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_ae62cc9c7ea75ba272b57e73578" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_aedbc5f7844f468f578dd9f4d8" ON "stream_data_sinks" ("enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_119be1602e564fc35b68bc7539" ON "stream_data_sinks" ("type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_dd618b11743f397901dd416a40" ON "stream_data_sinks" ("organizationId") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_d77f0ad25d88557fa83bf55c9d" ON "stream_data_sinks" ("tenantId") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "stream_metrics" ("id" character varying(120) NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "totalEvents" integer NOT NULL DEFAULT '0', "processedEvents" integer NOT NULL DEFAULT '0', "droppedEvents" integer NOT NULL DEFAULT '0', "averageLatency" double precision NOT NULL DEFAULT '0', "throughput" double precision NOT NULL DEFAULT '0', "activeSources" integer NOT NULL DEFAULT '0', "activeSinks" integer NOT NULL DEFAULT '0', "activeProcessors" integer NOT NULL DEFAULT '0', "errorRate" double precision NOT NULL DEFAULT '0', "dataQuality" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_9f692873e7aa367896f5a820b22" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_8468622057cdfce2c423fb73be" ON "stream_metrics" ("timestamp") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_aba1b638438bb1267e4b5f0381" ON "stream_metrics" ("organizationId") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_6edca99b81ac062b893c1f35ed" ON "stream_metrics" ("tenantId") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "stream_processors" ("id" character varying(100) NOT NULL, "name" character varying(255) NOT NULL, "type" character varying(100) NOT NULL, "config" text, "enabled" boolean NOT NULL DEFAULT true, "order" integer NOT NULL DEFAULT '0', "inputSchema" text, "outputSchema" text, "metadata" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_c1231e36e2c5b9d4cce3b910a26" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_2a256a9847af5aae8afc3f6d54" ON "stream_processors" ("order") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_6026665bcdb9cce25a1306d560" ON "stream_processors" ("enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_ab4b1540c768e5c421adffe34e" ON "stream_processors" ("type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_4aaa9ba241ad8f86ec4584159a" ON "stream_processors" ("organizationId") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_831fa8d64f8cf5c57a85208906" ON "stream_processors" ("tenantId") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "stream_connection_configs" ("id" character varying(120) NOT NULL, "name" character varying(255) NOT NULL, "type" character varying(100) NOT NULL, "config" text, "enabled" boolean NOT NULL DEFAULT true, "lastConnection" TIMESTAMP WITH TIME ZONE, "connectionStatus" character varying(50) NOT NULL DEFAULT 'disconnected', "errorCount" integer NOT NULL DEFAULT '0', "metadata" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_bc409782898d5b34b84eef1c048" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_3b14a168ddf22e64110d530f3d" ON "stream_connection_configs" ("connectionStatus") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_b53402d3b212b5a166572c5ca7" ON "stream_connection_configs" ("enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_8550095330d18590e7cead3500" ON "stream_connection_configs" ("type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_e820a37dde387b103af49eebc5" ON "stream_connection_configs" ("organizationId") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_bae5b07021480819ce31e933f3" ON "stream_connection_configs" ("tenantId") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "stream_data_sources" ("id" character varying(100) NOT NULL, "name" character varying(255) NOT NULL, "connectorType" character varying(100) NOT NULL, "config" text, "enabled" boolean NOT NULL DEFAULT true, "lastData" text, "lastUpdate" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "status" character varying(50) NOT NULL DEFAULT 'inactive', "metadata" text, "tenantId" character varying(36), "organizationId" character varying(36), "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_da681a5e70a568aaf21242f9472" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_6cb936610cd3733aa89611e597" ON "stream_data_sources" ("enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_2353d831240b19fcc34d6803a9" ON "stream_data_sources" ("status") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_4a14c733b1d1421f1ce0eedbe1" ON "stream_data_sources" ("connectorType") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_7a24bfafd08197338686845431" ON "stream_data_sources" ("organizationId") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_5f19ca962634e4010e60c3e572" ON "stream_data_sources" ("tenantId") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_change_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "question" character varying(255) NOT NULL, "changes" text NOT NULL, CONSTRAINT "PK_c7ade9f85999597b5addf8889f9" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_8b6ad2bccf50753849263a521e" ON "rca_change_analyses" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_7e5b997af65eb13f932573fc34" ON "rca_change_analyses" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_4eab5ecd3f4166db8c7db5e17d" ON "rca_change_analyses" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_fmea_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "failure_mode" character varying(255) NOT NULL, "effects" text NOT NULL, "causes" text NOT NULL, CONSTRAINT "PK_251fce5d03bc898689efda27262" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_97ae496f70b45daddfa927e068" ON "rca_fmea_analyses" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_68e47c91039617fea2ff36313b" ON "rca_fmea_analyses" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_ffae41607f1c369f1c87975ce8" ON "rca_fmea_analyses" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_five_why_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "problem" text NOT NULL, "why_levels" text NOT NULL, "root_cause" text NOT NULL, "verified_by" character varying(255), "verified_date" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_d3bef094d46b53fac64e6bec875" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_b3ca481cb9edf1c55d002aece9" ON "rca_five_why_analyses" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_4bca7afdf5e1a9164295b81ad4" ON "rca_five_why_analyses" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_1614859f262a4b0df6cc307026" ON "rca_five_why_analyses" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_fishbone_diagrams" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "effect" text NOT NULL, "categories" text NOT NULL, CONSTRAINT "PK_551c262c49bbf0d50d594452354" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_3a1adec9dc81f00da6920ceda8" ON "rca_fishbone_diagrams" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_6a2e35fcbd3f5f6b09f0f0eccd" ON "rca_fishbone_diagrams" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_10c88127427a6b9e64da2bea0b" ON "rca_fishbone_diagrams" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_fault_tree_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "top_event" character varying(255) NOT NULL, "nodes" text NOT NULL, "minimum_cut_sets" text, CONSTRAINT "PK_de910b9b14c0013c625a8a79b77" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_da67fcf410e52cca13513d5fbf" ON "rca_fault_tree_analyses" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_06830eabae1dc4cafe121af8be" ON "rca_fault_tree_analyses" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_40bfa9eb36b30927422f2b51f4" ON "rca_fault_tree_analyses" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "source_hierarchy_mappings" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "source_type" character varying(50) NOT NULL, "source_connection_id" uuid, "source_identifier" character varying(1000) NOT NULL, "source_path" character varying(1000), "target_type" character varying(50) NOT NULL, "target_id" uuid NOT NULL, "tenant_id" character varying(36) NOT NULL, "organization_id" character varying(36), "is_pattern" boolean NOT NULL DEFAULT false, "pattern" character varying(500), "priority" integer NOT NULL DEFAULT '50', "is_active" boolean NOT NULL DEFAULT true, "description" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_2c866d3bc72058309481c3d36cf" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_8915d9aba8665e9fd0e74ba600" ON "source_hierarchy_mappings" ("is_active") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_ea042a30a025ca09ee724ba571" ON "source_hierarchy_mappings" ("priority") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_5f6667abd5bde682568dc0e831" ON "source_hierarchy_mappings" ("pattern") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_78d0844a70c25eda3dabeed97a" ON "source_hierarchy_mappings" ("source_identifier") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_fdb271a23d58c7a948ee730e40" ON "source_hierarchy_mappings" ("target_type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_0adf29d9a8e4b154d18dfd2d8c" ON "source_hierarchy_mappings" ("source_type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_bf3eb0c0607310d1195ed28d33" ON "source_hierarchy_mappings" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "scada_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "ipAddress" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '502', "protocol" character varying(20) NOT NULL DEFAULT 'modbus', "connectionType" character varying(20) NOT NULL DEFAULT 'tcp', "unitId" integer NOT NULL DEFAULT '1', "timeoutMs" integer NOT NULL DEFAULT '10000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "operationType" character varying(50) NOT NULL DEFAULT 'read', "registerType" character varying(100), "startAddress" integer, "registerCount" integer, "dataType" character varying(20) NOT NULL DEFAULT 'uint16', "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_8f05c55ca77f78e90516c5a2e49" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_14bbf3e0251a28add502cc5fc3" ON "scada_connections" ("tenantId", "enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "profinet_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "ipAddress" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '34964', "connectionType" character varying(20) NOT NULL DEFAULT 'tcp', "deviceId" integer NOT NULL DEFAULT '1', "timeoutMs" integer NOT NULL DEFAULT '10000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '100', "operationType" character varying(50) NOT NULL DEFAULT 'read', "slotNumber" character varying(100), "subslotNumber" character varying(100), "index" character varying(100), "subindex" character varying(100), "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_098af12178c29e7a51896a86b2b" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_d366d7817cb50f1c76e4196862" ON "profinet_connections" ("tenantId", "enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "modbus_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "connection_type" character varying(20) NOT NULL, "ip_address" character varying(45), "port" integer, "serial_port" character varying(50), "baud_rate" integer, "timeout_ms" integer NOT NULL DEFAULT '5000', "retry_count" integer NOT NULL DEFAULT '3', "unit_id" integer NOT NULL DEFAULT '1', "polling_interval_ms" integer NOT NULL DEFAULT '1000', "start_address" integer NOT NULL DEFAULT '0', "register_count" integer NOT NULL DEFAULT '10', "data_type" character varying(20) NOT NULL DEFAULT 'uint16', "byte_ordering" character varying(20) NOT NULL DEFAULT 'big-endian', "scaling_factor" numeric(10,4) NOT NULL DEFAULT '1', "unit" character varying(50), "enabled" boolean NOT NULL DEFAULT true, "tenant_id" uuid NOT NULL, "organization_id" character varying(36), "status" character varying(50) NOT NULL DEFAULT 'disconnected', "last_connected" TIMESTAMP WITH TIME ZONE, "error_count" integer NOT NULL DEFAULT '0', "last_error" text, "metadata" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenantId" uuid, CONSTRAINT "PK_9ea1d72ff4a6c26bb4f28eee9cf" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "ethernetip_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "ipAddress" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '44818', "timeoutMs" integer NOT NULL DEFAULT '10000', "retryCount" integer NOT NULL DEFAULT '3', "backplaneSlot" integer NOT NULL DEFAULT '0', "cipSecurity" boolean NOT NULL DEFAULT false, "vendorId" integer NOT NULL DEFAULT '1', "productCode" integer NOT NULL DEFAULT '0', "pollingIntervalMs" integer NOT NULL DEFAULT '100', "tagPaths" text, "dataTypes" text, "arraySizes" text, "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "organizationId" character varying(36), "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_97a529cc8ffe2a5425b4b626742" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "mqtt_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "broker_url" character varying(500) NOT NULL, "port" integer NOT NULL DEFAULT '1883', "client_id" character varying(255), "username" character varying(255), "password_hash" character varying(255), "keep_alive_seconds" integer NOT NULL DEFAULT '60', "reconnect_period_ms" integer NOT NULL DEFAULT '1000', "connect_timeout_ms" integer NOT NULL DEFAULT '30000', "clean_session" boolean NOT NULL DEFAULT true, "subscribe_topics" text, "publish_topic" character varying(500), "qos_level" integer NOT NULL DEFAULT '1', "use_tls" boolean NOT NULL DEFAULT false, "ca_cert" character varying(500), "client_cert" character varying(500), "client_key" character varying(500), "last_will_topic" character varying(500), "last_will_message" text, "last_will_qos" integer NOT NULL DEFAULT '1', "last_will_retain" boolean NOT NULL DEFAULT false, "enabled" boolean NOT NULL DEFAULT true, "tenant_id" uuid NOT NULL, "organization_id" character varying(36), "status" character varying(50) NOT NULL DEFAULT 'disconnected', "last_connected" TIMESTAMP WITH TIME ZONE, "error_count" integer NOT NULL DEFAULT '0', "last_error" text, "metadata" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenantId" uuid, CONSTRAINT "PK_3cc7fa986d0abea35d7d25ecb69" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "connection_health" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "connectionType" character varying(50) NOT NULL, "opcuaConnectionId" uuid, "modbusConnectionId" uuid, "ethernetipConnectionId" uuid, "mqttConnectionId" uuid, "systemIntegrationId" uuid, "status" character varying(20) NOT NULL, "responseTimeMs" integer, "dataPointCount" integer, "errorRate" numeric(10,4), "lastDataReceivedMs" integer, "errorMessage" text, "metrics" text, "configuration" text, "checkedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "createdAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_de3bf73e723eb657f27e664ee12" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "opcua_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "endpoint" character varying(500) NOT NULL, "security_mode" character varying(50) NOT NULL DEFAULT 'SignAndEncrypt', "security_policy" character varying(100) NOT NULL DEFAULT 'Basic256Sha256', "authentication" character varying(50) NOT NULL DEFAULT 'Anonymous', "certificate_path" character varying(500), "private_key_path" character varying(500), "reconnect_interval_ms" integer NOT NULL DEFAULT '5000', "max_reconnect_attempts" integer NOT NULL DEFAULT '5', "username" character varying(255), "password_hash" character varying(255), "timeout_ms" integer NOT NULL DEFAULT '30000', "session_timeout_ms" integer NOT NULL DEFAULT '60000', "keep_alive_ms" integer NOT NULL DEFAULT '10000', "max_message_size" integer NOT NULL DEFAULT '65536', "polling_interval_ms" integer NOT NULL DEFAULT '1000', "subscription_size" integer NOT NULL DEFAULT '1000', "default_nodes" text, "application_name" character varying(500), "enabled" boolean NOT NULL DEFAULT true, "tenant_id" uuid NOT NULL, "organization_id" character varying(36), "status" character varying(50) NOT NULL DEFAULT 'disconnected', "last_connected" TIMESTAMP WITH TIME ZONE, "error_count" integer NOT NULL DEFAULT '0', "last_error" text, "metadata" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenantId" uuid, CONSTRAINT "PK_460e0457ef0adabaff2dfd51349" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "data_transformations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "bindingId" uuid NOT NULL, "transformationType" character varying(50) NOT NULL, "parameters" text, "orderIndex" integer NOT NULL DEFAULT '0', "enabled" boolean NOT NULL DEFAULT true, "description" character varying(500), "inputMapping" text, "outputMapping" text, "formula" character varying(1000), "conditions" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_8e6b5bffeb7d5bd1c785b992ba3" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "data_bindings" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "sourceOPCUAConnectionId" uuid, "sourceModbusConnectionId" uuid, "sourceEtherNetIPConnectionId" uuid, "sourceMQTTConnectionId" uuid, "sourceSystemIntegrationId" uuid, "targetOPCUAConnectionId" uuid, "targetModbusConnectionId" uuid, "targetEtherNetIPConnectionId" uuid, "targetMQTTConnectionId" uuid, "targetSystemIntegrationId" uuid, "sourcePath" character varying(500), "targetPath" character varying(500), "transformationRules" text, "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "enabled" boolean NOT NULL DEFAULT true, "active" boolean NOT NULL DEFAULT false, "triggerMode" character varying(50) NOT NULL DEFAULT 'manual', "schedule" text, "filters" text, "tenantId" uuid NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_d934c725d13f71962cc18d529e9" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "system_integrations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "integrationType" character varying(50) NOT NULL, "endpoint" character varying(500), "apiKey" character varying(255), "username" character varying(255), "passwordHash" character varying(255), "systemType" character varying(50), "database" character varying(500), "syncIntervalSeconds" integer NOT NULL DEFAULT '300', "enabled" boolean NOT NULL DEFAULT true, "configuration" text, "authentication" text, "description" character varying(500), "tenantId" uuid NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_906ed1d97f84b3cad4e6b09a3a2" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "rca_barrier_analyses" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "tenant_id" character varying(36), "organization_id" character varying(36), "rca_id" character varying(36) NOT NULL, "hazard" character varying(255) NOT NULL, "barriers" text NOT NULL, CONSTRAINT "PK_fc75893e8c95b19094180792083" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_b452cba15c834ab797e539860b" ON "rca_barrier_analyses" ("rca_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_f20b36faff75f435f9452aa68e" ON "rca_barrier_analyses" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_b6a8953d43eaf93d4aa0898ebc" ON "rca_barrier_analyses" ("tenant_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "dnp3_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "ipAddress" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '20000', "connectionType" character varying(20) NOT NULL DEFAULT 'tcp', "sourceAddress" integer NOT NULL DEFAULT '1', "destinationAddress" integer NOT NULL DEFAULT '1', "timeoutMs" integer NOT NULL DEFAULT '10000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "operationType" character varying(50) NOT NULL DEFAULT 'read', "objectGroup" character varying(100), "objectVariation" integer, "startIndex" integer, "stopIndex" integer, "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_ab80284ceba00c0f61857a224fd" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_b52ed93e1ad0bcc5ac4f15385a" ON "dnp3_connections" ("tenantId", "enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "restapi_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "baseUrl" character varying(500) NOT NULL, "protocol" character varying(20) NOT NULL DEFAULT 'https', "defaultMethod" character varying(50) NOT NULL DEFAULT 'GET', "username" character varying(100), "passwordHash" character varying(255), "apiKey" character varying(255), "authType" character varying(100), "timeoutMs" integer NOT NULL DEFAULT '30000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "operationType" character varying(50) NOT NULL DEFAULT 'request', "headers" text, "queryParams" text, "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_01a9efe285161ab550157c43453" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_8375dd95ca704bf99eed7f4af3" ON "restapi_connections" ("tenantId", "enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "database_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "databaseType" character varying(50) NOT NULL, "host" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '5432', "database" character varying(100) NOT NULL, "username" character varying(100), "passwordHash" character varying(255), "schema" character varying(100), "table" character varying(100), "timeoutMs" integer NOT NULL DEFAULT '30000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "operationType" character varying(50) NOT NULL DEFAULT 'query', "query" text, "connectionString" text, "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_0e22db8b41302c3c47fffb530c7" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_a646bf5f4a0b20b911bfe624b0" ON "database_connections" ("tenantId", "enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "bacnet_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "ipAddress" character varying(45) NOT NULL, "port" integer NOT NULL DEFAULT '47808', "deviceId" integer NOT NULL DEFAULT '123', "timeoutMs" integer NOT NULL DEFAULT '10000', "retryCount" integer NOT NULL DEFAULT '3', "pollingIntervalMs" integer NOT NULL DEFAULT '1000', "operationType" character varying(50) NOT NULL DEFAULT 'readProperty', "objectType" character varying(100), "objectInstance" integer, "propertyId" character varying(100), "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_2310e757b1cf7c0ee1901fe35e4" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_a3ba97b71e803f5a330c66d1f9" ON "bacnet_connections" ("tenantId", "enabled") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "websocket_connections" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "description" character varying(500), "url" character varying(500) NOT NULL, "protocol" character varying(20) NOT NULL DEFAULT 'ws', "subprotocol" character varying(100), "timeoutMs" integer NOT NULL DEFAULT '30000', "retryCount" integer NOT NULL DEFAULT '3', "reconnectIntervalMs" integer NOT NULL DEFAULT '5000', "operationType" character varying(50) NOT NULL DEFAULT 'connect', "messageHandlers" text, "eventHandlers" text, "autoReconnect" boolean NOT NULL DEFAULT true, "enabled" boolean NOT NULL DEFAULT true, "tenantId" uuid NOT NULL, "status" character varying(50) NOT NULL DEFAULT 'disconnected', "lastConnected" TIMESTAMP WITH TIME ZONE, "errorCount" integer NOT NULL DEFAULT '0', "lastError" text, "metadata" text, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_ead282edc24a39682982185fb21" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_832d253b7c15500aaf919d1ce0" ON "websocket_connections" ("tenantId", "enabled") `,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_losses" ADD CONSTRAINT "FK_043210fc4ee9601d5be253ed7fa" FOREIGN KEY ("plan_id") REFERENCES "production_plans"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_losses" ADD CONSTRAINT "FK_c01238245c8d3209352cd791379" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "reconcile_forms" ADD CONSTRAINT "FK_b6a13399b1a6b1cb64c745c314d" FOREIGN KEY ("lossId") REFERENCES "production_losses"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "reconcile_forms" ADD CONSTRAINT "FK_829750e1b655f62473fbf34b36c" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" ADD CONSTRAINT "FK_8e36b4c91cff4344b1ed8da72d8" FOREIGN KEY ("plan_id") REFERENCES "production_plans"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" ADD CONSTRAINT "FK_fda378c707c43df7d9730fdac8c" FOREIGN KEY ("unit_id") REFERENCES "units"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" ADD CONSTRAINT "FK_91c1cd9e89d1db1d05f14d395e0" FOREIGN KEY ("asset_id") REFERENCES "assets"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" ADD CONSTRAINT "FK_9c89eb92722994c19f0be0ba0a1" FOREIGN KEY ("impact_code_id") REFERENCES "impact_codes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" ADD CONSTRAINT "FK_165571c3016f2aae50852324396" FOREIGN KEY ("oee_code_id") REFERENCES "oee_codes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" ADD CONSTRAINT "FK_f6b86cfe4d0085cf0ab70695b6a" FOREIGN KEY ("rca_id") REFERENCES "rcas"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" ADD CONSTRAINT "FK_09af81053b4af55cdc775bc3bd5" FOREIGN KEY ("reason_code_id") REFERENCES "reason_codes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rcas" ADD CONSTRAINT "FK_a0e2a9c25b398c12e232d861b3b" FOREIGN KEY ("event_id") REFERENCES "production_events"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rcas" ADD CONSTRAINT "FK_90f1f10ffd6d8366913f112d6ab" FOREIGN KEY ("team_lead_id") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rcas" ADD CONSTRAINT "FK_790ced6e47d966eb4fc70d5d56a" FOREIGN KEY ("template_id") REFERENCES "rca_templates"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rca_recommendations" ADD CONSTRAINT "FK_da1882bdc7e97c6f2169e95753f" FOREIGN KEY ("rcaId") REFERENCES "rcas"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rca_recommendations" ADD CONSTRAINT "FK_882aeb3d1b3de219e0396922f12" FOREIGN KEY ("assigneeId") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rca_evidence" ADD CONSTRAINT "FK_82d0f82dec4406f3cbd2df14bf4" FOREIGN KEY ("rcaId") REFERENCES "rcas"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "oee_summaries" ADD CONSTRAINT "FK_5266210a97774dca8df05d96d09" FOREIGN KEY ("plan_id") REFERENCES "production_plans"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "oee_summaries" ADD CONSTRAINT "FK_834d98877996ec31892e24edb8d" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "loss_categories" ADD CONSTRAINT "FK_f8ba443e0240f5c682948a1d434" FOREIGN KEY ("reconcileFormId") REFERENCES "reconcile_forms"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "loss_categories" ADD CONSTRAINT "FK_90bd0d20e1a2d29260118eb88a7" FOREIGN KEY ("impactCodeId") REFERENCES "impact_codes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "loss_categories" ADD CONSTRAINT "FK_193c29b91ad1a8c51a93795ad2e" FOREIGN KEY ("oeeCodeId") REFERENCES "oee_codes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "loss_categories" ADD CONSTRAINT "FK_a4e0812d81eaa05f0ca64b8b2c2" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "logic_tree_nodes" ADD CONSTRAINT "FK_791df580d6b173be0d1fb294f06" FOREIGN KEY ("rcaId") REFERENCES "rcas"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "logic_tree_nodes" ADD CONSTRAINT "FK_5c7c4a7010b9d0897735b611256" FOREIGN KEY ("parentId") REFERENCES "logic_tree_nodes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "modbus_connections" ADD CONSTRAINT "FK_941fc289173aadb1999f35f38cc" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "ethernetip_connections" ADD CONSTRAINT "FK_f0b06fb847659c8c11ac72e3860" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "mqtt_connections" ADD CONSTRAINT "FK_83f500201cd0f88f9d2fffd2986" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "connection_health" ADD CONSTRAINT "FK_671f511028ef4da6d1f33c50761" FOREIGN KEY ("opcuaConnectionId") REFERENCES "opcua_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "connection_health" ADD CONSTRAINT "FK_4dc9c9f58017162ed446f07e1ae" FOREIGN KEY ("modbusConnectionId") REFERENCES "modbus_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "connection_health" ADD CONSTRAINT "FK_47556682b92aae9d92c8d1eb9d6" FOREIGN KEY ("ethernetipConnectionId") REFERENCES "ethernetip_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "connection_health" ADD CONSTRAINT "FK_cf62fd05e752296936a42ad0eb6" FOREIGN KEY ("mqttConnectionId") REFERENCES "mqtt_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "connection_health" ADD CONSTRAINT "FK_b247d26494f07e284c642b41e16" FOREIGN KEY ("systemIntegrationId") REFERENCES "system_integrations"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "opcua_connections" ADD CONSTRAINT "FK_c8e81a6ca6c4e4decedae3f2e59" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_transformations" ADD CONSTRAINT "FK_691e17d14a722afe00d51a8fef6" FOREIGN KEY ("bindingId") REFERENCES "data_bindings"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_bb225d12d357e55db9510d6b6ef" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_8ae43b12236e907c68055ee0b5c" FOREIGN KEY ("sourceOPCUAConnectionId") REFERENCES "opcua_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_fc1593a9ec86506eb3f7a2eef8c" FOREIGN KEY ("sourceModbusConnectionId") REFERENCES "modbus_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_5d009f74b2274f0d3b620f0195e" FOREIGN KEY ("sourceEtherNetIPConnectionId") REFERENCES "ethernetip_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_6975ed005c96539055da31b7d86" FOREIGN KEY ("sourceMQTTConnectionId") REFERENCES "mqtt_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_8b79d96b53cb58bb05694cc624f" FOREIGN KEY ("sourceSystemIntegrationId") REFERENCES "system_integrations"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_78d7de931e8445efc767aa378e0" FOREIGN KEY ("targetOPCUAConnectionId") REFERENCES "opcua_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_ee8022d1372c9a5670bd611196d" FOREIGN KEY ("targetModbusConnectionId") REFERENCES "modbus_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_a6b1a1234541040a7053c4a5f70" FOREIGN KEY ("targetEtherNetIPConnectionId") REFERENCES "ethernetip_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_f3cff418b88f34697ea8dc660a4" FOREIGN KEY ("targetMQTTConnectionId") REFERENCES "mqtt_connections"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" ADD CONSTRAINT "FK_e71d86958c7184c058ca8eac56d" FOREIGN KEY ("targetSystemIntegrationId") REFERENCES "system_integrations"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "system_integrations" ADD CONSTRAINT "FK_c8ebae12649b35319e78dcf84ca" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "system_integrations" DROP CONSTRAINT "FK_c8ebae12649b35319e78dcf84ca"`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_e71d86958c7184c058ca8eac56d"`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_f3cff418b88f34697ea8dc660a4"`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_a6b1a1234541040a7053c4a5f70"`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_ee8022d1372c9a5670bd611196d"`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_78d7de931e8445efc767aa378e0"`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_8b79d96b53cb58bb05694cc624f"`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_6975ed005c96539055da31b7d86"`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_5d009f74b2274f0d3b620f0195e"`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_fc1593a9ec86506eb3f7a2eef8c"`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_8ae43b12236e907c68055ee0b5c"`);
-        await queryRunner.query(`ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_bb225d12d357e55db9510d6b6ef"`);
-        await queryRunner.query(`ALTER TABLE "data_transformations" DROP CONSTRAINT "FK_691e17d14a722afe00d51a8fef6"`);
-        await queryRunner.query(`ALTER TABLE "opcua_connections" DROP CONSTRAINT "FK_c8e81a6ca6c4e4decedae3f2e59"`);
-        await queryRunner.query(`ALTER TABLE "connection_health" DROP CONSTRAINT "FK_b247d26494f07e284c642b41e16"`);
-        await queryRunner.query(`ALTER TABLE "connection_health" DROP CONSTRAINT "FK_cf62fd05e752296936a42ad0eb6"`);
-        await queryRunner.query(`ALTER TABLE "connection_health" DROP CONSTRAINT "FK_47556682b92aae9d92c8d1eb9d6"`);
-        await queryRunner.query(`ALTER TABLE "connection_health" DROP CONSTRAINT "FK_4dc9c9f58017162ed446f07e1ae"`);
-        await queryRunner.query(`ALTER TABLE "connection_health" DROP CONSTRAINT "FK_671f511028ef4da6d1f33c50761"`);
-        await queryRunner.query(`ALTER TABLE "mqtt_connections" DROP CONSTRAINT "FK_83f500201cd0f88f9d2fffd2986"`);
-        await queryRunner.query(`ALTER TABLE "ethernetip_connections" DROP CONSTRAINT "FK_f0b06fb847659c8c11ac72e3860"`);
-        await queryRunner.query(`ALTER TABLE "modbus_connections" DROP CONSTRAINT "FK_941fc289173aadb1999f35f38cc"`);
-        await queryRunner.query(`ALTER TABLE "logic_tree_nodes" DROP CONSTRAINT "FK_5c7c4a7010b9d0897735b611256"`);
-        await queryRunner.query(`ALTER TABLE "logic_tree_nodes" DROP CONSTRAINT "FK_791df580d6b173be0d1fb294f06"`);
-        await queryRunner.query(`ALTER TABLE "loss_categories" DROP CONSTRAINT "FK_a4e0812d81eaa05f0ca64b8b2c2"`);
-        await queryRunner.query(`ALTER TABLE "loss_categories" DROP CONSTRAINT "FK_193c29b91ad1a8c51a93795ad2e"`);
-        await queryRunner.query(`ALTER TABLE "loss_categories" DROP CONSTRAINT "FK_90bd0d20e1a2d29260118eb88a7"`);
-        await queryRunner.query(`ALTER TABLE "loss_categories" DROP CONSTRAINT "FK_f8ba443e0240f5c682948a1d434"`);
-        await queryRunner.query(`ALTER TABLE "oee_summaries" DROP CONSTRAINT "FK_834d98877996ec31892e24edb8d"`);
-        await queryRunner.query(`ALTER TABLE "oee_summaries" DROP CONSTRAINT "FK_5266210a97774dca8df05d96d09"`);
-        await queryRunner.query(`ALTER TABLE "rca_evidence" DROP CONSTRAINT "FK_82d0f82dec4406f3cbd2df14bf4"`);
-        await queryRunner.query(`ALTER TABLE "rca_recommendations" DROP CONSTRAINT "FK_882aeb3d1b3de219e0396922f12"`);
-        await queryRunner.query(`ALTER TABLE "rca_recommendations" DROP CONSTRAINT "FK_da1882bdc7e97c6f2169e95753f"`);
-        await queryRunner.query(`ALTER TABLE "rcas" DROP CONSTRAINT "FK_790ced6e47d966eb4fc70d5d56a"`);
-        await queryRunner.query(`ALTER TABLE "rcas" DROP CONSTRAINT "FK_90f1f10ffd6d8366913f112d6ab"`);
-        await queryRunner.query(`ALTER TABLE "rcas" DROP CONSTRAINT "FK_a0e2a9c25b398c12e232d861b3b"`);
-        await queryRunner.query(`ALTER TABLE "production_events" DROP CONSTRAINT "FK_09af81053b4af55cdc775bc3bd5"`);
-        await queryRunner.query(`ALTER TABLE "production_events" DROP CONSTRAINT "FK_f6b86cfe4d0085cf0ab70695b6a"`);
-        await queryRunner.query(`ALTER TABLE "production_events" DROP CONSTRAINT "FK_165571c3016f2aae50852324396"`);
-        await queryRunner.query(`ALTER TABLE "production_events" DROP CONSTRAINT "FK_9c89eb92722994c19f0be0ba0a1"`);
-        await queryRunner.query(`ALTER TABLE "production_events" DROP CONSTRAINT "FK_91c1cd9e89d1db1d05f14d395e0"`);
-        await queryRunner.query(`ALTER TABLE "production_events" DROP CONSTRAINT "FK_fda378c707c43df7d9730fdac8c"`);
-        await queryRunner.query(`ALTER TABLE "production_events" DROP CONSTRAINT "FK_8e36b4c91cff4344b1ed8da72d8"`);
-        await queryRunner.query(`ALTER TABLE "reconcile_forms" DROP CONSTRAINT "FK_829750e1b655f62473fbf34b36c"`);
-        await queryRunner.query(`ALTER TABLE "reconcile_forms" DROP CONSTRAINT "FK_b6a13399b1a6b1cb64c745c314d"`);
-        await queryRunner.query(`ALTER TABLE "production_losses" DROP CONSTRAINT "FK_c01238245c8d3209352cd791379"`);
-        await queryRunner.query(`ALTER TABLE "production_losses" DROP CONSTRAINT "FK_043210fc4ee9601d5be253ed7fa"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_832d253b7c15500aaf919d1ce0"`);
-        await queryRunner.query(`DROP TABLE "websocket_connections"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_a3ba97b71e803f5a330c66d1f9"`);
-        await queryRunner.query(`DROP TABLE "bacnet_connections"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_a646bf5f4a0b20b911bfe624b0"`);
-        await queryRunner.query(`DROP TABLE "database_connections"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_8375dd95ca704bf99eed7f4af3"`);
-        await queryRunner.query(`DROP TABLE "restapi_connections"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_b52ed93e1ad0bcc5ac4f15385a"`);
-        await queryRunner.query(`DROP TABLE "dnp3_connections"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_b6a8953d43eaf93d4aa0898ebc"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_f20b36faff75f435f9452aa68e"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_b452cba15c834ab797e539860b"`);
-        await queryRunner.query(`DROP TABLE "rca_barrier_analyses"`);
-        await queryRunner.query(`DROP TABLE "system_integrations"`);
-        await queryRunner.query(`DROP TABLE "data_bindings"`);
-        await queryRunner.query(`DROP TABLE "data_transformations"`);
-        await queryRunner.query(`DROP TABLE "opcua_connections"`);
-        await queryRunner.query(`DROP TABLE "connection_health"`);
-        await queryRunner.query(`DROP TABLE "mqtt_connections"`);
-        await queryRunner.query(`DROP TABLE "ethernetip_connections"`);
-        await queryRunner.query(`DROP TABLE "modbus_connections"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_d366d7817cb50f1c76e4196862"`);
-        await queryRunner.query(`DROP TABLE "profinet_connections"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_14bbf3e0251a28add502cc5fc3"`);
-        await queryRunner.query(`DROP TABLE "scada_connections"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_bf3eb0c0607310d1195ed28d33"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_0adf29d9a8e4b154d18dfd2d8c"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_fdb271a23d58c7a948ee730e40"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_78d0844a70c25eda3dabeed97a"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_5f6667abd5bde682568dc0e831"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_ea042a30a025ca09ee724ba571"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_8915d9aba8665e9fd0e74ba600"`);
-        await queryRunner.query(`DROP TABLE "source_hierarchy_mappings"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_40bfa9eb36b30927422f2b51f4"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_06830eabae1dc4cafe121af8be"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_da67fcf410e52cca13513d5fbf"`);
-        await queryRunner.query(`DROP TABLE "rca_fault_tree_analyses"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_10c88127427a6b9e64da2bea0b"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_6a2e35fcbd3f5f6b09f0f0eccd"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_3a1adec9dc81f00da6920ceda8"`);
-        await queryRunner.query(`DROP TABLE "rca_fishbone_diagrams"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_1614859f262a4b0df6cc307026"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_4bca7afdf5e1a9164295b81ad4"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_b3ca481cb9edf1c55d002aece9"`);
-        await queryRunner.query(`DROP TABLE "rca_five_why_analyses"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_ffae41607f1c369f1c87975ce8"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_68e47c91039617fea2ff36313b"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_97ae496f70b45daddfa927e068"`);
-        await queryRunner.query(`DROP TABLE "rca_fmea_analyses"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_4eab5ecd3f4166db8c7db5e17d"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_7e5b997af65eb13f932573fc34"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_8b6ad2bccf50753849263a521e"`);
-        await queryRunner.query(`DROP TABLE "rca_change_analyses"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_5f19ca962634e4010e60c3e572"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_7a24bfafd08197338686845431"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_4a14c733b1d1421f1ce0eedbe1"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_2353d831240b19fcc34d6803a9"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_6cb936610cd3733aa89611e597"`);
-        await queryRunner.query(`DROP TABLE "stream_data_sources"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_bae5b07021480819ce31e933f3"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_e820a37dde387b103af49eebc5"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_8550095330d18590e7cead3500"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_b53402d3b212b5a166572c5ca7"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_3b14a168ddf22e64110d530f3d"`);
-        await queryRunner.query(`DROP TABLE "stream_connection_configs"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_831fa8d64f8cf5c57a85208906"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_4aaa9ba241ad8f86ec4584159a"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_ab4b1540c768e5c421adffe34e"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_6026665bcdb9cce25a1306d560"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_2a256a9847af5aae8afc3f6d54"`);
-        await queryRunner.query(`DROP TABLE "stream_processors"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_6edca99b81ac062b893c1f35ed"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_aba1b638438bb1267e4b5f0381"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_8468622057cdfce2c423fb73be"`);
-        await queryRunner.query(`DROP TABLE "stream_metrics"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_d77f0ad25d88557fa83bf55c9d"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_dd618b11743f397901dd416a40"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_119be1602e564fc35b68bc7539"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_aedbc5f7844f468f578dd9f4d8"`);
-        await queryRunner.query(`DROP TABLE "stream_data_sinks"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_086a5ec69875c0c87463002f29"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_cf8b40fcf36b0fee6a2e81e833"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_d3d4d5b235928fe4605a45b48e"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_4c418bf452d0e118261bd0995f"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_22776255c9e7c95b90d543eb70"`);
-        await queryRunner.query(`DROP TABLE "stream_alerts"`);
-        await queryRunner.query(`DROP TABLE "app_settings"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_1463179e78a90d088ae8374743"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_92c1f2c75417c27d0b2559d012"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_6f2183f735a5b87eaf2f557f60"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_268ab8531f11ebd5d619fc33ae"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_86d28b5a6cccf3bd81c0cbb327"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_90d257c2c4f58a6b01c7211c7c"`);
-        await queryRunner.query(`DROP TABLE "af_bindings"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_ce8e4d371840bbeff8beda50c8"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_d66335073f378c5e772e48d3f6"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_de6783dc8220ac36576a84c086"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_baf96330ad2e93bf54f0617689"`);
-        await queryRunner.query(`DROP TABLE "change_analyses"`);
-        await queryRunner.query(`DROP TABLE "audit_logs"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_80e0ce436793d531e24612d267"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_1a96c779ad73d283135a62d6f9"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_c46a7ad67c0b78d6f92d381e6a"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_8d42a346e61169120ae97510fa"`);
-        await queryRunner.query(`DROP TABLE "barrier_analyses"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_139c530dcddcd1c0f040f8a7e7"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_a66f57e74944f56f8426399892"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_19d7cfd5c6d832f26e9cd6f959"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_3b6e486e49a2353c4456e72751"`);
-        await queryRunner.query(`DROP TABLE "custom_attribute_definitions"`);
-        await queryRunner.query(`DROP TABLE "dashboard_configurations"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_6c05f068f12c3d0f0e399670d7"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_feb3331b1d18cafdbf9e96f1f7"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_736faece0ea92fc5e8574115a7"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_a10a6ecb685dcadfb8196eb20c"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_cb5dd318884707fdb160842660"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_b15d66428823c8b8113f7c8a41"`);
-        await queryRunner.query(`DROP TABLE "custom_attribute_values"`);
-        await queryRunner.query(`DROP TABLE "evidence_categories"`);
-        await queryRunner.query(`DROP TABLE "evidence_locations"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_d099cf8e70daabd3851892d9b8"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_d253e2f3d22fb390a12fc40b33"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_f20600e078a6ba3b8efb928775"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_20ce2e2e0b18596ad41f8a9459"`);
-        await queryRunner.query(`DROP TABLE "fishbone_diagrams"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_39dceb76a83f68b33494034bca"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_1eec9b8ac8a36e3150f35d401b"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_386fe3a14ca7ab15da185351e2"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_aa258f6d6c837000eb837c8141"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_c76edc1e50d935210c73ba27bb"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_f6dbc499812b60d690c5c3f359"`);
-        await queryRunner.query(`DROP TABLE "data_sources"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_9caeb54c670d4b0d80c7d470c1"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_773a16f0da066ebd71b1accc1d"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_d7d4b83e2c43370585421d6d65"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_537bc41b31a70177f34238e934"`);
-        await queryRunner.query(`DROP TABLE "fault_tree_analyses"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_fba9d32f43f51fc0b45c5a26a1"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_45ecd1369d8e7754ddaf36fc1a"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_af7b065900a91fd28781526e76"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_491a32514a4c2611323a3bc986"`);
-        await queryRunner.query(`DROP TABLE "fmea_analyses"`);
-        await queryRunner.query(`DROP TABLE "logic_tree_nodes"`);
-        await queryRunner.query(`DROP TABLE "loss_categories"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_707919a300bbb088ba707dbe92"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_c087539c265e0d2b1886cbbd38"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_bbbc016f1489fd92ff413957b8"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_b3c45d6e6a61c86943298a702e"`);
-        await queryRunner.query(`DROP TABLE "five_why_analyses"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_8d77df8595e77a6d7f866b406c"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_09df7426df1326499f89b39491"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_e09ac90c0669bb7e638c0bfa2a"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_b5af1a62e3f1afa08dd2d359f1"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_fbba362107909d51dd06f54617"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_6ed7925463b87855c10381624f"`);
-        await queryRunner.query(`DROP TABLE "historian_tags"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_8662ec50511259be3076f9c81a"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_459e5caad164d68ba08510f128"`);
-        await queryRunner.query(`DROP TABLE "query_history"`);
-        await queryRunner.query(`DROP TABLE "oee_summaries"`);
-        await queryRunner.query(`DROP TABLE "organizations"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_a067299e14d010580eebfb86cb"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_278ac79c0bba2b29cca67c4352"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_297cd1f53bb77990c39dc04c4a"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_dcac91bdb09d8fd2aa4ef1ca10"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_e6313f2722a8d39dd852218507"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_583df9e4a4a26098718f37c8e6"`);
-        await queryRunner.query(`DROP TABLE "pi_af_elements"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_dc14cf1cea5a5b8eb72f6d95b3"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_0a60561d49d2defb80153b5a3c"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_560a5a557df886c4a8a15d840e"`);
-        await queryRunner.query(`DROP TABLE "pi_connections"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_7fa81bd4264b9df8d18f9d26f0"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_a15f110084e26bf1a96caef2bd"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_ee8876d8d96b2ec9e7356b5933"`);
-        await queryRunner.query(`DROP TABLE "pi_mappings"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_243a82722abeb72cbadcddd7ff"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_366bf98ce45a78fc04c5d2be12"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_d8eac7c75d2762a9c33f2b8617"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_928802dbf538f07a75f2c3ba48"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_faf6bc79e85331733cd0d567b4"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_1ca559a671f86ff006f1aba6f9"`);
-        await queryRunner.query(`DROP TABLE "pi_events"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_68e74a0ab6e2aa327b5c0fe677"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_3b38ccc53896cd40077d5c23be"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_7c1ca69fdcb693137f615eafab"`);
-        await queryRunner.query(`DROP TABLE "pi_sync_watermarks"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_03bc03f60cf3ead27d2290f93c"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_41870904cacc3982b156128bb6"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_bb56578ccb47df6ef52551b1ad"`);
-        await queryRunner.query(`DROP TABLE "pi_sync_jobs"`);
-        await queryRunner.query(`DROP TABLE "products"`);
-        await queryRunner.query(`DROP TABLE "production_plan_templates"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_47db4c22f1a45dd6d8503df8dc"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_b096d83c9704cbbc387fe6c803"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_d2d97aadc174ec0d0c62488dc2"`);
-        await queryRunner.query(`DROP TABLE "rca_analysis_configs"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_52477a3c4a6cb7e34a8a27b8cb"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_ada1a4a28cc8c8a6d4faddb64f"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_c5074ce654cea7bb387994f253"`);
-        await queryRunner.query(`DROP TABLE "rca_knowledge_base"`);
-        await queryRunner.query(`DROP TABLE "rca_evidence"`);
-        await queryRunner.query(`DROP TABLE "rca_recommendations"`);
-        await queryRunner.query(`DROP TABLE "rcas"`);
-        await queryRunner.query(`DROP TABLE "rca_templates"`);
-        await queryRunner.query(`DROP TABLE "production_events"`);
-        await queryRunner.query(`DROP TABLE "reason_codes"`);
-        await queryRunner.query(`DROP TABLE "oee_codes"`);
-        await queryRunner.query(`DROP TABLE "impact_codes"`);
-        await queryRunner.query(`DROP TABLE "assets"`);
-        await queryRunner.query(`DROP TABLE "rca_cause_codes"`);
-        await queryRunner.query(`DROP TABLE "roles"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_632e962cb6b605ccb5a7d42ebf"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_1a68e66eb10626fe366c03494b"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_6d3a73b904484a86a6f7fa706d"`);
-        await queryRunner.query(`DROP TABLE "rca_trigger_configs"`);
-        await queryRunner.query(`DROP TABLE "reconcile_forms"`);
-        await queryRunner.query(`DROP TABLE "production_losses"`);
-        await queryRunner.query(`DROP TABLE "production_plans"`);
-        await queryRunner.query(`DROP TABLE "tasks"`);
-        await queryRunner.query(`DROP TABLE "tenants"`);
-        await queryRunner.query(`DROP TABLE "units"`);
-        await queryRunner.query(`DROP TABLE "verification_status_codes"`);
-        await queryRunner.query(`DROP TABLE "unmapped_events"`);
-        await queryRunner.query(`DROP TABLE "users"`);
-    }
-
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE "system_integrations" DROP CONSTRAINT "FK_c8ebae12649b35319e78dcf84ca"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_e71d86958c7184c058ca8eac56d"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_f3cff418b88f34697ea8dc660a4"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_a6b1a1234541040a7053c4a5f70"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_ee8022d1372c9a5670bd611196d"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_78d7de931e8445efc767aa378e0"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_8b79d96b53cb58bb05694cc624f"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_6975ed005c96539055da31b7d86"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_5d009f74b2274f0d3b620f0195e"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_fc1593a9ec86506eb3f7a2eef8c"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_8ae43b12236e907c68055ee0b5c"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_bindings" DROP CONSTRAINT "FK_bb225d12d357e55db9510d6b6ef"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "data_transformations" DROP CONSTRAINT "FK_691e17d14a722afe00d51a8fef6"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "opcua_connections" DROP CONSTRAINT "FK_c8e81a6ca6c4e4decedae3f2e59"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "connection_health" DROP CONSTRAINT "FK_b247d26494f07e284c642b41e16"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "connection_health" DROP CONSTRAINT "FK_cf62fd05e752296936a42ad0eb6"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "connection_health" DROP CONSTRAINT "FK_47556682b92aae9d92c8d1eb9d6"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "connection_health" DROP CONSTRAINT "FK_4dc9c9f58017162ed446f07e1ae"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "connection_health" DROP CONSTRAINT "FK_671f511028ef4da6d1f33c50761"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "mqtt_connections" DROP CONSTRAINT "FK_83f500201cd0f88f9d2fffd2986"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "ethernetip_connections" DROP CONSTRAINT "FK_f0b06fb847659c8c11ac72e3860"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "modbus_connections" DROP CONSTRAINT "FK_941fc289173aadb1999f35f38cc"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "logic_tree_nodes" DROP CONSTRAINT "FK_5c7c4a7010b9d0897735b611256"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "logic_tree_nodes" DROP CONSTRAINT "FK_791df580d6b173be0d1fb294f06"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "loss_categories" DROP CONSTRAINT "FK_a4e0812d81eaa05f0ca64b8b2c2"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "loss_categories" DROP CONSTRAINT "FK_193c29b91ad1a8c51a93795ad2e"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "loss_categories" DROP CONSTRAINT "FK_90bd0d20e1a2d29260118eb88a7"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "loss_categories" DROP CONSTRAINT "FK_f8ba443e0240f5c682948a1d434"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "oee_summaries" DROP CONSTRAINT "FK_834d98877996ec31892e24edb8d"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "oee_summaries" DROP CONSTRAINT "FK_5266210a97774dca8df05d96d09"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rca_evidence" DROP CONSTRAINT "FK_82d0f82dec4406f3cbd2df14bf4"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rca_recommendations" DROP CONSTRAINT "FK_882aeb3d1b3de219e0396922f12"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rca_recommendations" DROP CONSTRAINT "FK_da1882bdc7e97c6f2169e95753f"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rcas" DROP CONSTRAINT "FK_790ced6e47d966eb4fc70d5d56a"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rcas" DROP CONSTRAINT "FK_90f1f10ffd6d8366913f112d6ab"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "rcas" DROP CONSTRAINT "FK_a0e2a9c25b398c12e232d861b3b"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" DROP CONSTRAINT "FK_09af81053b4af55cdc775bc3bd5"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" DROP CONSTRAINT "FK_f6b86cfe4d0085cf0ab70695b6a"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" DROP CONSTRAINT "FK_165571c3016f2aae50852324396"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" DROP CONSTRAINT "FK_9c89eb92722994c19f0be0ba0a1"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" DROP CONSTRAINT "FK_91c1cd9e89d1db1d05f14d395e0"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" DROP CONSTRAINT "FK_fda378c707c43df7d9730fdac8c"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_events" DROP CONSTRAINT "FK_8e36b4c91cff4344b1ed8da72d8"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "reconcile_forms" DROP CONSTRAINT "FK_829750e1b655f62473fbf34b36c"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "reconcile_forms" DROP CONSTRAINT "FK_b6a13399b1a6b1cb64c745c314d"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_losses" DROP CONSTRAINT "FK_c01238245c8d3209352cd791379"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "production_losses" DROP CONSTRAINT "FK_043210fc4ee9601d5be253ed7fa"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_832d253b7c15500aaf919d1ce0"`,
+    );
+    await queryRunner.query(`DROP TABLE "websocket_connections"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_a3ba97b71e803f5a330c66d1f9"`,
+    );
+    await queryRunner.query(`DROP TABLE "bacnet_connections"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_a646bf5f4a0b20b911bfe624b0"`,
+    );
+    await queryRunner.query(`DROP TABLE "database_connections"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_8375dd95ca704bf99eed7f4af3"`,
+    );
+    await queryRunner.query(`DROP TABLE "restapi_connections"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_b52ed93e1ad0bcc5ac4f15385a"`,
+    );
+    await queryRunner.query(`DROP TABLE "dnp3_connections"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_b6a8953d43eaf93d4aa0898ebc"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_f20b36faff75f435f9452aa68e"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_b452cba15c834ab797e539860b"`,
+    );
+    await queryRunner.query(`DROP TABLE "rca_barrier_analyses"`);
+    await queryRunner.query(`DROP TABLE "system_integrations"`);
+    await queryRunner.query(`DROP TABLE "data_bindings"`);
+    await queryRunner.query(`DROP TABLE "data_transformations"`);
+    await queryRunner.query(`DROP TABLE "opcua_connections"`);
+    await queryRunner.query(`DROP TABLE "connection_health"`);
+    await queryRunner.query(`DROP TABLE "mqtt_connections"`);
+    await queryRunner.query(`DROP TABLE "ethernetip_connections"`);
+    await queryRunner.query(`DROP TABLE "modbus_connections"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_d366d7817cb50f1c76e4196862"`,
+    );
+    await queryRunner.query(`DROP TABLE "profinet_connections"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_14bbf3e0251a28add502cc5fc3"`,
+    );
+    await queryRunner.query(`DROP TABLE "scada_connections"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_bf3eb0c0607310d1195ed28d33"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_0adf29d9a8e4b154d18dfd2d8c"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_fdb271a23d58c7a948ee730e40"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_78d0844a70c25eda3dabeed97a"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_5f6667abd5bde682568dc0e831"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_ea042a30a025ca09ee724ba571"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_8915d9aba8665e9fd0e74ba600"`,
+    );
+    await queryRunner.query(`DROP TABLE "source_hierarchy_mappings"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_40bfa9eb36b30927422f2b51f4"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_06830eabae1dc4cafe121af8be"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_da67fcf410e52cca13513d5fbf"`,
+    );
+    await queryRunner.query(`DROP TABLE "rca_fault_tree_analyses"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_10c88127427a6b9e64da2bea0b"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_6a2e35fcbd3f5f6b09f0f0eccd"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_3a1adec9dc81f00da6920ceda8"`,
+    );
+    await queryRunner.query(`DROP TABLE "rca_fishbone_diagrams"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_1614859f262a4b0df6cc307026"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_4bca7afdf5e1a9164295b81ad4"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_b3ca481cb9edf1c55d002aece9"`,
+    );
+    await queryRunner.query(`DROP TABLE "rca_five_why_analyses"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_ffae41607f1c369f1c87975ce8"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_68e47c91039617fea2ff36313b"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_97ae496f70b45daddfa927e068"`,
+    );
+    await queryRunner.query(`DROP TABLE "rca_fmea_analyses"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_4eab5ecd3f4166db8c7db5e17d"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_7e5b997af65eb13f932573fc34"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_8b6ad2bccf50753849263a521e"`,
+    );
+    await queryRunner.query(`DROP TABLE "rca_change_analyses"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_5f19ca962634e4010e60c3e572"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_7a24bfafd08197338686845431"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_4a14c733b1d1421f1ce0eedbe1"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_2353d831240b19fcc34d6803a9"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_6cb936610cd3733aa89611e597"`,
+    );
+    await queryRunner.query(`DROP TABLE "stream_data_sources"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_bae5b07021480819ce31e933f3"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_e820a37dde387b103af49eebc5"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_8550095330d18590e7cead3500"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_b53402d3b212b5a166572c5ca7"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_3b14a168ddf22e64110d530f3d"`,
+    );
+    await queryRunner.query(`DROP TABLE "stream_connection_configs"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_831fa8d64f8cf5c57a85208906"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_4aaa9ba241ad8f86ec4584159a"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_ab4b1540c768e5c421adffe34e"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_6026665bcdb9cce25a1306d560"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_2a256a9847af5aae8afc3f6d54"`,
+    );
+    await queryRunner.query(`DROP TABLE "stream_processors"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_6edca99b81ac062b893c1f35ed"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_aba1b638438bb1267e4b5f0381"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_8468622057cdfce2c423fb73be"`,
+    );
+    await queryRunner.query(`DROP TABLE "stream_metrics"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_d77f0ad25d88557fa83bf55c9d"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_dd618b11743f397901dd416a40"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_119be1602e564fc35b68bc7539"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_aedbc5f7844f468f578dd9f4d8"`,
+    );
+    await queryRunner.query(`DROP TABLE "stream_data_sinks"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_086a5ec69875c0c87463002f29"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_cf8b40fcf36b0fee6a2e81e833"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_d3d4d5b235928fe4605a45b48e"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_4c418bf452d0e118261bd0995f"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_22776255c9e7c95b90d543eb70"`,
+    );
+    await queryRunner.query(`DROP TABLE "stream_alerts"`);
+    await queryRunner.query(`DROP TABLE "app_settings"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_1463179e78a90d088ae8374743"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_92c1f2c75417c27d0b2559d012"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_6f2183f735a5b87eaf2f557f60"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_268ab8531f11ebd5d619fc33ae"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_86d28b5a6cccf3bd81c0cbb327"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_90d257c2c4f58a6b01c7211c7c"`,
+    );
+    await queryRunner.query(`DROP TABLE "af_bindings"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_ce8e4d371840bbeff8beda50c8"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_d66335073f378c5e772e48d3f6"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_de6783dc8220ac36576a84c086"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_baf96330ad2e93bf54f0617689"`,
+    );
+    await queryRunner.query(`DROP TABLE "change_analyses"`);
+    await queryRunner.query(`DROP TABLE "audit_logs"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_80e0ce436793d531e24612d267"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_1a96c779ad73d283135a62d6f9"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_c46a7ad67c0b78d6f92d381e6a"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_8d42a346e61169120ae97510fa"`,
+    );
+    await queryRunner.query(`DROP TABLE "barrier_analyses"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_139c530dcddcd1c0f040f8a7e7"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_a66f57e74944f56f8426399892"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_19d7cfd5c6d832f26e9cd6f959"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_3b6e486e49a2353c4456e72751"`,
+    );
+    await queryRunner.query(`DROP TABLE "custom_attribute_definitions"`);
+    await queryRunner.query(`DROP TABLE "dashboard_configurations"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_6c05f068f12c3d0f0e399670d7"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_feb3331b1d18cafdbf9e96f1f7"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_736faece0ea92fc5e8574115a7"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_a10a6ecb685dcadfb8196eb20c"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_cb5dd318884707fdb160842660"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_b15d66428823c8b8113f7c8a41"`,
+    );
+    await queryRunner.query(`DROP TABLE "custom_attribute_values"`);
+    await queryRunner.query(`DROP TABLE "evidence_categories"`);
+    await queryRunner.query(`DROP TABLE "evidence_locations"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_d099cf8e70daabd3851892d9b8"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_d253e2f3d22fb390a12fc40b33"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_f20600e078a6ba3b8efb928775"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_20ce2e2e0b18596ad41f8a9459"`,
+    );
+    await queryRunner.query(`DROP TABLE "fishbone_diagrams"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_39dceb76a83f68b33494034bca"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_1eec9b8ac8a36e3150f35d401b"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_386fe3a14ca7ab15da185351e2"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_aa258f6d6c837000eb837c8141"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_c76edc1e50d935210c73ba27bb"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_f6dbc499812b60d690c5c3f359"`,
+    );
+    await queryRunner.query(`DROP TABLE "data_sources"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_9caeb54c670d4b0d80c7d470c1"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_773a16f0da066ebd71b1accc1d"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_d7d4b83e2c43370585421d6d65"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_537bc41b31a70177f34238e934"`,
+    );
+    await queryRunner.query(`DROP TABLE "fault_tree_analyses"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_fba9d32f43f51fc0b45c5a26a1"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_45ecd1369d8e7754ddaf36fc1a"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_af7b065900a91fd28781526e76"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_491a32514a4c2611323a3bc986"`,
+    );
+    await queryRunner.query(`DROP TABLE "fmea_analyses"`);
+    await queryRunner.query(`DROP TABLE "logic_tree_nodes"`);
+    await queryRunner.query(`DROP TABLE "loss_categories"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_707919a300bbb088ba707dbe92"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_c087539c265e0d2b1886cbbd38"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_bbbc016f1489fd92ff413957b8"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_b3c45d6e6a61c86943298a702e"`,
+    );
+    await queryRunner.query(`DROP TABLE "five_why_analyses"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_8d77df8595e77a6d7f866b406c"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_09df7426df1326499f89b39491"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_e09ac90c0669bb7e638c0bfa2a"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_b5af1a62e3f1afa08dd2d359f1"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_fbba362107909d51dd06f54617"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_6ed7925463b87855c10381624f"`,
+    );
+    await queryRunner.query(`DROP TABLE "historian_tags"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_8662ec50511259be3076f9c81a"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_459e5caad164d68ba08510f128"`,
+    );
+    await queryRunner.query(`DROP TABLE "query_history"`);
+    await queryRunner.query(`DROP TABLE "oee_summaries"`);
+    await queryRunner.query(`DROP TABLE "organizations"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_a067299e14d010580eebfb86cb"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_278ac79c0bba2b29cca67c4352"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_297cd1f53bb77990c39dc04c4a"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_dcac91bdb09d8fd2aa4ef1ca10"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_e6313f2722a8d39dd852218507"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_583df9e4a4a26098718f37c8e6"`,
+    );
+    await queryRunner.query(`DROP TABLE "pi_af_elements"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_dc14cf1cea5a5b8eb72f6d95b3"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_0a60561d49d2defb80153b5a3c"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_560a5a557df886c4a8a15d840e"`,
+    );
+    await queryRunner.query(`DROP TABLE "pi_connections"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_7fa81bd4264b9df8d18f9d26f0"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_a15f110084e26bf1a96caef2bd"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_ee8876d8d96b2ec9e7356b5933"`,
+    );
+    await queryRunner.query(`DROP TABLE "pi_mappings"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_243a82722abeb72cbadcddd7ff"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_366bf98ce45a78fc04c5d2be12"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_d8eac7c75d2762a9c33f2b8617"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_928802dbf538f07a75f2c3ba48"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_faf6bc79e85331733cd0d567b4"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_1ca559a671f86ff006f1aba6f9"`,
+    );
+    await queryRunner.query(`DROP TABLE "pi_events"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_68e74a0ab6e2aa327b5c0fe677"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_3b38ccc53896cd40077d5c23be"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_7c1ca69fdcb693137f615eafab"`,
+    );
+    await queryRunner.query(`DROP TABLE "pi_sync_watermarks"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_03bc03f60cf3ead27d2290f93c"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_41870904cacc3982b156128bb6"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_bb56578ccb47df6ef52551b1ad"`,
+    );
+    await queryRunner.query(`DROP TABLE "pi_sync_jobs"`);
+    await queryRunner.query(`DROP TABLE "products"`);
+    await queryRunner.query(`DROP TABLE "production_plan_templates"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_47db4c22f1a45dd6d8503df8dc"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_b096d83c9704cbbc387fe6c803"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_d2d97aadc174ec0d0c62488dc2"`,
+    );
+    await queryRunner.query(`DROP TABLE "rca_analysis_configs"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_52477a3c4a6cb7e34a8a27b8cb"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_ada1a4a28cc8c8a6d4faddb64f"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_c5074ce654cea7bb387994f253"`,
+    );
+    await queryRunner.query(`DROP TABLE "rca_knowledge_base"`);
+    await queryRunner.query(`DROP TABLE "rca_evidence"`);
+    await queryRunner.query(`DROP TABLE "rca_recommendations"`);
+    await queryRunner.query(`DROP TABLE "rcas"`);
+    await queryRunner.query(`DROP TABLE "rca_templates"`);
+    await queryRunner.query(`DROP TABLE "production_events"`);
+    await queryRunner.query(`DROP TABLE "reason_codes"`);
+    await queryRunner.query(`DROP TABLE "oee_codes"`);
+    await queryRunner.query(`DROP TABLE "impact_codes"`);
+    await queryRunner.query(`DROP TABLE "assets"`);
+    await queryRunner.query(`DROP TABLE "rca_cause_codes"`);
+    await queryRunner.query(`DROP TABLE "roles"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_632e962cb6b605ccb5a7d42ebf"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_1a68e66eb10626fe366c03494b"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_6d3a73b904484a86a6f7fa706d"`,
+    );
+    await queryRunner.query(`DROP TABLE "rca_trigger_configs"`);
+    await queryRunner.query(`DROP TABLE "reconcile_forms"`);
+    await queryRunner.query(`DROP TABLE "production_losses"`);
+    await queryRunner.query(`DROP TABLE "production_plans"`);
+    await queryRunner.query(`DROP TABLE "tasks"`);
+    await queryRunner.query(`DROP TABLE "tenants"`);
+    await queryRunner.query(`DROP TABLE "units"`);
+    await queryRunner.query(`DROP TABLE "verification_status_codes"`);
+    await queryRunner.query(`DROP TABLE "unmapped_events"`);
+    await queryRunner.query(`DROP TABLE "users"`);
+  }
 }

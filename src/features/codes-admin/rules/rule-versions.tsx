@@ -14,7 +14,7 @@ export interface RuleVersionsProps {
 }
 
 const MARK = { added: '+', removed: '−', same: ' ' } as const;
-const TONE = { added: 'text-green-700 dark:text-green-400', removed: 'text-destructive line-through', same: 'text-muted-foreground' } as const;
+const TONE = { added: 'text-success', removed: 'text-destructive line-through', same: 'text-muted-foreground' } as const;
 
 function DefinitionDiff({ rows, index, schema, valueText }: { rows: readonly RuleVersionView[]; index: number; schema: RulesSchemaView; valueText: ValueText }) {
   return (

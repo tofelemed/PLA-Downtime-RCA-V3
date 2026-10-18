@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { v2 } from '@/api/v2/v2';
 import { DataTable, type DataTableColumn, type DataTableEmpty } from '@/features/ux-kit/data-table';
 import { useRcaFormat } from '@/features/rca/use-rca-format';
+import { GLOSSARY } from '@/features/ux-kit/labels/glossary';
 import { QualityBadge } from './quality-score';
 
 function usePrefetchEntry() {
@@ -43,7 +44,7 @@ function columns(date: (iso: string | null) => string, prefetch: (id: string) =>
     },
     { id: 'quality', header: 'Quality', cell: (row) => <QualityBadge score={row.qualityScore} />, nowrap: true },
     { id: 'published', header: 'State', cell: (row) => <Badge variant={row.isPublished ? 'default' : 'outline'}>{row.isPublished ? 'Published' : 'Unpublished'}</Badge>, nowrap: true },
-    { id: 'unit', header: 'Unit', cell: (row) => row.unitName ?? (row.unitId ? 'Unknown unit' : 'Tenant-wide') },
+    { id: 'unit', header: 'Unit', cell: (row) => row.unitName ?? (row.unitId ? 'Unknown unit' : GLOSSARY.wholePlant) },
     { id: 'asset', header: 'Asset', cell: (row) => row.assetName ?? '—' },
     { id: 'helpful', header: 'Helpful', cell: (row) => row.helpfulCount, align: 'right' },
     { id: 'closed', header: 'Closed', cell: (row) => date(row.closedAt ?? row.createdAt), nowrap: true },

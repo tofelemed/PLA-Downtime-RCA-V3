@@ -8,6 +8,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { DataState } from '@/features/ux-kit/data-state';
+import { InlineError } from '@/features/ux-kit/errors/inline-error';
 import { Fact } from '../components/fact';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DEFAULT_BASIS_LABELS, DEMAND_RULE_LABELS, FX_DATE_RULE_LABELS, FX_POLICY_LABELS, FX_RATE_TYPE_LABELS, labelOf, TIME_BASIS_RULE_LABELS } from '@/features/ux-kit/labels';
@@ -21,12 +22,12 @@ import { PolicyApprove } from './policy-approve';
 const BACK = { to: '/finance?tab=policies', label: 'Finance' };
 const bodyText = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
-
 /** Names of the impact codes counted as independent cost components (never their ids). */
 function IndependentCodes({ ids }: { ids: readonly string[] }) {
   const impacts = useCodeList('impact-codes', { includeRetired: true });
   if (ids.length === 0) return <>None</>;
   if (impacts.isLoading) return <>Loading…</>;
+  if (impacts.isError) return <InlineError title="Could not load the impact codes." error={impacts.error} onRetry={() => void impacts.refetch()} />;
   return <>{ids.map((id) => impacts.items.find((entry) => entry.id === id)).map((code) => (code ? `${code.code} — ${code.name}` : 'Unknown impact code')).join(', ')}</>;
 }
 
@@ -49,6 +50,12 @@ function PolicyFacts({ policy }: { policy: ValuationPolicyView }) {
       {bodyText(policy.body.timeBasisRule) === 'independent_components' && (
         <Fact label="Independent cost components">
           <IndependentCodes ids={independent} />
+        </Fact>
+      )}
+      {policy.backdateReason && (
+        <Fact label="Commissioning backdate">
+          {policy.backdateReason}
+          {policy.restateApproved ? ' · approved figures in range get change proposals' : ''}
         </Fact>
       )}
       {policy.notes && <Fact label="Notes">{policy.notes}</Fact>}

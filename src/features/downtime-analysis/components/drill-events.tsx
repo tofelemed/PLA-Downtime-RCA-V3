@@ -24,7 +24,7 @@ export function DrillEvents({ filters, selection, onDismiss }: DrillEventsProps)
   const { digits } = useCalendarPreference();
   return (
     <Section
-      title={`Events · ${selection.label}`}
+      title={`Stops · ${selection.label}`}
       className="rounded-md border p-4"
       actions={<Button size="sm" variant="ghost" onClick={onDismiss}>Close list</Button>}
       description={
@@ -35,7 +35,7 @@ export function DrillEvents({ filters, selection, onDismiss }: DrillEventsProps)
       }
     >
       <div data-testid="drill-events" data-reason-id={selection.reasonId ?? ''}>
-        <EventTable caption={`Events coded ${selection.label}`} query={drillEventQuery(filters, selection.reasonId, env.allReasonCodes)} testId="drill-event-list" />
+        <EventTable caption={`Stops coded ${selection.label}`} query={drillEventQuery(filters, selection.reasonId, env.allReasonCodes)} testId="drill-event-list" />
       </div>
     </Section>
   );

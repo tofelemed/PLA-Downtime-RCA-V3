@@ -11,6 +11,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { resolvedActorText } from '@/features/ux-kit/labels/actor-labels';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
 import { linkTargetOf } from './components/task-columns';
@@ -83,9 +84,9 @@ function TaskDetail({ task }: { task: TaskView }) {
       <PageHeader
         title={task.title}
         back={BACK}
-        description={`Assigned by ${task.assignedByName ?? 'Unknown user'} · created ${dates.date(task.createdAt)}`}
+        description={`Assigned by ${resolvedActorText(task.assignedById, task.assignedByName)} · created ${dates.date(task.createdAt)}`}
         actions={canWriteEvents && <TaskActions task={task} />}
-        meta={target && <Link to={target} className="underline-offset-2 hover:underline">Open the linked RCA case</Link>}
+        meta={target && <Link to={target} className="underline-offset-2 hover:underline">Open the linked investigation</Link>}
       />
       <Section title="Details">
         <TaskForm key={task.updatedAt} initial={original} assigneeName={task.assigneeName} readOnly={!canWriteEvents} submitLabel="Save changes" onSubmit={submit} onCancel={() => navigate(BACK.to)} />

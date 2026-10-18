@@ -99,3 +99,47 @@ export class RcaRecommendationDismissV2Dto {
   @MaxLength(2000)
   reason: string;
 }
+
+/**
+ * `GET /v2/occurrences` (UX G-3): stop occurrences to link to a case. Bounded: a window `from`/`to`
+ * (overlap, at most 366 days) or an `eventId` (422 WINDOW_REQUIRED / WINDOW_TOO_LONG / INVALID_RANGE).
+ */
+export class RcaOccurrenceV2ListQueryDto extends ListQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  unitId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Occurrences with an event of this asset',
+  })
+  @IsOptional()
+  @IsUUID()
+  assetId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Occurrences with an event coded with this reason',
+  })
+  @IsOptional()
+  @IsUUID()
+  reasonCodeId?: string;
+
+  @ApiPropertyOptional({ description: 'The occurrence of this event' })
+  @IsOptional()
+  @IsUUID()
+  eventId?: string;
+
+  @ApiPropertyOptional({
+    maxLength: 100,
+    description: 'Case-insensitive search in event descriptions',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
+  @ApiPropertyOptional({ enum: ['-startTime'] })
+  @IsOptional()
+  @IsIn(['-startTime'])
+  sort?: string = undefined;
+}

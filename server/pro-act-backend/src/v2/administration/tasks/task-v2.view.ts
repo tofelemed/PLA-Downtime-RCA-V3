@@ -21,6 +21,8 @@ export interface TaskV2View {
   overdue: boolean;
   linkType: string | null;
   linkId: string | null;
+  /** item 5: the RCA action this task carries out (with linkType RCA) */
+  rcaActionId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -70,6 +72,7 @@ export function toTaskView(
     overdue: isOverdue(task, now),
     linkType: task.entityType ?? null,
     linkId: task.entityId ?? null,
+    rcaActionId: task.rcaActionId ?? null,
     createdAt: new Date(task.createdAt).toISOString(),
     updatedAt: new Date(task.updatedAt).toISOString(),
   };

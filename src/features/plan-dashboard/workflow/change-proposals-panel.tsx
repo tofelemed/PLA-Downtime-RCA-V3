@@ -1,19 +1,21 @@
-import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useChangeProposals } from '@/api/v2/queries/period-overview';
 import { useProposalDecision, useProposeCorrection } from '@/api/v2/queries/period-workflow';
 import type { ChangeProposalView, ReconciliationView } from '@/api/v2/types/reconciliation';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
-import { humanize, labelOf } from '@/features/ux-kit/labels';
+import { labelOf } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { EditorProblem } from '../editor/editor-problem';
+import { useCommandProblem } from '../hooks/use-command-problem';
 import { periodRefOf } from '../hooks/use-draft-editor';
+import { proposalTriggersText } from '../model/proposal-labels';
 import { snapshotFigures } from '../model/snapshot-figures';
-import { workflowProblemOf, WorkflowProblem } from '../model/workflow-errors';
 import { EVIDENCE_LABELS } from '../model/line-evidence';
 import { ProposeCorrectionDialog, type CorrectionDraft } from './propose-correction-dialog';
+import { ProposalCodingChanges } from './proposal-coding-changes';
+import { ProposalValues } from './proposal-values';
 import { ReasonConfirm } from './reason-confirm';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
@@ -59,9 +61,11 @@ function Proposal({ p, timezone, decide }: { p: ChangeProposalView; timezone: st
   return (
     <div className="space-y-1 rounded-md border p-2" data-testid="change-proposal" data-state={p.state}>
       <p>
-        <Badge variant={p.state === 'open' ? 'destructive' : 'secondary'}>{labelOf(STATE_LABELS, p.state)}</Badge> {humanize(p.trigger)} · <PlantTime iso={p.createdAt} tz={timezone} withDate />
+        <Badge variant={p.state === 'open' ? 'destructive' : 'secondary'}>{labelOf(STATE_LABELS, p.state)}</Badge> <span data-testid="proposal-triggers">{proposalTriggersText(p)}</span> · <PlantTime iso={p.createdAt} tz={timezone} withDate />
       </p>
       <ManualDetail p={p} />
+      <ProposalValues p={p} />
+      <ProposalCodingChanges p={p} />
       <Snapshot label="Before (approved)" value={p.before} />
       <Snapshot label="After (with the approved decisions)" value={p.after} />
       {p.affectedReports.length > 0 && <p className="text-xs">Affects {number(p.affectedReports.length)} earlier export(s) of the approved figures.</p>}
@@ -76,20 +80,6 @@ function Proposal({ p, timezone, decide }: { p: ChangeProposalView; timezone: st
   );
 }
 
-/** Server refusals of a proposal command shown under the list; the promise still rejects (dialog stays open). */
-function useProblem() {
-  const [problem, setProblem] = useState<WorkflowProblem | null>(null);
-  const track = (command: Promise<unknown>) =>
-    command.then(
-      () => setProblem(null),
-      (error: unknown) => {
-        setProblem(workflowProblemOf(error));
-        throw error;
-      },
-    );
-  return { problem, track };
-}
-
 /**
  * Late corrections of an approved period: before / after from the server; accept opens a revision,
  * dismiss keeps the approval. Revision approvers decide — never the proposer of a manual correction (SME R4),
@@ -102,7 +92,7 @@ export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelPro
   const proposals = useChangeProposals(view.periodId);
   const decision = useProposalDecision();
   const proposal = useProposeCorrection();
-  const { problem, track } = useProblem();
+  const { problem, track } = useCommandProblem();
   const decide = (p: ChangeProposalView, d: 'accept' | 'dismiss', reason: string) =>
     track(decision.submit({ period: periodRefOf(view), proposalId: p.id, decision: d, reason }));
   const propose = (draft: CorrectionDraft) =>

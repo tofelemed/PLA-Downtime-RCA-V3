@@ -22,6 +22,7 @@ import {
   ListResponse,
   ListScope,
 } from '../common/response';
+import { planIdOf, planIdsOfVersions } from './period-plan-ids';
 import { PeriodListQueryDto } from './period-v2.dto';
 import {
   PeriodDetailV2View,
@@ -64,9 +65,16 @@ export class PeriodsV2Service {
       cursor: query.cursor,
       limit: query.limit,
     });
-    const { slices, results } = await this.slicesAndResults(page.items);
+    const [{ slices, results }, plans] = await Promise.all([
+      this.slicesAndResults(page.items),
+      planIdsOfVersions(
+        this.periods.manager,
+        requireTenantId(context),
+        page.items,
+      ),
+    ]);
     const items = page.items.map((period) =>
-      summaryOf(period, slices, results),
+      summaryOf(period, { slices, results, planId: planIdOf(period, plans) }),
     );
     return listResponse(items, page.nextCursor, scopeOf(context));
   }
@@ -92,8 +100,13 @@ export class PeriodsV2Service {
           id: period.currentActualsRunId,
         })
       : null;
+    const plans = await planIdsOfVersions(
+      this.periods.manager,
+      requireTenantId(context),
+      [period],
+    );
     const data: PeriodDetailV2View = {
-      ...toPeriodBase(period),
+      ...toPeriodBase(period, planIdOf(period, plans)),
       slices: slices.map((slice) => {
         const result = results.find((r) => r.sliceId === slice.id);
         return toSliceView(slice, result ? toDetail(result) : null);
@@ -154,11 +167,15 @@ function applyFilters(
 /** A grid row: the period and each active slice with the result of the current run. */
 function summaryOf(
   period: ProductionPeriod,
-  slices: readonly PeriodProductSlice[],
-  results: readonly ActualsResult[],
+  page: {
+    slices: readonly PeriodProductSlice[];
+    results: readonly ActualsResult[];
+    planId: string | null;
+  },
 ): PeriodV2View {
+  const { slices, results } = page;
   return {
-    ...toPeriodBase(period),
+    ...toPeriodBase(period, page.planId),
     slices: slices
       .filter((slice) => slice.periodId === period.id)
       .map((slice) => {

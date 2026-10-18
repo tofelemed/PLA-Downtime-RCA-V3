@@ -59,4 +59,4 @@ export class PaginationHelper {
       hasPrev,
     };
   }
-} 
+}

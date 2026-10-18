@@ -37,6 +37,6 @@ function readRowVersion(body: unknown): number | null {
   if (typeof body !== 'object' || body === null || !('rowVersion' in body)) {
     return null;
   }
-  const version = (body as { rowVersion: unknown }).rowVersion;
+  const version = body.rowVersion;
   return typeof version === 'number' ? version : null;
 }

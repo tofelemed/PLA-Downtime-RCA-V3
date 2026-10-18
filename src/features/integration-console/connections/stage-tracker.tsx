@@ -5,7 +5,7 @@ import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 const ICON = { done: StatusIcon.success, attention: StatusIcon.warning, pending: StatusIcon.pending } as const;
 const STATUS_TEXT = { done: 'done', attention: 'needs attention', pending: 'not done yet' } as const;
-const COLOR = { done: 'text-green-600', attention: 'text-amber-600', pending: 'text-muted-foreground' } as const;
+const COLOR = { done: 'text-success', attention: 'text-warning', pending: 'text-muted-foreground' } as const;
 
 /** UX06 checklist of one connection: every stage with its result and time. */
 export function StageTracker({ stages, timezone }: { stages: readonly StageResult[]; timezone: string }) {

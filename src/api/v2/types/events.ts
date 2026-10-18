@@ -1,3 +1,5 @@
+import type { GridWorkflowState } from './period-overview';
+
 /** `ProductionEventV2View` (backend `src/v2/production-events/production-event-v2.view.ts`). */
 export interface EventClassificationView {
   physicalType: string;
@@ -90,8 +92,19 @@ export interface ProductionEventView {
   supersededByEventId: string | null;
   rowVersion: number;
   overriddenFields?: string[];
+  /**
+   * E-5 (single event reads only): PATCH field names the source system owns — the interval of a non-manual
+   * event (`startTime`, `endTime`, `durationSeconds`: PATCH answers 409 SOURCE_OWNED) and, once a source
+   * revision exists, the fields whose edit is recorded as a source override. `[]` for manual events.
+   */
+  sourceOwnedFields?: string[];
   /** SME D5: repeat-stop incident of the occurrence (list and single reads); null / absent = none */
   incidentId?: string | null;
+  /**
+   * Owner finding 2 (list and single reads): accounting workflow of the periods the event overlaps
+   * (open work wins); shown next to the coding state, never instead of it. Absent on older servers.
+   */
+  accountingState?: GridWorkflowState;
 }
 
 export interface EventRevisionView {
@@ -101,6 +114,8 @@ export interface EventRevisionView {
   changeReason: string | null;
   actorId: string | null;
   actorKind: string;
+  /** owner finding 1: service key (`state-engine`, …) or connector / import source name of a non-user revision; absent on older servers */
+  actorSource?: string | null;
   sourceRevision: string | null;
   createdAt: string;
   effectiveFacts: Record<string, unknown>;
@@ -122,6 +137,8 @@ export interface EventCodingView {
   isOverride: boolean;
   reason: string | null;
   authorId: string | null;
+  /** owner finding 1: the service or source of a coding revision without a person; absent on older servers */
+  authorSource?: string | null;
   createdAt: string;
 }
 
@@ -155,4 +172,57 @@ export interface ProductionEventHistoryView {
   coding: EventCodingView[];
   reviewItems: EventReviewItemView[];
   relations: EventRelationView[];
+}
+
+/** One currency's value of the loss an event carries in one period revision (backend `AttributedValueV2View`). */
+export interface AttributedValueView {
+  currency: string;
+  /** decimal string; null when any line is not valued or lacks an FX rate (never estimated) */
+  amount: string | null;
+  valuedLines: number;
+  unvaluedLines: number;
+  /** valued lines converted with an authorised provisional FX rate */
+  provisionalLines: number;
+  status: 'valued' | 'unvalued' | 'mixed';
+  fxProvisional: boolean;
+}
+
+export interface AttributedQuantityView {
+  kind: string;
+  uom: string | null;
+  /** signed decimal string */
+  quantity: string;
+  lines: number;
+}
+
+/** The loss one event carries in one period revision (UX G-2b, backend `AttributedPeriodV2View`). */
+export interface AttributedPeriodView {
+  periodId: string;
+  unitId: string;
+  localDate: string;
+  shiftName: string | null;
+  utcStart: string;
+  utcEnd: string;
+  /** plan of the period's accounting-baseline plan version (null = profile default product) */
+  planId: string | null;
+  planVersionId: string | null;
+  revisionId: string;
+  revision: number;
+  /** approved | draft | in_review */
+  lifecycle: string;
+  /** approved = the published revision's lines; provisional = the open revision's run proposals */
+  status: 'approved' | 'provisional';
+  quantities: AttributedQuantityView[];
+  values: AttributedValueView[];
+}
+
+/** `GET /v2/production-events/{id}/attributed-losses` (backend `EventAttributedLossesV2View`). */
+export interface EventAttributedLossesView {
+  eventId: string;
+  /** the valuation view of `values` (the tenant policy's default basis) */
+  valuationView: string;
+  items: AttributedPeriodView[];
+  /** more periods than the server bound (200) carried this event; the earliest are listed */
+  truncated: boolean;
+  asOf: string;
 }

@@ -9,20 +9,35 @@ export interface SidebarLinkProps {
   item: NavigationItem;
   collapsed: boolean;
   active: boolean;
+  /** called after a click (the drawer closes on navigation) */
+  onNavigate?: () => void;
+}
+
+/**
+ * The rail is icon-only, so the link is named by `aria-label`. Expanded, a short label keeps the full
+ * name only when the name contains it (WCAG 2.5.3 label in name); otherwise the visible label is the name.
+ */
+function accessibleNameOf(item: NavigationItem, collapsed: boolean): string | undefined {
+  if (collapsed) return item.name;
+  if (!item.label || item.label === item.name) return undefined;
+  return item.name.toLowerCase().includes(item.label.toLowerCase()) ? item.name : undefined;
 }
 
 /**
  * One menu link. On the collapsed rail it is icon-only, so it carries `aria-label` (its accessible
- * name) and a tooltip; hover or focus starts downloading the page chunk.
+ * name) and a tooltip; expanded, long labels wrap to two lines with the full name as `title` (UX audit
+ * B-1). Hover or focus starts downloading the page chunk.
  */
-export function SidebarLink({ item, collapsed, active }: SidebarLinkProps) {
+export function SidebarLink({ item, collapsed, active, onNavigate }: SidebarLinkProps) {
   const Icon = item.icon;
   const location = useLocation();
   const link = (
     <NavLink
       to={analysisHref(item.href, location)}
       end={item.exact}
-      aria-label={collapsed || item.label ? item.name : undefined}
+      onClick={onNavigate}
+      aria-label={accessibleNameOf(item, collapsed)}
+      title={collapsed ? undefined : item.name}
       aria-current={active ? 'page' : undefined}
       onMouseEnter={() => preloadRoute(item.href)}
       onFocus={() => preloadRoute(item.href)}
@@ -33,7 +48,7 @@ export function SidebarLink({ item, collapsed, active }: SidebarLinkProps) {
       )}
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden />
-      {!collapsed && <span className={item.label ? 'min-w-0 whitespace-normal leading-snug' : 'truncate'}>{item.label ?? item.name}</span>}
+      {!collapsed && <span className="line-clamp-2 min-w-0 break-words leading-snug">{item.label ?? item.name}</span>}
     </NavLink>
   );
   if (!collapsed) return link;

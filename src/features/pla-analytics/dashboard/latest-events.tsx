@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { labelOf, PHYSICAL_TYPE_LABELS } from '@/features/ux-kit/labels';
+import { PHYSICAL_STATE_LABELS } from '@/features/ux-kit/labels/event-labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { useEventHubEnv, type EventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import type { AnalyticsScope } from '../model/analytics-scope';
@@ -17,7 +18,7 @@ function columnsOf(env: EventHubEnv): Array<DataTableColumn<ProductionEventView>
     { id: 'unit', header: 'Unit', cell: (e) => env.unitName(e.unitId) },
     { id: 'type', header: 'Type', cell: (e) => labelOf(PHYSICAL_TYPE_LABELS, e.classification.physicalType) },
     { id: 'reason', header: 'Reason', cell: (e) => (e.reasonCodeId ? env.reasonName(e.reasonCodeId) : 'Not coded') },
-    { id: 'duration', header: 'Duration', align: 'right', nowrap: true, cell: (e) => (e.durationSeconds === null ? 'Running' : <DurationText seconds={e.durationSeconds} variant="clock" />) },
+    { id: 'duration', header: 'Duration', align: 'right', nowrap: true, cell: (e) => (e.durationSeconds === null ? PHYSICAL_STATE_LABELS.open : <DurationText seconds={e.durationSeconds} />) },
   ];
 }
 

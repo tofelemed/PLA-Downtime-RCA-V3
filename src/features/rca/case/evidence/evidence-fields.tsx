@@ -3,6 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { DateInput, DateTimeInput } from '@/features/ux-kit/date-inputs';
 import { Section } from '@/features/ux-kit/page-layout';
+import { OwnerSelect } from '../../actions/owner-select';
 import { useAssetOptions } from '../../use-asset-options';
 import { EVIDENCE_TYPES, FIVE_P, SEVERITIES, type EvidenceForm } from '../../model/evidence-form';
 import { useRcaFormat } from '../../use-rca-format';
@@ -54,12 +55,13 @@ export function EvidenceClassificationFields({ form, onChange }: EvidenceFieldsP
   );
 }
 
-/** The collection task behind the evidence (who has to bring what by when). */
+/** The collection task behind the evidence (who has to bring what by when; the assignee is a plant member). */
 export function EvidenceTaskFields({ form, onChange }: EvidenceFieldsProps) {
   return (
     <Section title="Collection task" headingLevel={3}>
       <div className="grid gap-4 md:grid-cols-2">
         <AreaField id="ev-task" label="Task" value={form.task} maxLength={2000} onChange={(task) => onChange({ task })} />
+        <OwnerSelect id="ev-task-assignee" label="Assigned to" noneLabel="Not assigned" value={form.taskAssigneeId} onChange={(taskAssigneeId) => onChange({ taskAssigneeId })} />
         <DateInput id="ev-task-due" label="Due date" value={form.taskDueDate} onChange={(taskDueDate) => onChange({ taskDueDate })} />
         <ChoiceField
           id="ev-task-status"

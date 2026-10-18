@@ -21,6 +21,7 @@ import { ProductionPlanModule } from './production-plan/production-plan.module';
 import { ProductionEventModule } from './production-event/production-event.module';
 import { RCAModule } from './rca/rca.module';
 import { TaskModule } from './task/task.module';
+import { NotificationResolutionModule } from './notifications/notification-resolution.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { ScopedRealtimeModule } from './realtime/scoped-realtime.module';
@@ -77,6 +78,8 @@ registerPgTypeParsers();
     ProductionEventModule,
     RCAModule,
     TaskModule,
+    // shared work-item notifications resolved after domain messages (the `all` role relays the outbox here)
+    NotificationResolutionModule,
     AppSettingsModule,
     RealtimeModule,
     // authenticated, tenant/unit-scoped channel fed from the outbox (plan 3.1)

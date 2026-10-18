@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { StatusIcon } from '@/lib/icons';
+import { DisabledReason } from './disabled-reason';
 
 export interface ConfirmDialogProps {
   /** controlled usage; omit together with `onOpenChange` and pass `trigger` instead */
@@ -28,6 +29,8 @@ export interface ConfirmDialogProps {
   onConfirm: () => void | Promise<unknown>;
   busy?: boolean;
   confirmDisabled?: boolean;
+  /** shown next to the buttons (and linked to the confirm button) while `confirmDisabled` is set */
+  confirmDisabledReason?: string;
   /** extra content between description and buttons, e.g. a required reason field */
   children?: ReactNode;
 }
@@ -80,6 +83,8 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
   const { pending, confirm } = usePendingConfirm(props.onConfirm, () => setOpen(false));
   const confirmRef = useRef<HTMLButtonElement>(null);
   const busy = pending || Boolean(props.busy);
+  const reasonId = useId();
+  const disabledReason = props.confirmDisabled ? props.confirmDisabledReason : undefined;
   return (
     <AlertDialog open={isOpen} onOpenChange={(next) => !busy && setOpen(next)}>
       {trigger && <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>}
@@ -104,6 +109,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
           )}
           {children}
         </div>
+        <DisabledReason id={reasonId} reason={disabledReason} />
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>{cancelLabel}</AlertDialogCancel>
           <Button
@@ -112,6 +118,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
             variant={destructive ? 'destructive' : 'default'}
             disabled={busy || props.confirmDisabled}
             aria-busy={busy || undefined}
+            aria-describedby={disabledReason ? reasonId : undefined}
             onClick={() => void confirm()}
           >
             {busy && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}

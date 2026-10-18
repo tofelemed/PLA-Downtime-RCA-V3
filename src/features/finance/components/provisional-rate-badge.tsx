@@ -1,11 +1,12 @@
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/features/ux-kit/status-badge';
+import { StatusIcon } from '@/lib/icons';
 
-/** SME V7: marks an authorised provisional exchange rate (in words, never colour alone). */
+/** SME V7: marks an authorised provisional exchange rate (in words, never colour alone): a warning, not an alarm. */
 export function ProvisionalRateBadge({ provisional }: { provisional: boolean }) {
   if (!provisional) return null;
   return (
-    <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400" data-testid="fx-provisional-badge">
+    <StatusBadge tone="warning" icon={StatusIcon.warning} data-testid="fx-provisional-badge">
       Provisional
-    </Badge>
+    </StatusBadge>
   );
 }

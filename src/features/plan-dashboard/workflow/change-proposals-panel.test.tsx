@@ -71,6 +71,7 @@ describe('change proposals panel: manual correction (SME R4)', () => {
         const call = { method: init.method ?? 'GET', url: new URL(url), body: init.body ? JSON.parse(String(init.body)) : null };
         calls.push(call);
         if (call.method === 'POST') return json(201, MANUAL);
+        if (call.url.pathname.includes('reason-codes')) return json(200, { items: [{ id: 'speed-loss', code: 'SPEED-LOSS', name: 'Reduced extrusion rate', parentId: null }], nextCursor: null });
         return json(200, { items: proposals, nextCursor: null });
       }),
     );
@@ -113,5 +114,27 @@ describe('change proposals panel: manual correction (SME R4)', () => {
     actAs('manager_approver', 'manager-1');
     renderPanel({ ...VIEW, openProposalId: 'cp-1' });
     expect(await screen.findByTestId('proposal-accept')).toBeTruthy();
+  });
+
+  it('Marun E2E: a reused proposal shows every cause, the approved value and the re-coded line', async () => {
+    proposals = [{
+      ...MANUAL,
+      id: 'cp-2',
+      trigger: 'valuation_change',
+      manual: null,
+      detail: { reason: 'valuation_policy_changed', triggers: [
+        { trigger: 'event_change', reason: 'loss_event_changed', at: '2026-10-18T15:33:35.000Z' },
+        { trigger: 'valuation_change', reason: 'valuation_policy_changed', at: '2026-10-18T15:50:00.000Z' },
+      ] },
+      before: { revision: 2, values: { view: 'contribution_margin', policyVersion: 2, amounts: [{ currency: 'USD', amount: '2250', status: 'valued' }] } },
+      after: { codingChanges: [{ autoKey: 'k', sliceId: 's', kind: 'availability', quantity: '14', before: 'speed-loss', after: null }] },
+    }];
+    actAs('manager_approver', 'maryam');
+    renderPanel({ ...VIEW, openProposalId: 'cp-2' });
+    expect((await screen.findByTestId('proposal-triggers')).textContent).toBe('Event changed, then Valuation policy changed');
+    expect(screen.getByTestId('proposal-values').textContent).toContain('Contribution margin');
+    expect(screen.getByTestId('proposal-values').textContent).toContain('2,250.00');
+    await waitFor(() => expect(screen.getByTestId('proposal-coding-changes').textContent).toContain('Reason changed: SPEED-LOSS'));
+    expect(screen.getByTestId('proposal-coding-changes').textContent).toContain('→ none · availability loss line 14.00');
   });
 });

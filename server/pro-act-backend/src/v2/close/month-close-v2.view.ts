@@ -1,3 +1,4 @@
+import { MissingPeriod } from '../../close/month-coverage';
 import { MonthCloseSnapshot } from '../../close/month-close.service';
 import {
   OpenProposal,
@@ -80,6 +81,12 @@ export interface MonthCloseV2View {
     approved: number;
     pendingCount: number;
     pending: PendingPeriod[];
+    /** scheduled shifts of the month without a production period yet (each blocks the close) */
+    missingPeriodCount: number;
+    missingPeriods: MissingPeriod[];
+    /** the month is over in the plant time zone (its last shift ended): the quantity close needs it */
+    monthEnded: boolean;
+    monthEndsAt: string;
     /** production days (unit × date) and the certified ones (owner decision: day certification) */
     days: number;
     certifiedDays: number;
@@ -148,7 +155,14 @@ function prerequisitesOf(
   const policy = snapshot.context.policy.policy;
   const proposalsBlock = policy.blockOnOpenProposals && p.openProposalCount > 0;
   const daysBlock = policy.requireCertifiedDays && p.certifiedDays < p.days;
-  return { met: p.pendingCount === 0 && !proposalsBlock && !daysBlock, ...p };
+  const monthEnded = snapshot.asOf >= snapshot.endsAt;
+  const complete = p.pendingCount === 0 && p.missingPeriodCount === 0;
+  return {
+    met: complete && monthEnded && !proposalsBlock && !daysBlock,
+    ...p,
+    monthEnded,
+    monthEndsAt: snapshot.endsAt.toISOString(),
+  };
 }
 
 export function toMonthCloseView(

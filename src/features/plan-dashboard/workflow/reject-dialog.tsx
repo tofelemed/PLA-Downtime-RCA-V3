@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { failedLineChoices } from '../model/failed-lines';
+import { RequiredMarker } from '@/features/ux-kit/form-field';
 
 export interface RejectDialogProps {
   view: ReconciliationView;
@@ -44,7 +45,7 @@ export function RejectDialog({ view, disabled, onConfirm, children }: RejectDial
       }
     >
       <div className="space-y-1">
-        <Label htmlFor={id}>What has to change (required)</Label>
+        <Label htmlFor={id}>What has to change<RequiredMarker /></Label>
         <Textarea id={id} rows={3} data-testid="wf-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
       </div>
       {choices.length > 0 && (

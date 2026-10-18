@@ -22,7 +22,7 @@ export function ValidationSummary({ check, checking, general, limits }: Validati
         </p>
       )}
       {state === 'valid' && (
-        <p className="flex items-center gap-1 text-green-700 dark:text-green-400">
+        <p className="flex items-center gap-1 text-success">
           <StatusIcon.success className="h-4 w-4" aria-hidden="true" /> Valid: {number(check?.conditionCount)} of at most {number(limits.maxConditions)} conditions.
         </p>
       )}

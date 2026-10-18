@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { actAs } from '@/test/acting-user';
@@ -11,6 +12,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 
 const { LossLineEditor } = await import('./editor/loss-line-editor');
 const { WorkflowBar } = await import('./workflow/workflow-bar');
+const { ReconciliationSummary } = await import('./components/reconciliation-summary');
 
 interface Call {
   method: string;
@@ -41,7 +43,7 @@ describe('plan dashboard editor and workflow (plan 3.5)', () => {
   let calls: Call[];
   let reply: (call: Call) => Response;
   let client: QueryClient;
-  const wrap = (node: ReactNode) => render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
+  const wrap = (node: ReactNode) => render(<QueryClientProvider client={client}><MemoryRouter>{node}</MemoryRouter></QueryClientProvider>);
 
   beforeEach(() => {
     calls = [];
@@ -94,7 +96,7 @@ describe('plan dashboard editor and workflow (plan 3.5)', () => {
     const { rerender } = wrap(<LossLineEditor view={VIEW} timezone="UTC" />);
     fireEvent.change(screen.getByTestId('candidate-decision'), { target: { value: 'accept' } });
     const next: ReconciliationView = { ...VIEW, rowVersion: 5, baseRunId: 'run-2', candidates: [{ ...VIEW.candidates[0], autoKey: 'k9' }] };
-    rerender(<QueryClientProvider client={client}><LossLineEditor view={next} timezone="UTC" /></QueryClientProvider>);
+    rerender(<QueryClientProvider client={client}><MemoryRouter><LossLineEditor view={next} timezone="UTC" /></MemoryRouter></QueryClientProvider>);
     expect(screen.getByTestId('rebase-dropped').textContent).toContain('1 decision(s) dropped');
     expect(screen.getByTestId('loss-line-editor').getAttribute('data-dirty')).toBe('true');
   });
@@ -126,6 +128,42 @@ describe('plan dashboard editor and workflow (plan 3.5)', () => {
     const post = calls.find((c) => c.method === 'POST');
     expect(post?.body).toEqual({ revision: 1, runId: 'run-1', contentHash: 'a'.repeat(64) });
     expect(post?.headers.get('Idempotency-Key')).toBeTruthy();
+  });
+
+  it('approve asks first: revision, attributed and Unaccounted with its state from the view, and sends the optional comment (A-6)', async () => {
+    const inReview: ReconciliationView = { ...VIEW, revision: { ...VIEW.revision, lifecycle: 'in_review', submittedBy: 'someone-else', submittedHash: 'b'.repeat(64) } };
+    reply = (call) => (call.method === 'POST' ? json(200, { ...inReview, revision: { ...inReview.revision, lifecycle: 'approved' } }) : json(200, { items: [] }));
+    wrap(<WorkflowBar view={inReview} shown="current" onShowCurrent={() => undefined} />);
+    fireEvent.click(screen.getByTestId('wf-approve'));
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toHaveTextContent('Approve revision 1?');
+    expect(within(dialog).getByTestId('approve-summary')).toHaveTextContent('Attributed 90.00t');
+    expect(within(dialog).getByTestId('approve-summary')).toHaveTextContent('Unaccounted 60.00t');
+    expect(within(dialog).getByTestId('residual-state')).toHaveTextContent('Above tolerance');
+    fireEvent.change(screen.getByTestId('wf-approve-comment'), { target: { value: '  checked the logs ' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Approve revision' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ revision: 1, submittedHash: 'b'.repeat(64), comment: 'checked the logs' });
+  });
+
+  it('a candidate links to its cause event with the page as back target and shows "Not coded" in words (A-3, D-1)', () => {
+    reply = () => json(200, { items: [] });
+    wrap(<LossLineEditor view={VIEW} timezone="UTC" />);
+    const link = screen.getByRole('link', { name: 'from a recorded event' });
+    expect(link).toHaveAttribute('href', '/events/e1');
+    expect(screen.getByTestId('line-not-coded')).toHaveTextContent('Not coded');
+  });
+
+  it('the reconciliation summary reads as the identity of server figures, with the residual state and checks (D-3)', () => {
+    reply = () => json(200, {});
+    wrap(<ReconciliationSummary view={VIEW} />);
+    const figures = screen.getByTestId('slice-figures');
+    for (const label of ['Target', 'Actual (good)', 'Gap', 'Attributed', 'Tolerance adj.', 'Unaccounted', 'Checks', 'Over-accounted', 'Overproduction', 'Tolerance threshold']) {
+      expect(figures).toHaveTextContent(label);
+    }
+    expect(screen.getByTestId('figure-residual')).toHaveAttribute('data-value', '60');
+    expect(screen.getByTestId('residual-state')).toHaveTextContent('Above tolerance');
   });
 
   describe('controls follow the period role sets (owner decision 2026-10-12)', () => {

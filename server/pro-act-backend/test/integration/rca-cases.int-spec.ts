@@ -1,6 +1,7 @@
 import { A, HOUR } from './support/actuals-world';
 import { plus } from './support/accounting-world';
 import { ApiError } from './support/plan-world';
+import { addCodedRootCause } from './support/rca-causes';
 import { CaseBody, LinkResultBody, RcaWorld } from './support/rca-world';
 
 /**
@@ -245,7 +246,7 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
       expect(body.verificationStatus).toBe('due');
       expect(body.baseline).toMatchObject({
         declared: false,
-        queryVersion: 'rca-exposure-v2',
+        queryVersion: 'rca-exposure-v3',
         criteria: { requiredReduction: 0.5, minExposureHours: 720 },
       });
       actionId = body.id;
@@ -321,8 +322,13 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
       const readiness = (await env.get(`rcas/${caseId}/readiness`).expect(200))
         .body as {
         investigation: { blockers: unknown[] };
+        rules: { fiveWhyUnsupportedRootCauses: string[] };
       };
       expect(readiness.investigation.blockers).toEqual([]);
+      // the 5-Why checklist reads the phrases the gate refuses from here (Marun RCA test)
+      expect(readiness.rules.fiveWhyUnsupportedRootCauses).toContain(
+        'operator error',
+      );
       await transition({ to: 'Monitoring' }).then((r) =>
         expect(r.status).toBe(200),
       );
@@ -384,6 +390,7 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
           )
           .expect(200);
       }
+      await addCodedRootCause(env, env.world.tenantA, caseId);
       const requested = await transition({
         to: 'Closure Review',
         residualRisk:
@@ -439,6 +446,77 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
       expect(states.map((s) => s.rca_state)).toEqual([
         'completed',
         'completed',
+      ]);
+    });
+
+    it('G4: a closed case takes no new link (409 CASE_CLOSED); repeating an existing link stays 200', async () => {
+      const refused = await env
+        .post(`rcas/${caseId}/links`, {
+          linkType: 'work_order',
+          targetId: 'WO-AFTER-CLOSE',
+        })
+        .expect(409);
+      expect((refused.body as ApiError).code).toBe('CASE_CLOSED');
+      const again = (await env.linkEvent(first, { rcaId: caseId }).expect(200))
+        .body as LinkResultBody;
+      expect(again.created).toBe(false);
+    });
+
+    it('the repair migration applies the closure rule to recommendations of cases closed before it', async () => {
+      const [done] = await env.rows<{ id: string }>(
+        `SELECT id FROM rca_actions WHERE rca_id = $1 AND status = 'done' LIMIT 1`,
+        [caseId],
+      );
+      const [cancelled] = await env.rows<{ id: string }>(
+        `SELECT id FROM rca_actions WHERE rca_id = $1 AND status = 'cancelled' LIMIT 1`,
+        [caseId],
+      );
+      const [before] = await env.rows<{ recommendations: string | null }>(
+        `SELECT recommendations FROM rcas WHERE id = $1`,
+        [caseId],
+      );
+      const items = [
+        { id: 'r-done', text: 'Realign', status: 'Open' },
+        { id: 'r-cancel', text: 'Replace', status: 'Open' },
+        { id: 'r-none', text: 'Train', status: 'Open' },
+      ];
+      await env.rows(`UPDATE rcas SET recommendations = $2 WHERE id = $1`, [
+        caseId,
+        JSON.stringify(items),
+      ]);
+      await env.rows(
+        `UPDATE rca_actions SET recommendation_id = CASE id WHEN $1 THEN 'r-done' ELSE 'r-cancel' END WHERE id IN ($1, $2)`,
+        [done.id, cancelled.id],
+      );
+      const { CloseRecommendationsOfClosedCases1794221700000 } = await import(
+        '../../src/database/migrations/1794221700000-CloseRecommendationsOfClosedCases'
+      );
+      const runner = env.harness.dataSource.createQueryRunner();
+      await runner.connect();
+      try {
+        const migration = new CloseRecommendationsOfClosedCases1794221700000();
+        await migration.up(runner);
+        await migration.up(runner);
+        await migration.down();
+      } finally {
+        await runner.release();
+      }
+      const [after] = await env.rows<{ recommendations: string }>(
+        `SELECT recommendations FROM rcas WHERE id = $1`,
+        [caseId],
+      );
+      expect(
+        (JSON.parse(after.recommendations) as Array<{ status: string }>).map(
+          (r) => r.status,
+        ),
+      ).toEqual(['Completed', 'Cancelled', 'Open']);
+      await env.rows(
+        `UPDATE rca_actions SET recommendation_id = NULL WHERE id IN ($1, $2)`,
+        [done.id, cancelled.id],
+      );
+      await env.rows(`UPDATE rcas SET recommendations = $2 WHERE id = $1`, [
+        caseId,
+        before.recommendations,
       ]);
     });
 

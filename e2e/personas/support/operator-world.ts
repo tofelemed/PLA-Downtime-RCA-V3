@@ -100,7 +100,7 @@ export async function openHub(page: Page, unitName: string | null): Promise<void
   // first visit compiles the lazy page chunk on the dev server
   await expect(page.getByTestId('event-hub-v2')).toBeVisible({ timeout: 60_000 });
   if (unitName) await chooseUnit(page, 'filter-units', unitName);
-  await page.getByTestId('event-window').selectOption('preset:24');
+  await page.getByTestId('event-window').selectOption('preset:24h');
 }
 
 export async function chooseUnit(page: Page, filterTestId: string, unitName: string): Promise<void> {

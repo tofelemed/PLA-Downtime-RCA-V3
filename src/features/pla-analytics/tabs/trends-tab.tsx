@@ -19,7 +19,7 @@ import { OeeGroupTable } from '../components/oee-group-table';
 import { ResidualTrendCard } from '../components/residual-trend-card';
 
 const SeriesChart = lazy(() => import('../charts/series-chart').then((module) => ({ default: module.SeriesChart })));
-const MODES = [{ value: 'oee', label: 'OEE over time' }, { value: 'residual', label: 'Reconciliation residuals' }, { value: 'units', label: 'OEE by unit' }, { value: 'products', label: 'OEE by product' }];
+const MODES = [{ value: 'oee', label: 'OEE over time' }, { value: 'residual', label: 'Unaccounted over time' }, { value: 'units', label: 'OEE by unit' }, { value: 'products', label: 'OEE by product' }];
 export interface TrendsTabProps { scope: AnalyticsScope; onChange: (patch: Partial<AnalyticsScope>) => void; }
 
 export function TrendsTab({ scope, onChange }: TrendsTabProps) {

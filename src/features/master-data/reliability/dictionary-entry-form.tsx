@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreateDictionaryEntry } from '@/api/v2/queries/failure-dictionary';
 import { DICTIONARY_KIND_LABELS, type DictionaryKind } from '@/api/v2/types/failure-dictionary';
-import { describeError } from '@/features/ux-kit/errors';
+import { friendlyToastContent } from '@/features/ux-kit/errors';
 
 const SELECT_CLASS = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 const KINDS = Object.keys(DICTIONARY_KIND_LABELS) as DictionaryKind[];
@@ -41,7 +41,7 @@ export function DictionaryEntryForm({ classes }: { classes: readonly string[] })
       setDraft({ ...EMPTY, kind: draft.kind, equipmentClass: draft.equipmentClass });
       setMessage('Entry added.');
     } catch (error: unknown) {
-      setMessage(describeError(error).message);
+      setMessage(friendlyToastContent(error).description);
     }
   };
   return (

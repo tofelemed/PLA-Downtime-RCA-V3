@@ -12,6 +12,7 @@ import { DisplayCurrencyProvider } from "@/features/display-currency/display-cur
 import { CalendarPreferenceProvider } from "@/features/settings/calendar-preference-provider";
 import { createAppQueryClient } from "./app/query-client";
 import { PROTECTED_ROUTES } from "./app/routes";
+import { RouteCapabilityGate } from "./app/routes/route-capability-gate";
 import { V2SessionBridge } from "./features/v2-foundation/v2-session-bridge";
 import { RealtimeBridge } from "./features/v2-foundation/realtime-bridge";
 import { SessionRecovery } from "./features/auth/session-recovery";
@@ -51,21 +52,42 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   );
 };
 
-/** Routes come from the per-area modules in `src/app/routes/` (one file per area, owned by its track). */
+/** Unknown address: inside the app shell for a signed-in user (menu still usable), standalone otherwise. */
+const NotFoundRoute = () => {
+  const { session, isLoading } = useAuth();
+  if (isLoading || session) {
+    return (
+      <ProtectedRoute>
+        <NotFound embedded />
+      </ProtectedRoute>
+    );
+  }
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <NotFound />
+    </Suspense>
+  );
+};
+
+/**
+ * Routes come from the per-area modules in `src/app/routes/` (one file per area, owned by its track); each
+ * is guarded by the capability of its menu item (`RouteCapabilityGate`, UX audit B-7).
+ */
 const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Navigate to="/dashboard" replace />} />
     {PROTECTED_ROUTES.map((route) => (
-      <Route key={route.path} path={route.path} element={<ProtectedRoute>{route.element}</ProtectedRoute>} />
+      <Route
+        key={route.path}
+        path={route.path}
+        element={
+          <ProtectedRoute>
+            <RouteCapabilityGate requires={route.requires} title={route.gateTitle}>{route.element}</RouteCapabilityGate>
+          </ProtectedRoute>
+        }
+      />
     ))}
-    <Route
-      path="*"
-      element={
-        <Suspense fallback={<PageFallback />}>
-          <NotFound />
-        </Suspense>
-      }
-    />
+    <Route path="*" element={<NotFoundRoute />} />
   </Routes>
 );
 

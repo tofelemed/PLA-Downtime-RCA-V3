@@ -39,4 +39,20 @@ describe('Dashboard RCA tiles', () => {
     expect(screen.getByTestId('dashboard-rca-effectivenessPending')).toHaveAttribute('data-count', '2');
     expect(paths).toEqual([expect.stringMatching(/\/v2\/rcas\/summary$/)]);
   });
+
+  it('counts open the filtered investigation or action list (UX audit G-6); effectiveness is plain', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <RcaTiles />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('dashboard-rca-overdue')).toHaveAttribute('data-count', '1'));
+    expect(screen.getByRole('link', { name: 'Overdue investigations: 1, open the list' })).toHaveAttribute('href', '/rca?due=overdue');
+    expect(screen.getByRole('link', { name: 'Open critical investigations: 0, open the list' })).toHaveAttribute('href', '/rca?open=true&priority=Critical');
+    expect(screen.getByRole('link', { name: 'Overdue actions: 3, open the list' })).toHaveAttribute('href', '/rca?tab=actions&mine=false&overdue=true');
+    expect(screen.queryByRole('link', { name: /Effectiveness pending/ })).toBeNull();
+  });
 });

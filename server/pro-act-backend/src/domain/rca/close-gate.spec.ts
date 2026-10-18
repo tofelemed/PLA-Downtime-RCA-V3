@@ -70,4 +70,31 @@ describe('closeReadiness (RCA-01 / SME CA1, CA2, CA4)', () => {
       }).blockers,
     ).toEqual(['EFFECTIVENESS_NOT_VERIFIED']);
   });
+
+  describe('item 7: coded root cause for cases opened since typed causes', () => {
+    it('needs a coded root cause instead of the free text', () => {
+      const coded = { coded: true, codedRootCauses: 0 };
+      expect(
+        closeReadiness({ ...READY, rootCauseRule: coded }).blockers,
+      ).toEqual(['CODED_ROOT_CAUSE_MISSING']);
+      expect(
+        closeReadiness({
+          ...READY,
+          rootCause: null,
+          rootCauseRule: { coded: true, codedRootCauses: 1 },
+        }).blockers,
+      ).toEqual([]);
+    });
+
+    it('older cases keep the free-text rule', () => {
+      const legacy = { coded: false, codedRootCauses: 0 };
+      expect(
+        closeReadiness({ ...READY, rootCauseRule: legacy }).blockers,
+      ).toEqual([]);
+      expect(
+        closeReadiness({ ...READY, rootCause: '', rootCauseRule: legacy })
+          .blockers,
+      ).toEqual(['ROOT_CAUSE_MISSING']);
+    });
+  });
 });

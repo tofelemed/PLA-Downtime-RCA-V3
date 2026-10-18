@@ -1,5 +1,4 @@
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { useCertifyDay, useProductionDay } from '@/api/v2/queries/production-days';
 import { useProductionPeriod } from '@/api/v2/queries/production-periods';
 import type { DayView } from '@/api/v2/types/production-day';
@@ -9,6 +8,7 @@ import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { WORKFLOW_LABELS } from '../model/display';
+import { CertifyDayButton } from './certify-day-button';
 import { DayCodingGate } from './day-coding-gate';
 import type { GridWorkflowState } from '@/api/v2/types/period-overview';
 
@@ -45,9 +45,7 @@ export function DayCertificationPanel({ unitId, localDate }: { unitId: string; l
         <span className="font-medium">Production day {formatOperationalDate(day.localDate, pref)}</span>
         <Badge variant={day.state === 'certified' ? 'default' : 'secondary'}>{STATE_LABELS[day.state]}</Badge>
         {canCertifyDay && day.state === 'ready' && (
-          <Button size="sm" data-testid="day-certify" disabled={certify.isPending || submitted} onClick={() => void certify.submit({ unitId, localDate }).catch(() => undefined)}>
-            Certify the day
-          </Button>
+          <CertifyDayButton day={day} disabled={certify.isPending || submitted} onCertify={() => certify.submit({ unitId, localDate })} />
         )}
       </div>
       <ul className="flex flex-wrap gap-3 text-xs">

@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ProductionPlanService } from './production-plan.service';
 import { ProductionPlan } from './production-plan.entity';
 import { ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
@@ -40,7 +52,10 @@ export class ProductionPlanController {
   @Post()
   @ApiBody({ type: CreateProductionPlanDto })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  create(@Ctx() ctx: RequestContext, @Body() data: CreateProductionPlanDto): Promise<ProductionPlan | null> {
+  create(
+    @Ctx() ctx: RequestContext,
+    @Body() data: CreateProductionPlanDto,
+  ): Promise<ProductionPlan | null> {
     const payload = this.transformDateFields(data);
     return this.planService.create(ctx, payload);
   }
@@ -64,7 +79,9 @@ export class ProductionPlanController {
 
   private transformDateFields(data: unknown): Partial<ProductionPlan> {
     const dateFields: (keyof ProductionPlan)[] = ['startDate', 'endDate'];
-    const transformed: Record<string, unknown> = { ...(data as Record<string, unknown>) };
+    const transformed: Record<string, unknown> = {
+      ...(data as Record<string, unknown>),
+    };
 
     for (const field of dateFields) {
       const value = transformed[field as string];
@@ -73,6 +90,6 @@ export class ProductionPlanController {
       }
     }
 
-    return transformed as Partial<ProductionPlan>;
+    return transformed;
   }
-} 
+}

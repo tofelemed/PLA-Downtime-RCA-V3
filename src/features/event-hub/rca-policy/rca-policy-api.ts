@@ -8,7 +8,7 @@ import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 export type RcaRepeatMatch = 'asset' | 'asset_and_mode' | 'asset_mode_and_mechanism';
 export type RcaCostCurrency = 'IRR' | 'USD';
 
-/** The workflow rule sections of the policy (SME CA2–CA7), shown read-only. */
+/** The workflow rule sections of the policy (SME CA2–CA7). */
 export interface RcaPolicyRules {
   effectiveness: {
     baselineLookbackDays: number;
@@ -16,6 +16,8 @@ export interface RcaPolicyRules {
     requiredReduction: number;
     reviewDays: number;
     zeroRepeatClasses: string[];
+    /** 0–1: state-data coverage the window after an action needs for a verdict (server default 0.95) */
+    minimumCoverage?: number;
   };
   fmea: {
     method: 'rpn' | 'action_priority';
@@ -68,6 +70,11 @@ export interface RcaPolicyInput {
   criticalAssets: { criticalities: string[]; thresholdFactor: number };
   cumulative: { windowDays: number; downtimeSeconds: number } | null;
   notes?: string;
+  /** the workflow rules (SME CA2–CA7); the server parser validates them (422 INVALID_POLICY) */
+  effectiveness?: RcaPolicyRules['effectiveness'];
+  fmea?: RcaPolicyRules['fmea'];
+  fiveWhy?: RcaPolicyRules['fiveWhy'];
+  investigation?: RcaPolicyRules['investigation'];
 }
 
 /**

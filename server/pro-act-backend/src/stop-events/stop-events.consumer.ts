@@ -3,7 +3,10 @@ import { EntityManager } from 'typeorm';
 import { InProcessEventBus } from '../common/outbox/in-process-event-bus';
 import { InboxService } from '../common/outbox/inbox.service';
 import { PublishedMessage } from '../common/outbox/outbox-transport';
-import { EventChangeNotifier } from '../production-event/revisions/event-change.notifier';
+import {
+  EventChangeNotifier,
+  isWorkflowOnly,
+} from '../production-event/revisions/event-change.notifier';
 import { IncidentGroupingService } from './incident-grouping.service';
 import { StopReconciliationService } from './stop-reconciliation.service';
 import { UnitImpactService } from './unit-impact.service';
@@ -53,7 +56,8 @@ export class StopEventsConsumer implements OnModuleInit {
       affectedFrom?: string;
       affectedTo?: string | null;
     };
-    if (!payload.affectedFrom) return;
+    // verification labels move no timing or impact: nothing to reconcile or regroup
+    if (!payload.affectedFrom || isWorkflowOnly(message.payload)) return;
     const rows = await manager.query<
       Array<{ unit_id: string; physical_type: string }>
     >(

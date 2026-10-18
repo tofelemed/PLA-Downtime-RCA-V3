@@ -13,6 +13,7 @@ import {
   triggerOf,
   upsertProposal,
 } from './proposal-writer';
+import { approvedCauseCoding } from './proposal-coding';
 import { loadRevisionState } from './revision-state';
 import {
   publishWorkflowEvent,
@@ -100,7 +101,12 @@ export class WorkflowRevisionHooks extends AccountingRevisionHooks {
         trigger: triggerOf(change.trigger.reason),
         inputHash: change.inputHash,
         before: beforeOf(state),
-        after: afterOf(state, change.preview(), change.inputHash),
+        after: afterOf(
+          state,
+          change.preview(),
+          change.inputHash,
+          await approvedCauseCoding(manager, state),
+        ),
         detail: { reason: change.trigger.reason },
       },
       serviceActor(SERVICE),

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { usePagedQuery } from '@/api/v2/queries/use-paged-query';
 import type { SourceMappingView } from '@/api/v2/types/integration-mappings';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { labelOf, MATCH_KIND_LABELS } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
@@ -22,6 +23,7 @@ const COLUMNS: DataTableColumn<SourceMappingView>[] = [
  * v1 "PI bound" badge. Read-only here; rules are edited in the integration console.
  */
 export function SourceMappingsSection({ targetId }: { targetId: string }) {
+  const { canReachIntegration } = useCapabilities();
   const mappings = usePagedQuery<SourceMappingView>({
     resource: 'source-mappings',
     path: '/source-mappings',
@@ -36,11 +38,18 @@ export function SourceMappingsSection({ targetId }: { targetId: string }) {
       defaultOpen={false}
       description={
         <>
-          Source ids and PI elements that resolve to this record. Edit them in the{' '}
-          <Link className="underline" to="/connectivity">
-            integration console
-          </Link>
-          .
+          Source ids and PI elements that resolve to this record.{' '}
+          {canReachIntegration ? (
+            <>
+              Edit them in the{' '}
+              <Link className="underline" to="/connectivity">
+                integration console
+              </Link>
+              .
+            </>
+          ) : (
+            'A SuperAdmin edits them in the integration console.'
+          )}
         </>
       }
     >

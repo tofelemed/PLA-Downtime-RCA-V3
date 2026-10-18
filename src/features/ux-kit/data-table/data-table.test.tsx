@@ -80,12 +80,46 @@ describe('DataTable rows and states', () => {
       />,
     );
     await user.tab();
-    expect(screen.getByRole('row', { name: 'Open Row 1' })).toHaveFocus();
+    const [first, second, third] = bodyRows();
+    expect(first).toHaveFocus();
+    // H-10: no aria-label hides the cells; the action text is read before the cell text
+    expect(first).not.toHaveAttribute('aria-label');
+    expect(first).toHaveTextContent('Open Row 1. Row 1');
+    expect(within(first).getByText('Open Row 1.')).toHaveClass('sr-only');
     await user.keyboard('{Enter}');
     await user.tab();
+    expect(second).toHaveFocus();
     await user.keyboard(' ');
-    await user.click(screen.getByRole('row', { name: 'Open Row 3' }));
+    await user.click(third);
     expect(onRowClick.mock.calls.map(([row]) => (row as Item).id)).toEqual(['k1', 'k2', 'k3']);
+  });
+
+  it('rows with a link cell are clickable but not an extra tab stop; the link is the keyboard path (H-10)', async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    const linkColumns: ReadonlyArray<DataTableColumn<Item>> = [
+      { id: 'name', header: 'Name', cell: (row) => <a href={`#${row.id}`}>{row.name}</a> },
+      columns[1],
+    ];
+    render(
+      <DataTable
+        caption="Items"
+        columns={linkColumns}
+        rows={items(2)}
+        getRowKey={(row) => row.id}
+        onRowClick={onRowClick}
+        rowLabel={(row) => `Open ${row.name}`}
+        rowsHaveLink
+      />,
+    );
+    const [first] = bodyRows();
+    expect(first).not.toHaveAttribute('tabindex');
+    expect(first).not.toHaveAttribute('aria-label');
+    expect(within(first).queryByText('Open Row 1.')).not.toBeInTheDocument();
+    await user.tab();
+    expect(screen.getByRole('link', { name: 'Row 1' })).toHaveFocus();
+    await user.click(within(first).getAllByRole('cell')[1]);
+    expect(onRowClick).toHaveBeenCalledTimes(1);
   });
 
   it('shows skeleton rows while loading and no pager', () => {

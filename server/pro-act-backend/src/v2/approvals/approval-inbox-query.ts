@@ -81,7 +81,12 @@ export async function queryInboxRows(
   manager: EntityManager,
   context: RequestContext,
   definition: ApprovalDefinition,
-  page: { query: ApprovalInboxQueryDto; cursor: ApprovalCursor | null },
+  page: {
+    query: Pick<ApprovalInboxQueryDto, 'limit'>;
+    cursor: ApprovalCursor | null;
+    /** one pending record (the approval detail), still under the caller's role and scope */
+    recordId?: string;
+  },
 ): Promise<InboxRow[]> {
   const scope = approvalScope(context, definition.roles, definition.unit);
   if (scope.sql === 'FALSE') return [];
@@ -107,6 +112,8 @@ export async function queryInboxRows(
       scope.parameters,
     );
   workflowScope(qb, context, definition);
+  if (page.recordId)
+    qb.andWhere('r.id = :recordId', { recordId: page.recordId });
   selectRow(qb, definition);
   if (page.cursor)
     qb.andWhere(

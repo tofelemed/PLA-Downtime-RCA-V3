@@ -1,12 +1,30 @@
-import { Controller, Post, Body, Request, UseGuards, Get, UnauthorizedException, HttpCode } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Request,
+  UseGuards,
+  Get,
+  UnauthorizedException,
+  HttpCode,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { ApiBody, ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
-import { LoginResponseDto, ProfileResponseDto } from './dto/session-response.dto';
+import {
+  LoginResponseDto,
+  ProfileResponseDto,
+} from './dto/session-response.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthenticatedUser } from './interfaces/jwt-payload.interface';
 import { Roles } from './decorators/roles.decorator';
@@ -22,7 +40,12 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({ summary: 'User login' })
   @ApiBody({ type: LoginDto })
-  @ApiResponse({ status: 200, description: 'Login successful; `user.scopes` and `user.homeTenantId` carry the grants the browser derives its roles from', type: LoginResponseDto })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Login successful; `user.scopes` and `user.homeTenantId` carry the grants the browser derives its roles from',
+    type: LoginResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() body: LoginDto) {
     const user = await this.authService.validateUser(body.email, body.password);
@@ -40,7 +63,10 @@ export class AuthController {
   @PublicIf('AUTH_ALLOW_PUBLIC_REGISTRATION')
   @Roles('SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'manager_approver')
   @Post('register')
-  @ApiOperation({ summary: 'Register new user (admin roles; a caller cannot grant a role above its own). Can auto-create organization and tenant if names are provided.' })
+  @ApiOperation({
+    summary:
+      'Register new user (admin roles; a caller cannot grant a role above its own). Can auto-create organization and tenant if names are provided.',
+  })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Invalid data' })
@@ -51,8 +77,14 @@ export class AuthController {
       email: body.email,
       password: body.password,
       role: body.role,
-      tenantId: body.tenantId && body.tenantId.trim() !== '' ? body.tenantId : undefined,
-      organizationId: body.organizationId && body.organizationId.trim() !== '' ? body.organizationId : undefined,
+      tenantId:
+        body.tenantId && body.tenantId.trim() !== ''
+          ? body.tenantId
+          : undefined,
+      organizationId:
+        body.organizationId && body.organizationId.trim() !== ''
+          ? body.organizationId
+          : undefined,
       organizationName: body.organizationName,
       tenantName: body.tenantName,
       isActive: true,
@@ -64,7 +96,11 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Refresh access token' })
   @ApiBody({ type: RefreshTokenDto })
-  @ApiResponse({ status: 200, description: 'Token refreshed successfully', type: LoginResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Token refreshed successfully',
+    type: LoginResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
   async refresh(@Body() body: RefreshTokenDto) {
     return this.authService.refreshToken(body.refreshToken);
@@ -74,7 +110,12 @@ export class AuthController {
   @Get('profile')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'Return user profile with the user_scopes grants (`scopes`) and `homeTenantId`', type: ProfileResponseDto })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Return user profile with the user_scopes grants (`scopes`) and `homeTenantId`',
+    type: ProfileResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async profile(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.profile(user);
@@ -83,7 +124,10 @@ export class AuthController {
   @Public()
   @Post('logout')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Logout: revokes the refresh token family sent in the body; the client discards its tokens' })
+  @ApiOperation({
+    summary:
+      'Logout: revokes the refresh token family sent in the body; the client discards its tokens',
+  })
   @ApiBody({ type: LogoutDto, required: false })
   @ApiResponse({ status: 200, description: 'Logout successful' })
   async logout(@Body() body: LogoutDto) {
@@ -101,4 +145,4 @@ export class AuthController {
     const payload = await this.authService.validateToken(body.token);
     return { valid: true, payload };
   }
-} 
+}

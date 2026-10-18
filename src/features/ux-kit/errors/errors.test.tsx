@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { V2ApiError, type FieldError } from '@/api/v2/errors';
 import { ApiError } from '@/services/api/httpClient';
-import { describeError, refusalTitle } from './describe-error';
+import { describeError, refusalTitle, UNEXPECTED_FIELDS_TEXT, UNNAMED_VALUE_TEXT } from './describe-error';
 import { ERROR_MESSAGES } from './error-messages';
 import { fieldLabel } from './field-label';
 import { FriendlyErrorAlert } from './friendly-error-alert';
@@ -66,10 +66,10 @@ describe('describeError', () => {
   });
 
   it('an unknown code whose message is the code, or a generated / id-bearing message: fallback text', () => {
-    expect(describeError(v2(422, 'WEIRD_CODE', 'WEIRD_CODE')).message).toBe('Check the highlighted values and try again.');
+    expect(describeError(v2(422, 'WEIRD_CODE', 'WEIRD_CODE')).message).toBe(UNNAMED_VALUE_TEXT);
     expect(describeError(v2(404, 'HTTP_404', 'Request failed with status 404')).title).toBe('Not found');
     expect(describeError(v2(400, 'X_Y', `plan ${CORR} is locked`)).message).not.toContain(CORR);
-    expect(describeError(v2(400, 'X_Y', 'uses oee_policy@3 already')).message).toBe('Check the highlighted values and try again.');
+    expect(describeError(v2(400, 'X_Y', 'uses oee_policy@3 already')).message).toBe(UNNAMED_VALUE_TEXT);
   });
 
   it('a 5xx never shows the server text', () => {
@@ -90,8 +90,8 @@ describe('describeError', () => {
     const friendly = describeError(new ApiError(400, 'Bad Request', '/api/x', body));
     expect(friendly.title).toBe('Some values were not accepted');
     expect(friendly.fieldMessages).toEqual([
-      { label: 'Foo', message: 'Is not accepted here' },
-      { label: 'Quantity', message: 'Must be a positive number' },
+      { field: 'foo', label: 'Unexpected field', message: 'foo', unexpected: true },
+      { field: 'quantity', label: 'Quantity', message: 'Must be a positive number', unexpected: false },
     ]);
     expect(friendly.reference?.correlationId).toBe(CORR);
     const bare = describeError(new ApiError(403, 'Forbidden', '/api/users'));
@@ -101,7 +101,28 @@ describe('describeError', () => {
 
   it('field errors get plain labels', () => {
     const friendly = describeError(v2(422, 'VALIDATION_FAILED', 'Validation failed', [{ field: 'lines[0].quantity', message: 'must be positive' }]));
-    expect(friendly.fieldMessages).toEqual([{ label: 'Line 1 · Quantity', message: 'Must be positive' }]);
+    expect(friendly.fieldMessages).toEqual([{ field: 'lines[0].quantity', label: 'Line 1 · Quantity', message: 'Must be positive', unexpected: false }]);
+  });
+
+  it('a property the server does not accept is named as an unexpected field, never as "highlighted"', () => {
+    const friendly = describeError(
+      v2(422, 'VALIDATION_FAILED', 'property rowVersion should not exist', [
+        { field: 'rowVersion', message: 'property rowVersion should not exist', constraint: 'whitelistValidation' },
+      ]),
+    );
+    expect(friendly.fieldMessages).toEqual([{ field: 'rowVersion', label: 'Unexpected field', message: 'rowVersion', unexpected: true }]);
+    expect(friendly.message).toBe(UNEXPECTED_FIELDS_TEXT);
+    const nested = describeError(v2(422, 'VALIDATION_FAILED', 'x', [{ field: 'lines.0.createdAt', message: 'property createdAt should not exist' }]));
+    expect(nested.fieldMessages[0]).toMatchObject({ label: 'Unexpected field', message: 'lines.0.createdAt', unexpected: true });
+  });
+
+  it('a generic refusal without field errors shows the server reason, or says that no value was named', () => {
+    expect(describeError(v2(400, 'BAD_REQUEST', 'Unknown approval kind')).message).toBe('Unknown approval kind');
+    expect(describeError(v2(400, 'BAD_REQUEST', 'Validation failed (uuid is expected)')).message).toBe(UNNAMED_VALUE_TEXT);
+    expect(describeError(v2(422, 'VALIDATION_FAILED', 'VALIDATION_FAILED')).message).toBe(UNNAMED_VALUE_TEXT);
+    const v1 = describeError(new ApiError(400, 'Bad Request', '/api/x', { code: 'BAD_REQUEST', message: 'Missing required fields' }));
+    expect(v1.title).toBe('Some values were not accepted');
+    expect(v1.message).toBe('Missing required fields');
   });
 
   it('plain errors and unknown values', () => {
@@ -117,6 +138,10 @@ describe('describeError', () => {
     expect(refusalTitle(null, 429)).toBe('Too many requests');
     const toast = friendlyToastContent(v2(422, 'VALIDATION_FAILED', 'x', [{ field: 'validFrom', message: 'must be a date' }]));
     expect(toast).toEqual({ title: 'Some values were not accepted', description: 'Check the highlighted values and try again. Valid from: Must be a date.' });
+    const many = friendlyToastContent(
+      v2(422, 'VALIDATION_FAILED', 'x', ['a', 'b', 'c', 'd', 'e'].map((field) => ({ field, message: `property ${field} should not exist` }))),
+    );
+    expect(many.description).toBe(`${UNEXPECTED_FIELDS_TEXT} Unexpected field: a. Unexpected field: b. Unexpected field: c. And 2 more.`);
   });
 
   it('every mapped message is plain language', () => {
@@ -176,5 +201,14 @@ describe('SupportReference and FriendlyErrorAlert', () => {
     expect(container.textContent).not.toContain(CORR);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalled();
+  });
+
+  it('the alert names an unexpected field so a tester can report it', () => {
+    const error = v2(422, 'VALIDATION_FAILED', 'x', [{ field: 'xyz', message: 'property xyz should not exist', constraint: 'whitelistValidation' }]);
+    const { container } = render(<FriendlyErrorAlert error={error} />);
+    const item = container.querySelector('[data-field="xyz"]');
+    expect(item?.textContent).toBe('Unexpected field: xyz');
+    expect(item?.getAttribute('data-unexpected')).toBe('true');
+    expect(container.textContent).not.toContain('highlighted');
   });
 });

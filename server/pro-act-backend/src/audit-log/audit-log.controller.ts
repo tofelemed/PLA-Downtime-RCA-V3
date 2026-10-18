@@ -1,8 +1,26 @@
 import { ReadOnlyAllowed } from '../auth/decorators/read-only-allowed.decorator';
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  ForbiddenException,
+} from '@nestjs/common';
 import { AuditLogService } from './audit-log.service';
 import { AuditLog } from './audit-log.entity';
-import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse, ApiQuery, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiTags,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiQuery,
+  ApiOperation,
+} from '@nestjs/swagger';
 import { CreateAuditLogDto } from './dto/create-audit-log.dto';
 import { UpdateAuditLogDto } from './dto/update-audit-log.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -27,7 +45,11 @@ export class AuditLogController {
     summary:
       'Audit logs of the acting tenant (X-Tenant-Id or the token tenant); admins and approvers only',
   })
-  @ApiResponse({ status: 200, description: 'List audit logs with optional filters', type: [AuditLog] })
+  @ApiResponse({
+    status: 200,
+    description: 'List audit logs with optional filters',
+    type: [AuditLog],
+  })
   @ApiResponse({
     status: 403,
     description:
@@ -102,7 +124,9 @@ export class AuditLogController {
     @Body() data: CreateAuditLogDto,
   ): Promise<AuditLog> {
     if (!ctx.userId) {
-      throw new ForbiddenException('Audit entries require an authenticated caller');
+      throw new ForbiddenException(
+        'Audit entries require an authenticated caller',
+      );
     }
     // Identity fields come from the token, never from the body (WF05)
     return this.auditLogService.create({
@@ -117,17 +141,26 @@ export class AuditLogController {
   @Put(':id')
   @UseGuards(RolesGuard)
   @Roles('SuperAdmin')
-  @ApiOperation({ summary: 'Update audit log (SuperAdmin only — audit is append-only by design)' })
+  @ApiOperation({
+    summary:
+      'Update audit log (SuperAdmin only — audit is append-only by design)',
+  })
   @ApiBody({ type: UpdateAuditLogDto })
   @ApiResponse({ status: 200, description: 'Update audit log', type: AuditLog })
-  update(@Param('id') id: string, @Body() data: UpdateAuditLogDto): Promise<AuditLog | null> {
-    return this.auditLogService.update(id, data as Partial<AuditLog>);
+  update(
+    @Param('id') id: string,
+    @Body() data: UpdateAuditLogDto,
+  ): Promise<AuditLog | null> {
+    return this.auditLogService.update(id, data);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('SuperAdmin')
-  @ApiOperation({ summary: 'Delete audit log (SuperAdmin only — audit is append-only by design)' })
+  @ApiOperation({
+    summary:
+      'Delete audit log (SuperAdmin only — audit is append-only by design)',
+  })
   @ApiResponse({ status: 200, description: 'Delete audit log' })
   remove(@Param('id') id: string): Promise<void> {
     return this.auditLogService.remove(id);

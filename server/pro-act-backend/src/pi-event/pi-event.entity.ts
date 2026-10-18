@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -31,7 +40,12 @@ export class PIEvent {
   tenant?: Tenant;
 
   @ApiProperty({ description: 'Organization ID', required: false })
-  @Column({ name: 'organization_id', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'organization_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
   organizationId?: string;
 
   @ApiProperty({ description: 'PI Web ID', required: false })
@@ -47,7 +61,12 @@ export class PIEvent {
   template?: string;
 
   @ApiProperty({ description: 'Primary AF ID', required: false })
-  @Column({ name: 'primary_af_id', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'primary_af_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   primaryAfId?: string;
 
   @ApiProperty({ description: 'Start time UTC', required: false })
@@ -66,4 +85,3 @@ export class PIEvent {
   @Column({ name: 'event_data', type: 'text', nullable: true })
   eventData?: string;
 }
-

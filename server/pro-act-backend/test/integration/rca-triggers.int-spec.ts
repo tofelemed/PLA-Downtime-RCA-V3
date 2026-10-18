@@ -73,7 +73,7 @@ describe('RCA triggers (plan 3.9, RCA01, T42)', () => {
     expect(cases).toHaveLength(0);
   });
 
-  it('below the threshold and planned stops never fire; with v2.rca off nothing is evaluated', async () => {
+  it('below the threshold and planned stops never fire', async () => {
     const short = await env.stopEvent(env.world.unitA2, 300, 250);
     const planned = await env.stopEvent(env.world.unitA2, 240, 100, {
       scheduleClass: 'planned',
@@ -81,13 +81,21 @@ describe('RCA triggers (plan 3.9, RCA01, T42)', () => {
     await env.relay();
     expect(await evaluations(short)).toHaveLength(0);
     expect(await evaluations(planned)).toHaveLength(0);
+  });
+
+  it('RCA is v2 for every plant: a v2.rca row switched off changes nothing and no v1 case is auto-created', async () => {
     await env.rows(
       `UPDATE feature_flags SET enabled = false WHERE tenant_id = $1 AND key = 'v2.rca'`,
       [env.world.tenantA],
     );
-    const off = await env.stopEvent(env.world.unitA2, 600, 400);
+    const stop = await env.stopEvent(env.world.unitA2, 600, 400);
     await env.relay();
-    expect(await evaluations(off)).toHaveLength(0);
+    expect((await evaluations(stop)).length).toBeGreaterThan(0);
+    const [event] = await env.rows<{ rca_id: string | null }>(
+      `SELECT rca_id FROM production_events WHERE id = $1`,
+      [stop],
+    );
+    expect(event.rca_id).toBeNull();
     await env.rows(
       `UPDATE feature_flags SET enabled = true WHERE tenant_id = $1 AND key = 'v2.rca'`,
       [env.world.tenantA],

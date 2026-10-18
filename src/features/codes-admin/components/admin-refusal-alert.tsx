@@ -1,5 +1,5 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { describeError, FieldMessageList, SupportReference } from '@/features/ux-kit/errors';
+import { describeError, FieldMessageList, SupportReference, type FieldVocabulary } from '@/features/ux-kit/errors';
 import { StatusIcon } from '@/lib/icons';
 import { adminRefusalOf } from '../model/admin-refusal';
 
@@ -7,6 +7,8 @@ export interface AdminRefusalAlertProps {
   error: unknown;
   /** false where the field errors are already shown on their rows (the rule builder) */
   withFields?: boolean;
+  /** the form's labels and choice labels for refused fields */
+  fields?: FieldVocabulary;
 }
 
 /**
@@ -14,10 +16,10 @@ export interface AdminRefusalAlertProps {
  * code (409 CODE_HAS_CHILDREN). The server code and status stay in `data-*` attributes for tests; the
  * correlation id sits behind "Copy support reference".
  */
-export function AdminRefusalAlert({ error, withFields = true }: AdminRefusalAlertProps) {
+export function AdminRefusalAlert({ error, withFields = true, fields }: AdminRefusalAlertProps) {
   const refusal = adminRefusalOf(error);
   if (!refusal) return null;
-  const friendly = describeError(error);
+  const friendly = describeError(error, undefined, fields);
   const locked = refusal.kind === 'role' || refusal.kind === 'tenant-scope' || refusal.kind === 'duties';
   const Icon = locked ? StatusIcon.locked : StatusIcon.warning;
   const counts = refusal.references;

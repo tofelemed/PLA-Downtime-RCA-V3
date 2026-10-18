@@ -16,6 +16,30 @@ export interface EventDraft {
   /** values the form started from (the diff base of the PATCH) */
   initial: EventFormValues;
   values: EventFormValues;
+  /** when the draft was last stored (ms since epoch); absent on drafts stored before E-9 */
+  savedAt?: number;
+}
+
+/** E-9: a new-event draft older than this is dropped (an old stop is not resumed by surprise). */
+export const NEW_DRAFT_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+/** True when a new-event draft is too old to resume (or of unknown age). */
+export function isExpiredNewDraft(draft: EventDraft, now: number): boolean {
+  return draft.savedAt === undefined || now - draft.savedAt > NEW_DRAFT_MAX_AGE_MS;
+}
+
+/** How a new-event form starts: fresh, with the stored draft, or by asking (the draft is of another unit). */
+export type NewDraftStart = { kind: 'fresh' } | { kind: 'restore'; draft: EventDraft } | { kind: 'ask'; draft: EventDraft };
+
+/**
+ * E-9: an expired draft starts fresh; a draft for another unit than the one the page was opened for
+ * (`?unitId=`) is offered, not imposed ("Resume draft or start new?"); otherwise it is restored.
+ */
+export function newDraftStart(stored: EventDraft | null, unitId: string, now: number): NewDraftStart {
+  if (!stored || isExpiredNewDraft(stored, now)) return { kind: 'fresh' };
+  const draftUnit = stored.values.unitId;
+  if (unitId && draftUnit && draftUnit !== unitId) return { kind: 'ask', draft: stored };
+  return { kind: 'restore', draft: stored };
 }
 
 export function draftKey(userId: string, tenantId: string, eventId: string | null): string {
@@ -43,7 +67,7 @@ export const draftStore = {
   },
   write(key: string, draft: EventDraft): void {
     try {
-      window.localStorage.setItem(key, JSON.stringify(draft));
+      window.localStorage.setItem(key, JSON.stringify({ ...draft, savedAt: Date.now() }));
     } catch (error) {
       log.warn('draft not stored', { key, error: String(error) });
     }
@@ -59,5 +83,5 @@ export const draftStore = {
 
 /** Fields whose value differs between two value sets (conflict view, "changed" markers). */
 export function changedFields(a: EventFormValues, b: EventFormValues): Array<keyof EventFormValues> {
-  return (Object.keys(a) as Array<keyof EventFormValues>).filter((field) => a[field] !== b[field]);
+  return (Object.keys(a) as Array<keyof EventFormValues>).filter((field) => field !== 'intervalMode' && a[field] !== b[field]);
 }

@@ -26,7 +26,7 @@ export function DefinitionSummary() {
       </dl>
       {!readOnly && <Button asChild variant="outline" className="mt-4"><Link to={`${basePath}/definition${search}`} data-testid="edit-definition">Edit definition</Link></Button>}
     </Section>
-    <Section title="Team" description={locked ? 'The accepted investigation team is fixed until the case is reopened.' : undefined}>
+    <Section title="Team" description={locked ? 'The accepted investigation team is fixed until the investigation is reopened.' : undefined}>
       <dl className="grid gap-4 md:grid-cols-2">
         <Fact label="Team lead" value={rca.teamLeadId ? users.nameOf(rca.teamLeadId) : 'No team lead'} />
         <Fact label="Team members" value={rca.teamMemberIds.length ? rca.teamMemberIds.map(users.nameOf).join(', ') : 'No team members yet.'} />

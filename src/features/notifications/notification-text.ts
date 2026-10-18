@@ -1,6 +1,7 @@
 import type { NotificationView, SlaEscalationDetail, SlaReminderDetail, SourceFallbackDetail } from '@/api/v2/types/notifications';
 import { formatOperationalDate, toDigits, type CalendarDisplayOptions } from '@/lib/dates';
 import { roleLabel } from '@/features/ux-kit/labels/role-labels';
+import { isWorkReminder, workReminderText } from './work-reminder-text';
 
 export interface NotificationText {
   title: string;
@@ -49,6 +50,7 @@ function fallbackText(d: SourceFallbackDetail, pref: CalendarDisplayOptions): No
 export function notificationText(n: NotificationView, pref: CalendarDisplayOptions): NotificationText {
   if (n.kind === 'sla_reminder' && isReminderDetail(n.detail)) return reminderText(n.detail, pref);
   if (n.kind === 'source_fallback' && isFallbackDetail(n.detail)) return fallbackText(n.detail, pref);
+  if (isWorkReminder(n.kind)) return workReminderText(n, pref);
   if (n.kind !== 'sla_escalation' || !isSlaDetail(n.detail)) return { title: 'Notification', body: '', href: null };
   const d = n.detail;
   const where = whereOf(d, pref);

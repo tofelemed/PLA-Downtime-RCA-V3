@@ -13,7 +13,11 @@ import {
   TRANSITIONS,
   withInvestigators,
 } from '../domain/rca/case-workflow';
-import { closeReadiness, CloseReadiness } from '../domain/rca/close-gate';
+import {
+  closeReadiness,
+  CloseReadiness,
+  RootCauseRule,
+} from '../domain/rca/close-gate';
 import {
   GateIssue,
   GateResult,
@@ -30,6 +34,8 @@ import {
   investigationFacts,
 } from './case-gate-facts';
 import { casePolicy } from './case-policy';
+import { codedRootCauses } from './cause-rules';
+import { caseAudit, recordRcaAudit } from './rca-audit';
 import {
   assertIndependentApprover,
   assertNote,
@@ -43,6 +49,7 @@ import { moveEventRcaState } from './event-rca-pointer';
 import { RcaCaseV2View } from './rca-case.view';
 import { RcaCasesService } from './rca-cases.service';
 import { upsertKnowledgeEntry } from './rca-knowledge';
+import { recommendationsAtClosure } from './recommendation-actions';
 import { findCase, RcaScope, scopeOf } from './rca-scope';
 
 /** What the case screen shows about the next moves (RCA-01 / CA1, computed on the server). */
@@ -54,17 +61,34 @@ export interface RcaCaseReadinessV2View {
   closure: {
     blockers: GateIssue[];
     effectiveness: CloseReadiness['effectiveness'];
+    /** item 7: coded = a root cause linked to the cause catalogue is required (cases opened since then) */
+    rootCauseRule: RootCauseRule;
   };
   /** whether the caller may approve the closure (role and independence), with the reason when not */
   approver: { canApprove: boolean; reason: string | null };
   /** same-problem events linked to this case by the triggers since it opened (CA8 escalation) */
   linkedRecurrences: number;
-  rules: { fiveWhyGuidelineLevels: number; consequenceClass: string | null };
+  rules: {
+    fiveWhyGuidelineLevels: number;
+    /** CA6: root-cause phrases the investigation gate refuses on their own (e.g. "operator error") */
+    fiveWhyUnsupportedRootCauses: string[];
+    consequenceClass: string | null;
+  };
 }
 
 interface Gates {
   investigation: GateResult;
   closure: CloseReadiness;
+  rootCauseRule: RootCauseRule;
+}
+
+/** Audit verb of a move: the closure steps by name, every other move as `transitioned`. */
+function transitionVerb(transition: Transition): string {
+  if (transition.to === 'Closure Review') return 'closure_requested';
+  if (transition.to === 'Closed') return 'closed';
+  if (transition.from === 'Closure Review') return 'closure_rejected';
+  if (transition.from === 'Closed') return 'reopened';
+  return 'transitioned';
 }
 
 /**
@@ -110,11 +134,13 @@ export class RcaCaseWorkflowService {
           (blocker) => CLOSE_MESSAGES[blocker],
         ),
         effectiveness: gates.closure.effectiveness,
+        rootCauseRule: gates.rootCauseRule,
       },
       approver: this.approverOf(context, rca),
       linkedRecurrences: await this.linkedRecurrences(manager, scope, rca.id),
       rules: {
         fiveWhyGuidelineLevels: policy.fiveWhy.guidelineLevels,
+        fiveWhyUnsupportedRootCauses: [...policy.fiveWhy.unsupportedRootCauses],
         consequenceClass: rca.consequenceClass ?? null,
       },
     };
@@ -129,6 +155,7 @@ export class RcaCaseWorkflowService {
     await this.dataSource.transaction(async (manager) => {
       const rca = await findCase(manager, scope, target.id, true);
       assertRevision(rca.rowVersion, target.expectedRowVersion);
+      const before = { ...rca };
       const from = statusOf(rca.status);
       const transition = transitionOf(from, body.to);
       if (!transition)
@@ -147,9 +174,12 @@ export class RcaCaseWorkflowService {
         note,
         residualRisk: body.residualRisk,
       });
-      await manager
+      const saved = await manager
         .getRepository(RCA)
         .save({ ...rca, ...changes, status: body.to });
+      await recordRcaAudit(manager, scope, [
+        caseAudit(transitionVerb(transition), { before, after: saved }, note),
+      ]);
       if (body.to === 'Closed')
         await this.onClosed(manager, { scope, context, id: rca.id });
     });
@@ -168,13 +198,19 @@ export class RcaCaseWorkflowService {
       policy,
       actionCount: actions.length,
     });
+    const rootCauseRule = {
+      coded: rca.codedRootCauseRequired,
+      codedRootCauses: await codedRootCauses(manager, rca),
+    };
     return {
       investigation: investigationGate(facts, policy),
       closure: closeReadiness({
         rootCause: rca.rootCause ?? null,
+        rootCauseRule,
         actions: closeActions(actions),
         residualRisk,
       }),
+      rootCauseRule,
     };
   }
 
@@ -293,6 +329,28 @@ export class RcaCaseWorkflowService {
     return rows[0]?.n ?? 0;
   }
 
+  /** Recommendations whose implementing actions are all finished leave "Open" when the case closes. */
+  private async closeRecommendations(
+    manager: EntityManager,
+    scope: RcaScope,
+    rca: RCA,
+  ): Promise<void> {
+    const recommendations = await recommendationsAtClosure(manager, rca);
+    if (recommendations === null) return;
+    const before = { ...rca };
+    const saved = await manager
+      .getRepository(RCA)
+      .save({ ...rca, recommendations });
+    Object.assign(rca, saved);
+    await recordRcaAudit(manager, scope, [
+      caseAudit(
+        'updated',
+        { before, after: saved },
+        'closure: recommendations with every action finished completed',
+      ),
+    ]);
+  }
+
   /** Knowledge entry and `completed` RCA state of every linked event (an independent reviewer closed it). */
   private async onClosed(
     manager: EntityManager,
@@ -300,6 +358,7 @@ export class RcaCaseWorkflowService {
   ): Promise<void> {
     const { scope } = input;
     const rca = await findCase(manager, scope, input.id);
+    await this.closeRecommendations(manager, scope, rca);
     await upsertKnowledgeEntry(manager, {
       rca,
       closedBy: scope.userId,

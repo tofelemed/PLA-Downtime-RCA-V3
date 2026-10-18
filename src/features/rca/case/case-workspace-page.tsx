@@ -24,6 +24,7 @@ const AnalysisToolPage = named(() => import('./analysis/analysis-tool-page'), 'A
 const ActionsPage = named(() => import('./actions/actions-page'), 'ActionsPage');
 const RecommendationFormPage = named(() => import('./actions/recommendation-form-page'), 'RecommendationFormPage');
 const LinksPage = named(() => import('./links/links-page'), 'LinksPage');
+const HistoryPage = named(() => import('./history/history-page'), 'HistoryPage');
 const DefinitionPage = named(() => import('./definition/definition-page'), 'DefinitionPage');
 
 function CaseRoutes() {
@@ -43,6 +44,7 @@ function CaseRoutes() {
         <Route path="actions/recommendations/new" element={<RecommendationFormPage />} />
         <Route path="actions/recommendations/:recommendationId/edit" element={<RecommendationFormPage />} />
         <Route path="links" element={<LinksPage />} />
+        <Route path="history" element={<HistoryPage />} />
         <Route path="*" element={<Navigate to={basePath} replace />} />
       </Routes>
     </Suspense>
@@ -74,12 +76,12 @@ function Workspace({ caseId }: { caseId: string }) {
   );
 }
 
-/** `/rca/:caseId/*`: one case with its sub-pages (overview, evidence, analysis, actions, links). */
+/** `/rca/:caseId/*`: one case with its sub-pages (overview, evidence, analysis, actions, links, history). */
 export function CaseWorkspacePage() {
   const tenantId = useV2TenantId();
   const owner = useRcaDraftOwner();
   const { caseId } = useParams();
-  if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to see its RCA cases." />;
+  if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to see its investigations." />;
   if (!caseId) return <Navigate to="/rca" replace />;
   return <Workspace key={`${owner}:${caseId}`} caseId={caseId} />;
 }

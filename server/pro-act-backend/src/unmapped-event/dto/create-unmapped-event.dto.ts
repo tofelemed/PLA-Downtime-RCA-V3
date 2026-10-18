@@ -47,7 +47,9 @@ export class CreateUnmappedEventDto {
   @IsOptional()
   sourceId?: string;
 
-  @ApiPropertyOptional({ description: 'JSON string with reason, suggestions, event snapshot' })
+  @ApiPropertyOptional({
+    description: 'JSON string with reason, suggestions, event snapshot',
+  })
   @IsString()
   @IsOptional()
   eventData?: string;

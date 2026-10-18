@@ -6,6 +6,7 @@ import { friendlyToastContent } from '@/features/ux-kit/errors';
 import { PageHeader } from '@/features/ux-kit/page-layout';
 import { ScopeHeader } from '@/features/ux-kit/scope-header';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { useWindowRangeText } from '@/features/event-hub/hooks/use-window-range-text';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { ActionIcon } from '@/lib/icons';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
@@ -25,9 +26,10 @@ export function DowntimeHeader({ filters, bundle, title = 'Downtime analysis' }:
 function DowntimeMetadata({ filters, bundle, snapshot }: DowntimeHeaderProps & { snapshot: Snapshot }) {
   const env = useEventHubEnv();
   const { number } = useNumberFormat();
+  const rangeText = useWindowRangeText();
   const scope = filters.unitIds.length === 0 ? 'All units in your scope' : filters.unitIds.map(env.unitName).join(', ');
   return <div className="space-y-1">
-    <ScopeHeader scopeLabel={`${scope} · ${filters.windowLabel}`} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback}
+    <ScopeHeader scopeLabel={`${scope} · ${rangeText({ label: filters.windowLabel, from: filters.from, to: filters.to })}`} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback}
       uom="time in h:mm" isProvisional={bundle.data?.isProvisional} asOf={bundle.data?.asOf ?? null} />
     {snapshot && <p className="text-xs" data-testid="snapshot-runs" data-run-ids={snapshot.calculationRunIds.join(',')}>
       Historical downtime summary and breakdowns use {snapshot.calculationRunIds.length === 1 ? 'the same calculation run' : `the same ${number(snapshot.calculationRunIds.length)} calculation runs`}.

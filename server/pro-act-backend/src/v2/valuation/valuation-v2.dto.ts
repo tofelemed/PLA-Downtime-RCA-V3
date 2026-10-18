@@ -219,9 +219,36 @@ export class ValuationPolicyCreateDto {
   @IsBoolean()
   manualLineHours?: boolean;
 
-  @ApiProperty({ example: '2027-01-01T00:00:00Z' })
+  @ApiProperty({
+    example: '2027-01-01T00:00:00Z',
+    description:
+      'A past instant is a commissioning backdate (owner, 18 Oct 2026): it needs backdateReason (422 ' +
+      'BACKDATE_REASON_REQUIRED), must follow the latest approved version (409 BACKDATE_REWRITES_HISTORY) and ' +
+      'no period of the plant with an approved revision may overlap [effectiveFrom, now) (409 ' +
+      'BACKDATE_OVERLAPS_APPROVED_VALUE, details.periods) unless restateApproved. Checked again at approval.',
+  })
   @Matches(INSTANT, { message: `effectiveFrom ${INSTANT_MESSAGE}` })
   effectiveFrom: string;
+
+  @ApiPropertyOptional({
+    maxLength: 1000,
+    description:
+      'Why the version is backdated; required with a past effectiveFrom, refused otherwise (422 ' +
+      'BACKDATE_REASON_WITHOUT_EFFECTIVE_FROM). Kept on the version.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  backdateReason?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Backdate over approved figures: approval queues the revaluation and every approved period in range gets ' +
+      'a change proposal (approved snapshots are never rewritten). Only with a backdate (422 RESTATE_WITHOUT_BACKDATE).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  restateApproved?: boolean;
 
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()

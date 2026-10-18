@@ -7,6 +7,7 @@ import { HOLD_KIND_LABELS, SLA_STAGE_LABELS } from '../model/sla-labels';
 import { failedLineLabel } from '../model/failed-lines';
 import { HoldControls } from './hold-controls';
 import { SlaBadges } from './sla-badges';
+import { SlaDataState } from './sla-data-state';
 
 const hours = (seconds: number) => `${Math.floor(seconds / 3600)} h`;
 
@@ -26,6 +27,7 @@ export function SlaPanel({ view, timezone }: { view: ReconciliationView; timezon
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium">{SLA_STAGE_LABELS[sla.stage]}</span>
         <SlaBadges sla={sla} />
+        {sla.stage !== 'done' && <SlaDataState periodId={view.periodId} onHold={sla.onHold} />}
         {canWritePeriods && sla.stage !== 'done' && <HoldControls detail={detail} />}
       </div>
       {sla.stage !== 'done' && (

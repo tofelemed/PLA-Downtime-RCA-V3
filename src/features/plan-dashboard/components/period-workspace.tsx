@@ -12,16 +12,22 @@ import { DispositionsSection } from '../dispositions/dispositions-section';
 import { LossLineEditorContent } from '../editor/loss-line-editor';
 import { useDraftEditor } from '../hooks/use-draft-editor';
 import { useRetainedDraft } from '../hooks/use-retained-draft';
+import { useWorkflowActions, type WorkflowActions } from '../hooks/use-workflow-actions';
 import { periodPath, PERIOD_SECTIONS } from '../model/period-navigation';
+import { stickyPlacement } from '../model/workflow-blockers';
 import { RestatementPanel } from '../restatement/restatement-panel';
 import { SlaPanel } from '../sla/sla-panel';
 import { BridgeReviewPanel } from '../workflow/bridge-review-panel';
+import { StickyWorkflowBar } from '../workflow/sticky-workflow-bar';
+import { ReviewCorrection } from '../workflow/review-correction';
 import { WorkflowBar } from '../workflow/workflow-bar';
 import { ActualsProvenance } from './actuals-provenance';
 import { DetailToolbar } from './detail-toolbar';
 import { LedgerComparison } from './ledger-comparison';
+import { MonthLockBanner } from './month-lock-banner';
 import type { PeriodDetailProps } from './period-detail';
 import { PeriodHeader } from './period-header';
+import { PeriodNeighbourNav } from './period-neighbour-nav';
 import { PeriodDraftNotices } from './period-draft-notices';
 import { ReconciliationSummary } from './reconciliation-summary';
 import { ValuationTiles } from './valuation-tiles';
@@ -40,9 +46,10 @@ interface Props extends PeriodDetailProps {
   search: string;
 }
 
-function ReviewSection({ data, view, timezone, periodId, onView }: Pick<Props, 'data' | 'view' | 'timezone' | 'periodId' | 'onView'>) {
+function ReviewSection({ data, view, timezone, periodId, onView, actions }: Pick<Props, 'data' | 'view' | 'timezone' | 'periodId' | 'onView'> & { actions: WorkflowActions }) {
   return <div className="space-y-6">
-    <WorkflowBar view={data} shown={view} onShowCurrent={() => onView('current')} />
+    <WorkflowBar view={data} shown={view} onShowCurrent={() => onView('current')} actions={actions} />
+    <ReviewCorrection view={data} />
     {view === 'current' && <><BridgeReviewPanel view={data} /><CodingGatePanel view={data} /><SlaPanel view={data} timezone={timezone} /></>}
     {data.revision.supersedesId && <RestatementPanel view={data} />}
     <PeriodDayPanel periodId={periodId} />
@@ -50,19 +57,22 @@ function ReviewSection({ data, view, timezone, periodId, onView }: Pick<Props, '
 }
 
 /** A single draft owner survives section changes; commands and server figures retain their existing components. */
-export function PeriodWorkspace({ planId, periodId, unitName, planLabel, timezone, section, data, accounting, view, ledger, onView, onLedger, nav, search }: Props) {
+export function PeriodWorkspace({ planId, periodId, unitName, planLabel, planWindow, timezone, section, data, accounting, view, ledger, onView, onLedger, nav, search }: Props) {
   const { canWritePeriods } = useCapabilities();
   const editor = useDraftEditor(data);
   const editable = canWritePeriods && view === 'current' && data.revision.lifecycle === 'draft';
   const basePath = periodPath(planId, periodId);
   const retained = useRetainedDraft(data, editor, editable, basePath);
+  const actions = useWorkflowActions(data);
   return (
     <section data-testid="period-detail" data-lifecycle={data.revision.lifecycle} className="space-y-5">
-      <PeriodHeader view={data} accounting={accounting} unitName={unitName} planLabel={planLabel} timezone={timezone} />
+      <PeriodHeader view={data} accounting={accounting} unitName={unitName} planLabel={planLabel} timezone={timezone}
+        neighbours={<PeriodNeighbourNav planId={planId} period={data} plan={planWindow} section={section} search={search} />} />
+      <MonthLockBanner monthClose={data.monthClose} />
       <DetailToolbar view={view} onView={onView} ledger={ledger} onLedger={onLedger} canShowApproved={data.publishedRevision !== null} />
       <PeriodDraftNotices retained={retained} editable={editable} />
-      {section !== 'review' && <p className="text-sm text-muted-foreground">Approval, holds and production-day certification: <Link className="font-medium text-primary underline underline-offset-4" to={`${basePath}/review${search}`}>Review & close</Link>.</p>}
-      {editor.draft.dirty && editable && section !== '' && <p role="status" className="rounded-md border border-amber-300 p-3 text-sm">Unsaved loss-line changes. <Link className="font-medium underline" to={`${basePath}${search}`}>Return to Reconciliation to save or discard.</Link></p>}
+      <StickyWorkflowBar view={data} actions={actions} unsavedLines={editor.draft.dirty} {...stickyPlacement(section, view, `${basePath}/review${search}`)} />
+      {editor.draft.dirty && editable && section !== '' && <p role="status" className="rounded-md border border-warning/40 p-3 text-sm">Unsaved loss-line changes. <Link className="font-medium underline" to={`${basePath}${search}`}>Return to Reconciliation to save or discard.</Link></p>}
       {nav}
       <h2 className="text-lg font-semibold" data-testid="period-section-heading">{PERIOD_SECTIONS.find((item) => item.path === section)?.label}</h2>
       {/* Keep the editor subtree alive too: unfinished manual-line fields and conflict dialogs are local state. */}
@@ -73,8 +83,8 @@ export function PeriodWorkspace({ planId, periodId, unitName, planLabel, timezon
         {section === '' && <Suspense fallback={<Skeleton className="h-48 w-full" />}><WaterfallPanel periodId={periodId} ledger={ledger} view={view} /></Suspense>}
       </div>
       {section === 'actuals' && <div className="space-y-6"><ActualsProvenance periodId={periodId} timezone={timezone} /><AdjustmentsSection planId={planId} periodId={periodId} /><DispositionsSection planId={planId} periodId={periodId} timezone={timezone} /></div>}
-      {section === 'review' && <ReviewSection data={data} view={view} timezone={timezone} periodId={periodId} onView={onView} />}
-      {section === 'value' && <ValuationTiles period={data} ledger={ledger} approvedOnly={view === 'approved'} />}
+      {section === 'review' && <ReviewSection data={data} view={view} timezone={timezone} periodId={periodId} onView={onView} actions={actions} />}
+      {section === 'value' && <ValuationTiles key={data.revision.id} period={data} ledger={ledger} approvedOnly={view === 'approved'} historyHref={`${basePath}/history${search}`} />}
       {section === 'history' && <Suspense fallback={<Skeleton className="h-24 w-full" />}><PeriodHistory view={data} timezone={timezone} /></Suspense>}
     </section>
   );

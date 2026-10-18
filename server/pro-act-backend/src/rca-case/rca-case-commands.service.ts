@@ -4,6 +4,8 @@ import { DataSource, EntityManager } from 'typeorm';
 import { assertRevision } from '../common/concurrency/revision';
 import { RequestContext } from '../common/context/request-context';
 import { RCA } from '../rca/rca.entity';
+import { actionOverdueSql } from './action-overdue';
+import { caseAudit, recordRcaAudit } from './rca-audit';
 import { writeJson } from './rca-case-json';
 import {
   evidenceOptions,
@@ -98,7 +100,7 @@ export class RcaCaseCommandsService {
   ): Promise<{ overdueActions: number; effectivenessPending: number }> {
     const [row]: Array<{ overdue: number; pending: number }> =
       await this.dataSource.query(
-        `SELECT count(*) FILTER (WHERE a.due_date < now() AND a.status::text IN ('open', 'in_progress'))::int AS overdue,
+        `SELECT count(*) FILTER (WHERE ${actionOverdueSql('a')})::int AS overdue,
                 count(*) FILTER (WHERE a.baseline IS NOT NULL AND a.post_action IS NULL
                                    AND a.verification_window_end IS NOT NULL AND a.status::text <> 'cancelled')::int AS pending
            FROM "rca_actions" a JOIN "rcas" rca ON rca.id = a.rca_id
@@ -135,6 +137,9 @@ export class RcaCaseCommandsService {
       await manager
         .getRepository(RCA)
         .delete({ id: rca.id, tenantId: scope.tenantId });
+      await recordRcaAudit(manager, scope, [
+        caseAudit('deleted', { before: rca, after: null }),
+      ]);
     });
   }
 
@@ -159,9 +164,12 @@ export class RcaCaseCommandsService {
         scope.tenantId,
         rca.templateId,
       );
-      await manager
+      const saved = await manager
         .getRepository(RCA)
         .save({ ...rca, logicTree: writeJson(tree) });
+      await recordRcaAudit(manager, scope, [
+        caseAudit('logic_tree_reset', { before: rca, after: saved }),
+      ]);
     });
     return this.cases.get(context, target.id);
   }

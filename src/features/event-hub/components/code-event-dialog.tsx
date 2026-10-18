@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { useCodeEvent } from '../hooks/use-code-and-close';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { useEventHubEnv } from '../use-event-hub-env';
@@ -32,16 +34,16 @@ export function CodeEventDialog({ event, onClose, onDone }: CodeEventDialogProps
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent data-testid="code-dialog">
         <DialogHeader>
-          <DialogTitle>Code stop</DialogTitle>
+          <DialogTitle>{event.classification.physicalType === 'downtime' ? 'Code stop' : 'Code event'}</DialogTitle>
           <DialogDescription>
             {env.unitName(event.unitId)}, since {dateTime(event.startTime)}
           </DialogDescription>
         </DialogHeader>
         <ReasonCodeSelect id="code-reason" value={reasonCodeId} onChange={setReasonCodeId} allowEmpty={false} />
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" data-testid="code-investigation-pending" checked={pending} onChange={(e) => setPending(e.target.checked)} />
-          Investigation pending (no specific reason known yet)
-        </label>
+        <div className="flex items-center gap-2">
+          <Checkbox id="code-investigation-pending" data-testid="code-investigation-pending" checked={pending} onCheckedChange={(value) => setPending(value === true)} />
+          <Label htmlFor="code-investigation-pending" className="font-normal">Investigation pending (no specific reason known yet)</Label>
+        </div>
         <CommandError error={code.error} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>

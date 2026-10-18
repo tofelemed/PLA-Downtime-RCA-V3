@@ -4,8 +4,10 @@ import { useDraftEditor, type DraftEditor } from '../hooks/use-draft-editor';
 import { issuesByRow } from '../model/workflow-errors';
 import { CandidateTable } from './candidate-table';
 import { ConflictDialogs } from './conflict-dialogs';
+import { DiscardChanges } from './discard-changes';
 import { EditorProblem } from './editor-problem';
 import { ManualLines } from './manual-lines';
+import { Quantity } from '@/features/ux-kit/quantity';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 export interface LossLineEditorProps {
@@ -37,31 +39,33 @@ export function LossLineEditorContent({ view, timezone, readOnly = false, editor
         <h3 className="text-sm font-medium">Loss lines (plan ledger)</h3>
         {!readOnly && (
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={editor.discard} disabled={!editor.draft.dirty || editor.saving}>
-              Discard changes
-            </Button>
+            <DiscardChanges view={view} draft={editor.draft} disabled={!editor.draft.dirty || editor.saving} onDiscard={editor.discard} />
             <Button size="sm" data-testid="save-lines" onClick={() => void editor.save()} disabled={!editor.draft.dirty || editor.saving || !view.baseRunId || Boolean(editor.draft.pendingManual)}>
               {editor.saving ? 'Saving…' : 'Save lines'}
             </Button>
           </div>
         )}
       </div>
-      {editor.draft.dirty && !readOnly && <p className="text-xs text-amber-700">Unsaved changes — the figures above are the last saved state; the server recomputes them on save.</p>}
+      {editor.draft.dirty && !readOnly && <p className="text-xs text-warning">Unsaved changes — the figures above are the last saved state; the server recomputes them on save.</p>}
       {editor.draft.pendingManual && !readOnly && <p className="text-xs text-muted-foreground">Add or cancel the manual line before saving the complete draft.</p>}
       {editor.dropped && editor.dropped.length > 0 && (
-        <p className="text-xs text-amber-700" data-testid="rebase-dropped">
+        <p className="text-xs text-warning" data-testid="rebase-dropped">
           Rebased on the new run: {number(editor.dropped.length)} decision(s) dropped because their candidate no longer exists.
         </p>
       )}
-      <CandidateTable view={view} draft={editor.draft} setDraft={editor.setDraft} issues={rowIssues} readOnly={readOnly} />
+      <CandidateTable view={view} draft={editor.draft} setDraft={editor.setDraft} issues={rowIssues} readOnly={readOnly} timezone={timezone} />
       <ManualLines view={view} draft={editor.draft} setDraft={editor.setDraft} issues={rowIssues} readOnly={readOnly} timezone={timezone} />
       {view.lines.some((l) => l.action === 'tolerance') && (
         <p className="text-xs" data-testid="tolerance-line">
           Tolerance adjustment line(s) written on submission:{' '}
           {view.lines
             .filter((l) => l.action === 'tolerance')
-            .map((l) => `${l.quantity ?? '—'} ${l.uom ?? ''}`)
-            .join(', ')}
+            .map((l, index) => (
+              <span key={l.id}>
+                {index > 0 && ', '}
+                <Quantity value={l.quantity} uom={l.uom} />
+              </span>
+            ))}
         </p>
       )}
       {editor.problem && !conflict && <EditorProblem problem={editor.problem} />}

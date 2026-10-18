@@ -1,4 +1,5 @@
 import type { MonthCloseView } from '@/api/v2/types/month-close';
+import { resolvedActorText } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Section } from '@/features/ux-kit/page-layout';
 import { CLOSE_ACTION_LABELS } from '../model/close-labels';
@@ -10,7 +11,7 @@ export function CloseHistory({ view }: { view: MonthCloseView }) {
       {view.history.length === 0 ? <p data-testid="close-history-empty">No month-close actions recorded.</p> : <ol className="space-y-2 text-sm break-words" data-testid="close-history">
         {view.history.map((h) => (
           <li key={h.id}>
-            <PlantTime iso={h.createdAt} tz={view.deadlines.timezone} withDate /> — {CLOSE_ACTION_LABELS[h.action] ?? h.action} by {h.actor?.name ?? 'a user'}
+            <PlantTime iso={h.createdAt} tz={view.deadlines.timezone} withDate /> — {CLOSE_ACTION_LABELS[h.action] ?? h.action} by {resolvedActorText(h.actor?.id, h.actor?.name)}
             {h.reason ? `: ${h.reason}` : ''}
           </li>
         ))}

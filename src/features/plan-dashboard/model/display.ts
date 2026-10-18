@@ -2,16 +2,12 @@ import type { CurrencyValueView, GridWorkflowState, ResidualState } from '@/api/
 import type { CandidateState, ReconciliationView } from '@/api/v2/types/reconciliation';
 import { type DigitSystem, localizeNumber } from '@/lib/dates';
 import { formatCurrencyAmount } from '@/features/display-currency/money-format';
-import { humanize } from '@/features/ux-kit/labels';
+import { GLOSSARY, GRID_WORKFLOW_LABELS, humanize, systemActorText } from '@/features/ux-kit/labels';
+import { roundDecimal } from '@/features/ux-kit/format/decimal';
 
 /** Labels and display rules of the Plan Dashboard (plan 3.5); no figure is derived here. */
-export const WORKFLOW_LABELS: Record<GridWorkflowState, string> = {
-  none: 'Not calculated',
-  draft: 'Draft',
-  in_review: 'In review',
-  stale: 'Stale (inputs changed)',
-  approved: 'Approved',
-};
+/** The shared period workflow wording (`ux-kit/labels`, owner finding 2). */
+export const WORKFLOW_LABELS: Readonly<Record<GridWorkflowState, string>> = GRID_WORKFLOW_LABELS;
 
 export const RESIDUAL_LABELS: Record<ResidualState, string> = {
   not_computable: 'Not computable',
@@ -37,7 +33,7 @@ export const FLAG_LABELS: Readonly<Record<string, string>> = {
   no_actuals: 'No actuals',
   claim_exceeds_component: 'Causes claim more than measured loss',
   planned_rate_scaled: 'Priced at the planned rate (target ÷ eligible time)',
-  unexplained: 'Unexplained (no event or measurement supports it)',
+  unexplained: 'Unaccounted (no event or measurement supports it)',
   transition_overrun: 'Transition ran past its approved standard',
   no_transition_standard: 'No approved transition standard for this grade change',
   trip_recovery: 'Ramp-up / start-up after a trip (charged to the trip)',
@@ -62,7 +58,7 @@ export const KIND_LABELS: Record<string, string> = {
   quality: 'Quality',
   bridge: 'Bridge',
   gain: 'Gain',
-  unaccounted_classified: 'Unaccounted (classified)',
+  unaccounted_classified: 'Unaccounted',
   tolerance_adjustment: 'Tolerance adjustment',
   transition_allowance: 'Grade transition (within standard)',
   transition_excess: 'Grade transition overrun',
@@ -135,6 +131,9 @@ export function reviewGate(view: ReconciliationView, userId: string | null, isSu
 export function approveGate(view: ReconciliationView, userId: string | null, isSuperAdmin = false): ActionGate {
   const review = reviewGate(view, userId, isSuperAdmin);
   if (!review.allowed || !userId) return review;
+  if (!isSuperAdmin && view.revision.openedBy === userId) {
+    return { allowed: false, reason: 'You reopened this revision: another manager approver must approve it (separation of duties).', code: 'SEPARATION_OF_DUTIES' };
+  }
   if (!isSuperAdmin && view.lines.some((line) => line.authorId === userId)) {
     return { allowed: false, reason: 'You wrote lines in this revision: another manager approver must approve it (separation of duties).', code: 'SEPARATION_OF_DUTIES' };
   }
@@ -150,20 +149,18 @@ function bridgeGate(view: ReconciliationView, userId: string, isSuperAdmin: bool
   return null;
 }
 
-const SERVICE_LABELS: Readonly<Record<string, string>> = {
-  'accounting-worker': 'the accounting service',
-  'actuals-worker': 'the actuals service',
-  worker: 'the background service',
-};
-
 /** Who did it: "you", the user's name (`nameOf` from the user directory) or the service, never an id. */
 export function actorLabel(actorId: string | null, userId: string | null, nameOf: (id: string) => string, service?: string | null): string {
-  if (!actorId) return service ? (SERVICE_LABELS[service] ?? 'an automatic service') : '—';
+  if (!actorId) return systemActorText(service);
   if (actorId === userId) return 'you';
   return nameOf(actorId);
 }
 
-/** `"0.875"` → `"87.5 %"`: a ratio shown as a percentage by moving the decimal point (no float maths). */
+/**
+ * `"0.875"` → `"87.5 %"`: a ratio shown as a percentage by moving the decimal point (no float maths), one
+ * decimal rounded half away from zero like the server's gate messages (one decimal, Decimal rounding), so
+ * `"0.6667"` reads 66.7 % on every screen; a trailing `.0` is dropped (`"1"` → `"100 %"`).
+ */
 export function formatRatioPercent(ratio: string | null, digitSystem?: DigitSystem): string {
   if (ratio === null) return '—';
   const match = /^(-?)(\d*)(?:\.(\d*))?$/.exec(ratio.trim());
@@ -171,7 +168,15 @@ export function formatRatioPercent(ratio: string | null, digitSystem?: DigitSyst
   const [, sign, whole, fraction = ''] = match;
   const shifted = `${whole}${fraction.padEnd(2, '0')}`;
   const cut = whole.length + 2;
-  const integer = shifted.slice(0, cut).replace(/^0+(?=\d)/, '') || '0';
-  const rest = shifted.slice(cut).replace(/0+$/, '');
-  return localizeNumber(`${sign}${integer}${rest ? `.${rest.slice(0, 1)}` : ''} %`, digitSystem);
+  const percent = `${sign}${shifted.slice(0, cut) || '0'}.${shifted.slice(cut) || '0'}`;
+  const rounded = roundDecimal(percent, 1);
+  if (rounded === null) return ratio;
+  return localizeNumber(`${rounded.replace(/\.0$/, '')} %`, digitSystem);
+}
+
+/** Glossary names of server waterfall bars whose server label differs (docs/GLOSSARY.md: the residual is "Unaccounted"). */
+const WATERFALL_BAR_NAMES: Readonly<Record<string, string>> = { unaccounted: GLOSSARY.residual, residual: GLOSSARY.residual };
+
+export function waterfallBarLabel(bar: { key: string; label: string }): string {
+  return WATERFALL_BAR_NAMES[bar.key] ?? bar.label;
 }

@@ -88,7 +88,8 @@ describe('PLA analytics data flows (plan 3.6)', () => {
 
   it('T41: an OEE tile without a server value says why, never 87 % / 100 %', () => {
     render(<OeeTile title="OEE" label="Operational OEE (ISO 22400)" denominator="over scheduled time" testId="tile" view={{ metric: 'oee', numerator: '0', denominator: '0', value: null, unit: 'ratio', quality: 'unavailable', reason: 'no_scheduled_time', rows: 1, missing: 0 }} />);
-    expect(screen.getByTestId('oee-tile-value').textContent).toBe('Not available: no scheduled time');
+    expect(screen.getByTestId('oee-tile-value').textContent).toBe('—Not available');
+    expect(screen.getByTestId('oee-tile-reason').textContent).toBe('No scheduled time');
     expect(screen.getByText(/Operational OEE \(ISO 22400\)/)).toBeTruthy();
   });
 

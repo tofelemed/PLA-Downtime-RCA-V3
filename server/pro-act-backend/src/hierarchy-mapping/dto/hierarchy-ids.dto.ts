@@ -21,4 +21,3 @@ export interface MappingRequest {
   connectionId?: string;
   tenantId: string;
 }
-

@@ -20,6 +20,20 @@ describe('master-data form model', () => {
     expect(fieldErrorsOf(new Error('boom'))).toEqual({});
   });
 
+  it('shows the server reason on the field and never puts an unexpected property on an input', () => {
+    const refused = new V2ApiError(422, {
+      code: 'VALIDATION_FAILED',
+      message: 'refused',
+      fieldErrors: [
+        { field: 'name', message: 'name must be shorter than or equal to 120 characters', constraint: 'maxLength' },
+        { field: 'rowVersion', message: 'property rowVersion should not exist', constraint: 'whitelistValidation' },
+      ],
+      correlationId: null,
+      retryable: false,
+    });
+    expect(fieldErrorsOf(refused)).toEqual({ name: 'Must be shorter than or equal to 120 characters' });
+  });
+
   it('validates required text and legacy decimals', () => {
     expect(requiredText('  ', 'Name')).toBe('Name is required.');
     expect(optionalDecimal('12.5', 'Capacity')).toBeUndefined();

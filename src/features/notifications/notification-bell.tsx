@@ -1,58 +1,50 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications, useUnreadNotificationCount } from '@/api/v2/queries/notifications';
-import type { NotificationView } from '@/api/v2/types/notifications';
+import { useNotifications, useUnreadNotificationCount } from '@/api/v2/queries/notifications';
+import type { NotificationFilter, NotificationView } from '@/api/v2/types/notifications';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { PlantTime } from '@/features/ux-kit/plant-time';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { toDigits, useCalendarPreference } from '@/lib/dates';
 import { UiIcon } from '@/lib/icons';
-import { notificationText } from './notification-text';
+import { NotificationList } from './notification-list';
+import { useNotificationMarks } from './use-notification-marks';
 
-function Item({ n, timezone, onOpen }: { n: NotificationView; timezone: string; onOpen: (n: NotificationView) => void }) {
-  const pref = useCalendarPreference();
-  const text = notificationText(n, pref);
-  const content = (
-    <>
-      <span className="block font-medium">{text.title}</span>
-      <span className="block text-muted-foreground">{text.body}</span>
-      <PlantTime iso={n.createdAt} tz={timezone} withDate className="block text-xs text-muted-foreground" />
-    </>
-  );
+const FILTERS: ReadonlyArray<[NotificationFilter, string]> = [
+  ['all', 'All'],
+  ['unread', 'Unread'],
+];
+
+function FilterButtons({ filter, onChange, unreadLabel }: { filter: NotificationFilter; onChange: (f: NotificationFilter) => void; unreadLabel: string }) {
   return (
-    <li className={`rounded-md p-2 text-sm ${n.read ? '' : 'bg-muted'}`} data-testid="notification" data-read={n.read}>
-      {text.href ? (
-        <Link to={text.href} className="block hover:underline" onClick={() => onOpen(n)}>
-          {content}
-        </Link>
-      ) : (
-        <button type="button" className="block w-full text-left" onClick={() => onOpen(n)}>
-          {content}
-        </button>
-      )}
-    </li>
+    <div role="group" aria-label="Show notifications" className="mb-2 flex gap-1 px-1">
+      {FILTERS.map(([value, label]) => (
+        <Button key={value} size="sm" variant={filter === value ? 'secondary' : 'ghost'} aria-pressed={filter === value} onClick={() => onChange(value)}>
+          {value === 'unread' ? `${label}${unreadLabel}` : label}
+        </Button>
+      ))}
+    </div>
   );
 }
 
 /**
- * The header's in-app notifications (EXPERT_REVIEW Area 3: SLA escalations): unread badge, the newest list
- * (loaded when opened), open-and-mark-read and mark all read. Realtime hints refresh both; nothing is sent by
- * e-mail or SMS.
+ * The header's in-app notifications (SLA reminders and escalations, work reminders): unread badge, the newest
+ * active list (loaded when opened) filtered All / Unread, open-and-mark-read, per-item mark as read / unread and
+ * mark all read. Shared work someone already did is resolved on the server and leaves the list. Realtime hints
+ * refresh both; nothing is sent by e-mail or SMS.
  */
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<NotificationFilter>('all');
   const pref = useCalendarPreference();
   const { timezone } = usePlantTimezone();
   const unread = useUnreadNotificationCount().data?.unread ?? 0;
-  const list = useNotifications(open);
-  const markRead = useMarkNotificationRead();
-  const markAll = useMarkAllNotificationsRead();
-  const items = list.data?.items ?? [];
+  const list = useNotifications(open, filter);
+  const marks = useNotificationMarks();
   const openItem = (n: NotificationView) => {
-    if (!n.read) void markRead.submit({ id: n.id }).catch(() => undefined);
+    if (!n.read) marks.read(n.id);
     setOpen(false);
   };
+  const count = toDigits(unread > 99 ? '99+' : String(unread), pref.digits);
   const label = unread > 0 ? `Notifications, ${toDigits(String(unread), pref.digits)} unread` : 'Notifications';
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -60,8 +52,8 @@ export function NotificationBell() {
         <Button variant="ghost" size="icon" aria-label={label} className="relative" data-testid="notification-bell">
           <UiIcon.notifications aria-hidden="true" />
           {unread > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 rounded-full bg-destructive px-1 text-[10px] font-semibold leading-4 text-destructive-foreground" data-testid="notification-unread">
-              {toDigits(unread > 99 ? '99+' : String(unread), pref.digits)}
+            <span className="absolute -right-0.5 -top-0.5 rounded-full bg-destructive px-1 text-xs font-semibold leading-4 text-destructive-foreground" data-testid="notification-unread">
+              {count}
             </span>
           )}
         </Button>
@@ -70,18 +62,13 @@ export function NotificationBell() {
         <div className="flex items-center justify-between px-1 pb-2">
           <span className="text-sm font-semibold">Notifications</span>
           {unread > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => void markAll.submit().catch(() => undefined)} data-testid="notification-read-all">
+            <Button variant="ghost" size="sm" onClick={marks.all} data-testid="notification-read-all">
               Mark all read
             </Button>
           )}
         </div>
-        {list.isLoading && <p className="px-1 text-sm text-muted-foreground">Loading…</p>}
-        {!list.isLoading && items.length === 0 && <p className="px-1 text-sm text-muted-foreground">No notifications.</p>}
-        <ul className="max-h-96 space-y-1 overflow-y-auto" data-testid="notification-list">
-          {items.map((n) => (
-            <Item key={n.id} n={n} timezone={timezone} onOpen={openItem} />
-          ))}
-        </ul>
+        <FilterButtons filter={filter} onChange={setFilter} unreadLabel={unread > 0 ? ` (${count})` : ''} />
+        <NotificationList list={list} filter={filter} timezone={timezone} marks={marks} onOpen={openItem} />
       </PopoverContent>
     </Popover>
   );

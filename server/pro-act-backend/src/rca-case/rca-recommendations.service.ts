@@ -6,6 +6,10 @@ import { RcaTriggerEvaluation } from '../rca/entities/rca-trigger-evaluation.ent
 import { keysetPage } from '../v2/common/keyset-page';
 import { listResponse, ListResponse } from '../v2/common/response';
 import { RcaRecommendationV2ListQueryDto } from '../v2/rca/rca-links-v2.dto';
+import {
+  recommendationEventFacts,
+  RcaRecommendationEventFacts,
+} from './recommendation-event-facts';
 import { notFound, scopeOf } from './rca-scope';
 
 /** A trigger firing as the UI shows it: a recommendation badge with its attribution. */
@@ -25,9 +29,14 @@ export interface RcaRecommendationV2View {
   firedAt: string;
   confirmedAt: string | null;
   resolvedAt: string | null;
+  /** F-1: facts of the event (null when the event is not readable any more) */
+  event: RcaRecommendationEventFacts | null;
 }
 
-const toView = (row: RcaTriggerEvaluation): RcaRecommendationV2View => ({
+const toView = (
+  row: RcaTriggerEvaluation,
+  event: RcaRecommendationEventFacts | null,
+): RcaRecommendationV2View => ({
   id: row.id,
   eventId: row.eventId,
   occurrenceId: row.occurrenceId,
@@ -47,6 +56,7 @@ const toView = (row: RcaTriggerEvaluation): RcaRecommendationV2View => ({
   firedAt: row.firedAt.toISOString(),
   confirmedAt: row.confirmedAt ? row.confirmedAt.toISOString() : null,
   resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
+  event,
 });
 
 /**
@@ -84,7 +94,15 @@ export class RcaRecommendationsService {
       cursor: query.cursor,
       limit: query.limit,
     });
-    return listResponse(page.items.map(toView), page.nextCursor, {
+    const facts = await recommendationEventFacts(
+      this.dataSource.manager,
+      scope.tenantId,
+      page.items.map((row) => row.eventId),
+    );
+    const items = page.items.map((row) =>
+      toView(row, facts.get(row.eventId) ?? null),
+    );
+    return listResponse(items, page.nextCursor, {
       tenantId: scope.tenantId,
       ...(scope.units ? { unitIds: scope.units } : {}),
     });
@@ -120,7 +138,11 @@ export class RcaRecommendationsService {
         resolvedAt: new Date(),
         detail: { ...row.detail, dismissReason: reason },
       });
-      return toView(await repository.save(row));
+      const saved = await repository.save(row);
+      const facts = await recommendationEventFacts(manager, scope.tenantId, [
+        saved.eventId,
+      ]);
+      return toView(saved, facts.get(saved.eventId) ?? null);
     });
   }
 }

@@ -7,6 +7,7 @@ import {
   SliceInput,
   ValidationIssue,
 } from './accounting.types';
+import { withAppliedRates } from './applied-rate';
 import { ClaimPool } from './claim-pooling';
 import {
   allocate,
@@ -228,13 +229,12 @@ export function capacityLedger(
     .minus(timeTotals.exclusion)
     .minus(timeTotals.availability);
   const running = runningPart(ctx, { capacity: effective, claims });
-  const totals = capacityTotals(
-    slice,
-    timeTotals,
-    running,
-    hasStreams(input),
+  const totals = capacityTotals(slice, timeTotals, running, hasStreams(input));
+  const lines = withAppliedRates(
+    [...time, ...running.lines],
+    segments,
+    'sustained',
   );
-  const lines = [...time, ...running.lines];
   if (totals.residual)
     lines.push(sliceLine('residual', totals.residual, slice, line));
   return { lines, issues: running.issues, totals };

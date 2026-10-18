@@ -8,8 +8,8 @@ import { RcaTriggerService } from './rca-trigger.service';
 
 /**
  * Open events change no row while their elapsed time grows, so no `EventChanged` arrives when they cross
- * a threshold: this worker sweep (every 5 min, worker/all roles) re-evaluates open events of tenants
- * with `v2.rca` on, oldest first, at most `RCA_SWEEP_BATCH` (default 500) per run. Provisional
+ * a threshold: this worker sweep (every 5 min, worker/all roles) re-evaluates open events of every
+ * tenant, oldest first, at most `RCA_SWEEP_BATCH` (default 500) per run. Provisional
  * firings are recorded once; closure confirms them through the event consumer.
  */
 @Injectable()
@@ -33,7 +33,6 @@ export class RcaTriggerSweepJob {
     const rows: Array<{ id: string; tenant_id: string }> =
       await this.dataSource.query(
         `SELECT e."id", e."tenant_id" FROM "production_events" e
-         JOIN "feature_flags" f ON f."tenant_id" = e."tenant_id" AND f."key" = 'v2.rca' AND f."enabled"
         WHERE e."end_time" IS NULL AND e."physical_state" = 'open' AND e."start_time" < $1
         ORDER BY e."start_time", e."id" LIMIT $2`,
         [now, envInt('RCA_SWEEP_BATCH', 500)],

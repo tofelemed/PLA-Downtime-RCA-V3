@@ -92,6 +92,7 @@ import {
   Square,
   SquarePen,
   Tags,
+  Table2,
   ThumbsDown,
   ThumbsUp,
   Trash2,
@@ -183,6 +184,8 @@ export const EntityIcon = {
   downtime: TrendingDown,
   plan: CalendarClock,
   planning: CalendarRange,
+  /** UX audit B-5: the period grid of a plan (period accounting) */
+  periodAccounting: Table2,
   calendar: CalendarCog,
   rcaCase: Microscope,
   knowledge: BookOpen,

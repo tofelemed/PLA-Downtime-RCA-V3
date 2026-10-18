@@ -12,8 +12,9 @@ const TO = new Date('2026-11-11T00:00:00.000Z');
 /**
  * CA2 / CA4 on real Postgres (owner, 15 Oct 2026): the effectiveness exposure of a case about a standby
  * pump is the pump's own running time from the standby log (28 h, mostly during the unit's planned stop),
- * not the unit run time (214 h of 240 h); a case that also names a duty asset, and a verification that
- * froze the unit basis with its baseline, keep the unit run time. Incidents are counted the same way.
+ * not the unit run time; a case that also names a duty asset, and a verification that froze the unit
+ * basis with its baseline, keep the unit run time — known running time from the unit's state timeline
+ * (rca-exposure-v3), none here: the unit has no state mapping. Incidents are counted the same way.
  */
 describe('RCA effectiveness exposure of standby equipment (CA2 / CA4)', () => {
   const harness = new IntegrationHarness();
@@ -90,13 +91,16 @@ describe('RCA effectiveness exposure of standby equipment (CA2 / CA4)', () => {
 
   it('a duty asset in the case, or a frozen unit basis, keeps the unit run time', async () => {
     const mixed = await exposure([world.assetA1, randomUUID()]);
-    expect(mixed.exposureBasis).toBe('unit_run_time');
-    expect(Number(mixed.exposureSeconds)).toBe(214 * 3600);
+    expect(mixed).toMatchObject({
+      exposureBasis: 'unit_run_time',
+      exposureSeconds: '0',
+      coverage: '0',
+    });
     const frozen = await exposure([world.assetA1], 'unit_run_time');
     expect(frozen).toMatchObject({
       incidents: 1,
       exposureBasis: 'unit_run_time',
     });
-    expect(Number(frozen.exposureSeconds)).toBe(214 * 3600);
+    expect(Number(frozen.exposureSeconds)).toBe(0);
   });
 });

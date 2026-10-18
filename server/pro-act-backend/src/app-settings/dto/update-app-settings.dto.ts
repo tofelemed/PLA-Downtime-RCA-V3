@@ -6,4 +6,4 @@ export class UpdateAppSettingsDto {
   @IsOptional()
   @IsNotEmpty()
   value?: any;
-} 
+}

@@ -112,8 +112,24 @@ export const DURATION_SECONDS_EXPRESSION =
     where: `"physical_type" = 'downtime' AND "verified_at" IS NULL`,
   },
 )
+/** UX E-7: verified events of the tenant, newest first (`verificationStates=verified`) */
+@Index(
+  'IDX_production_events_tenant_verified',
+  ['tenantId', 'startTime', 'id'],
+  { where: `"verified_at" IS NOT NULL` },
+)
+/** UX E-1: duration sort key, running events as the longest (expression index, migration-owned) */
+@Index('IDX_production_events_tenant_duration', { synchronize: false })
 @Index('IDX_production_events_open_by_unit', ['tenantId', 'unitId'], {
   where: '"end_time" IS NULL',
+})
+/** Open events oldest first: the RCA open-event sweep and long open stop reminders (item 6) */
+@Index('IDX_production_events_open_start', ['startTime', 'id'], {
+  where: `"end_time" IS NULL AND "physical_state" = 'open'`,
+})
+/** Item 6: closed uncoded stops of the tenant by end time (uncoded backlog reminders) */
+@Index('IDX_production_events_uncoded_stops', ['tenantId', 'endTime'], {
+  where: `"physical_type" = 'downtime' AND "coding_state" = 'uncoded' AND "physical_state" = 'closed'`,
 })
 /** GiST over (unit_id, tstzrange(start, end)) for the period loaders' overlap lookups (DB-01, migration-owned). */
 @Index('IDX_production_events_unit_span', { synchronize: false })

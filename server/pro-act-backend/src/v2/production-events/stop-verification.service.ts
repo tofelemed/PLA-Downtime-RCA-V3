@@ -8,6 +8,14 @@ import {
 } from '../../common/context/request-context';
 import { restrictedUnitIds } from '../../common/query/scoped-query';
 import {
+  EventChangeMessage,
+  EventChangeNotifier,
+} from '../../production-event/revisions/event-change.notifier';
+import {
+  appendWorkflowRevisions,
+  WorkflowRevisionReason,
+} from '../../production-event/revisions/workflow-revision';
+import {
   StopForVerification,
   validateRefusal,
   verifyRefusal,
@@ -81,6 +89,12 @@ const toStop = (row: StopRow): StopForVerification => ({
 
 type Stage = 'verify' | 'validate';
 
+/** What one transaction verified, and the change messages to broadcast once it commits. */
+interface Applied {
+  outcome: VerificationOutcome;
+  messages: EventChangeMessage[];
+}
+
 const STAGES: Readonly<
   Record<
     Stage,
@@ -92,6 +106,7 @@ const STAGES: Readonly<
         isSuperAdmin?: boolean,
       ) => string | null;
       set: string;
+      reason: WorkflowRevisionReason;
     }
   >
 > = {
@@ -99,11 +114,13 @@ const STAGES: Readonly<
     roles: STOP_VERIFIERS,
     refusal: verifyRefusal,
     set: `"verified_by" = $2, "verified_at" = $3`,
+    reason: 'verification',
   },
   validate: {
     roles: FAILURE_VALIDATORS,
     refusal: validateRefusal,
     set: `"validated_by" = $2, "validated_at" = $3`,
+    reason: 'failure_validation',
   },
 };
 
@@ -125,17 +142,21 @@ function skipReason(
  * a selection, or every unverified stop of a shift period), maintenance validates the failure detail of a
  * verified stop. Never the person who entered the current coding; stops that do not qualify are skipped with
  * the reason, so a bulk verification never fails as a whole and recording is never blocked. A later change
- * of the coding / failure detail clears the label (`verificationReset`).
+ * of the coding / failure detail clears the label (`verificationReset`). Each label is an event revision
+ * (actor = the verifier) with a workflow-only `EventChanged` in the same transaction, broadcast after commit.
  */
 @Injectable()
 export class StopVerificationService {
-  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly notifier: EventChangeNotifier,
+  ) {}
 
   verify(
     context: RequestContext,
     input: { eventIds?: string[]; periodId?: string },
   ): Promise<VerificationOutcome> {
-    return this.dataSource.transaction(async (manager) => {
+    return this.run(async (manager) => {
       const ids = await this.targets(manager, context, input);
       return this.apply(manager, context, { ids, stage: 'verify' });
     });
@@ -145,9 +166,25 @@ export class StopVerificationService {
     context: RequestContext,
     eventId: string,
   ): Promise<VerificationOutcome> {
-    return this.dataSource.transaction((manager) =>
+    return this.run((manager) =>
       this.apply(manager, context, { ids: [eventId], stage: 'validate' }),
     );
+  }
+
+  /** One transaction (labels, revisions, outbox); browsers are told after commit. */
+  private async run(
+    work: (manager: EntityManager) => Promise<Applied>,
+  ): Promise<VerificationOutcome> {
+    const { outcome, messages } = await this.dataSource.transaction(work);
+    for (const message of messages) {
+      this.notifier.eventChanged(message);
+      this.notifier.legacyUpdated(
+        message.eventId,
+        message.tenantId,
+        message.unitId,
+      );
+    }
+    return outcome;
   }
 
   private async targets(
@@ -186,7 +223,7 @@ export class StopVerificationService {
     manager: EntityManager,
     context: RequestContext,
     work: { ids: string[]; stage: Stage },
-  ): Promise<VerificationOutcome> {
+  ): Promise<Applied> {
     const actor = requireUser(context);
     const tenantId = requireTenantId(context);
     const stage = STAGES[work.stage];
@@ -206,13 +243,31 @@ export class StopVerificationService {
       else done.push(id);
     }
     const at = new Date();
-    if (done.length > 0) {
-      await manager.query(
-        `UPDATE "production_events" SET ${stage.set}, "row_version" = "row_version" + 1
-          WHERE "tenant_id" = $4 AND "id" = ANY($1::uuid[])`,
-        [done, actor, at, tenantId],
-      );
-    }
-    return { done, skipped, at: at.toISOString() };
+    const messages = await this.label(
+      manager,
+      { done, actor, at, tenantId },
+      stage,
+    );
+    return { outcome: { done, skipped, at: at.toISOString() }, messages };
+  }
+
+  /** Stamps the qualifying stops, records their revisions and outbox messages. */
+  private async label(
+    manager: EntityManager,
+    write: { done: string[]; actor: string; at: Date; tenantId: string },
+    stage: (typeof STAGES)[Stage],
+  ): Promise<EventChangeMessage[]> {
+    if (write.done.length === 0) return [];
+    await manager.query(
+      `UPDATE "production_events" SET ${stage.set}, "updated_at" = $3, "row_version" = "row_version" + 1
+        WHERE "tenant_id" = $4 AND "id" = ANY($1::uuid[])`,
+      [write.done, write.actor, write.at, write.tenantId],
+    );
+    const messages = await appendWorkflowRevisions(manager, write.done, {
+      actor: { id: write.actor, kind: 'user' },
+      reason: stage.reason,
+    });
+    await this.notifier.recordIn(manager, messages);
+    return messages;
   }
 }

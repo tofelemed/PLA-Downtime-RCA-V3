@@ -242,11 +242,21 @@ describe('provisional FX rates (SME V7)', () => {
       'USD',
     );
     expect(kept).toMatchObject({ amount: '50', provisional: true });
-    const [proposal] = await env.rows<{ id: string; trigger: string }>(
-      `SELECT id, trigger::text AS trigger FROM period_change_proposals WHERE period_id = $1 AND state = 'open'`,
+    const [proposal] = await env.rows<{
+      id: string;
+      trigger: string;
+      reason: string;
+      values: { view: string; amounts: Array<{ currency: string }> } | null;
+    }>(
+      `SELECT id, trigger::text AS trigger, detail->>'reason' AS reason, before->'values' AS values
+         FROM period_change_proposals WHERE period_id = $1 AND state = 'open'`,
       [env.periodA1],
     );
-    expect(proposal.trigger).toBe('rate_change');
+    // Marun E2E: an FX rate change is a valuation change, and the proposal carries the approved value
+    expect(proposal.trigger).toBe('valuation_change');
+    expect(proposal.reason).toBe('fx_rate_changed');
+    expect(proposal.values?.view).toBeTruthy();
+    expect(proposal.values?.amounts.map((a) => a.currency)).toContain('USD');
     await env
       .post(
         `period-change-proposals/${proposal.id}/accept`,

@@ -2,14 +2,16 @@ import { test, expect } from '@playwright/test';
 import { PLANTS, expandTreeNode, openPlantTree, selectPlant } from './support/admin-helpers';
 import { findCode } from '../test-utils/codes-world';
 import { expectHidden, expectRefused } from './support/hidden-controls';
-import { apiLogin, BROKER, call, command, DEMO_EVENTS_CONNECTION, DEMO_PLANT, DEMO_PLANT_2, findConnection, findOnPages, INT_USERS, newSuffix, NOAH, openConsole, PREFIX, selectConnection, uiLogin } from './support/integration-world';
+import { apiLogin, BROKER, call, command, CONSOLE_ADMIN, DEMO_EVENTS_CONNECTION, DEMO_PLANT, DEMO_PLANT_2, findConnection, findOnPages, INT_USERS, newSuffix, NOAH, openConsole, PREFIX, uiLogin } from './support/integration-world';
 
 /**
  * INTEGRATION ADMIN persona — journeys 1 (menu and access), 8 (cross-plant) and 9 (refusals).
- * An `integration_admin` (legacy Engineer / Analyst + scope) sees Connectivity in the sidebar and opens
- * the integration console; a plain Engineer (Noah) has no such menu item, is offered no console write
- * and the server refuses each one with 403 FORBIDDEN_ROLE. Diego, integration_admin in Demo Plant 2 as well, switches
- * there and creates a connection in its (empty) console; Freya cannot select Demo Plant 2 at all.
+ * Owner 18 Oct 2026: Integration is SuperAdmin-only. The SuperAdmin sees Connectivity in the sidebar and
+ * opens the integration console; an `integration_admin` (Elena) and a plain Engineer (Noah) have no such
+ * menu item and a direct visit shows no console. The server rules are unchanged: Elena reads connections,
+ * Noah's console writes are refused with 403 FORBIDDEN_ROLE. In Demo Plant 2 the SuperAdmin creates a
+ * connection in its (empty) console and Diego, integration_admin there as well, reads it through the API;
+ * Freya cannot select Demo Plant 2 at all.
  * Approvals, codes and feature flags are not an integration administrator's business: 403 FORBIDDEN_ROLE.
  */
 const suffix = newSuffix();
@@ -17,8 +19,8 @@ const suffix = newSuffix();
 test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
 test.describe('Integration admin — access, cross-plant, refusals', () => {
-  test('INT-01a (elena): Connectivity is in the sidebar and opens the integration console', async ({ page }) => {
-    await uiLogin(page, INT_USERS.elena);
+  test('INT-01a (SuperAdmin): Connectivity is in the sidebar and opens the integration console', async ({ page }) => {
+    await uiLogin(page, CONSOLE_ADMIN);
     const nav = page.locator('nav').first();
     await nav.getByRole('button', { name: 'Expand sidebar' }).click();
     const link = nav.getByRole('link', { name: 'Connectivity' });
@@ -32,18 +34,30 @@ test.describe('Integration admin — access, cross-plant, refusals', () => {
     await page.screenshot({ path: test.info().outputPath('int-01a-console.png'), fullPage: true });
   });
 
-  test('INT-01b (noah): no Connectivity menu; a direct visit shows the console read-only (no test / new connection) and the server refuses both (403 role)', async ({ page }) => {
+  test('INT-01c (elena): an integration admin has no Connectivity menu and a direct visit shows no console; the API still lists connections', async ({ page }) => {
+    await uiLogin(page, INT_USERS.elena);
+    const nav = page.locator('nav').first();
+    await nav.getByRole('button', { name: 'Expand sidebar' }).click();
+    await expect(nav.getByRole('link', { name: 'Event Hub' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Connectivity' })).toHaveCount(0);
+    await page.goto('/connectivity');
+    await expect(page.getByRole('heading', { name: 'Connectivity', level: 1 })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('integration-console')).toHaveCount(0);
+    const elena = await apiLogin(INT_USERS.elena);
+    expect(await findConnection(elena.token, DEMO_EVENTS_CONNECTION), 'server rules unchanged: an integration admin reads connections').not.toBeNull();
+  });
+
+  test('INT-01b (noah): no Connectivity menu; a direct visit shows no console and the server refuses the test and a new connection (403 role)', async ({ page }) => {
     await uiLogin(page, NOAH);
     const nav = page.locator('nav').first();
     await nav.getByRole('button', { name: 'Expand sidebar' }).click();
     await expect(nav.getByRole('link', { name: 'Event Hub' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Connectivity' })).toHaveCount(0);
-    await openConsole(page);
-    await selectConnection(page, DEMO_EVENTS_CONNECTION);
-    // a non-writer is not offered the connection test (nor creating a connection); the server still refuses both
-    await expectHidden(page.getByTestId('run-diagnostics'));
-    await expectHidden(page.getByTestId('new-connection'));
-    await page.screenshot({ path: test.info().outputPath('int-01b-noah-read-only.png'), fullPage: true });
+    // owner 18 Oct 2026: Integration is SuperAdmin-only
+    await page.goto('/connectivity');
+    await expect(page.getByRole('heading', { name: 'Connectivity', level: 1 })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('integration-console')).toHaveCount(0);
+    await page.screenshot({ path: test.info().outputPath('int-01b-noah-no-console.png'), fullPage: true });
     const noah = await apiLogin(NOAH);
     const demoEvents = await findConnection(noah.token, DEMO_EVENTS_CONNECTION);
     expect(demoEvents, 'the Demo events connection is readable by an engineer').not.toBeNull();
@@ -58,8 +72,9 @@ test.describe('Integration admin — access, cross-plant, refusals', () => {
     expect(await findConnection(noah.token, `${PREFIX}noah-refused-${suffix}`)).toBeNull();
   });
 
-  test('INT-08a (diego): switches to Demo Plant 2, sees its empty console and creates a connection there', async ({ page }) => {
-    await uiLogin(page, INT_USERS.diego);
+  test('INT-08a (SuperAdmin + diego): in Demo Plant 2 the console is empty, a connection is created there and Diego reads it in that plant only', async ({ page }) => {
+    // owner 18 Oct 2026: Integration is SuperAdmin-only; the console UI runs as the SuperAdmin
+    await uiLogin(page, CONSOLE_ADMIN);
     await selectPlant(page, PLANTS.demo2);
     await openConsole(page);
     await expect(page.getByTestId('connections-list')).toBeVisible();

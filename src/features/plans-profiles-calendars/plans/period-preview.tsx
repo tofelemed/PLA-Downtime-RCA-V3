@@ -27,7 +27,7 @@ function SumBadge({ preview, headerTarget }: { preview: PlanPreviewView; headerT
   if (matches === null) return <Badge variant="outline" data-testid="sum-badge" data-match="n/a">Σ {totals || '—'}</Badge>;
   const Icon = matches ? StatusIcon.success : StatusIcon.error;
   return (
-    <Badge className={matches ? 'bg-green-600 text-white' : 'bg-red-600 text-white'} data-testid="sum-badge" data-match={String(matches)}>
+    <Badge className={matches ? 'bg-success text-success-foreground' : 'bg-danger text-danger-foreground'} data-testid="sum-badge" data-match={String(matches)}>
       <Icon className="mr-1 h-3 w-3" aria-hidden="true" />Σ {totals} {matches ? '= header' : `≠ header ${text(headerTarget ?? '')}`}
     </Badge>
   );
@@ -61,7 +61,7 @@ export function PeriodPreview({ preview, headerTarget, timezone, productName }: 
         <span className="text-muted-foreground">{number(preview.periods.length)} periods · nothing stored</span>
       </div>
       {preview.warnings.length > 0 && (
-        <ul className="list-disc pl-5 text-xs text-amber-700" data-testid="preview-warnings">
+        <ul className="list-disc pl-5 text-xs text-warning" data-testid="preview-warnings">
           {preview.warnings.map((warning, index) => (
             <li key={`${warning.code}-${warning.at ?? index}`} data-code={warning.code}>
               {labelOf(PLAN_WARNING_LABELS, warning.code)}
